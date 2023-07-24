@@ -1,0 +1,377 @@
+crosschain:
+  chains:
+  - asset: ETH
+    driver: evm
+    net: testnet
+    url: 'https://goerli.infura.io/v3'
+    auth: 'env:INFURA_API_TOKEN'
+    provider: infura
+    chain_id: 5
+    chain_name: Ethereum (Goerli)
+    explorer_url: 'https://goerli.etherscan.io'
+    decimals: 18
+  # EVM
+  - asset: MATIC
+    driver: evm
+    net: testnet
+    url: 'https://rpc-mumbai.matic.today'
+    chain_id: 80001
+    chain_name: Polygon (Mumbai)
+    explorer_url: 'https://mumbai.polygonscan.com'
+    decimals: 18
+  - asset: AVAX
+    driver: "evm"
+    net: testnet
+    url: 'https://api.avax-test.network/ext/bc/C/rpc'
+    chain_id: 43113
+    chain_name: Avalanche (Fuji Testnet)
+    explorer_url: 'https://testnet.snowtrace.io'
+    indexer_url: 'https://api.covalenthq.com/v1'
+    indexer_type: covalent
+    decimals: 18
+  # EVM Legacy
+  - asset: BNB
+    driver: evm-legacy
+    net: testnet
+    url: 'https://data-seed-prebsc-1-s1.binance.org:8545'
+    chain_id: 97
+    chain_name: Binance Smart Chain (Testnet)
+    explorer_url: 'https://testnet.bscscan.com'
+    decimals: 18
+  # Chiliz v2 chain
+  - asset: CHZ2
+    driver: "evm-legacy"
+    net: mainnet
+    url: 'https://rpc.chiliz.com'
+    chain_id: 88888
+    chain_name: Chiliz 2.0
+    explorer_url: 'https://scan.chiliz.com'
+    indexer_url: 'https://scan.chiliz.com'
+    indexer_type: "blockscout"
+    decimals: 18
+  - asset: FTM
+    driver: evm-legacy
+    net: testnet
+    url: 'https://rpc.testnet.fantom.network'
+    chain_id: 4002
+    chain_name: Fantom (Testnet)
+    explorer_url: 'https://testnet.ftmscan.com'
+    indexer_type: none
+    decimals: 18
+  # Solana
+  - asset: SOL
+    driver: solana
+    net: devnet
+    url: 'https://api.devnet.solana.com'
+    chain_name: Solana (Devnet)
+    explorer_url: 'https://explorer.solana.com'
+    decimals: 9
+  # Westend
+  - asset: WND
+    driver: substrate
+    net: testnet
+    url: 'wss://westend-rpc.polkadot.io'
+    chain_name: Westend (Testnet)
+    explorer_url: 'https://westend.api.subscan.io'
+    auth: 'env:SUBSCAN_API_TOKEN'
+    provider: subscan
+    decimals: 12
+    chain_id: 42
+    chain_gas_tip: 0
+  # Polkadot
+  - asset: DOT
+    driver: substrate
+    net: mainnet
+    url: 'wss://rpc.polkadot.io'
+    chain_name: Polkadot
+    explorer_url: 'https://polkadot.api.subscan.io'
+    auth: 'env:SUBSCAN_API_TOKEN'
+    provider: subscan
+    decimals: 10
+    chain_id: 0
+    chain_gas_tip: 0 # Can be modified manually if Polkadot ever becomes congested.
+  # Cosmos-based
+  - asset: ATOM
+    driver: cosmos
+    net: testnet
+    url: 'https://rpc.sentry-01.theta-testnet.polypore.xyz'
+    chain_id_str: 'theta-testnet-001'
+    chain_prefix: 'cosmos'
+    chain_coin: 'uatom'
+    chain_coin_hd_path: 118
+    chain_name: Cosmos (Theta Testnet)
+    explorer_url: 'https://explorer.theta-testnet.polypore.xyz'
+    decimals: 6
+  - asset: INJ
+    driver: cosmos
+    net: testnet
+    url: 'https://k8s.testnet.tm.injective.network'
+    fcd_url: ''
+    chain_id_str: 'injective-888'
+    chain_prefix: 'inj'
+    chain_coin: 'inj'
+    chain_coin_hd_path: 60
+    chain_name: Injective (Testnet)
+    chain_gas_price_default: 500_000_000
+    explorer_url: 'https://testnet.explorer.injective.network'
+    decimals: 18
+  - asset: XPLA
+    driver: evmos
+    net: testnet
+    url: 'https://cube-rpc.xpla.dev'
+    fcd_url: 'https://cube-fcd.xpla.dev'
+    chain_id_str: 'cube_47-5'
+    chain_prefix: 'xpla'
+    chain_coin: 'axpla'
+    chain_coin_hd_path: 60
+    chain_name: XPLA (Testnet)
+    explorer_url: 'https://explorer.xpla.io/testnet'
+    decimals: 18
+  - asset: LUNA
+    driver: cosmos
+    net: testnet
+    url: 'https://terra-testnet-rpc.polkachu.com'
+    fcd_url: 'https://pisco-fcd.terra.dev'
+    chain_id_str: 'pisco-1'
+    chain_prefix: 'terra'
+    chain_coin: 'uluna'
+    chain_coin_hd_path: 330
+    chain_name: Terra (Testnet)
+    chain_gas_multiplier: 12.0
+    explorer_url: 'https://finder.terra.money/testnet'
+    decimals: 6
+  # Aptos
+  - asset: APTOS
+    driver: aptos
+    net: devnet
+    url: 'https://fullnode.devnet.aptoslabs.com'
+    chain_name: Aptos (Devnet)
+    explorer_url: 'https://explorer.devnet.aptos.dev'
+    decimals: 8
+  - asset: SUI
+    driver: sui
+    net: devnet
+    url: 'https://fullnode.devnet.sui.io:443'
+    chain_name: Sui (Devnet)
+    explorer_url: 'https://explorer.sui.io'
+    decimals: 9
+  # Bitcoin
+  - asset: BTC
+    driver: bitcoin
+    net: testnet
+    url: 'https://api.blockchair.com/bitcoin/testnet'
+    auth: 'env:BLOCKCHAIR_API_TOKEN'
+    provider: blockchair
+    chain_name: Bitcoin (Testnet)
+    explorer_url: 'https://blockchair.com/bitcoin/testnet'
+    decimals: 8
+
+  tokens:
+  - asset: DAI
+    chain: ETH
+    net: testnet
+    decimals: 18
+    contract: 0xc2118d4d90b274016cb7a54c03ef52e6c537d957
+  - asset: USDC
+    chain: ETH
+    net: testnet
+    decimals: 6
+    contract: 0x07865c6e87b9f70255377e024ace6630c1eaa37f
+  - asset: WETH
+    chain: ETH
+    net: testnet
+    decimals: 18
+    contract: 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6
+  - asset: WETH
+    chain: MATIC
+    net: testnet
+    decimals: 18
+    contract: 0xc6735cc74553Cc2caeB9F5e1Ea0A4dAe12ef4632
+  - asset: WSOL
+    chain: SOL
+    net: testnet
+    decimals: 9
+    contract: So11111111111111111111111111111111111111112
+  - asset: USDC
+    chain: SOL
+    net: testnet
+    decimals: 6
+    contract: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+  - asset: WETH
+    chain: SOL
+    net: testnet
+    decimals: 8
+    contract: 7VPWjBhCXrpYYBiRKZh1ubh9tLZZNkZGp2ReRphEV4Mc
+  - asset: USDC
+    chain: INJ
+    net: testnet
+    decimals: 6
+    contract: factory/inj17vytdwqczqz72j65saukplrktd4gyfme5agf6c/usdc
+    type: native
+  - asset: USDT
+    chain: INJ
+    net: testnet
+    decimals: 6
+    contract: peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
+
+  contract_accounts:
+    - wallet: 'TMSL-BTCX-TMSL-217:dex-trading.ETH'
+      native_asset: ETH
+      signer_address: '0x648ff8e9aceb9e60d35101952e43c368ae907936'
+      contract_address: '0x2d35ce0cabf4ac263eab1c182a454c91cc155cc1'
+      contract_name: 'customTrader'
+
+  tasks:
+    # Solana
+    - name: sol-wrap
+      code: WrapTx
+      chain: SOL
+      allow:
+      - SOL -> WSOL.SOL
+    - name: sol-unwrap
+      code: UnwrapEverythingTx
+      chain: SOL
+      allow:
+      - WSOL.SOL -> SOL
+    # Ethereum
+    - name: eth-wrap
+      allow:
+      - ETH -> WETH.ETH
+      - WETH.ETH  # for compatibility
+      operations:
+      - function: deposit
+        contract: dst_asset
+        signature: d0e30db0
+        payable: true
+    - name: eth-unwrap
+      chain: ETH
+      allow:
+      - WETH.ETH -> ETH
+      operations:
+      - function: withdraw
+        signature: 2e1a7d4d
+        params:
+        - name: qty
+          type: uint256
+          bind: amount
+    - name: proxy-transfer-eth
+      code: ProxyTransferTx
+      allow:
+      - ETH
+    - name: proxy-transfer-erc20
+      code: ProxyTransferTx
+      allow:
+      - "*"
+    - name: coinbase-multisend-eth
+      code: MultisendTransferTx
+      operations:
+      - function: multisendETH
+        signature: 1a1da075
+        contract: 0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43
+        params:
+        - name: ignored1
+          type: uint256
+          # 40
+        - name: ignored2
+          type: uint256
+          # 15694
+        - name: tx
+          type: array # array is not yet implemented
+          bind: destinations
+          fields:
+          - name: to
+            type: address
+          - name: amount
+            type: uint256
+    - name: coinbase-multisend-erc20
+      code: MultisendTransferTx
+      operations:
+      - function: multisendERC20
+        signature: ca350aa6
+        contract: 0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43
+        params:
+        - name: ignored1
+          type: uint256
+          # 40
+        - name: ignored2
+          type: uint256
+          # 3d090
+        - name: tx
+          type: array # array is not yet implemented
+          bind: destinations
+          fields:
+          - name: asset
+            type: address
+          - name: to
+            type: address
+          - name: amount
+            type: uint256
+    # Bridging
+    - name: wormhole-approve
+      operations:
+      - function: approve
+        signature: 095ea7b3
+        params:
+        - name: spender
+          type: address
+          value:
+            ETH: 0x3ee18B2214AFF97000D974cf647E7C347E8fa585
+            FTM: 0x7C9Fc5741288cDFdD83CeB07f3ea7e22618D79D2
+            AVAX: 0x0e082F06FF657D94310cB8cE8B0D9a04541d8052
+        - name: amount
+          type: uint256
+          bind: amount
+    - name: wormhole-transfer
+      code: WormholeTransferTx
+      default_params:
+        arbiter_fee_usd: 5
+      operations:
+      - function: transfer
+        signature: 0f5287b0
+        contract:
+          ETH: 0x3ee18B2214AFF97000D974cf647E7C347E8fa585
+          FTM: 0x7C9Fc5741288cDFdD83CeB07f3ea7e22618D79D2
+          AVAX: 0x0e082F06FF657D94310cB8cE8B0D9a04541d8052
+        params:
+        - name: token
+          type: address
+          bind: contract
+        - name: amount
+          type: uint256
+          bind: amount
+        - name: chain
+          type: uint256
+          match: dst_asset
+          value:
+            SOL: 1
+            ETH: 2
+            MATIC: 5
+        - name: recipient
+          type: address
+          bind: to
+
+    # example to show that erc20.transfer can be written as a task
+    - name: erc20-transfer
+      chain: ETH
+      allow:
+      - USDC.ETH
+      - WETH.ETH
+      operations:
+      - function: transfer
+        signature: a9059cbb
+        params:
+        - name: addr
+          type: address
+          bind: to
+        - name: qty
+          type: uint256
+          bind: amount
+  pipelines:
+    - name: wormhole-transfer
+      allow:
+        - WETH.ETH -> WETH.MATIC
+        - WETH.ETH -> WETH.SOL
+        - WETH.MATIC -> WETH.SOL
+      tasks:
+        - wormhole-approve
+        - wormhole-transfer
