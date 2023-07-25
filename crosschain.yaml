@@ -61,6 +61,10 @@ crosschain:
   # Solana
   - asset: SOL
     driver: solana
+    clients:
+    - driver: crosschain
+      url: http://localhost:3000
+    - url: 'https://api.devnet.solana.com'
     net: devnet
     url: 'https://api.devnet.solana.com'
     chain_name: Solana (Devnet)

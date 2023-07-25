@@ -133,7 +133,7 @@ func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 	if err != nil {
 		panic("unsupported asset")
 	}
-	address := xc.MustAddress(asset, "MYiaXnRnaRCinBxK1usPhLeVA1Bfae4aepdT1pcPeNx")
+	address := xc.MustAddress(asset, "44UY77prgrQmf4sbD9pyyk3dqRQPMM32QQv4YTHjLReh")
 	client, _ := xc.NewClient(asset)
 	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
 	if err != nil {

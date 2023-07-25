@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -18,11 +17,13 @@ import (
 	"github.com/jumpcrypto/crosschain/chain/aptos"
 	"github.com/jumpcrypto/crosschain/chain/bitcoin"
 	"github.com/jumpcrypto/crosschain/chain/cosmos"
+	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
 	"github.com/jumpcrypto/crosschain/chain/evm"
 	"github.com/jumpcrypto/crosschain/chain/solana"
 	"github.com/jumpcrypto/crosschain/chain/substrate"
 	"github.com/jumpcrypto/crosschain/chain/sui"
 	"github.com/jumpcrypto/crosschain/config"
+	"github.com/jumpcrypto/crosschain/factory/helper"
 )
 
 // FactoryContext is the main Factory interface
@@ -391,12 +392,12 @@ func (f *Factory) NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 
 // MarshalTxInput marshalls a TxInput struct
 func (f *Factory) MarshalTxInput(input TxInput) ([]byte, error) {
-	return MarshalTxInput(input)
+	return helper.MarshalTxInput(input)
 }
 
 // UnmarshalTxInput unmarshalls data into a TxInput struct
 func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
-	return UnmarshalTxInput(data)
+	return helper.UnmarshalTxInput(data)
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
@@ -625,7 +626,20 @@ func AssetsToMap(assetsList []ITask) *sync.Map {
 }
 
 func newClient(cfg ITask) (Client, error) {
-	switch Driver(cfg.GetDriver()) {
+	nativeAsset := cfg.GetNativeAsset()
+	defaultDriver := nativeAsset.GetDriver()
+
+	driver := defaultDriver
+	if len(nativeAsset.Clients) > 0 {
+		//TODO: support retrieve client by id
+		id := 0
+		client := nativeAsset.Clients[id]
+		if client.Driver != "" {
+			driver = Driver(client.Driver)
+		}
+	}
+
+	switch driver {
 	case DriverEVM:
 		return evm.NewClient(cfg)
 	case DriverEVMLegacy:
@@ -642,6 +656,9 @@ func newClient(cfg ITask) (Client, error) {
 		return bitcoin.NewClient(cfg)
 	case DriverSubstrate:
 		return substrate.NewClient(cfg)
+	// Crosschain client-only driver
+	case DriverCrosschain:
+		return xcclient.NewClient(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -706,51 +723,6 @@ func newAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return substrate.NewAddressBuilder(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
-}
-
-func MarshalTxInput(txInput TxInput) ([]byte, error) {
-	return json.Marshal(txInput)
-}
-
-func UnmarshalTxInput(data []byte) (TxInput, error) {
-	var env TxInputEnvelope
-	buf := []byte(data)
-	err := json.Unmarshal(buf, &env)
-	if err != nil {
-		return nil, err
-	}
-	switch env.Type {
-	case DriverAptos:
-		var txInput aptos.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverCosmos, DriverCosmosEvmos:
-		var txInput cosmos.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverEVM, DriverEVMLegacy:
-		var txInput evm.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverSolana:
-		var txInput solana.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverBitcoin:
-		var txInput bitcoin.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverSui:
-		var txInput sui.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case DriverSubstrate:
-		var txInput substrate.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	default:
-		return nil, fmt.Errorf("invalid TxInput type: %s", env.Type)
-	}
 }
 
 func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {

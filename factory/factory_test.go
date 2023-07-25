@@ -12,6 +12,7 @@ import (
 	"github.com/jumpcrypto/crosschain/chain/solana"
 	"github.com/jumpcrypto/crosschain/chain/substrate"
 	"github.com/jumpcrypto/crosschain/chain/sui"
+	"github.com/jumpcrypto/crosschain/factory/helper"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
 )
@@ -478,9 +479,9 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 			Value: xc.NewAmountBlockchainFromUint64(200),
 		},
 	}
-	btcBz, err := MarshalTxInput(inputBtc)
+	btcBz, err := helper.MarshalTxInput(inputBtc)
 	require.NoError(err)
-	inputBtc2, err := UnmarshalTxInput(btcBz)
+	inputBtc2, err := helper.UnmarshalTxInput(btcBz)
 	require.NoError(err)
 
 	require.Equal(inputBtc.UnspentOutputs[0].Value.String(), "100")
@@ -513,9 +514,9 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 		default:
 			require.Fail("must add driver to test: " + string(driver))
 		}
-		bz, err := MarshalTxInput(input)
+		bz, err := helper.MarshalTxInput(input)
 		require.NoError(err)
-		_, err = UnmarshalTxInput(bz)
+		_, err = helper.UnmarshalTxInput(bz)
 		require.NoError(err)
 	}
 }
