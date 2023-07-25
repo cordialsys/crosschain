@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/shopspring/decimal"
 )
@@ -132,16 +133,34 @@ func (amount AmountHumanReadable) Div(x AmountHumanReadable) AmountHumanReadable
 	return AmountHumanReadable(decimal.Decimal(amount).Div(decimal.Decimal(x)))
 }
 
-func (b *AmountBlockchain) MarshalJSON() ([]byte, error) {
-	return []byte(b.String()), nil
+func (b AmountHumanReadable) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + b.String() + "\""), nil
+}
+
+func (b *AmountHumanReadable) UnmarshalJSON(p []byte) error {
+	if string(p) == "null" {
+		return nil
+	}
+	str := strings.Trim(string(p), "\"")
+	decimal, err := decimal.NewFromString(str)
+	if err != nil {
+		return err
+	}
+	*b = AmountHumanReadable(decimal)
+	return nil
+}
+
+func (b AmountBlockchain) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + b.String() + "\""), nil
 }
 
 func (b *AmountBlockchain) UnmarshalJSON(p []byte) error {
 	if string(p) == "null" {
 		return nil
 	}
+	str := strings.Trim(string(p), "\"")
 	var z big.Int
-	_, ok := z.SetString(string(p), 10)
+	_, ok := z.SetString(str, 10)
 	if !ok {
 		return fmt.Errorf("not a valid big integer: %s", p)
 	}

@@ -49,15 +49,15 @@ var _ xc.FullClientWithGas = &Client{}
 // TxInput for EVM
 type TxInput struct {
 	xc.TxInputEnvelope
-	Nonce    uint64
-	GasLimit uint64
+	Nonce    uint64 `json:"nonce,omitempty"`
+	GasLimit uint64 `json:"gas_limit,omitempty"`
 	// DynamicFeeTx
-	GasTipCap xc.AmountBlockchain // maxPriorityFeePerGas
-	GasFeeCap xc.AmountBlockchain // maxFeePerGas
+	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
+	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
 	// LegacyTx
-	GasPrice xc.AmountBlockchain // wei per gas
+	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 	// Task params
-	Params []string
+	Params []string `json:"params,omitempty"`
 }
 
 func NewTxInput() *TxInput {

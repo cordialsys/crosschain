@@ -14,12 +14,12 @@ import (
 // Tx for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	SequenceNumber uint64
-	GasLimit       uint64
-	GasPrice       uint64
-	Timestamp      uint64
-	ChainId        int
-	Pubkey         []byte
+	SequenceNumber uint64 `json:"sequence_number,omitempty"`
+	GasLimit       uint64 `json:"gas_limit,omitempty"`
+	GasPrice       uint64 `json:"gas_price,omitempty"`
+	Timestamp      uint64 `json:"timestamp,omitempty"`
+	ChainId        int    `json:"chain_id,omitempty"`
+	Pubkey         []byte `json:"pubkey,omitempty"`
 }
 
 func NewTxInput() *TxInput {

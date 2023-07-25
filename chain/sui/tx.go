@@ -15,15 +15,15 @@ import (
 // Tx for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	GasBudget uint64
-	GasPrice  uint64
-	Pubkey    []byte
+	GasBudget uint64 `json:"gas_budget,omitempty"`
+	GasPrice  uint64 `json:"gas_price,omitempty"`
+	Pubkey    []byte `json:"pubkey,omitempty"`
 	// Native Sui object that we can use to pay gas with
-	GasCoin types.Coin
+	GasCoin types.Coin `json:"gas_coin,omitempty"`
 	// All objects (native or token)
-	Coins []*types.Coin
+	Coins []*types.Coin `json:"coins,omitempty"`
 	// current epoch
-	CurrentEpoch uint64
+	CurrentEpoch uint64 `json:"current_epoch,omitempty"`
 }
 
 var _ xc.TxInputWithPublicKey = &TxInput{}

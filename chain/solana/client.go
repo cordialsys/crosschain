@@ -17,15 +17,15 @@ import (
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
-	RecentBlockHash     solana.Hash
-	ToIsATA             bool
-	ShouldCreateATA     bool
-	SourceTokenAccounts []*TokenAccount
+	RecentBlockHash     solana.Hash     `json:"recent_block_hash,omitempty"`
+	ToIsATA             bool            `json:"to_is_ata,omitempty"`
+	ShouldCreateATA     bool            `json:"should_create_ata,omitempty"`
+	SourceTokenAccounts []*TokenAccount `json:"source_token_accounts,omitempty"`
 }
 
 type TokenAccount struct {
-	Account solana.PublicKey
-	Balance xc.AmountBlockchain
+	Account solana.PublicKey    `json:"account,omitempty"`
+	Balance xc.AmountBlockchain `json:"balance,omitempty"`
 }
 
 // NewTxInput returns a new Solana TxInput

@@ -15,7 +15,7 @@ type TxInput struct {
 	xc.TxInputEnvelope
 	UnspentOutputs  []Output            `json:"unspent_outputs"`
 	Inputs          []Input             `json:"input"`
-	FromPublicKey   []byte              `json:"from_public_key"`
+	FromPublicKey   []byte              `json:"from_pubkey"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 }
 

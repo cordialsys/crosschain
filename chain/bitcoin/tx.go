@@ -25,12 +25,12 @@ type Outpoint struct {
 type Output struct {
 	Outpoint     `json:"outpoint"`
 	Value        xc.AmountBlockchain `json:"value"`
-	PubKeyScript []byte              `json:"pubKeyScript"`
+	PubKeyScript []byte              `json:"pubkey_script"`
 }
 
 type Input struct {
 	Output    `json:"output"`
-	SigScript []byte     `json:"sigScript,omitempty"`
+	SigScript []byte     `json:"sig_script,omitempty"`
 	Address   xc.Address `json:"address,omitempty"`
 }
 

@@ -34,35 +34,35 @@ const (
 
 // TxInfoEndpoint is a unified view of an endpoint (source or destination) in a TxInfo.
 type TxInfoEndpoint struct {
-	Address         Address
-	ContractAddress ContractAddress
-	Amount          AmountBlockchain
-	NativeAsset     NativeAsset
-	Asset           Asset
-	AssetConfig     *AssetConfig
+	Address         Address          `json:"address"`
+	ContractAddress ContractAddress  `json:"contract,omitempty"`
+	Amount          AmountBlockchain `json:"amount"`
+	NativeAsset     NativeAsset      `json:"chain"`
+	Asset           Asset            `json:"asset,omitempty"`
+	AssetConfig     *AssetConfig     `json:"asset_config,omitempty"`
 }
 
 // TxInfo is a unified view of common tx info across multiple blockchains. Use it as an example to build your own.
 type TxInfo struct {
-	BlockHash       string
-	TxID            string
-	ExplorerURL     string
-	From            Address
-	To              Address
-	ToAlt           Address
-	ContractAddress ContractAddress
-	Amount          AmountBlockchain
-	Fee             AmountBlockchain
-	BlockIndex      int64
-	BlockTime       int64
-	Confirmations   int64
-	Status          TxStatus
-	Sources         []*TxInfoEndpoint
-	Destinations    []*TxInfoEndpoint
-	Time            int64
-	TimeReceived    int64
+	BlockHash       string            `json:"block_hash"`
+	TxID            string            `json:"tx_id"`
+	ExplorerURL     string            `json:"explorer_url"`
+	From            Address           `json:"from"`
+	To              Address           `json:"to"`
+	ToAlt           Address           `json:"to_alt,omitempty"`
+	ContractAddress ContractAddress   `json:"contract,omitempty"`
+	Amount          AmountBlockchain  `json:"amount"`
+	Fee             AmountBlockchain  `json:"fee"`
+	BlockIndex      int64             `json:"block_index,omitempty"`
+	BlockTime       int64             `json:"block_time,omitempty"`
+	Confirmations   int64             `json:"confirmations,omitempty"`
+	Status          TxStatus          `json:"status"`
+	Sources         []*TxInfoEndpoint `json:"sources,omitempty"`
+	Destinations    []*TxInfoEndpoint `json:"destinations,omitempty"`
+	Time            int64             `json:"time,omitempty"`
+	TimeReceived    int64             `json:"time_received,omitempty"`
 	// If this transaction failed, this is the reason why.
-	Error string
+	Error string `json:"error,omitempty"`
 }
 
 // TxHash is a tx hash or id

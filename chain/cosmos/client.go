@@ -29,12 +29,12 @@ import (
 // TxInput for Cosmos
 type TxInput struct {
 	xc.TxInputEnvelope
-	AccountNumber uint64
-	Sequence      uint64
-	GasLimit      uint64
-	GasPrice      float64
-	Memo          string
-	FromPublicKey []byte
+	AccountNumber uint64  `json:"account_number,omitempty"`
+	Sequence      uint64  `json:"sequence,omitempty"`
+	GasLimit      uint64  `json:"gas_limit,omitempty"`
+	GasPrice      float64 `json:"gas_price,omitempty"`
+	Memo          string  `json:"memo,omitempty"`
+	FromPublicKey []byte  `json:"from_pubkey,omitempty"`
 }
 
 func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {

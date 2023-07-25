@@ -30,10 +30,13 @@ var _ xc.Client = &Client{}
 // TxInput for Substrate
 type TxInput struct {
 	xc.TxInputEnvelope
-	meta                 types.Metadata
-	genesisHash, curHash types.Hash
-	rv                   types.RuntimeVersion
-	curNum, tip, nonce   uint64
+	meta        types.Metadata       `json:"meta,omitempty"`
+	genesisHash types.Hash           `json:"genesis_hash,omitempty"`
+	curHash     types.Hash           `json:"current_hash,omitempty"`
+	rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
+	curNum      uint64               `json:"current_num,omitempty"`
+	tip         uint64               `json:"tip,omitempty"`
+	nonce       uint64               `json:"nonce,omitempty"`
 }
 
 // NewClient returns a new Substrate Client
