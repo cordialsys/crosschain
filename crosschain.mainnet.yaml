@@ -176,6 +176,17 @@ crosschain:
     chain_name: Bitcoin
     explorer_url: 'https://blockchair.com/bitcoin'
     decimals: 8
+  - asset: XDC
+    driver: "evm-legacy"
+    net: mainnet
+    url: 'https://rpc.xdcrpc.com'
+    chain_id: 50
+    chain_name: XinFin
+    explorer_url: 'https://explorer.xinfin.network/'
+    indexer_url: 'https://xdc.blocksscan.io'
+    indexer_type: "blocksscan"
+    polling_period: 6m
+    decimals: 18
 
   tokens:
   - asset: DAI

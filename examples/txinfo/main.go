@@ -14,7 +14,7 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset string, txHash
 	// asset is used to create client, builder, signer, etc.
 	asset, err := xc.GetAssetConfig("", nativeAsset)
 	if err != nil {
-		panic("unsupported asset")
+		panic("unsupported asset: " + nativeAsset)
 	}
 
 	// fetch tx info
@@ -25,6 +25,9 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset string, txHash
 	}
 	info, _ = xc.EnrichDestinations(asset, info)
 	fmt.Printf("%+v\n", info)
+	for _, dst := range info.Destinations {
+		fmt.Printf("destination: %+v\n", dst)
+	}
 }
 
 func main() {

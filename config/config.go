@@ -18,6 +18,7 @@ func getViper() *viper.Viper {
 	v.SetConfigType("yaml")
 	v.AddConfigPath(".")
 	v.AddConfigPath("..")
+	v.SetConfigFile(os.Getenv("XC_CONFIG"))
 	return v
 }
 

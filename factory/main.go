@@ -804,46 +804,23 @@ func NormalizeMoveAddress(address string) string {
 // NormalizeAddressString normalizes an address, e.g. returns lowercase when possible
 func NormalizeAddressString(address string, nativeAsset string) string {
 	if nativeAsset == "" {
-		nativeAsset = "ETH"
+		nativeAsset = string(ETH)
 	}
 
 	address = strings.TrimSpace(address)
-	switch NativeAsset(nativeAsset) {
-	// hex formatted addresses
-	case ETH,
-		AVAX, ArbETH, CELO, MATIC, OptETH,
-		ETC, FTM, BNB, ROSE, ACA, KAR, KLAY, AurETH, CHZ, CHZ2, OAS:
-		if strings.HasPrefix(address, "0x") {
-			return strings.ToLower(address)
-		}
-	case XDC:
-		if strings.HasPrefix(address, "0x") || strings.HasPrefix(address, "xdc") {
-			return strings.ToLower(address)
-		}
-	case BCH:
-		// remove bitcoincash: prefix
-		if strings.Contains(address, ":") {
-			return strings.Split(address, ":")[1]
-		}
-	case APTOS, SUI:
-		return NormalizeMoveAddress(address)
-	default:
-	}
-	return address
-}
-
-func NormalizeAddressStringByDriver(address string, driver Driver) string {
-	address = strings.TrimSpace(address)
-	switch driver {
-	// hex formatted addresses
+	switch NativeAsset(nativeAsset).Driver() {
 	case DriverEVM, DriverEVMLegacy:
+		// XDC chain uses a prefix
+		if nativeAsset == string(XDC) && strings.HasPrefix(address, "0x") {
+			address = "xdc" + address[2:]
+		}
 		if strings.HasPrefix(address, "0x") {
 			return strings.ToLower(address)
 		}
-		// XDC chain
 		if strings.HasPrefix(address, "xdc") {
 			return strings.ToLower(address)
 		}
+
 	case DriverBitcoin:
 		// remove bitcoincash: prefix
 		if strings.Contains(address, ":") {
