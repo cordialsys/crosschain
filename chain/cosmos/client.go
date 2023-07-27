@@ -20,6 +20,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	xc "github.com/jumpcrypto/crosschain"
+	"github.com/jumpcrypto/crosschain/utils"
 
 	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
 
@@ -73,21 +74,48 @@ type Client struct {
 
 var _ xc.FullClientWithGas = &Client{}
 
+func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
+	bodyStr := string(body)
+
+	// try to parse as json and remove .result.block.evidence field as it's incompatible between chains
+	val := map[string]interface{}{}
+	err := json.Unmarshal(body, &val)
+	if err != nil {
+		// skip
+	} else {
+		if result, ok := val["result"].(map[string]interface{}); ok {
+			if block, ok := result["block"].(map[string]interface{}); ok {
+				// Sei chain changed the schema for this field
+				delete(block, "evidence")
+				newBody, err := json.Marshal(val)
+				if err != nil {
+					// skip
+				} else {
+					// replace
+					return newBody
+				}
+			}
+		}
+	}
+
+	return []byte(bodyStr)
+}
+
 // NewClient returns a new Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	asset := cfgI
 	cfg := cfgI.GetNativeAsset()
 	host := cfg.URL
+	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableCosmosResponses)
+	interceptor.Enable()
 	httpClient, err := rpchttp.NewWithClient(
 		host,
 		"websocket",
 		&http.Client{
-			// Timeout: opts.Timeout,
-
-			// We override the transport layer with a custom implementation as
-			// there is an issue with the Cosmos SDK that causes it to
-			// incorrectly parse URLs.
-			Transport: newTransport(host, &http.Transport{}),
+			// Need to use custom transport because:
+			// - cosmos library does not parse URLs correctly
+			// - need to intercept responses to remove incompatible response fields for some chains
+			Transport: interceptor,
 		})
 	if err != nil {
 		panic(err)

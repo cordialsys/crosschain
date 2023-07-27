@@ -78,6 +78,8 @@ const (
 	SOL       = NativeAsset("SOL")       // Solana
 	SUI       = NativeAsset("SUI")       // SUI
 	XPLA      = NativeAsset("XPLA")      // XPLA
+	TIA       = NativeAsset("TIA")       // celestia
+	SEI       = NativeAsset("SEI")       // Sei
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -114,6 +116,8 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SOL,
 	SUI,
 	XPLA,
+	TIA,
+	SEI,
 }
 
 // Driver is the type of a chain
@@ -158,7 +162,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, LUNC, LUNA:
+	case ATOM, XPLA, INJ, LUNC, LUNA, SEI, TIA:
 		return DriverCosmos
 	case SUI:
 		return DriverSui

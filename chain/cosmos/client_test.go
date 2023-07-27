@@ -199,10 +199,12 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 func (s *CrosschainTestSuite) TestSubmitTxErr() {
 	require := s.Require()
 
-	client, _ := NewClient(&xc.AssetConfig{})
+	client, _ := NewClient(&xc.AssetConfig{
+		URL: "",
+	})
 	tx := &Tx{}
 	err := client.SubmitTx(s.Ctx, tx)
-	require.ErrorContains(err, "unsupported protocol scheme")
+	require.ErrorContains(err, "no Host in request URL")
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInfo() {

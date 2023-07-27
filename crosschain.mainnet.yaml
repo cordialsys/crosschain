@@ -97,6 +97,7 @@ crosschain:
     chain_prefix: 'cosmos'
     chain_coin: 'uatom'
     chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
     chain_name: Cosmos (Theta Testnet)
     explorer_url: 'https://explorer.theta-testnet.polypore.xyz'
     decimals: 6
@@ -121,8 +122,9 @@ crosschain:
     chain_id_str: 'dimension_37-1'
     chain_prefix: 'xpla'
     chain_coin: 'axpla'
-    chain_coin_hd_path: 60
+    chain_coin_hd_path: 118
     chain_name: XPLA
+    chain_gas_price_default: 0.1
     explorer_url: 'https://explorer.xpla.io/mainnet'
     decimals: 18
   - asset: LUNC
@@ -134,6 +136,7 @@ crosschain:
     chain_prefix: 'terra'
     chain_coin: 'uluna'
     chain_coin_hd_path: 330
+    chain_gas_price_default: 5
     chain_name: Terra Classic
     chain_gas_multiplier: 12.0
     explorer_url: 'https://finder.terra.money/mainnet'

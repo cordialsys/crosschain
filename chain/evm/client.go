@@ -1,11 +1,8 @@
 package evm
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"net/http"
@@ -20,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/chain/evm/erc20"
+	"github.com/jumpcrypto/crosschain/utils"
 )
 
 const DEFAULT_GAS_PRICE = 20_000_000_000
@@ -41,7 +39,7 @@ type Client struct {
 	EthClient       *ethclient.Client
 	RpcClient       *rpc.Client
 	ChainId         *big.Int
-	Interceptor     *HttpInterceptor
+	Interceptor     *utils.HttpInterceptor
 	EstimateGasFunc xc.EstimateGasFunc
 	Legacy          bool
 }
@@ -70,71 +68,6 @@ func NewTxInput() *TxInput {
 	}
 }
 
-// Interceptor
-type HttpInterceptor struct {
-	core    http.RoundTripper
-	enabled bool
-}
-
-func (i *HttpInterceptor) Enable() {
-	i.enabled = true
-}
-func (i *HttpInterceptor) Disable() {
-	i.enabled = false
-}
-
-func (i HttpInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
-	defer func() {
-		_ = req.Body.Close()
-	}()
-
-	res, err := i.core.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	if i.enabled {
-		defer func() {
-			_ = res.Body.Close()
-		}()
-		body, _ := ioutil.ReadAll(res.Body)
-		bodyStr := string(body)
-
-		newStr := ""
-		// KLAY issue
-		if strings.Contains(bodyStr, "type\":\"TxTypeLegacyTransaction") {
-			log.Print("Replacing KLAY TxTypeLegacyTransaction")
-			newStr = strings.Replace(bodyStr, "TxTypeLegacyTransaction", "0x0", 1)
-			newStr = strings.Replace(newStr, "\"V\"", "\"v\"", 1)
-			newStr = strings.Replace(newStr, "\"R\"", "\"r\"", 1)
-			newStr = strings.Replace(newStr, "\"S\"", "\"s\"", 1)
-			newStr = strings.Replace(newStr, "\"signatures\":[{", "", 1)
-			newStr = strings.Replace(newStr, "}]", ",\"cumulativeGasUsed\":\"0x0\"", 1)
-		}
-		if strings.Contains(bodyStr, "parentHash") {
-			log.Print("Adding KLAY/CELO sha3Uncles")
-			newStr = strings.Replace(bodyStr, "parentHash", "gasLimit\":\"0x0\",\"difficulty\":\"0x0\",\"miner\":\"0x0000000000000000000000000000000000000000\",\"sha3Uncles\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"parentHash", 1)
-		}
-		if newStr == "" {
-			newStr = bodyStr[:]
-		}
-		// XDC returns some values prefixed with "xdc"
-		if strings.Contains(bodyStr, "\"xdc") {
-			log.Print("Replacing xdc prefix with 0x")
-			newStr = strings.Replace(newStr, "\"xdc", "\"0x", -1)
-		}
-
-		if newStr != "" {
-			newBody := []byte(newStr)
-			res.Body = io.NopCloser(bytes.NewReader(newBody))
-			res.ContentLength = int64(len(newBody))
-			res.Header.Set("Content-Length", fmt.Sprintf("%d", res.ContentLength))
-		}
-	}
-	newRes := res
-
-	return newRes, nil
-}
-
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetNativeAsset()
 	if cfg.Provider == "infura" {
@@ -143,13 +76,46 @@ func configToEVMClientURL(cfgI xc.ITask) string {
 	return cfg.URL
 }
 
+func ReplaceIncompatiableEvmResponses(body []byte) []byte {
+	bodyStr := string(body)
+	newStr := ""
+	// KLAY issue
+	if strings.Contains(bodyStr, "type\":\"TxTypeLegacyTransaction") {
+		log.Print("Replacing KLAY TxTypeLegacyTransaction")
+		newStr = strings.Replace(bodyStr, "TxTypeLegacyTransaction", "0x0", 1)
+		newStr = strings.Replace(newStr, "\"V\"", "\"v\"", 1)
+		newStr = strings.Replace(newStr, "\"R\"", "\"r\"", 1)
+		newStr = strings.Replace(newStr, "\"S\"", "\"s\"", 1)
+		newStr = strings.Replace(newStr, "\"signatures\":[{", "", 1)
+		newStr = strings.Replace(newStr, "}]", ",\"cumulativeGasUsed\":\"0x0\"", 1)
+	}
+	if strings.Contains(bodyStr, "parentHash") {
+		log.Print("Adding KLAY/CELO sha3Uncles")
+		newStr = strings.Replace(bodyStr, "parentHash", "gasLimit\":\"0x0\",\"difficulty\":\"0x0\",\"miner\":\"0x0000000000000000000000000000000000000000\",\"sha3Uncles\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"parentHash", 1)
+	}
+	if newStr == "" {
+		newStr = bodyStr[:]
+	}
+	if strings.Contains(bodyStr, "\"xdc") {
+		log.Print("Replacing xdc prefix with 0x")
+		newStr = strings.Replace(newStr, "\"xdc", "\"0x", -1)
+	}
+
+	if newStr != "" {
+		return []byte(newStr)
+	}
+	// return unmodified body
+	return body
+}
+
 // NewClient returns a new EVM Client
 func NewClient(asset xc.ITask) (*Client, error) {
 	nativeAsset := asset.GetNativeAsset()
 	url := configToEVMClientURL(asset)
 
 	// c, err := rpc.DialContext(context.Background(), url)
-	interceptor := &HttpInterceptor{http.DefaultTransport, false}
+	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableEvmResponses)
+	// {http.DefaultTransport, false}
 	httpClient := &http.Client{
 		Transport: interceptor,
 	}

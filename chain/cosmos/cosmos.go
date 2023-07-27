@@ -7,6 +7,7 @@ import (
 
 	// "github.com/terra-money/core/x/vesting"
 
+	"github.com/CosmWasm/wasmd/x/wasm"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -73,6 +74,7 @@ var ModuleBasics = module.NewBasicManager(
 	// ica.AppModuleBasic{},
 	// router.AppModuleBasic{},
 	authzmodule.AppModuleBasic{},
+	wasm.AppModuleBasic{},
 )
 
 func NewEncodingConfig() EncodingConfig {

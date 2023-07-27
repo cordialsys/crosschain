@@ -140,7 +140,32 @@ crosschain:
     chain_gas_multiplier: 12.0
     explorer_url: 'https://finder.terra.money/testnet'
     decimals: 6
-  # Aptos
+  - asset: TIA
+    driver: cosmos
+    net: testnet
+    url: 'https://rpc-mocha.pops.one'
+    chain_id_str: 'mocha-3'
+    chain_prefix: 'celestia'
+    chain_coin: 'utia'
+    chain_coin_hd_path: 118
+    chain_name: Celestia (Testnet)
+    chain_gas_multiplier: 12.0
+    chain_gas_price_default: 0.1
+    explorer_url: 'https://celestia.explorers.guru'
+    decimals: 6
+  - asset: SEI
+    driver: cosmos
+    net: testnet
+    url: 'https://sei-testnet-rpc.polkachu.com'
+    chain_id_str: 'atlantic-2'
+    chain_prefix: 'sei'
+    chain_coin: 'usei'
+    chain_coin_hd_path: 118
+    chain_name: Sei (Testnet)
+    chain_gas_multiplier: 12.0
+    chain_gas_price_default: 0.1
+    explorer_url: 'https://sei.explorers.guru/'
+    decimals: 1
   - asset: APTOS
     driver: aptos
     net: devnet

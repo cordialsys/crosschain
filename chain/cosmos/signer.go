@@ -35,7 +35,8 @@ func (signer Signer) ImportPrivateKey(privateKeyOrMnemonic string) (xc.PrivateKe
 		}
 		codec := MakeCosmosConfig().Marshaler
 		kb := keyring.NewInMemory(codec)
-		hdPath := hd.CreateHDPath(signer.Asset.GetNativeAsset().ChainCoinHDPath, 0, 0).String()
+		pathNum := signer.Asset.GetNativeAsset().ChainCoinHDPath
+		hdPath := hd.CreateHDPath(pathNum, 0, 0).String()
 		_, err := kb.NewAccount("test", privateKeyOrMnemonic, keyring.DefaultBIP39Passphrase, hdPath, hd.Secp256k1)
 		if err != nil {
 			return xc.PrivateKey{}, err
