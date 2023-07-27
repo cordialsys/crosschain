@@ -99,7 +99,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 				return nil, errors.Join(err, err2)
 			}
 			addr, err2 = BchAddressFromBytes(bchaddr, txBuilder.Params)
-			if err != nil {
+			if err2 != nil {
 				return nil, errors.Join(err, err2)
 			}
 		}

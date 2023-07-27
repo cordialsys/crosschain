@@ -211,6 +211,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 
 	result.TxID = string(txHash)
 	result.ExplorerURL = client.Asset.GetNativeAsset().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetNativeAsset().Net
+	result.ContractAddress = tx.ContractAddress()
 
 	toAddr := tx.To()
 	// If no clear destination, try looking up owner behind a token account
@@ -231,12 +232,12 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 				return result, err
 			}
 			toAddr = xc.Address(accountInfo.Parsed.Info.Owner)
+			result.ContractAddress = xc.ContractAddress(accountInfo.Parsed.Info.Mint)
 		}
 	}
 
 	result.From = tx.From()
 	result.To = toAddr
-	result.ContractAddress = tx.ContractAddress()
 	result.Amount = tx.Amount()
 
 	return result, nil
