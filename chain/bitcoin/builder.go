@@ -92,16 +92,15 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	// Outputs
 	for _, recipient := range recipients {
 		addr, err := btcutil.DecodeAddress(string(recipient.To), txBuilder.Params)
-		fmt.Println("trying to decode ", recipient.To)
 		if err != nil {
 			// try to decode as BCH
 			bchaddr, err2 := DecodeBchAddress(string(recipient.To), txBuilder.Params)
 			if err2 != nil {
-				return nil, err
+				return nil, errors.Join(err, err2)
 			}
-			addr, err = BchAddressFromBytes(bchaddr, txBuilder.Params)
+			addr, err2 = BchAddressFromBytes(bchaddr, txBuilder.Params)
 			if err != nil {
-				return nil, err
+				return nil, errors.Join(err, err2)
 			}
 		}
 		script, err := txscript.PayToAddrScript(addr)

@@ -133,16 +133,13 @@ func BchAddressFromBytes(addrBytes []byte, params *chaincfg.Params) (btcutil.Add
 	case ripemd160.Size: // P2PKH or P2SH
 		switch addrBytes[0] {
 		case 0: // P2PKH
-			fmt.Println("P2PKH")
 			return btcutil.NewAddressPubKeyHash(addrBytes[1:21], params)
 		case 8: // P2SH
-			fmt.Println("P2SH")
 			return btcutil.NewAddressScriptHashFromHash(addrBytes[1:21], params)
 		default:
 			return nil, btcutil.ErrUnknownAddressType
 		}
 	default:
-		fmt.Println("Base58")
 		addr, err := btcutil.DecodeAddress(base58.Encode(addrBytes), params)
 		if err != nil {
 			return nil, err
@@ -257,12 +254,12 @@ func AddressPrefix(params *chaincfg.Params) string {
 	if params == nil {
 		panic(fmt.Errorf("non-exhaustive pattern: params %v", params))
 	}
-	switch params {
-	case &chaincfg.MainNetParams:
+	switch params.Name {
+	case chaincfg.MainNetParams.Name:
 		return "bitcoincash"
-	case &chaincfg.TestNet3Params:
+	case chaincfg.TestNet3Params.Name:
 		return "bchtest"
-	case &chaincfg.RegressionNetParams:
+	case chaincfg.RegressionNetParams.Name:
 		return "bchreg"
 	default:
 		panic(fmt.Errorf("non-exhaustive pattern: params %v", params.Name))
