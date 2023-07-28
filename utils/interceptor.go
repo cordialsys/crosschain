@@ -39,13 +39,11 @@ func (i *HttpInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	res, err := i.core.RoundTrip(req)
 	if err != nil {
-		fmt.Println("--er")
 		return nil, err
 	}
 	if i.enabled {
-		fmt.Println("interc")
 		defer func() {
-			// _ = res.Body.Close()
+			_ = res.Body.Close()
 		}()
 		body, _ := ioutil.ReadAll(res.Body)
 

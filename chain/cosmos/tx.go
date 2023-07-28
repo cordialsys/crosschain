@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 
 	xc "github.com/jumpcrypto/crosschain"
@@ -11,6 +12,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	wasmtypes "github.com/jumpcrypto/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 )
 
 // Tx for Cosmos
@@ -25,6 +27,14 @@ type Tx struct {
 }
 
 var _ xc.Tx = Tx{}
+
+type Cw20MsgTransfer struct {
+	Transfer *Cw20Transfer `json:"transfer,omitempty"`
+}
+type Cw20Transfer struct {
+	Amount    string `json:"amount,omitempty"`
+	Recipient string `json:"recipient,omitempty"`
+}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
@@ -93,6 +103,8 @@ func (tx *Tx) ParseTransfer() {
 		switch msg := msg.(type) {
 		case *banktypes.MsgSend:
 			tx.ParsedTransfers = append(tx.ParsedTransfers, msg)
+		case *wasmtypes.MsgExecuteContract:
+			tx.ParsedTransfers = append(tx.ParsedTransfers, msg)
 		}
 	}
 }
@@ -104,6 +116,8 @@ func (tx Tx) From() xc.Address {
 		case *banktypes.MsgSend:
 			from := tf.FromAddress
 			return xc.Address(from)
+		case *wasmtypes.MsgExecuteContract:
+			return xc.Address(tf.Sender)
 		}
 	}
 	return xc.Address("")
@@ -116,7 +130,14 @@ func (tx Tx) To() xc.Address {
 		case *banktypes.MsgSend:
 			to := tf.ToAddress
 			return xc.Address(to)
+		case *wasmtypes.MsgExecuteContract:
+			msg := Cw20MsgTransfer{}
+			_ = json.Unmarshal(tf.Msg, &msg)
+			if msg.Transfer != nil {
+				return xc.Address(msg.Transfer.Recipient)
+			}
 		}
+
 	}
 	return xc.Address("")
 }
@@ -132,6 +153,8 @@ func (tx Tx) ContractAddress() xc.ContractAddress {
 				denom = ""
 			}
 			return xc.ContractAddress(denom)
+		case *wasmtypes.MsgExecuteContract:
+			return xc.ContractAddress(tf.Contract)
 		}
 	}
 	return xc.ContractAddress("")
@@ -144,6 +167,12 @@ func (tx Tx) Amount() xc.AmountBlockchain {
 		case *banktypes.MsgSend:
 			amount := tf.Amount[0].Amount.BigInt()
 			return xc.AmountBlockchain(*amount)
+		case *wasmtypes.MsgExecuteContract:
+			msg := Cw20MsgTransfer{}
+			_ = json.Unmarshal(tf.Msg, &msg)
+			if msg.Transfer != nil {
+				return xc.NewAmountBlockchainFromStr(msg.Transfer.Amount)
+			}
 		}
 	}
 	return xc.NewAmountBlockchainFromUint64(0)
@@ -171,6 +200,18 @@ func (tx Tx) Sources() []*xc.TxInfoEndpoint {
 			})
 			// currently assume/support single-source transfers
 			return sources
+		case *wasmtypes.MsgExecuteContract:
+			msg := Cw20MsgTransfer{}
+			_ = json.Unmarshal(tf.Msg, &msg)
+			if msg.Transfer != nil {
+				sources = append(sources, &xc.TxInfoEndpoint{
+					Address:         xc.Address(tf.Sender),
+					ContractAddress: xc.ContractAddress(tf.Contract),
+					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),
+				})
+			}
+		default:
+			// fmt.Printf("unknown type: %T\n", tf)
 		}
 	}
 	return sources
@@ -190,6 +231,18 @@ func (tx Tx) Destinations() []*xc.TxInfoEndpoint {
 				ContractAddress: xc.ContractAddress(denom),
 				Amount:          xc.AmountBlockchain(*amount),
 			})
+		case *wasmtypes.MsgExecuteContract:
+			msg := Cw20MsgTransfer{}
+			_ = json.Unmarshal(tf.Msg, &msg)
+			if msg.Transfer != nil {
+				destinations = append(destinations, &xc.TxInfoEndpoint{
+					Address:         xc.Address(msg.Transfer.Recipient),
+					ContractAddress: xc.ContractAddress(tf.Contract),
+					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),
+				})
+			}
+		default:
+			// fmt.Printf("unknown type: %T\n", tf)
 		}
 	}
 	return destinations
