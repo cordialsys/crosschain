@@ -213,7 +213,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	result.ExplorerURL = client.Asset.GetNativeAsset().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetNativeAsset().Net
 	result.ContractAddress = tx.ContractAddress()
 
-	toAddr := tx.To()
+	toAddr := tx.ToOwnerAccount()
 	// If no clear destination, try looking up owner behind a token account
 	if toAddr == "" {
 		// check ATA

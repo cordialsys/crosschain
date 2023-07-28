@@ -111,8 +111,8 @@ func (tx Tx) From() xc.Address {
 	return xc.Address("")
 }
 
-// To is the account receiving a transfer
-func (tx Tx) To() xc.Address {
+// To is the owner account receiving a transfer
+func (tx Tx) ToOwnerAccount() xc.Address {
 	switch tf := tx.parsedTransfer.(type) {
 	case *system.Transfer:
 		to := tf.GetRecipientAccount().PublicKey.String()

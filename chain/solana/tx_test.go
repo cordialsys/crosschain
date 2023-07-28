@@ -105,7 +105,7 @@ func (s *SolanaTestSuite) TestTx() {
 		// basic info
 		require.Equal(v.hash, string(tx.Hash()))
 		require.Equal(v.from, string(tx.From()))
-		require.Equal(v.to, string(tx.To()))
+		require.Equal(v.to, string(tx.ToOwnerAccount()))
 		require.Equal(v.amount, tx.Amount().String())
 		require.Equal(v.contract, string(tx.ContractAddress()))
 		require.Equal(v.recentBlockhash, string(tx.RecentBlockhash()))

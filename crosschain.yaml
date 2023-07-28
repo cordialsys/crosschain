@@ -165,7 +165,7 @@ crosschain:
     chain_gas_multiplier: 12.0
     chain_gas_price_default: 0.1
     explorer_url: 'https://sei.explorers.guru/'
-    decimals: 1
+    decimals: 6
   - asset: APTOS
     driver: aptos
     net: devnet
