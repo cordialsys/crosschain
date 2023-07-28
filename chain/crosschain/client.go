@@ -9,15 +9,8 @@ import (
 	"net/http"
 
 	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/aptos"
-	"github.com/jumpcrypto/crosschain/chain/bitcoin"
-	"github.com/jumpcrypto/crosschain/chain/cosmos"
 	"github.com/jumpcrypto/crosschain/chain/crosschain/types"
-	"github.com/jumpcrypto/crosschain/chain/evm"
-	"github.com/jumpcrypto/crosschain/chain/solana"
-	"github.com/jumpcrypto/crosschain/chain/substrate"
-	"github.com/jumpcrypto/crosschain/chain/sui"
-	"github.com/jumpcrypto/crosschain/factory/helper"
+	"github.com/jumpcrypto/crosschain/factory/drivers"
 )
 
 // Client for Template
@@ -44,25 +37,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 func (client *Client) nextClient() (xc.Client, error) {
 	cfg := client.Asset
 	driver := xc.Driver(cfg.GetNativeAsset().Driver)
-	switch driver {
-	case xc.DriverEVM:
-		return evm.NewClient(cfg)
-	case xc.DriverEVMLegacy:
-		return evm.NewLegacyClient(cfg)
-	case xc.DriverCosmos, xc.DriverCosmosEvmos:
-		return cosmos.NewClient(cfg)
-	case xc.DriverSolana:
-		return solana.NewClient(cfg)
-	case xc.DriverAptos:
-		return aptos.NewClient(cfg)
-	case xc.DriverSui:
-		return sui.NewClient(cfg)
-	case xc.DriverBitcoin:
-		return bitcoin.NewClient(cfg)
-	case xc.DriverSubstrate:
-		return substrate.NewClient(cfg)
-	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
+	return drivers.NewClient(cfg, driver)
 }
 
 func (client *Client) apiAsset() *types.AssetReq {
@@ -131,7 +106,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	var r types.TxInputRes
 	_ = json.Unmarshal(res, &r)
 	rSer, _ := json.Marshal(r.TxInput)
-	return helper.UnmarshalTxInput(rSer)
+	return drivers.UnmarshalTxInput(rSer)
 }
 
 // SubmitTx submits via a Crosschain endpoint

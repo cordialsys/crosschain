@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 	"regexp"
@@ -14,16 +13,9 @@ import (
 	"gopkg.in/yaml.v2"
 
 	. "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/aptos"
-	"github.com/jumpcrypto/crosschain/chain/bitcoin"
-	"github.com/jumpcrypto/crosschain/chain/cosmos"
 	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/evm"
-	"github.com/jumpcrypto/crosschain/chain/solana"
-	"github.com/jumpcrypto/crosschain/chain/substrate"
-	"github.com/jumpcrypto/crosschain/chain/sui"
 	"github.com/jumpcrypto/crosschain/config"
-	"github.com/jumpcrypto/crosschain/factory/helper"
+	"github.com/jumpcrypto/crosschain/factory/drivers"
 )
 
 // FactoryContext is the main Factory interface
@@ -372,32 +364,49 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 
 // NewClient creates a new Client
 func (f *Factory) NewClient(cfg ITask) (Client, error) {
-	return newClient(cfg)
+	nativeAsset := cfg.GetNativeAsset()
+	defaultDriver := nativeAsset.GetDriver()
+
+	driver := defaultDriver
+	if len(nativeAsset.Clients) > 0 {
+		//TODO: support retrieve client by id
+		id := 0
+		client := nativeAsset.Clients[id]
+		if client.Driver != "" {
+			driver = Driver(client.Driver)
+		}
+	}
+
+	if driver == DriverCrosschain {
+		return xcclient.NewClient(cfg)
+	}
+
+	return drivers.NewClient(cfg, driver)
 }
 
 // NewTxBuilder creates a new TxBuilder
 func (f *Factory) NewTxBuilder(cfg ITask) (TxBuilder, error) {
-	return newTxBuilder(cfg)
+	return drivers.NewTxBuilder(cfg)
 }
 
 // NewSigner creates a new Signer
 func (f *Factory) NewSigner(cfg ITask) (Signer, error) {
-	return newSigner(cfg)
+	return drivers.NewSigner(cfg)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
 func (f *Factory) NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
-	return newAddressBuilder(cfg)
+	return drivers.NewAddressBuilder(cfg)
 }
 
 // MarshalTxInput marshalls a TxInput struct
 func (f *Factory) MarshalTxInput(input TxInput) ([]byte, error) {
-	return helper.MarshalTxInput(input)
+	return drivers.MarshalTxInput(input)
 }
 
 // UnmarshalTxInput unmarshalls data into a TxInput struct
 func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
-	return helper.UnmarshalTxInput(data)
+	return drivers.UnmarshalTxInput(data)
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
@@ -407,7 +416,7 @@ func (f *Factory) GetAddressFromPublicKey(cfg ITask, publicKey []byte) (Address,
 
 // GetAllPossibleAddressesFromPublicKey returns all PossibleAddress(es) given a public key
 func (f *Factory) GetAllPossibleAddressesFromPublicKey(cfg ITask, publicKey []byte) ([]PossibleAddress, error) {
-	builder, err := newAddressBuilder(cfg)
+	builder, err := drivers.NewAddressBuilder(cfg)
 	if err != nil {
 		return []PossibleAddress{}, err
 	}
@@ -625,108 +634,8 @@ func AssetsToMap(assetsList []ITask) *sync.Map {
 	return assetsMap
 }
 
-func newClient(cfg ITask) (Client, error) {
-	nativeAsset := cfg.GetNativeAsset()
-	defaultDriver := nativeAsset.GetDriver()
-
-	driver := defaultDriver
-	if len(nativeAsset.Clients) > 0 {
-		//TODO: support retrieve client by id
-		id := 0
-		client := nativeAsset.Clients[id]
-		if client.Driver != "" {
-			driver = Driver(client.Driver)
-		}
-	}
-
-	switch driver {
-	case DriverEVM:
-		return evm.NewClient(cfg)
-	case DriverEVMLegacy:
-		return evm.NewLegacyClient(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewClient(cfg)
-	case DriverSolana:
-		return solana.NewClient(cfg)
-	case DriverAptos:
-		return aptos.NewClient(cfg)
-	case DriverSui:
-		return sui.NewClient(cfg)
-	case DriverBitcoin:
-		return bitcoin.NewClient(cfg)
-	case DriverSubstrate:
-		return substrate.NewClient(cfg)
-	// Crosschain client-only driver
-	case DriverCrosschain:
-		return xcclient.NewClient(cfg)
-	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
-}
-
-func newTxBuilder(cfg ITask) (TxBuilder, error) {
-	switch Driver(cfg.GetDriver()) {
-	case DriverEVM:
-		return evm.NewTxBuilder(cfg)
-	case DriverEVMLegacy:
-		return evm.NewLegacyTxBuilder(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewTxBuilder(cfg)
-	case DriverSolana:
-		return solana.NewTxBuilder(cfg)
-	case DriverAptos:
-		return aptos.NewTxBuilder(cfg)
-	case DriverSui:
-		return sui.NewTxBuilder(cfg)
-	case DriverBitcoin:
-		return bitcoin.NewTxBuilder(cfg)
-	case DriverSubstrate:
-		return substrate.NewTxBuilder(cfg)
-	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
-}
-
-func newSigner(cfg ITask) (Signer, error) {
-	switch Driver(cfg.GetDriver()) {
-	case DriverEVM, DriverEVMLegacy:
-		return evm.NewSigner(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewSigner(cfg)
-	case DriverSolana:
-		return solana.NewSigner(cfg)
-	case DriverAptos:
-		return aptos.NewSigner(cfg)
-	case DriverBitcoin:
-		return bitcoin.NewSigner(cfg)
-	case DriverSui:
-		return sui.NewSigner(cfg)
-	case DriverSubstrate:
-		return substrate.NewSigner(cfg)
-	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
-}
-
-func newAddressBuilder(cfg ITask) (AddressBuilder, error) {
-	switch Driver(cfg.GetDriver()) {
-	case DriverEVM, DriverEVMLegacy:
-		return evm.NewAddressBuilder(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewAddressBuilder(cfg)
-	case DriverSolana:
-		return solana.NewAddressBuilder(cfg)
-	case DriverAptos:
-		return aptos.NewAddressBuilder(cfg)
-	case DriverBitcoin:
-		return bitcoin.NewAddressBuilder(cfg)
-	case DriverSui:
-		return sui.NewAddressBuilder(cfg)
-	case DriverSubstrate:
-		return substrate.NewAddressBuilder(cfg)
-	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
-}
-
 func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
-	builder, err := newAddressBuilder(cfg)
+	builder, err := drivers.NewAddressBuilder(cfg)
 	if err != nil {
 		return "", err
 	}
@@ -807,19 +716,5 @@ func NormalizeAddressString(address string, nativeAsset string) string {
 }
 
 func CheckError(driver Driver, err error) ClientError {
-	switch driver {
-	case DriverEVM, DriverEVMLegacy:
-		return evm.CheckError(err)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.CheckError(err)
-	case DriverSolana:
-		return solana.CheckError(err)
-	case DriverAptos:
-		return aptos.CheckError(err)
-	case DriverBitcoin:
-		return bitcoin.CheckError(err)
-	case DriverSubstrate:
-		return substrate.CheckError(err)
-	}
-	return UnknownError
+	return drivers.CheckError(driver, err)
 }

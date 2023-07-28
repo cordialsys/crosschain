@@ -5,14 +5,10 @@ import (
 	"testing"
 
 	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/aptos"
 	"github.com/jumpcrypto/crosschain/chain/bitcoin"
 	"github.com/jumpcrypto/crosschain/chain/cosmos"
-	"github.com/jumpcrypto/crosschain/chain/evm"
 	"github.com/jumpcrypto/crosschain/chain/solana"
-	"github.com/jumpcrypto/crosschain/chain/substrate"
-	"github.com/jumpcrypto/crosschain/chain/sui"
-	"github.com/jumpcrypto/crosschain/factory/helper"
+	"github.com/jumpcrypto/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
 )
@@ -479,9 +475,9 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 			Value: xc.NewAmountBlockchainFromUint64(200),
 		},
 	}
-	btcBz, err := helper.MarshalTxInput(inputBtc)
+	btcBz, err := drivers.MarshalTxInput(inputBtc)
 	require.NoError(err)
-	inputBtc2, err := helper.UnmarshalTxInput(btcBz)
+	inputBtc2, err := drivers.UnmarshalTxInput(btcBz)
 	require.NoError(err)
 
 	require.Equal(inputBtc.UnspentOutputs[0].Value.String(), "100")
@@ -490,42 +486,6 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require.EqualValues(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Outpoint.Index, 2)
 	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[0].Value.String(), "100")
 	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Value.String(), "200")
-}
-
-func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
-	require := s.Require()
-	for _, driver := range xc.SupportedDrivers {
-		var input xc.TxInput
-		switch driver {
-		case xc.DriverEVM, xc.DriverEVMLegacy:
-			input = evm.NewTxInput()
-		case xc.DriverCosmos, xc.DriverCosmosEvmos:
-			input = cosmos.NewTxInput()
-		case xc.DriverSolana:
-			input = solana.NewTxInput()
-		case xc.DriverAptos:
-			input = aptos.NewTxInput()
-		case xc.DriverBitcoin:
-			input = bitcoin.NewTxInput()
-		case xc.DriverSui:
-			input = sui.NewTxInput()
-		case xc.DriverSubstrate:
-			input = substrate.NewTxInput()
-		default:
-			require.Fail("must add driver to test: " + string(driver))
-		}
-		bz, err := helper.MarshalTxInput(input)
-		require.NoError(err)
-		_, err = helper.UnmarshalTxInput(bz)
-		require.NoError(err)
-	}
-}
-
-func (s *CrosschainTestSuite) TestSigAlg() {
-	require := s.Require()
-	for _, driver := range xc.SupportedDrivers {
-		require.NotEmpty(driver.SignatureAlgorithm())
-	}
 }
 
 func (s *CrosschainTestSuite) TestMoveAddressNormalize() {
