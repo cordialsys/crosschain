@@ -9,6 +9,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	wasmd "github.com/jumpcrypto/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 	injethsecp256k1 "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
 	injective "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/types"
 	terraclassic "github.com/jumpcrypto/crosschain/chain/cosmos/types/classic-terra/core/v2/x/vesting/types"
@@ -28,6 +29,7 @@ func RegisterExternalInterfaces(registry codectypes.InterfaceRegistry) {
 	registerInterfacesEthermint(registry)
 	registerInterfacesCosmosExtra(registry)
 	registerInterfacesInjective(registry)
+	registerInterfacesWasmd(registry)
 }
 func RegisterExternalLegacyAdmino(cdc *codec.LegacyAmino) {
 	registerLegacyAminoTerraClassic(cdc)
@@ -121,4 +123,70 @@ func registerLegacyAminoTerraClassic(cdc *codec.LegacyAmino) {
 	cdc.RegisterInterface((*exported.VestingAccount)(nil), nil)
 	cdc.RegisterConcrete(&vestingtypes.BaseVestingAccount{}, "core/BaseVestingAccount", nil)
 	cdc.RegisterConcrete(&terraclassic.LazyGradedVestingAccount{}, "core/LazyGradedVestingAccount", nil)
+}
+
+func registerInterfacesWasmd(registry codectypes.InterfaceRegistry) {
+	registry.RegisterInterface("injective.types.v1beta1.EthAccount", (*authtypes.AccountI)(nil))
+
+	registry.RegisterImplementations(
+		(*authtypes.AccountI)(nil),
+		&injective.EthAccount{},
+	)
+	registry.RegisterImplementations(
+		(*sdk.Msg)(nil),
+		&wasmd.MsgStoreCode{},
+		&wasmd.MsgInstantiateContract{},
+		&wasmd.MsgInstantiateContract2{},
+		&wasmd.MsgExecuteContract{},
+		&wasmd.MsgMigrateContract{},
+		&wasmd.MsgUpdateAdmin{},
+		&wasmd.MsgClearAdmin{},
+		// &wasmd.MsgIBCCloseChannel{},
+		// &wasmd.MsgIBCSend{},
+		&wasmd.MsgUpdateInstantiateConfig{},
+		&wasmd.MsgUpdateParams{},
+		&wasmd.MsgSudoContract{},
+		&wasmd.MsgPinCodes{},
+		&wasmd.MsgUnpinCodes{},
+		&wasmd.MsgStoreAndInstantiateContract{},
+	)
+	// registry.RegisterImplementations(
+	// 	(*v1beta1.Content)(nil),
+	// 	&wasmd.StoreCodeProposal{},
+	// 	&wasmd.InstantiateContractProposal{},
+	// 	&wasmd.InstantiateContract2Proposal{},
+	// 	&wasmd.MigrateContractProposal{},
+	// 	&wasmd.SudoContractProposal{},
+	// 	&wasmd.ExecuteContractProposal{},
+	// 	&wasmd.UpdateAdminProposal{},
+	// 	&wasmd.ClearAdminProposal{},
+	// 	&wasmd.PinCodesProposal{},
+	// 	&wasmd.UnpinCodesProposal{},
+	// 	&wasmd.UpdateInstantiateConfigProposal{},
+	// 	&wasmd.StoreAndInstantiateContractProposal{},
+	// )
+
+	// registry.RegisterInterface("cosmwasm.wasm.v1.ContractInfoExtension", (*wasmd.ContractInfoExtension)(nil))
+
+	// registry.RegisterInterface("cosmwasm.wasm.v1.ContractAuthzFilterX", wasmd.(*ContractAuthzFilterX)(nil))
+	// registry.RegisterImplementations(
+	// 	(*wasmd.ContractAuthzFilterX)(nil),
+	// 	&wasmd.AllowAllMessagesFilter{},
+	// 	&wasmd.AcceptedMessageKeysFilter{},
+	// 	&wasmd.AcceptedMessagesFilter{},
+	// )
+
+	// registry.RegisterInterface("cosmwasm.wasm.v1.ContractAuthzLimitX", (*wasmd.ContractAuthzLimitX)(nil))
+	// registry.RegisterImplementations(
+	// 	(*ContractAuthzLimitX)(nil),
+	// 	&MaxCallsLimit{},
+	// 	&MaxFundsLimit{},
+	// 	&CombinedLimit{},
+	// )
+
+	// registry.RegisterImplementations(
+	// 	(*authz.Authorization)(nil),
+	// 	&ContractExecutionAuthorization{},
+	// 	&ContractMigrationAuthorization{},
+	// )
 }

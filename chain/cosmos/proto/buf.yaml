@@ -5,7 +5,6 @@ deps:
   - buf.build/cosmos/gogo-proto:a14993478f40695898ed8a86931094b6656e8a5d
   - buf.build/googleapis/googleapis:c35889a0b917e22e26c53acafa5c27102a51d623
   - buf.build/cosmos/ics23:b1abd8678aab07165efd453c96796a179eb3131f
-  - buf.build/cosmwasm/wasmd:e6d451bf9dd96a555b10e72aa3c0f6b820d34684
 breaking:
   use:
     - FILE

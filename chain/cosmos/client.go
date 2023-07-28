@@ -8,16 +8,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	wasmtypes "github.com/jumpcrypto/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/utils"
@@ -77,26 +76,15 @@ var _ xc.FullClientWithGas = &Client{}
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 	bodyStr := string(body)
 
+	// Output traces:
+	// data := map[string]interface{}{}
+	// json.Unmarshal(body, &data)
+	// bz, _ := json.Marshal(data)
+	// fmt.Println("", string(bz))
+
 	// try to parse as json and remove .result.block.evidence field as it's incompatible between chains
-	val := map[string]interface{}{}
-	err := json.Unmarshal(body, &val)
-	if err != nil {
-		// skip
-	} else {
-		if result, ok := val["result"].(map[string]interface{}); ok {
-			if block, ok := result["block"].(map[string]interface{}); ok {
-				// Sei chain changed the schema for this field
-				delete(block, "evidence")
-				newBody, err := json.Marshal(val)
-				if err != nil {
-					// skip
-				} else {
-					// replace
-					return newBody
-				}
-			}
-		}
-	}
+	// by just renaming the key it should just get dropped during parsing
+	bodyStr = strings.Replace(bodyStr, "\"evidence\"", "\"_evidence\"", 1)
 
 	return []byte(bodyStr)
 }
@@ -137,30 +125,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Prefix:          cfg.ChainPrefix,
 		EstimateGasFunc: nil,
 	}, nil
-}
-
-type transport struct {
-	remote string
-	proxy  http.RoundTripper
-}
-
-func newTransport(remote string, proxy http.RoundTripper) *transport {
-	return &transport{
-		remote: remote,
-		proxy:  proxy,
-	}
-}
-
-func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	u, err := url.Parse(t.remote)
-	if err != nil {
-		return nil, err
-	}
-	req.URL = u
-	req.Host = u.Host
-
-	// Proxy request.
-	return t.proxy.RoundTrip(req)
 }
 
 // FetchTxInput returns tx input for a Cosmos tx
