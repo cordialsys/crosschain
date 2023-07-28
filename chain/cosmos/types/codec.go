@@ -1,6 +1,7 @@
 package types
 
 import (
+	wasmd "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -9,7 +10,6 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	wasmd "github.com/jumpcrypto/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 	injethsecp256k1 "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
 	injective "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/types"
 	terraclassic "github.com/jumpcrypto/crosschain/chain/cosmos/types/classic-terra/core/v2/x/vesting/types"

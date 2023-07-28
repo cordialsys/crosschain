@@ -7,12 +7,12 @@ import (
 
 	xc "github.com/jumpcrypto/crosschain"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	wasmtypes "github.com/jumpcrypto/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 )
 
 // Tx for Cosmos

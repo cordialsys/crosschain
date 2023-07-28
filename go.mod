@@ -30,6 +30,7 @@ require (
 
 require (
 	cosmossdk.io/errors v1.0.0-beta.7
+	github.com/CosmWasm/wasmd v0.40.1
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/btcsuite/btcd/btcutil v1.1.2
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
@@ -37,7 +38,6 @@ require (
 	github.com/cosmos/gogoproto v1.4.10
 	github.com/golang/protobuf v1.5.3
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/pkg/errors v0.9.1
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 	google.golang.org/grpc v1.55.0
 	google.golang.org/protobuf v1.30.0
@@ -175,6 +175,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
 	github.com/petermattis/goid v0.0.0-20230317030725-371a4b8eda08 // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.15.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -235,8 +236,10 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
-
-replace github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
-
-replace github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
+replace (
+	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
+	// replace wasmd instead of using local types to avoid protobuf conflicts
+	github.com/CosmWasm/wasmd => ./chain/cosmos/types/CosmWasm/wasmd
+	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
+	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
+)
