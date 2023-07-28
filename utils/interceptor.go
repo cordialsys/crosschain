@@ -34,7 +34,9 @@ func (i *HttpInterceptor) Disable() {
 
 func (i *HttpInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
 	defer func() {
-		_ = req.Body.Close()
+		if req != nil && req.Body != nil {
+			_ = req.Body.Close()
+		}
 	}()
 
 	res, err := i.core.RoundTrip(req)
@@ -43,7 +45,9 @@ func (i *HttpInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	if i.enabled {
 		defer func() {
-			_ = res.Body.Close()
+			if req != nil && req.Body != nil {
+				_ = res.Body.Close()
+			}
 		}()
 		body, _ := ioutil.ReadAll(res.Body)
 
