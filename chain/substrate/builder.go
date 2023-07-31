@@ -37,7 +37,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 	// We use transfer_keep_alive to avoid accounts being reaped for sending too much balance that it no longer has the
 	// existential deposit. This would cause the account to get reaped, which can cause future TXs to have duped hashes
-	call, err := types.NewCall(&txInput.meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
+	call, err := types.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
 	if err != nil {
 		return &Tx{}, err
 	}
@@ -45,11 +45,11 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	return &Tx{
 		extrinsic:   types.NewExtrinsic(call),
 		sender:      sender,
-		nonce:       txInput.nonce,
-		genesisHash: txInput.genesisHash,
-		curHash:     txInput.curHash,
-		rv:          txInput.rv,
-		tip:         txInput.tip,
-		era:         uint16(txInput.curNum%MORTAL_PERIOD<<4) + uint16(math.Log2(MORTAL_PERIOD)-1),
+		nonce:       txInput.Nonce,
+		genesisHash: txInput.GenesisHash,
+		curHash:     txInput.CurHash,
+		rv:          txInput.Rv,
+		tip:         txInput.Tip,
+		era:         uint16(txInput.CurNum%MORTAL_PERIOD<<4) + uint16(math.Log2(MORTAL_PERIOD)-1),
 	}, nil
 }

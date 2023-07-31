@@ -24,7 +24,7 @@ func main() {
 
 	// set your own private key and address
 	// you can get them, for example, from your Phantom wallet
-	fromPrivateKey := xc.MustPrivateKey(asset, "5t2UZv7RBj556CwV8KUUmY8AbRiiLJ8XgDcSZKCPe5q5pDx7tWyg1JVhxoo6NMEUacy7TDbrUVfGMMFTBEmaaoA9")
+	fromPrivateKey := xc.MustPrivateKey(asset, "...")
 
 	signer, _ := xc.NewSigner(asset)
 	publicKey, err := signer.PublicKey(fromPrivateKey)
@@ -42,7 +42,7 @@ func main() {
 		panic("could create from address: " + err.Error())
 	}
 
-	to := xc.MustAddress(asset, "BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
+	to := xc.MustAddress(asset, "...")
 	amount := xc.MustAmountBlockchain(asset, "0.001")
 
 	// to create a tx, we typically need some input from the blockchain
@@ -97,7 +97,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Zzz...")
-	time.Sleep(20 * time.Second)
+	time.Sleep(60 * time.Second)
 	info, err := client.FetchTxInfo(ctx, tx.Hash())
 	if err != nil {
 		panic(err)

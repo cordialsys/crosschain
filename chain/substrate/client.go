@@ -30,13 +30,13 @@ var _ xc.Client = &Client{}
 // TxInput for Substrate
 type TxInput struct {
 	xc.TxInputEnvelope
-	meta        types.Metadata       `json:"meta,omitempty"`
-	genesisHash types.Hash           `json:"genesis_hash,omitempty"`
-	curHash     types.Hash           `json:"current_hash,omitempty"`
-	rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
-	curNum      uint64               `json:"current_num,omitempty"`
-	tip         uint64               `json:"tip,omitempty"`
-	nonce       uint64               `json:"nonce,omitempty"`
+	Meta        types.Metadata       `json:"meta,omitempty"`
+	GenesisHash types.Hash           `json:"genesis_hash,omitempty"`
+	CurHash     types.Hash           `json:"current_hash,omitempty"`
+	Rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
+	CurNum      uint64               `json:"current_num,omitempty"`
+	Tip         uint64               `json:"tip,omitempty"`
+	Nonce       uint64               `json:"nonce,omitempty"`
 }
 
 // NewClient returns a new Substrate Client
@@ -70,8 +70,8 @@ func (client *Client) FetchTxInputChain() (*TxInput, error) {
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.meta = *meta
-	txInput.genesisHash, err = rpc.Chain.GetBlockHash(0)
+	txInput.Meta = *meta
+	txInput.GenesisHash, err = rpc.Chain.GetBlockHash(0)
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -79,13 +79,13 @@ func (client *Client) FetchTxInputChain() (*TxInput, error) {
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.rv = *rv
+	txInput.Rv = *rv
 	header, err := rpc.Chain.GetHeaderLatest()
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.curNum = uint64(header.Number)
-	txInput.curHash, err = rpc.Chain.GetBlockHash(txInput.curNum)
+	txInput.CurNum = uint64(header.Number)
+	txInput.CurHash, err = rpc.Chain.GetBlockHash(txInput.CurNum)
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -115,8 +115,8 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.tip = client.Asset.GetAssetConfig().ChainGasTip
-	txInput.nonce, err = client.FetchAccountNonce(txInput.meta, from)
+	txInput.Tip = client.Asset.GetAssetConfig().ChainGasTip
+	txInput.Nonce, err = client.FetchAccountNonce(txInput.Meta, from)
 	if err != nil {
 		return &TxInput{}, err
 	}
