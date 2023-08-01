@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/jumpcrypto/crosschain"
@@ -17,14 +19,19 @@ func main() {
 
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("USDC", "SOL")
+	asset, err := xc.GetAssetConfig("", "TIA")
 	if err != nil {
 		panic("unsupported asset")
 	}
 
 	// set your own private key and address
 	// you can get them, for example, from your Phantom wallet
-	fromPrivateKey := xc.MustPrivateKey(asset, "...")
+	privateKeyInput := os.Getenv("PRIVATE_KEY")
+	if privateKeyInput == "" {
+		log.Fatalln("must set env PRIVATE_KEY")
+	}
+
+	fromPrivateKey := xc.MustPrivateKey(asset, privateKeyInput)
 
 	signer, _ := xc.NewSigner(asset)
 	publicKey, err := signer.PublicKey(fromPrivateKey)
