@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
@@ -118,6 +119,20 @@ func accAddressFromBech32WithPrefix(address string, prefix string) ([]byte, erro
 	return addressBytes, nil
 }
 
+// Returns the amount in blockchain that is percentage of amount.
+// E.g. amount = 100, tax = 0.05, returns 5.
+func GetTaxFrom(amount xc.AmountBlockchain, tax float64) xc.AmountBlockchain {
+	if tax > 0.00001 {
+		precisionInt := uint64(10000000)
+		taxBig := xc.NewAmountBlockchainFromUint64(uint64(float64(precisionInt) * tax))
+		// some chains may implement a tax (terra classic)
+		product := amount.Mul(&taxBig).Int()
+		quotiant := product.Div(product, big.NewInt(int64(precisionInt)))
+		return xc.NewAmountBlockchainFromStr(quotiant.String())
+	}
+	return xc.NewAmountBlockchainFromUint64(0)
+}
+
 // createTxWithMsg creates a new Tx given Cosmos Msg
 func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *TxInput, msg types.Msg) (xc.Tx, error) {
 	asset := txBuilder.Asset
@@ -144,12 +159,37 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	}
 	cosmosBuilder.SetMemo(input.Memo)
 	cosmosBuilder.SetGasLimit(input.GasLimit)
-	cosmosBuilder.SetFeeAmount(types.Coins{
+	feeCoins := types.Coins{
 		{
 			Denom:  gasDenom,
 			Amount: types.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
 		},
+	}
+	taxRate := txBuilder.Asset.GetNativeAsset().ChainTransferTax
+	tax := GetTaxFrom(amount, taxRate)
+	if tax.Uint64() > 0 {
+		taxDenom := asset.GetNativeAsset().ChainCoin
+		if token, ok := asset.(*xc.TokenAssetConfig); ok && token.Contract != "" {
+			taxDenom = token.Contract
+		}
+		taxStr, _ := types.NewIntFromString(tax.String())
+		// cannot add two coins that are the same so must check
+		if feeCoins[0].Denom == taxDenom {
+			// add to existing
+			feeCoins[0].Amount = feeCoins[0].Amount.Add(taxStr)
+		} else {
+			// add new
+			feeCoins = append(feeCoins, types.Coin{
+				Denom:  taxDenom,
+				Amount: taxStr,
+			})
+		}
+	}
+	// Must be sorted or cosmos client panics
+	sort.Slice(feeCoins, func(i, j int) bool {
+		return feeCoins[i].Denom < feeCoins[j].Denom
 	})
+	cosmosBuilder.SetFeeAmount(feeCoins)
 
 	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
 	sigsV2 := []signingtypes.SignatureV2{

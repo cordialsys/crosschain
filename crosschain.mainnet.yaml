@@ -131,14 +131,17 @@ crosschain:
     driver: cosmos
     net: mainnet
     url: 'https://terra-classic-rpc.publicnode.com:443'
-    fcd_url: 'https://pisco-fcd.terra.dev'
+    fcd_url: 'https://columbus-fcd.terra.dev'
     chain_id_str: 'columbus-5'
     chain_prefix: 'terra'
     chain_coin: 'uluna'
+    gas_coin: 'uusd'
     chain_coin_hd_path: 330
     chain_gas_price_default: 5
+    # 0.5% tax
+    chain_transfer_tax: 0.005
     chain_name: Terra Classic
-    chain_gas_multiplier: 12.0
+    chain_gas_multiplier: 2.0
     explorer_url: 'https://finder.terra.money/mainnet'
     decimals: 6
   - asset: LUNA
@@ -217,6 +220,13 @@ crosschain:
     net: testnet
     decimals: 9
     contract: So11111111111111111111111111111111111111112
+
+  - asset: USTC
+    chain: LUNC
+    net: mainnet
+    decimals: 6
+    contract: uusd
+    type: native
   # - asset: USDC
   #   chain: SOL
   #   net: testnet
