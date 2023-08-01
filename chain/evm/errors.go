@@ -11,7 +11,8 @@ func CheckError(err error) xc.ClientError {
 	if strings.Contains(msg, "insufficient funds for gas * price + value") {
 		return xc.NoBalanceForGas
 	}
-	if strings.Contains(msg, "insufficient funds for transfer") {
+	if strings.Contains(msg, "insufficient funds for transfer") ||
+		strings.Contains(msg, "insufficient funds of the sender") {
 		return xc.NoBalance
 	}
 	// Polygon seems to return "transaction underpriced" but still forwarding the tx the chain,
