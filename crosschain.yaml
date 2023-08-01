@@ -29,6 +29,14 @@ crosschain:
     indexer_url: 'https://api.covalenthq.com/v1'
     indexer_type: covalent
     decimals: 18
+  - asset: CELO
+    driver: "evm"
+    net: testnet
+    url: 'https://alfajores-forno.celo-testnet.org'
+    chain_id: 0xaef3
+    chain_name: CELO (Alfajores Testnet)
+    explorer_url: 'https://alfajores-blockscout.celo-testnet.org'
+    decimals: 18
   # EVM Legacy
   - asset: BNB
     driver: evm-legacy

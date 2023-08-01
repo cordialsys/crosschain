@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/chain/crosschain/types"
@@ -46,7 +47,7 @@ func (client *Client) apiAsset() *types.AssetReq {
 		Chain:    string(assetCfg.NativeAsset),
 		Asset:    assetCfg.Asset,
 		Contract: assetCfg.Contract,
-		Decimals: assetCfg.Decimals,
+		Decimals: strconv.FormatInt(int64(assetCfg.Decimals), 10),
 	}
 }
 

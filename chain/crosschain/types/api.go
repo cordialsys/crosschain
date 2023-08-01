@@ -18,7 +18,7 @@ type AssetReq struct {
 	Chain    string `json:"chain"`
 	Asset    string `json:"asset,omitempty"`
 	Contract string `json:"contract,omitempty"`
-	Decimals int32  `json:"decimals"`
+	Decimals string `json:"decimals,omitempty"`
 }
 
 type BalanceReq struct {
@@ -53,7 +53,7 @@ type TxInfoReq struct {
 type TxInfoRes struct {
 	Object string `json:"object"`
 	*TxInfoReq
-	xc.TxInfo `json:"raw_tx_info,omitempty"`
+	xc.TxInfo `json:"tx_info,omitempty"`
 }
 
 type SubmitTxReq struct {
