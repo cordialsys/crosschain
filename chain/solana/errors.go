@@ -11,7 +11,8 @@ func CheckError(err error) xc.ClientError {
 	if strings.Contains(msg, "transaction underpriced") {
 		return xc.TransactionFailure
 	}
-	if strings.Contains(msg, "insufficient funds for gas * price + value") {
+	if strings.Contains(msg, "insufficient funds for gas * price + value") ||
+		strings.Contains(msg, "insufficient funds for rent") {
 		return xc.NoBalanceForGas
 	}
 	if strings.Contains(msg, "insufficient funds for transfer") {
