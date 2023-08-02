@@ -9,7 +9,7 @@ type ApiResult interface{}
 type ApiResponse struct {
 	Status    string `json:"status"`
 	Error     string `json:"error,omitempty"`
-	ErrorCode string `json:"error_code,omitempty"`
+	ErrorCode int    `json:"error_code,omitempty"`
 	// wrap result inside a property of the response, so we can sign it
 	Result ApiResult `json:"result,omitempty"`
 }
