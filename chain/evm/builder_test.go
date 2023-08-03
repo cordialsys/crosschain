@@ -19,21 +19,36 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require.Equal("USDC", builder.(TxBuilder).Asset.GetAssetConfig().Asset)
 }
 
-// func (s *CrosschainTestSuite) TestNewNativeTransfer() {
-// 	require := s.Require()
-// 	builder, _ := NewTxBuilder(&xc.AssetConfig{})
-// 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-// 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
-// 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
-// 	input := &TxInput{}
-// 	tx, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
-// 	require.Nil(err)
-// 	require.NotNil(tx)
-// 	solTx := tx.(*Tx).SolTx
-// 	require.Equal(0, len(solTx.Signatures))
-// 	require.Equal(1, len(solTx.Message.Instructions))
-// 	require.Equal(uint16(0x2), solTx.Message.Instructions[0].ProgramIDIndex) // system tx
-// }
+func (s *CrosschainTestSuite) TestTransferSetsMaxTipCap() {
+	require := s.Require()
+	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+
+	from := "0x724435CC1B2821362c2CD425F2744Bd7347bf299"
+	to := "0x3ad57b83B2E3dC5648F32e98e386935A9B10bb9F"
+	amount := xc.NewAmountBlockchainFromUint64(100)
+	input := NewTxInput()
+
+	input.GasTipCap = GweiToWei(DefaultMaxTipCapGwei - 1)
+	tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	require.NoError(err)
+	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei-1).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
+
+	input.GasTipCap = GweiToWei(DefaultMaxTipCapGwei + 1)
+	tx, err = builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	require.NoError(err)
+	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
+
+	// increase the max
+	builder, _ = NewTxBuilder(&xc.AssetConfig{ChainMaxGasTip: 100})
+	tx, _ = builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	// now DefaultMaxTipCapGwei + 1 is used
+	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei+1).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
+
+	// 100 is used instead of 1000
+	input.GasTipCap = GweiToWei(1000)
+	tx, _ = builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	require.EqualValues(GweiToWei(100).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
+}
 
 // func (s *CrosschainTestSuite) TestNewNativeTransferErr() {
 // 	require := s.Require()

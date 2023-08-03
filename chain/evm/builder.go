@@ -9,6 +9,8 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+var DefaultMaxTipCapGwei uint64 = 5
+
 // TxBuilder for EVM
 type TxBuilder struct {
 	Asset  xc.ITask
@@ -112,7 +114,6 @@ func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountB
 		return nil, err
 	}
 	chainID := new(big.Int).SetInt64(txBuilder.Asset.GetNativeAsset().ChainID)
-	// fmt.Println("chainID", chainID)
 
 	if txBuilder.Legacy {
 		return &Tx{
@@ -128,11 +129,24 @@ func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountB
 		}, nil
 	}
 
+	// Protection from setting very high gas tip
+	maxTipGwei := txBuilder.Asset.GetNativeAsset().ChainMaxGasTip
+	if maxTipGwei == 0 {
+		maxTipGwei = DefaultMaxTipCapGwei
+	}
+	maxTipWei := GweiToWei(maxTipGwei)
+	gasTipCap := input.GasTipCap
+
+	if gasTipCap.Cmp(&maxTipWei) > 0 {
+		// limit to max
+		gasTipCap = maxTipWei
+	}
+
 	return &Tx{
 		EthTx: types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainID,
 			Nonce:     input.Nonce,
-			GasTipCap: input.GasTipCap.Int(),
+			GasTipCap: gasTipCap.Int(),
 			GasFeeCap: input.GasFeeCap.Int(),
 			Gas:       input.GasLimit,
 			To:        &address,

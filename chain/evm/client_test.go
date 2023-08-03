@@ -24,6 +24,41 @@ func (s *CrosschainTestSuite) TestNewLegacyClient() {
 	require.Nil(err)
 }
 
+func (s *CrosschainTestSuite) TestLegacyGasCalculation() {
+	require := s.Require()
+
+	// Should sum 1000 + 200
+	estimate := EvmGasEstimation{
+		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
+		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
+		Multiplier: 1.0,
+	}
+
+	// Multiplier should default to 1
+	require.EqualValues(1200, estimate.MultipliedLegacyGasPrice().Uint64())
+	estimate = EvmGasEstimation{
+		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
+		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
+		Multiplier: 0.0,
+	}
+	require.EqualValues(1200, estimate.MultipliedLegacyGasPrice().Uint64())
+
+	// 1.5x
+	estimate = EvmGasEstimation{
+		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
+		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
+		Multiplier: 1.5,
+	}
+	require.EqualValues(1800, estimate.MultipliedLegacyGasPrice().Uint64())
+	// 0.5x
+	estimate = EvmGasEstimation{
+		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
+		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
+		Multiplier: 0.5,
+	}
+	require.EqualValues(600, estimate.MultipliedLegacyGasPrice().Uint64())
+}
+
 func (s *CrosschainTestSuite) TestAccountBalance() {
 	require := s.Require()
 
@@ -82,40 +117,95 @@ func (s *CrosschainTestSuite) TestAccountBalance() {
 // 	require.EqualError(err, "not implemented")
 // }
 
-func (s *CrosschainTestSuite) TestSubmitTx() {
+func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
 	vectors := []struct {
-		name string
-		resp interface{}
-		val  *TxInput
-		err  string
+		name       string
+		resp       interface{}
+		val        *TxInput
+		err        string
+		multiplier float64
+		legacy     bool
 	}{
 		// Send ether normal tx
 		{
-			"fetchTxInput",
-			[]string{
+			name: "fetchTxInput normal",
+			resp: []string{
 				// eth_getTransactionCount
 				`"0x6"`,
-				// eth_gasPrice
-				`"0x246139ca800"`,
+				// eth_getBlockByNumber
+				`{"jsonrpc":"2.0","id":2,"result":{"baseFeePerGas":"0xba43b7400","difficulty":"0x19","extraData":"0xd682040083626f7288676f312e31392e37856c696e7578000000000000000000ec6ff50a6a950f50eb734ee68765c988ce7dbaae7af3f92f5604100affceb6d87fd6ad01972752001d4e067ec14482630bb88db995f5503c76cfd625c949922300","gasLimit":"0x1c0e7cb","gasUsed":"0x0","hash":"0x32c7587e0c0634a19c40dee211323dd0b2d83494f65d619a9ddefa6d31f99238","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","miner":"0x0000000000000000000000000000000000000000","mixHash":"0x0000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0000000000000000","number":"0x2bbd145","parentHash":"0x6c63c167c9014fb62dad62dde72f774f64634237d18f5877ec3642c44b3af2dd","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x269","stateRoot":"0x70d3c1f93205f1b6970b6e0ebc5a20c938dbcc8050c82e07a09fa1d568a9d428","timestamp":"0x64cbc1e1","totalDifficulty":"0x2f15808f","transactions":[],"transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","uncles":[]}}`,
+				// eth_maxPriorityFeePerGas
+				`"0x6fc23ac00"`,
 			},
-			&TxInput{
+			val: &TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
 				GasLimit:        0,
-				GasTipCap:       xc.NewAmountBlockchainFromUint64(3000000000),
-				GasFeeCap:       xc.NewAmountBlockchainFromUint64(46000000000),
-				GasPrice:        xc.NewAmountBlockchainFromUint64(46000000000),
+				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
+				GasTipCap:       xc.NewAmountBlockchainFromUint64(30000000000),
+				// legacy price
+				GasPrice: xc.NewAmountBlockchainFromUint64(50000000000 + 30000000000),
 			},
-			"",
+			err:        "",
+			multiplier: 1.0,
+		},
+		{
+			name: "fetchTxInput normal 2x",
+			resp: []string{
+				// eth_getTransactionCount
+				`"0x6"`,
+				// eth_getBlockByNumber
+				`{"jsonrpc":"2.0","id":2,"result":{"baseFeePerGas":"0x14f46b0400","difficulty":"0x19","extraData":"0xd682040083626f7288676f312e31392e37856c696e7578000000000000000000ec6ff50a6a950f50eb734ee68765c988ce7dbaae7af3f92f5604100affceb6d87fd6ad01972752001d4e067ec14482630bb88db995f5503c76cfd625c949922300","gasLimit":"0x1c0e7cb","gasUsed":"0x0","hash":"0x32c7587e0c0634a19c40dee211323dd0b2d83494f65d619a9ddefa6d31f99238","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","miner":"0x0000000000000000000000000000000000000000","mixHash":"0x0000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0000000000000000","number":"0x2bbd145","parentHash":"0x6c63c167c9014fb62dad62dde72f774f64634237d18f5877ec3642c44b3af2dd","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x269","stateRoot":"0x70d3c1f93205f1b6970b6e0ebc5a20c938dbcc8050c82e07a09fa1d568a9d428","timestamp":"0x64cbc1e1","totalDifficulty":"0x2f15808f","transactions":[],"transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","uncles":[]}}`,
+				// eth_maxPriorityFeePerGas
+				`"0x77359400"`,
+			},
+			val: &TxInput{
+				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
+				Nonce:           6,
+				GasLimit:        0,
+				GasFeeCap:       xc.NewAmountBlockchainFromUint64(90000000000 * 2),
+				// GasTip should not get multiplied
+				GasTipCap: xc.NewAmountBlockchainFromUint64(2000000000),
+				// legacy price
+				GasPrice: xc.NewAmountBlockchainFromUint64((90000000000 + 2000000000) * 2),
+			},
+			err:        "",
+			multiplier: 2.0,
+		},
+		{
+			name: "fetchTxInput legacy",
+			resp: []string{
+				// eth_getTransactionCount
+				`"0x6"`,
+				// eth_gasPrice
+				`"0xba43b7400"`,
+			},
+			val: &TxInput{
+				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
+				Nonce:           6,
+				GasLimit:        0,
+				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
+				GasTipCap:       xc.NewAmountBlockchainFromUint64(0),
+				// legacy price
+				GasPrice: xc.NewAmountBlockchainFromUint64(50000000000),
+			},
+			err:        "",
+			multiplier: 1.0,
+			legacy:     true,
 		},
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		client, _ := NewClient(&xc.NativeAssetConfig{NativeAsset: xc.ETH, URL: server.URL})
+		asset := &xc.NativeAssetConfig{NativeAsset: xc.ETH, URL: server.URL, ChainGasMultiplier: v.multiplier}
+		client, err := NewClient(asset)
+		if v.legacy {
+			client, err = NewLegacyClient(asset)
+		}
+		require.NoError(err)
 		input, err := client.FetchTxInput(s.Ctx, xc.Address(""), xc.Address(""))
 		require.NoError(err)
 		if v.err != "" {

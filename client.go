@@ -11,11 +11,11 @@ type Client interface {
 
 type EstimateGasFunc func(native NativeAsset) (AmountBlockchain, error)
 
-// GasEstimator is a specific Client that can estimate gas - not implemented yet
-type GasEstimator interface {
-	EstimateGas(ctx context.Context) (AmountBlockchain, error)
-	RegisterEstimateGasCallback(fn EstimateGasFunc)
-}
+// // GasEstimator is a specific Client that can estimate gas - not implemented yet
+// type GasEstimator interface {
+// 	EstimateGas(ctx context.Context) (AmountBlockchain, error)
+// 	RegisterEstimateGasCallback(fn EstimateGasFunc)
+// }
 
 // ClientBalance is a specific Client that can fetch balances
 type ClientBalance interface {
@@ -32,7 +32,7 @@ type FullClient interface {
 type FullClientWithGas interface {
 	Client
 	ClientBalance
-	GasEstimator
+	// GasEstimator
 }
 
 type ClientError string

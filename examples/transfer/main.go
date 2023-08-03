@@ -19,7 +19,7 @@ func main() {
 
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("", "TIA")
+	asset, err := xc.GetAssetConfig("", "MATIC")
 	if err != nil {
 		panic("unsupported asset")
 	}
@@ -49,7 +49,7 @@ func main() {
 		panic("could create from address: " + err.Error())
 	}
 
-	to := xc.MustAddress(asset, "...")
+	to := xc.MustAddress(asset, "0x3ad57b83B2E3dC5648F32e98e386935A9B10bb9F")
 	amount := xc.MustAmountBlockchain(asset, "0.001")
 
 	// to create a tx, we typically need some input from the blockchain

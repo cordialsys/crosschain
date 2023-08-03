@@ -17,6 +17,7 @@ crosschain:
     chain_name: Polygon
     explorer_url: 'https://polygonscan.com'
     decimals: 18
+    chain_max_gas_tip: 100
   - asset: AVAX
     driver: "evm"
     net: mainnet
