@@ -29,6 +29,18 @@ crosschain:
     indexer_type: covalent
     decimals: 18
   # EVM Legacy
+  - asset: CELO
+    driver: evm-legacy
+    net: mainnet
+    url: 'https://forno.celo.org'
+    chain_id: 42220
+    chain_name: Celo
+    explorer_url: 'https://explorer.celo.org'
+    indexer_url: 'https://explorer.celo.org/mainnet'
+    indexer_type: "blockscout"
+    decimals: 18
+    # CELO native asset is aliased by CELO token
+    token_alias: 0x471ece3750da237f93b8e339c536989b8978a438
   - asset: BNB
     driver: evm-legacy
     net: mainnet

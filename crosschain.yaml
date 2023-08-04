@@ -31,12 +31,12 @@ crosschain:
     indexer_type: covalent
     decimals: 18
   - asset: CELO
-    driver: "evm"
+    driver: "evm-legacy"
     net: testnet
-    url: 'https://alfajores-forno.celo-testnet.org'
-    chain_id: 0xaef3
-    chain_name: CELO (Alfajores Testnet)
-    explorer_url: 'https://alfajores-blockscout.celo-testnet.org'
+    url: 'https://forno.cannoli.celo-testnet.org'
+    chain_id: 17323
+    chain_name: CELO (Cannoli Testnet)
+    explorer_url: 'https://explorer.celo.org/cannoli/'
     decimals: 18
   # EVM Legacy
   - asset: BNB
