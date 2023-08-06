@@ -330,6 +330,12 @@ func (asset *TokenAssetConfig) GetDriver() Driver {
 }
 
 func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {
+	asset.AssetConfig.Asset = asset.Asset
+	asset.AssetConfig.Chain = asset.Chain
+	asset.AssetConfig.Net = asset.Net
+	asset.AssetConfig.Decimals = asset.Decimals
+	asset.AssetConfig.Contract = asset.Contract
+	asset.AssetConfig.Type = asset.Type
 	return &asset.AssetConfig
 }
 
