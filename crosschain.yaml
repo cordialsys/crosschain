@@ -47,17 +47,6 @@ crosschain:
     chain_name: Binance Smart Chain (Testnet)
     explorer_url: 'https://testnet.bscscan.com'
     decimals: 18
-  # Chiliz v2 chain
-  - asset: CHZ2
-    driver: "evm-legacy"
-    net: mainnet
-    url: 'https://rpc.chiliz.com'
-    chain_id: 88888
-    chain_name: Chiliz 2.0
-    explorer_url: 'https://scan.chiliz.com'
-    indexer_url: 'https://scan.chiliz.com'
-    indexer_type: "blockscout"
-    decimals: 18
   - asset: FTM
     driver: evm-legacy
     net: testnet
@@ -75,30 +64,18 @@ crosschain:
     chain_name: Solana (Devnet)
     explorer_url: 'https://explorer.solana.com'
     decimals: 9
-  # Westend
-  - asset: WND
+  # Polkadot
+  - asset: DOT
     driver: substrate
     net: testnet
     url: 'wss://westend-rpc.polkadot.io'
-    chain_name: Westend (Testnet)
+    chain_name: Polkadot (Westend)
     explorer_url: 'https://westend.api.subscan.io'
     auth: 'env:SUBSCAN_API_TOKEN'
     provider: subscan
     decimals: 12
     chain_id: 42
     chain_gas_tip: 0
-  # Polkadot
-  - asset: DOT
-    driver: substrate
-    net: mainnet
-    url: 'wss://rpc.polkadot.io'
-    chain_name: Polkadot
-    explorer_url: 'https://polkadot.api.subscan.io'
-    auth: 'env:SUBSCAN_API_TOKEN'
-    provider: subscan
-    decimals: 10
-    chain_id: 0
-    chain_gas_tip: 0 # Can be modified manually if Polkadot ever becomes congested.
   # Cosmos-based
   - asset: ATOM
     driver: cosmos
