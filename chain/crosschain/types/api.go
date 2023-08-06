@@ -14,8 +14,12 @@ type ApiResponse struct {
 	Result ApiResult `json:"result,omitempty"`
 }
 
+type ChainReq struct {
+	Chain string `json:"chain"`
+}
+
 type AssetReq struct {
-	Chain    string `json:"chain"`
+	*ChainReq
 	Asset    string `json:"asset,omitempty"`
 	Contract string `json:"contract,omitempty"`
 	Decimals string `json:"decimals,omitempty"`
@@ -57,7 +61,7 @@ type TxInfoRes struct {
 }
 
 type SubmitTxReq struct {
-	Chain  string `json:"chain"`
+	*ChainReq
 	TxData []byte `json:"tx_data"`
 }
 

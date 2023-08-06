@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -37,14 +38,17 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 func (client *Client) nextClient() (xc.Client, error) {
 	cfg := client.Asset
-	driver := xc.Driver(cfg.GetNativeAsset().Driver)
-	return drivers.NewClient(cfg, driver)
+	driver := cfg.GetNativeAsset().Driver
+	if driver == "" {
+		return nil, errors.New("crosschain client fallback is disabled")
+	}
+	return drivers.NewClient(cfg, xc.Driver(driver))
 }
 
 func (client *Client) apiAsset() *types.AssetReq {
 	assetCfg := client.Asset.GetAssetConfig()
 	return &types.AssetReq{
-		Chain:    string(assetCfg.NativeAsset),
+		ChainReq: &types.ChainReq{Chain: string(assetCfg.NativeAsset)},
 		Asset:    assetCfg.Asset,
 		Contract: assetCfg.Contract,
 		Decimals: strconv.FormatInt(int64(assetCfg.Decimals), 10),
@@ -98,6 +102,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	})
 	if err != nil {
 		// Fallback to default client
+		log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return nil, err
@@ -118,11 +123,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 		return err
 	}
 	res, err := client.apiCall(ctx, "/submit", &types.SubmitTxReq{
-		Chain:  chain,
-		TxData: data,
+		ChainReq: &types.ChainReq{Chain: chain},
+		TxData:   data,
 	})
 	if err != nil {
 		// Fallback to default client
+		log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return err
@@ -142,6 +148,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	})
 	if err != nil {
 		// Fallback to default client
+		log.Printf("crosschain client.FetchTxInfo - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return xc.TxInfo{}, err
@@ -162,6 +169,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	})
 	if err != nil {
 		// Fallback to default client
+		log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return zero, err
@@ -182,6 +190,7 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 	})
 	if err != nil {
 		// Fallback to default client
+		log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return zero, err
