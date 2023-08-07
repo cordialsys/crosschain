@@ -142,7 +142,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 
 // FetchTxInfo returns tx info from a Crosschain endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
-	res, err := client.apiCall(ctx, "/input", &types.TxInfoReq{
+	res, err := client.apiCall(ctx, "/info", &types.TxInfoReq{
 		AssetReq: client.apiAsset(),
 		TxHash:   string(txHash),
 	})
