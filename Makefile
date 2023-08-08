@@ -1,4 +1,5 @@
-
+all:
+	go build -v ./...
 
 test:
 	go test -mod=readonly ./...
