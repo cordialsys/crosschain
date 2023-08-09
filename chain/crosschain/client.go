@@ -172,8 +172,13 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	// 	AssetReq: client.apiAsset(),
 	// 	Address:  string(address),
 	// })
+	var assetReq = client.apiAsset()
+	assetReq.Asset = ""
+	assetReq.Contract = ""
+	assetReq.Decimals = ""
 	res, err := client.apiCall(ctx, "/balance", &types.BalanceReq{
-		Address: string(address),
+		AssetReq: assetReq,
+		Address:  string(address),
 	})
 	if err != nil {
 		// Fallback to default client
