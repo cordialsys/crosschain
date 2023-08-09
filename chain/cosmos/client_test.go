@@ -170,7 +170,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	for _, v := range vectors {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		serverFcd, closeFcd := testtypes.MockHTTP(&s.Suite, v.respGas)
+		serverFcd, closeFcd := testtypes.MockHTTP(&s.Suite, v.respGas, 200)
 		defer closeFcd()
 
 		v.asset.URL = server.URL

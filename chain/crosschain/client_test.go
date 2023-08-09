@@ -46,17 +46,13 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	txInput := evm.NewTxInput()
 	txInput.Nonce = 1234567
-	resObj := types.ApiResponse{
-		Status: "ok",
-		Result: types.TxInputRes{
-			Object:     "tx_input",
-			TxInputReq: &types.TxInputReq{},
-			TxInput:    txInput,
-		},
+	resObj := types.TxInputRes{
+		TxInputReq: &types.TxInputReq{},
+		TxInput:    txInput,
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res))
+	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -73,7 +69,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 func (s *CrosschainTestSuite) TestFetchTxInputError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -88,7 +84,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
@@ -114,17 +110,13 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		TxID:          "tx-hash",
 		Confirmations: 10,
 	}
-	resObj := types.ApiResponse{
-		Status: "ok",
-		Result: types.TxInfoRes{
-			Object:    "tx_info",
-			TxInfoReq: &types.TxInfoReq{},
-			TxInfo:    txInfo,
-		},
+	resObj := types.TxInfoRes{
+		TxInfoReq: &types.TxInfoReq{},
+		TxInfo:    txInfo,
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res))
+	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -140,7 +132,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -154,7 +146,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
@@ -174,16 +166,12 @@ func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
 func (s *CrosschainTestSuite) TestSubmitTx() {
 	require := s.Require()
 
-	resObj := types.ApiResponse{
-		Status: "ok",
-		Result: types.SubmitTxRes{
-			Object:      "tx",
-			SubmitTxReq: &types.SubmitTxReq{},
-		},
+	resObj := types.SubmitTxRes{
+		SubmitTxReq: &types.SubmitTxReq{},
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res))
+	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -200,7 +188,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 func (s *CrosschainTestSuite) TestSubmitTxError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -217,7 +205,7 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 func (s *CrosschainTestSuite) TestSubmitTxErrorFallback() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
@@ -240,17 +228,13 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	require := s.Require()
 
 	expectedBalance := xc.NewAmountBlockchainFromUint64(1234567)
-	resObj := types.ApiResponse{
-		Status: "ok",
-		Result: types.BalanceRes{
-			Object:     "balance",
-			BalanceReq: &types.BalanceReq{},
-			BalanceRaw: expectedBalance,
-		},
+	resObj := types.BalanceRes{
+		BalanceReq: &types.BalanceReq{},
+		BalanceRaw: expectedBalance,
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res))
+	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -269,7 +253,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -286,7 +270,7 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 func (s *CrosschainTestSuite) TestFetchBalanceErrorFallback() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"status":"error","error":"api-error"}`)
+	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))

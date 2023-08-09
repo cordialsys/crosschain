@@ -85,7 +85,7 @@ type MockHTTPServer struct {
 }
 
 // MockHTTP creates a new MockHTTPServer given a response, or array of responses
-func MockHTTP(s *suite.Suite, response interface{}) (mock *MockHTTPServer, close func()) {
+func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPServer, close func()) {
 	require := s.Require()
 	mock = &MockHTTPServer{
 		Response:    response,
@@ -96,7 +96,6 @@ func MockHTTP(s *suite.Suite, response interface{}) (mock *MockHTTPServer, close
 				curResponse = a[mock.Counter]
 			}
 			// default success
-			status := 200
 			if mock.Counter < len(mock.StatusCodes) {
 				status = mock.StatusCodes[mock.Counter]
 			}

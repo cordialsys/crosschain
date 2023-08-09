@@ -56,7 +56,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
-	http, httpClose := testtypes.MockHTTP(&s.Suite, test_http_tx)
+	http, httpClose := testtypes.MockHTTP(&s.Suite, test_http_tx, 200)
 	defer httpClose()
 
 	client, err := NewClient(&xc.AssetConfig{
@@ -87,7 +87,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 	require := s.Require()
 
-	http, httpClose := testtypes.MockHTTP(&s.Suite, `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`)
+	http, httpClose := testtypes.MockHTTP(&s.Suite, `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`, 200)
 	defer httpClose()
 
 	client, err := NewClient(&xc.AssetConfig{

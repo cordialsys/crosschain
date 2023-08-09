@@ -61,7 +61,7 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 	json.NewEncoder(buf).Encode(data)
 
 	// Create HTTP POST request
-	apiURL := fmt.Sprintf("%s/api/v1/crosschain%s", client.URL, url)
+	apiURL := fmt.Sprintf("%s/v1/__internal%s", client.URL, url)
 	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, buf)
 	if err != nil {
 		return nil, err
@@ -74,6 +74,16 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 	}
 	defer res.Body.Close()
 
+	// Return error if HTTP return error
+	if res.StatusCode != 200 {
+		var r types.Status
+		err = json.NewDecoder(res.Body).Decode(&r)
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New(r.Message)
+	}
+
 	// Parse API response
 	var r types.ApiResponse
 	err = json.NewDecoder(res.Body).Decode(&r)
@@ -81,16 +91,11 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 		return nil, err
 	}
 
-	// Return API error
-	if r.Error != "" {
-		return nil, errors.New(r.Error)
-	}
-
 	// Return result
 	// The result here is map[string]interface{}, in order to cast it
 	// in the caller the easier way is to re-serialize it and let the
 	// caller deserialize it.
-	return json.Marshal(r.Result)
+	return json.Marshal(r)
 }
 
 // FetchTxInput returns tx input from a Crosschain endpoint
@@ -163,9 +168,12 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 // FetchNativeBalance fetches account balance from a Crosschain endpoint
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	res, err := client.apiCall(ctx, "/balance/native", &types.BalanceReq{
-		AssetReq: client.apiAsset(),
-		Address:  string(address),
+	// res, err := client.apiCall(ctx, "/balance/native", &types.BalanceReq{
+	// 	AssetReq: client.apiAsset(),
+	// 	Address:  string(address),
+	// })
+	res, err := client.apiCall(ctx, "/balance", &types.BalanceReq{
+		Address: string(address),
 	})
 	if err != nil {
 		// Fallback to default client

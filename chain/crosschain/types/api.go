@@ -2,17 +2,12 @@ package types
 
 import (
 	xc "github.com/jumpcrypto/crosschain"
+	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
-type ApiResult interface{}
+type Status status.Status
 
-type ApiResponse struct {
-	Status    string `json:"status"`
-	Error     string `json:"error,omitempty"`
-	ErrorCode int    `json:"error_code,omitempty"`
-	// wrap result inside a property of the response, so we can sign it
-	Result ApiResult `json:"result,omitempty"`
-}
+type ApiResponse interface{}
 
 type ChainReq struct {
 	Chain string `json:"chain"`
@@ -31,7 +26,6 @@ type BalanceReq struct {
 }
 
 type BalanceRes struct {
-	Object string `json:"object"`
 	*BalanceReq
 	Balance    xc.AmountHumanReadable `json:"balance"`
 	BalanceRaw xc.AmountBlockchain    `json:"balance_raw"`
@@ -44,7 +38,6 @@ type TxInputReq struct {
 }
 
 type TxInputRes struct {
-	Object string `json:"object"`
 	*TxInputReq
 	xc.TxInput `json:"raw_tx_input,omitempty"`
 }
@@ -55,7 +48,6 @@ type TxInfoReq struct {
 }
 
 type TxInfoRes struct {
-	Object string `json:"object"`
 	*TxInfoReq
 	xc.TxInfo `json:"tx_info,omitempty"`
 }
@@ -66,7 +58,6 @@ type SubmitTxReq struct {
 }
 
 type SubmitTxRes struct {
-	Object string `json:"object"`
 	*SubmitTxReq
 }
 
