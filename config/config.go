@@ -14,28 +14,29 @@ import (
 func getViper() *viper.Viper {
 	// new instance of viper to avoid conflicts with, e.g., cosmos
 	v := viper.New()
-	v.SetConfigName("crosschain")
+	v.SetConfigName("config")
 	v.SetConfigType("yaml")
+	// TODO change coridal root
+	v.AddConfigPath("$CORDIAL_ROOT")
 	v.AddConfigPath(".")
 	v.AddConfigPath("..")
-	v.SetConfigFile(os.Getenv("XC_CONFIG"))
+	v.SetConfigFile(os.Getenv("CORDIAL_CONFIG"))
 	return v
 }
 
 // RequireConfig returns the config - panic if config file is not available
-func RequireConfig(section string) map[string]interface{} {
+func RequireConfig(section string) (map[string]interface{}, error) {
 	v := getViper()
 	// config is where we store default values
 	// panic if not available
 	err := v.ReadInConfig()
 	if err != nil {
-		// fmt.Printf("error reading config file: %w \n", err)
-		panic(fmt.Errorf("fatal error reading config file: %w", err))
+		return nil, fmt.Errorf("fatal error reading config file: %w", err)
 	}
 
 	// retrieve config
 	config := v.GetStringMap(section)
-	return config
+	return config, nil
 }
 
 func newVaultClient(cfg *vault.Config) (VaultLoader, error) {

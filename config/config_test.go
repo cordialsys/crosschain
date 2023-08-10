@@ -23,14 +23,16 @@ func TestExampleTestSuite(t *testing.T) {
 
 func (s *CrosschainTestSuite) TestRequireConfig() {
 	require := s.Require()
-	xcConfig := RequireConfig("crosschain")
+	xcConfig, err := RequireConfig("crosschain")
+	require.NoError(err)
 	require.NotNil(xcConfig)
 	require.NotNil(xcConfig["chains"])
 }
 
 func (s *CrosschainTestSuite) TestRequireConfigErr() {
 	require := s.Require()
-	xcConfig := RequireConfig("crosschainINVALID")
+	xcConfig, err := RequireConfig("crosschainINVALID")
+	require.NoError(err)
 	require.Equal(xcConfig, map[string]interface{}{})
 }
 
@@ -140,4 +142,30 @@ func (s *CrosschainTestSuite) TestGetSecretVault() {
 	secret, err = GetSecret("vault:https://example.com,path2/to/secret_none")
 	require.NoError(err)
 	require.Equal("", secret)
+}
+
+func (s *CrosschainTestSuite) TestGetSecretFileTrimmed() {
+	require := s.Require()
+
+	dir := os.TempDir()
+	file, err := os.CreateTemp(dir, "config-test")
+	require.NoError(err)
+	defer file.Close()
+	file.Write([]byte("MYSECRET"))
+	file.Sync()
+
+	sec, err := GetSecret("file:" + file.Name())
+	require.NoError(err)
+	require.Equal("MYSECRET", sec)
+
+	file2, err := os.CreateTemp(dir, "config-test")
+	require.NoError(err)
+	defer file2.Close()
+	// add whitespace
+	file2.Write([]byte(" MY SECRET \n"))
+	file2.Sync()
+
+	sec, err = GetSecret("file:" + file2.Name())
+	require.NoError(err)
+	require.Equal("MY SECRET", sec)
 }

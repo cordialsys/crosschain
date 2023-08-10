@@ -602,7 +602,10 @@ func pipelinesFromConfig(configMap map[string]interface{}) []*PipelineConfig {
 // NewDefaultFactory creates a new Factory
 func NewDefaultFactory() *Factory {
 	// Use our config file loader
-	cfg := config.RequireConfig("crosschain")
+	cfg, err := config.RequireConfig("crosschain")
+	if err != nil {
+		panic(err)
+	}
 	return NewDefaultFactoryWithConfig(cfg)
 }
 
