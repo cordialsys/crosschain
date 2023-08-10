@@ -61,7 +61,7 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 	json.NewEncoder(buf).Encode(data)
 
 	// Create HTTP POST request
-	apiURL := fmt.Sprintf("%s/v1/__internal%s", client.URL, url)
+	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, url)
 	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, buf)
 	if err != nil {
 		return nil, err
