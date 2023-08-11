@@ -202,17 +202,6 @@ type ClientConfig struct {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type AssetConfig struct {
-	// 	[[silochain.beta.chains]]
-	//     asset = "eth"
-	//     net = "mainnet"
-	//     url = "http://7.125.36.22:8089"
-	//
-	//   [[silochain.beta.chains]]
-	//     asset = "usdc"
-	//     chain = "eth"
-	//     net = "mainnet"
-	//     contract = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
-	//     decimals = 6
 	Asset                string         `yaml:"asset"`
 	Driver               string         `yaml:"driver"`
 	Net                  string         `yaml:"net"`

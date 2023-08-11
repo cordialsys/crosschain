@@ -11,12 +11,13 @@ import (
 	"strconv"
 	"strings"
 
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/utils"
