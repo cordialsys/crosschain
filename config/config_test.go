@@ -3,11 +3,13 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/jumpcrypto/crosschain/config/constants"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -40,7 +42,7 @@ service2:
 	defer os.Unsetenv(constants.ConfigEnv)
 
 	cfg := map[string]interface{}{}
-	err = RequireConfig("crosschain", &cfg)
+	err = RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
 	require.Contains(cfg, "chains")
 	require.NotContains(cfg, "service2")
@@ -48,7 +50,7 @@ service2:
 	require.Equal("XYZ", cfg["chains"].([]interface{})[0].(map[string]interface{})["asset"])
 
 	cfg = map[string]interface{}{}
-	err = RequireConfig("service2", &cfg)
+	err = RequireConfig("service2", &cfg, nil)
 	require.NoError(err)
 	require.Contains(cfg, "stuff")
 	require.NotContains(cfg, "chains")
@@ -56,7 +58,7 @@ service2:
 	require.Equal(123, cfg["stuff"].([]interface{})[0].(map[string]interface{})["asset"])
 
 	cfg = map[string]interface{}{}
-	err = RequireConfig("invalid", &cfg)
+	err = RequireConfig("invalid", &cfg, nil)
 	require.NoError(err)
 	require.NotContains(cfg, "invalid")
 	require.NotContains(cfg, "chains")
@@ -194,4 +196,205 @@ func (s *CrosschainTestSuite) TestGetSecretFileTrimmed() {
 	sec, err = GetSecret("file:" + file2.Name())
 	require.NoError(err)
 	require.Equal("MY SECRET", sec)
+}
+
+type TestHobby struct {
+	Type    string   `yaml:"type"`
+	Actions []string `yaml:"actions"`
+}
+type TestFriend struct {
+	Name     string                `yaml:"name"`
+	Thoughts []string              `yaml:"thoughts"`
+	Hobbies  map[string]*TestHobby `yaml:"hobbies"`
+	Numbers  map[string]int        `yaml:"numbers"`
+}
+type TestObj struct {
+	Name      string                 `yaml:"name"`
+	Age       int                    `yaml:"age"`
+	Favorites []string               `yaml:"favorites"`
+	Friends   map[string]*TestFriend `yaml:"friends"`
+}
+
+func WriteConfig(cfg string) {
+	file, err := os.CreateTemp(os.TempDir(), "xctest")
+	if err != nil {
+		panic(err)
+	}
+
+	file.Write([]byte(cfg))
+	os.Setenv(constants.ConfigEnv, file.Name())
+}
+
+func GetDefaults(require *require.Assertions) *TestObj {
+	WriteConfig(`
+test:
+  name: "marley"
+  age: 100
+  favorites:
+    - "trade"
+    - "swap"
+    - "bridge"
+  friends:
+    foo:
+      name: "foo"
+      thoughts:
+        - "market"
+        - "eth"
+        - "coins"
+      hobbies:
+        running:
+          type: exercise
+          actions:
+            - "left"
+            - "right"
+        drawing:
+          type: art
+          actions:
+            - "blue"
+            - "green"
+      numbers:
+        one: 1
+        one2: 1
+        seven: 7
+`)
+	expected := TestObj{
+		Name:      "marley",
+		Age:       100,
+		Favorites: []string{"trade", "swap", "bridge"},
+		Friends: map[string]*TestFriend{
+			"foo": {
+				Name:     "foo",
+				Thoughts: []string{"market", "eth", "coins"},
+				Hobbies: map[string]*TestHobby{
+					"running": {Type: "exercise", Actions: []string{"left", "right"}},
+					"drawing": {Type: "art", Actions: []string{"blue", "green"}},
+				},
+				Numbers: map[string]int{
+					"one":   1,
+					"one2":  1,
+					"seven": 7,
+				},
+			},
+		},
+	}
+
+	defaults := TestObj{}
+	err := RequireConfig("test", &defaults, nil)
+	require.NoError(err)
+	require.Equal(expected, defaults)
+	return &defaults
+}
+
+func (s *CrosschainTestSuite) TestUsingDefaults() {
+	require := s.Require()
+
+	type testcase struct {
+		name      string
+		cfg       string
+		applyDiff func(cfg *TestObj)
+	}
+
+	for _, tc := range []testcase{
+		{
+			name: "overwrite name",
+			cfg: `
+test:
+  name: "dave"
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Name = "dave"
+			},
+		},
+		{
+			name: "overwrite nested name",
+			cfg: `
+test:
+  friends:
+    foo:
+      name: "bar"
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Friends["foo"].Name = "bar"
+			},
+		},
+
+		{
+			name: "add new element to map",
+			cfg: `
+  test:
+    friends:
+      new:
+        name: "n"
+        numbers:
+          two: 2
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Friends["new"] = &TestFriend{
+					Name:     "n",
+					Numbers:  map[string]int{"two": 2},
+					Thoughts: []string{},
+					Hobbies:  map[string]*TestHobby{},
+				}
+			},
+		},
+		{
+			name: "empty map should not overwrite anything",
+			cfg: `
+test:
+  friends:
+`,
+		},
+		{
+			name: "overriding number does not affect neighboring string",
+			cfg: `
+test:
+  age: 200
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Age = 200
+			},
+		},
+		{
+			name: "change very nested value",
+			cfg: `
+test:
+  name: "eth"
+  friends:
+    foo:
+      hobbies:
+        running:
+          type: "moving"
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Name = "eth"
+				cfg.Friends["foo"].Hobbies["running"].Type = "moving"
+			},
+		},
+		{
+			name: "overriding an array should not override anything",
+			cfg: `
+test:
+  favorites:
+    - "cats"
+`,
+		},
+	} {
+		fmt.Println("Config defaults test:", tc.name)
+		defaults := GetDefaults(require)
+		cfg := TestObj{}
+
+		WriteConfig(tc.cfg)
+
+		err := RequireConfig("test", &cfg, &defaults)
+		require.NoError(err)
+
+		if tc.applyDiff != nil {
+			require.NotEqual(defaults, &cfg)
+			tc.applyDiff(defaults)
+			require.Equal(defaults, &cfg)
+		} else {
+			require.Equal(defaults, &cfg)
+		}
+	}
+
 }

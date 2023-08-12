@@ -32,8 +32,13 @@ func getViper() *viper.Viper {
 	return v
 }
 
-// RequireConfig returns the config - panic if config file is not available
-func RequireConfig(section string, unmarshalDst interface{}) error {
+// Load configuration.  This will load a configuration file
+// Using the default paths and environment variables, Then, if a section is
+// provided, only that relevent section in the config will be loaded.  Otherwise,
+// The whole configuration is used.
+// You may optionally provide a matching configuration object with defaults filled out.
+// The configuration will then override or add values given in the defaults.
+func RequireConfig(section string, unmarshalDst interface{}, defaults interface{}) error {
 	v := getViper()
 	// config is where we store default values
 	// panic if not available
@@ -47,9 +52,18 @@ func RequireConfig(section string, unmarshalDst interface{}) error {
 		// have to re-serialize and parse again
 		asMap := v.GetStringMap(section)
 		bz, _ := yaml.Marshal(asMap)
-		return yaml.Unmarshal(bz, unmarshalDst)
+		err = yaml.Unmarshal(bz, unmarshalDst)
 	} else {
-		return v.Unmarshal(unmarshalDst)
+		err = v.Unmarshal(unmarshalDst)
+	}
+	if err != nil {
+		return err
+	}
+
+	if defaults != nil {
+		return ApplyDefaults(defaults, unmarshalDst, unmarshalDst)
+	} else {
+		return nil
 	}
 }
 

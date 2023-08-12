@@ -174,7 +174,7 @@ crosschain:
 	yaml.Unmarshal(cfgBz, &wrapper)
 	require.Contains(wrapper.Config.Tasks[0].DefaultParams, "arbiter_fee_usd")
 	var cfg Config
-	err = config.RequireConfig("crosschain", &cfg)
+	err = config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
 	cfg.Parse()
 

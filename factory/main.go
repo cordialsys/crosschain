@@ -537,7 +537,7 @@ func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
 func NewDefaultFactory() *Factory {
 	// Use our config file loader
 	var cfg Config
-	err := config.RequireConfig("crosschain", &cfg)
+	err := config.RequireConfig("crosschain", &cfg, nil)
 	if err != nil {
 		panic(err)
 	}

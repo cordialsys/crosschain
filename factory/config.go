@@ -9,6 +9,10 @@ import (
 
 // Config is the full config containing all Assets
 type Config struct {
+	// which network to default to: "mainnet" or "testnet"
+	// Default: "testnet"
+
+	Network   string                  `yaml:"network"`
 	Chains    []*xc.NativeAssetConfig `yaml:"chains"`
 	Tokens    []*xc.TokenAssetConfig  `yaml:"tokens"`
 	Pipelines []*xc.PipelineConfig    `yaml:"pipelines"`
