@@ -267,13 +267,6 @@ crosschain:
     decimals: 6
     contract: peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
 
-  contract_accounts:
-    - wallet: 'TMSL-BTCX-TMSL-217:dex-trading.ETH'
-      native_asset: ETH
-      signer_address: '0x648ff8e9aceb9e60d35101952e43c368ae907936'
-      contract_address: '0x2d35ce0cabf4ac263eab1c182a454c91cc155cc1'
-      contract_name: 'customTrader'
-
   tasks:
     # Solana
     - name: sol-wrap

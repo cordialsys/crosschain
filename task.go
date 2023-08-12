@@ -10,7 +10,7 @@ type TaskConfig struct {
 	Name          string                 `yaml:"name"`
 	Code          string                 `yaml:"code"`
 	Allow         []string               `yaml:"allow"`
-	Signer        string                 `yaml:"signer"`
+	Chain         string                 `yaml:"chain"`
 	DefaultParams map[string]interface{} `yaml:"default_params"`
 	Operations    []TaskConfigOperation  `yaml:"operations"`
 
@@ -57,7 +57,7 @@ type TaskConfigOperationParam struct {
 	Match string      `yaml:"match"`
 	Value interface{} `yaml:"value"` // string or map[string]string
 	// Defaults []TaskConfigOperationParamDefaults `yaml:"defaults"`
-	// Fields   []TaskConfigOperationParamField    `yaml:"fields"`
+	Fields []TaskConfigOperationParam `yaml:"fields"`
 }
 
 type TaskConfigOperationParamDefaults struct {

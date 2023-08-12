@@ -2,7 +2,15 @@ package asset
 
 import xc "github.com/jumpcrypto/crosschain"
 
-var Testnets = []*xc.NativeAssetConfig{
+func init() {
+	for _, chain := range Testnet {
+		if chain.Net != "" {
+			chain.Net = "testnet"
+		}
+	}
+}
+
+var Testnet = []*xc.NativeAssetConfig{
 
 	{
 		Asset:       string(xc.APTOS),
@@ -16,7 +24,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:           string(xc.ATOM),
 		Driver:          string(xc.DriverCosmos),
-		Net:             "testnet",
 		URL:             "https://rpc.sentry-01.theta-testnet.polypore.xyz",
 		ChainName:       "Cosmos (Theta Testnet)",
 		ExplorerURL:     "https://explorer.theta-testnet.polypore.xyz",
@@ -29,7 +36,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.AVAX),
 		Driver:      string(xc.DriverEVM),
-		Net:         "testnet",
 		URL:         "https://api.avax-test.network/ext/bc/C/rpc",
 		ChainName:   "Avalanche (Fuji Testnet)",
 		ExplorerURL: "https://testnet.snowtrace.io",
@@ -41,7 +47,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.BCH),
 		Driver:      string(xc.DriverBitcoin),
-		Net:         "testnet",
 		URL:         "",
 		ChainName:   "Bitcoin Cash (Testnet)",
 		ExplorerURL: "",
@@ -51,7 +56,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.BNB),
 		Driver:      string(xc.DriverEVMLegacy),
-		Net:         "testnet",
 		URL:         "https://data-seed-prebsc-1-s1.binance.org:8545",
 		ChainName:   "Binance Smart Chain (Testnet)",
 		ExplorerURL: "https://testnet.bscscan.com",
@@ -61,7 +65,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.BTC),
 		Driver:      string(xc.DriverBitcoin),
-		Net:         "testnet",
 		URL:         "https://api.blockchair.com/bitcoin/testnet",
 		ChainName:   "Bitcoin (Testnet)",
 		ExplorerURL: "https://blockchair.com/bitcoin/testnet",
@@ -72,19 +75,17 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.CHZ2),
 		Driver:      string(xc.DriverEVMLegacy),
-		Net:         "mainnet",
-		URL:         "https://rpc.chiliz.com",
-		ChainName:   "Chiliz 2.0",
-		ExplorerURL: "https://scan.chiliz.com",
-		IndexerUrl:  "https://scan.chiliz.com",
+		URL:         "https://spicy-rpc.chiliz.com",
+		ChainName:   "Chiliz 2.0 (testnet)",
+		ExplorerURL: "https://spicy-explorer.chiliz.com",
+		IndexerUrl:  "https://spicy-explorer.chiliz.com",
 		IndexerType: "blockscout",
 		Decimals:    18,
-		ChainID:     88888,
+		ChainID:     88882,
 	},
 	{
 		Asset:       string(xc.DOGE),
 		Driver:      string(xc.DriverBitcoin),
-		Net:         "testnet",
 		URL:         "",
 		ChainName:   "Dogecoin (Testnet)",
 		ExplorerURL: "",
@@ -94,7 +95,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.ETC),
 		Driver:      string(xc.DriverEVMLegacy),
-		Net:         "testnet",
 		URL:         "https://www.ethercluster.com/mordor",
 		ChainName:   "Ethereum Classic (Mordor)",
 		ExplorerURL: "",
@@ -105,7 +105,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.ETH),
 		Driver:      string(xc.DriverEVM),
-		Net:         "testnet",
 		URL:         "https://goerli.infura.io/v3",
 		ChainName:   "Ethereum (Goerli)",
 		ExplorerURL: "https://goerli.etherscan.io",
@@ -118,7 +117,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.FTM),
 		Driver:      string(xc.DriverEVMLegacy),
-		Net:         "testnet",
 		URL:         "https://rpc.testnet.fantom.network",
 		ChainName:   "Fantom (Testnet)",
 		ExplorerURL: "https://testnet.ftmscan.com",
@@ -129,7 +127,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:                string(xc.INJ),
 		Driver:               string(xc.DriverCosmos),
-		Net:                  "testnet",
 		URL:                  "https://k8s.testnet.tm.injective.network",
 		ChainName:            "Injective (Testnet)",
 		ExplorerURL:          "https://testnet.explorer.injective.network",
@@ -143,7 +140,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:              string(xc.LUNA),
 		Driver:             string(xc.DriverCosmos),
-		Net:                "testnet",
 		URL:                "https://terra-testnet-rpc.polkachu.com",
 		ChainName:          "Terra (Testnet)",
 		ExplorerURL:        "https://finder.terra.money/testnet",
@@ -157,7 +153,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.MATIC),
 		Driver:      string(xc.DriverEVM),
-		Net:         "testnet",
 		URL:         "https://rpc-mumbai.matic.today",
 		ChainName:   "Polygon (Mumbai)",
 		ExplorerURL: "https://mumbai.polygonscan.com",
@@ -168,7 +163,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:       string(xc.ROSE),
 		Driver:      string(xc.DriverEVMLegacy),
-		Net:         "testnet",
 		URL:         "https://testnet.emerald.oasis.dev",
 		ChainName:   "Oasis Emerald (Testnet)",
 		ExplorerURL: "",
@@ -201,7 +195,6 @@ var Testnets = []*xc.NativeAssetConfig{
 	{
 		Asset:           string(xc.XPLA),
 		Driver:          string(xc.DriverCosmos),
-		Net:             "testnet",
 		URL:             "https://cube-rpc.xpla.dev",
 		ChainName:       "XPLA (Testnet)",
 		ExplorerURL:     "https://explorer.xpla.io/testnet",

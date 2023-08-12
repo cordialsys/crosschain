@@ -158,7 +158,6 @@ func NewLegacyClient(cfg xc.ITask) (*Client, error) {
 // FetchTxInput returns tx input for a EVM tx
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
 	nativeAsset := client.Asset.GetNativeAsset()
-	task := client.Asset.GetTask()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	result := NewTxInput()
@@ -171,11 +170,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	// Nonce
 	var targetAddr common.Address
 	var err error
-	if task != nil && task.Signer != "" {
-		targetAddr, err = HexToAddress(xc.Address(task.Signer))
-	} else {
-		targetAddr, err = HexToAddress(from)
-	}
+	targetAddr, err = HexToAddress(from)
 	if err != nil {
 		return zero, fmt.Errorf("bad to address '%v': %v", from, err)
 	}
