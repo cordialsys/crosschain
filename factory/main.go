@@ -2,7 +2,6 @@ package factory
 
 import (
 	"fmt"
-	"math/big"
 	"regexp"
 	"sort"
 	"strings"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
-	"gopkg.in/yaml.v2"
+	"github.com/sirupsen/logrus"
 
 	. "github.com/jumpcrypto/crosschain"
 	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
@@ -425,17 +424,19 @@ func (f *Factory) GetAllPossibleAddressesFromPublicKey(cfg ITask, publicKey []by
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
 func (f *Factory) ConvertAmountToHuman(cfg ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error) {
-	return convertAmountToHuman(cfg, blockchainAmount)
+	return blockchainAmount.ToHuman(cfg.GetAssetConfig().Decimals), nil
 }
 
 // ConvertAmountToBlockchain converts an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
 func (f *Factory) ConvertAmountToBlockchain(cfg ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error) {
-	return convertAmountToBlockchain(cfg, humanAmount)
+	return humanAmount.ToBlockchain(cfg.GetAssetConfig().Decimals), nil
 }
 
 // ConvertAmountStrToBlockchain converts a string representing an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
 func (f *Factory) ConvertAmountStrToBlockchain(cfg ITask, humanAmountStr string) (AmountBlockchain, error) {
-	return convertAmountStrToBlockchain(cfg, humanAmountStr)
+	_, err := decimal.NewFromString(humanAmountStr)
+	return NewAmountHumanReadableFromStr(humanAmountStr).
+		ToBlockchain(cfg.GetAssetConfig().Decimals), err
 }
 
 // EnrichAssetConfig augments a partial AssetConfig, for example if some info is stored in a db and other in a config file
@@ -532,109 +533,35 @@ func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
 	return privateKey
 }
 
-func assetsFromConfig(configMap map[string]interface{}) []ITask {
-	yamlStr, _ := yaml.Marshal(configMap)
-	var mainConfig Config
-	yaml.Unmarshal(yamlStr, &mainConfig)
-
-	var allAssets []ITask
-	for _, c := range mainConfig.Chains {
-		allAssets = append(allAssets, c)
-	}
-
-	for _, t := range mainConfig.Tokens {
-		copier.CopyWithOption(&t.AssetConfig, &t, copier.Option{IgnoreEmpty: false, DeepCopy: false})
-		allAssets = append(allAssets, t)
-	}
-
-	return allAssets
-}
-
-func parseAllowList(allowList []string) []*AllowEntry {
-	result := []*AllowEntry{}
-	for _, allow := range allowList {
-		var entry AllowEntry
-		values := strings.Split(allow, "->")
-		if len(values) == 1 {
-			valueStr := strings.TrimSpace(values[0])
-			value := GetAssetIDFromAsset(valueStr, "")
-			if valueStr == "*" {
-				value = "*"
-			}
-			entry = AllowEntry{
-				Src: value,
-				Dst: value,
-			}
-		}
-		if len(values) == 2 {
-			src := GetAssetIDFromAsset(strings.TrimSpace(values[0]), "")
-			dst := GetAssetIDFromAsset(strings.TrimSpace(values[1]), "")
-			entry = AllowEntry{
-				Src: src,
-				Dst: dst,
-			}
-		}
-		result = append(result, &entry)
-	}
-	return result
-}
-
-func tasksFromConfig(configMap map[string]interface{}) []*TaskConfig {
-	yamlStr, _ := yaml.Marshal(configMap)
-	var mainConfig Config
-	yaml.Unmarshal(yamlStr, &mainConfig)
-	for _, task := range mainConfig.AllTasks {
-		task.AllowList = parseAllowList(task.Allow)
-	}
-	return mainConfig.AllTasks
-}
-
-func pipelinesFromConfig(configMap map[string]interface{}) []*PipelineConfig {
-	yamlStr, _ := yaml.Marshal(configMap)
-	var mainConfig Config
-	yaml.Unmarshal(yamlStr, &mainConfig)
-	for _, pipeline := range mainConfig.AllPipelines {
-		pipeline.AllowList = parseAllowList(pipeline.Allow)
-	}
-	return mainConfig.AllPipelines
-}
-
 // NewDefaultFactory creates a new Factory
 func NewDefaultFactory() *Factory {
 	// Use our config file loader
-	cfg, err := config.RequireConfig("crosschain")
+	var cfg Config
+	err := config.RequireConfig("crosschain", &cfg)
 	if err != nil {
 		panic(err)
 	}
-	return NewDefaultFactoryWithConfig(cfg)
+
+	return NewDefaultFactoryWithConfig(&cfg)
 }
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
-func NewDefaultFactoryWithConfig(cfg map[string]interface{}) *Factory {
-	assetsList := assetsFromConfig(cfg)
-	assetsMap := AssetsToMap(assetsList)
+func NewDefaultFactoryWithConfig(cfg *Config) *Factory {
+	assetsList := cfg.GetChainsAndTokens()
 
-	tasksList := tasksFromConfig(cfg)
-	pipelinesList := pipelinesFromConfig(cfg)
-
-	return &Factory{
-		AllAssets:    assetsMap,
-		AllTasks:     tasksList,
-		AllPipelines: pipelinesList,
+	factory := &Factory{
+		AllAssets:    &sync.Map{},
+		AllTasks:     cfg.GetTasks(),
+		AllPipelines: cfg.GetPipelines(),
 	}
-}
-
-// AssetsToMap loads chains config without config file
-func AssetsToMap(assetsList []ITask) *sync.Map {
-	assetsMap := &sync.Map{}
-	for _, cfgI := range assetsList {
-		cfg := cfgI.GetAssetConfig()
-		if cfg.Auth != "" {
-			cfgI.(*NativeAssetConfig).AuthSecret, _ = config.GetSecret(cfg.Auth) // ignore error
+	for _, asset := range assetsList {
+		_, err := factory.PutAssetConfig(asset)
+		if err != nil {
+			logrus.WithError(err).WithField("asset", asset).Warn("could not add asset")
 		}
-		assetsMap.Store(cfgI.ID(), cfgI)
 	}
-	return assetsMap
+
+	return factory
 }
 
 func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
@@ -643,24 +570,6 @@ func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
 		return "", err
 	}
 	return builder.GetAddressFromPublicKey(publicKey)
-}
-
-// Amount converter
-func convertAmountToHuman(cfg ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error) {
-	return blockchainAmount.ToHuman(cfg.GetAssetConfig().Decimals), nil
-}
-
-func convertAmountToBlockchain(cfg ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error) {
-	return humanAmount.ToBlockchain(cfg.GetAssetConfig().Decimals), nil
-}
-
-func convertAmountStrToBlockchain(cfg ITask, humanAmountStr string) (AmountBlockchain, error) {
-	humanAmount, err := decimal.NewFromString(humanAmountStr)
-	if err != nil {
-		return AmountBlockchain(*big.NewInt(0)), err
-	}
-
-	return convertAmountToBlockchain(cfg, AmountHumanReadable(humanAmount))
 }
 
 // Given an address like coin::Coin<0x11AAbbCCdd::coin::NAME>,

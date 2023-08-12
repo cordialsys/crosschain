@@ -67,6 +67,14 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 				to = v.(string)
 			}
 		}
+	case map[string]interface{}:
+		nativeAsset := string(asset.NativeAsset)
+		for k, v := range contract {
+			// map keys are lowercase
+			if strings.EqualFold(k, nativeAsset) {
+				to = v.(string)
+			}
+		}
 	default:
 		return to, value, data, fmt.Errorf("invalid config for task=%s contract type=%T", task.ID(), contract)
 	}
@@ -118,6 +126,17 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 					for k, v := range valType {
 						// map keys are lowercase
 						if strings.EqualFold(k.(string), nativeAsset) {
+							valStr = fmt.Sprintf("%v", v)
+						}
+					}
+				case map[string]interface{}:
+					nativeAsset := string(asset.NativeAsset)
+					if p.Match == "dst_asset" {
+						nativeAsset = string(task.DstAsset.GetNativeAsset().NativeAsset)
+					}
+					for k, v := range valType {
+						// map keys are lowercase
+						if strings.EqualFold(k, nativeAsset) {
 							valStr = fmt.Sprintf("%v", v)
 						}
 					}
@@ -260,6 +279,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 		return contract, value, payload, fmt.Errorf("token price for %s is required to calculate arbiter fee", dstAsset.ID())
 	}
 	defaultArbiterFeeUsdStr, ok := task.DefaultParams["arbiter_fee_usd"]
+	fmt.Println(task)
 	if !ok {
 		return contract, value, payload, fmt.Errorf("invalid config: wormhole-transfer requires default_params.arbiter_fee_usd")
 	}

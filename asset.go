@@ -229,6 +229,7 @@ type AssetConfig struct {
 	IndexerType          string         `yaml:"indexer_type"`
 	PollingPeriod        string         `yaml:"polling_period"`
 	NoGasFees            bool           `yaml:"no_gas_fees"`
+	Disabled             bool           `yaml:"disabled"`
 
 	// Tokens
 	Chain    string `yaml:"chain"`
@@ -261,15 +262,6 @@ type AssetMetadataConfig struct {
 
 var _ ITask = &NativeAssetConfig{}
 var _ ITask = &TokenAssetConfig{}
-
-// Config is the full config containing all Assets
-type Config struct {
-	Chains       []*NativeAssetConfig `yaml:"chains"`
-	Tokens       []*TokenAssetConfig  `yaml:"tokens"`
-	AllPipelines []*PipelineConfig    `yaml:"pipelines"`
-	AllTasks     []*TaskConfig        `yaml:"tasks"`
-	AllAssets    []ITask              `yaml:"-"`
-}
 
 func (c NativeAssetConfig) String() string {
 	// do NOT print AuthSecret

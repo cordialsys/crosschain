@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
+	"github.com/jumpcrypto/crosschain/config/constants"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -17,23 +18,48 @@ type CrosschainTestSuite struct {
 func (s *CrosschainTestSuite) SetupTest() {
 }
 
-func TestExampleTestSuite(t *testing.T) {
+func TestConfig(t *testing.T) {
 	suite.Run(t, new(CrosschainTestSuite))
 }
 
 func (s *CrosschainTestSuite) TestRequireConfig() {
 	require := s.Require()
-	xcConfig, err := RequireConfig("crosschain")
+	file, err := os.CreateTemp(os.TempDir(), "xctest")
 	require.NoError(err)
-	require.NotNil(xcConfig)
-	require.NotNil(xcConfig["chains"])
-}
+	file.Write([]byte(`
+crosschain:
+  chains:
+    - asset: XYZ
+    - asset: ABC
+service2:
+  stuff:
+    - asset: 123
+    - asset: 456
+`))
+	os.Setenv(constants.ConfigEnv, file.Name())
+	defer os.Unsetenv(constants.ConfigEnv)
 
-func (s *CrosschainTestSuite) TestRequireConfigErr() {
-	require := s.Require()
-	xcConfig, err := RequireConfig("crosschainINVALID")
+	cfg := map[string]interface{}{}
+	err = RequireConfig("crosschain", &cfg)
 	require.NoError(err)
-	require.Equal(xcConfig, map[string]interface{}{})
+	require.Contains(cfg, "chains")
+	require.NotContains(cfg, "service2")
+	require.Len(cfg["chains"], 2)
+	require.Equal("XYZ", cfg["chains"].([]interface{})[0].(map[string]interface{})["asset"])
+
+	cfg = map[string]interface{}{}
+	err = RequireConfig("service2", &cfg)
+	require.NoError(err)
+	require.Contains(cfg, "stuff")
+	require.NotContains(cfg, "chains")
+	require.Len(cfg["stuff"], 2)
+	require.Equal(123, cfg["stuff"].([]interface{})[0].(map[string]interface{})["asset"])
+
+	cfg = map[string]interface{}{}
+	err = RequireConfig("invalid", &cfg)
+	require.NoError(err)
+	require.NotContains(cfg, "invalid")
+	require.NotContains(cfg, "chains")
 }
 
 func (s *CrosschainTestSuite) TestGetSecretEnv() {

@@ -22,6 +22,11 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Factory = NewDefaultFactory()
+	fmt.Printf("all %+v\n", s.Factory.AllAssets)
+	s.Factory.AllAssets.Range(func(key, value any) bool {
+		fmt.Println("0", key, value)
+		return true
+	})
 	s.TestNativeAssets = []xc.NativeAsset{
 		xc.ETH,
 		xc.MATIC,
@@ -36,7 +41,7 @@ func (s *CrosschainTestSuite) SetupTest() {
 
 }
 
-func TestExampleTestSuite(t *testing.T) {
+func TestCrosschain(t *testing.T) {
 	suite.Run(t, new(CrosschainTestSuite))
 }
 

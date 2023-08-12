@@ -2,6 +2,7 @@ package factory
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	xc "github.com/jumpcrypto/crosschain"
@@ -219,10 +220,10 @@ func (s *CrosschainTestSuite) TestWormholeApprove() {
 	// get wormhole pipeline config (approve > transfer)
 	require := s.Require()
 	srcAsset, err := s.Factory.GetAssetConfig("WETH", "ETH")
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(srcAsset)
 	dstAsset, err := s.Factory.GetAssetConfig("WETH", "MATIC")
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(dstAsset)
 
 	tasks, err := s.Factory.GetMultiAssetConfig("WETH.ETH", "WETH.MATIC")
@@ -232,12 +233,12 @@ func (s *CrosschainTestSuite) TestWormholeApprove() {
 	// test wormhole approve only
 	task := tasks[0]
 	txBuilder, err := s.Factory.NewTxBuilder(task)
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(txBuilder)
 
 	txInput := evm.TxInput{}
 	tx, err := txBuilder.NewTransfer("from", "0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B", xc.NewAmountBlockchainFromUint64(0x123), &txInput)
-	require.Nil(err)
+	require.NoError(err)
 	evmTx := tx.(*evm.Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
@@ -254,20 +255,23 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 	// get wormhole pipeline config (approve > transfer)
 	require := s.Require()
 	srcAsset, err := s.Factory.GetAssetConfig("WETH", "ETH")
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(srcAsset)
 	dstAsset, err := s.Factory.GetAssetConfig("WETH", "MATIC")
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(dstAsset)
 
 	tasks, err := s.Factory.GetMultiAssetConfig("WETH.ETH", "WETH.MATIC")
-	require.Nil(err)
+	require.NoError(err)
 	require.Equal(2, len(tasks))
+	for _, t := range tasks {
+		fmt.Println(t)
+	}
 
 	// test wormhole transfer only
 	task := tasks[1]
 	txBuilder, err := s.Factory.NewTxBuilder(task)
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(txBuilder)
 
 	txInput := evm.TxInput{Nonce: 0x234}
@@ -277,7 +281,7 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 
 	task.GetTask().DstAsset.(*xc.TokenAssetConfig).Metadata.PriceUSD = xc.NewAmountHumanReadableFromStr("2.5")
 	tx, err := txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
-	require.Nil(err)
+	require.NoError(err)
 	evmTx := tx.(*evm.Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())

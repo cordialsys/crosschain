@@ -83,8 +83,8 @@ func (task TaskConfig) String() string {
 		dst = string(task.DstAsset.ID())
 	}
 	return fmt.Sprintf(
-		"TaskConfig(id=%s src=%s dst=%s)",
-		task.ID(), src, dst,
+		"TaskConfig(id=%s src=%s dst=%s defaults=%v)",
+		task.ID(), src, dst, task.DefaultParams,
 	)
 }
 

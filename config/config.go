@@ -8,35 +8,49 @@ import (
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"
+	"github.com/jumpcrypto/crosschain/config/constants"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 func getViper() *viper.Viper {
 	// new instance of viper to avoid conflicts with, e.g., cosmos
 	v := viper.New()
+	// config file is config.yaml
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")
-	// TODO change coridal root
-	v.AddConfigPath("$CORDIAL_ROOT")
+
+	// If the config location env is set, use that.
+	v.SetConfigFile(os.Getenv(constants.ConfigEnv))
+
+	// otherwise, prioritize current path or parent
 	v.AddConfigPath(".")
 	v.AddConfigPath("..")
-	v.SetConfigFile(os.Getenv("CORDIAL_CONFIG"))
+	// Lastly, check home dir
+	v.AddConfigPath(constants.DefaultHome)
+
 	return v
 }
 
 // RequireConfig returns the config - panic if config file is not available
-func RequireConfig(section string) (map[string]interface{}, error) {
+func RequireConfig(section string, unmarshalDst interface{}) error {
 	v := getViper()
 	// config is where we store default values
 	// panic if not available
 	err := v.ReadInConfig()
 	if err != nil {
-		return nil, fmt.Errorf("fatal error reading config file: %w", err)
+		return fmt.Errorf("fatal error reading config file: %w", err)
 	}
-
 	// retrieve config
-	config := v.GetStringMap(section)
-	return config, nil
+	if section != "" {
+		// viper does not support partial deserialization so we
+		// have to re-serialize and parse again
+		asMap := v.GetStringMap(section)
+		bz, _ := yaml.Marshal(asMap)
+		return yaml.Unmarshal(bz, unmarshalDst)
+	} else {
+		return v.Unmarshal(unmarshalDst)
+	}
 }
 
 func newVaultClient(cfg *vault.Config) (VaultLoader, error) {
