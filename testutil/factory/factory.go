@@ -3,6 +3,7 @@ package testutil
 import (
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/factory"
+	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
 )
 
 // TestFactory for unit tests
@@ -190,7 +191,7 @@ func NewDefaultFactory() TestFactory {
 }
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
-func NewDefaultFactoryWithConfig(cfg *factory.Config) TestFactory {
+func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config) TestFactory {
 	f := factory.NewDefaultFactoryWithConfig(cfg)
 	return TestFactory{
 		DefaultFactory: f,

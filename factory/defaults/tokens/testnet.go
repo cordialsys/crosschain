@@ -29,6 +29,12 @@ var Testnet = []*xc.TokenAssetConfig{
 		Decimals: 18,
 		Contract: "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
 	},
+	{
+		Asset:    "WETH",
+		Chain:    string(xc.MATIC),
+		Decimals: 18,
+		Contract: "0xc6735cc74553Cc2caeB9F5e1Ea0A4dAe12ef4632",
+	},
 
 	{
 		Asset:    "USDC",
@@ -38,7 +44,7 @@ var Testnet = []*xc.TokenAssetConfig{
 	},
 	{
 		Asset:    "WSOL",
-		Chain:    string(xc.ETH),
+		Chain:    string(xc.SOL),
 		Decimals: 9,
 		Contract: "So11111111111111111111111111111111111111112",
 	},

@@ -1,4 +1,4 @@
-package asset
+package chains
 
 import (
 	xc "github.com/jumpcrypto/crosschain"

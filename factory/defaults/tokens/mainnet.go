@@ -30,6 +30,12 @@ var Mainnet = []*xc.TokenAssetConfig{
 		Decimals: 18,
 		Contract: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
 	},
+	{
+		Asset:    "WETH",
+		Chain:    string(xc.MATIC),
+		Decimals: 18,
+		Contract: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+	},
 
 	{
 		Asset:    "USDC",
@@ -39,7 +45,7 @@ var Mainnet = []*xc.TokenAssetConfig{
 	},
 	{
 		Asset:    "WSOL",
-		Chain:    string(xc.ETH),
+		Chain:    string(xc.SOL),
 		Decimals: 9,
 		Contract: "So11111111111111111111111111111111111111112",
 	},

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	vault "github.com/hashicorp/vault/api"
@@ -24,7 +25,32 @@ func TestConfig(t *testing.T) {
 	suite.Run(t, new(CrosschainTestSuite))
 }
 
-func (s *CrosschainTestSuite) TestRequireConfig() {
+func (s *CrosschainTestSuite) TestRequireConfigNotFound() {
+	require := s.Require()
+	os.Setenv(constants.ConfigEnv, "___not_an_existing_file___")
+	cfg := map[string]interface{}{}
+	err := RequireConfig("crosschain", &cfg, nil)
+	require.Error(err)
+	require.ErrorContains(err, noSuchFile)
+
+	// works if defaults are provided
+	err = RequireConfig("crosschain", &cfg, &cfg)
+	require.NoError(err)
+
+	// different error if looking in directory for config file
+	os.Unsetenv(constants.ConfigEnv)
+	// change dir to somewhere that config files are not present
+	os.Chdir(os.TempDir())
+	os.Setenv(constants.DefaultHomeEnv, os.TempDir())
+	err = RequireConfig("crosschain", &cfg, nil)
+	require.Error(err)
+	require.Contains(strings.ToLower(err.Error()), notFoundIn)
+
+	// works if given defaults
+	err = RequireConfig("crosschain", &cfg, &cfg)
+	require.NoError(err)
+}
+func (s *CrosschainTestSuite) TestRequireConfigParsesYaml() {
 	require := s.Require()
 	file, err := os.CreateTemp(os.TempDir(), "xctest")
 	require.NoError(err)

@@ -6,12 +6,13 @@ import (
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/config"
 	"github.com/jumpcrypto/crosschain/config/constants"
+	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
 	"gopkg.in/yaml.v2"
 )
 
 func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	require := s.Require()
-	var cfg Config
+	var cfg factoryconfig.Config
 	err := yaml.Unmarshal([]byte(`
   chains:
   - asset: ATOM
@@ -115,7 +116,7 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 }
 
 type ConfigWrapper struct {
-	Config `yaml:"crosschain"`
+	factoryconfig.Config `yaml:"crosschain"`
 }
 
 func (s *CrosschainTestSuite) TestConfigLoad() {
@@ -173,7 +174,7 @@ crosschain:
 	wrapper.Parse()
 	yaml.Unmarshal(cfgBz, &wrapper)
 	require.Contains(wrapper.Config.Tasks[0].DefaultParams, "arbiter_fee_usd")
-	var cfg Config
+	var cfg factoryconfig.Config
 	err = config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
 	cfg.Parse()

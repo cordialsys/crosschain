@@ -13,6 +13,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var noSuchFile = "no such file"
+var notFoundIn = "not found in"
+
 func getViper() *viper.Viper {
 	// new instance of viper to avoid conflicts with, e.g., cosmos
 	v := viper.New()
@@ -32,19 +35,28 @@ func getViper() *viper.Viper {
 	return v
 }
 
-// Load configuration.  This will load a configuration file
-// Using the default paths and environment variables, Then, if a section is
-// provided, only that relevent section in the config will be loaded.  Otherwise,
-// The whole configuration is used.
-// You may optionally provide a matching configuration object with defaults filled out.
-// The configuration will then override or add values given in the defaults.
+// Load configuration.
+// 1. Read in a configuration file based on environment variables and current path.
+// 2. If a section is provided, e.g. "crosschain", then only that section will be treated as root and deserialized.
+// 3. You may optionally provide an existing configuration object with default values.
+// 4. If defaults are provided, an error will _not_ be returned if no config is found.
 func RequireConfig(section string, unmarshalDst interface{}, defaults interface{}) error {
 	v := getViper()
 	// config is where we store default values
 	// panic if not available
 	err := v.ReadInConfig()
 	if err != nil {
-		return fmt.Errorf("fatal error reading config file: %w", err)
+		msg := strings.ToLower(err.Error())
+		if defaults != nil && (strings.Contains(msg, noSuchFile) || strings.Contains(msg, notFoundIn)) {
+			// use the defaults by serializing and deserializing
+			bz, err := yaml.Marshal(defaults)
+			if err != nil {
+				return err
+			}
+			return yaml.Unmarshal(bz, unmarshalDst)
+		} else {
+			return fmt.Errorf("fatal error reading config file: %w", err)
+		}
 	}
 	// retrieve config
 	if section != "" {

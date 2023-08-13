@@ -187,7 +187,7 @@ func GenerateTasks(
 					Function:  "transfer",
 					Signature: "0f5287b0",
 					// we need to know the token bridge contract address to interactive with per chain
-					Contract: mainnet.WormholeTokenBridge,
+					Contract: wormholeTokenBridge,
 					Params: []xc.TaskConfigOperationParam{
 						{
 							Name: "token",
@@ -202,6 +202,7 @@ func GenerateTasks(
 						{
 							Name:  "chain",
 							Match: "dst_asset",
+							Type:  "uint256",
 							Value: wormholeChains,
 						},
 						{

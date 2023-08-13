@@ -1,4 +1,4 @@
-package factory
+package config
 
 import (
 	"strings"

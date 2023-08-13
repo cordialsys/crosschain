@@ -2,6 +2,7 @@ package factory
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,6 +15,8 @@ import (
 	. "github.com/jumpcrypto/crosschain"
 	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
 	"github.com/jumpcrypto/crosschain/config"
+	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
+	"github.com/jumpcrypto/crosschain/factory/defaults"
 	"github.com/jumpcrypto/crosschain/factory/drivers"
 )
 
@@ -536,17 +539,36 @@ func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
 // NewDefaultFactory creates a new Factory
 func NewDefaultFactory() *Factory {
 	// Use our config file loader
-	var cfg Config
-	err := config.RequireConfig("crosschain", &cfg, nil)
-	if err != nil {
-		panic(err)
+	var cfg factoryconfig.Config
+	if v := os.Getenv("XC_MAINNET"); v != "" {
+		// use mainnets
+		err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
+		fmt.Println("--- USING MAINNET")
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// default to use testnet
+		err := config.RequireConfig("crosschain", &cfg, defaults.Testnet)
+		if err != nil {
+			panic(err)
+		}
+
+		// special override: if override with mainnet, let's start over with mainnet defaults
+		if cfg.Network == "mainnet" {
+			fmt.Println("--- USING MAINNET")
+			err = config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	return NewDefaultFactoryWithConfig(&cfg)
 }
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
-func NewDefaultFactoryWithConfig(cfg *Config) *Factory {
+func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config) *Factory {
 	assetsList := cfg.GetChainsAndTokens()
 
 	factory := &Factory{

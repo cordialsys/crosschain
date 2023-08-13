@@ -176,6 +176,8 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 				addr := common.HexToAddress(valStr)
 				paddedAddr := common.LeftPadBytes(addr.Bytes(), 32)
 				data = append(data, paddedAddr...)
+			default:
+				return to, value, data, fmt.Errorf("cannot serialize unknown type=%s", p.Type)
 			}
 		}
 	}

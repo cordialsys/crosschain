@@ -90,7 +90,7 @@ func (s *CrosschainTestSuite) TestEthUnwrap() {
 
 func (s *CrosschainTestSuite) TestProxyTransfer() {
 	require := s.Require()
-	task, err := s.Factory.GetTaskConfig("proxy-transfer-eth", "ETH")
+	task, err := s.Factory.GetTaskConfig("evm-transfer", "ETH")
 	require.Nil(err)
 	require.NotNil(task)
 
@@ -120,7 +120,7 @@ func (s *CrosschainTestSuite) TestProxyTransferToken() {
 	asset, err := s.Factory.GetAssetConfig("USDC", "ETH")
 	require.Nil(err)
 	require.NotNil(asset)
-	task, err := s.Factory.GetTaskConfig("proxy-transfer-erc20", "USDC.ETH")
+	task, err := s.Factory.GetTaskConfig("evm-transfer-erc20", "USDC.ETH")
 	require.Nil(err)
 	require.NotNil(task)
 
@@ -168,7 +168,7 @@ func (s *CrosschainTestSuite) TestERC20Transfer() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(asset.GetAssetConfig().Contract, strings.ToLower(evmTx.To().String()))
+	require.Equal(strings.ToLower(asset.GetAssetConfig().Contract), strings.ToLower(evmTx.To().String()))
 	require.Equal("0", evmTx.Value().String())
 	expectedData := "a9059cbb" +
 		"000000000000000000000000" + strings.ToLower(to) +

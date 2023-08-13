@@ -22,7 +22,6 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Factory = NewDefaultFactory()
-	fmt.Printf("all %+v\n", s.Factory.AllAssets)
 	s.Factory.AllAssets.Range(func(key, value any) bool {
 		fmt.Println("0", key, value)
 		return true
