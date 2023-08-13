@@ -4,7 +4,7 @@ import xc "github.com/jumpcrypto/crosschain"
 
 var Mainnet = []*xc.PipelineConfig{
 	{
-		ID: "wormhole-transfer",
+		Name: "wormhole-transfer",
 		Allow: []string{
 			"WETH.ETH -> WETH.MATIC",
 			"WETH.ETH -> WETH.SOL",

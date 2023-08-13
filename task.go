@@ -22,7 +22,7 @@ type TaskConfig struct {
 
 // PipelineConfig is the model used to represent a pipeline (list of tasks) read from config file or db
 type PipelineConfig struct {
-	ID    string   `yaml:"name"`
+	Name  string   `yaml:"name"`
 	Allow []string `yaml:"allow"`
 	Tasks []string `yaml:"tasks"`
 
@@ -33,8 +33,12 @@ type PipelineConfig struct {
 func (p PipelineConfig) String() string {
 	return fmt.Sprintf(
 		"PipelineConfig(id=%s)",
-		p.ID,
+		p.Name,
 	)
+}
+
+func (p PipelineConfig) ID() AssetID {
+	return AssetID(p.Name)
 }
 
 type AllowEntry struct {

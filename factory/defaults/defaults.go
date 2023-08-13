@@ -12,38 +12,46 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var mainnetChainMap = map[string]*xc.NativeAssetConfig{}
-var testnetChainMap = map[string]*xc.NativeAssetConfig{}
-
-func init() {
-	for _, chain := range chains.Mainnet {
-		asset := strings.ToLower(chain.Asset)
-		if _, ok := mainnetChainMap[asset]; ok {
-			logrus.Warnf("multiple mainnet configuration entries for %s", asset)
-		}
-		mainnetChainMap[asset] = chain
-	}
-	for _, chain := range chains.Testnet {
-		asset := strings.ToLower(chain.Asset)
-		if _, ok := testnetChainMap[asset]; ok {
-			logrus.Warnf("multiple testnet configuration entries for %s", asset)
-		}
-		testnetChainMap[asset] = chain
-	}
+type HasID interface {
+	ID() xc.AssetID
 }
+
+func listToMap[T HasID](list []T) map[string]T {
+	toMap := map[string]T{}
+	for _, item := range list {
+		asset := strings.ToLower(string(item.ID()))
+		if _, ok := toMap[asset]; ok {
+			logrus.Warnf("multiple entries for %s (%T)", asset, item)
+		}
+		toMap[asset] = item
+	}
+	return toMap
+}
+
+var mainnetChainMap = listToMap(chains.Mainnet)
+var testnetChainMap = listToMap(chains.Testnet)
+
+var mainnetTokenMap = listToMap(tokens.Mainnet)
+var testnetTokenMap = listToMap(tokens.Testnet)
+
+var mainnetTaskMap = listToMap(tasks.Mainnet)
+var testnetTaskMap = listToMap(tasks.Testnet)
+
+var mainnetPipelineMap = listToMap(pipelines.Mainnet)
+var testnetPipelineMap = listToMap(pipelines.Testnet)
 
 var Mainnet = factoryconfig.Config{
 	Network:   "mainnet",
 	Chains:    mainnetChainMap,
-	Tokens:    tokens.Mainnet,
-	Pipelines: pipelines.Mainnet,
-	Tasks:     tasks.Mainnet,
+	Tokens:    mainnetTokenMap,
+	Pipelines: mainnetPipelineMap,
+	Tasks:     mainnetTaskMap,
 }
 
 var Testnet = factoryconfig.Config{
 	Network:   "testnet",
 	Chains:    testnetChainMap,
-	Tokens:    tokens.Testnet,
-	Pipelines: pipelines.Testnet,
-	Tasks:     tasks.Testnet,
+	Tokens:    testnetTokenMap,
+	Pipelines: testnetPipelineMap,
+	Tasks:     testnetTaskMap,
 }

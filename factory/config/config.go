@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/jinzhu/copier"
@@ -15,11 +15,14 @@ type Config struct {
 
 	Network string `yaml:"network"`
 	// map of lowercase(native_asset) -> NativeAssetObject
-	Chains    map[string]*xc.NativeAssetConfig `yaml:"chains"`
-	Tokens    []*xc.TokenAssetConfig           `yaml:"tokens"`
-	Pipelines []*xc.PipelineConfig             `yaml:"pipelines"`
+	Chains map[string]*xc.NativeAssetConfig `yaml:"chains"`
+	// map of lowercase(id) -> TokenAssetConfig
+	Tokens map[string]*xc.TokenAssetConfig `yaml:"tokens"`
 
-	Tasks []*xc.TaskConfig `yaml:"tasks"`
+	// map of lowercase(id) -> TaskConfig
+	Tasks map[string]*xc.TaskConfig `yaml:"tasks"`
+	// map of lowercase(id) -> PipelineConfig
+	Pipelines map[string]*xc.PipelineConfig `yaml:"pipelines"`
 
 	chainsAndTokens []xc.ITask `yaml:"-"`
 	// Has this been parsed already
@@ -39,7 +42,6 @@ func (cfg *Config) Parse() {
 	for _, token := range cfg.Tokens {
 		cfg.chainsAndTokens = append(cfg.chainsAndTokens, token)
 	}
-	fmt.Println("-----", len(cfg.chainsAndTokens))
 
 	for _, task := range cfg.Tasks {
 		task.AllowList = parseAllowList(task.Allow)
@@ -55,19 +57,23 @@ func (cfg *Config) GetChainsAndTokens() []xc.ITask {
 	if !cfg.parsed {
 		cfg.Parse()
 	}
+	// must sort deterministically
+	sort.Slice(cfg.chainsAndTokens, func(i, j int) bool {
+		return cfg.chainsAndTokens[i].ID() < cfg.chainsAndTokens[j].ID()
+	})
 	return cfg.chainsAndTokens
 }
 func (cfg *Config) GetTasks() []*xc.TaskConfig {
 	if !cfg.parsed {
 		cfg.Parse()
 	}
-	return cfg.Tasks
+	return mapToList(cfg.Tasks)
 }
 func (cfg *Config) GetPipelines() []*xc.PipelineConfig {
 	if !cfg.parsed {
 		cfg.Parse()
 	}
-	return cfg.Pipelines
+	return mapToList(cfg.Pipelines)
 }
 
 func parseAllowList(allowList []string) []*xc.AllowEntry {
@@ -97,4 +103,22 @@ func parseAllowList(allowList []string) []*xc.AllowEntry {
 		result = append(result, &entry)
 	}
 	return result
+}
+
+type HasID interface {
+	ID() xc.AssetID
+}
+
+func mapToList[T HasID](theMap map[string]T) []T {
+	toList := make([]T, len(theMap))
+	i := 0
+	for _, item := range theMap {
+		toList[i] = item
+		i++
+	}
+	sort.Slice(toList, func(i, j int) bool {
+		// need to be sorted deterministically
+		return toList[i].ID() < toList[j].ID()
+	})
+	return toList
 }

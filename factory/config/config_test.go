@@ -1,15 +1,28 @@
-package factory
+package config_test
 
 import (
 	"os"
+	"testing"
 
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/config"
 	"github.com/jumpcrypto/crosschain/config/constants"
+	"github.com/jumpcrypto/crosschain/factory"
 	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
 	"github.com/jumpcrypto/crosschain/factory/defaults"
+	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v2"
 )
+
+type CrosschainTestSuite struct {
+	suite.Suite
+}
+
+func (s *CrosschainTestSuite) SetupTest() {
+}
+func TestFactoryConfig(t *testing.T) {
+	suite.Run(t, new(CrosschainTestSuite))
+}
 
 func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	require := s.Require()
@@ -38,22 +51,25 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
       decimals: 9
 
   tokens:
-  - asset: USDC
-    chain: SOL
-    net: testnet
-    decimals: 6
-    contract: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+    USDC.SOL:
+      asset: USDC
+      chain: SOL
+      net: testnet
+      decimals: 6
+      contract: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
 
   tasks:
     # Solana
-    - name: sol-wrap
+    sol-wrap:
+      name: sol-wrap
       default_params:
         param1: abc
       code: WrapTx
       chain: SOL
       allow:
       - SOL -> WSOL.SOL
-    - name: sol-unwrap
+    sol-unwrap:
+      name: sol-unwrap
       default_params:
         param2: xyz
       code: UnwrapEverythingTx
@@ -62,7 +78,8 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
       - WSOL.SOL -> SOL
 
   pipelines:
-    - name: wrappyMcUnwrappyFace
+    wrappyMcUnwrappyFace:
+      name: wrappyMcUnwrappyFace
       allow:
         - SOL -> WSOL.SOL
         - WSOL.SOL -> SOL
@@ -74,26 +91,27 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 
 `), &cfg)
 	require.NoError(err)
-	// // TODO delete this
-	cfg.Parse()
+
+	bz, err := yaml.Marshal(&cfg)
+	require.NoError(err)
+	cfg = factoryconfig.Config{}
+	err = yaml.Unmarshal(bz, &cfg)
+	require.NoError(err)
 
 	// Test tokens and chains
 	require.Len(cfg.Chains, 2)
 	require.Len(cfg.Tokens, 1)
 	require.Len(cfg.GetChainsAndTokens(), 3)
 
+	// viper lowercases the config keys, but yaml natively
+	// is case sensitive.
 	require.Equal("ATOM", cfg.Chains["ATOM"].Asset)
 	require.Equal("Cosmos", cfg.Chains["ATOM"].ChainName)
 	require.Equal("SOL", cfg.Chains["SOL"].Asset)
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
 
-	require.Equal("USDC", cfg.Tokens[0].Asset)
-	require.Equal("USDC", cfg.Tokens[0].AssetConfig.Asset)
-
-	// cursed
-	yamlStr, _ := yaml.Marshal(cfg)
-	var raw map[string]interface{}
-	yaml.Unmarshal(yamlStr, &raw)
+	require.Equal("USDC", cfg.Tokens["USDC.SOL"].Asset)
+	require.Equal("USDC", cfg.Tokens["USDC.SOL"].AssetConfig.Asset)
 
 	tasks := cfg.GetTasks()
 	pipelines := cfg.GetPipelines()
@@ -103,16 +121,15 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	// Allow lists should be parsed
 	require.Len(tasks[0].AllowList, 1)
 	require.Len(tasks[1].AllowList, 1)
-	require.Equal(tasks[0].AllowList[0], &xc.AllowEntry{Src: "SOL", Dst: "WSOL.SOL"})
-	require.Equal(tasks[1].AllowList[0], &xc.AllowEntry{Src: "WSOL.SOL", Dst: "SOL"})
-	require.Contains(tasks[0].DefaultParams, "param1")
-	require.Equal(tasks[0].DefaultParams["param1"], "abc")
-	require.Contains(tasks[1].DefaultParams, "param2")
-	require.Equal(tasks[1].DefaultParams["param2"], "xyz")
-
+	require.Equal(tasks[0].AllowList[0], &xc.AllowEntry{Src: "WSOL.SOL", Dst: "SOL"})
+	require.Equal(tasks[1].AllowList[0], &xc.AllowEntry{Src: "SOL", Dst: "WSOL.SOL"})
+	require.Contains(tasks[0].DefaultParams, "param2")
+	require.Equal(tasks[0].DefaultParams["param2"], "xyz")
+	require.Contains(tasks[1].DefaultParams, "param1")
+	require.Equal(tasks[1].DefaultParams["param1"], "abc")
 	// Test pipelines
 	require.Len(pipelines, 1)
-	require.Equal(pipelines[0].ID, "wrappyMcUnwrappyFace")
+	require.Equal(pipelines[0].Name, "wrappyMcUnwrappyFace")
 	require.Len(pipelines[0].AllowList, 4)
 	require.Equal(pipelines[0].AllowList[0], &xc.AllowEntry{Src: "SOL", Dst: "WSOL.SOL"})
 	require.Equal(pipelines[0].AllowList[3], &xc.AllowEntry{Src: "WETH.ETH", Dst: "ETH"})
@@ -139,7 +156,8 @@ crosschain:
       explorer_url: 'https://goerli.etherscan.io'
       decimals: 18
   tasks:
-    - name: wormhole-transfer
+    wormhole-transfer:
+      name: wormhole-transfer
       code: WormholeTransferTx
       default_params:
         arbiter_fee_usd: 5
@@ -176,7 +194,7 @@ crosschain:
 	var wrapper ConfigWrapper
 	wrapper.Parse()
 	yaml.Unmarshal(cfgBz, &wrapper)
-	require.Contains(wrapper.Config.Tasks[0].DefaultParams, "arbiter_fee_usd")
+	require.Contains(wrapper.Config.Tasks["wormhole-transfer"].DefaultParams, "arbiter_fee_usd")
 	var cfg factoryconfig.Config
 	err := config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
@@ -186,7 +204,7 @@ crosschain:
 	require.Len(cfg.Chains, 1)
 	require.Len(cfg.Tasks, 1)
 	require.Len(cfg.GetChainsAndTokens(), 1)
-	require.Contains(cfg.Tasks[0].DefaultParams, "arbiter_fee_usd")
+	require.Contains(cfg.Tasks["wormhole-transfer"].DefaultParams, "arbiter_fee_usd")
 }
 
 func (s *CrosschainTestSuite) TestMergeWitDefaults() {
@@ -238,7 +256,7 @@ crosschain:
 		file, _ := os.CreateTemp(os.TempDir(), "xctest")
 		file.Write([]byte(tc.cfg))
 		os.Setenv(constants.ConfigEnv, file.Name())
-		f := NewDefaultFactory()
+		f := factory.NewDefaultFactory()
 		count := 0
 		f.AllAssets.Range(func(key, _ any) bool {
 			count += 1
@@ -253,4 +271,64 @@ crosschain:
 
 	}
 
+}
+
+func (s *CrosschainTestSuite) TestSorted() {
+	require := s.Require()
+	// run multiple times since go map keys are not deterministic
+	for i := 0; i < 10; i++ {
+		cfg := factoryconfig.Config{
+			Chains: map[string]*xc.NativeAssetConfig{
+				"BBB": {
+					Asset: "BBB",
+				},
+				"AAA": {
+					Asset: "AAA",
+				},
+				"CCC": {
+					Asset: "CCC",
+				},
+			},
+			Tasks: map[string]*xc.TaskConfig{
+				"BBB": {
+					Name: "BBB",
+				},
+				"AAA": {
+					Name: "AAA",
+				},
+				"CCC": {
+					Name: "CCC",
+				},
+			},
+			Pipelines: map[string]*xc.PipelineConfig{
+				"BBB": {
+					Name: "BBB",
+				},
+				"AAA": {
+					Name: "AAA",
+				},
+				"CCC": {
+					Name: "CCC",
+				},
+			},
+		}
+		assets := cfg.GetChainsAndTokens()
+		tasks := cfg.GetTasks()
+		pipes := cfg.GetChainsAndTokens()
+		require.Len(assets, 3)
+		require.Equal("AAA", string(assets[0].ID()))
+		require.Equal("BBB", string(assets[1].ID()))
+		require.Equal("CCC", string(assets[2].ID()))
+
+		require.Len(tasks, 3)
+		require.Equal("AAA", string(tasks[0].ID()))
+		require.Equal("BBB", string(tasks[1].ID()))
+		require.Equal("CCC", string(tasks[2].ID()))
+
+		require.Len(pipes, 3)
+		require.Equal("AAA", string(pipes[0].ID()))
+		require.Equal("BBB", string(pipes[1].ID()))
+		require.Equal("CCC", string(pipes[2].ID()))
+
+	}
 }

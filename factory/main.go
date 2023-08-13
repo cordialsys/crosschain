@@ -237,11 +237,11 @@ func (f *Factory) getTaskConfigBySrcDstAssets(srcAsset ITask, dstAsset ITask) ([
 				for _, taskName := range pipeline.Tasks {
 					task, err := f.findTask(taskName)
 					if err != nil {
-						return []ITask{}, fmt.Errorf("pipeline '%s' has invalid task: '%s'", pipeline.ID, taskName)
+						return []ITask{}, fmt.Errorf("pipeline '%s' has invalid task: '%s'", pipeline.Name, taskName)
 					}
 					newTask, err := f.enrichTaskBySrcDstAssets(task, srcAsset, dstAsset)
 					if err != nil {
-						return []ITask{}, fmt.Errorf("pipeline '%s' can't enrich task: '%s' %s -> %s", pipeline.ID, taskName, srcAssetID, dstAssetID)
+						return []ITask{}, fmt.Errorf("pipeline '%s' can't enrich task: '%s' %s -> %s", pipeline.Name, taskName, srcAssetID, dstAssetID)
 					}
 					result = append(result, newTask)
 				}
