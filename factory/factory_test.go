@@ -22,8 +22,10 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Factory = NewDefaultFactory()
+	count := 0
 	s.Factory.AllAssets.Range(func(key, value any) bool {
-		fmt.Println("0", key, value)
+		count++
+		fmt.Printf("loaded asset %d: %s %v\n", count, key, value)
 		return true
 	})
 	s.TestNativeAssets = []xc.NativeAsset{

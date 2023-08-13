@@ -230,9 +230,9 @@ type TestHobby struct {
 }
 type TestFriend struct {
 	Name     string                `yaml:"name"`
-	Thoughts []string              `yaml:"thoughts"`
-	Hobbies  map[string]*TestHobby `yaml:"hobbies"`
-	Numbers  map[string]int        `yaml:"numbers"`
+	Thoughts []string              `yaml:"thoughts,omitempty"`
+	Hobbies  map[string]*TestHobby `yaml:"hobbies,omitempty"`
+	Numbers  map[string]int        `yaml:"numbers,omitempty"`
 }
 type TestObj struct {
 	Name      string                 `yaml:"name"`
@@ -282,6 +282,8 @@ test:
         one: 1
         one2: 1
         seven: 7
+    sol:
+      name: "sol"
 `)
 	expected := TestObj{
 		Name:      "marley",
@@ -300,6 +302,9 @@ test:
 					"one2":  1,
 					"seven": 7,
 				},
+			},
+			"sol": {
+				Name: "sol",
 			},
 		},
 	}
@@ -332,6 +337,18 @@ test:
 			},
 		},
 		{
+			name: "test case for keys is lowercase",
+			cfg: `
+test:
+  friends:
+    SOL:
+      name: SOL
+`,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Friends["sol"].Name = "SOL"
+			},
+		},
+		{
 			name: "overwrite nested name",
 			cfg: `
 test:
@@ -356,10 +373,8 @@ test:
 `,
 			applyDiff: func(cfg *TestObj) {
 				cfg.Friends["new"] = &TestFriend{
-					Name:     "n",
-					Numbers:  map[string]int{"two": 2},
-					Thoughts: []string{},
-					Hobbies:  map[string]*TestHobby{},
+					Name:    "n",
+					Numbers: map[string]int{"two": 2},
 				}
 			},
 		},

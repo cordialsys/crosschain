@@ -7,6 +7,7 @@ import (
 	"github.com/jumpcrypto/crosschain/config"
 	"github.com/jumpcrypto/crosschain/config/constants"
 	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
+	"github.com/jumpcrypto/crosschain/factory/defaults"
 	"gopkg.in/yaml.v2"
 )
 
@@ -15,24 +16,26 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	var cfg factoryconfig.Config
 	err := yaml.Unmarshal([]byte(`
   chains:
-  - asset: ATOM
-    driver: cosmos
-    net: testnet
-    url: 'myurl'
-    chain_id_str: 'theta-testnet-001'
-    chain_prefix: 'cosmos'
-    chain_coin: 'uatom'
-    chain_coin_hd_path: 118
-    chain_name: Cosmos
-    explorer_url: 'myexplorer'
-    decimals: 6
-  - asset: SOL
-    driver: solana
-    net: mainnet
-    url: 'https://api.devnet.solana.com'
-    chain_name: Solana
-    explorer_url: 'https://explorer.solana.com'
-    decimals: 9
+    ATOM:
+      asset: ATOM
+      driver: cosmos
+      net: testnet
+      url: 'myurl'
+      chain_id_str: 'theta-testnet-001'
+      chain_prefix: 'cosmos'
+      chain_coin: 'uatom'
+      chain_coin_hd_path: 118
+      chain_name: Cosmos
+      explorer_url: 'myexplorer'
+      decimals: 6
+    SOL:
+      asset: SOL
+      driver: solana
+      net: mainnet
+      url: 'https://api.devnet.solana.com'
+      chain_name: Solana
+      explorer_url: 'https://explorer.solana.com'
+      decimals: 9
 
   tokens:
   - asset: USDC
@@ -79,10 +82,10 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	require.Len(cfg.Tokens, 1)
 	require.Len(cfg.GetChainsAndTokens(), 3)
 
-	require.Equal("ATOM", cfg.Chains[0].Asset)
-	require.Equal("Cosmos", cfg.Chains[0].ChainName)
-	require.Equal("SOL", cfg.Chains[1].Asset)
-	require.Equal("Solana", cfg.Chains[1].ChainName)
+	require.Equal("ATOM", cfg.Chains["ATOM"].Asset)
+	require.Equal("Cosmos", cfg.Chains["ATOM"].ChainName)
+	require.Equal("SOL", cfg.Chains["SOL"].Asset)
+	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
 
 	require.Equal("USDC", cfg.Tokens[0].Asset)
 	require.Equal("USDC", cfg.Tokens[0].AssetConfig.Asset)
@@ -119,21 +122,22 @@ type ConfigWrapper struct {
 	factoryconfig.Config `yaml:"crosschain"`
 }
 
-func (s *CrosschainTestSuite) TestConfigLoad() {
+func (s *CrosschainTestSuite) TestConfigFullyLoads() {
 	require := s.Require()
 	cfgBz := []byte(`
 crosschain:
   chains:
-  - asset: ETH
-    driver: evm
-    net: testnet
-    url: 'https://goerli.infura.io/v3'
-    auth: 'env:INFURA_API_TOKEN'
-    provider: infura
-    chain_id: 5
-    chain_name: Ethereum (Goerli)
-    explorer_url: 'https://goerli.etherscan.io'
-    decimals: 18
+    ETH:
+      asset: ETH
+      driver: evm
+      net: testnet
+      url: 'https://goerli.infura.io/v3'
+      auth: 'env:INFURA_API_TOKEN'
+      provider: infura
+      chain_id: 5
+      chain_name: Ethereum (Goerli)
+      explorer_url: 'https://goerli.etherscan.io'
+      decimals: 18
   tasks:
     - name: wormhole-transfer
       code: WormholeTransferTx
@@ -164,8 +168,7 @@ crosschain:
           type: address
           bind: to
 `)
-	file, err := os.CreateTemp(os.TempDir(), "xctest")
-	require.NoError(err)
+	file, _ := os.CreateTemp(os.TempDir(), "xctest")
 	file.Write(cfgBz)
 
 	os.Setenv(constants.ConfigEnv, file.Name())
@@ -175,7 +178,7 @@ crosschain:
 	yaml.Unmarshal(cfgBz, &wrapper)
 	require.Contains(wrapper.Config.Tasks[0].DefaultParams, "arbiter_fee_usd")
 	var cfg factoryconfig.Config
-	err = config.RequireConfig("crosschain", &cfg, nil)
+	err := config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
 	cfg.Parse()
 
@@ -184,4 +187,70 @@ crosschain:
 	require.Len(cfg.Tasks, 1)
 	require.Len(cfg.GetChainsAndTokens(), 1)
 	require.Contains(cfg.Tasks[0].DefaultParams, "arbiter_fee_usd")
+}
+
+func (s *CrosschainTestSuite) TestMergeWitDefaults() {
+
+	require := s.Require()
+	type testcase struct {
+		cfg            string
+		expectedAssets int
+		expectedUrl    string
+	}
+	for _, tc := range []testcase{
+		{
+			cfg: `
+crosschain:
+  chains:
+    ETH:
+      url: myurl
+`,
+			// should stay the same
+			expectedAssets: len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:    "myurl",
+		},
+		{
+			cfg: `
+crosschain:
+  chains:
+    eth:
+      url: myurl2
+`,
+			// should stay the same
+			expectedAssets: len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:    "myurl2",
+		},
+		{
+			cfg: `
+crosschain:
+  chains:
+    eth:
+      url: myurl3
+    eth123:
+      asset: eth123
+      url: myurl4
+`,
+			// should be 1 extra chain
+			expectedAssets: 1 + len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:    "myurl3",
+		},
+	} {
+		file, _ := os.CreateTemp(os.TempDir(), "xctest")
+		file.Write([]byte(tc.cfg))
+		os.Setenv(constants.ConfigEnv, file.Name())
+		f := NewDefaultFactory()
+		count := 0
+		f.AllAssets.Range(func(key, _ any) bool {
+			count += 1
+			return true
+		})
+		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
+
+		eth, err := f.GetAssetConfig("", "ETH")
+		require.NoError(err)
+		require.Equal("ETH", eth.GetNativeAsset().Asset)
+		require.Equal(tc.expectedUrl, eth.GetNativeAsset().URL)
+
+	}
+
 }

@@ -63,7 +63,7 @@ var Testnet = []*xc.TokenAssetConfig{
 		Contract: "factory/inj17vytdwqczqz72j65saukplrktd4gyfme5agf6c/usdc",
 	},
 	{
-		Asset:    "USDC",
+		Asset:    "USDT",
 		Chain:    string(xc.INJ),
 		Decimals: 6,
 		Contract: "peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5",

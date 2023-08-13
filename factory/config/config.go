@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jinzhu/copier"
@@ -12,10 +13,11 @@ type Config struct {
 	// which network to default to: "mainnet" or "testnet"
 	// Default: "testnet"
 
-	Network   string                  `yaml:"network"`
-	Chains    []*xc.NativeAssetConfig `yaml:"chains"`
-	Tokens    []*xc.TokenAssetConfig  `yaml:"tokens"`
-	Pipelines []*xc.PipelineConfig    `yaml:"pipelines"`
+	Network string `yaml:"network"`
+	// map of lowercase(native_asset) -> NativeAssetObject
+	Chains    map[string]*xc.NativeAssetConfig `yaml:"chains"`
+	Tokens    []*xc.TokenAssetConfig           `yaml:"tokens"`
+	Pipelines []*xc.PipelineConfig             `yaml:"pipelines"`
 
 	Tasks []*xc.TaskConfig `yaml:"tasks"`
 
@@ -25,8 +27,7 @@ type Config struct {
 }
 
 func (cfg *Config) Parse() {
-	// TODO remove AssetConfig object so we can remove this backwards
-	// compat hack
+	// TODO remove AssetConfig object so we can remove this backwards-compat hack
 	for _, t := range cfg.Tokens {
 		copier.CopyWithOption(&t.AssetConfig, &t, copier.Option{IgnoreEmpty: false, DeepCopy: false})
 	}
@@ -38,6 +39,7 @@ func (cfg *Config) Parse() {
 	for _, token := range cfg.Tokens {
 		cfg.chainsAndTokens = append(cfg.chainsAndTokens, token)
 	}
+	fmt.Println("-----", len(cfg.chainsAndTokens))
 
 	for _, task := range cfg.Tasks {
 		task.AllowList = parseAllowList(task.Allow)

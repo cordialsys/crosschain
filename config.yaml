@@ -1,24 +1,24 @@
 crosschain:
-  chains:
   # Add overrides or new chains here.
-  # Example:
-  - asset: ETH
-    driver: evm
-    net: testnet
-    url: 'https://goerli.infura.io/v3'
-    auth: 'env:INFURA_API_TOKEN'
-    provider: infura
-    chain_id: 5
-    chain_name: Ethereum (Goerli)
-    explorer_url: 'https://goerli.etherscan.io'
-    decimals: 18
-  # EVM
-  - asset: MATIC
-    driver: evm
-    net: testnet
-    url: 'https://rpc-mumbai.matic.today'
-    chain_id: 80001
-    chain_name: Polygon (Mumbai)
-    explorer_url: 'https://mumbai.polygonscan.com'
-    decimals: 18
-    chain_max_gas_tip: 100
+  chains:
+    ETH:
+      # asset: ETH
+      driver: evm
+      net: testnet
+      url: 'https://goerli.infura.io/v3'
+      auth: 'env:INFURA_API_TOKEN'
+      provider: infura
+      chain_id: 5
+      chain_name: Ethereum (Goerli)
+      explorer_url: 'https://goerli.etherscan.io'
+      decimals: 18
+    MATIC:
+      asset: MATIC
+      driver: evm
+      net: testnet
+      url: 'https://rpc-mumbai.matic.today'
+      chain_id: 80001
+      chain_name: Polygon (Mumbai)
+      explorer_url: 'https://mumbai.polygonscan.com'
+      decimals: 18
+      chain_max_gas_tip: 100

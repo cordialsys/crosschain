@@ -41,16 +41,12 @@ func RecusiveOverride(defaults map[string]interface{}, overrides map[string]inte
 			} else {
 				if IsAllowedOverrideType(val) {
 					defaults[key] = val
-					zero := reflect.ValueOf(val).IsZero()
-					fmt.Println("override", key, val, "zero", zero)
 				} else {
 					// should not overwrite full arrays or maps
-					fmt.Println("skip", key, val)
 				}
 			}
 		} else {
 			// just add it
-			fmt.Println("added", key, val)
 			defaults[key] = val
 		}
 	}

@@ -543,7 +543,6 @@ func NewDefaultFactory() *Factory {
 	if v := os.Getenv("XC_MAINNET"); v != "" {
 		// use mainnets
 		err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
-		fmt.Println("--- USING MAINNET")
 		if err != nil {
 			panic(err)
 		}
@@ -556,7 +555,6 @@ func NewDefaultFactory() *Factory {
 
 		// special override: if override with mainnet, let's start over with mainnet defaults
 		if cfg.Network == "mainnet" {
-			fmt.Println("--- USING MAINNET")
 			err = config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
 			if err != nil {
 				panic(err)
