@@ -207,6 +207,36 @@ crosschain:
 	require.Contains(cfg.Tasks["wormhole-transfer"].DefaultParams, "arbiter_fee_usd")
 }
 
+func (s *CrosschainTestSuite) TestUseMainnet() {
+	require := s.Require()
+	cfgBz := []byte(`
+crosschain:
+  network: mainnet
+  chains:
+    ETH:
+      url: 'myurl'
+`)
+	file, _ := os.CreateTemp(os.TempDir(), "xctest")
+	file.Write(cfgBz)
+	os.Setenv(constants.ConfigEnv, file.Name())
+
+	xcf := factory.NewFactory(&factory.FactoryOptions{
+		UseDisabledChains: true,
+	})
+	expectedChainCount := len(defaults.Mainnet.Chains)
+	count := 0
+	xcf.AllAssets.Range(func(key, value any) bool {
+		if chain, ok := value.(*xc.NativeAssetConfig); ok {
+			count += 1
+			require.NotEqual(chain.Net, "testnet")
+			require.NotEqual(chain.Net, "")
+			require.NotEqual(chain.Net, "devnet")
+		}
+		return true
+	})
+	require.Equal(expectedChainCount, count)
+}
+
 func (s *CrosschainTestSuite) TestMergeWitDefaults() {
 
 	require := s.Require()

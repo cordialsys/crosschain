@@ -205,7 +205,7 @@ var Testnet = []*xc.NativeAssetConfig{
 	},
 	{
 		Asset:         string(xc.SUI),
-		Driver:        string(xc.DriverSolana),
+		Driver:        string(xc.DriverSui),
 		Net:           "devnet",
 		URL:           "https://fullnode.devnet.sui.io:443",
 		ChainName:     "Sui (Devnet)",

@@ -22,12 +22,14 @@ func NewFactory(options *FactoryOptions) *Factory {
 	var cfg factoryconfig.Config
 	if v := os.Getenv("XC_MAINNET"); v != "" {
 		// use mainnets
+		cfg = factoryconfig.Config{}
 		err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
 		if err != nil {
 			panic(err)
 		}
 	} else {
 		// default to use testnet
+		cfg = factoryconfig.Config{}
 		err := config.RequireConfig("crosschain", &cfg, defaults.Testnet)
 		if err != nil {
 			panic(err)
@@ -35,6 +37,7 @@ func NewFactory(options *FactoryOptions) *Factory {
 
 		// special override: if override with mainnet, let's start over with mainnet defaults
 		if cfg.Network == "mainnet" {
+			cfg = factoryconfig.Config{}
 			err = config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
 			if err != nil {
 				panic(err)
