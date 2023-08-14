@@ -343,16 +343,6 @@ var Mainnet = []*xc.NativeAssetConfig{
 		ChainID:       248,
 	},
 	{
-		Asset:         string(xc.OasisROSE),
-		Driver:        string(xc.DriverCosmos),
-		ChainName:     "Oasis",
-		ExplorerURL:   "https://oasisscan.com",
-		IndexerType:   "rpc",
-		PollingPeriod: "15m",
-		Decimals:      18,
-		ChainPrefix:   "oasis",
-	},
-	{
 		Asset:         string(xc.OptETH),
 		Driver:        string(xc.DriverEVM),
 		URL:           "https://mainnet.optimism.io",

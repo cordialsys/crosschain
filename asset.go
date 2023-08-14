@@ -49,37 +49,36 @@ const (
 	LTC  = NativeAsset("LTC")  // Litecoin
 
 	// Account-based
-	ACA       = NativeAsset("ACA")       // Acala
-	APTOS     = NativeAsset("APTOS")     // APTOS
-	ArbETH    = NativeAsset("ArbETH")    // Arbitrum
-	ATOM      = NativeAsset("ATOM")      // Cosmos
-	AurETH    = NativeAsset("AurETH")    // Aurora
-	AVAX      = NativeAsset("AVAX")      // Avalanche
-	BNB       = NativeAsset("BNB")       // Binance Coin
-	CELO      = NativeAsset("CELO")      // Celo
-	CHZ       = NativeAsset("CHZ")       // Chiliz
-	CHZ2      = NativeAsset("CHZ2")      // Chiliz 2.0
-	DOT       = NativeAsset("DOT")       // Polkadot
-	ETC       = NativeAsset("ETC")       // Ethereum Classic
-	ETH       = NativeAsset("ETH")       // Ethereum
-	ETHW      = NativeAsset("ETHW")      // Ethereum PoW
-	FTM       = NativeAsset("FTM")       // Fantom
-	INJ       = NativeAsset("INJ")       // Injective
-	LUNA      = NativeAsset("LUNA")      // Terra V2
-	LUNC      = NativeAsset("LUNC")      // Terra Classic
-	KAR       = NativeAsset("KAR")       // Karura
-	KLAY      = NativeAsset("KLAY")      // Klaytn
-	XDC       = NativeAsset("XDC")       // XinFin
-	MATIC     = NativeAsset("MATIC")     // Polygon
-	OAS       = NativeAsset("OAS")       // Oasys (not Oasis!)
-	OasisROSE = NativeAsset("OasisROSE") // Rose (Oasis = main chain)
-	OptETH    = NativeAsset("OptETH")    // Optimism
-	ROSE      = NativeAsset("ROSE")      // Rose (Oasis Emerald parachain)
-	SOL       = NativeAsset("SOL")       // Solana
-	SUI       = NativeAsset("SUI")       // SUI
-	XPLA      = NativeAsset("XPLA")      // XPLA
-	TIA       = NativeAsset("TIA")       // celestia
-	SEI       = NativeAsset("SEI")       // Sei
+	ACA    = NativeAsset("ACA")    // Acala
+	APTOS  = NativeAsset("APTOS")  // APTOS
+	ArbETH = NativeAsset("ArbETH") // Arbitrum
+	ATOM   = NativeAsset("ATOM")   // Cosmos
+	AurETH = NativeAsset("AurETH") // Aurora
+	AVAX   = NativeAsset("AVAX")   // Avalanche
+	BNB    = NativeAsset("BNB")    // Binance Coin
+	CELO   = NativeAsset("CELO")   // Celo
+	CHZ    = NativeAsset("CHZ")    // Chiliz
+	CHZ2   = NativeAsset("CHZ2")   // Chiliz 2.0
+	DOT    = NativeAsset("DOT")    // Polkadot
+	ETC    = NativeAsset("ETC")    // Ethereum Classic
+	ETH    = NativeAsset("ETH")    // Ethereum
+	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
+	FTM    = NativeAsset("FTM")    // Fantom
+	INJ    = NativeAsset("INJ")    // Injective
+	LUNA   = NativeAsset("LUNA")   // Terra V2
+	LUNC   = NativeAsset("LUNC")   // Terra Classic
+	KAR    = NativeAsset("KAR")    // Karura
+	KLAY   = NativeAsset("KLAY")   // Klaytn
+	XDC    = NativeAsset("XDC")    // XinFin
+	MATIC  = NativeAsset("MATIC")  // Polygon
+	OAS    = NativeAsset("OAS")    // Oasys (not Oasis!)
+	OptETH = NativeAsset("OptETH") // Optimism
+	ROSE   = NativeAsset("ROSE")   // Rose (Oasis Emerald parachain)
+	SOL    = NativeAsset("SOL")    // Solana
+	SUI    = NativeAsset("SUI")    // SUI
+	XPLA   = NativeAsset("XPLA")   // XPLA
+	TIA    = NativeAsset("TIA")    // celestia
+	SEI    = NativeAsset("SEI")    // Sei
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -110,7 +109,6 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XDC,
 	MATIC,
 	OAS,
-	OasisROSE,
 	OptETH,
 	ROSE,
 	SOL,
@@ -158,7 +156,7 @@ func (native NativeAsset) Driver() Driver {
 	switch native {
 	case BCH, BTC, DOGE, LTC:
 		return DriverBitcoin
-	case AVAX, CELO, ETH, ETHW, MATIC, OasisROSE, OptETH, ArbETH:
+	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH:
 		return DriverEVM
 	case BNB, FTM, ETC, ROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
