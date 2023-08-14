@@ -9,6 +9,14 @@ func init() {
 		if chain.Net == "" {
 			chain.Net = "mainnet"
 		}
+
+		// default to using xc client
+		if chain.URL == "" && len(chain.Clients) == 0 {
+			chain.Clients = append(chain.Clients, &xc.ClientConfig{
+				Driver: string(xc.DriverCrosschain),
+				URL:    "https://crosschain.cordialapis.com",
+			})
+		}
 	}
 }
 
@@ -62,6 +70,12 @@ var Mainnet = []*xc.NativeAssetConfig{
 		PollingPeriod: "6m",
 		Decimals:      18,
 		ChainID:       43114,
+		Clients: []*xc.ClientConfig{
+			{
+				Driver: "crosschain",
+				URL:    "https://crosschain.cordialapis.com",
+			},
+		},
 	},
 	{
 		Asset:              string(xc.ArbETH),
@@ -369,6 +383,12 @@ var Mainnet = []*xc.NativeAssetConfig{
 		IndexerType:   "solana",
 		PollingPeriod: "3m",
 		Decimals:      9,
+		Clients: []*xc.ClientConfig{
+			{
+				Driver: "crosschain",
+				URL:    "https://crosschain.cordialapis.com",
+			},
+		},
 	},
 	{
 		Asset:         string(xc.SUI),
@@ -405,7 +425,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		ChainPrefix:          "xpla",
 		ChainCoin:            "axpla",
 		ChainCoinHDPath:      60,
-		ChainGasPriceDefault: 0.100000,
+		ChainGasPriceDefault: 0.1,
 	},
 
 	{
@@ -423,7 +443,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		ChainCoin:            "utia",
 		ChainCoinHDPath:      118,
 		ChainGasMultiplier:   12.0,
-		ChainGasPriceDefault: 0.100000,
+		ChainGasPriceDefault: 0.1,
 	},
 	{
 		Asset:                string(xc.SEI),

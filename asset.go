@@ -202,34 +202,34 @@ type ClientConfig struct {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type AssetConfig struct {
-	Asset                string         `yaml:"asset"`
-	Driver               string         `yaml:"driver"`
-	Net                  string         `yaml:"net"`
-	Clients              []ClientConfig `yaml:"clients"`
-	URL                  string         `yaml:"url"`
-	FcdURL               string         `yaml:"fcd_url"`
-	Auth                 string         `yaml:"auth"`
-	Provider             string         `yaml:"provider"`
-	ChainID              int64          `yaml:"chain_id"`
-	ChainIDStr           string         `yaml:"chain_id_str"`
-	ChainName            string         `yaml:"chain_name"`
-	ChainPrefix          string         `yaml:"chain_prefix"`
-	ChainCoin            string         `yaml:"chain_coin"`
-	GasCoin              string         `yaml:"gas_coin"`
-	ChainCoinHDPath      uint32         `yaml:"chain_coin_hd_path"`
-	ChainGasPriceDefault float64        `yaml:"chain_gas_price_default"`
-	ChainGasMultiplier   float64        `yaml:"chain_gas_multiplier"`
-	ChainGasTip          uint64         `yaml:"chain_gas_tip"`
-	ChainMaxGasTip       uint64         `yaml:"chain_max_gas_tip"`
-	ChainTransferTax     float64        `yaml:"chain_transfer_tax"`
-	ExplorerURL          string         `yaml:"explorer_url"`
-	Decimals             int32          `yaml:"decimals"`
-	Name                 string         `yaml:"name"`
-	IndexerUrl           string         `yaml:"indexer_url"`
-	IndexerType          string         `yaml:"indexer_type"`
-	PollingPeriod        string         `yaml:"polling_period"`
-	NoGasFees            bool           `yaml:"no_gas_fees"`
-	Disabled             bool           `yaml:"disabled"`
+	Asset                string          `yaml:"asset"`
+	Driver               string          `yaml:"driver"`
+	Net                  string          `yaml:"net"`
+	Clients              []*ClientConfig `yaml:"clients"`
+	URL                  string          `yaml:"url"`
+	FcdURL               string          `yaml:"fcd_url"`
+	Auth                 string          `yaml:"auth"`
+	Provider             string          `yaml:"provider"`
+	ChainID              int64           `yaml:"chain_id"`
+	ChainIDStr           string          `yaml:"chain_id_str"`
+	ChainName            string          `yaml:"chain_name"`
+	ChainPrefix          string          `yaml:"chain_prefix"`
+	ChainCoin            string          `yaml:"chain_coin"`
+	GasCoin              string          `yaml:"gas_coin"`
+	ChainCoinHDPath      uint32          `yaml:"chain_coin_hd_path"`
+	ChainGasPriceDefault float64         `yaml:"chain_gas_price_default"`
+	ChainGasMultiplier   float64         `yaml:"chain_gas_multiplier"`
+	ChainGasTip          uint64          `yaml:"chain_gas_tip"`
+	ChainMaxGasTip       uint64          `yaml:"chain_max_gas_tip"`
+	ChainTransferTax     float64         `yaml:"chain_transfer_tax"`
+	ExplorerURL          string          `yaml:"explorer_url"`
+	Decimals             int32           `yaml:"decimals"`
+	Name                 string          `yaml:"name"`
+	IndexerUrl           string          `yaml:"indexer_url"`
+	IndexerType          string          `yaml:"indexer_type"`
+	PollingPeriod        string          `yaml:"polling_period"`
+	NoGasFees            bool            `yaml:"no_gas_fees"`
+	Disabled             bool            `yaml:"disabled"`
 
 	// Tokens
 	Chain    string `yaml:"chain"`
@@ -289,6 +289,28 @@ func (asset *NativeAssetConfig) GetNativeAsset() *NativeAssetConfig {
 
 func (asset NativeAssetConfig) GetTask() *TaskConfig {
 	return nil
+}
+
+// Return list of clients with the "default" client added
+// if it's not already there
+func (asset NativeAssetConfig) GetAllClients() []*ClientConfig {
+	defaultCfg := &ClientConfig{
+		Driver: asset.Driver,
+		URL:    asset.URL,
+	}
+	cfgs := asset.Clients[:]
+	hasDefault := false
+	for _, cfg := range cfgs {
+		if cfg.Driver == defaultCfg.Driver {
+			hasDefault = true
+		}
+	}
+	empty := defaultCfg.Driver == "" && defaultCfg.URL == ""
+	if !hasDefault && !empty {
+		cfgs = append(cfgs, defaultCfg)
+	}
+
+	return cfgs
 }
 
 func (c *TokenAssetConfig) String() string {

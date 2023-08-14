@@ -413,12 +413,15 @@ test:
 			},
 		},
 		{
-			name: "overriding an array should not override anything",
+			name: "overriding an array should override whole array",
 			cfg: `
 test:
   favorites:
     - "cats"
 `,
+			applyDiff: func(cfg *TestObj) {
+				cfg.Favorites = []string{"cats"}
+			},
 		},
 	} {
 		fmt.Println("Config defaults test:", tc.name)

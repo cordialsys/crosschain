@@ -47,6 +47,12 @@ func GenerateTasks(
 			Allow: []string{
 				"ETH -> WETH.ETH",
 				"WETH.ETH", // for compatibility
+				"ArbETH -> WETH.ArbETH",
+				"WETH.ArbETH",
+				"MATIC -> WMATIC.MATIC",
+				"WMATIC.MATIC",
+				"BNB -> WBNB.BNB",
+				"WBNB",
 			},
 			Operations: []xc.TaskConfigOperation{
 				{
@@ -62,6 +68,9 @@ func GenerateTasks(
 			Chain: string(xc.ETH),
 			Allow: []string{
 				"WETH.ETH -> ETH",
+				"WETH.ArbETH -> ETH",
+				"WMATIC.MATIC-> MATIC",
+				"WBNB.BNB -> BNB",
 			},
 			Operations: []xc.TaskConfigOperation{
 				{

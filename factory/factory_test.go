@@ -7,6 +7,7 @@ import (
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/chain/bitcoin"
 	"github.com/jumpcrypto/crosschain/chain/cosmos"
+	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
 	"github.com/jumpcrypto/crosschain/chain/solana"
 	"github.com/jumpcrypto/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
@@ -22,12 +23,12 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Factory = NewDefaultFactory()
-	count := 0
-	s.Factory.AllAssets.Range(func(key, value any) bool {
-		count++
-		fmt.Printf("loaded asset %d: %s %v\n", count, key, value)
-		return true
-	})
+	// count := 0
+	// s.Factory.AllAssets.Range(func(key, value any) bool {
+	// 	count++
+	// 	fmt.Printf("loaded asset %d: %s %v\n", count, key, value)
+	// 	return true
+	// })
 	s.TestNativeAssets = []xc.NativeAsset{
 		xc.ETH,
 		xc.MATIC,
@@ -56,13 +57,36 @@ func (s *CrosschainTestSuite) TestNewDefaultFactory() {
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
+		// default
 		client, _ := s.Factory.NewClient(asset)
 		require.NotNil(client)
+		_, ok := client.(*xcclient.Client)
+		require.False(ok)
 	}
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST"})
+	// should return a xc client
+	client, _ := s.Factory.NewClient(&xc.NativeAssetConfig{
+		Driver: "solana",
+		URL:    "url2",
+		Clients: []*xc.ClientConfig{
+			{
+				Driver: string(xc.DriverCrosschain),
+				URL:    "url1",
+			},
+		},
+	})
+	require.NotNil(client)
+	_, ok := client.(*xcclient.Client)
+	require.True(ok)
+
+	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST", URL: "a url"})
 	_, err := s.Factory.NewClient(asset)
 	require.ErrorContains(err, "unsupported asset")
+
+	// no clients can be derived without a driver or url
+	asset, _ = s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST2"})
+	_, err = s.Factory.NewClient(asset)
+	require.ErrorContains(err, "no clients possible")
 }
 
 func (s *CrosschainTestSuite) TestNewTxBuilder() {

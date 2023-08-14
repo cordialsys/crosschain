@@ -22,8 +22,8 @@ type CrosschainTestSuite struct {
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Ctx = context.Background()
 	s.Asset = &xc.AssetConfig{
-		Clients: []xc.ClientConfig{
-			xc.ClientConfig{},
+		Clients: []*xc.ClientConfig{
+			{},
 		},
 	}
 }

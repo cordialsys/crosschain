@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -367,23 +368,16 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 // NewClient creates a new Client
 func (f *Factory) NewClient(cfg ITask) (Client, error) {
 	nativeAsset := cfg.GetNativeAsset()
-	defaultDriver := nativeAsset.GetDriver()
-
-	driver := defaultDriver
-	if len(nativeAsset.Clients) > 0 {
-		//TODO: support retrieve client by id
-		id := 0
-		client := nativeAsset.Clients[id]
-		if client.Driver != "" {
-			driver = Driver(client.Driver)
+	clients := nativeAsset.GetAllClients()
+	for _, client := range clients {
+		switch Driver(client.Driver) {
+		case DriverCrosschain:
+			return xcclient.NewClient(cfg)
+		default:
+			return drivers.NewClient(cfg, Driver(client.Driver))
 		}
 	}
-
-	if driver == DriverCrosschain {
-		return xcclient.NewClient(cfg)
-	}
-
-	return drivers.NewClient(cfg, driver)
+	return nil, errors.New("no clients possible for " + nativeAsset.Asset)
 }
 
 // NewTxBuilder creates a new TxBuilder

@@ -6,9 +6,20 @@ var Mainnet = []*xc.PipelineConfig{
 	{
 		Name: "wormhole-transfer",
 		Allow: []string{
+			"USDC.ETH -> USDCet.MATIC",
+			"USDT.ETH -> USDTet.MATIC",
 			"WETH.ETH -> WETH.MATIC",
-			"WETH.ETH -> WETH.SOL",
-			"WETH.MATIC -> WETH.SOL",
+			"WBTC.ETH -> WBTC.MATIC",
+			"LM_SNA.ETH -> SOL.MATIC",
+			"AVAX.ETH -> AVAX.MATIC",
+			"YFI.ETH -> YFIet.MATIC",
+			"ONEINCH.ETH -> ONEINCHet.MATIC",
+			"BIT.ETH -> BITet.MATIC",
+			"COMP.ETH -> COMPet.MATIC",
+			"SUSHI.ETH -> SUSHIet.MATIC",
+			"DAI.ETH -> DAIet.MATIC",
+			"wAVAX.AVAX -> AVAX.MATIC",
+			"wFTM.FTM -> FTM.MATIC",
 		},
 		Tasks: []string{
 			"wormhole-approve",

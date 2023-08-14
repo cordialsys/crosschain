@@ -9,8 +9,15 @@ import (
 
 func IsAllowedOverrideType(v interface{}) bool {
 	switch reflect.TypeOf(v).Kind() {
-	case reflect.Array, reflect.Slice, reflect.Map:
+	case reflect.Map:
 		return false
+		// only override with array if it has a length
+	case reflect.Array, reflect.Slice:
+		if reflect.ValueOf(v).Len() > 0 {
+			return true
+		} else {
+			return false
+		}
 	}
 	//nolint
 	if reflect.ValueOf(v).IsZero() {
