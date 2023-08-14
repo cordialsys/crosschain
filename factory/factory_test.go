@@ -64,8 +64,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 		require.False(ok)
 	}
 
-	// should return a xc client
-	client, _ := s.Factory.NewClient(&xc.NativeAssetConfig{
+	chainWithXcClient := &xc.NativeAssetConfig{
 		Driver: "solana",
 		URL:    "url2",
 		Clients: []*xc.ClientConfig{
@@ -74,10 +73,21 @@ func (s *CrosschainTestSuite) TestNewClient() {
 				URL:    "url1",
 			},
 		},
-	})
+	}
+
+	// should return a xc client
+	client, _ := s.Factory.NewClient(chainWithXcClient)
 	require.NotNil(client)
 	_, ok := client.(*xcclient.Client)
 	require.True(ok)
+
+	// should _not_ return a xc client
+	s.Factory.NoXcClients = true
+	client, _ = s.Factory.NewClient(chainWithXcClient)
+	require.NotNil(client)
+	_, ok = client.(*xcclient.Client)
+	require.False(ok)
+	s.Factory.NoXcClients = false
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST", URL: "a url"})
 	_, err := s.Factory.NewClient(asset)

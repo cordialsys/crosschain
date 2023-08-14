@@ -65,6 +65,7 @@ type Factory struct {
 	AllPipelines                     []*PipelineConfig
 	callbackGetAssetConfig           func(assetID AssetID) (ITask, error)
 	callbackGetAssetConfigByContract func(contract string, nativeAsset string) (ITask, error)
+	NoXcClients                      bool
 }
 
 var _ FactoryContext = &Factory{}
@@ -364,6 +365,10 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 func (f *Factory) NewClient(cfg ITask) (Client, error) {
 	nativeAsset := cfg.GetNativeAsset()
 	clients := nativeAsset.GetAllClients()
+	if f.NoXcClients {
+		// prevent recursion
+		clients = nativeAsset.GetNativeClients()
+	}
 	for _, client := range clients {
 		switch Driver(client.Driver) {
 		case DriverCrosschain:

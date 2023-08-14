@@ -11,7 +11,10 @@ import (
 )
 
 type FactoryOptions struct {
+	// do not use chains that have been marked disabled
 	UseDisabledChains bool
+	// do not use xc clients, only use native clients
+	NoXcClients bool
 }
 
 func NewFactory(options *FactoryOptions) *Factory {
@@ -60,6 +63,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 		AllAssets:    &sync.Map{},
 		AllTasks:     cfg.GetTasks(),
 		AllPipelines: cfg.GetPipelines(),
+		NoXcClients:  options.NoXcClients,
 	}
 	for _, asset := range assetsList {
 		if asset.GetNativeAsset().Disabled {

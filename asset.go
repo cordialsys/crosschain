@@ -313,6 +313,18 @@ func (asset NativeAssetConfig) GetAllClients() []*ClientConfig {
 	return cfgs
 }
 
+// Return all clients that are not crosschain driver
+func (asset NativeAssetConfig) GetNativeClients() []*ClientConfig {
+	clients := asset.GetAllClients()
+	filtered := []*ClientConfig{}
+	for _, client := range clients {
+		if client.Driver != string(DriverCrosschain) {
+			filtered = append(filtered, client)
+		}
+	}
+	return filtered
+}
+
 func (c *TokenAssetConfig) String() string {
 	return fmt.Sprintf(
 		"TokenAssetConfig(id=%s asset=%s chain=%s net=%s decimals=%d contract=%s)",

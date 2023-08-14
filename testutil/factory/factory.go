@@ -190,6 +190,13 @@ func NewDefaultFactory() TestFactory {
 	}
 }
 
+func NewFactory(options factory.FactoryOptions) TestFactory {
+	f := factory.NewFactory(&options)
+	return TestFactory{
+		DefaultFactory: f,
+	}
+}
+
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
 func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config) TestFactory {
 	f := factory.NewDefaultFactoryWithConfig(cfg, nil)
