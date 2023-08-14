@@ -4,7 +4,7 @@ import xc "github.com/jumpcrypto/crosschain"
 
 func init() {
 	for _, chain := range Testnet {
-		if chain.Net != "" {
+		if chain.Net == "" {
 			chain.Net = "testnet"
 		}
 	}
@@ -113,6 +113,16 @@ var Testnet = []*xc.NativeAssetConfig{
 		Decimals:    18,
 		ChainID:     5,
 		Provider:    "infura",
+	},
+	{
+		Asset:       string(xc.CELO),
+		Driver:      string(xc.DriverEVM),
+		URL:         "https://alfajores-forno.celo-testnet.org",
+		ChainName:   "Celo (Testnet)",
+		ExplorerURL: "https://alfajores-blockscout.celo-testnet.org/",
+		IndexerType: "rpc",
+		Decimals:    18,
+		ChainID:     44787,
 	},
 	{
 		Asset:       string(xc.FTM),

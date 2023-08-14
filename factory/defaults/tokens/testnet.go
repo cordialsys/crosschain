@@ -4,7 +4,7 @@ import xc "github.com/jumpcrypto/crosschain"
 
 func init() {
 	for _, chain := range Testnet {
-		if chain.Net != "" {
+		if chain.Net == "" {
 			chain.Net = "testnet"
 		}
 	}

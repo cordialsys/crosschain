@@ -47,7 +47,7 @@ func RequireConfig(section string, unmarshalDst interface{}, defaults interface{
 	err := v.ReadInConfig()
 	if err != nil {
 		msg := strings.ToLower(err.Error())
-		if defaults != nil && (strings.Contains(msg, noSuchFile) || strings.Contains(msg, notFoundIn)) {
+		if defaults != nil && strings.Contains(msg, notFoundIn) {
 			// use the defaults by serializing and deserializing
 			bz, err := yaml.Marshal(defaults)
 			if err != nil {

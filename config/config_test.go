@@ -33,9 +33,10 @@ func (s *CrosschainTestSuite) TestRequireConfigNotFound() {
 	require.Error(err)
 	require.ErrorContains(err, noSuchFile)
 
-	// works if defaults are provided
+	// Still does not work if defaults are provided.
+	// If someone if specifically providing a config file, they expect it to load.
 	err = RequireConfig("crosschain", &cfg, &cfg)
-	require.NoError(err)
+	require.Error(err)
 
 	// different error if looking in directory for config file
 	os.Unsetenv(constants.ConfigEnv)
@@ -46,7 +47,7 @@ func (s *CrosschainTestSuite) TestRequireConfigNotFound() {
 	require.Error(err)
 	require.Contains(strings.ToLower(err.Error()), notFoundIn)
 
-	// works if given defaults
+	// works if given defaults, as no config file is specified.
 	err = RequireConfig("crosschain", &cfg, &cfg)
 	require.NoError(err)
 }
