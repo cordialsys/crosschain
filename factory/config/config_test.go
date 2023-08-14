@@ -239,11 +239,14 @@ crosschain:
 
 func (s *CrosschainTestSuite) TestMergeWitDefaults() {
 
+	pw := "1234"
+	os.Setenv("TEST_PASSWORD", pw)
 	require := s.Require()
 	type testcase struct {
 		cfg            string
 		expectedAssets int
 		expectedUrl    string
+		expectedAuth   string
 	}
 	for _, tc := range []testcase{
 		{
@@ -252,10 +255,12 @@ crosschain:
   chains:
     ETH:
       url: myurl
+      auth: 'env:TEST_PASSWORD'
 `,
 			// should stay the same
 			expectedAssets: len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
 			expectedUrl:    "myurl",
+			expectedAuth:   pw,
 		},
 		{
 			cfg: `
@@ -297,6 +302,7 @@ crosschain:
 		eth, err := f.GetAssetConfig("", "ETH")
 		require.NoError(err)
 		require.Equal("ETH", eth.GetNativeAsset().Asset)
+		require.Equal(tc.expectedAuth, eth.GetNativeAsset().AuthSecret)
 		require.Equal(tc.expectedUrl, eth.GetNativeAsset().URL)
 
 	}

@@ -117,7 +117,7 @@ func GetSecret(uri string) (string, error) {
 	}
 
 	path := splits[1]
-	switch key := splits[0]; key {
+	switch key := splits[0]; strings.ToLower(key) {
 	case "env":
 		return strings.TrimSpace(os.Getenv(path)), nil
 	case "file":

@@ -111,7 +111,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		PollingPeriod: "10m",
 		Decimals:      8,
 		Provider:      "blockchair",
-		Auth:          "ENV:BLOCKCHAIN_API_KEY",
+		Auth:          "ENV:BLOCKCHAIR_API_KEY",
 	},
 	{
 		Asset:         string(xc.BNB),
@@ -135,7 +135,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		PollingPeriod: "10m",
 		Decimals:      8,
 		Provider:      "blockchair",
-		Auth:          "ENV:BLOCKCHAIN_API_KEY",
+		Auth:          "ENV:BLOCKCHAIR_API_KEY",
 	},
 	{
 		Asset:         string(xc.CELO),
@@ -186,7 +186,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		PollingPeriod: "10m",
 		Decimals:      8,
 		Provider:      "blockchair",
-		Auth:          "ENV:BLOCKCHAIN_API_KEY",
+		Auth:          "ENV:BLOCKCHAIR_API_KEY",
 	},
 	{
 		Asset:         string(xc.ETC),
@@ -281,7 +281,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		PollingPeriod: "10m",
 		Decimals:      8,
 		Provider:      "blockchair",
-		Auth:          "ENV:BLOCKCHAIN_API_KEY",
+		Auth:          "ENV:BLOCKCHAIR_API_KEY",
 	},
 	{
 		Asset:              string(xc.LUNA),

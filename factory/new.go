@@ -4,6 +4,7 @@ import (
 	"os"
 	"sync"
 
+	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/config"
 	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
 	"github.com/jumpcrypto/crosschain/factory/defaults"
@@ -73,6 +74,12 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			// skip unless explicity including
 			if !options.UseDisabledChains {
 				continue
+			}
+		}
+		// dereference secrets
+		if native, ok := asset.(*xc.NativeAssetConfig); ok {
+			if native.Auth != "" {
+				native.AuthSecret, _ = config.GetSecret(native.Auth)
 			}
 		}
 		_, err := factory.PutAssetConfig(asset)
