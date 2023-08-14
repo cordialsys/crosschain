@@ -192,7 +192,7 @@ func NewDefaultFactory() TestFactory {
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
 func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config) TestFactory {
-	f := factory.NewDefaultFactoryWithConfig(cfg)
+	f := factory.NewDefaultFactoryWithConfig(cfg, nil)
 	return TestFactory{
 		DefaultFactory: f,
 	}

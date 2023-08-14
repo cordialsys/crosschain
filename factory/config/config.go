@@ -6,6 +6,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	xc "github.com/jumpcrypto/crosschain"
+	"github.com/sirupsen/logrus"
 )
 
 // Config is the full config containing all Assets
@@ -40,7 +41,19 @@ func (cfg *Config) Parse() {
 		cfg.chainsAndTokens = append(cfg.chainsAndTokens, chain)
 	}
 	for _, token := range cfg.Tokens {
-		cfg.chainsAndTokens = append(cfg.chainsAndTokens, token)
+		// match to a chain
+		for _, chain := range cfg.Chains {
+			if chain.Asset == token.Chain {
+				copy := *chain
+				token.NativeAssetConfig = &copy
+			}
+		}
+		// only add if matched to a chain
+		if token.NativeAssetConfig != nil {
+			cfg.chainsAndTokens = append(cfg.chainsAndTokens, token)
+		} else {
+			logrus.WithField("token", token).Warn("could not match token to a chain")
+		}
 	}
 
 	for _, task := range cfg.Tasks {

@@ -148,6 +148,18 @@ var Testnet = []*xc.NativeAssetConfig{
 		ChainCoinHDPath:      60,
 	},
 	{
+		Asset:              string(xc.LUNC),
+		Driver:             string(xc.DriverCosmos),
+		URL:                "",
+		ChainName:          "Terra Classic (Testnet)",
+		Decimals:           6,
+		ChainGasMultiplier: 12.00,
+		ChainIDStr:         "bombay-12",
+		ChainPrefix:        "terra",
+		ChainCoin:          "uluna",
+		ChainCoinHDPath:    330,
+	},
+	{
 		Asset:              string(xc.LUNA),
 		Driver:             string(xc.DriverCosmos),
 		URL:                "https://terra-testnet-rpc.polkachu.com",
