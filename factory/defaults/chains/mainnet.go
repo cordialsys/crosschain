@@ -328,7 +328,7 @@ var Mainnet = []*xc.NativeAssetConfig{
 		Decimals:           18,
 		ChainID:            137,
 		ChainGasMultiplier: 4.00,
-		ChainGasTip:        20,
+		ChainMaxGasTip:     120,
 	},
 	{
 		Asset:         string(xc.OAS),
