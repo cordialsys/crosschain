@@ -193,45 +193,45 @@ type AssetID string
 // ClientConfig is the model used to represent a client inside an AssetConfig
 type ClientConfig struct {
 	Driver   string `yaml:"driver"`
-	URL      string `yaml:"url"`
-	Auth     string `yaml:"auth"`
-	Provider string `yaml:"provider"`
+	URL      string `yaml:"url,omitempty"`
+	Auth     string `yaml:"auth,omitempty"`
+	Provider string `yaml:"provider,omitempty"`
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type AssetConfig struct {
 	Asset                string          `yaml:"asset"`
 	Driver               string          `yaml:"driver"`
-	Net                  string          `yaml:"net"`
-	Clients              []*ClientConfig `yaml:"clients"`
+	Net                  string          `yaml:"net,omitempty"`
+	Clients              []*ClientConfig `yaml:"clients,omitempty"`
 	URL                  string          `yaml:"url"`
-	FcdURL               string          `yaml:"fcd_url"`
-	Auth                 string          `yaml:"auth"`
-	Provider             string          `yaml:"provider"`
-	ChainID              int64           `yaml:"chain_id"`
-	ChainIDStr           string          `yaml:"chain_id_str"`
-	ChainName            string          `yaml:"chain_name"`
-	ChainPrefix          string          `yaml:"chain_prefix"`
-	ChainCoin            string          `yaml:"chain_coin"`
-	GasCoin              string          `yaml:"gas_coin"`
-	ChainCoinHDPath      uint32          `yaml:"chain_coin_hd_path"`
-	ChainGasPriceDefault float64         `yaml:"chain_gas_price_default"`
-	ChainGasMultiplier   float64         `yaml:"chain_gas_multiplier"`
-	ChainGasTip          uint64          `yaml:"chain_gas_tip"`
-	ChainMaxGasTip       uint64          `yaml:"chain_max_gas_tip"`
-	ChainTransferTax     float64         `yaml:"chain_transfer_tax"`
-	ExplorerURL          string          `yaml:"explorer_url"`
+	FcdURL               string          `yaml:"fcd_url,omitempty"`
+	Auth                 string          `yaml:"auth,omitempty"`
+	Provider             string          `yaml:"provider,omitempty"`
+	ChainID              int64           `yaml:"chain_id,omitempty"`
+	ChainIDStr           string          `yaml:"chain_id_str,omitempty"`
+	ChainName            string          `yaml:"chain_name,omitempty"`
+	ChainPrefix          string          `yaml:"chain_prefix,omitempty"`
+	ChainCoin            string          `yaml:"chain_coin,omitempty"`
+	GasCoin              string          `yaml:"gas_coin,omitempty"`
+	ChainCoinHDPath      uint32          `yaml:"chain_coin_hd_path,omitempty"`
+	ChainGasPriceDefault float64         `yaml:"chain_gas_price_default,omitempty"`
+	ChainGasMultiplier   float64         `yaml:"chain_gas_multiplier,omitempty"`
+	ChainGasTip          uint64          `yaml:"chain_gas_tip,omitempty"`
+	ChainMaxGasTip       uint64          `yaml:"chain_max_gas_tip,omitempty"`
+	ChainTransferTax     float64         `yaml:"chain_transfer_tax,omitempty"`
+	ExplorerURL          string          `yaml:"explorer_url,omitempty"`
 	Decimals             int32           `yaml:"decimals"`
-	Name                 string          `yaml:"name"`
-	IndexerUrl           string          `yaml:"indexer_url"`
-	IndexerType          string          `yaml:"indexer_type"`
-	PollingPeriod        string          `yaml:"polling_period"`
-	NoGasFees            bool            `yaml:"no_gas_fees"`
-	Disabled             bool            `yaml:"disabled"`
+	IndexerUrl           string          `yaml:"indexer_url,omitempty"`
+	IndexerType          string          `yaml:"indexer_type,omitempty"`
+	PollingPeriod        string          `yaml:"polling_period,omitempty"`
+	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
+	Disabled             bool            `yaml:"disabled,omitempty"`
 
 	// Tokens
-	Chain    string `yaml:"chain"`
-	Contract string `yaml:"contract"`
+	Chain    string `yaml:"chain,omitempty"`
+	Contract string `yaml:"contract,omitempty"`
+	Name     string `yaml:"name,omitempty"`
 
 	// Internal
 	AuthSecret  string              `yaml:"-"`

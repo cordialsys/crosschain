@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -248,7 +249,7 @@ func (s *CrosschainTestSuite) TestMergeWitDefaults() {
 		expectedUrl    string
 		expectedAuth   string
 	}
-	for _, tc := range []testcase{
+	for i, tc := range []testcase{
 		{
 			cfg: `
 crosschain:
@@ -288,12 +289,13 @@ crosschain:
 			expectedUrl:    "myurl3",
 		},
 	} {
+		fmt.Println("testcase ", i)
 		file, _ := os.CreateTemp(os.TempDir(), "xctest")
 		file.Write([]byte(tc.cfg))
 		os.Setenv(constants.ConfigEnv, file.Name())
 		f := factory.NewDefaultFactory()
 		count := 0
-		f.AllAssets.Range(func(key, _ any) bool {
+		f.AllAssets.Range(func(key, val any) bool {
 			count += 1
 			return true
 		})

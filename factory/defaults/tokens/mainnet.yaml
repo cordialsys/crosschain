@@ -1,0 +1,52 @@
+network: "mainnet"
+tokens:
+    DAI.ETH:
+        asset: DAI
+        chain: ETH
+        net: ""
+        decimals: 18
+        contract: 0x6b175474e89094c44da98b954eedeac495271d0f
+        type: ""
+    USDC.ETH:
+        asset: USDC
+        chain: ETH
+        net: ""
+        decimals: 6
+        contract: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+        type: ""
+    USDC.SOL:
+        asset: USDC
+        chain: SOL
+        net: ""
+        decimals: 6
+        contract: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+        type: ""
+    USTC.LUNC:
+        asset: USTC
+        chain: LUNC
+        net: ""
+        decimals: 6
+        contract: uusd
+        type: ""
+    WETH.ETH:
+        asset: WETH
+        chain: ETH
+        net: ""
+        decimals: 18
+        contract: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        type: ""
+    WETH.MATIC:
+        asset: WETH
+        chain: MATIC
+        net: ""
+        decimals: 18
+        contract: 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619
+        type: ""
+    WSOL.SOL:
+        asset: WSOL
+        chain: SOL
+        net: ""
+        decimals: 9
+        contract: So11111111111111111111111111111111111111112
+        type: ""
+

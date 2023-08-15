@@ -1,0 +1,66 @@
+network: "testnet"
+tokens:
+    DAI.ETH:
+        asset: DAI
+        chain: ETH
+        net: ""
+        decimals: 18
+        contract: 0xc2118d4d90b274016cb7a54c03ef52e6c537d957
+        type: ""
+    USDC.ETH:
+        asset: USDC
+        chain: ETH
+        net: ""
+        decimals: 6
+        contract: 0x07865c6e87b9f70255377e024ace6630c1eaa37f
+        type: ""
+    USDC.INJ:
+        asset: USDC
+        chain: INJ
+        net: ""
+        decimals: 6
+        contract: factory/inj17vytdwqczqz72j65saukplrktd4gyfme5agf6c/usdc
+        type: ""
+    USDC.SOL:
+        asset: USDC
+        chain: SOL
+        net: ""
+        decimals: 6
+        contract: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
+        type: ""
+    USDT.INJ:
+        asset: USDT
+        chain: INJ
+        net: ""
+        decimals: 6
+        contract: peggy0x87aB3B4C8661e07D6372361211B96ed4Dc36B1B5
+        type: ""
+    USTC.LUNC:
+        asset: USTC
+        chain: LUNC
+        net: ""
+        decimals: 6
+        contract: uusd
+        type: ""
+    WETH.ETH:
+        asset: WETH
+        chain: ETH
+        net: ""
+        decimals: 18
+        contract: 0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6
+        type: ""
+    WETH.MATIC:
+        asset: WETH
+        chain: MATIC
+        net: ""
+        decimals: 18
+        contract: 0xc6735cc74553Cc2caeB9F5e1Ea0A4dAe12ef4632
+        type: ""
+    WSOL.SOL:
+        asset: WSOL
+        chain: SOL
+        net: ""
+        decimals: 9
+        contract: So11111111111111111111111111111111111111112
+        type: ""
+

@@ -28,12 +28,6 @@ func listToMap[T HasID](list []T) map[string]T {
 	return toMap
 }
 
-var mainnetChainMap = listToMap(chains.Mainnet)
-var testnetChainMap = listToMap(chains.Testnet)
-
-var mainnetTokenMap = listToMap(tokens.Mainnet)
-var testnetTokenMap = listToMap(tokens.Testnet)
-
 var mainnetTaskMap = listToMap(tasks.Mainnet)
 var testnetTaskMap = listToMap(tasks.Testnet)
 
@@ -42,16 +36,16 @@ var testnetPipelineMap = listToMap(pipelines.Testnet)
 
 var Mainnet = factoryconfig.Config{
 	Network:   "mainnet",
-	Chains:    mainnetChainMap,
-	Tokens:    mainnetTokenMap,
+	Chains:    chains.Mainnet,
+	Tokens:    tokens.Mainnet,
 	Pipelines: mainnetPipelineMap,
 	Tasks:     mainnetTaskMap,
 }
 
 var Testnet = factoryconfig.Config{
 	Network:   "testnet",
-	Chains:    testnetChainMap,
-	Tokens:    testnetTokenMap,
+	Chains:    chains.Testnet,
+	Tokens:    tokens.Testnet,
 	Pipelines: testnetPipelineMap,
 	Tasks:     testnetTaskMap,
 }
