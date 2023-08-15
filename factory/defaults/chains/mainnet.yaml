@@ -3,6 +3,8 @@ chains:
     ACA:
         asset: ACA
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://eth-rpc-acala.aca-api.network
         chain_id: 787
         chain_name: Acala
@@ -13,6 +15,8 @@ chains:
     APTOS:
         asset: APTOS
         driver: aptos
+        clients:
+            - driver: crosschain
         url: https://aptos-mainnet-rpc.allthatnode.com
         chain_id: 1
         chain_name: Aptos
@@ -24,6 +28,8 @@ chains:
     ATOM:
         asset: ATOM
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: https://cosmos-rpc.publicnode.com
         chain_id_str: cosmoshub-4
         chain_name: Cosmos
@@ -40,7 +46,6 @@ chains:
         driver: evm
         clients:
             - driver: crosschain
-              url: https://crosschain.cordialapis.com
         url: https://api.avax.network/ext/bc/C/rpc
         chain_id: 43114
         chain_name: Avalanche C-Chain
@@ -51,6 +56,8 @@ chains:
     ArbETH:
         asset: ArbETH
         driver: evm
+        clients:
+            - driver: crosschain
         url: https://arb1.arbitrum.io/rpc
         chain_id: 42161
         chain_name: Arbitrum
@@ -62,6 +69,8 @@ chains:
     AurETH:
         asset: AurETH
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://mainnet.aurora.dev
         chain_id: 1313161554
         chain_name: Aurora
@@ -84,6 +93,8 @@ chains:
     BNB:
         asset: BNB
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://bsc-dataseed.binance.org
         chain_id: 56
         chain_name: Binance Smart Chain
@@ -106,6 +117,8 @@ chains:
     CELO:
         asset: CELO
         driver: evm
+        clients:
+            - driver: crosschain
         url: https://forno.celo.org
         chain_id: 42220
         chain_name: Celo
@@ -129,6 +142,8 @@ chains:
     CHZ2:
         asset: CHZ2
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://rpc.chiliz.com
         chain_id: 88888
         chain_name: Chiliz 2.0
@@ -152,6 +167,8 @@ chains:
     ETC:
         asset: ETC
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://www.ethercluster.com/etc
         chain_id: 61
         chain_name: Ethereum Classic
@@ -163,6 +180,8 @@ chains:
     ETH:
         asset: ETH
         driver: evm
+        clients:
+            - driver: crosschain
         url: https://ethereum.publicnode.com
         chain_id: 1
         chain_name: Ethereum
@@ -173,6 +192,8 @@ chains:
     ETHW:
         asset: ETHW
         driver: evm
+        clients:
+            - driver: crosschain
         url: http://mainnet.ethereumpow.org:80
         chain_id: 10001
         chain_name: EthereumPOW
@@ -183,6 +204,8 @@ chains:
     FTM:
         asset: FTM
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://rpc.ftm.tools
         chain_id: 250
         chain_name: Fantom
@@ -193,6 +216,8 @@ chains:
     INJ:
         asset: INJ
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: https://injective-rpc.polkachu.com
         chain_id_str: injective-1
         chain_name: Injective
@@ -207,6 +232,8 @@ chains:
     KAR:
         asset: KAR
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://eth-rpc-karura.aca-api.network
         chain_id: 686
         chain_name: Karura
@@ -217,6 +244,8 @@ chains:
     KLAY:
         asset: KLAY
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://public-node-api.klaytnapi.com/v1/cypress
         chain_id: 8217
         chain_name: Klaytn
@@ -239,6 +268,8 @@ chains:
     LUNA:
         asset: LUNA
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: https://terra-rpc.publicnode.com
         chain_id_str: phoenix-1
         chain_name: Terra
@@ -253,6 +284,8 @@ chains:
     LUNC:
         asset: LUNC
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: https://terra-classic-rpc.publicnode.com
         chain_id_str: columbus-5
         chain_name: Terra Classic
@@ -270,6 +303,8 @@ chains:
     MATIC:
         asset: MATIC
         driver: evm
+        clients:
+            - driver: crosschain
         url: https://polygon-rpc.com
         chain_id: 137
         chain_name: Polygon
@@ -283,6 +318,8 @@ chains:
     OAS:
         asset: OAS
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://rpc.mainnet.oasys.games
         chain_id: 248
         chain_name: Oasys
@@ -294,6 +331,8 @@ chains:
     OptETH:
         asset: OptETH
         driver: evm
+        clients:
+            - driver: crosschain
         url: https://mainnet.optimism.io
         chain_id: 10
         chain_name: Optimism
@@ -304,6 +343,8 @@ chains:
     ROSE:
         asset: ROSE
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://emerald.oasis.dev
         chain_id: 42262
         chain_name: Oasis
@@ -314,6 +355,8 @@ chains:
     SEI:
         asset: SEI
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: ""
         chain_name: Sei
         chain_prefix: sei
@@ -331,7 +374,6 @@ chains:
         driver: solana
         clients:
             - driver: crosschain
-              url: https://crosschain.cordialapis.com
         url: https://api.mainnet-beta.solana.com
         chain_name: Solana
         explorer_url: https://explorer.solana.com
@@ -341,6 +383,8 @@ chains:
     SUI:
         asset: SUI
         driver: sui
+        clients:
+            - driver: crosschain
         url: https://fullnode.mainnet.sui.io:443
         chain_name: Sui
         explorer_url: https://explorer.sui.io
@@ -350,6 +394,8 @@ chains:
     TIA:
         asset: TIA
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: ""
         chain_name: Celestia
         chain_prefix: celestia
@@ -364,6 +410,8 @@ chains:
     XDC:
         asset: XDC
         driver: evm-legacy
+        clients:
+            - driver: crosschain
         url: https://rpc.xdcrpc.com
         chain_id: 50
         chain_name: XinFin
@@ -375,6 +423,8 @@ chains:
     XPLA:
         asset: XPLA
         driver: cosmos
+        clients:
+            - driver: crosschain
         url: https://dimension-rpc.xpla.dev
         chain_id_str: dimension_37-1
         chain_name: XPLA Chain
