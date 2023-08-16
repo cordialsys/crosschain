@@ -63,6 +63,18 @@ chains:
         explorer_url: https://alfajores-blockscout.celo-testnet.org/
         decimals: 18
         indexer_type: rpc
+    CHZ:
+        asset: CHZ
+        driver: "evm-legacy"
+        net: testnet
+        url: ''
+        chain_id: 0 # TBD, do not currently know the chain id.
+        chain_name: Chiliz (Testnet)
+        explorer_url: ''
+        indexer_type: "none"
+        no_gas_fees: true
+        disabled: true
+        decimals: 18
     CHZ2:
         asset: CHZ2
         driver: evm-legacy

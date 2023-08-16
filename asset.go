@@ -200,11 +200,11 @@ type ClientConfig struct {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type AssetConfig struct {
-	Asset                string          `yaml:"asset"`
-	Driver               string          `yaml:"driver"`
+	Asset                string          `yaml:"asset,omitempty"`
+	Driver               string          `yaml:"driver,omitempty"`
 	Net                  string          `yaml:"net,omitempty"`
 	Clients              []*ClientConfig `yaml:"clients,omitempty"`
-	URL                  string          `yaml:"url"`
+	URL                  string          `yaml:"url,omitempty"`
 	FcdURL               string          `yaml:"fcd_url,omitempty"`
 	Auth                 string          `yaml:"auth,omitempty"`
 	Provider             string          `yaml:"provider,omitempty"`
@@ -221,12 +221,12 @@ type AssetConfig struct {
 	ChainMaxGasPrice     float64         `yaml:"chain_max_gas_price,omitempty"`
 	ChainTransferTax     float64         `yaml:"chain_transfer_tax,omitempty"`
 	ExplorerURL          string          `yaml:"explorer_url,omitempty"`
-	Decimals             int32           `yaml:"decimals"`
+	Decimals             int32           `yaml:"decimals,omitempty"`
 	IndexerUrl           string          `yaml:"indexer_url,omitempty"`
 	IndexerType          string          `yaml:"indexer_type,omitempty"`
 	PollingPeriod        string          `yaml:"polling_period,omitempty"`
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
-	Disabled             bool            `yaml:"disabled,omitempty"`
+	Disabled             *bool           `yaml:"disabled,omitempty"`
 
 	// Tokens
 	Chain    string `yaml:"chain,omitempty"`
@@ -242,12 +242,12 @@ type AssetConfig struct {
 type NativeAssetConfig = AssetConfig
 
 type TokenAssetConfig struct {
-	Asset    string    `yaml:"asset"`
-	Chain    string    `yaml:"chain"`
-	Net      string    `yaml:"net"`
-	Decimals int32     `yaml:"decimals"`
-	Contract string    `yaml:"contract"`
-	Type     AssetType `yaml:"type"`
+	Asset    string    `yaml:"asset,omitempty"`
+	Chain    string    `yaml:"chain,omitempty"`
+	Net      string    `yaml:"net,omitempty"`
+	Decimals int32     `yaml:"decimals,omitempty"`
+	Contract string    `yaml:"contract,omitempty"`
+	Type     AssetType `yaml:"type,omitempty"`
 
 	AssetConfig       `yaml:"-"`
 	NativeAssetConfig *NativeAssetConfig  `yaml:"-"`

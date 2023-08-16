@@ -357,8 +357,8 @@ func (s *CrosschainTestSuite) TestGetAssetConfig() {
 func (s *CrosschainTestSuite) TestGetAssetConfigEdgeCases() {
 	require := s.Require()
 	task, err := s.Factory.GetAssetConfig("", "")
+	require.Error(err)
 	asset := task.GetAssetConfig()
-	require.NotNil(err)
 	require.NotNil(asset)
 	require.Equal("", asset.Asset)
 	require.Equal(xc.NativeAsset(""), asset.NativeAsset)

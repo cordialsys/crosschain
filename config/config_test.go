@@ -226,18 +226,20 @@ func (s *CrosschainTestSuite) TestGetSecretFileTrimmed() {
 }
 
 type TestHobby struct {
-	Type    string   `yaml:"type"`
+	Type    string   `yaml:"type,omitempty"`
 	Actions []string `yaml:"actions"`
 }
 type TestFriend struct {
-	Name     string                `yaml:"name"`
+	Name     string                `yaml:"name,omitempty"`
 	Thoughts []string              `yaml:"thoughts,omitempty"`
 	Hobbies  map[string]*TestHobby `yaml:"hobbies,omitempty"`
 	Numbers  map[string]int        `yaml:"numbers,omitempty"`
 }
 type TestObj struct {
-	Name      string                 `yaml:"name"`
-	Age       int                    `yaml:"age"`
+	Name      string                 `yaml:"name,omitempty"`
+	Age       *int                   `yaml:"age,omitempty"`
+	Death     int                    `yaml:"death,omitempty"`
+	Alive     *bool                  `yaml:"alive,omitempty"`
 	Favorites []string               `yaml:"favorites"`
 	Friends   map[string]*TestFriend `yaml:"friends"`
 }
@@ -257,6 +259,8 @@ func GetDefaults(require *require.Assertions) *TestObj {
 test:
   name: "marley"
   age: 100
+  death: 1999
+  alive: true
   favorites:
     - "trade"
     - "swap"
@@ -286,9 +290,13 @@ test:
     sol:
       name: "sol"
 `)
+	age := 100
+	alive := true
 	expected := TestObj{
 		Name:      "marley",
-		Age:       100,
+		Age:       &age,
+		Alive:     &alive,
+		Death:     1999,
 		Favorites: []string{"trade", "swap", "bridge"},
 		Friends: map[string]*TestFriend{
 			"foo": {
@@ -393,7 +401,30 @@ test:
   age: 200
 `,
 			applyDiff: func(cfg *TestObj) {
-				cfg.Age = 200
+				age := 200
+				cfg.Age = &age
+			},
+		},
+		{
+			name: "overriding with 0",
+			cfg: `
+test:
+  age: 0
+`,
+			applyDiff: func(cfg *TestObj) {
+				age := 0
+				cfg.Age = &age
+			},
+		},
+		{
+			name: "overriding with false",
+			cfg: `
+test:
+  alive: false
+`,
+			applyDiff: func(cfg *TestObj) {
+				alive := false
+				cfg.Alive = &alive
 			},
 		},
 		{

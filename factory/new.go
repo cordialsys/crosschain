@@ -70,7 +70,8 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 		NoXcClients:  options.NoXcClients,
 	}
 	for _, asset := range assetsList {
-		if asset.GetNativeAsset().Disabled {
+		disabled := asset.GetNativeAsset().Disabled
+		if disabled != nil && *disabled {
 			// skip unless explicity including
 			if !options.UseDisabledChains {
 				continue

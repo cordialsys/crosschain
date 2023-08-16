@@ -293,7 +293,9 @@ crosschain:
 		file, _ := os.CreateTemp(os.TempDir(), "xctest")
 		file.Write([]byte(tc.cfg))
 		os.Setenv(constants.ConfigEnv, file.Name())
-		f := factory.NewDefaultFactory()
+		f := factory.NewFactory(&factory.FactoryOptions{
+			UseDisabledChains: true,
+		})
 		count := 0
 		f.AllAssets.Range(func(key, val any) bool {
 			count += 1

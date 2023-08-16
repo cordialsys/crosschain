@@ -140,6 +140,7 @@ chains:
         indexer_type: blockscout
         polling_period: 6m
         disabled: true
+        no_gas_fees: true
     CHZ2:
         asset: CHZ2
         driver: evm-legacy

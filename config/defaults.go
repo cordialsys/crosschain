@@ -7,7 +7,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func IsAllowedOverrideType(v interface{}) bool {
+func IsAllowedOverrideType(existing interface{}, v interface{}) bool {
+	if v == nil {
+		return false
+	}
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Map:
 		return false
@@ -18,6 +21,10 @@ func IsAllowedOverrideType(v interface{}) bool {
 		} else {
 			return false
 		}
+	case reflect.Int, reflect.Bool, reflect.String:
+		// enable overriding with "", 0, false
+		// warning: config objects should always use "omitempty" or _all_ fields will get overwritten
+		return true
 	}
 	//nolint
 	if reflect.ValueOf(v).IsZero() {
@@ -46,7 +53,7 @@ func RecusiveOverride(defaults map[string]interface{}, overrides map[string]inte
 					panic(fmt.Sprintf("unknown map: %T", existingVal))
 				}
 			} else {
-				if IsAllowedOverrideType(val) {
+				if IsAllowedOverrideType(existingVal, val) {
 					defaults[key] = val
 				} else {
 					// should not overwrite full arrays or maps
