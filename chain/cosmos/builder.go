@@ -41,15 +41,24 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 	}, nil
 }
 
+func DefaultMaxGasPrice(nativeAsset *xc.NativeAssetConfig) float64 {
+	// Don't spend more than e.g. 2 LUNA on a transaction
+	maxAmount := xc.NewAmountHumanReadableFromStr("2")
+	maxFee := maxAmount.ToBlockchain(nativeAsset.Decimals)
+	return TotalFeeToFeePerGas(maxFee.String(), NativeTransferGasLimit)
+}
+
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	max := txBuilder.Asset.GetNativeAsset().ChainMaxGasPrice
+	native := txBuilder.Asset.GetNativeAsset()
+	max := native.ChainMaxGasPrice
+	if max <= 0 {
+		max = DefaultMaxGasPrice(native)
+	}
 	// enforce a maximum gas price
-	if max > 0 {
-		if txInput.GasPrice > max {
-			txInput.GasPrice = max
-		}
+	if txInput.GasPrice > max {
+		txInput.GasPrice = max
 	}
 	if isNativeAsset(txBuilder.Asset.GetAssetConfig()) {
 		return txBuilder.NewNativeTransfer(from, to, amount, input)

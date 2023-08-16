@@ -114,6 +114,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 			ChainCoin:        "axpla",
 			ChainPrefix:      "xpla",
 			ChainMaxGasPrice: tc.max,
+			Decimals:         18,
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
