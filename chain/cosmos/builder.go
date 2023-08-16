@@ -19,6 +19,9 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
+var NativeTransferGasLimit = uint64(400_000)
+var TokenTransferGasLimit = uint64(900_000)
+
 // TxBuilder for Cosmos
 type TxBuilder struct {
 	xc.TxBuilder
@@ -40,6 +43,14 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	txInput := input.(*TxInput)
+	max := txBuilder.Asset.GetNativeAsset().ChainMaxGasPrice
+	// enforce a maximum gas price
+	if max > 0 {
+		if txInput.GasPrice > max {
+			txInput.GasPrice = max
+		}
+	}
 	if isNativeAsset(txBuilder.Asset.GetAssetConfig()) {
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 	}
@@ -53,7 +64,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	amountInt := big.Int(amount)
 
 	if txInput.GasLimit == 0 {
-		txInput.GasLimit = 400_000
+		txInput.GasLimit = NativeTransferGasLimit
 	}
 
 	denom := asset.GetNativeAsset().ChainCoin
@@ -90,7 +101,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	if txInput.GasLimit == 0 {
-		txInput.GasLimit = 900_000
+		txInput.GasLimit = TokenTransferGasLimit
 	}
 
 	contractTransferMsg := fmt.Sprintf(`{"transfer": {"amount": "%s", "recipient": "%s"}}`, amount.String(), to)
@@ -196,7 +207,7 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
 	sigsV2 := []signingtypes.SignatureV2{
 		{
-			PubKey: getPublicKey(*asset.GetNativeAsset(), input.FromPublicKey),
+			PubKey: getPublicKey(asset.GetNativeAsset(), input.FromPublicKey),
 			Data: &signingtypes.SingleSignatureData{
 				SignMode:  sigMode,
 				Signature: nil,
@@ -218,7 +229,7 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	if err != nil {
 		return nil, err
 	}
-	sighash := getSighash(*asset.GetNativeAsset(), sighashData)
+	sighash := getSighash(asset.GetNativeAsset(), sighashData)
 	return &Tx{
 		CosmosTx:        cosmosBuilder.GetTx(),
 		ParsedTransfers: []types.Msg{msg},

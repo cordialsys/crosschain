@@ -19,7 +19,7 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	publicKey := getPublicKey(*ab.Asset, publicKeyBytes)
+	publicKey := getPublicKey(ab.Asset, publicKeyBytes)
 	rawAddress := publicKey.Address()
 
 	err := sdk.VerifyAddressFormat(rawAddress)

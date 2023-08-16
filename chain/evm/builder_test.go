@@ -39,7 +39,7 @@ func (s *CrosschainTestSuite) TestTransferSetsMaxTipCap() {
 	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
 
 	// increase the max
-	builder, _ = NewTxBuilder(&xc.AssetConfig{ChainMaxGasTip: 100})
+	builder, _ = NewTxBuilder(&xc.AssetConfig{ChainMaxGasPrice: 100})
 	tx, _ = builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
 	// now DefaultMaxTipCapGwei + 1 is used
 	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei+1).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())

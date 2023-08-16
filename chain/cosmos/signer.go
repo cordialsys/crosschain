@@ -3,7 +3,6 @@ package cosmos
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
@@ -72,7 +71,6 @@ func (signer Signer) PublicKey(privateKey xc.PrivateKey) (xc.PublicKey, error) {
 // Sign a Cosmos tx
 func (signer Signer) Sign(privateKey xc.PrivateKey, data xc.TxDataToSign) (xc.TxSignature, error) {
 	privHex := hex.EncodeToString(privateKey)
-	fmt.Println("PRIV:", privHex, len(privHex), len(privateKey))
 	ecdsaKey, err := crypto.HexToECDSA(privHex)
 	if err != nil {
 		return nil, err

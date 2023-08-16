@@ -87,3 +87,51 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 
 	}
 }
+
+func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
+	require := s.Require()
+	type testcase struct {
+		max        float64
+		inputPrice float64
+		totalFee   uint64
+	}
+	for _, tc := range []testcase{
+		{
+			max:        10,
+			inputPrice: 100,
+			totalFee:   NativeTransferGasLimit * 10,
+		},
+		{
+			max:        10,
+			inputPrice: 5,
+			totalFee:   NativeTransferGasLimit * 5,
+		},
+	} {
+
+		asset := &xc.NativeAssetConfig{
+			Type:             xc.AssetTypeNative,
+			NativeAsset:      "XPLA",
+			ChainCoin:        "axpla",
+			ChainPrefix:      "xpla",
+			ChainMaxGasPrice: tc.max,
+		}
+
+		amount := xc.NewAmountBlockchainFromUint64(100)
+
+		builder, err := NewTxBuilder(asset)
+		require.NoError(err)
+
+		addr1 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
+		addr2 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
+		input := NewTxInput()
+		input.GasPrice = tc.inputPrice
+
+		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
+		require.NoError(err)
+		cosmosTx := xcTx.(*Tx).CosmosTx.(types.FeeTx)
+		fee := cosmosTx.GetFee()
+		require.Len(fee, 1)
+		require.EqualValues(tc.totalFee, fee.AmountOf("axpla").Uint64())
+
+	}
+}

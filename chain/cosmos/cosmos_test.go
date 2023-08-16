@@ -47,39 +47,39 @@ func (s *CrosschainTestSuite) TestIsNativeAsset() {
 
 func (s *CrosschainTestSuite) TestIsEVMOS() {
 	require := s.Require()
-	is := isEVMOS(xc.AssetConfig{NativeAsset: "ETH", Driver: string(xc.DriverEVM)})
+	is := isEVMOS(&xc.AssetConfig{NativeAsset: "ETH", Driver: string(xc.DriverEVM)})
 	require.False(is)
 
-	is = isEVMOS(xc.AssetConfig{NativeAsset: "ATOM", Driver: string(xc.DriverCosmos)})
+	is = isEVMOS(&xc.AssetConfig{NativeAsset: "ATOM", Driver: string(xc.DriverCosmos)})
 	require.False(is)
 
-	is = isEVMOS(xc.AssetConfig{NativeAsset: "LUNA", Driver: string(xc.DriverCosmos)})
+	is = isEVMOS(&xc.AssetConfig{NativeAsset: "LUNA", Driver: string(xc.DriverCosmos)})
 	require.False(is)
 
-	is = isEVMOS(xc.AssetConfig{NativeAsset: "XPLA", Driver: string(xc.DriverCosmos)})
+	is = isEVMOS(&xc.AssetConfig{NativeAsset: "XPLA", Driver: string(xc.DriverCosmos)})
 	require.False(is)
 
-	is = isEVMOS(xc.AssetConfig{NativeAsset: "XPLA", Driver: string(xc.DriverCosmosEvmos)})
+	is = isEVMOS(&xc.AssetConfig{NativeAsset: "XPLA", Driver: string(xc.DriverCosmosEvmos)})
 	require.True(is)
 }
 
 func (s *CrosschainTestSuite) TestGetPublicKey() {
 	require := s.Require()
 
-	pubKey := getPublicKey(xc.AssetConfig{Driver: string(xc.DriverCosmos)}, []byte{})
+	pubKey := getPublicKey(&xc.AssetConfig{Driver: string(xc.DriverCosmos)}, []byte{})
 	require.Exactly(&secp256k1.PubKey{Key: []byte{}}, pubKey)
 
-	pubKey = getPublicKey(xc.AssetConfig{Driver: string(xc.DriverCosmosEvmos)}, []byte{})
+	pubKey = getPublicKey(&xc.AssetConfig{Driver: string(xc.DriverCosmosEvmos)}, []byte{})
 	require.Exactly(&ethsecp256k1.PubKey{Key: []byte{}}, pubKey)
 }
 
 func (s *CrosschainTestSuite) TestGetSighash() {
 	require := s.Require()
 
-	sighash := getSighash(xc.AssetConfig{Driver: string(xc.DriverCosmos)}, []byte{})
+	sighash := getSighash(&xc.AssetConfig{Driver: string(xc.DriverCosmos)}, []byte{})
 	// echo -n '' | openssl dgst -sha256
 	require.Exactly("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hex.EncodeToString(sighash))
 
-	sighash = getSighash(xc.AssetConfig{Driver: string(xc.DriverCosmosEvmos)}, []byte{})
+	sighash = getSighash(&xc.AssetConfig{Driver: string(xc.DriverCosmosEvmos)}, []byte{})
 	require.Exactly("c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", hex.EncodeToString(sighash))
 }

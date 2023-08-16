@@ -41,6 +41,7 @@ chains:
         decimals: 6
         indexer_type: cosmos
         polling_period: 5m
+        chain_max_gas_price: 2.5
     AVAX:
         asset: AVAX
         driver: evm
@@ -229,6 +230,7 @@ chains:
         decimals: 18
         indexer_type: cosmos
         polling_period: 5m
+        chain_max_gas_price: 2500000000000
     KAR:
         asset: KAR
         driver: evm-legacy
@@ -276,7 +278,7 @@ chains:
         chain_prefix: terra
         chain_coin: uluna
         chain_coin_hd_path: 330
-        chain_gas_multiplier: 12
+        chain_max_gas_price: 2.5
         explorer_url: https://finder.terra.money
         decimals: 6
         indexer_type: cosmos
@@ -293,8 +295,9 @@ chains:
         chain_coin: uluna
         gas_coin: uusd
         chain_coin_hd_path: 330
-        chain_gas_price_default: 5
+        chain_gas_price_default: 0.5
         chain_gas_multiplier: 2
+        chain_max_gas_price: 2.5
         chain_transfer_tax: 0.005
         explorer_url: https://finder.terra.money/classic
         decimals: 6
@@ -314,7 +317,7 @@ chains:
         decimals: 18
         indexer_type: covalent
         polling_period: 6m
-        chain_max_gas_tip: 120
+        chain_max_gas_price: 120
     OAS:
         asset: OAS
         driver: evm-legacy
@@ -363,7 +366,7 @@ chains:
         chain_coin: usei
         chain_coin_hd_path: 118
         chain_gas_price_default: 0.1
-        chain_gas_multiplier: 12
+        chain_max_gas_price: 2.5
         explorer_url: https://sei.explorers.guru/
         decimals: 6
         indexer_type: cosmos
@@ -402,7 +405,7 @@ chains:
         chain_coin: utia
         chain_coin_hd_path: 118
         chain_gas_price_default: 0.1
-        chain_gas_multiplier: 12
+        chain_max_gas_price: 2.5
         decimals: 6
         indexer_type: cosmos
         polling_period: 15m
@@ -432,6 +435,7 @@ chains:
         chain_coin: axpla
         chain_coin_hd_path: 60
         chain_gas_price_default: 0.1
+        chain_max_gas_price: 2500000000000
         explorer_url: https://explorer.xpla.io/mainnet
         decimals: 18
         indexer_type: cosmos

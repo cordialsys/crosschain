@@ -120,15 +120,15 @@ func isNativeAsset(asset *xc.AssetConfig) bool {
 	return asset.Type == xc.AssetTypeNative || len(asset.Contract) < LEN_NATIVE_ASSET
 }
 
-func isEVMOS(asset xc.NativeAssetConfig) bool {
+func isEVMOS(asset *xc.NativeAssetConfig) bool {
 	return xc.Driver(asset.Driver) == xc.DriverCosmosEvmos
 }
 
-func isINJ(asset xc.NativeAssetConfig) bool {
+func isINJ(asset *xc.NativeAssetConfig) bool {
 	return asset.NativeAsset == xc.NativeAsset("INJ")
 }
 
-func getPublicKey(asset xc.NativeAssetConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {
+func getPublicKey(asset *xc.NativeAssetConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {
 	if isINJ(asset) {
 		return &injethsecp256k1.PubKey{Key: publicKeyBytes}
 	}
@@ -138,7 +138,7 @@ func getPublicKey(asset xc.NativeAssetConfig, publicKeyBytes xc.PublicKey) crypt
 	return &secp256k1.PubKey{Key: publicKeyBytes}
 }
 
-func getSighash(asset xc.NativeAssetConfig, sigData []byte) []byte {
+func getSighash(asset *xc.NativeAssetConfig, sigData []byte) []byte {
 	if isEVMOS(asset) || isINJ(asset) {
 		return crypto.Keccak256(sigData)
 	}

@@ -218,7 +218,7 @@ type AssetConfig struct {
 	ChainGasPriceDefault float64         `yaml:"chain_gas_price_default,omitempty"`
 	ChainGasMultiplier   float64         `yaml:"chain_gas_multiplier,omitempty"`
 	ChainGasTip          uint64          `yaml:"chain_gas_tip,omitempty"`
-	ChainMaxGasTip       uint64          `yaml:"chain_max_gas_tip,omitempty"`
+	ChainMaxGasPrice     float64         `yaml:"chain_max_gas_price,omitempty"`
 	ChainTransferTax     float64         `yaml:"chain_transfer_tax,omitempty"`
 	ExplorerURL          string          `yaml:"explorer_url,omitempty"`
 	Decimals             int32           `yaml:"decimals"`

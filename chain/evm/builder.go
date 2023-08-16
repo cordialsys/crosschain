@@ -130,7 +130,7 @@ func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountB
 	}
 
 	// Protection from setting very high gas tip
-	maxTipGwei := txBuilder.Asset.GetNativeAsset().ChainMaxGasTip
+	maxTipGwei := uint64(txBuilder.Asset.GetNativeAsset().ChainMaxGasPrice)
 	if maxTipGwei == 0 {
 		maxTipGwei = DefaultMaxTipCapGwei
 	}

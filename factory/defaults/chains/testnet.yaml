@@ -16,6 +16,7 @@ chains:
         chain_name: Cosmos (Theta Testnet)
         chain_prefix: cosmos
         chain_coin: uatom
+        chain_max_gas_price: 1.0
         chain_coin_hd_path: 118
         explorer_url: https://explorer.theta-testnet.polypore.xyz
         decimals: 6
@@ -117,6 +118,7 @@ chains:
         chain_coin: inj
         chain_coin_hd_path: 60
         chain_gas_price_default: 5e+08
+        chain_max_gas_price: 2500000000000
         explorer_url: https://testnet.explorer.injective.network
         decimals: 18
     LUNA:
@@ -128,7 +130,7 @@ chains:
         chain_prefix: terra
         chain_coin: uluna
         chain_coin_hd_path: 330
-        chain_gas_multiplier: 12
+        chain_max_gas_price: 1
         explorer_url: https://finder.terra.money/testnet
         decimals: 6
     LUNC:
@@ -140,7 +142,7 @@ chains:
         chain_prefix: terra
         chain_coin: uluna
         chain_coin_hd_path: 330
-        chain_gas_multiplier: 12
+        chain_max_gas_price: 1
         decimals: 6
     MATIC:
         asset: MATIC
@@ -151,7 +153,7 @@ chains:
         explorer_url: https://mumbai.polygonscan.com
         decimals: 18
         indexer_type: rpc
-        chain_max_gas_tip: 120
+        chain_max_gas_price: 120
     ROSE:
         asset: ROSE
         driver: evm-legacy
@@ -189,6 +191,7 @@ chains:
         chain_prefix: xpla
         chain_coin: axpla
         chain_coin_hd_path: 60
+        chain_max_gas_price: 2500000000000
         explorer_url: https://explorer.xpla.io/testnet
         decimals: 18
 

@@ -3,6 +3,7 @@ package cosmos
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 
 	xc "github.com/jumpcrypto/crosschain"
 	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
@@ -27,7 +28,6 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		pubKeyStr string
 		to        string
 		resp      interface{}
-		respGas   interface{}
 		txInput   *TxInput
 		err       string
 	}{
@@ -36,14 +36,17 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-			`{"uluna": "0.015"}`,
+			[]string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+			},
+			// `{"uluna": "0.015"}`,
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR")),
 				AccountNumber:   17241,
 				Sequence:        3,
-				GasLimit:        0,
+				GasLimit:        NativeTransferGasLimit,
 				GasPrice:        0.015,
 				Memo:            "",
 			},
@@ -54,15 +57,17 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			"AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
 			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
-			`{"axpla":"850000000000"}`,
+			[]string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+			},
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:   1442,
 				Sequence:        4,
-				GasLimit:        0,
-				GasPrice:        8.5e11,
+				GasLimit:        NativeTransferGasLimit,
+				GasPrice:        850000,
 				Memo:            "",
 			},
 			"",
@@ -74,7 +79,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			``,
-			`{"uluna": "0.015"}`,
+			// `{"uluna": "0.015"}`,
 			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
 			"failed to get account data",
 		},
@@ -84,7 +89,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			`null`,
-			`{"uluna": "0.015"}`,
+			// `{"uluna": "0.015"}`,
 			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
 			"failed to get account data",
 		},
@@ -94,7 +99,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			`{}`,
-			`{"uluna": "0.015"}`,
+			// `{"uluna": "0.015"}`,
 			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
 			"failed to get account data",
 		},
@@ -104,7 +109,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			errors.New(`{"message": "custom RPC error", "code": 123}`),
-			`{"uluna": "0.015"}`,
+			// `{"uluna": "0.015"}`,
 			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
 			"failed to get account data",
 		},
@@ -114,12 +119,15 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-			``,
+			[]string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				`{"message": "custom HTTP error", "code": 123}`,
+			},
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
 				Sequence:        3,
+				GasLimit:        NativeTransferGasLimit,
 			},
 			"failed to estimate gas",
 		},
@@ -128,53 +136,26 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-			`null`,
-			&TxInput{
-				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
-				AccountNumber:   17241,
-				Sequence:        3,
+			[]string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				"null",
 			},
-			"failed to estimate gas",
-		},
-		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-			`{}`,
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
-				Sequence:        3,
-			},
-			"failed to estimate gas",
-		},
-		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-			errors.New(`{"message": "custom HTTP error", "code": 123}`),
-			&TxInput{
-				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
-				AccountNumber:   17241,
+				GasLimit:        NativeTransferGasLimit,
 				Sequence:        3,
 			},
 			"failed to estimate gas",
 		},
 	}
 
-	for _, v := range vectors {
+	for i, v := range vectors {
+		fmt.Println("test vector", i)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		serverFcd, closeFcd := testtypes.MockHTTP(&s.Suite, v.respGas, 200)
-		defer closeFcd()
 
 		v.asset.URL = server.URL
-		v.asset.FcdURL = serverFcd.URL
 		client, _ := NewClient(&v.asset)
 		from := xc.Address(v.from)
 		to := xc.Address(v.to)
