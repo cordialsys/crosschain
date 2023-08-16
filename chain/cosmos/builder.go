@@ -21,6 +21,7 @@ import (
 
 var NativeTransferGasLimit = uint64(400_000)
 var TokenTransferGasLimit = uint64(900_000)
+var DefaultMaxTotalFeeHuman = xc.NewAmountHumanReadableFromStr("2")
 
 // TxBuilder for Cosmos
 type TxBuilder struct {
@@ -43,8 +44,7 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 
 func DefaultMaxGasPrice(nativeAsset *xc.NativeAssetConfig) float64 {
 	// Don't spend more than e.g. 2 LUNA on a transaction
-	maxAmount := xc.NewAmountHumanReadableFromStr("2")
-	maxFee := maxAmount.ToBlockchain(nativeAsset.Decimals)
+	maxFee := DefaultMaxTotalFeeHuman.ToBlockchain(nativeAsset.Decimals)
 	return TotalFeeToFeePerGas(maxFee.String(), NativeTransferGasLimit)
 }
 

@@ -106,15 +106,21 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 			inputPrice: 5,
 			totalFee:   NativeTransferGasLimit * 5,
 		},
+		{
+			max:        0,
+			inputPrice: 10000,
+			// 2 "human units" is the default max
+			totalFee: DefaultMaxTotalFeeHuman.ToBlockchain(6).Uint64(),
+		},
 	} {
 
 		asset := &xc.NativeAssetConfig{
 			Type:             xc.AssetTypeNative,
-			NativeAsset:      "XPLA",
-			ChainCoin:        "axpla",
-			ChainPrefix:      "xpla",
+			NativeAsset:      "LUNA",
+			ChainCoin:        "uluna",
+			ChainPrefix:      "terra",
 			ChainMaxGasPrice: tc.max,
-			Decimals:         18,
+			Decimals:         6,
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
@@ -122,8 +128,8 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 		builder, err := NewTxBuilder(asset)
 		require.NoError(err)
 
-		addr1 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
-		addr2 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
+		addr1 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
+		addr2 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
 		input := NewTxInput()
 		input.GasPrice = tc.inputPrice
 
@@ -132,7 +138,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 		cosmosTx := xcTx.(*Tx).CosmosTx.(types.FeeTx)
 		fee := cosmosTx.GetFee()
 		require.Len(fee, 1)
-		require.EqualValues(tc.totalFee, fee.AmountOf("axpla").Uint64())
+		require.EqualValues(tc.totalFee, fee.AmountOf("uluna").Uint64())
 
 	}
 }
