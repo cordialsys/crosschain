@@ -29,6 +29,13 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, err
 }
 
+func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
+	return &Client{
+		Asset:       asset,
+		AptosClient: client,
+	}
+}
+
 // FetchTxInput returns tx input for a Aptos tx
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
 	ledger, err := client.AptosClient.LedgerInfo()
