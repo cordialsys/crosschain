@@ -29,6 +29,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, err
 }
 
+// Enable constructing multiple clients without dialing aptos endpoint
+// multiple times
 func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
 	return &Client{
 		Asset:       asset,
