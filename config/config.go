@@ -1,15 +1,20 @@
 package config
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	vault "github.com/hashicorp/vault/api"
 	"github.com/jumpcrypto/crosschain/config/constants"
 	"github.com/spf13/viper"
+	"google.golang.org/api/iterator"
 	"gopkg.in/yaml.v3"
 )
 
@@ -116,11 +121,14 @@ func GetSecret(uri string) (string, error) {
 		return "", errors.New("invalid secret source for: ***")
 	}
 
-	path := splits[1]
-	switch key := splits[0]; strings.ToLower(key) {
+	secretType := strings.ToLower(splits[0])
+	args := strings.Split(strings.Join(splits[1:], ":"), ",")
+	switch secretType {
 	case "env":
+		path := args[0]
 		return strings.TrimSpace(os.Getenv(path)), nil
 	case "file":
+		path := args[0]
 		if len(path) > 1 && path[0] == '~' {
 			path = strings.Replace(path, "~", os.Getenv("HOME"), 1)
 		}
@@ -135,14 +143,11 @@ func GetSecret(uri string) (string, error) {
 		}
 		return strings.TrimSpace(string(result)), nil
 	case "vault":
-		vaultArgString := strings.Join(splits[1:], ":")
-		vaultArgs := strings.Split(vaultArgString, ",")
-		if len(vaultArgs) != 2 {
+		if len(args) != 2 {
 			return "", errors.New("vault secret has 2 comma separated arguments (url,path)")
 		}
-		// expect VAULT_TOKEN in env
-		vaultUrl := vaultArgs[0]
-		vaultFullPath := vaultArgs[1]
+		vaultUrl := args[0]
+		vaultFullPath := args[1]
 
 		cfg := &vault.Config{Address: vaultUrl}
 		// just check the error
@@ -169,6 +174,51 @@ func GetSecret(uri string) (string, error) {
 		data, _ := secret.Data["data"].(map[string]interface{})
 		result, _ := data[vaultKey].(string)
 		return strings.TrimSpace(result), nil
+	case "gsm":
+		// google secret manager
+		if len(args) != 2 {
+			return "", errors.New("gsm secret has 2 comma separated arguments (project,secret_name)")
+		}
+		project := args[0]
+		if len(strings.Split(project, "/")) == 1 {
+			// should have /projects/ prefix
+			project = filepath.Join("projects", project)
+		}
+		name := args[1]
+
+		client, err := secretmanager.NewClient(context.Background())
+		if err != nil {
+			return "", err
+		}
+
+		it := client.ListSecrets(context.Background(), &secretmanagerpb.ListSecretsRequest{
+			Parent: project,
+			Filter: name,
+		})
+		for {
+			resp, err := it.Next()
+			if err == iterator.Done {
+				break
+			}
+
+			if err != nil {
+				return "", err
+			}
+
+			_, secretName := filepath.Split(resp.Name)
+			if secretName == name {
+				// access the latest version
+				latest := filepath.Join(resp.Name, "versions/latest")
+				latestSecret, err := client.AccessSecretVersion(context.Background(), &secretmanagerpb.AccessSecretVersionRequest{
+					Name: latest,
+				})
+				if err != nil {
+					return "", err
+				}
+				return string(latestSecret.Payload.Data), nil
+			}
+		}
+		return "", fmt.Errorf("could not find a gsm secret by name %s", name)
 	}
 	return "", errors.New("invalid secret source for: ***")
 }
