@@ -3,7 +3,6 @@ package factory
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -536,61 +535,6 @@ func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
 		return "", err
 	}
 	return builder.GetAddressFromPublicKey(publicKey)
-}
-
-// Given an address like coin::Coin<0x11AAbbCCdd::coin::NAME>,
-// we only want to normalize the 0x11AAbbCCdd part, and remove the coin::Coin::<> part.
-func NormalizeMoveAddress(address string) string {
-	// find a hexadecimal string
-	r, err := regexp.Compile("0[xX][0-9a-fA-F]+")
-	if err != nil {
-		panic(err)
-	}
-	address = strings.Replace(address, "coin::Coin<", "", 1)
-	address = strings.Replace(address, ">", "", 1)
-
-	match := r.FindString(address)
-	if match != "" {
-		// replace the hexadeciaml portion of the string with lowercase
-		match_lower := strings.ToLower(match)
-		address = strings.Replace(address, match, match_lower, 1)
-		return address
-	} else {
-		return address
-	}
-}
-
-// NormalizeAddressString normalizes an address, e.g. returns lowercase when possible
-func NormalizeAddressString(address string, nativeAsset string) string {
-	if nativeAsset == "" {
-		nativeAsset = string(ETH)
-	}
-
-	address = strings.TrimSpace(address)
-	switch NativeAsset(nativeAsset).Driver() {
-	case DriverEVM, DriverEVMLegacy:
-		// XDC chain uses a prefix
-		if nativeAsset == string(XDC) && strings.HasPrefix(address, "0x") {
-			address = "xdc" + address[2:]
-		}
-		if strings.HasPrefix(address, "0x") {
-			return strings.ToLower(address)
-		}
-		if strings.HasPrefix(address, "xdc") {
-			return strings.ToLower(address)
-		}
-
-	case DriverBitcoin:
-		// remove bitcoincash: prefix
-		if strings.Contains(address, ":") {
-			return strings.Split(address, ":")[1]
-		}
-	case DriverAptos, DriverSui:
-		return NormalizeMoveAddress(address)
-
-	default:
-	}
-	return address
 }
 
 func CheckError(driver Driver, err error) ClientError {

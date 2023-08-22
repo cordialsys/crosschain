@@ -421,23 +421,6 @@ func (s *CrosschainTestSuite) TestGetAssetConfigByContract() {
 	require.Equal("", asset.Asset)
 }
 
-func (s *CrosschainTestSuite) TestNormalizeAddressString() {
-	require := s.Require()
-	address := ""
-
-	address = NormalizeAddressString("myaddress", "BTC")
-	require.Equal("myaddress", address) // no normalization
-
-	address = NormalizeAddressString("bitcoincash:myaddress", "BCH")
-	require.Equal("myaddress", address)
-
-	address = NormalizeAddressString("0x0ECE", "")
-	require.Equal("0x0ece", address) // lowercase
-
-	address = NormalizeAddressString("0x0ECE", "ETH")
-	require.Equal("0x0ece", address)
-}
-
 func (s *CrosschainTestSuite) TestPutAssetConfig() {
 	require := s.Require()
 	assetName := "TEST"
@@ -526,21 +509,4 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require.EqualValues(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Outpoint.Index, 2)
 	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[0].Value.String(), "100")
 	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Value.String(), "200")
-}
-
-func (s *CrosschainTestSuite) TestMoveAddressNormalize() {
-	require := s.Require()
-	// Test that only the hexadecimal string part of move addresses gets normalized
-	// and that coin::Coin<> is removed
-	naddr := NormalizeMoveAddress("0x11AAbbCCdd")
-	require.Equal("0x11aabbccdd", naddr)
-
-	naddr = NormalizeMoveAddress("0x11AAbbCCdd::coin::NAME")
-	require.Equal("0x11aabbccdd::coin::NAME", naddr)
-
-	naddr = NormalizeMoveAddress("coin::Coin<0x11AAbbCCdd::coin::NAME>")
-	require.Equal("0x11aabbccdd::coin::NAME", naddr)
-
-	naddr = NormalizeMoveAddress("coin::Coin<0x1::coin::NAME>")
-	require.Equal("0x1::coin::NAME", naddr)
 }
