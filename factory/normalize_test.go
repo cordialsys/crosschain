@@ -114,3 +114,15 @@ func (s *CrosschainTestSuite) TestMoveAddressNormalize() {
 	naddr = NormalizeMoveAddress("coin::Coin<0x1::coin::NAME>")
 	require.Equal("0x1::coin::NAME", naddr)
 }
+
+func (s *CrosschainTestSuite) TestNormalizeCosmos() {
+	require := s.Require()
+	address := Normalize("123456aABB", "LUNA", &NormalizeOptions{TransactionHash: true})
+	require.Equal("123456aabb", address)
+	// default should remove prefix
+	address = Normalize("0x123456aABB", "LUNA", &NormalizeOptions{TransactionHash: true})
+	require.Equal("123456aabb", address)
+
+	address = Normalize("0x123456aABB", "LUNA", &NormalizeOptions{TransactionHash: true, ZeroPad: true})
+	require.Equal("000000000000000000000000000000000000000000000000000000123456aabb", address)
+}

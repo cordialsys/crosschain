@@ -109,6 +109,15 @@ func Normalize(address string, nativeAsset string, optionsMaybe ...*NormalizeOpt
 			}
 			address = strings.ToLower(address)
 		}
+	case xc.DriverCosmos:
+		if options.TransactionHash {
+			// cosmos hash tx do not prefix 0x, so we always remove.
+			address = strings.TrimPrefix(address, "0x")
+			if options.ZeroPad {
+				address = zeroPadHex("", address, 64)
+			}
+			address = strings.ToLower(address)
+		}
 
 	default:
 	}
