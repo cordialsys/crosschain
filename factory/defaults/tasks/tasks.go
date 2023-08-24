@@ -267,6 +267,30 @@ func GenerateTasks(
 				},
 			},
 		},
+		{
+			Name:  "KLAY Unstake",
+			Allow: []string{"KLAY.KLAY"},
+			Operations: []xc.TaskConfigOperation{
+				{
+					Function:  "deposit",
+					Contract:  "0x0795aea6948fc1d31809383edc4183b220abd71f", // mainnet
+					Signature: "238be93f",
+					Payable:   false,
+					Params: []xc.TaskConfigOperationParam{
+						{
+							Name: "to",
+							Type: "address",
+							Bind: "from",
+						},
+						{
+							Name: "klay",
+							Type: "uint256",
+							Bind: "amount",
+						},
+					},
+				},
+			},
+		},
 	}
 
 }
