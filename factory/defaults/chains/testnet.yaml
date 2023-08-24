@@ -119,6 +119,26 @@ chains:
         explorer_url: https://testnet.ftmscan.com
         decimals: 18
         indexer_type: none
+    KAR:
+        asset: KAR
+        driver: "evm-legacy"
+        net: testnet
+        url: 'http://103.253.145.222:8545'
+        chain_id: 686
+        chain_name: Karura (Testnet)
+        explorer_url: 'https://karura.subscan.io'
+        indexer_type: "none"
+        decimals: 12
+    KLAY:
+        asset: KLAY
+        driver: "evm-legacy"
+        net: testnet
+        url: 'https://public-node-api.klaytnapi.com/v1/cypress'
+        chain_id: 1001
+        chain_name: Klaytn (Baobab Testnet)
+        explorer_url: 'https://api.baobab.klaytn.net:8651'
+        indexer_type: "none"
+        decimals: 18
     INJ:
         asset: INJ
         driver: cosmos
