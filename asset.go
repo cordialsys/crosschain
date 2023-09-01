@@ -285,6 +285,17 @@ func (asset *NativeAssetConfig) GetNativeAsset() *NativeAssetConfig {
 	return asset
 }
 
+// TODO we should delete these extra fields that are indicative of chain
+func (asset *NativeAssetConfig) GetChainIdentifier() string {
+	if asset.NativeAsset != "" {
+		return string(asset.NativeAsset)
+	}
+	if asset.Chain != "" {
+		return asset.Chain
+	}
+	return asset.Asset
+}
+
 func (asset NativeAssetConfig) GetTask() *TaskConfig {
 	return nil
 }

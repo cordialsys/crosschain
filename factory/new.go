@@ -80,7 +80,11 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 		// dereference secrets
 		if native, ok := asset.(*xc.NativeAssetConfig); ok {
 			if native.Auth != "" {
-				native.AuthSecret, _ = config.GetSecret(native.Auth)
+				var err error
+				native.AuthSecret, err = config.GetSecret(native.Auth)
+				if err != nil {
+					logrus.WithError(err).WithField("chain", native.GetChainIdentifier()).Error("could access secret")
+				}
 			}
 		}
 		_, err := factory.PutAssetConfig(asset)
