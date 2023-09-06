@@ -1,7 +1,6 @@
 package factory
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -133,6 +132,5 @@ func NormalizeAddressString(address string, nativeAsset string, optionsMaybe ...
 func AddressEqual(address1 string, address2 string, nativeAsset string) bool {
 	addr1 := NormalizeAddressString(address1, nativeAsset)
 	addr2 := NormalizeAddressString(address2, nativeAsset)
-	fmt.Println("--- addresses", addr1, addr2, addr1 == addr2)
 	return addr1 == addr2
 }
