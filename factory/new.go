@@ -20,30 +20,29 @@ type FactoryOptions struct {
 
 func NewFactory(options *FactoryOptions) *Factory {
 	// Use our config file loader
-	var cfg factoryconfig.Config
-	if v := os.Getenv("XC_MAINNET"); v != "" {
-		// use mainnets
-		cfg = factoryconfig.Config{}
-		err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		// default to use testnet
-		cfg = factoryconfig.Config{}
-		err := config.RequireConfig("crosschain", &cfg, defaults.Testnet)
-		if err != nil {
-			panic(err)
-		}
+	cfg := factoryconfig.Config{}
+	if v := os.Getenv("XC_TESTNET"); v != "" {
+		cfg.Network = "testnet"
+	}
 
-		// special override: if override with mainnet, let's start over with mainnet defaults
-		if cfg.Network == "mainnet" {
-			cfg = factoryconfig.Config{}
-			err = config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
-			if err != nil {
-				panic(err)
-			}
+	err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
+	if err != nil {
+		panic(err)
+	}
+
+	// use testnet
+	switch cfg.Network {
+	case "mainet":
+		// done
+	case "testnet":
+		cfg = factoryconfig.Config{}
+		err = config.RequireConfig("crosschain", &cfg, defaults.Testnet)
+		if err != nil {
+			panic(err)
 		}
+	default:
+		// default to use mainnet to avoid using testnet by accident.
+		cfg.Network = "mainnet"
 	}
 
 	return NewDefaultFactoryWithConfig(&cfg, options)
@@ -68,6 +67,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 		AllTasks:     cfg.GetTasks(),
 		AllPipelines: cfg.GetPipelines(),
 		NoXcClients:  options.NoXcClients,
+		Config:       cfg,
 	}
 	for _, asset := range assetsList {
 		disabled := asset.GetNativeAsset().Disabled

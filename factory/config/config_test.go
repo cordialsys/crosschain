@@ -244,39 +244,70 @@ func (s *CrosschainTestSuite) TestMergeWitDefaults() {
 	os.Setenv("TEST_PASSWORD", pw)
 	require := s.Require()
 	type testcase struct {
-		cfg            string
-		expectedAssets int
-		expectedUrl    string
-		expectedAuth   string
+		cfg             string
+		expectedAssets  int
+		expectedUrl     string
+		expectedAuth    string
+		expectedNetwork string
 	}
 	for i, tc := range []testcase{
 		{
 			cfg: `
 crosschain:
+  network: testnet
   chains:
     ETH:
       url: myurl
       auth: 'env:TEST_PASSWORD'
 `,
 			// should stay the same
-			expectedAssets: len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
-			expectedUrl:    "myurl",
-			expectedAuth:   pw,
+			expectedAssets:  len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:     "myurl",
+			expectedAuth:    pw,
+			expectedNetwork: "testnet",
+		},
+		{
+			cfg: `
+crosschain:
+  network: testnet
+  chains:
+    eth:
+      url: myurl2
+`,
+			// should stay the same
+			expectedAssets:  len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:     "myurl2",
+			expectedNetwork: "testnet",
+		},
+		{
+			cfg: `
+crosschain:
+  network: mainnet
+  chains:
+    eth:
+      url: myurl_mainnet
+`,
+			// should have mainnet assets
+			expectedAssets:  len(defaults.Mainnet.Chains) + len(defaults.Mainnet.Tokens),
+			expectedUrl:     "myurl_mainnet",
+			expectedNetwork: "mainnet",
 		},
 		{
 			cfg: `
 crosschain:
   chains:
     eth:
-      url: myurl2
+      url: myurl_mainnet
 `,
-			// should stay the same
-			expectedAssets: len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
-			expectedUrl:    "myurl2",
+			// should default to mainnet
+			expectedAssets:  len(defaults.Mainnet.Chains) + len(defaults.Mainnet.Tokens),
+			expectedUrl:     "myurl_mainnet",
+			expectedNetwork: "mainnet",
 		},
 		{
 			cfg: `
 crosschain:
+  network: testnet
   chains:
     eth:
       url: myurl3
@@ -285,8 +316,9 @@ crosschain:
       url: myurl4
 `,
 			// should be 1 extra chain
-			expectedAssets: 1 + len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
-			expectedUrl:    "myurl3",
+			expectedAssets:  1 + len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedUrl:     "myurl3",
+			expectedNetwork: "testnet",
 		},
 	} {
 		fmt.Println("testcase ", i)
@@ -301,8 +333,9 @@ crosschain:
 			count += 1
 			return true
 		})
-		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
 
+		require.Equal(tc.expectedNetwork, f.Config.Network)
+		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
 		eth, err := f.GetAssetConfig("", "ETH")
 		require.NoError(err)
 		require.Equal("ETH", eth.GetNativeAsset().Asset)

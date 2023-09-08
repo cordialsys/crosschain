@@ -443,7 +443,7 @@ func (s *CrosschainTestSuite) TestPutAssetConfig() {
 
 func (s *CrosschainTestSuite) TestConfig() {
 	require := s.Require()
-	cfg := s.Factory.Config()
+	cfg := s.Factory.GetConfig()
 	require.NotNil(cfg)
 }
 

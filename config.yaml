@@ -1,4 +1,5 @@
 crosschain:
+  network: testnet
   # Add overrides or new chains here.
   chains:
     ETH:

@@ -12,6 +12,7 @@ import (
 
 	. "github.com/jumpcrypto/crosschain"
 	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
+	"github.com/jumpcrypto/crosschain/factory/config"
 	"github.com/jumpcrypto/crosschain/factory/drivers"
 )
 
@@ -42,7 +43,7 @@ type FactoryContext interface {
 	GetAssetConfig(asset string, nativeAsset string) (ITask, error)
 	GetAssetConfigByContract(contract string, nativeAsset string) (ITask, error)
 	PutAssetConfig(config ITask) (ITask, error)
-	Config() interface{}
+	GetConfig() config.Config
 
 	GetAllAssets() []ITask
 	GetAllTasks() []*TaskConfig
@@ -65,6 +66,7 @@ type Factory struct {
 	callbackGetAssetConfig           func(assetID AssetID) (ITask, error)
 	callbackGetAssetConfigByContract func(contract string, nativeAsset string) (ITask, error)
 	NoXcClients                      bool
+	Config                           *config.Config
 }
 
 var _ FactoryContext = &Factory{}
@@ -498,8 +500,8 @@ func (f *Factory) PutAssetConfig(cfgI ITask) (ITask, error) {
 }
 
 // Config returns the Config
-func (f *Factory) Config() interface{} {
-	return &f.AllAssets
+func (f *Factory) GetConfig() config.Config {
+	return *f.Config
 }
 
 // MustAddress coverts a string to Address, panic if error

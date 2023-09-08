@@ -3,6 +3,7 @@ package testutil
 import (
 	xc "github.com/jumpcrypto/crosschain"
 	"github.com/jumpcrypto/crosschain/factory"
+	"github.com/jumpcrypto/crosschain/factory/config"
 	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
 )
 
@@ -154,8 +155,8 @@ func (f *TestFactory) PutAssetConfig(config xc.ITask) (xc.ITask, error) {
 }
 
 // Config returns the Config
-func (f *TestFactory) Config() interface{} {
-	return f.DefaultFactory.Config()
+func (f *TestFactory) GetConfig() config.Config {
+	return f.DefaultFactory.GetConfig()
 }
 
 // MustAddress coverts a string to Address, panic if error
