@@ -40,7 +40,7 @@ func (s *CrosschainTestSuite) TestEthWrapPassingWETH() {
 	asset, err := s.Factory.GetAssetConfig("WETH", "ETH")
 	require.Nil(err)
 	require.NotNil(asset)
-	task, err := s.Factory.GetTaskConfig("eth-wrap", "WETH.ETH")
+	task, err := s.Factory.GetTaskConfig("eth-wrap", "ETH")
 	require.Nil(err)
 	require.NotNil(task)
 
