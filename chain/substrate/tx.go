@@ -3,7 +3,7 @@ package substrate
 import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"golang.org/x/crypto/blake2b"
 )
 

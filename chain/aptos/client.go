@@ -7,7 +7,7 @@ import (
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Client for Aptos

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/bitcoin"
-	"github.com/jumpcrypto/crosschain/chain/cosmos"
-	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/solana"
-	"github.com/jumpcrypto/crosschain/factory/drivers"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/cosmos"
+	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
+	"github.com/cordialsys/crosschain/chain/solana"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
 )

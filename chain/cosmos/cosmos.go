@@ -3,7 +3,7 @@ package cosmos
 import (
 	"crypto/sha256"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 
 	// "github.com/terra-money/core/x/vesting"
 
@@ -11,6 +11,9 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
+	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
@@ -32,9 +35,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
-	localcodectypes "github.com/jumpcrypto/crosschain/chain/cosmos/types"
-	injethsecp256k1 "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
-	"github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 )
 
 const LEN_NATIVE_ASSET = 8

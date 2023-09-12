@@ -3,9 +3,9 @@ package solana
 import (
 	"encoding/hex"
 
+	xc "github.com/cordialsys/crosschain"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 func (s *SolanaTestSuite) TestTx() {

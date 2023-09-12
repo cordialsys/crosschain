@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
-	xc "github.com/jumpcrypto/crosschain"
-	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
 )
 
 func (s *SolanaTestSuite) TestNewClient() {

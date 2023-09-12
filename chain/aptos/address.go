@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"golang.org/x/crypto/sha3"
 )
 

@@ -6,10 +6,10 @@ import (
 	"errors"
 	"testing"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/crosschain/types"
-	"github.com/jumpcrypto/crosschain/chain/evm"
-	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/crosschain/types"
+	"github.com/cordialsys/crosschain/chain/evm"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
 

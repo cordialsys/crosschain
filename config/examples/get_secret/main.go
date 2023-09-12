@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/jumpcrypto/crosschain/config"
+	"github.com/cordialsys/crosschain/config"
 )
 
 func main() {

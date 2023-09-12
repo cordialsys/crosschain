@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Client for Template

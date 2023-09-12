@@ -3,9 +3,9 @@ package evm
 import (
 	"math/big"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	xc "github.com/jumpcrypto/crosschain"
 	"golang.org/x/crypto/sha3"
 )
 

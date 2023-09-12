@@ -1,8 +1,8 @@
 package cosmos
 
 import (
+	xc "github.com/cordialsys/crosschain"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // AddressBuilder for Cosmos

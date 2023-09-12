@@ -8,7 +8,7 @@ import (
 	"github.com/coming-chat/go-aptos/aptostypes"
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
 	"github.com/coming-chat/lcs"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"github.com/sirupsen/logrus"
 )
 

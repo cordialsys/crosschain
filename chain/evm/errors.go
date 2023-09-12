@@ -3,7 +3,7 @@ package evm
 import (
 	"strings"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func CheckError(err error) xc.ClientError {

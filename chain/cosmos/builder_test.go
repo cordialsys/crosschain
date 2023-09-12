@@ -4,8 +4,8 @@ import (
 
 	// "github.com/cosmos/cosmos-sdk/types/tx"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cosmos/cosmos-sdk/types"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestTaxRate() {

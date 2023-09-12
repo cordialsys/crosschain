@@ -4,10 +4,10 @@ import (
 	"os"
 	"sync"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/config"
-	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
-	"github.com/jumpcrypto/crosschain/factory/defaults"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/config"
+	factoryconfig "github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/defaults"
 	"github.com/sirupsen/logrus"
 )
 

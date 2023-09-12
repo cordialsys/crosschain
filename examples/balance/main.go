@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory"
+	"github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory"
 )
 
 func getBalanceSui(ctx context.Context, xc *factory.Factory) {

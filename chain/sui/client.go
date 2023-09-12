@@ -10,7 +10,7 @@ import (
 	"github.com/coming-chat/go-sui/v2/lib"
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Client for Sui

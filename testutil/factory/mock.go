@@ -3,7 +3,7 @@ package testutil
 import (
 	"context"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"github.com/stretchr/testify/mock"
 )
 

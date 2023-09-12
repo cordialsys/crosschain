@@ -3,9 +3,9 @@ package cosmos
 import (
 	"encoding/hex"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestTx() {

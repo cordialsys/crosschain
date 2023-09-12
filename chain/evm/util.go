@@ -3,7 +3,7 @@ package evm
 import (
 	"math/big"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func GweiToWei(gwei uint64) xc.AmountBlockchain {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/sui/generated/bcs"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 )
 
 type TxBuilder struct {

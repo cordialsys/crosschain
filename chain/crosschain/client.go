@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strconv"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/crosschain/types"
-	"github.com/jumpcrypto/crosschain/factory/drivers"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/crosschain/types"
+	"github.com/cordialsys/crosschain/factory/drivers"
 )
 
 // Client for Template

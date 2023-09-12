@@ -17,8 +17,8 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/utils"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/utils"
 
 	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
 

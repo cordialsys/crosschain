@@ -4,9 +4,9 @@ import (
 	"crypto/ecdsa"
 	"errors"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // AddressBuilder for EVM

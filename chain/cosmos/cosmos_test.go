@@ -8,8 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/stretchr/testify/suite"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 )
 
 type CrosschainTestSuite struct {

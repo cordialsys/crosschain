@@ -1,9 +1,9 @@
 package solana
 
 import (
+	xc "github.com/cordialsys/crosschain"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/token"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 func (s *SolanaTestSuite) TestNewTxBuilder() {

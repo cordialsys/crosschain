@@ -3,8 +3,8 @@ package evm
 import (
 	"encoding/hex"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/crypto"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // Signer for EVM

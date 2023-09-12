@@ -1,8 +1,8 @@
 package mainnet
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tasks/contracts"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/defaults/tasks/contracts"
 )
 
 // MAINNET

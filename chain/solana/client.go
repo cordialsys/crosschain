@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"

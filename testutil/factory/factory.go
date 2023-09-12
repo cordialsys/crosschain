@@ -1,10 +1,10 @@
 package testutil
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory"
-	"github.com/jumpcrypto/crosschain/factory/config"
-	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory"
+	"github.com/cordialsys/crosschain/factory/config"
+	factoryconfig "github.com/cordialsys/crosschain/factory/config"
 )
 
 // TestFactory for unit tests

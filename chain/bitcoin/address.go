@@ -8,8 +8,8 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cosmos/btcutil/bech32"
-	xc "github.com/jumpcrypto/crosschain"
 	"golang.org/x/crypto/ripemd160"
 )
 

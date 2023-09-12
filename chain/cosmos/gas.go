@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // EstimateGas estimates gas price for a Cosmos chain

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/evm"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm"
 )
 
 func (s *CrosschainTestSuite) TestEthWrap() {

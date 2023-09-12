@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/wire"
-	xc "github.com/jumpcrypto/crosschain"
-	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
+	xc "github.com/cordialsys/crosschain"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
 

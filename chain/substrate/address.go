@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 
 	"github.com/btcsuite/btcutil/base58"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // AddressBuilder for Template

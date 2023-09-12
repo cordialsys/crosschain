@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // TxBuilder for Template

@@ -3,7 +3,7 @@ package newchain
 import (
 	"errors"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Signer for Template

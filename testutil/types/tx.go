@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // An object that only supports .Serialize for SubmitTx()

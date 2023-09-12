@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory"
+	"github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory"
 )
 
 func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset string, txHash string) {

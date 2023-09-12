@@ -8,7 +8,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/coming-chat/go-sui/v2/types"
-	"github.com/jumpcrypto/crosschain/chain/sui/generated/bcs"
+	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 )
 
 type ObjectRef struct {

@@ -1,7 +1,7 @@
 package evm
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestNewTxBuilder() {

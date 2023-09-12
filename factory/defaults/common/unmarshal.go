@@ -3,8 +3,8 @@ package common
 import (
 	"strings"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/config"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )

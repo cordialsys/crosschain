@@ -7,8 +7,8 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/coming-chat/go-sui/v2/types"
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/sui/generated/bcs"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	"golang.org/x/crypto/blake2b"
 )
 

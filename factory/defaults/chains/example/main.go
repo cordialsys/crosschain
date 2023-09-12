@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/config"
-	"github.com/jumpcrypto/crosschain/factory/defaults/chains"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tokens"
+	"github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/defaults/chains"
+	"github.com/cordialsys/crosschain/factory/defaults/tokens"
 	"gopkg.in/yaml.v3"
 )
 

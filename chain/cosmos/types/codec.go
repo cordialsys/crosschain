@@ -12,13 +12,13 @@ import (
 
 	// wasmd "github.com/CosmWasm/wasmd/x/wasm/types"
 	wasmd "github.com/CosmWasm/wasmd/x/wasm/types"
-	injethsecp256k1 "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
-	injective "github.com/jumpcrypto/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/types"
-	terraclassic "github.com/jumpcrypto/crosschain/chain/cosmos/types/classic-terra/core/v2/x/vesting/types"
-	"github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
-	etherminttypes "github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/types"
-	ethermintevm "github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/x/evm/types"
-	ethermintfeemarket "github.com/jumpcrypto/crosschain/chain/cosmos/types/evmos/ethermint/x/feemarket/types"
+	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
+	injective "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/types"
+	terraclassic "github.com/cordialsys/crosschain/chain/cosmos/types/classic-terra/core/v2/x/vesting/types"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
+	etherminttypes "github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/types"
+	ethermintevm "github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/x/evm/types"
+	ethermintfeemarket "github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/x/feemarket/types"
 )
 
 // Register types from other chains.  Do not rely on 3rd party dependencies here!

@@ -1,6 +1,6 @@
 package substrate
 
-import xc "github.com/jumpcrypto/crosschain"
+import xc "github.com/cordialsys/crosschain"
 
 func (s *CrosschainTestSuite) TestTx() {
 	// TODO: write tests

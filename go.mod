@@ -1,4 +1,4 @@
-module github.com/jumpcrypto/crosschain
+module github.com/cordialsys/crosschain
 
 go 1.20
 

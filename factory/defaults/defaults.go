@@ -3,12 +3,12 @@ package defaults
 import (
 	"strings"
 
-	xc "github.com/jumpcrypto/crosschain"
-	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
-	"github.com/jumpcrypto/crosschain/factory/defaults/chains"
-	"github.com/jumpcrypto/crosschain/factory/defaults/pipelines"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tasks"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tokens"
+	xc "github.com/cordialsys/crosschain"
+	factoryconfig "github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/defaults/chains"
+	"github.com/cordialsys/crosschain/factory/defaults/pipelines"
+	"github.com/cordialsys/crosschain/factory/defaults/tasks"
+	"github.com/cordialsys/crosschain/factory/defaults/tokens"
 	"github.com/sirupsen/logrus"
 )
 

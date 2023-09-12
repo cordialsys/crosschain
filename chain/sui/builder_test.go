@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/coming-chat/go-sui/v2/types"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestTransferHash() {

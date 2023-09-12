@@ -8,9 +8,9 @@ import (
 	"github.com/coming-chat/go-sui/v2/lib"
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/sui/generated/bcs"
-	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/shopspring/decimal"
 )
 

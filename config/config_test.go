@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/cordialsys/crosschain/config/constants"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/jumpcrypto/crosschain/config/constants"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

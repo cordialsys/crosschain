@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/aptos"
-	"github.com/jumpcrypto/crosschain/chain/bitcoin"
-	"github.com/jumpcrypto/crosschain/chain/cosmos"
-	"github.com/jumpcrypto/crosschain/chain/evm"
-	"github.com/jumpcrypto/crosschain/chain/solana"
-	"github.com/jumpcrypto/crosschain/chain/substrate"
-	"github.com/jumpcrypto/crosschain/chain/sui"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/aptos"
+	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/cosmos"
+	"github.com/cordialsys/crosschain/chain/evm"
+	"github.com/cordialsys/crosschain/chain/solana"
+	"github.com/cordialsys/crosschain/chain/substrate"
+	"github.com/cordialsys/crosschain/chain/sui"
 )
 
 func MarshalTxInput(txInput xc.TxInput) ([]byte, error) {

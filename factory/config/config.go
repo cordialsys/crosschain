@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/jinzhu/copier"
-	xc "github.com/jumpcrypto/crosschain"
 	"github.com/sirupsen/logrus"
 )
 

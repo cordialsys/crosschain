@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"golang.org/x/crypto/blake2b"
 )
 

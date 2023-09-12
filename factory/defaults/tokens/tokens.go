@@ -3,8 +3,8 @@ package tokens
 import (
 	_ "embed"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/defaults/common"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/defaults/common"
 )
 
 func init() {

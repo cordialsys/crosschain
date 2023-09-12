@@ -3,7 +3,7 @@ package sui
 import (
 	"encoding/hex"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {

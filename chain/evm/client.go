@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/erc20"
+	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,9 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/evm/erc20"
-	"github.com/jumpcrypto/crosschain/utils"
 )
 
 const DEFAULT_GAS_PRICE = 20_000_000_000

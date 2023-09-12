@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	"github.com/coming-chat/go-sui/v2/account"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Signer for Sui

@@ -11,8 +11,8 @@ import (
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/cordialsys/crosschain/config/constants"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/jumpcrypto/crosschain/config/constants"
 	"github.com/spf13/viper"
 	"google.golang.org/api/iterator"
 	"gopkg.in/yaml.v3"

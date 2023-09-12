@@ -3,8 +3,8 @@ package substrate
 import (
 	_ "embed"
 
-	xc "github.com/jumpcrypto/crosschain"
-	testtypes "github.com/jumpcrypto/crosschain/testutil/types"
+	xc "github.com/cordialsys/crosschain"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
 
 // *** RPC & HTTP Test Responses ***

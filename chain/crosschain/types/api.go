@@ -1,7 +1,7 @@
 package types
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	"google.golang.org/genproto/googleapis/rpc/status"
 )
 

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ethereum/go-ethereum/crypto"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // Signer for Cosmos

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Given an address like coin::Coin<0x11AAbbCCdd::coin::NAME>,

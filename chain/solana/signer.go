@@ -4,7 +4,7 @@ import (
 	"crypto/ed25519"
 
 	"github.com/btcsuite/btcutil/base58"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // Signer for Solana

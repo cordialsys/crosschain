@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
-	xc "github.com/jumpcrypto/crosschain"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/sha3"
 )

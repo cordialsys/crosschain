@@ -5,12 +5,12 @@ import (
 	"os"
 	"testing"
 
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/config"
-	"github.com/jumpcrypto/crosschain/config/constants"
-	"github.com/jumpcrypto/crosschain/factory"
-	factoryconfig "github.com/jumpcrypto/crosschain/factory/config"
-	"github.com/jumpcrypto/crosschain/factory/defaults"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/config/constants"
+	"github.com/cordialsys/crosschain/factory"
+	factoryconfig "github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/defaults"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v2"
 )

@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/erc20"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/chain/evm/erc20"
 )
 
 // Tx for EVM

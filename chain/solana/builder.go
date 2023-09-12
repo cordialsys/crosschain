@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/gagliardetto/solana-go"
 	ata "github.com/gagliardetto/solana-go/programs/associated-token-account"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
-	xc "github.com/jumpcrypto/crosschain"
 )
 
 // TxBuilder for Solana

@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcd/chaincfg"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 // UTXO chains have mainnet, testnet, and regtest/devnet network types built in.

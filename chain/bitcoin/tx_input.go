@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	log "github.com/sirupsen/logrus"
 )
 

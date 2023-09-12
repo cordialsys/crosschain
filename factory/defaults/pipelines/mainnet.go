@@ -1,6 +1,6 @@
 package pipelines
 
-import xc "github.com/jumpcrypto/crosschain"
+import xc "github.com/cordialsys/crosschain"
 
 var Mainnet = []*xc.PipelineConfig{
 	{

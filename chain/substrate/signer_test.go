@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
-	xc "github.com/jumpcrypto/crosschain"
+	xc "github.com/cordialsys/crosschain"
 )
 
 func (s *CrosschainTestSuite) TestNewSigner() {

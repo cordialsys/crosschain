@@ -10,10 +10,10 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 
-	. "github.com/jumpcrypto/crosschain"
-	xcclient "github.com/jumpcrypto/crosschain/chain/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/config"
-	"github.com/jumpcrypto/crosschain/factory/drivers"
+	. "github.com/cordialsys/crosschain"
+	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
+	"github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/drivers"
 )
 
 // FactoryContext is the main Factory interface

@@ -1,10 +1,10 @@
 package tasks
 
 import (
-	xc "github.com/jumpcrypto/crosschain"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tasks/contracts"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tasks/contracts/mainnet"
-	"github.com/jumpcrypto/crosschain/factory/defaults/tasks/contracts/testnet"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/defaults/tasks/contracts"
+	"github.com/cordialsys/crosschain/factory/defaults/tasks/contracts/mainnet"
+	"github.com/cordialsys/crosschain/factory/defaults/tasks/contracts/testnet"
 )
 
 var Mainnet = GenerateTasks(
