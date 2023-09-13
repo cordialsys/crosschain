@@ -1,7 +1,7 @@
 # Crosschain
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/cordialsys/crosschain.svg)](https://pkg.go.dev/github.com/cordialsys/crosschain)
-[![Coverage Status](https://coveralls.io/repos/github/JumpCrypto/crosschain/badge.svg?branch=main)](https://coveralls.io/github/JumpCrypto/crosschain?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/cordialsys/crosschain/badge.svg?branch=main)](https://coveralls.io/github/cordialsys/crosschain?branch=main)
 
 A Go library to interact with multiple blockchains.
 
