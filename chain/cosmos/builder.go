@@ -66,23 +66,27 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	return txBuilder.NewTokenTransfer(from, to, amount, input)
 }
 
-// NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+func (txBuilder TxBuilder) GetDenom() string {
 	asset := txBuilder.Asset
-	amountInt := big.Int(amount)
-
-	if txInput.GasLimit == 0 {
-		txInput.GasLimit = NativeTransferGasLimit
-	}
-
 	denom := asset.GetNativeAsset().ChainCoin
 	if token, ok := asset.(*xc.TokenAssetConfig); ok {
 		if token.Contract != "" {
 			denom = token.Contract
 		}
 	}
+	return denom
+}
 
+// NewNativeTransfer creates a new transfer for a native asset
+func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	txInput := input.(*TxInput)
+	amountInt := big.Int(amount)
+
+	if txInput.GasLimit == 0 {
+		txInput.GasLimit = NativeTransferGasLimit
+	}
+
+	denom := txBuilder.GetDenom()
 	msgSend := &banktypes.MsgSend{
 		FromAddress: string(from),
 		ToAddress:   string(to),
@@ -166,15 +170,6 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 		return nil, err
 	}
 
-	_, err = accAddressFromBech32WithPrefix(string(from), asset.GetNativeAsset().ChainPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = accAddressFromBech32WithPrefix(string(to), asset.GetNativeAsset().ChainPrefix)
-	if err != nil {
-		return nil, err
-	}
 	gasDenom := asset.GetNativeAsset().GasCoin
 	if gasDenom == "" {
 		gasDenom = asset.GetNativeAsset().ChainCoin

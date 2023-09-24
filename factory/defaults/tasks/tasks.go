@@ -287,6 +287,19 @@ func GenerateTasks(
 				},
 			},
 		},
+		{
+			Name: "Cosmos Undelegate Operator 1",
+			Code: "CosmosUndelegateOperator1",
+			DefaultParams: map[string]interface{}{
+				"validator_address": "TODO",
+			},
+		},
+		{
+			Name: "Cosmos Undelegate Operator 2",
+			Code: "CosmosUndelegateOperator2",
+			DefaultParams: map[string]interface{}{
+				"validator_address": "TODO",
+			},
+		},
 	}
-
 }
