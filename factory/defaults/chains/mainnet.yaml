@@ -175,9 +175,8 @@ chains:
         chain_name: Ethereum Classic
         explorer_url: https://blockscout.com/etc/mainnet
         decimals: 18
-        indexer_url: https://blockscout.com/etc/mainnet
-        indexer_type: blockscout
-        polling_period: 6m
+        indexer_type: rpc
+        polling_period: 10m
     ETH:
         asset: ETH
         driver: evm
@@ -357,7 +356,8 @@ chains:
         driver: cosmos
         clients:
             - driver: crosschain
-        url: ""
+        url: "https://sei-rpc.polkachu.com/"
+        chain_id_str: pacific-1
         chain_name: Sei
         chain_prefix: sei
         chain_coin: usei

@@ -224,6 +224,7 @@ type AssetConfig struct {
 	Decimals             int32           `yaml:"decimals,omitempty"`
 	IndexerUrl           string          `yaml:"indexer_url,omitempty"`
 	IndexerType          string          `yaml:"indexer_type,omitempty"`
+	IndexerSymbol        string          `yaml:"indexer_symbol,omitempty"`
 	PollingPeriod        string          `yaml:"polling_period,omitempty"`
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
 	Disabled             *bool           `yaml:"disabled,omitempty"`
