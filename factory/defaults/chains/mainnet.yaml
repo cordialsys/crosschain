@@ -175,7 +175,8 @@ chains:
         chain_name: Ethereum Classic
         explorer_url: https://blockscout.com/etc/mainnet
         decimals: 18
-        indexer_type: rpc
+        indexer_type: blockscout
+        indexer_url: https://etc.blockscout.com
         polling_period: 10m
     ETH:
         asset: ETH
