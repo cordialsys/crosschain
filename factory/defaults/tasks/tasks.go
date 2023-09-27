@@ -288,22 +288,25 @@ func GenerateTasks(
 			},
 		},
 		{
-			Name: "Cosmos Undelegate Operator Danku",
-			Code: "CosmosUndelegateOperator1",
+			Name:  "Cosmos Undelegate Operator Danku",
+			Code:  "CosmosUndelegateOperator1",
+			Allow: []string{"*"},
 			DefaultParams: map[string]interface{}{
 				"validator_address": "terravaloper17kh8ngu3s74epwympaxrp4ukahm5rvtf5zc8ma",
 			},
 		},
 		{
-			Name: "Cosmos Undelegate Operator Ceres Ventures",
-			Code: "CosmosUndelegateOperator2",
+			Name:  "Cosmos Undelegate Operator Ceres Ventures",
+			Code:  "CosmosUndelegateOperator2",
+			Allow: []string{"*"},
 			DefaultParams: map[string]interface{}{
 				"validator_address": "terravaloper1q8w4u2wyhx574m70gwe8km5za2ptanny9mnqy3",
 			},
 		},
 		{
-			Name: "Cosmos Undelegate Operator Interdimensional Cable",
-			Code: "CosmosUndelegateOperator3",
+			Name:  "Cosmos Undelegate Operator Interdimensional Cable",
+			Code:  "CosmosUndelegateOperator3",
+			Allow: []string{"*"},
 			DefaultParams: map[string]interface{}{
 				"validator_address": "terravaloper1qlgyrmaadru03rd9j0w9nr5p2quhthlrhujknq",
 			},
