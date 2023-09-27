@@ -23,3 +23,11 @@ crosschain:
       explorer_url: 'https://mumbai.polygonscan.com'
       decimals: 18
       chain_max_gas_price: 100
+  tokens:
+    USDC.INJ:
+      asset: USDC
+      chain: INJ
+      net: ""
+      decimals: 18
+      contract: peggy0x44C21afAaF20c270EBbF5914Cfc3b5022173FEB7
+      type: "native"

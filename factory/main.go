@@ -303,8 +303,12 @@ func (f *Factory) cfgEnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAsse
 	cfg := partialCfg
 	if cfg.Chain != "" {
 		// token
-		cfg.Type = AssetTypeToken
-		cfg.AssetConfig.Type = AssetTypeToken
+		if cfg.Type == "" {
+			cfg.Type = AssetTypeToken
+		}
+		if cfg.AssetConfig.Type == "" {
+			cfg.AssetConfig.Type = AssetTypeToken
+		}
 		nativeAsset := cfg.Chain
 		cfg.NativeAsset = NativeAsset(nativeAsset)
 

@@ -311,11 +311,12 @@ func (s *CrosschainTestSuite) TestEnrichAssetConfig() {
 	assetCfg := assetCfgI.(*xc.TokenAssetConfig)
 	assetCfg.URL = ""
 	assetCfgEnriched, err := s.Factory.EnrichAssetConfig(assetCfg)
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(assetCfgEnriched)
 	require.Equal("USDC", assetCfgEnriched.Asset)
 	require.NotEqual("", assetCfgEnriched.URL)
 	require.NotEqual("", assetCfgEnriched.Driver)
+	require.Equal(xc.AssetTypeToken, assetCfgEnriched.Type)
 
 	assetCfg.URL = ""
 	assetCfg.Chain = "TEST"
@@ -336,6 +337,13 @@ func (s *CrosschainTestSuite) TestEnrichAssetConfig() {
 	require.Equal("", assetCfgEnriched.URL)
 	require.Equal("", assetCfgEnriched.Chain)
 	require.NotEqual("", assetCfgEnriched.Driver)
+
+	// Do not overwrite the token type if it's set to something already
+	assetCfg.Type = xc.AssetTypeNative
+	assetCfg.Chain = "SOL"
+	assetCfgEnriched, err = s.Factory.EnrichAssetConfig(assetCfg)
+	require.NoError(err)
+	require.Equal(xc.AssetTypeNative, assetCfgEnriched.Type)
 }
 
 func (s *CrosschainTestSuite) TestGetAssetID() {
