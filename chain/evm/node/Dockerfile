@@ -1,6 +1,4 @@
-FROM node:lts-buster-slim
-RUN apt update
-RUN apt install git -y
+FROM us-docker.pkg.dev/cordialsys/containers/build-base:latest
 WORKDIR /root
 RUN git clone https://github.com/NomicFoundation/hardhat-boilerplate.git
 WORKDIR /root/hardhat-boilerplate
