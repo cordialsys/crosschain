@@ -62,6 +62,7 @@ const (
 	DOT    = NativeAsset("DOT")    // Polkadot
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
+	DevETH = NativeAsset("ETH")    // Ethereum (Devnet)
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
 	FTM    = NativeAsset("FTM")    // Fantom
 	INJ    = NativeAsset("INJ")    // Injective
