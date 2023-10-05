@@ -62,7 +62,7 @@ const (
 	DOT    = NativeAsset("DOT")    // Polkadot
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
-	DevETH = NativeAsset("ETH")    // Ethereum (Devnet)
+	DevETH = NativeAsset("DevETH") // Ethereum (Devnet)
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
 	FTM    = NativeAsset("FTM")    // Fantom
 	INJ    = NativeAsset("INJ")    // Injective
@@ -97,6 +97,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	CELO,
 	CHZ,
 	CHZ2,
+	DevETH,
 	DOT,
 	ETC,
 	ETH,
@@ -159,7 +160,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoin
 	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH:
 		return DriverEVM
-	case BNB, FTM, ETC, ROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
+	case BNB, DevETH, FTM, ETC, ROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
