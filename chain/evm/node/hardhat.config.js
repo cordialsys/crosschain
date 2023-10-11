@@ -13,6 +13,10 @@ module.exports = {
       chainId: parseInt(chainId),
       hardfork: 'london',
       baseFeePerGas: "10000000000",
+      mining: {
+        auto: false,
+        interval: 3000
+      }
     },
   }
 };
