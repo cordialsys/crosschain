@@ -81,6 +81,8 @@ chains:
     BCH:
         asset: BCH
         driver: bitcoin
+        clients:
+            - driver: crosschain
         url: https://api.blockchair.com/bitcoin-cash
         auth: ENV:BLOCKCHAIR_API_KEY
         provider: blockchair
@@ -105,6 +107,8 @@ chains:
     BTC:
         asset: BTC
         driver: bitcoin
+        clients:
+            - driver: crosschain
         url: https://api.blockchair.com/bitcoin
         auth: ENV:BLOCKCHAIR_API_KEY
         provider: blockchair
@@ -156,6 +160,8 @@ chains:
     DOGE:
         asset: DOGE
         driver: bitcoin
+        clients:
+            - driver: crosschain
         url: https://api.blockchair.com/dogecoin
         auth: ENV:BLOCKCHAIR_API_KEY
         provider: blockchair
@@ -257,6 +263,8 @@ chains:
     LTC:
         asset: LTC
         driver: bitcoin
+        clients:
+            - driver: crosschain
         url: https://api.blockchair.com/litecoin
         auth: ENV:BLOCKCHAIR_API_KEY
         provider: blockchair
