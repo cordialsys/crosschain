@@ -159,9 +159,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 				accountContract,
 				ataTo,
 				accountFrom,
-				[]solana.PublicKey{
-					accountFrom,
-				},
+				[]solana.PublicKey{},
 			).Build(),
 		)
 	} else {
@@ -185,9 +183,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 					accountContract,
 					ataTo,
 					accountFrom,
-					[]solana.PublicKey{
-						accountFrom,
-					},
+					[]solana.PublicKey{},
 				).Build(),
 			)
 			remainingBalanceToSend = remainingBalanceToSend.Sub(&amountToSend)

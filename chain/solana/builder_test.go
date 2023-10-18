@@ -1,6 +1,8 @@
 package solana
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/token"
@@ -112,10 +114,21 @@ func (s *SolanaTestSuite) TestNewTokenTransfer() {
 	require.NotEqual(ataTo, solTx.Message.AccountKeys[2])                    // destination
 }
 
-func getTokenTransferAmount(tx *solana.Transaction, instr *solana.CompiledInstruction) uint64 {
+func validateTransferChecked(tx *solana.Transaction, instr *solana.CompiledInstruction) (*token.TransferChecked, error) {
 	accs, _ := instr.ResolveInstructionAccounts(&tx.Message)
 	inst, _ := token.DecodeInstruction(accs, instr.Data)
-	return *inst.Impl.(*token.TransferChecked).Amount
+	transferChecked := *inst.Impl.(*token.TransferChecked)
+	if len(transferChecked.Signers) > 0 {
+		return &transferChecked, fmt.Errorf("should not send multisig transfers")
+	}
+	return &transferChecked, nil
+}
+func getTokenTransferAmount(tx *solana.Transaction, instr *solana.CompiledInstruction) uint64 {
+	transferChecked, err := validateTransferChecked(tx, instr)
+	if err != nil {
+		panic(err)
+	}
+	return *transferChecked.Amount
 }
 
 func (s *SolanaTestSuite) TestNewMultiTokenTransfer() {
@@ -155,12 +168,15 @@ func (s *SolanaTestSuite) TestNewMultiTokenTransfer() {
 			},
 		},
 	}
-	tx, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountTooBig, input)
+	_, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountTooBig, input)
 	require.ErrorContains(err, "cannot send")
 
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountExact, input)
+	tx, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountExact, input)
 	require.NoError(err)
 	solTx := tx.(*Tx).SolTx
+
+	_, err = validateTransferChecked(solTx, &solTx.Message.Instructions[0])
+	require.NoError(err)
 
 	require.Equal(uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
 	require.Equal(ataTo, solTx.Message.AccountKeys[2])                       // destination
@@ -274,4 +290,6 @@ func (s *SolanaTestSuite) TestNewTransferAsToken() {
 	require.Equal(0, len(solTx.Signatures))
 	require.Equal(1, len(solTx.Message.Instructions))
 	require.Equal(uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
+	_, err = validateTransferChecked(solTx, &solTx.Message.Instructions[0])
+	require.NoError(err)
 }
