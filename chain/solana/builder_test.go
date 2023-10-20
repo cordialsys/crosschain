@@ -280,16 +280,41 @@ func (s *SolanaTestSuite) TestNewTransferAsToken() {
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
-	input := &TxInput{
-		RecentBlockHash: solana.HashFromBytes([]byte{1, 2, 3, 4}),
+
+	type testcase struct {
+		txInput               *TxInput
+		expectedSourceAccount string
 	}
-	tx, err := builder.NewTransfer(from, to, amount, input)
-	require.Nil(err)
-	require.NotNil(tx)
-	solTx := tx.(*Tx).SolTx
-	require.Equal(0, len(solTx.Signatures))
-	require.Equal(1, len(solTx.Message.Instructions))
-	require.Equal(uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
-	_, err = validateTransferChecked(solTx, &solTx.Message.Instructions[0])
-	require.NoError(err)
+	testcases := []testcase{
+		{
+			txInput: &TxInput{
+				RecentBlockHash: solana.HashFromBytes([]byte{1, 2, 3, 4}),
+			},
+			expectedSourceAccount: "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
+		},
+		{
+			txInput: &TxInput{
+				RecentBlockHash: solana.HashFromBytes([]byte{1, 2, 3, 4}),
+				SourceTokenAccounts: []*TokenAccount{
+					{
+						Account: solana.MustPublicKeyFromBase58("gCr8Xc43gEKntp7pjsBNq8qFHeUUdie2D7TrfbzPMJP"),
+					},
+				},
+			},
+			// should use new source account specified in txInput
+			expectedSourceAccount: "gCr8Xc43gEKntp7pjsBNq8qFHeUUdie2D7TrfbzPMJP",
+		},
+	}
+	for _, v := range testcases {
+		tx, err := builder.NewTransfer(from, to, amount, v.txInput)
+		require.Nil(err)
+		require.NotNil(tx)
+		solTx := tx.(*Tx).SolTx
+		require.Equal(0, len(solTx.Signatures))
+		require.Equal(1, len(solTx.Message.Instructions))
+		require.Equal(uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
+		tokenTf, err := validateTransferChecked(solTx, &solTx.Message.Instructions[0])
+		require.NoError(err)
+		require.Equal(v.expectedSourceAccount, tokenTf.Accounts[0].PublicKey.String())
+	}
 }

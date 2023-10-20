@@ -118,6 +118,9 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, err
 	}
 	ataFrom := solana.MustPublicKeyFromBase58(ataFromStr)
+	if len(txInput.SourceTokenAccounts) > 0 {
+		ataFrom = txInput.SourceTokenAccounts[0].Account
+	}
 
 	ataTo := accountTo
 	if !txInput.ToIsATA {
