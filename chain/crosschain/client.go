@@ -99,11 +99,12 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 }
 
 // FetchTxInput returns tx input from a Crosschain endpoint
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, amount xc.AmountBlockchain) (xc.TxInput, error) {
 	res, err := client.apiCall(ctx, "/input", &types.TxInputReq{
 		AssetReq: client.apiAsset(),
 		From:     string(from),
 		To:       string(to),
+		Amount:   amount.String(),
 	})
 	if err != nil {
 		// Fallback to default client
@@ -112,7 +113,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		if err2 != nil {
 			return nil, err
 		}
-		return nextClient.FetchTxInput(ctx, from, to)
+		return nextClient.FetchTxInput(ctx, from, to, amount)
 	}
 	var r types.TxInputRes
 	_ = json.Unmarshal(res, &r)

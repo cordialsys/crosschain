@@ -110,7 +110,7 @@ func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (u
 }
 
 // FetchTxInput returns tx input for a Substrate tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, _ xc.AmountBlockchain) (xc.TxInput, error) {
 	txInput, err := client.FetchTxInputChain()
 	if err != nil {
 		return &TxInput{}, err
@@ -243,7 +243,7 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 // Create sample extrinsic with a transaction
 func (client *Client) SampleTransaction(ctx context.Context) (xc.Tx, error) {
 	sampleAddr := xc.Address(signature.TestKeyringPairAlice.Address)
-	txInput, err := client.FetchTxInput(ctx, sampleAddr, sampleAddr)
+	txInput, err := client.FetchTxInput(ctx, sampleAddr, sampleAddr, xc.AmountBlockchain{})
 	if err != nil {
 		return &Tx{}, err
 	}

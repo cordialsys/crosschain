@@ -206,7 +206,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			client, err = NewLegacyClient(asset)
 		}
 		require.NoError(err)
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(""), xc.Address(""))
+		input, err := client.FetchTxInput(s.Ctx, xc.Address(""), xc.Address(""), xc.AmountBlockchain{})
 		require.NoError(err)
 		if v.err != "" {
 			require.Equal(TxInput{}, input)

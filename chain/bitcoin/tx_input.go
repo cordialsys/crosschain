@@ -82,26 +82,22 @@ func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockcha
 		})
 	}
 
-	inputs := []Input{}
 	lenUTXOIndex := len(unspentOutputs)
 	for balance.Cmp(&targetAmount) < 0 && lenUTXOIndex > 0 {
 		o := unspentOutputs[lenUTXOIndex-1]
 		log.Infof("unspent output h2l: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
+		filtered = append(filtered, o)
 		balance = balance.Add(&o.Value)
-
-		inputs = append(inputs, Input{
-			Output: o,
-		})
 		lenUTXOIndex--
 	}
 
 	// add the smallest utxo until we reach `minUtxo` inputs
 	// lenUTXOIndex wasn't used, so i can grow up to lenUTXOIndex (included)
-	for i := 0; len(inputs) < minUtxo && i < lenUTXOIndex; i++ {
+	for i := 0; len(filtered) < minUtxo && i < lenUTXOIndex; i++ {
 		o := unspentOutputs[i]
 		log.Infof("unspent output l2h: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
-		balance = balance.Add(&o.Value)
 		filtered = append(filtered, o)
+		balance = balance.Add(&o.Value)
 	}
 	return filtered
 }

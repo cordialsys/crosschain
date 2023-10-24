@@ -60,7 +60,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	from := xc.Address("from")
 	to := xc.Address("to")
-	input, err := client.FetchTxInput(s.Ctx, from, to)
+	input, err := client.FetchTxInput(s.Ctx, from, to, xc.AmountBlockchain{})
 	require.Nil(err)
 	require.IsType(txInput, input)
 	require.Equal(txInput, input)
@@ -77,7 +77,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 
 	from := xc.Address("from")
 	to := xc.Address("to")
-	_, err := client.FetchTxInput(s.Ctx, from, to)
+	_, err := client.FetchTxInput(s.Ctx, from, to, xc.AmountBlockchain{})
 	require.EqualError(err, "api-error")
 }
 
@@ -97,7 +97,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
 
 	from := xc.Address("from")
 	to := xc.Address("to")
-	_, err := client.FetchTxInput(s.Ctx, from, to)
+	_, err := client.FetchTxInput(s.Ctx, from, to, xc.AmountBlockchain{})
 	require.ErrorContains(err, "custom RPC error")
 }
 
