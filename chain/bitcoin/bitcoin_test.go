@@ -425,7 +425,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 		},
 	}
 	tf, _ = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
-	require.Len(tf.(*Tx).input.Inputs, 2)
+	require.Len(tf.(*Tx).input.UnspentOutputs, 2)
 	err = tf.(*Tx).AddSignatures([]xc.TxSignature{
 		sig, sig,
 	}...)

@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 type TxInput struct {
 	xc.TxInputEnvelope
 	UnspentOutputs  []Output            `json:"unspent_outputs"`
-	Inputs          []Input             `json:"input"`
 	FromPublicKey   []byte              `json:"from_pubkey"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 }
@@ -46,26 +46,46 @@ func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
 	return err
 }
 
+// Indicate if another txInput has a same UTXO and returns the first one.
+func (txInput *TxInput) HasSameUtxoAs(other *TxInput) (*Outpoint, bool) {
+	for _, x := range txInput.UnspentOutputs {
+		for _, y := range other.UnspentOutputs {
+			if bytes.Equal(x.Hash, y.Hash) && x.Index == y.Index {
+				return &y.Outpoint, true
+			}
+		}
+	}
+	return nil, false
+}
+
+func (txInput *TxInput) SumUtxo() *xc.AmountBlockchain {
+	balance := xc.NewAmountBlockchainFromUint64(0)
+	for _, utxo := range txInput.UnspentOutputs {
+		balance = balance.Add(&utxo.Value)
+	}
+	return &balance
+}
+
 // 1. sort unspentOutputs from lowest to highest
 // 2. grab the minimum amount of UTXO needed to satify amount
 // 3. tack on the smallest utxo's until `minUtxo` is reached.
 // This ensures a small number of UTXO are used for transaction while also consolidating some
 // smaller utxo into the transaction.
 // Returns the total balance of the min utxo set.  txInput.inputs are updated to the new set.
-func (txInput *TxInput) allocateMinUtxoSet(targetAmount xc.AmountBlockchain, minUtxo int) *xc.AmountBlockchain {
+func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockchain, minUtxo int) []Output {
+	filtered := []Output{}
 	balance := xc.NewAmountBlockchainFromUint64(0)
-
 	// 1. sort from lowest to higher
-	if len(txInput.UnspentOutputs) > 1 {
-		sort.Slice(txInput.UnspentOutputs, func(i, j int) bool {
-			return txInput.UnspentOutputs[i].Value.Cmp(&txInput.UnspentOutputs[j].Value) <= 0
+	if len(unspentOutputs) > 1 {
+		sort.Slice(unspentOutputs, func(i, j int) bool {
+			return unspentOutputs[i].Value.Cmp(&unspentOutputs[j].Value) <= 0
 		})
 	}
 
 	inputs := []Input{}
-	lenUTXOIndex := len(txInput.UnspentOutputs)
+	lenUTXOIndex := len(unspentOutputs)
 	for balance.Cmp(&targetAmount) < 0 && lenUTXOIndex > 0 {
-		o := txInput.UnspentOutputs[lenUTXOIndex-1]
+		o := unspentOutputs[lenUTXOIndex-1]
 		log.Infof("unspent output h2l: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
 		balance = balance.Add(&o.Value)
 
@@ -78,13 +98,10 @@ func (txInput *TxInput) allocateMinUtxoSet(targetAmount xc.AmountBlockchain, min
 	// add the smallest utxo until we reach `minUtxo` inputs
 	// lenUTXOIndex wasn't used, so i can grow up to lenUTXOIndex (included)
 	for i := 0; len(inputs) < minUtxo && i < lenUTXOIndex; i++ {
-		o := txInput.UnspentOutputs[i]
+		o := unspentOutputs[i]
 		log.Infof("unspent output l2h: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
 		balance = balance.Add(&o.Value)
-		inputs = append(inputs, Input{
-			Output: o,
-		})
+		filtered = append(filtered, o)
 	}
-	txInput.Inputs = inputs
-	return &balance
+	return filtered
 }

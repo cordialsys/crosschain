@@ -151,6 +151,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 		signed: true,
 	}
 	tx.msgTx.Deserialize(bytes.NewReader(data))
+	inputs := []Input{}
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain
@@ -174,7 +175,8 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Output:  output,
 			Address: xc.Address(addresses[0].String()),
 		}
-		tx.input.Inputs = append(tx.input.Inputs, input)
+		inputs = append(inputs, input)
+		tx.input.UnspentOutputs = append(tx.input.UnspentOutputs, input.Output)
 		sources = append(sources, &xc.TxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
@@ -188,7 +190,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 	// detect from address
 	// single input: from is the address of the single input = unspent output
 	// multiple inputs: from is the address of the unspent output with highest value
-	from, totalIn := tx.DetectFrom()
+	from, totalIn := DetectFrom(inputs)
 
 	// detect recipient addresses and fields: to, amount
 	// two outputs:

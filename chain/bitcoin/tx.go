@@ -85,9 +85,12 @@ func bzToString(bz []byte) string {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	sighashes := make([]xc.TxDataToSign, len(tx.input.Inputs))
+	sighashes := make([]xc.TxDataToSign, len(tx.input.UnspentOutputs))
 
-	for i, txin := range tx.input.Inputs {
+	for i, utxo := range tx.input.UnspentOutputs {
+		txin := Input{
+			Output: utxo,
+		}
 		pubKeyScript := txin.PubKeyScript
 		sigScript := txin.SigScript
 		value := txin.Value.Uint64()
@@ -163,8 +166,8 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		s.SetBytes(&sBz)
 
 		signature := ecdsa.NewSignature(&r, &s)
-		pubKeyScript := tx.input.Inputs[i].Output.PubKeyScript
-		sigScript := tx.input.Inputs[i].SigScript
+		pubKeyScript := tx.input.UnspentOutputs[i].PubKeyScript
+		var sigScript []byte = nil
 
 		// Support segwit.
 		if sigScript == nil {
@@ -232,11 +235,11 @@ func (tx *Tx) Outputs() ([]Output, error) {
 
 // Heuristic to determine the sender of a transaction by
 // using the largest utxo input and taking it's spender.
-func (tx *Tx) DetectFrom() (string, xc.AmountBlockchain) {
+func DetectFrom(inputs []Input) (string, xc.AmountBlockchain) {
 	from := ""
 	max := xc.NewAmountBlockchainFromUint64(0)
 	totalIn := xc.NewAmountBlockchainFromUint64(0)
-	for _, input := range tx.input.Inputs {
+	for _, input := range inputs {
 		value := input.Output.Value
 		if value.Cmp(&max) > 0 {
 			max = value

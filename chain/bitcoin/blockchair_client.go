@@ -323,6 +323,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 		msgTx:      &wire.MsgTx{},
 		signed:     true,
 	}
+	inputs := []Input{}
 
 	for _, in := range data.Inputs {
 		hash, _ := hex.DecodeString(in.TxHash)
@@ -340,7 +341,8 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 			// SigScript: sigScript,
 			Address: xc.Address(in.Recipient),
 		}
-		tx.input.Inputs = append(tx.input.Inputs, input)
+		tx.input.UnspentOutputs = append(tx.input.UnspentOutputs, input.Output)
+		inputs = append(inputs, input)
 		sources = append(sources, &xc.TxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
@@ -361,7 +363,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 	}
 
 	// detect from, to, amount
-	from, _ := tx.DetectFrom()
+	from, _ := DetectFrom(inputs)
 	to, amount, _ := tx.DetectToAndAmount(from, expectedTo)
 	for _, out := range data.Outputs {
 		if out.Recipient != from {
