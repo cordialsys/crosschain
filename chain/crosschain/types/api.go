@@ -33,9 +33,8 @@ type BalanceRes struct {
 
 type TxInputReq struct {
 	*AssetReq
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Amount string `json:"amount"`
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 type TxInputRes struct {

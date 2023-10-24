@@ -54,7 +54,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 // FetchTxInput returns tx input for a Solana tx, namely a RecentBlockHash
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, _ xc.AmountBlockchain) (xc.TxInput, error) {
+func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	txInput := NewTxInput()
 	asset := client.Asset
 

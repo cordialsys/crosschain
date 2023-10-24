@@ -15,8 +15,8 @@ type MockedClient struct {
 var _ xc.ClientBalance = &MockedClient{}
 
 // FetchTxInput fetches tx input, mocked
-func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, amount xc.AmountBlockchain) (xc.TxInput, error) {
-	args := m.Called(ctx, from, to, amount)
+func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	args := m.Called(ctx, from, to)
 	return args.Get(0).(xc.TxInput), args.Error(1)
 }
 

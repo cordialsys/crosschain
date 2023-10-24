@@ -156,7 +156,7 @@ func NewLegacyClient(cfg xc.ITask) (*Client, error) {
 }
 
 // FetchTxInput returns tx input for a EVM tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address, _ xc.AmountBlockchain) (xc.TxInput, error) {
+func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
 	nativeAsset := client.Asset.GetNativeAsset()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)

@@ -235,7 +235,7 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 
 }
 
-func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, _ xc.AmountBlockchain) (xc.TxInput, error) {
+func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	// native asset SUI
 	native := "0x2::sui::SUI"
 	contract := native

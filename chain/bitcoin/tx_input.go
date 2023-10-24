@@ -20,6 +20,7 @@ type TxInput struct {
 }
 
 var _ xc.TxInputWithPublicKey = &TxInput{}
+var _ xc.TxInputWithAmount = &TxInput{}
 
 // NewTxInput returns a new Bitcoin TxInput
 func NewTxInput() *TxInput {
@@ -44,6 +45,10 @@ func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
 	err = txInput.SetPublicKey(publicKeyBytes)
 
 	return err
+}
+
+func (txInput *TxInput) SetAmount(amount xc.AmountBlockchain) {
+	txInput.UnspentOutputs = FilterForMinUtxoSet(txInput.UnspentOutputs, amount, 10)
 }
 
 // Indicate if another txInput has a same UTXO and returns the first one.

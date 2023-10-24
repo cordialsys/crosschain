@@ -13,6 +13,11 @@ type TxInputWithPublicKey interface {
 	SetPublicKeyFromStr(string) error
 }
 
+// TxInputWithAmount for chains that can optimize the tx input if they know the amount being transferred.
+type TxInputWithAmount interface {
+	SetAmount(AmountBlockchain)
+}
+
 type TxInputEnvelope struct {
 	Type Driver `json:"type"`
 }

@@ -79,7 +79,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			server.StatusCodes = []int{200, 200, 400}
 		}
 		server.Response = v.resp
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(v.from), "", xc.AmountBlockchain{})
+		input, err := client.FetchTxInput(s.Ctx, xc.Address(v.from), "")
 
 		if v.err != "" {
 			require.ErrorContains(err, v.err)

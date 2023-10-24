@@ -47,12 +47,15 @@ func main() {
 	// (network needed)
 	client, _ := xc.NewClient(asset)
 
-	input, err := client.FetchTxInput(ctx, from, to, amount)
+	input, err := client.FetchTxInput(ctx, from, to)
 	if err != nil {
 		panic(err)
 	}
 	if inputWithPublicKey, ok := input.(crosschain.TxInputWithPublicKey); ok {
 		inputWithPublicKey.SetPublicKeyFromStr(fromPublicKeyStr)
+	}
+	if inputWithAmount, ok := input.(crosschain.TxInputWithAmount); ok {
+		inputWithAmount.SetAmount(amount)
 	}
 	fmt.Printf("%+v\n", input)
 

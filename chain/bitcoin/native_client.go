@@ -94,13 +94,13 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 }
 
 // FetchTxInput returns tx input for a Bitcoin tx
-func (client *NativeClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address, amount xc.AmountBlockchain) (xc.TxInput, error) {
+func (client *NativeClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
 	if err != nil {
 		return input, err
 	}
-	input.UnspentOutputs = FilterForMinUtxoSet(allUnspentOutputs, amount, 10)
+	input.UnspentOutputs = allUnspentOutputs
 	gasPerByte, err := client.EstimateGas(ctx)
 	input.GasPricePerByte = gasPerByte
 	if err != nil {

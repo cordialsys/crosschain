@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -188,8 +189,11 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 		to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-		input, err := client.FetchTxInput(s.Ctx, from, to, xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
+		input, err := client.FetchTxInput(s.Ctx, from, to)
 		require.NotNil(input)
+		// optimize the utxo amounts
+		input.(xc.TxInputWithAmount).SetAmount(xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
+
 		fmt.Println(input)
 		fmt.Println(err)
 		require.NoError(err)
@@ -205,6 +209,14 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		// string should be reversed
 		require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
 		require.EqualValues(60, btcInput.GasPricePerByte.Uint64())
+
+		// should be sorted with the largest utxo used first
+		firstValue := btcInput.UnspentOutputs[0].Value.Uint64()
+		sort.Slice(btcInput.UnspentOutputs, func(i, j int) bool {
+			return btcInput.UnspentOutputs[i].Value.Uint64() > btcInput.UnspentOutputs[j].Value.Uint64()
+		})
+		require.Equal(firstValue, btcInput.UnspentOutputs[0].Value.Uint64())
+
 	}
 }
 
