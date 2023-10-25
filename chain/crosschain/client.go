@@ -107,11 +107,11 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	})
 	if err != nil {
 		// Fallback to default client
-		log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return nil, err
 		}
+		log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
 		return nextClient.FetchTxInput(ctx, from, to)
 	}
 	var r types.TxInputRes
@@ -133,11 +133,11 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	})
 	if err != nil {
 		// Fallback to default client
-		log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return err
 		}
+		log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
 		return nextClient.SubmitTx(ctx, txInput)
 	}
 	var r types.SubmitTxRes
@@ -153,11 +153,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	})
 	if err != nil {
 		// Fallback to default client
-		log.Printf("crosschain client.FetchTxInfo - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return xc.TxInfo{}, err
 		}
+		log.Printf("crosschain client.FetchTxInfo - fall back to node err=%s", err)
 		return nextClient.FetchTxInfo(ctx, txHash)
 	}
 	var r types.TxInfoRes
@@ -182,11 +182,11 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	})
 	if err != nil {
 		// Fallback to default client
-		log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return zero, err
 		}
+		log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
 		return nextClient.(xc.ClientBalance).FetchNativeBalance(ctx, address)
 	}
 	var r types.BalanceRes
@@ -203,11 +203,11 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 	})
 	if err != nil {
 		// Fallback to default client
-		log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
 			return zero, err
 		}
+		log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
 		return nextClient.(xc.ClientBalance).FetchNativeBalance(ctx, address)
 	}
 	var r types.BalanceRes

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/wire"
@@ -40,6 +41,9 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	opts.Chaincfg = params
 	opts.Host = cfg.URL
 	opts.Password = cfg.AuthSecret
+	if strings.TrimSpace(cfg.AuthSecret) == "" {
+		return &BlockchairClient{}, fmt.Errorf("api token required for blockchair blockchain client")
+	}
 	return &BlockchairClient{
 		opts:       opts,
 		httpClient: httpClient,
