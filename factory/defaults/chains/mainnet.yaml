@@ -110,7 +110,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/bitcoin
-        auth: ENV:BLOCKCHAIR_API_KEY
+        auth: ENV:BLOCKCHAIR_API_TOKEN
         provider: blockchair
         chain_name: Bitcoin
         explorer_url: https://blockchair.com/bitcoin
