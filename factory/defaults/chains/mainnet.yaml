@@ -348,8 +348,8 @@ chains:
         decimals: 18
         indexer_type: rpc
         polling_period: 15m
-    EvmROSE:
-        asset: EvmROSE
+    EmROSE:
+        asset: EmROSE
         driver: evm-legacy
         clients:
             - driver: crosschain

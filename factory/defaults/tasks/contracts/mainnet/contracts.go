@@ -15,13 +15,13 @@ var WormholeTokenBridge = contracts.WormholeTokenContractMapping{
 }
 
 var WormholeChainMapping = contracts.WormholeXcChainMapping{
-	string(xc.SOL):     1,
-	string(xc.ETH):     2,
-	string(xc.LUNC):    3,
-	string(xc.BNB):     4,
-	string(xc.MATIC):   5,
-	string(xc.AVAX):    6,
-	string(xc.EvmROSE): 7,
+	string(xc.SOL):    1,
+	string(xc.ETH):    2,
+	string(xc.LUNC):   3,
+	string(xc.BNB):    4,
+	string(xc.MATIC):  5,
+	string(xc.AVAX):   6,
+	string(xc.EmROSE): 7,
 	// string(xc.ALGO): 8,
 	string(xc.AurETH): 9,
 	string(xc.FTM):    10,

@@ -181,8 +181,8 @@ chains:
         explorer_url: https://mumbai.polygonscan.com
         decimals: 18
         indexer_type: rpc
-    EvmROSE:
-        asset: EvmROSE
+    EmROSE:
+        asset: EmROSE
         driver: evm-legacy
         url: https://testnet.emerald.oasis.dev
         chain_id: 42261
