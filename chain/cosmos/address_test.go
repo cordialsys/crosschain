@@ -2,6 +2,7 @@ package cosmos
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 )
@@ -132,6 +133,13 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			Mnemonic:        "tide wage unit rack permit parent easy theme require focus honey connect intact furnace device tiger enter often cycle immense wire either better crush",
 			Address:         "cosmos18jfym2e7gt7a5eclgawp4lwgh6n7ud77ak6vzt",
 		},
+		{
+			ChainCoinHDPath: 1,
+			ChainPrefix:     "tp",
+			NativeAsset:     "HASH",
+			Mnemonic:        "increase embark dice perfect october camera cousin matrix congress prosper fix what shiver staff undo airport master shadow swift level arch push industry gauge",
+			Address:         "tp1x0wf90nl6rymz26d73l8hesk7neag82ka2zsv6",
+		},
 	} {
 
 		asset := &xc.NativeAssetConfig{
@@ -149,6 +157,22 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 		require.NoError(err)
 		address, err := builder.GetAddressFromPublicKey(pubkey)
 		require.NoError(err)
+
+		if tc.Address != string(address) {
+			// try to discover what the derivation path is
+			for i := 0; i < 2048; i++ {
+				asset.ChainCoinHDPath = uint32(i)
+				signer, _ = NewSigner(asset)
+				privkey, _ = signer.ImportPrivateKey(tc.Mnemonic)
+				pubkey, _ = signer.PublicKey(privkey)
+				builder, _ = NewAddressBuilder(asset)
+				otherAddress, _ := builder.GetAddressFromPublicKey(pubkey)
+				if tc.Address == string(otherAddress) {
+					fmt.Println("matching chain code: ", i, "produced expected address", otherAddress)
+					break
+				}
+			}
+		}
 
 		require.EqualValues(tc.Address, address)
 	}

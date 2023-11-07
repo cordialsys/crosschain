@@ -181,8 +181,8 @@ chains:
         explorer_url: https://mumbai.polygonscan.com
         decimals: 18
         indexer_type: rpc
-    ROSE:
-        asset: ROSE
+    EvmROSE:
+        asset: EvmROSE
         driver: evm-legacy
         url: https://testnet.emerald.oasis.dev
         chain_id: 42261
@@ -220,4 +220,18 @@ chains:
         chain_coin_hd_path: 60
         explorer_url: https://explorer.xpla.io/testnet
         decimals: 18
+    HASH:
+        asset: HASH
+        driver: cosmos
+        url: https://rpc.test.provenance.io
+        chain_id_str: pio-testnet-1
+        chain_name: Provenance (Testnet)
+        chain_prefix: tp
+        chain_coin: nhash
+        chain_coin_hd_path: 1
+        explorer_url: https://explorer.test.provenance.io
+        decimals: 9
+        chain_gas_multiplier: 10.0
+        # translates to roughly max 50 HASH in gas per tx
+        chain_max_gas_price: 125000.0
 

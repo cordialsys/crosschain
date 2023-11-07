@@ -348,8 +348,8 @@ chains:
         decimals: 18
         indexer_type: rpc
         polling_period: 15m
-    ROSE:
-        asset: ROSE
+    EvmROSE:
+        asset: EvmROSE
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -443,4 +443,17 @@ chains:
         decimals: 18
         indexer_type: cosmos
         polling_period: 5m
-
+    HASH:
+        asset: HASH
+        driver: cosmos
+        url: https://rpc.provenance.io
+        chain_id_str: pio-mainnet-1
+        chain_name: Provenance
+        chain_prefix: pb
+        chain_coin: nhash
+        chain_coin_hd_path: 1
+        explorer_url: https://explorer.provenance.io
+        decimals: 9
+        chain_gas_multiplier: 10.0
+        # translates to roughly max 50 HASH in gas per tx
+        chain_max_gas_price: 125000.0

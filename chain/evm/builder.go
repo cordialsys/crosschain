@@ -67,7 +67,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	asset := txBuilder.Asset.GetAssetConfig()
 
 	txInput.GasLimit = 350_000
-	if asset.NativeAsset == xc.ROSE {
+	if asset.NativeAsset == xc.EvmROSE {
 		txInput.GasLimit = 500_000
 	}
 	if asset.NativeAsset == xc.ArbETH {
