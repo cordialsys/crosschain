@@ -404,9 +404,11 @@ func (f *Factory) GetAllPossibleAddressesFromPublicKey(cfg ITask, publicKey []by
 func (f *Factory) ConvertAmountToHuman(cfg ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error) {
 	dec, ok := cfg.GetDecimals()
 	amount := blockchainAmount.ToHuman(dec)
-	if !ok {
-		return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
-	}
+	// TODO should we enforce an error here?
+	_ = ok
+	// if !ok {
+	// 	return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
+	// }
 	return amount, nil
 }
 
@@ -414,9 +416,11 @@ func (f *Factory) ConvertAmountToHuman(cfg ITask, blockchainAmount AmountBlockch
 func (f *Factory) ConvertAmountToBlockchain(cfg ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error) {
 	dec, ok := cfg.GetDecimals()
 	amount := humanAmount.ToBlockchain(dec)
-	if !ok {
-		return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
-	}
+	// TODO should we enforce an error here?
+	_ = ok
+	// if !ok {
+	// 	return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
+	// }
 	return amount, nil
 }
 

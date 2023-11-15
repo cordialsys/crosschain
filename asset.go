@@ -330,6 +330,10 @@ func (asset NativeAssetConfig) GetNativeClients() []*ClientConfig {
 	return filtered
 }
 
+func (native *NativeAssetConfig) GetAssetSymbol() (string, bool) {
+	return native.Asset, true
+}
+
 func (c *TokenAssetConfig) String() string {
 	net := ""
 	native := c.GetNativeAsset()
@@ -359,6 +363,9 @@ func (asset *TokenAssetConfig) GetDecimals() (int32, bool) {
 
 func (token *TokenAssetConfig) GetContract() (string, bool) {
 	return token.Contract, true
+}
+func (token *TokenAssetConfig) GetAssetSymbol() (string, bool) {
+	return token.Asset, true
 }
 
 // func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {

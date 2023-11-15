@@ -85,6 +85,12 @@ type ITask interface {
 
 	// Get associated contract if it exists
 	GetContract() (string, bool)
+
+	// Get asset symbol (e.g. 'USDC') if it exists
+	GetAssetSymbol() (string, bool)
+
+	// Informational / debugging
+	String() string
 }
 
 func (task TaskConfig) String() string {
@@ -118,6 +124,12 @@ func (task *TaskConfig) GetContract() (string, bool) {
 	// return false, "not ok", as tasks may have multiple associated contracts
 	// and relying on the default here shouldn't be okay.
 	return contract, false
+}
+
+func (task *TaskConfig) GetAssetSymbol() (string, bool) {
+	// by default we return the source asset contract
+	symbol, _ := task.SrcAsset.GetAssetSymbol()
+	return symbol, false
 }
 
 func (task TaskConfig) GetNativeAsset() *NativeAssetConfig {
