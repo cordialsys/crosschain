@@ -114,9 +114,9 @@ func NewAmountBlockchainFromStr(str string) AmountBlockchain {
 }
 
 // NewAmountHumanReadableFromStr creates a new AmountHumanReadable from a string
-func NewAmountHumanReadableFromStr(str string) AmountHumanReadable {
-	decimal, _ := decimal.NewFromString(str)
-	return AmountHumanReadable(decimal)
+func NewAmountHumanReadableFromStr(str string) (AmountHumanReadable, error) {
+	decimal, err := decimal.NewFromString(str)
+	return AmountHumanReadable(decimal), err
 }
 
 func (amount AmountHumanReadable) ToBlockchain(decimals int32) AmountBlockchain {

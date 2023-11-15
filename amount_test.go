@@ -33,19 +33,23 @@ func (s *CrosschainTestSuite) TestAmountHumanReadable() {
 
 func (s *CrosschainTestSuite) TestNewAmountHumanReadableFromStr() {
 	require := s.Require()
-	amount := NewAmountHumanReadableFromStr("10.3")
+	amount, err := NewAmountHumanReadableFromStr("10.3")
+	require.NoError(err)
 	require.NotNil(amount)
 	require.Equal(amount.String(), "10.3")
 
-	amount = NewAmountHumanReadableFromStr("0")
+	amount, err = NewAmountHumanReadableFromStr("0")
+	require.NoError(err)
 	require.NotNil(amount)
 	require.Equal(amount.String(), "0")
 
-	amount = NewAmountHumanReadableFromStr("")
+	amount, err = NewAmountHumanReadableFromStr("")
+	require.Error(err)
 	require.NotNil(amount)
 	require.Equal(amount.String(), "0")
 
-	amount = NewAmountHumanReadableFromStr("invalid")
+	amount, err = NewAmountHumanReadableFromStr("invalid")
+	require.Error(err)
 	require.NotNil(amount)
 	require.Equal(amount.String(), "0")
 }

@@ -6,22 +6,22 @@ import (
 
 func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require := s.Require()
-	builder, err := NewTxBuilder(&xc.AssetConfig{Asset: "USDC"})
+	builder, err := NewTxBuilder(&xc.TokenAssetConfig{Asset: "USDC", Contract: "1234"})
 	require.Nil(err)
 	require.NotNil(builder)
 	require.False(builder.(TxBuilder).Legacy)
-	require.Equal("USDC", builder.(TxBuilder).Asset.GetAssetConfig().Asset)
+	require.Equal("USDC", builder.(TxBuilder).Asset.(*xc.TokenAssetConfig).Asset)
 
-	builder, err = NewLegacyTxBuilder(&xc.AssetConfig{Asset: "USDC"})
+	builder, err = NewLegacyTxBuilder(&xc.TokenAssetConfig{Asset: "USDC", Contract: "1234"})
 	require.Nil(err)
 	require.NotNil(builder)
 	require.True(builder.(TxBuilder).Legacy)
-	require.Equal("USDC", builder.(TxBuilder).Asset.GetAssetConfig().Asset)
+	require.Equal("USDC", builder.(TxBuilder).Asset.(*xc.TokenAssetConfig).Asset)
 }
 
 func (s *CrosschainTestSuite) TestTransferSetsMaxTipCap() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 
 	from := "0x724435CC1B2821362c2CD425F2744Bd7347bf299"
 	to := "0x3ad57b83B2E3dC5648F32e98e386935A9B10bb9F"
@@ -39,7 +39,7 @@ func (s *CrosschainTestSuite) TestTransferSetsMaxTipCap() {
 	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())
 
 	// increase the max
-	builder, _ = NewTxBuilder(&xc.AssetConfig{ChainMaxGasPrice: 100})
+	builder, _ = NewTxBuilder(&xc.NativeAssetConfig{ChainMaxGasPrice: 100})
 	tx, _ = builder.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
 	// now DefaultMaxTipCapGwei + 1 is used
 	require.EqualValues(GweiToWei(DefaultMaxTipCapGwei+1).Uint64(), tx.(*Tx).EthTx.GasTipCap().Uint64())

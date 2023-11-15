@@ -8,14 +8,14 @@ import (
 
 func (s *SolanaTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.AssetConfig{})
+	builder, err := NewAddressBuilder(&xc.NativeAssetConfig{})
 	require.Nil(err)
 	require.NotNil(builder)
 }
 
 func (s *SolanaTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.AssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
 	bytes, _ := hex.DecodeString("FC880863219008406235FA4C8FBB2A86D3DA7B6762EAC39323B2A1D8C404A414")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.Nil(err)
@@ -24,7 +24,7 @@ func (s *SolanaTestSuite) TestGetAddressFromPublicKey() {
 
 func (s *SolanaTestSuite) TestGetAddressFromPublicKeyErr() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.AssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
 
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(xc.Address(""), address)
@@ -37,7 +37,7 @@ func (s *SolanaTestSuite) TestGetAddressFromPublicKeyErr() {
 
 func (s *SolanaTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.AssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
 	bytes, _ := hex.DecodeString("FC880863219008406235FA4C8FBB2A86D3DA7B6762EAC39323B2A1D8C404A414")
 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
 	require.Nil(err)

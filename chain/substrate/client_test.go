@@ -25,7 +25,7 @@ var test_http_tx string
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.AssetConfig{})
+	client, err := NewClient(&xc.NativeAssetConfig{})
 	require.NotNil(err)
 	require.Nil(client.DotClient)
 }
@@ -38,7 +38,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 	rpc, rpcClose := testtypes.MockJSONRPC(&s.Suite, []string{test_rpc_meta, test_rpc_meta, test_rpc_storage})
 	defer rpcClose()
 
-	client, err := NewClient(&xc.AssetConfig{
+	client, err := NewClient(&xc.NativeAssetConfig{
 		Asset:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,
@@ -59,7 +59,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	http, httpClose := testtypes.MockHTTP(&s.Suite, test_http_tx, 200)
 	defer httpClose()
 
-	client, err := NewClient(&xc.AssetConfig{
+	client, err := NewClient(&xc.NativeAssetConfig{
 		Asset:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
@@ -90,7 +90,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 	http, httpClose := testtypes.MockHTTP(&s.Suite, `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`, 200)
 	defer httpClose()
 
-	client, err := NewClient(&xc.AssetConfig{
+	client, err := NewClient(&xc.NativeAssetConfig{
 		Asset:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
@@ -138,7 +138,7 @@ func (s *CrosschainTestSuite) TestEstimateGas() {
 	})
 	defer rpcClose()
 
-	client, err := NewClient(&xc.AssetConfig{
+	client, err := NewClient(&xc.NativeAssetConfig{
 		Asset:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,

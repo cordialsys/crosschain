@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/sirupsen/logrus"
 
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
@@ -69,17 +70,16 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		return nil, errors.New("error fetching blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
-	contract := ""
-	if token, ok := asset.(*xc.TokenAssetConfig); ok {
-		contract = token.Contract
-	} else {
-		// TODO remove native asset
-		if asset.GetAssetConfig().Contract != "" {
-			contract = asset.GetAssetConfig().Contract
-		} else {
-			// native transfer
-			return txInput, nil
+	contract, _ := asset.GetContract()
+	if contract == "" {
+		if _, ok := asset.(*xc.NativeAssetConfig); !ok {
+			logrus.WithFields(logrus.Fields{
+				"chain":      asset.GetNativeAsset().Asset,
+				"asset_type": fmt.Sprintf("%T", asset),
+			}).Warn("no associated contract but not native asset")
 		}
+		// native transfer
+		return txInput, nil
 	}
 
 	// get account info - check if to is an owner or ata
@@ -330,14 +330,20 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 
 // FetchBalanceForAsset fetches a specific token balance which may not be the asset configured for the client
 func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.ITask) (xc.AmountBlockchain, error) {
-	if token, ok := assetCfg.(*xc.TokenAssetConfig); ok {
-		return client.fetchContractBalance(ctx, address, token.Contract)
+	switch asset := client.Asset.(type) {
+	case *xc.NativeAssetConfig:
+		return client.FetchNativeBalance(ctx, address)
+	case *xc.TokenAssetConfig:
+		return client.fetchContractBalance(ctx, address, asset.Contract)
+	default:
+		contract, _ := asset.GetContract()
+		logrus.WithFields(logrus.Fields{
+			"chain":      asset.GetNativeAsset().Asset,
+			"contract":   contract,
+			"asset_type": fmt.Sprintf("%T", asset),
+		}).Warn("fetching balance for unknown asset type")
+		return client.fetchContractBalance(ctx, address, contract)
 	}
-	// TODO remove assetconfig
-	if assetCfg.GetAssetConfig().Contract != "" {
-		return client.fetchContractBalance(ctx, address, assetCfg.GetAssetConfig().Contract)
-	}
-	return client.FetchNativeBalance(ctx, address)
 }
 
 // fetchContractBalance fetches a specific token balance for a Solana address

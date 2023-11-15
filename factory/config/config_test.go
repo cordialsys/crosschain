@@ -112,7 +112,6 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
 
 	require.Equal("USDC", cfg.Tokens["USDC.SOL"].Asset)
-	require.Equal("USDC", cfg.Tokens["USDC.SOL"].AssetConfig.Asset)
 
 	tasks := cfg.GetTasks()
 	pipelines := cfg.GetPipelines()

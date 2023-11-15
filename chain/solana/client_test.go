@@ -14,7 +14,7 @@ import (
 
 func (s *SolanaTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.AssetConfig{})
+	client, err := NewClient(&xc.NativeAssetConfig{})
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -71,7 +71,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -88,7 +88,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -105,7 +105,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -123,7 +123,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -140,7 +140,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -169,7 +169,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "rpc.GetRecentBlockhashResult",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "invalid-contract"},
+			asset: &xc.TokenAssetConfig{Contract: "invalid-contract"},
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -213,9 +213,9 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 		defer close()
 		fmt.Println("ASSET", v.asset)
 		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-			token.NativeAssetConfig = &xc.AssetConfig{
-				URL:         server.URL,
-				NativeAsset: "SOL",
+			token.NativeAssetConfig = &xc.NativeAssetConfig{
+				URL:   server.URL,
+				Asset: "SOL",
 			}
 		} else {
 			v.asset.(*xc.NativeAssetConfig).URL = server.URL
@@ -261,7 +261,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 
 	server, close := testtypes.MockJSONRPC(&s.Suite, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
-	client, _ := NewClient(&xc.NativeAssetConfig{NativeAsset: xc.SOL, URL: server.URL})
+	client, _ := NewClient(&xc.NativeAssetConfig{Asset: string(xc.SOL), URL: server.URL})
 	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 	})
@@ -270,7 +270,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 func (s *SolanaTestSuite) TestSubmitTxErr() {
 	require := s.Require()
 
-	client, _ := NewClient(&xc.AssetConfig{})
+	client, _ := NewClient(&xc.NativeAssetConfig{})
 	tx := &Tx{
 		SolTx:          &solana.Transaction{},
 		ParsedSolTx:    &rpc.ParsedTransaction{},
@@ -314,7 +314,7 @@ func (s *SolanaTestSuite) TestAccountBalance() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.AssetConfig{URL: server.URL})
+		client, _ := NewClient(&xc.NativeAssetConfig{URL: server.URL})
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 		balance, err := client.FetchNativeBalance(s.Ctx, from)
 
@@ -366,7 +366,12 @@ func (s *SolanaTestSuite) TestTokenBalance() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.AssetConfig{URL: server.URL, Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"})
+		client, _ := NewClient(&xc.TokenAssetConfig{
+			NativeAssetConfig: &xc.NativeAssetConfig{
+				URL: server.URL,
+			},
+			Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+		})
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 		balance, err := client.FetchBalance(s.Ctx, from)
 
@@ -550,7 +555,7 @@ func (s *SolanaTestSuite) TestFetchTxInfo() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.AssetConfig{URL: server.URL})
+		client, _ := NewClient(&xc.NativeAssetConfig{URL: server.URL})
 		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.tx))
 
 		if v.err != "" {

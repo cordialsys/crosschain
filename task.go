@@ -20,6 +20,8 @@ type TaskConfig struct {
 	DstAsset  ITask         `yaml:"-"`
 }
 
+var _ ITask = &TaskConfig{}
+
 // PipelineConfig is the model used to represent a pipeline (list of tasks) read from config file or db
 type PipelineConfig struct {
 	Name  string   `yaml:"name"`
@@ -71,10 +73,18 @@ type TaskConfigOperationParamDefaults struct {
 
 type ITask interface {
 	ID() AssetID
-	GetDriver() Driver
-	GetAssetConfig() *AssetConfig
+
+	// TODO you should be able to just `.GetNativeAsset().Driver`
+	// GetDriver() Driver
+	// TODO rename to ChainConfig?
 	GetNativeAsset() *NativeAssetConfig
-	GetTask() *TaskConfig
+	// TODO not needed - this should be a type switch?
+	// GetTask() *TaskConfig
+
+	GetDecimals() (int32, bool)
+
+	// Get associated contract if it exists
+	GetContract() (string, bool)
 }
 
 func (task TaskConfig) String() string {
@@ -96,16 +106,18 @@ func (task *TaskConfig) ID() AssetID {
 	return AssetID(task.Name)
 }
 
-func (task TaskConfig) GetAssetConfig() *AssetConfig {
-	return task.SrcAsset.GetAssetConfig()
+func (task *TaskConfig) GetDecimals() (int32, bool) {
+	// source asset is the asset being used typically
+	dec, _ := task.SrcAsset.GetDecimals()
+	return dec, false
 }
 
-func (task TaskConfig) GetDriver() Driver {
-	return Driver(task.SrcAsset.GetAssetConfig().Driver)
-}
-
-func (task TaskConfig) GetAsset() string {
-	return task.SrcAsset.GetAssetConfig().Asset
+func (task *TaskConfig) GetContract() (string, bool) {
+	// by default we return the source asset contract
+	contract, _ := task.SrcAsset.GetContract()
+	// return false, "not ok", as tasks may have multiple associated contracts
+	// and relying on the default here shouldn't be okay.
+	return contract, false
 }
 
 func (task TaskConfig) GetNativeAsset() *NativeAssetConfig {

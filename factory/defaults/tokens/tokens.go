@@ -14,16 +14,16 @@ func init() {
 	Mainnet = maincfg.Tokens
 	Testnet = testcfg.Tokens
 
-	for _, chain := range Mainnet {
-		if chain.Net == "" {
-			chain.Net = maincfg.Network
-		}
-	}
-	for _, chain := range Testnet {
-		if chain.Net == "" {
-			chain.Net = testcfg.Network
-		}
-	}
+	// for _, chain := range Mainnet {
+	// 	if chain.Net == "" {
+	// 		chain.Net = maincfg.Network
+	// 	}
+	// }
+	// for _, chain := range Testnet {
+	// 	if chain.Net == "" {
+	// 		chain.Net = testcfg.Network
+	// 	}
+	// }
 }
 
 //go:embed mainnet.yaml

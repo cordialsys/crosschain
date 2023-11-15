@@ -1,11 +1,13 @@
 package evm
 
 import (
+	"fmt"
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -37,24 +39,39 @@ func NewLegacyTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	if _, ok := txBuilder.Asset.(*xc.TaskConfig); ok {
+	switch asset := txBuilder.Asset.(type) {
+	case *xc.TaskConfig:
 		return txBuilder.NewTask(from, to, amount, input)
-	}
 
-	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok {
+	case *xc.NativeAssetConfig:
+		return txBuilder.NewNativeTransfer(from, to, amount, input)
+
+	case *xc.TokenAssetConfig:
 		return txBuilder.NewTokenTransfer(from, to, amount, input)
-	}
 
-	return txBuilder.NewNativeTransfer(from, to, amount, input)
+	default:
+		// TODO this should return error
+		contract, _ := asset.GetContract()
+		logrus.WithFields(logrus.Fields{
+			"chain":      asset.GetNativeAsset().Asset,
+			"contract":   contract,
+			"asset_type": fmt.Sprintf("%T", asset),
+		}).Warn("new transfer for unknown asset type")
+		if contract != "" {
+			return txBuilder.NewTokenTransfer(from, to, amount, input)
+		} else {
+			return txBuilder.NewNativeTransfer(from, to, amount, input)
+		}
+	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	asset := txBuilder.Asset.GetAssetConfig()
+	native := txBuilder.Asset.GetNativeAsset()
 
 	txInput.GasLimit = 90_000
-	if asset.NativeAsset == xc.ArbETH {
+	if native.Asset == string(xc.ArbETH) {
 		txInput.GasLimit = 4_000_000
 	}
 
@@ -64,23 +81,23 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	asset := txBuilder.Asset.GetAssetConfig()
+	native := txBuilder.Asset.GetNativeAsset()
 
 	txInput.GasLimit = 350_000
-	if asset.NativeAsset == xc.EmROSE {
+	if native.Asset == string(xc.EmROSE) {
 		txInput.GasLimit = 500_000
 	}
-	if asset.NativeAsset == xc.ArbETH {
+	if native.Asset == string(xc.ArbETH) {
 		txInput.GasLimit = 4_000_000
 	}
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	contract := xc.Address(asset.Contract)
+	contract, _ := txBuilder.Asset.GetContract()
 	payload, err := txBuilder.buildERC20Payload(to, amount)
 	if err != nil {
 		return nil, err
 	}
-	return txBuilder.buildEvmTxWithPayload(contract, zero, payload, txInput)
+	return txBuilder.buildEvmTxWithPayload(xc.Address(contract), zero, payload, txInput)
 }
 
 func (txBuilder TxBuilder) buildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {

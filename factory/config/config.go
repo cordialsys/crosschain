@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/jinzhu/copier"
 	"github.com/sirupsen/logrus"
 )
 
@@ -31,10 +30,6 @@ type Config struct {
 }
 
 func (cfg *Config) Parse() {
-	// TODO remove AssetConfig object so we can remove this backwards-compat hack
-	for _, t := range cfg.Tokens {
-		copier.CopyWithOption(&t.AssetConfig, &t, copier.Option{IgnoreEmpty: false, DeepCopy: false})
-	}
 	// Add all tokens + native assets to same list
 	cfg.chainsAndTokens = []xc.ITask{}
 	for _, chain := range cfg.Chains {

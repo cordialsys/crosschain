@@ -44,7 +44,7 @@ type TxInfoEndpoint struct {
 	Amount          AmountBlockchain `json:"amount"`
 	NativeAsset     NativeAsset      `json:"chain"`
 	Asset           Asset            `json:"asset,omitempty"`
-	AssetConfig     *AssetConfig     `json:"asset_config,omitempty"`
+	// AssetConfig     *AssetConfig     `json:"asset_config,omitempty"`
 }
 
 // TxInfo is a unified view of common tx info across multiple blockchains. Use it as an example to build your own.

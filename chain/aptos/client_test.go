@@ -14,7 +14,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 	server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
 	defer close()
 
-	client, err := NewClient(&xc.AssetConfig{URL: server.URL})
+	client, err := NewClient(&xc.NativeAssetConfig{URL: server.URL})
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -30,15 +30,15 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		err   string
 	}{
 		{
-			&xc.NativeAssetConfig{},
+			asset: &xc.NativeAssetConfig{},
 			// valid blockhash
-			[]string{
+			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"sequence_number":"2","authentication_key":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"}`,
 			},
-			"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
-			&TxInput{
+			from: "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
+			input: &TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
 				GasLimit:        2000,
@@ -46,19 +46,19 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				Timestamp:       1683057860656414,
 				ChainId:         58,
 			},
-			"",
+			err: "",
 		},
 		{
-			&xc.NativeAssetConfig{},
+			asset: &xc.NativeAssetConfig{},
 			// valid blockhash
-			[]string{
+			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"message":"Account not found by Address(0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f681) and Ledger version(3545185)","error_code":"account_not_found","vm_error_code":null}`,
 			},
-			"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f680",
-			&TxInput{},
-			"Account not found",
+			from:  "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f680",
+			input: &TxInput{},
+			err:   "Account not found",
 		},
 	}
 
@@ -84,7 +84,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		if v.err != "" {
 			require.ErrorContains(err, v.err)
 		} else {
-			require.Nil(err)
+			require.NoError(err)
 			require.NotNil(input)
 			require.Equal(v.input, input)
 		}
@@ -103,7 +103,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	}, 200)
 	server.StatusCodes = []int{200, 200, 400}
 	defer close()
-	asset := &xc.AssetConfig{NativeAsset: xc.APTOS, Net: "devnet", URL: server.URL}
+	asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet", URL: server.URL}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -257,14 +257,14 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		err   string
 	}{
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative},
+			&xc.NativeAssetConfig{},
 			`{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
 			"1000000",
 			"",
 		},
 		{
 			// TODO I can't find any tokens on aptos
-			&xc.TokenAssetConfig{Type: xc.AssetTypeToken, Contract: "0x1234::coin:USDC", NativeAssetConfig: &xc.AssetConfig{NativeAsset: xc.APTOS}},
+			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", NativeAssetConfig: &xc.NativeAssetConfig{Asset: string(xc.APTOS)}},
 			[]string{
 				`{}`,
 				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
@@ -273,7 +273,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 			"failed to parse",
 		},
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative},
+			&xc.NativeAssetConfig{},
 			`null`,
 			"0",
 			"",
@@ -311,7 +311,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
-	asset := &xc.AssetConfig{NativeAsset: xc.APTOS, Net: "devnet"}
+	asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet"}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -349,7 +349,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
-	native_asset := &xc.AssetConfig{NativeAsset: xc.APTOS, Net: "devnet"}
+	native_asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet"}
 	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", NativeAssetConfig: native_asset}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")

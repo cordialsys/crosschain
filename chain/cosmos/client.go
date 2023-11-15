@@ -25,6 +25,12 @@ import (
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 )
 
+type CosmoAssetType string
+
+// Cosmos assets can be managed by completely different modules (e.g. cosmwasm cw20, x/bank, etc)
+var CW20 CosmoAssetType = "cw20"
+var BANK CosmoAssetType = "bank"
+
 // TxInput for Cosmos
 type TxInput struct {
 	xc.TxInputEnvelope
@@ -34,6 +40,8 @@ type TxInput struct {
 	GasPrice      float64 `json:"gas_price,omitempty"`
 	Memo          string  `json:"memo,omitempty"`
 	FromPublicKey []byte  `json:"from_pubkey,omitempty"`
+
+	AssetType CosmoAssetType `json:"asset_type,omitempty"`
 }
 
 func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
@@ -137,7 +145,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	switch client.Asset.(type) {
 	case *xc.NativeAssetConfig:
 		txInput.GasLimit = NativeTransferGasLimit
-		if client.Asset.GetNativeAsset().NativeAsset == xc.HASH {
+		if client.Asset.GetNativeAsset().Asset == string(xc.HASH) {
 			txInput.GasLimit = 200_000
 		}
 	default:
@@ -154,6 +162,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 		}
 		txInput.GasPrice = gasPrice
 	}
+
+	_, assetType, err := client.fetchBalanceAndType(ctx, from)
+	if err != nil {
+		return txInput, err
+	}
+	txInput.AssetType = assetType
 
 	return txInput, nil
 }
@@ -266,19 +280,32 @@ func (client *Client) GetAccount(ctx context.Context, address xc.Address) (clien
 
 // FetchBalance fetches balance for input asset for a Cosmos address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	contract := client.Asset.GetAssetConfig().Contract
-	if token, ok := client.Asset.(*xc.TokenAssetConfig); ok {
-		contract = token.Contract
-	}
-	if !strings.HasPrefix(contract, client.Prefix) {
-		// could be a custom denom.  Try querying as a native balance.
-		return client.fetchBankModuleBalance(ctx, address, client.Asset)
-	}
-	return client.fetchContractBalance(ctx, address, contract)
+	bal, _, err := client.fetchBalanceAndType(ctx, address)
+	return bal, err
 }
 
-func (client *Client) fetchContractBalance(ctx context.Context, address xc.Address, contractAddress string) (xc.AmountBlockchain, error) {
+func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address) (xc.AmountBlockchain, CosmoAssetType, error) {
+	// attempt getting the x/bank module balance first.
+	fmt.Println("-- bank")
+	bal, bankErr := client.fetchBankModuleBalance(ctx, address, client.Asset)
+	if bankErr == nil {
+		return bal, BANK, nil
+	}
+
+	// attempt getting the cw20 balance.
+	fmt.Println("-- cw20")
+	bal, cw20Err := client.fetchCw20Balance(ctx, address, client.Asset)
+	if cw20Err == nil {
+		return bal, CW20, nil
+	}
+	fmt.Println("-- done")
+
+	return bal, "", fmt.Errorf("could not determine balance for bank (%v) or cw20 (%v)", bankErr, cw20Err)
+}
+
+func (client *Client) fetchCw20Balance(ctx context.Context, address xc.Address, asset xc.ITask) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
+	contractAddress, _ := asset.GetContract()
 
 	_, err := types.GetFromBech32(string(address), client.Prefix)
 	if err != nil {
@@ -321,20 +348,16 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	if err != nil {
 		return zero, fmt.Errorf("bad address: '%v': %v", address, err)
 	}
-	denom := asset.GetAssetConfig().Contract
+	denom := ""
+	// denom should be the contract if it's set.
+	denom, _ = client.Asset.GetContract()
+	if denom == "" {
+		// use the default chain coin (should be set for cosmos chains)
+		denom = client.Asset.GetNativeAsset().ChainCoin
+	}
 
 	if denom == "" {
-		if token, ok := asset.(*xc.TokenAssetConfig); ok {
-			if token.Contract != "" {
-				denom = token.Contract
-			}
-		}
-	}
-	if denom == "" {
-		denom = asset.GetAssetConfig().ChainCoin
-	}
-	if denom == "" {
-		return zero, fmt.Errorf("failed to account balance: no denom on asset %s.%s", asset.GetAssetConfig().Asset, asset.GetNativeAsset().NativeAsset)
+		return zero, fmt.Errorf("failed to account balance: no denom on asset %s", asset.ID())
 	}
 
 	queryClient := banktypes.NewQueryClient(client.Ctx)

@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -93,6 +94,9 @@ func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPS
 		Server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			curResponse := mock.Response
 			if a, ok := mock.Response.([]string); ok {
+				if mock.Counter >= len(a) {
+					s.Fail(fmt.Sprintf("recieved another request but there's no response configured len=%d count=%d", len(a), mock.Counter))
+				}
 				curResponse = a[mock.Counter]
 			}
 			// default success

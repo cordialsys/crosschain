@@ -10,15 +10,15 @@ import (
 
 func (s *SolanaTestSuite) TestNewTxBuilder() {
 	require := s.Require()
-	builder, err := NewTxBuilder(&xc.AssetConfig{Asset: "USDC"})
+	builder, err := NewTxBuilder(&xc.TokenAssetConfig{Asset: "USDC"})
 	require.Nil(err)
 	require.NotNil(builder)
-	require.Equal("USDC", builder.(TxBuilder).Asset.GetAssetConfig().Asset)
+	require.Equal("USDC", builder.(TxBuilder).Asset.(*xc.TokenAssetConfig).Asset)
 }
 
 func (s *SolanaTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -34,7 +34,7 @@ func (s *SolanaTestSuite) TestNewNativeTransfer() {
 
 func (s *SolanaTestSuite) TestNewNativeTransferErr() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 
 	from := xc.Address("from") // fails on parsing from
 	to := xc.Address("to")
@@ -54,8 +54,7 @@ func (s *SolanaTestSuite) TestNewNativeTransferErr() {
 func (s *SolanaTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 	contract := "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-	builder, _ := NewTxBuilder(&xc.AssetConfig{
-		Type:     xc.AssetTypeToken,
+	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
 		Contract: contract,
 		Decimals: 6,
 	})
@@ -134,8 +133,7 @@ func getTokenTransferAmount(tx *solana.Transaction, instr *solana.CompiledInstru
 func (s *SolanaTestSuite) TestNewMultiTokenTransfer() {
 	require := s.Require()
 	contract := "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-	builder, _ := NewTxBuilder(&xc.AssetConfig{
-		Type:     xc.AssetTypeToken,
+	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
 		Contract: contract,
 		Decimals: 6,
 	})
@@ -215,18 +213,17 @@ func (s *SolanaTestSuite) TestNewTokenTransferErr() {
 	require := s.Require()
 
 	// invalid asset
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
 	tx, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
 	require.Nil(tx)
-	require.EqualError(err, "asset is not of type token")
+	require.EqualError(err, "asset does not have a contract")
 
 	// invalid from, to
-	builder, _ = NewTxBuilder(&xc.AssetConfig{
-		Type:     xc.AssetTypeToken,
+	builder, _ = NewTxBuilder(&xc.TokenAssetConfig{
 		Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 		Decimals: 6,
 	})
@@ -244,8 +241,7 @@ func (s *SolanaTestSuite) TestNewTokenTransferErr() {
 	require.EqualError(err, "invalid length, expected 32, got 2")
 
 	// invalid asset config
-	builder, _ = NewTxBuilder(&xc.AssetConfig{
-		Type:     xc.AssetTypeToken,
+	builder, _ = NewTxBuilder(&xc.TokenAssetConfig{
 		Contract: "contract",
 		Decimals: 6,
 	})
@@ -256,7 +252,7 @@ func (s *SolanaTestSuite) TestNewTokenTransferErr() {
 
 func (s *SolanaTestSuite) TestNewTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -273,7 +269,6 @@ func (s *SolanaTestSuite) TestNewTransfer() {
 func (s *SolanaTestSuite) TestNewTransferAsToken() {
 	require := s.Require()
 	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
-		Type:     xc.AssetTypeToken,
 		Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 		Decimals: 6,
 	})

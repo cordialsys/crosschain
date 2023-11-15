@@ -89,12 +89,12 @@ func (s *CrosschainTestSuite) TestNewClient() {
 	require.False(ok)
 	s.Factory.NoXcClients = false
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST", URL: "a url"})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST", URL: "a url"})
 	_, err := s.Factory.NewClient(asset)
 	require.ErrorContains(err, "unsupported asset")
 
 	// no clients can be derived without a driver or url
-	asset, _ = s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST2"})
+	asset, _ = s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST2"})
 	_, err = s.Factory.NewClient(asset)
 	require.ErrorContains(err, "no clients possible")
 }
@@ -106,7 +106,7 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 		require.NotNil(builder)
 	}
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST"})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST"})
 	_, err := s.Factory.NewTxBuilder(asset)
 	require.ErrorContains(err, "unsupported asset")
 }
@@ -118,7 +118,7 @@ func (s *CrosschainTestSuite) TestNewSigner() {
 		require.NotNil(signer)
 	}
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST"})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST"})
 	_, err := s.Factory.NewSigner(asset)
 	require.ErrorContains(err, "unsupported asset")
 }
@@ -130,7 +130,7 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 		require.NotNil(builder)
 	}
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST"})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST"})
 	_, err := s.Factory.NewAddressBuilder(asset)
 	require.ErrorContains(err, "unsupported asset")
 }
@@ -158,7 +158,7 @@ func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 func (s *CrosschainTestSuite) TestMustAmountBlockchain() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
+		asset := asset.GetNativeAsset()
 		amount := s.Factory.MustAmountBlockchain(asset, "10.3")
 
 		var expected xc.AmountBlockchain
@@ -175,28 +175,28 @@ func (s *CrosschainTestSuite) TestMustAmountBlockchain() {
 			expected = xc.NewAmountBlockchainFromUint64(10300000000 * 1000000000)
 		}
 
-		require.Equal(expected, amount, "Error on: "+asset.NativeAsset)
+		require.Equal(expected, amount, "Error on: "+asset.Asset)
 	}
 }
 
 func (s *CrosschainTestSuite) TestMustAddress() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
+		asset := asset.GetNativeAsset()
 		address := s.Factory.MustAddress(asset, "myaddress") // trivial impl
-		require.Equal(xc.Address("myaddress"), address, "Error on: "+asset.NativeAsset)
+		require.Equal(xc.Address("myaddress"), address, "Error on: "+asset.Asset)
 	}
 }
 
 func (s *CrosschainTestSuite) TestMustPrivateKey() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
-		if asset.NativeAsset != xc.SOL {
+		asset := asset.GetNativeAsset()
+		if xc.NativeAsset(asset.Asset) != xc.SOL {
 			continue
 		}
 		privateKey := s.Factory.MustPrivateKey(asset, "myprivatekey")
-		require.NotNil(privateKey, "Error on: "+asset.NativeAsset)
+		require.NotNil(privateKey, "Error on: "+asset.Asset)
 	}
 }
 
@@ -206,7 +206,7 @@ func (s *CrosschainTestSuite) TestConvertAmountToHuman() {
 	require := s.Require()
 	var amountBlockchain xc.AmountBlockchain
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
+		asset := asset.GetNativeAsset()
 		if asset.Decimals == 6 {
 			amountBlockchain = xc.NewAmountBlockchainFromUint64(10300000)
 		}
@@ -222,9 +222,9 @@ func (s *CrosschainTestSuite) TestConvertAmountToHuman() {
 
 		amount, err := s.Factory.ConvertAmountToHuman(asset, amountBlockchain)
 		require.Nil(err)
-		require.Equal("10.3", amount.String(), "Error on: "+asset.NativeAsset)
+		require.Equal("10.3", amount.String(), "Error on: "+asset.Asset)
 	}
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST", Decimals: 0})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST", Decimals: 0})
 	amountBlockchain = xc.NewAmountBlockchainFromUint64(103)
 	amount, err := s.Factory.ConvertAmountToHuman(asset, amountBlockchain)
 	require.NoError(err)
@@ -238,7 +238,7 @@ func (s *CrosschainTestSuite) TestConvertAmountToBlockchain() {
 
 	var expected xc.AmountBlockchain
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
+		asset := asset.GetNativeAsset()
 		amount, err := s.Factory.ConvertAmountToBlockchain(asset, amountHuman)
 
 		if asset.Decimals == 6 {
@@ -255,7 +255,7 @@ func (s *CrosschainTestSuite) TestConvertAmountToBlockchain() {
 		}
 
 		require.Nil(err)
-		require.Equal(expected, amount, "Error on: "+asset.NativeAsset)
+		require.Equal(expected, amount, "Error on: "+asset.Asset)
 	}
 }
 
@@ -263,7 +263,7 @@ func (s *CrosschainTestSuite) TestConvertAmountStrToBlockchain() {
 	require := s.Require()
 	var expected xc.AmountBlockchain
 	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetAssetConfig()
+		asset := asset.GetNativeAsset()
 		amount, err := s.Factory.ConvertAmountStrToBlockchain(asset, "10.3")
 
 		if asset.Decimals == 6 {
@@ -280,10 +280,10 @@ func (s *CrosschainTestSuite) TestConvertAmountStrToBlockchain() {
 		}
 
 		require.Nil(err)
-		require.Equal(expected, amount, "Error on: "+asset.NativeAsset)
+		require.Equal(expected, amount, "Error on: "+asset.Asset)
 	}
 
-	asset, _ := s.Factory.PutAssetConfig(&xc.AssetConfig{Asset: "TEST", Decimals: 0})
+	asset, _ := s.Factory.PutAssetConfig(&xc.NativeAssetConfig{Asset: "TEST", Decimals: 0})
 	amount, err := s.Factory.ConvertAmountStrToBlockchain(asset, "103")
 	require.NoError(err)
 	require.EqualValues(103, amount.Uint64())
@@ -307,43 +307,36 @@ func (s *CrosschainTestSuite) TestConvertAmountStrToBlockchainErr() {
 func (s *CrosschainTestSuite) TestEnrichAssetConfig() {
 	require := s.Require()
 
-	assetCfgI, _ := s.Factory.GetAssetConfig("USDC", "SOL")
+	assetCfgI, err := s.Factory.GetAssetConfig("USDC", "SOL")
+	require.NoError(err)
 	assetCfg := assetCfgI.(*xc.TokenAssetConfig)
-	assetCfg.URL = ""
+	assetCfg.GetNativeAsset().URL = ""
 	assetCfgEnriched, err := s.Factory.EnrichAssetConfig(assetCfg)
 	require.NoError(err)
 	require.NotNil(assetCfgEnriched)
 	require.Equal("USDC", assetCfgEnriched.Asset)
-	require.NotEqual("", assetCfgEnriched.URL)
-	require.NotEqual("", assetCfgEnriched.Driver)
-	require.Equal(xc.AssetTypeToken, assetCfgEnriched.Type)
+	require.NotEqual("", assetCfgEnriched.GetNativeAsset().URL)
+	require.NotEqual("", assetCfgEnriched.GetNativeAsset().Driver)
 
-	assetCfg.URL = ""
+	assetCfg.GetNativeAsset().URL = ""
 	assetCfg.Chain = "TEST"
 	assetCfgEnriched, err = s.Factory.EnrichAssetConfig(assetCfg)
 	require.EqualError(err, "unsupported native asset: TEST")
 	require.NotNil(assetCfgEnriched)
 	require.Equal("USDC", assetCfgEnriched.Asset)
-	require.Equal("", assetCfgEnriched.URL)
+	require.Equal("", assetCfgEnriched.GetNativeAsset().URL)
 	require.Equal("TEST", assetCfgEnriched.Chain)
-	require.NotEqual("", assetCfgEnriched.Driver)
+	require.NotEqual("", assetCfgEnriched.GetNativeAsset().Driver)
 
-	assetCfg.URL = ""
+	assetCfg.GetNativeAsset().URL = ""
 	assetCfg.Chain = ""
 	assetCfgEnriched, err = s.Factory.EnrichAssetConfig(assetCfg)
 	require.EqualError(err, "unsupported native asset: (empty)")
 	require.NotNil(assetCfgEnriched)
 	require.Equal("USDC", assetCfgEnriched.Asset)
-	require.Equal("", assetCfgEnriched.URL)
+	require.Equal("", assetCfgEnriched.GetNativeAsset().URL)
 	require.Equal("", assetCfgEnriched.Chain)
-	require.NotEqual("", assetCfgEnriched.Driver)
-
-	// Do not overwrite the token type if it's set to something already
-	assetCfg.Type = xc.AssetTypeNative
-	assetCfg.Chain = "SOL"
-	assetCfgEnriched, err = s.Factory.EnrichAssetConfig(assetCfg)
-	require.NoError(err)
-	require.Equal(xc.AssetTypeNative, assetCfgEnriched.Type)
+	require.NotEqual("", assetCfgEnriched.GetNativeAsset().Driver)
 }
 
 func (s *CrosschainTestSuite) TestGetAssetID() {
@@ -355,21 +348,22 @@ func (s *CrosschainTestSuite) TestGetAssetID() {
 func (s *CrosschainTestSuite) TestGetAssetConfig() {
 	require := s.Require()
 	task, err := s.Factory.GetAssetConfig("USDC", "SOL")
-	asset := task.GetAssetConfig()
-	require.Nil(err)
-	require.NotNil(asset)
-	require.Equal("USDC", asset.Asset)
-	require.Equal(xc.SOL, asset.NativeAsset)
+	token := task.(*xc.TokenAssetConfig)
+	native := task.GetNativeAsset()
+	require.NoError(err)
+	require.NotNil(token)
+	require.Equal("USDC", token.Asset)
+	require.EqualValues(xc.SOL, native.Asset)
 }
 
 func (s *CrosschainTestSuite) TestGetAssetConfigEdgeCases() {
 	require := s.Require()
 	task, err := s.Factory.GetAssetConfig("", "")
 	require.Error(err)
-	asset := task.GetAssetConfig()
+	asset := task.GetNativeAsset()
 	require.NotNil(asset)
 	require.Equal("", asset.Asset)
-	require.Equal(xc.NativeAsset(""), asset.NativeAsset)
+	require.EqualValues(xc.NativeAsset(""), asset.Asset)
 }
 
 func (s *CrosschainTestSuite) TestGetTaskConfig() {
@@ -411,19 +405,19 @@ func (s *CrosschainTestSuite) TestGetAssetConfigByContract() {
 	require := s.Require()
 
 	assetI, err := s.Factory.GetAssetConfigByContract("0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6", "ETH")
-	asset := assetI.GetAssetConfig()
+	asset := assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.NotNil(asset)
 	require.Equal("WETH", asset.Asset)
 
 	assetI, err = s.Factory.GetAssetConfigByContract("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", "SOL")
-	asset = assetI.GetAssetConfig()
+	asset = assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.NotNil(asset)
 	require.Equal("USDC", asset.Asset)
 
 	assetI, err = s.Factory.GetAssetConfigByContract("0x123456", "ETH")
-	asset = assetI.GetAssetConfig()
+	asset = assetI.(*xc.TokenAssetConfig)
 	require.EqualError(err, "invalid contract: '0x123456'")
 	require.NotNil(asset)
 	require.Equal("", asset.Asset)
@@ -439,12 +433,12 @@ func (s *CrosschainTestSuite) TestPutAssetConfig() {
 
 	assetI, err = s.Factory.PutAssetConfig(&xc.TokenAssetConfig{Asset: assetName, Chain: "ETH"})
 	fmt.Println(assetI)
-	asset := assetI.GetAssetConfig()
+	asset := assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.Equal(assetName, asset.Asset)
 
 	assetI, err = s.Factory.GetAssetConfig("TEST", "")
-	asset = assetI.GetAssetConfig()
+	asset = assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.Equal(assetName, asset.Asset)
 }

@@ -7,9 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jinzhu/copier"
-	"github.com/shopspring/decimal"
-
 	. "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/factory/config"
@@ -81,10 +78,10 @@ func (f *Factory) GetAllAssets() []ITask {
 	})
 	// sort so it's deterministc
 	sort.Slice(tasks, func(i, j int) bool {
-		asset_i := tasks[i].GetAssetConfig()
-		asset_j := tasks[j].GetAssetConfig()
-		key1 := asset_i.Asset + string(asset_i.NativeAsset) + asset_i.Chain
-		key2 := asset_j.Asset + string(asset_j.NativeAsset) + asset_j.Chain
+		asset_i := tasks[i].GetNativeAsset()
+		asset_j := tasks[j].GetNativeAsset()
+		key1 := string(asset_i.ID()) + string(asset_i.Asset) + asset_i.ChainName
+		key2 := string(asset_j.ID()) + string(asset_j.Asset) + asset_j.ChainName
 		return key1 < key2
 	})
 	return tasks
@@ -110,15 +107,14 @@ func (f *Factory) cfgFromAsset(assetID AssetID) (ITask, error) {
 	}
 	if cfg, ok := cfgI.(*NativeAssetConfig); ok {
 		// native asset
-		cfg.Type = AssetTypeNative
-		cfg.Chain = cfg.Asset
-		cfg.NativeAsset = NativeAsset(cfg.Asset)
+		// cfg.Type = AssetTypeNative
+		// cfg.Chain = cfg.Asset
+		// cfg.NativeAsset = NativeAsset(cfg.Asset)
 		return cfg, nil
 	}
 	if cfg, ok := cfgI.(*TokenAssetConfig); ok {
 		// token
-		copier.CopyWithOption(&cfg.AssetConfig, &cfg, copier.Option{IgnoreEmpty: false, DeepCopy: false})
-		cfg, _ = f.cfgEnrichAssetConfig(cfg)
+		cfg, _ = f.cfgEnrichToken(cfg)
 		return cfg, nil
 	}
 	return &NativeAssetConfig{}, fmt.Errorf("invalid asset: '%s'", assetID)
@@ -128,14 +124,15 @@ func (f *Factory) cfgFromAssetByContract(contract string, nativeAsset string) (I
 	var res ITask
 	contract = NormalizeAddressString(contract, nativeAsset)
 	f.AllAssets.Range(func(key, value interface{}) bool {
-		cfg := value.(ITask).GetAssetConfig()
-		if cfg.Chain == nativeAsset {
-			cfgContract := NormalizeAddressString(cfg.Contract, nativeAsset)
-			if cfgContract == contract {
-				res = value.(ITask)
-				return false
-			}
-		} else if cfg.Asset == nativeAsset && cfg.ChainCoin == contract {
+		cfg := value.(ITask)
+		chain := cfg.GetNativeAsset().Asset
+		cfgContract := ""
+		switch asset := cfg.(type) {
+		case *TokenAssetConfig:
+			cfgContract = NormalizeAddressString(asset.Contract, nativeAsset)
+		case *NativeAssetConfig:
+		}
+		if string(chain) == nativeAsset && cfgContract == contract {
 			res = value.(ITask)
 			return false
 		}
@@ -299,43 +296,16 @@ func (f *Factory) cfgFromMultiAsset(srcAssetID AssetID, dstAssetID AssetID) ([]I
 	return f.getTaskConfigBySrcDstAssets(srcAsset, dstAsset)
 }
 
-func (f *Factory) cfgEnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAssetConfig, error) {
+func (f *Factory) cfgEnrichToken(partialCfg *TokenAssetConfig) (*TokenAssetConfig, error) {
 	cfg := partialCfg
 	if cfg.Chain != "" {
-		// token
-		if cfg.Type == "" {
-			cfg.Type = AssetTypeToken
-		}
-		if cfg.AssetConfig.Type == "" {
-			cfg.AssetConfig.Type = AssetTypeToken
-		}
-		nativeAsset := cfg.Chain
-		cfg.NativeAsset = NativeAsset(nativeAsset)
-
-		chainI, found := f.AllAssets.Load(AssetID(nativeAsset))
+		chainI, found := f.AllAssets.Load(AssetID(cfg.Chain))
 		if !found {
-			return cfg, fmt.Errorf("unsupported native asset: %s", nativeAsset)
+			return cfg, fmt.Errorf("unsupported native asset: %s", cfg.Chain)
 		}
-		chain := chainI.(*NativeAssetConfig)
-		cfg.NativeAssetConfig = chain
-		if cfg.NativeAssetConfig.NativeAsset == "" {
-			cfg.NativeAssetConfig.NativeAsset = NativeAsset(cfg.NativeAssetConfig.Asset)
-		}
-		// deprecated fields below
-		cfg.Driver = chain.Driver
-		cfg.Net = chain.Net
-		cfg.URL = chain.URL
-		cfg.FcdURL = chain.FcdURL
-		cfg.Auth = chain.Auth
-		cfg.AuthSecret = chain.AuthSecret
-		cfg.Provider = chain.Provider
-		cfg.ChainID = chain.ChainID
-		cfg.ChainIDStr = chain.ChainIDStr
-		cfg.ChainGasMultiplier = chain.ChainGasMultiplier
-		cfg.ExplorerURL = chain.ExplorerURL
-		cfg.NoGasFees = chain.NoGasFees
-		cfg.GasCoin = chain.GasCoin
-		cfg.ChainPrefix = chain.ChainPrefix
+		// make copy so edits do not persist to local store
+		native := *chainI.(*NativeAssetConfig)
+		cfg.NativeAssetConfig = &native
 	} else {
 		return cfg, fmt.Errorf("unsupported native asset: (empty)")
 	}
@@ -343,23 +313,29 @@ func (f *Factory) cfgEnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAsse
 }
 
 func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, error) {
-	asset := activity.GetAssetConfig()
+	native := activity.GetNativeAsset()
 	result := txInfo
-	nativeAssetCfg := activity.GetNativeAsset()
+
 	for i, dst := range txInfo.Destinations {
-		dst.NativeAsset = asset.NativeAsset
+		dst.NativeAsset = NativeAsset(native.Asset)
 		if dst.ContractAddress != "" {
 			assetCfgI, err := f.cfgFromAssetByContract(string(dst.ContractAddress), string(dst.NativeAsset))
 			if err != nil {
 				// we shouldn't set the amount, if we don't know the contract
 				continue
 			}
-			assetCfg := assetCfgI.GetAssetConfig()
-			dst.Asset = Asset(assetCfg.Asset)
-			dst.ContractAddress = ContractAddress(assetCfg.Contract)
-			dst.AssetConfig = assetCfg
-		} else {
-			dst.AssetConfig = nativeAssetCfg
+			contractAddress := ""
+			asset := ""
+			if token, ok := assetCfgI.(*TokenAssetConfig); ok {
+				contractAddress = token.Contract
+				asset = token.Asset
+			}
+			if native, ok := assetCfgI.(*NativeAssetConfig); ok {
+				asset = native.Asset
+			}
+			// this isn't really needed, but more to pass along a descriptive name
+			dst.Asset = Asset(asset)
+			dst.ContractAddress = ContractAddress(contractAddress)
 		}
 		result.Destinations[i] = dst
 	}
@@ -426,24 +402,36 @@ func (f *Factory) GetAllPossibleAddressesFromPublicKey(cfg ITask, publicKey []by
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
 func (f *Factory) ConvertAmountToHuman(cfg ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error) {
-	return blockchainAmount.ToHuman(cfg.GetAssetConfig().Decimals), nil
+	dec, ok := cfg.GetDecimals()
+	amount := blockchainAmount.ToHuman(dec)
+	if !ok {
+		return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
+	}
+	return amount, nil
 }
 
 // ConvertAmountToBlockchain converts an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
 func (f *Factory) ConvertAmountToBlockchain(cfg ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error) {
-	return humanAmount.ToBlockchain(cfg.GetAssetConfig().Decimals), nil
+	dec, ok := cfg.GetDecimals()
+	amount := humanAmount.ToBlockchain(dec)
+	if !ok {
+		return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
+	}
+	return amount, nil
 }
 
 // ConvertAmountStrToBlockchain converts a string representing an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
 func (f *Factory) ConvertAmountStrToBlockchain(cfg ITask, humanAmountStr string) (AmountBlockchain, error) {
-	_, err := decimal.NewFromString(humanAmountStr)
-	return NewAmountHumanReadableFromStr(humanAmountStr).
-		ToBlockchain(cfg.GetAssetConfig().Decimals), err
+	human, err := NewAmountHumanReadableFromStr(humanAmountStr)
+	if err != nil {
+		return AmountBlockchain{}, err
+	}
+	return f.ConvertAmountToBlockchain(cfg, human)
 }
 
 // EnrichAssetConfig augments a partial AssetConfig, for example if some info is stored in a db and other in a config file
 func (f *Factory) EnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAssetConfig, error) {
-	return f.cfgEnrichAssetConfig(partialCfg)
+	return f.cfgEnrichToken(partialCfg)
 }
 
 // EnrichDestinations augments a TxInfo by resolving assets and amounts in TxInfo.Destinations

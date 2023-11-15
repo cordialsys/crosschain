@@ -304,7 +304,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 		Signer: types.LatestSignerForChainID(chainID),
 	}
 
-	info := confirmedTx.ParseTransfer(receipt, nativeAsset.NativeAsset)
+	info := confirmedTx.ParseTransfer(receipt, xc.NativeAsset(nativeAsset.Asset))
 
 	result.From = confirmedTx.From()
 	result.To = confirmedTx.To()
@@ -362,7 +362,7 @@ func (e *EvmGasEstimation) GetGasTipCap() xc.AmountBlockchain {
 }
 
 func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error) {
-	asset := client.Asset.GetNativeAsset()
+	native := client.Asset.GetNativeAsset()
 	estimate := EvmGasEstimation{
 		BaseFee:   xc.NewAmountBlockchainFromUint64(0),
 		GasTipCap: xc.NewAmountBlockchainFromUint64(0),
@@ -370,7 +370,7 @@ func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error)
 	}
 
 	// KLAY has fixed gas price of 250 ston
-	if asset.NativeAsset == xc.KLAY {
+	if native.Asset == string(xc.KLAY) {
 		return EvmGasEstimation{
 			BaseFee: xc.NewAmountBlockchainFromUint64(250_000_000_000),
 		}, nil
@@ -404,8 +404,8 @@ func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error)
 	}
 
 	estimate.Multiplier = 2.0
-	if asset.ChainGasMultiplier > 0.0 {
-		estimate.Multiplier = asset.ChainGasMultiplier
+	if native.ChainGasMultiplier > 0.0 {
+		estimate.Multiplier = native.ChainGasMultiplier
 	}
 
 	return estimate, nil
@@ -439,9 +439,9 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 	}
 
 	// token
-	asset := client.Asset.GetAssetConfig()
+	contract, _ := client.Asset.GetContract()
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	tokenAddress, _ := HexToAddress(xc.Address(asset.Contract))
+	tokenAddress, _ := HexToAddress(xc.Address(contract))
 	instance, err := erc20.NewErc20(tokenAddress, client.EthClient)
 	if err != nil {
 		return zero, err

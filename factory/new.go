@@ -83,7 +83,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 				var err error
 				native.AuthSecret, err = config.GetSecret(native.Auth)
 				if err != nil {
-					logrus.WithError(err).WithField("chain", native.GetChainIdentifier()).Error("could access secret")
+					logrus.WithError(err).WithField("chain", native.Asset).Error("could access secret")
 				}
 			}
 		}

@@ -44,12 +44,12 @@ func (m *MockedClient) FetchNativeBalance(ctx context.Context, address xc.Addres
 	return args.Get(0).(xc.AmountBlockchain), args.Error(1)
 }
 
-func (m *MockedClient) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.AssetConfig) (xc.AmountBlockchain, error) {
+func (m *MockedClient) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.ITask) (xc.AmountBlockchain, error) {
 	args := m.Called(ctx, address)
 	return args.Get(0).(xc.AmountBlockchain), args.Error(1)
 }
 
-func (m *MockedClient) UpdateAsset(assetCfg xc.AssetConfig) error {
+func (m *MockedClient) UpdateAsset(assetCfg xc.ITask) error {
 	args := m.Called(assetCfg)
 	return args.Error(1)
 }

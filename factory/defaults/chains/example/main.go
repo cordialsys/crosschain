@@ -16,7 +16,7 @@ func main() {
 	tokens := tokens.Mainnet
 	// tokens := tokens.Testnet
 	cfg := &config.Config{
-		Chains: make(map[string]*crosschain.AssetConfig),
+		Chains: make(map[string]*crosschain.NativeAssetConfig),
 		Tokens: make(map[string]*crosschain.TokenAssetConfig),
 	}
 	for _, chain := range chains {

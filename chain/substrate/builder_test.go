@@ -6,14 +6,14 @@ import (
 
 func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require := s.Require()
-	builder, err := NewTxBuilder(&xc.AssetConfig{})
+	builder, err := NewTxBuilder(&xc.NativeAssetConfig{})
 	require.Nil(err)
 	require.NotNil(builder)
 }
 
 func (s *CrosschainTestSuite) TestNewTransferFail() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.AssetConfig{})
+	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)

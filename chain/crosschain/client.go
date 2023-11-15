@@ -46,12 +46,22 @@ func (client *Client) nextClient() (xc.Client, error) {
 }
 
 func (client *Client) apiAsset() *types.AssetReq {
-	assetCfg := client.Asset.GetAssetConfig()
+	native := client.Asset.GetNativeAsset()
+	contract, _ := client.Asset.GetContract()
+	decimals, _ := client.Asset.GetDecimals()
+	assetSymbol := ""
+	// attempt to deduce the asset symbol
+	switch asset := client.Asset.(type) {
+	case *xc.NativeAssetConfig:
+		assetSymbol = asset.Asset
+	case *xc.TokenAssetConfig:
+		assetSymbol = asset.Asset
+	}
 	return &types.AssetReq{
-		ChainReq: &types.ChainReq{Chain: string(assetCfg.NativeAsset)},
-		Asset:    assetCfg.Asset,
-		Contract: assetCfg.Contract,
-		Decimals: strconv.FormatInt(int64(assetCfg.Decimals), 10),
+		ChainReq: &types.ChainReq{Chain: string(native.Asset)},
+		Asset:    assetSymbol,
+		Contract: contract,
+		Decimals: strconv.FormatInt(int64(decimals), 10),
 	}
 }
 
@@ -122,7 +132,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 // SubmitTx submits via a Crosschain endpoint
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	chain := string(client.Asset.GetNativeAsset().NativeAsset)
+	chain := string(client.Asset.GetNativeAsset().Asset)
 	data, err := txInput.Serialize()
 	if err != nil {
 		return err

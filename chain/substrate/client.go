@@ -115,7 +115,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.Tip = client.Asset.GetAssetConfig().ChainGasTip
+	txInput.Tip = client.Asset.GetNativeAsset().ChainGasTip
 	txInput.Nonce, err = client.FetchAccountNonce(txInput.Meta, from)
 	if err != nil {
 		return &TxInput{}, err
@@ -166,14 +166,14 @@ func (client *Client) ParseTxInfo(body []byte) (xc.TxInfo, error) {
 	if len(TxInfoResp.Data.BlockHash) == 0 {
 		return xc.TxInfo{}, errors.New("not found")
 	}
+	human, _ := xc.NewAmountHumanReadableFromStr(TxInfoResp.Data.Transfer.Amount)
 
 	return xc.TxInfo{
-		BlockHash: TxInfoResp.Data.BlockHash,
-		TxID:      TxInfoResp.Data.ExtIndex,
-		From:      xc.Address(TxInfoResp.Data.Transfer.From),
-		To:        xc.Address(TxInfoResp.Data.Transfer.To),
-		Amount: xc.NewAmountHumanReadableFromStr(TxInfoResp.Data.Transfer.Amount).ToBlockchain(
-			client.Asset.GetNativeAsset().Decimals),
+		BlockHash:  TxInfoResp.Data.BlockHash,
+		TxID:       TxInfoResp.Data.ExtIndex,
+		From:       xc.Address(TxInfoResp.Data.Transfer.From),
+		To:         xc.Address(TxInfoResp.Data.Transfer.To),
+		Amount:     human.ToBlockchain(client.Asset.GetNativeAsset().Decimals),
 		Fee:        xc.NewAmountBlockchainFromStr(TxInfoResp.Data.Fee),
 		BlockIndex: int64(TxInfoResp.Data.BlockNum),
 		BlockTime:  int64(TxInfoResp.Data.BlockTime),
@@ -233,7 +233,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 // FetchBalance fetches token balance for a Substrate address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetAssetConfig().Asset == client.Asset.GetNativeAsset().Asset {
+	if client.Asset.GetNativeAsset().Asset == client.Asset.GetNativeAsset().Asset {
 		return client.FetchNativeBalance(ctx, address)
 	} else {
 		return xc.AmountBlockchain{}, errors.New("unsupported asset")
@@ -276,16 +276,6 @@ func (client *Client) SampleTransaction(ctx context.Context) (xc.Tx, error) {
 
 // EstimateGas estimates the fee for a Substrate transaction (extrinsic)
 func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	// invoke EstimateGasFunc callback, if registered
-	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.GetNativeAsset().NativeAsset
-		res, err := client.EstimateGasFunc(nativeAsset)
-		if err != nil {
-			// continue with default implementation as fallback
-		} else {
-			return res, err
-		}
-	}
 	tx, err := client.SampleTransaction(ctx)
 	if err != nil {
 		return xc.NewAmountBlockchainFromUint64(0), err

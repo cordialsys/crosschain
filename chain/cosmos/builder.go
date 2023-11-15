@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -21,7 +20,7 @@ import (
 
 var NativeTransferGasLimit = uint64(400_000)
 var TokenTransferGasLimit = uint64(900_000)
-var DefaultMaxTotalFeeHuman = xc.NewAmountHumanReadableFromStr("2")
+var DefaultMaxTotalFeeHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 
 // TxBuilder for Cosmos
 type TxBuilder struct {
@@ -60,25 +59,40 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if txInput.GasPrice > max {
 		txInput.GasPrice = max
 	}
-	if isNativeAsset(txBuilder.Asset.GetAssetConfig()) {
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
+
+	// cosmos is unique in that:
+	// - the native asset is in one of the native modules, x/bank
+	// - x/bank can have multiple assets, all of which can typically pay for gas
+	//   - this means cosmos has "multiple" native assets and can add more later, similar to tokens.
+	// - there can be other modules with tokens, like cw20 in x/wasm.
+	// To abstract this, we detect the module for the asset and rely on that for the transfer types.
+	// A native transfer can be a token transfer and vice versa.
+	// Right now gas is always paid in the "default" gas coin, set by config.
+
+	// because cosmos assets can be transferred via a number of different modules, we have to rely on txInput
+	// to determine which cosmos module we should
+	switch txInput.AssetType {
+	case BANK:
+		return txBuilder.NewBankTransfer(from, to, amount, input)
+	case CW20:
+		return txBuilder.NewCW20Transfer(from, to, amount, input)
+	default:
+		return nil, errors.New("unknown cosmos asset type: " + string(txInput.AssetType))
 	}
-	return txBuilder.NewTokenTransfer(from, to, amount, input)
 }
 
-func (txBuilder TxBuilder) GetDenom() string {
-	asset := txBuilder.Asset
-	denom := asset.GetNativeAsset().ChainCoin
-	if token, ok := asset.(*xc.TokenAssetConfig); ok {
-		if token.Contract != "" {
-			denom = token.Contract
-		}
-	}
-	return denom
-}
-
-// NewNativeTransfer creates a new transfer for a native asset
+// See NewTransfer
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(from, to, amount, input)
+}
+
+// See NewTransfer
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(from, to, amount, input)
+}
+
+// x/bank MsgSend transfer
+func (txBuilder TxBuilder) NewBankTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 	amountInt := big.Int(amount)
 
@@ -101,48 +115,33 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	return txBuilder.createTxWithMsg(from, to, amount, txInput, msgSend)
 }
 
-// NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 	asset := txBuilder.Asset
-
-	// Terra Classic: most tokens are actually native tokens
-	// in crosschain we can treat them interchangeably as native or non-native assets
-	// if contract isn't a valid address, they're native tokens
-	if isNativeAsset(asset.GetAssetConfig()) {
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
-	}
 
 	if txInput.GasLimit == 0 {
 		txInput.GasLimit = TokenTransferGasLimit
 	}
-
+	contract, _ := asset.GetContract()
 	contractTransferMsg := fmt.Sprintf(`{"transfer": {"amount": "%s", "recipient": "%s"}}`, amount.String(), to)
 	msgSend := &wasmtypes.MsgExecuteContract{
 		Sender:   string(from),
-		Contract: asset.GetAssetConfig().Contract,
+		Contract: contract,
 		Msg:      wasmtypes.RawContractMessage(json.RawMessage(contractTransferMsg)),
 	}
 
 	return txBuilder.createTxWithMsg(from, to, amount, txInput, msgSend)
 }
 
-func accAddressFromBech32WithPrefix(address string, prefix string) ([]byte, error) {
-	if len(strings.TrimSpace(address)) == 0 {
-		return nil, errors.New("empty address string is not allowed")
+func (txBuilder TxBuilder) GetDenom() string {
+	asset := txBuilder.Asset
+	denom := asset.GetNativeAsset().ChainCoin
+	if token, ok := asset.(*xc.TokenAssetConfig); ok {
+		if token.Contract != "" {
+			denom = token.Contract
+		}
 	}
-
-	addressBytes, err := types.GetFromBech32(address, prefix)
-	if err != nil {
-		return nil, err
-	}
-
-	err = types.VerifyAddressFormat(addressBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return addressBytes, nil
+	return denom
 }
 
 // Returns the amount in blockchain that is percentage of amount.

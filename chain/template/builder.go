@@ -14,7 +14,7 @@ type TxBuilder struct {
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 	return TxBuilder{
-		Asset: cfgI.GetAssetConfig(),
+		Asset: cfgI,
 	}, errors.New("not implemented")
 }
 

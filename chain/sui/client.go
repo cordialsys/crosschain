@@ -141,7 +141,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
 				Address:         xc.Address(from),
-				NativeAsset:     c.Asset.GetNativeAsset().NativeAsset,
+				NativeAsset:     xc.NativeAsset(c.Asset.GetNativeAsset().Asset),
 			})
 		} else {
 			to = bal.Owner.AddressOwner.String()
@@ -152,7 +152,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
 				Address:         xc.Address(to),
-				NativeAsset:     c.Asset.GetNativeAsset().NativeAsset,
+				NativeAsset:     xc.NativeAsset(c.Asset.GetNativeAsset().Asset),
 			})
 		}
 	}
@@ -178,7 +178,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 		BlockIndex:    resp.Checkpoint.Int64(),
 		Confirmations: int64(latestCheckpoint.GetSequenceNumber()) - int64(txCheckpoint.GetSequenceNumber()),
 
-		ExplorerURL:  fmt.Sprintf("https://explorer.sui.io/txblock/%s?network=%s", resp.Digest, c.Asset.GetAssetConfig().Net),
+		ExplorerURL:  fmt.Sprintf("https://explorer.sui.io/txblock/%s?network=%s", resp.Digest, c.Asset.GetNativeAsset().Net),
 		Sources:      sources,
 		Destinations: destinations,
 		Error:        resp.Effects.Data.V1.Status.Error,
@@ -186,21 +186,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 	}, nil
 }
 
-func (c *Client) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc) {
-	c.EstimateGasFunc = estimateGas
-}
-
 func (c *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	if c.EstimateGasFunc != nil {
-		nativeAsset := c.Asset.GetNativeAsset().NativeAsset
-		res, err := c.EstimateGasFunc(nativeAsset)
-		if err != nil {
-			// continue with default implementation as fallback
-		} else {
-			return res, err
-		}
-	}
-
 	ref, err := c.SuiClient.GetReferenceGasPrice(ctx)
 	if err != nil {
 		return xc.NewAmountBlockchainFromUint64(0), err

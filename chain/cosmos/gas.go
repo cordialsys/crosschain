@@ -83,6 +83,7 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*Tx, error) {
 	input := NewTxInput()
 	input.GasLimit = gasLimit
 	input.GasPrice = 0
+	input.AssetType = BANK
 	tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1), input)
 	if err != nil {
 		return nil, err

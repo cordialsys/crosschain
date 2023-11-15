@@ -201,7 +201,7 @@ type ClientConfig struct {
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
-type AssetConfig struct {
+type NativeAssetConfig struct {
 	Asset                string          `yaml:"asset,omitempty"`
 	Driver               string          `yaml:"driver,omitempty"`
 	Net                  string          `yaml:"net,omitempty"`
@@ -232,27 +232,22 @@ type AssetConfig struct {
 	Disabled             *bool           `yaml:"disabled,omitempty"`
 
 	// Tokens
-	Chain    string `yaml:"chain,omitempty"`
-	Contract string `yaml:"contract,omitempty"`
-	Name     string `yaml:"name,omitempty"`
+	// Contract string `yaml:"contract,omitempty"`
+	// Name     string `yaml:"name,omitempty"`
 
 	// Internal
-	AuthSecret  string              `yaml:"-"`
-	Type        AssetType           `yaml:"-"`
-	NativeAsset NativeAsset         `yaml:"-"`
-	Metadata    AssetMetadataConfig `yaml:"-"`
+	AuthSecret string `yaml:"-"`
+	// Type       AssetType `yaml:"-"`
+	// NativeAsset NativeAsset         `yaml:"-"`
+	Metadata AssetMetadataConfig `yaml:"-"`
 }
-type NativeAssetConfig = AssetConfig
 
 type TokenAssetConfig struct {
-	Asset    string    `yaml:"asset,omitempty"`
-	Chain    string    `yaml:"chain,omitempty"`
-	Net      string    `yaml:"net,omitempty"`
-	Decimals int32     `yaml:"decimals,omitempty"`
-	Contract string    `yaml:"contract,omitempty"`
-	Type     AssetType `yaml:"type,omitempty"`
+	Asset    string `yaml:"asset,omitempty"`
+	Chain    string `yaml:"chain,omitempty"`
+	Decimals int32  `yaml:"decimals,omitempty"`
+	Contract string `yaml:"contract,omitempty"`
 
-	AssetConfig       `yaml:"-"`
 	NativeAssetConfig *NativeAssetConfig  `yaml:"-"`
 	Metadata          AssetMetadataConfig `yaml:"-"`
 }
@@ -267,8 +262,8 @@ var _ ITask = &TokenAssetConfig{}
 func (c NativeAssetConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
-		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s type=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s native_asset=%s)",
-		c.ID(), c.Asset, c.ChainID, c.Driver, c.Type, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth, c.Provider, c.NativeAsset,
+		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
+		c.ID(), c.Asset, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth, c.Provider,
 	)
 }
 
@@ -276,32 +271,30 @@ func (asset *NativeAssetConfig) ID() AssetID {
 	return GetAssetIDFromAsset("", asset.Asset)
 }
 
-func (asset NativeAssetConfig) GetAssetConfig() *AssetConfig {
-	return &asset
+func (asset *NativeAssetConfig) GetDecimals() (int32, bool) {
+	return asset.Decimals, true
 }
 
-func (asset NativeAssetConfig) GetDriver() Driver {
-	return Driver(asset.Driver)
-}
+// func (asset NativeAssetConfig) GetDriver() Driver {
+// 	return Driver(asset.Driver)
+// }
 
 func (asset *NativeAssetConfig) GetNativeAsset() *NativeAssetConfig {
 	return asset
 }
 
-// TODO we should delete these extra fields that are indicative of chain
-func (asset *NativeAssetConfig) GetChainIdentifier() string {
-	if asset.NativeAsset != "" {
-		return string(asset.NativeAsset)
-	}
-	if asset.Chain != "" {
-		return asset.Chain
-	}
-	return asset.Asset
+func (native *NativeAssetConfig) GetContract() (string, bool) {
+	return "", false
 }
 
-func (asset NativeAssetConfig) GetTask() *TaskConfig {
-	return nil
-}
+// TODO we should delete these extra fields that are indicative of chain
+// func (asset *NativeAssetConfig) GetChainIdentifier() string {
+// 	return asset.Asset
+// }
+
+// func (asset NativeAssetConfig) GetTask() *TaskConfig {
+// 	return nil
+// }
 
 // Return list of clients with the "default" client added
 // if it's not already there
@@ -338,9 +331,14 @@ func (asset NativeAssetConfig) GetNativeClients() []*ClientConfig {
 }
 
 func (c *TokenAssetConfig) String() string {
+	net := ""
+	native := c.GetNativeAsset()
+	if native != nil {
+		net = native.Net
+	}
 	return fmt.Sprintf(
 		"TokenAssetConfig(id=%s asset=%s chain=%s net=%s decimals=%d contract=%s)",
-		c.ID(), c.Asset, c.Chain, c.Net, c.Decimals, c.Contract,
+		c.ID(), c.Asset, c.Chain, net, c.Decimals, c.Contract,
 	)
 }
 
@@ -352,23 +350,30 @@ func (asset *TokenAssetConfig) GetNativeAsset() *NativeAssetConfig {
 	return asset.NativeAssetConfig
 }
 
-func (asset *TokenAssetConfig) GetDriver() Driver {
-	return Driver(asset.GetNativeAsset().Driver)
+//	func (asset *TokenAssetConfig) GetDriver() Driver {
+//		return Driver(asset.GetNativeAsset().Driver)
+//	}
+func (asset *TokenAssetConfig) GetDecimals() (int32, bool) {
+	return asset.Decimals, true
 }
 
-func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {
-	asset.AssetConfig.Asset = asset.Asset
-	asset.AssetConfig.Chain = asset.Chain
-	asset.AssetConfig.Net = asset.Net
-	asset.AssetConfig.Decimals = asset.Decimals
-	asset.AssetConfig.Contract = asset.Contract
-	asset.AssetConfig.Type = asset.Type
-	return &asset.AssetConfig
+func (token *TokenAssetConfig) GetContract() (string, bool) {
+	return token.Contract, true
 }
 
-func (asset *TokenAssetConfig) GetTask() *TaskConfig {
-	return nil
-}
+// func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {
+// 	asset.AssetConfig.Asset = asset.Asset
+// 	asset.AssetConfig.Chain = asset.Chain
+// 	asset.AssetConfig.Net = asset.Net
+// 	asset.AssetConfig.Decimals = asset.Decimals
+// 	asset.AssetConfig.Contract = asset.Contract
+// 	asset.AssetConfig.Type = asset.Type
+// 	return &asset.AssetConfig
+// }
+
+// func (asset *TokenAssetConfig) GetTask() *TaskConfig {
+// 	return nil
+// }
 
 func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, string) {
 	if asset == "" && nativeAsset == "" {

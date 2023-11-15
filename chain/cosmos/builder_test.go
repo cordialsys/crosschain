@@ -44,8 +44,7 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 	} {
 
 		asset := &xc.NativeAssetConfig{
-			Type:             xc.AssetTypeNative,
-			NativeAsset:      "XPLA",
+			Asset:            "XPLA",
 			ChainCoin:        "axpla",
 			ChainPrefix:      "xpla",
 			ChainTransferTax: tc.TaxRate,
@@ -59,6 +58,7 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 		addr1 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
 		addr2 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
 		input := NewTxInput()
+		input.AssetType = BANK
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
 		require.NoError(err)
@@ -115,8 +115,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 	} {
 
 		asset := &xc.NativeAssetConfig{
-			Type:             xc.AssetTypeNative,
-			NativeAsset:      "LUNA",
+			Asset:            "LUNA",
 			ChainCoin:        "uluna",
 			ChainPrefix:      "terra",
 			ChainMaxGasPrice: tc.max,
@@ -132,6 +131,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 		addr2 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
 		input := NewTxInput()
 		input.GasPrice = tc.inputPrice
+		input.AssetType = BANK
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
 		require.NoError(err)

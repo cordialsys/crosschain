@@ -65,7 +65,7 @@ type ClientOptions struct {
 type NativeClient struct {
 	opts            ClientOptions
 	httpClient      http.Client
-	Asset           *xc.AssetConfig
+	Asset           xc.ITask
 	EstimateGasFunc xc.EstimateGasFunc
 }
 
@@ -75,13 +75,12 @@ var NewClient = NewBlockchairClient
 
 // NewClient returns a new Bitcoin Client
 func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
-	asset := cfgI.GetAssetConfig()
-	cfg := cfgI.GetNativeAsset()
+	native := cfgI.GetNativeAsset()
 	opts := DefaultClientOptions()
 	httpClient := http.Client{}
 	httpClient.Timeout = opts.Timeout
-	opts.Host = cfg.URL
-	params, err := GetParams(cfg)
+	opts.Host = native.URL
+	params, err := GetParams(native)
 	if err != nil {
 		return &NativeClient{}, err
 	}
@@ -89,7 +88,7 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 	return &NativeClient{
 		opts:       opts,
 		httpClient: httpClient,
-		Asset:      asset,
+		Asset:      cfgI,
 	}, nil
 }
 
@@ -152,6 +151,8 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	tx.msgTx.Deserialize(bytes.NewReader(data))
 	inputs := []Input{}
+	// btc chains the native asset and asset are the same
+	asset := client.Asset.GetNativeAsset().Asset
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain
@@ -181,9 +182,8 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
-			NativeAsset:     client.Asset.NativeAsset,
-			Asset:           xc.Asset(client.Asset.NativeAsset),
-			AssetConfig:     client.Asset,
+			NativeAsset:     xc.NativeAsset(asset),
+			Asset:           xc.Asset(asset),
 		})
 	}
 
@@ -214,9 +214,8 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Address:         xc.Address(recipientAddr),
 			ContractAddress: "",
 			Amount:          value,
-			NativeAsset:     client.Asset.NativeAsset,
-			Asset:           xc.Asset(client.Asset.NativeAsset),
-			AssetConfig:     client.Asset,
+			NativeAsset:     xc.NativeAsset(asset),
+			Asset:           xc.Asset(asset),
 		})
 	}
 
@@ -437,16 +436,6 @@ func (client *NativeClient) RegisterEstimateGasCallback(estimateGas xc.EstimateG
 }
 
 func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	// invoke EstimateGasFunc callback, if registered
-	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.NativeAsset
-		res, err := client.EstimateGasFunc(nativeAsset)
-		if err != nil {
-			// continue with default implementation as fallback
-		} else {
-			return res, err
-		}
-	}
 	// estimate using last 1 blocks
 	numBlocks := 1
 	fallbackGasPerByte := xc.NewAmountBlockchainFromUint64(2)

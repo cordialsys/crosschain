@@ -29,7 +29,7 @@ func (s *CrosschainTestSuite) TestEthWrap() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(asset.GetAssetConfig().Contract, evmTx.To().String())
+	require.Equal(asset.(*xc.TokenAssetConfig).Contract, evmTx.To().String())
 	require.Equal("123", evmTx.Value().String())
 	expectedData := "d0e30db0"
 	require.Equal(expectedData, hex.EncodeToString(evmTx.Data()))
@@ -55,7 +55,7 @@ func (s *CrosschainTestSuite) TestEthWrapPassingWETH() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(asset.GetAssetConfig().Contract, evmTx.To().String())
+	require.Equal(asset.(*xc.TokenAssetConfig).Contract, evmTx.To().String())
 	require.Equal("123", evmTx.Value().String())
 	expectedData := "d0e30db0"
 	require.Equal(expectedData, hex.EncodeToString(evmTx.Data()))
@@ -81,68 +81,10 @@ func (s *CrosschainTestSuite) TestEthUnwrap() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(asset.GetAssetConfig().Contract, evmTx.To().String())
+	require.Equal(asset.(*xc.TokenAssetConfig).Contract, evmTx.To().String())
 	require.Equal("0", evmTx.Value().String())
 	expectedData := "2e1a7d4d" +
 		"0000000000000000000000000000000000000000000000000000000000000123"
-	require.Equal(expectedData, hex.EncodeToString(evmTx.Data()))
-}
-
-func (s *CrosschainTestSuite) TestProxyTransfer() {
-	require := s.Require()
-	task, err := s.Factory.GetTaskConfig("evm-transfer", "ETH")
-	require.Nil(err)
-	require.NotNil(task)
-
-	txBuilder, err := s.Factory.NewTxBuilder(task)
-	require.Nil(err)
-	require.NotNil(txBuilder)
-
-	txInput := evm.TxInput{}
-	from := "0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B"
-	to := "a0a5C02F0371cCc142ad5AD170C291c86c3E6379"
-	tx, err := txBuilder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
-	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
-	require.Equal(uint8(0x2), evmTx.Type())
-	require.Equal(uint64(400_000), evmTx.Gas())
-
-	require.Equal(from, evmTx.To().String())
-	require.Equal("0", evmTx.Value().String())
-	expectedData := "c664c714" +
-		"0000000000000000000000000000000000000000000000000000000000000123" +
-		"000000000000000000000000" + strings.ToLower(to)
-	require.Equal(expectedData, hex.EncodeToString(evmTx.Data()))
-}
-
-func (s *CrosschainTestSuite) TestProxyTransferToken() {
-	require := s.Require()
-	asset, err := s.Factory.GetAssetConfig("USDC", "ETH")
-	require.Nil(err)
-	require.NotNil(asset)
-	task, err := s.Factory.GetTaskConfig("evm-transfer-erc20", "USDC.ETH")
-	require.Nil(err)
-	require.NotNil(task)
-
-	txBuilder, err := s.Factory.NewTxBuilder(task)
-	require.Nil(err)
-	require.NotNil(txBuilder)
-
-	txInput := evm.TxInput{}
-	from := "0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B"
-	to := "a0a5C02F0371cCc142ad5AD170C291c86c3E6379"
-	tx, err := txBuilder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
-	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
-	require.Equal(uint8(0x2), evmTx.Type())
-	require.Equal(uint64(400_000), evmTx.Gas())
-
-	require.Equal(from, evmTx.To().String())
-	require.Equal("0", evmTx.Value().String())
-	expectedData := "4217e287" +
-		"000000000000000000000000" + strings.TrimPrefix(asset.GetAssetConfig().Contract, "0x") +
-		"0000000000000000000000000000000000000000000000000000000000000123" +
-		"000000000000000000000000" + strings.ToLower(to)
 	require.Equal(expectedData, hex.EncodeToString(evmTx.Data()))
 }
 
@@ -168,7 +110,7 @@ func (s *CrosschainTestSuite) TestERC20Transfer() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(strings.ToLower(asset.GetAssetConfig().Contract), strings.ToLower(evmTx.To().String()))
+	require.Equal(strings.ToLower(asset.(*xc.TokenAssetConfig).Contract), strings.ToLower(evmTx.To().String()))
 	require.Equal("0", evmTx.Value().String())
 	expectedData := "a9059cbb" +
 		"000000000000000000000000" + strings.ToLower(to) +
@@ -243,7 +185,7 @@ func (s *CrosschainTestSuite) TestWormholeApprove() {
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
-	require.Equal(srcAsset.GetAssetConfig().Contract, evmTx.To().String())
+	require.Equal(srcAsset.(*xc.TokenAssetConfig).Contract, evmTx.To().String())
 	require.Equal("0", evmTx.Value().String())
 	expectedData := "095ea7b3" +
 		"0000000000000000000000003ee18b2214aff97000d974cf647e7c347e8fa585" +
@@ -279,7 +221,7 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 	_, err = txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.Error(err, "token price for WETH.MATIC is required to calculate arbiter fee")
 
-	task.GetTask().DstAsset.(*xc.TokenAssetConfig).Metadata.PriceUSD = xc.NewAmountHumanReadableFromStr("2.5")
+	task.(*xc.TaskConfig).DstAsset.(*xc.TokenAssetConfig).Metadata.PriceUSD, _ = xc.NewAmountHumanReadableFromStr("2.5")
 	tx, err := txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.NoError(err)
 	evmTx := tx.(*evm.Tx).EthTx
@@ -289,7 +231,7 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 	require.Equal("0x3ee18B2214AFF97000D974cf647E7C347E8fa585", evmTx.To().String())
 	require.Equal("0", evmTx.Value().String())
 	expectedData := "0f5287b0" +
-		"000000000000000000000000" + strings.TrimPrefix(srcAsset.GetAssetConfig().Contract, "0x") + // token
+		"000000000000000000000000" + strings.TrimPrefix(srcAsset.(*xc.TokenAssetConfig).Contract, "0x") + // token
 		"0000000000000000000000000000000000000000000000000000000000000123" + // amount
 		"0000000000000000000000000000000000000000000000000000000000000005" + // chain
 		"000000000000000000000000" + strings.TrimPrefix(to, "0x") + // recipient

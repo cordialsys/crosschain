@@ -11,7 +11,7 @@ import (
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.AssetConfig{})
+	client, err := NewClient(&xc.NativeAssetConfig{})
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -23,7 +23,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
 	vectors := []struct {
-		asset     xc.AssetConfig
+		asset     xc.NativeAssetConfig
 		from      string
 		pubKeyStr string
 		to        string
@@ -32,13 +32,15 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		err       string
 	}{
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// get x/bank balance
+				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
 			// `{"uluna": "0.015"}`,
 			&TxInput{
@@ -49,17 +51,20 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasLimit:        NativeTransferGasLimit,
 				GasPrice:        0.015,
 				Memo:            "",
+				AssetType:       BANK,
 			},
 			"",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla", Driver: string(xc.DriverCosmosEvmos)},
+			xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla", Driver: string(xc.DriverCosmosEvmos)},
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			"AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
 			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
 				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// get x/bank balance
+				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -69,12 +74,39 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasLimit:        NativeTransferGasLimit,
 				GasPrice:        850000,
 				Memo:            "",
+				AssetType:       BANK,
+			},
+			"",
+		},
+		// CW20 token type
+		{
+			xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla", Driver: string(xc.DriverCosmosEvmos)},
+			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			"AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
+			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
+			[]string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// get x/bank balance (fail)
+				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get x/wasm cw20 balance
+				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+			},
+			&TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
+				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
+				AccountNumber:   1442,
+				Sequence:        4,
+				GasLimit:        NativeTransferGasLimit,
+				GasPrice:        850000,
+				Memo:            "",
+				AssetType:       CW20,
 			},
 			"",
 		},
 		// error getting account from RPC
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -84,7 +116,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"failed to get account data",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -94,7 +126,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"failed to get account data",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -104,7 +136,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"failed to get account data",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -115,7 +147,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		},
 		// error getting gas
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -132,7 +164,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"failed to estimate gas",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"",
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -165,7 +197,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			require.Equal(v.txInput, input)
 			require.ErrorContains(err, v.err)
 		} else {
-			require.Nil(err)
+			require.NoError(err)
 			require.NotNil(input)
 
 			if v.pubKeyStr != "" {
@@ -180,7 +212,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 func (s *CrosschainTestSuite) TestSubmitTxErr() {
 	require := s.Require()
 
-	client, _ := NewClient(&xc.AssetConfig{
+	client, _ := NewClient(&xc.NativeAssetConfig{
 		URL: "",
 	})
 	tx := &Tx{}
@@ -192,7 +224,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
 	vectors := []struct {
-		asset xc.AssetConfig
+		asset xc.ITask
 		tx    string
 		resp  interface{}
 		val   xc.TxInfo
@@ -200,7 +232,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}{
 		{
 			// receive LUNA from faucet
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			[]string{
 				// tx
@@ -240,7 +272,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		},
 		{
 			// send XPLA
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 			[]string{
 				// tx
@@ -280,7 +312,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		},
 		{
 			// multi-Cw20 deposit on XPLA
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 			[]string{
 				// tx
@@ -361,35 +393,35 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			"",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`{}`,
 			xc.TxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`null`,
 			xc.TxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			errors.New(`{"message": "custom RPC error", "code": 123}`),
 			xc.TxInfo{},
 			"custom RPC error",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"",
 			"",
 			xc.TxInfo{},
 			"error unmarshalling: invalid character",
 		},
 		{
-			xc.AssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"invalid-sig",
 			"",
 			xc.TxInfo{},
@@ -402,8 +434,8 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		defer close()
 
 		asset := v.asset
-		asset.URL = server.URL
-		client, _ := NewClient(&asset)
+		asset.GetNativeAsset().URL = server.URL
+		client, _ := NewClient(asset)
 		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.tx))
 
 		if v.err != "" {
@@ -429,7 +461,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	}{
 		{
 			// Terra
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			&xc.NativeAssetConfig{Asset: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			`{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "ChAKBXVsdW5hEgc0OTc5MDYz","proofOps": null,"height": "2803726","codespace": ""}}`,
 			"4979063",
@@ -437,7 +469,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		},
 		{
 			// XPLA
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			`{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "Ch0KBWF4cGxhEhQ5OTY0ODQwMDAwMDAwMDAwMDAwMA==","proofOps": null,"height": "1329788","codespace": ""}}`,
 			"99648400000000000000",
@@ -445,8 +477,8 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		},
 		{
 			// Injective peggy asset
-			&xc.TokenAssetConfig{Type: xc.AssetTypeNative, Asset: "USDT", Contract: "peggy0x3506424F91fD33084466F402d5D97f05F8e3b4AF", Decimals: 6, NativeAssetConfig: &xc.NativeAssetConfig{
-				NativeAsset: "INJ", ChainCoin: "uinj", ChainPrefix: "inj",
+			&xc.TokenAssetConfig{Asset: "USDT", Contract: "peggy0x3506424F91fD33084466F402d5D97f05F8e3b4AF", Decimals: 6, NativeAssetConfig: &xc.NativeAssetConfig{
+				Asset: "INJ", ChainCoin: "uinj", ChainPrefix: "inj",
 			}},
 			"inj162x3ax7z6ksquhshlqh6d498kr60qdx7wqf9we",
 			`{
@@ -471,37 +503,41 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		},
 		{
 			// Terra cw20 asset
-			&xc.TokenAssetConfig{Type: xc.AssetTypeToken, Asset: "USDC", Contract: "terra1pepwcav40nvj3kh60qqgrk8k07ydmc00xyat06", Decimals: 6, NativeAssetConfig: &xc.NativeAssetConfig{
-				NativeAsset: "LUNC", ChainCoin: "uluna", ChainPrefix: "terra",
+			&xc.TokenAssetConfig{Asset: "USDC", Contract: "terra1pepwcav40nvj3kh60qqgrk8k07ydmc00xyat06", Decimals: 6, NativeAssetConfig: &xc.NativeAssetConfig{
+				Asset: "LUNC", ChainCoin: "uluna", ChainPrefix: "terra",
 			}},
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+			[]string{
+				// first response fails because not a bank asset.
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":1,"log":"denom does not exist","info":"","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":1,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+			},
 			"43984127",
 			"",
 		},
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"xpla-invalid",
 			`null`,
 			"0",
 			"bad address",
 		},
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			`null`,
 			"0",
 			"failed to get account balance",
 		},
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			`{}`,
 			"0",
 			"failed to get account balance",
 		},
 		{
-			&xc.NativeAssetConfig{Type: xc.AssetTypeNative, NativeAsset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
+			&xc.NativeAssetConfig{Asset: "XPLA", ChainCoin: "axpla", ChainPrefix: "xpla"},
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			errors.New(`{"message": "custom RPC error", "code": 123}`),
 			"",
@@ -509,7 +545,8 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		},
 	}
 
-	for _, v := range vectors {
+	for i, v := range vectors {
+		fmt.Println("==testcase", i)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
@@ -523,7 +560,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 			require.Equal("0", balance.String())
 			require.ErrorContains(err, v.err)
 		} else {
-			require.Nil(err)
+			require.NoError(err)
 			require.NotNil(balance)
 			require.Equal(v.val, balance.String())
 		}

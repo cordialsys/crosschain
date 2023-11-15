@@ -16,31 +16,35 @@ const TxVersion int32 = 2
 
 // TxBuilder for Bitcoin
 type TxBuilder struct {
-	Asset  *xc.AssetConfig
+	Asset  xc.ITask
 	Params *chaincfg.Params
 	isBch  bool
 }
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
-	asset := cfgI.GetNativeAsset()
-	params, err := GetParams(asset)
+	native := cfgI.GetNativeAsset()
+	params, err := GetParams(native)
 	if err != nil {
 		return TxBuilder{}, err
 	}
 	return TxBuilder{
-		Asset:  asset,
+		Asset:  cfgI,
 		Params: params,
-		isBch:  asset.NativeAsset == xc.BCH,
+		isBch:  native.Asset == string(xc.BCH),
 	}, nil
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	if txBuilder.Asset.Type == xc.AssetTypeToken {
+	switch asset := txBuilder.Asset.(type) {
+	case *xc.NativeAssetConfig:
+		return txBuilder.NewNativeTransfer(from, to, amount, input)
+	case *xc.TokenAssetConfig:
 		return txBuilder.NewTokenTransfer(from, to, amount, input)
+	default:
+		return nil, fmt.Errorf("NewTransfer not implemented for %T", asset)
 	}
-	return txBuilder.NewNativeTransfer(from, to, amount, input)
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
@@ -62,7 +66,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	gasPrice := local_input.GasPricePerByte
 	// 255 for bitcoin, 300 for bch
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(uint64(255 * len(local_input.UnspentOutputs)))
-	if txBuilder.Asset.NativeAsset == xc.BCH {
+	if xc.NativeAsset(txBuilder.Asset.GetNativeAsset().Asset) == xc.BCH {
 		estimatedTxBytesLength = xc.NewAmountBlockchainFromUint64(uint64(300 * len(local_input.UnspentOutputs)))
 	}
 	fee := gasPrice.Mul(&estimatedTxBytesLength)
