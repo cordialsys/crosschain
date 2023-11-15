@@ -18,6 +18,11 @@ type TxInputWithAmount interface {
 	SetAmount(AmountBlockchain)
 }
 
+type TxInputWithPricing interface {
+	SetUsdPrice(nativeAsset NativeAsset, contract string, priceUsd AmountHumanReadable)
+	GetUsdPrice(nativeAsset NativeAsset, contract string) (AmountHumanReadable, bool)
+}
+
 type TxInputEnvelope struct {
 	Type Driver `json:"type"`
 }

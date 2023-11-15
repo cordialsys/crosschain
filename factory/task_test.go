@@ -221,7 +221,11 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 	_, err = txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.Error(err, "token price for WETH.MATIC is required to calculate arbiter fee")
 
-	task.(*xc.TaskConfig).DstAsset.(*xc.TokenAssetConfig).Metadata.PriceUSD, _ = xc.NewAmountHumanReadableFromStr("2.5")
+	// put the price in the tx_input
+	dstContract, _ := dstAsset.GetContract()
+	dstPrice, _ := xc.NewAmountHumanReadableFromStr("2.5")
+	txInput.SetUsdPrice("MATIC", dstContract, dstPrice)
+
 	tx, err := txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.NoError(err)
 	evmTx := tx.(*evm.Tx).EthTx

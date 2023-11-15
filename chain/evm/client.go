@@ -49,6 +49,7 @@ var _ xc.FullClientWithGas = &Client{}
 // TxInput for EVM
 type TxInput struct {
 	xc.TxInputEnvelope
+	utils.TxPriceInput
 	Nonce    uint64 `json:"nonce,omitempty"`
 	GasLimit uint64 `json:"gas_limit,omitempty"`
 	// DynamicFeeTx
@@ -59,6 +60,9 @@ type TxInput struct {
 	// Task params
 	Params []string `json:"params,omitempty"`
 }
+
+var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithPricing = &TxInput{}
 
 func NewTxInput() *TxInput {
 	return &TxInput{

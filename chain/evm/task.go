@@ -264,11 +264,17 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 		return contract, value, payload, err
 	}
 
+	dstContract, _ := task.DstAsset.GetContract()
+	dstDecimals, _ := task.DstAsset.GetDecimals()
+	priceUSD, ok := txInput.GetUsdPrice(xc.NativeAsset(task.DstAsset.GetNativeAsset().Asset), dstContract)
+
+	if !ok || priceUSD.String() == "0" {
+		return contract, value, payload, fmt.Errorf("token price for %s is required to calculate arbiter fee", task.DstAsset.ID())
+	}
+
 	// compute arbiterFee
-	dstAsset := task.DstAsset.(*xc.TokenAssetConfig)
-	priceUSD := dstAsset.Metadata.PriceUSD
 	if priceUSD.String() == "0" {
-		return contract, value, payload, fmt.Errorf("token price for %s is required to calculate arbiter fee", dstAsset.ID())
+		return contract, value, payload, fmt.Errorf("token price for %s is required to calculate arbiter fee", task.DstAsset.ID())
 	}
 	defaultArbiterFeeUsdStr, ok := task.DefaultParams["arbiter_fee_usd"]
 	fmt.Println(task)
@@ -280,7 +286,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 
 	// - name: arbiterFee
 	//   type: uint256
-	arbiterFee := numTokens.ToBlockchain(dstAsset.Decimals)
+	arbiterFee := numTokens.ToBlockchain(dstDecimals)
 	paddedValue := common.LeftPadBytes(arbiterFee.Int().Bytes(), 32)
 	payload = append(payload, paddedValue...)
 

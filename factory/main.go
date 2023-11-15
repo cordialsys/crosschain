@@ -11,6 +11,7 @@ import (
 	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/normalize"
 )
 
 // FactoryContext is the main Factory interface
@@ -122,14 +123,14 @@ func (f *Factory) cfgFromAsset(assetID AssetID) (ITask, error) {
 
 func (f *Factory) cfgFromAssetByContract(contract string, nativeAsset string) (ITask, error) {
 	var res ITask
-	contract = NormalizeAddressString(contract, nativeAsset)
+	contract = normalize.NormalizeAddressString(contract, nativeAsset)
 	f.AllAssets.Range(func(key, value interface{}) bool {
 		cfg := value.(ITask)
 		chain := cfg.GetNativeAsset().Asset
 		cfgContract := ""
 		switch asset := cfg.(type) {
 		case *TokenAssetConfig:
-			cfgContract = NormalizeAddressString(asset.Contract, nativeAsset)
+			cfgContract = normalize.NormalizeAddressString(asset.Contract, nativeAsset)
 		case *NativeAssetConfig:
 		}
 		if string(chain) == nativeAsset && cfgContract == contract {
