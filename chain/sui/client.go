@@ -22,7 +22,7 @@ type Client struct {
 
 // NewClient returns a new Sui Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	client, err := client.Dial(cfg.URL)
 	return &Client{
 		Asset:     cfgI,
@@ -141,7 +141,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
 				Address:         xc.Address(from),
-				NativeAsset:     xc.NativeAsset(c.Asset.GetNativeAsset().Asset),
+				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Asset),
 			})
 		} else {
 			to = bal.Owner.AddressOwner.String()
@@ -152,7 +152,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
 				Address:         xc.Address(to),
-				NativeAsset:     xc.NativeAsset(c.Asset.GetNativeAsset().Asset),
+				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Asset),
 			})
 		}
 	}
@@ -178,7 +178,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 		BlockIndex:    resp.Checkpoint.Int64(),
 		Confirmations: int64(latestCheckpoint.GetSequenceNumber()) - int64(txCheckpoint.GetSequenceNumber()),
 
-		ExplorerURL:  fmt.Sprintf("https://explorer.sui.io/txblock/%s?network=%s", resp.Digest, c.Asset.GetNativeAsset().Net),
+		ExplorerURL:  fmt.Sprintf("https://explorer.sui.io/txblock/%s?network=%s", resp.Digest, c.Asset.GetChain().Net),
 		Sources:      sources,
 		Destinations: destinations,
 		Error:        resp.Effects.Data.V1.Status.Error,
@@ -269,7 +269,7 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 
 	gasPrice, err := c.EstimateGas(ctx)
 	if err != nil {
-		defaultgas := c.Asset.GetNativeAsset().ChainGasPriceDefault
+		defaultgas := c.Asset.GetChain().ChainGasPriceDefault
 		if defaultgas < 0.1 {
 			return input, err
 		}

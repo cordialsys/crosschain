@@ -21,7 +21,7 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Ctx = context.Background()
-	s.Asset = &xc.NativeAssetConfig{
+	s.Asset = &xc.ChainConfig{
 		Clients: []*xc.ClientConfig{
 			{},
 		},
@@ -90,8 +90,8 @@ func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
 	defer close2()
 
-	s.Asset.GetNativeAsset().Driver = string(xc.DriverSolana)
-	s.Asset.GetNativeAsset().URL = server2.URL
+	s.Asset.GetChain().Driver = string(xc.DriverSolana)
+	s.Asset.GetChain().URL = server2.URL
 	client, _ := NewClient(s.Asset)
 	client.URL = server.URL
 
@@ -152,8 +152,8 @@ func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
 	defer close2()
 
-	s.Asset.GetNativeAsset().Driver = string(xc.DriverSolana)
-	s.Asset.GetNativeAsset().URL = server2.URL
+	s.Asset.GetChain().Driver = string(xc.DriverSolana)
+	s.Asset.GetChain().URL = server2.URL
 	client, _ := NewClient(s.Asset)
 	client.URL = server.URL
 
@@ -211,8 +211,8 @@ func (s *CrosschainTestSuite) TestSubmitTxErrorFallback() {
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
 	defer close2()
 
-	s.Asset.GetNativeAsset().Driver = string(xc.DriverSolana)
-	s.Asset.GetNativeAsset().URL = server2.URL
+	s.Asset.GetChain().Driver = string(xc.DriverSolana)
+	s.Asset.GetChain().URL = server2.URL
 	client, _ := NewClient(s.Asset)
 	client.URL = server.URL
 
@@ -276,8 +276,8 @@ func (s *CrosschainTestSuite) TestFetchBalanceErrorFallback() {
 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
 	defer close2()
 
-	s.Asset.GetNativeAsset().Driver = string(xc.DriverSolana)
-	s.Asset.GetNativeAsset().URL = server2.URL
+	s.Asset.GetChain().Driver = string(xc.DriverSolana)
+	s.Asset.GetChain().URL = server2.URL
 	client, _ := NewClient(s.Asset)
 	client.URL = server.URL
 

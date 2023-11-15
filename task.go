@@ -72,21 +72,18 @@ type TaskConfigOperationParamDefaults struct {
 }
 
 type ITask interface {
+	// unique identifier used within crosschain, typically a combination of asset.chain
 	ID() AssetID
-
-	GetNativeAsset() *NativeAssetConfig
-
+	GetChain() *ChainConfig
 	// Get associated asset decimals if it exists
-	GetDecimals() (int32, bool)
-
+	GetDecimals() int32
 	// Get associated contract if it exists
-	GetContract() (string, bool)
-
-	// Get asset symbol (e.g. 'USDC') if it exists.  Does not include the chain.
-	GetAssetSymbol() (string, bool)
+	GetContract() string
 
 	// Informational / debugging
 	String() string
+	// Get asset symbol (e.g. 'USDC') if it exists.  Does not include the chain.  Informational.
+	GetAssetSymbol() string
 }
 
 func (task TaskConfig) String() string {
@@ -108,28 +105,23 @@ func (task *TaskConfig) ID() AssetID {
 	return AssetID(task.Name)
 }
 
-func (task *TaskConfig) GetDecimals() (int32, bool) {
+func (task *TaskConfig) GetDecimals() int32 {
 	// source asset is the asset being used typically
-	dec, _ := task.SrcAsset.GetDecimals()
-	return dec, false
+	return task.SrcAsset.GetDecimals()
 }
 
-func (task *TaskConfig) GetContract() (string, bool) {
+func (task *TaskConfig) GetContract() string {
 	// by default we return the source asset contract
-	contract, _ := task.SrcAsset.GetContract()
-	// return false, "not ok", as tasks may have multiple associated contracts
-	// and relying on the default here shouldn't be okay.
-	return contract, false
+	return task.SrcAsset.GetContract()
 }
 
-func (task *TaskConfig) GetAssetSymbol() (string, bool) {
+func (task *TaskConfig) GetAssetSymbol() string {
 	// by default we return the source asset contract
-	symbol, _ := task.SrcAsset.GetAssetSymbol()
-	return symbol, false
+	return task.SrcAsset.GetAssetSymbol()
 }
 
-func (task TaskConfig) GetNativeAsset() *NativeAssetConfig {
-	return task.SrcAsset.GetNativeAsset()
+func (task TaskConfig) GetChain() *ChainConfig {
+	return task.SrcAsset.GetChain()
 }
 
 func (task TaskConfig) GetTask() *TaskConfig {

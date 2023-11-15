@@ -98,7 +98,7 @@ func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 // NewClient returns a new Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	asset := cfgI
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	host := cfg.URL
 	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableCosmosResponses)
 	interceptor.Enable()
@@ -143,21 +143,21 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	txInput.AccountNumber = account.GetAccountNumber()
 	txInput.Sequence = account.GetSequence()
 	switch client.Asset.(type) {
-	case *xc.NativeAssetConfig:
+	case *xc.ChainConfig:
 		txInput.GasLimit = NativeTransferGasLimit
-		if client.Asset.GetNativeAsset().Asset == string(xc.HASH) {
+		if client.Asset.GetChain().Asset == string(xc.HASH) {
 			txInput.GasLimit = 200_000
 		}
 	default:
 		txInput.GasLimit = TokenTransferGasLimit
 	}
 
-	if !client.Asset.GetNativeAsset().NoGasFees {
+	if !client.Asset.GetChain().NoGasFees {
 		gasPrice, err := client.EstimateGasPrice(ctx)
 		if err != nil {
 			return txInput, fmt.Errorf("failed to estimate gas: %v", err)
 		}
-		if mult := client.Asset.GetNativeAsset().ChainGasMultiplier; mult > 0 {
+		if mult := client.Asset.GetChain().ChainGasMultiplier; mult > 0 {
 			gasPrice = gasPrice * mult
 		}
 		txInput.GasPrice = gasPrice
@@ -234,7 +234,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	}
 
 	result.TxID = string(txHash)
-	result.ExplorerURL = client.Asset.GetNativeAsset().ExplorerURL + "/tx/" + result.TxID
+	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID
 	tx.ParseTransfer()
 
 	// parse tx info - this should happen after ATA is set
@@ -305,7 +305,7 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 
 func (client *Client) fetchCw20Balance(ctx context.Context, address xc.Address, asset xc.ITask) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	contractAddress, _ := asset.GetContract()
+	contractAddress := asset.GetContract()
 
 	_, err := types.GetFromBech32(string(address), client.Prefix)
 	if err != nil {
@@ -336,7 +336,7 @@ func (client *Client) fetchCw20Balance(ctx context.Context, address xc.Address, 
 
 // FetchNativeBalance fetches account balance for a Cosmos address
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.fetchBankModuleBalance(ctx, address, client.Asset.GetNativeAsset())
+	return client.fetchBankModuleBalance(ctx, address, client.Asset.GetChain())
 }
 
 // Cosmos chains can have multiple native assets.  This helper is necessary to query the
@@ -350,10 +350,10 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	}
 	denom := ""
 	// denom should be the contract if it's set.
-	denom, _ = client.Asset.GetContract()
+	denom = client.Asset.GetContract()
 	if denom == "" {
 		// use the default chain coin (should be set for cosmos chains)
-		denom = client.Asset.GetNativeAsset().ChainCoin
+		denom = client.Asset.GetChain().ChainCoin
 	}
 
 	if denom == "" {

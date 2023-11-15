@@ -18,7 +18,7 @@ func (s *SolanaTestSuite) TestNewTxBuilder() {
 
 func (s *SolanaTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -34,7 +34,7 @@ func (s *SolanaTestSuite) TestNewNativeTransfer() {
 
 func (s *SolanaTestSuite) TestNewNativeTransferErr() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 
 	from := xc.Address("from") // fails on parsing from
 	to := xc.Address("to")
@@ -213,7 +213,7 @@ func (s *SolanaTestSuite) TestNewTokenTransferErr() {
 	require := s.Require()
 
 	// invalid asset
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -252,7 +252,7 @@ func (s *SolanaTestSuite) TestNewTokenTransferErr() {
 
 func (s *SolanaTestSuite) TestNewTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL

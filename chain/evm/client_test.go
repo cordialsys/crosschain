@@ -10,7 +10,7 @@ import (
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.NativeAssetConfig{})
+	client, err := NewClient(&xc.ChainConfig{})
 	require.NotNil(client)
 	require.False(client.Legacy)
 	require.Nil(err)
@@ -18,7 +18,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 
 func (s *CrosschainTestSuite) TestNewLegacyClient() {
 	require := s.Require()
-	client, err := NewLegacyClient(&xc.NativeAssetConfig{})
+	client, err := NewLegacyClient(&xc.ChainConfig{})
 	require.NotNil(client)
 	require.True(client.Legacy)
 	require.Nil(err)
@@ -93,7 +93,7 @@ func (s *CrosschainTestSuite) TestAccountBalance() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.NativeAssetConfig{URL: server.URL})
+		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
 		from := xc.Address("0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B")
 		balance, err := client.FetchBalance(s.Ctx, from)
 
@@ -200,7 +200,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.NativeAssetConfig{Asset: string(xc.ETH), URL: server.URL, ChainGasMultiplier: v.multiplier}
+		asset := &xc.ChainConfig{Asset: string(xc.ETH), URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)
 		if v.legacy {
 			client, err = NewLegacyClient(asset)
@@ -491,7 +491,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.NativeAssetConfig{Asset: string(xc.ETH), Net: "testnet", URL: server.URL, ChainID: 5}
+		asset := &xc.ChainConfig{Asset: string(xc.ETH), Net: "testnet", URL: server.URL, ChainID: 5}
 
 		asset.URL = server.URL
 		client, _ := NewClient(asset)

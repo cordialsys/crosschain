@@ -36,7 +36,7 @@ func NewClient(cfg ITask, driver Driver) (Client, error) {
 }
 
 func NewTxBuilder(cfg ITask) (TxBuilder, error) {
-	switch Driver(cfg.GetNativeAsset().Driver) {
+	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
 		return evm.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
@@ -58,7 +58,7 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 }
 
 func NewSigner(cfg ITask) (Signer, error) {
-	switch Driver(cfg.GetNativeAsset().Driver) {
+	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM, DriverEVMLegacy:
 		return evm.NewSigner(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
@@ -78,7 +78,7 @@ func NewSigner(cfg ITask) (Signer, error) {
 }
 
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
-	switch Driver(cfg.GetNativeAsset().Driver) {
+	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM, DriverEVMLegacy:
 		return evm.NewAddressBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:

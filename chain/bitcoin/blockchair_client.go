@@ -30,7 +30,7 @@ var _ xc.FullClientWithGas = &BlockchairClient{}
 // NewClient returns a new Bitcoin Client
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	asset := cfgI
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	opts := DefaultClientOptions()
 	httpClient := http.Client{}
 	httpClient.Timeout = opts.Timeout
@@ -329,7 +329,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 	}
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
-	asset := client.Asset.GetNativeAsset().Asset
+	asset := client.Asset.GetChain().Asset
 
 	for _, in := range data.Inputs {
 		hash, _ := hex.DecodeString(in.TxHash)

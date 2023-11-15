@@ -46,7 +46,7 @@ var _ xc.Client = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	solClient := rpc.New(cfg.URL)
 	return &Client{
 		SolClient: solClient,
@@ -70,11 +70,11 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		return nil, errors.New("error fetching blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
-	contract, _ := asset.GetContract()
+	contract := asset.GetContract()
 	if contract == "" {
-		if _, ok := asset.(*xc.NativeAssetConfig); !ok {
+		if _, ok := asset.(*xc.ChainConfig); !ok {
 			logrus.WithFields(logrus.Fields{
-				"chain":      asset.GetNativeAsset().Asset,
+				"chain":      asset.GetChain().Asset,
 				"asset_type": fmt.Sprintf("%T", asset),
 			}).Warn("no associated contract but not native asset")
 		}
@@ -210,7 +210,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	result.Fee = xc.NewAmountBlockchainFromUint64(meta.Fee)
 
 	result.TxID = string(txHash)
-	result.ExplorerURL = client.Asset.GetNativeAsset().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetNativeAsset().Net
+	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetChain().Net
 	result.ContractAddress = tx.ContractAddress()
 
 	toAddr := tx.ToOwnerAccount()
@@ -331,14 +331,14 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 // FetchBalanceForAsset fetches a specific token balance which may not be the asset configured for the client
 func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.ITask) (xc.AmountBlockchain, error) {
 	switch asset := client.Asset.(type) {
-	case *xc.NativeAssetConfig:
+	case *xc.ChainConfig:
 		return client.FetchNativeBalance(ctx, address)
 	case *xc.TokenAssetConfig:
 		return client.fetchContractBalance(ctx, address, asset.Contract)
 	default:
-		contract, _ := asset.GetContract()
+		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetNativeAsset().Asset,
+			"chain":      asset.GetChain().Asset,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("fetching balance for unknown asset type")

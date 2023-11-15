@@ -8,14 +8,14 @@ import (
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, err := NewAddressBuilder(&xc.ChainConfig{})
 	require.Nil(err)
 	require.NotNil(builder)
 }
 
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 	bytes, _ := hex.DecodeString("192c3c7e5789b461fbf1c7f614ba5eed0b22efc507cda60a5e7fda8e046bcdce")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.Nil(err)
@@ -24,7 +24,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 
 	address, err := builder.GetAddressFromPublicKey([]byte{1, 2, 3})
 	require.Equal(xc.Address(""), address)
@@ -33,7 +33,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
 
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 	bytes, _ := hex.DecodeString("192c3c7e5789b461fbf1c7f614ba5eed0b22efc507cda60a5e7fda8e046bcdce")
 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
 	require.Nil(err)

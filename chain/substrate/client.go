@@ -41,7 +41,7 @@ type TxInput struct {
 
 // NewClient returns a new Substrate Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	rpcurl := cfgI.GetNativeAsset().URL
+	rpcurl := cfgI.GetChain().URL
 	if rpcurl != "" {
 		client, err := gsrpc.NewSubstrateAPI(rpcurl)
 		return &Client{
@@ -115,7 +115,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.Tip = client.Asset.GetNativeAsset().ChainGasTip
+	txInput.Tip = client.Asset.GetChain().ChainGasTip
 	txInput.Nonce, err = client.FetchAccountNonce(txInput.Meta, from)
 	if err != nil {
 		return &TxInput{}, err
@@ -173,7 +173,7 @@ func (client *Client) ParseTxInfo(body []byte) (xc.TxInfo, error) {
 		TxID:       TxInfoResp.Data.ExtIndex,
 		From:       xc.Address(TxInfoResp.Data.Transfer.From),
 		To:         xc.Address(TxInfoResp.Data.Transfer.To),
-		Amount:     human.ToBlockchain(client.Asset.GetNativeAsset().Decimals),
+		Amount:     human.ToBlockchain(client.Asset.GetChain().Decimals),
 		Fee:        xc.NewAmountBlockchainFromStr(TxInfoResp.Data.Fee),
 		BlockIndex: int64(TxInfoResp.Data.BlockNum),
 		BlockTime:  int64(TxInfoResp.Data.BlockTime),
@@ -187,7 +187,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	}
 	var reqBody = []byte(`{"hash": "` + txHash + `"}`)
 
-	asset := client.Asset.GetNativeAsset()
+	asset := client.Asset.GetChain()
 	req, err := http.NewRequest("POST", asset.ExplorerURL+"/api/scan/extrinsic", bytes.NewBuffer(reqBody))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-API-Key", asset.AuthSecret)
@@ -233,7 +233,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 // FetchBalance fetches token balance for a Substrate address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetNativeAsset().Asset == client.Asset.GetNativeAsset().Asset {
+	if client.Asset.GetChain().Asset == client.Asset.GetChain().Asset {
 		return client.FetchNativeBalance(ctx, address)
 	} else {
 		return xc.AmountBlockchain{}, errors.New("unsupported asset")

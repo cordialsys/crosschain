@@ -226,7 +226,7 @@ crosschain:
 	expectedChainCount := len(defaults.Mainnet.Chains)
 	count := 0
 	xcf.AllAssets.Range(func(key, value any) bool {
-		if chain, ok := value.(*xc.NativeAssetConfig); ok {
+		if chain, ok := value.(*xc.ChainConfig); ok {
 			count += 1
 			require.NotEqual(chain.Net, "testnet")
 			require.NotEqual(chain.Net, "")
@@ -337,9 +337,9 @@ crosschain:
 		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
 		eth, err := f.GetAssetConfig("", "ETH")
 		require.NoError(err)
-		require.Equal("ETH", eth.GetNativeAsset().Asset)
-		require.Equal(tc.expectedAuth, eth.GetNativeAsset().AuthSecret)
-		require.Equal(tc.expectedUrl, eth.GetNativeAsset().URL)
+		require.Equal("ETH", eth.GetChain().Asset)
+		require.Equal(tc.expectedAuth, eth.GetChain().AuthSecret)
+		require.Equal(tc.expectedUrl, eth.GetChain().URL)
 
 	}
 
@@ -350,7 +350,7 @@ func (s *CrosschainTestSuite) TestSorted() {
 	// run multiple times since go map keys are not deterministic
 	for i := 0; i < 10; i++ {
 		cfg := factoryconfig.Config{
-			Chains: map[string]*xc.NativeAssetConfig{
+			Chains: map[string]*xc.ChainConfig{
 				"BBB": {
 					Asset: "BBB",
 				},

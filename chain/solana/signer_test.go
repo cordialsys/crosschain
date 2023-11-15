@@ -8,14 +8,14 @@ import (
 
 func (s *SolanaTestSuite) TestNewSigner() {
 	require := s.Require()
-	signer, err := NewSigner(&xc.NativeAssetConfig{})
+	signer, err := NewSigner(&xc.ChainConfig{})
 	require.Nil(err)
 	require.NotNil(signer)
 }
 
 func (s *SolanaTestSuite) TestImportPrivateKey() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 	key, err := signer.ImportPrivateKey("key")
 	require.Equal(key, xc.PrivateKey{0x2, 0x3d, 0xa6})
 	require.Nil(err)
@@ -46,7 +46,7 @@ func (s *SolanaTestSuite) TestSign() {
 	}
 
 	for _, v := range vectors {
-		signer, _ := NewSigner(&xc.NativeAssetConfig{})
+		signer, _ := NewSigner(&xc.ChainConfig{})
 		bytesPri, _ := hex.DecodeString(v.pri)
 		bytesMsg, _ := hex.DecodeString(v.msg)
 		sig, err := signer.Sign(xc.PrivateKey(bytesPri), xc.TxDataToSign(bytesMsg))
@@ -58,7 +58,7 @@ func (s *SolanaTestSuite) TestSign() {
 
 func (s *SolanaTestSuite) TestSignErr() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 	require.Panics(func() {
 		signer.Sign(xc.PrivateKey{}, xc.TxDataToSign{})
 	})

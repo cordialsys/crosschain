@@ -79,8 +79,8 @@ func (f *Factory) GetAllAssets() []ITask {
 	})
 	// sort so it's deterministc
 	sort.Slice(tasks, func(i, j int) bool {
-		asset_i := tasks[i].GetNativeAsset()
-		asset_j := tasks[j].GetNativeAsset()
+		asset_i := tasks[i].GetChain()
+		asset_j := tasks[j].GetChain()
 		key1 := string(asset_i.ID()) + string(asset_i.Asset) + asset_i.ChainName
 		key2 := string(asset_j.ID()) + string(asset_j.Asset) + asset_j.ChainName
 		return key1 < key2
@@ -104,9 +104,9 @@ func (f *Factory) cfgFromAsset(assetID AssetID) (ITask, error) {
 		if f.callbackGetAssetConfig != nil {
 			return f.callbackGetAssetConfig(assetID)
 		}
-		return &NativeAssetConfig{}, fmt.Errorf("could not lookup asset: '%s'", assetID)
+		return &ChainConfig{}, fmt.Errorf("could not lookup asset: '%s'", assetID)
 	}
-	if cfg, ok := cfgI.(*NativeAssetConfig); ok {
+	if cfg, ok := cfgI.(*ChainConfig); ok {
 		// native asset
 		// cfg.Type = AssetTypeNative
 		// cfg.Chain = cfg.Asset
@@ -118,7 +118,7 @@ func (f *Factory) cfgFromAsset(assetID AssetID) (ITask, error) {
 		cfg, _ = f.cfgEnrichToken(cfg)
 		return cfg, nil
 	}
-	return &NativeAssetConfig{}, fmt.Errorf("invalid asset: '%s'", assetID)
+	return &ChainConfig{}, fmt.Errorf("invalid asset: '%s'", assetID)
 }
 
 func (f *Factory) cfgFromAssetByContract(contract string, nativeAsset string) (ITask, error) {
@@ -126,12 +126,12 @@ func (f *Factory) cfgFromAssetByContract(contract string, nativeAsset string) (I
 	contract = normalize.NormalizeAddressString(contract, nativeAsset)
 	f.AllAssets.Range(func(key, value interface{}) bool {
 		cfg := value.(ITask)
-		chain := cfg.GetNativeAsset().Asset
+		chain := cfg.GetChain().Asset
 		cfgContract := ""
 		switch asset := cfg.(type) {
 		case *TokenAssetConfig:
 			cfgContract = normalize.NormalizeAddressString(asset.Contract, nativeAsset)
-		case *NativeAssetConfig:
+		case *ChainConfig:
 		}
 		if string(chain) == nativeAsset && cfgContract == contract {
 			res = value.(ITask)
@@ -305,8 +305,8 @@ func (f *Factory) cfgEnrichToken(partialCfg *TokenAssetConfig) (*TokenAssetConfi
 			return cfg, fmt.Errorf("unsupported native asset: %s", cfg.Chain)
 		}
 		// make copy so edits do not persist to local store
-		native := *chainI.(*NativeAssetConfig)
-		cfg.NativeAssetConfig = &native
+		native := *chainI.(*ChainConfig)
+		cfg.ChainConfig = &native
 	} else {
 		return cfg, fmt.Errorf("unsupported native asset: (empty)")
 	}
@@ -314,7 +314,7 @@ func (f *Factory) cfgEnrichToken(partialCfg *TokenAssetConfig) (*TokenAssetConfi
 }
 
 func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, error) {
-	native := activity.GetNativeAsset()
+	native := activity.GetChain()
 	result := txInfo
 
 	for i, dst := range txInfo.Destinations {
@@ -331,7 +331,7 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 				contractAddress = token.Contract
 				asset = token.Asset
 			}
-			if native, ok := assetCfgI.(*NativeAssetConfig); ok {
+			if native, ok := assetCfgI.(*ChainConfig); ok {
 				asset = native.Asset
 			}
 			// this isn't really needed, but more to pass along a descriptive name
@@ -345,7 +345,7 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 
 // NewClient creates a new Client
 func (f *Factory) NewClient(cfg ITask) (Client, error) {
-	nativeAsset := cfg.GetNativeAsset()
+	nativeAsset := cfg.GetChain()
 	clients := nativeAsset.GetAllClients()
 	if f.NoXcClients {
 		// prevent recursion
@@ -403,25 +403,15 @@ func (f *Factory) GetAllPossibleAddressesFromPublicKey(cfg ITask, publicKey []by
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
 func (f *Factory) ConvertAmountToHuman(cfg ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error) {
-	dec, ok := cfg.GetDecimals()
+	dec := cfg.GetDecimals()
 	amount := blockchainAmount.ToHuman(dec)
-	// TODO should we enforce an error here?
-	_ = ok
-	// if !ok {
-	// 	return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
-	// }
 	return amount, nil
 }
 
 // ConvertAmountToBlockchain converts an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
 func (f *Factory) ConvertAmountToBlockchain(cfg ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error) {
-	dec, ok := cfg.GetDecimals()
+	dec := cfg.GetDecimals()
 	amount := humanAmount.ToBlockchain(dec)
-	// TODO should we enforce an error here?
-	_ = ok
-	// if !ok {
-	// 	return amount, fmt.Errorf("asset does not have associated decimals: %T", cfg)
-	// }
 	return amount, nil
 }
 

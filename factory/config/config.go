@@ -15,7 +15,7 @@ type Config struct {
 
 	Network string `yaml:"network"`
 	// map of lowercase(native_asset) -> NativeAssetObject
-	Chains map[string]*xc.NativeAssetConfig `yaml:"chains"`
+	Chains map[string]*xc.ChainConfig `yaml:"chains"`
 	// map of lowercase(id) -> TokenAssetConfig
 	Tokens map[string]*xc.TokenAssetConfig `yaml:"tokens"`
 
@@ -40,11 +40,11 @@ func (cfg *Config) Parse() {
 		for _, chain := range cfg.Chains {
 			if chain.Asset == token.Chain {
 				copy := *chain
-				token.NativeAssetConfig = &copy
+				token.ChainConfig = &copy
 			}
 		}
 		// only add if matched to a chain
-		if token.NativeAssetConfig != nil {
+		if token.ChainConfig != nil {
 			cfg.chainsAndTokens = append(cfg.chainsAndTokens, token)
 		} else {
 			logrus.WithField("token", token).Warn("could not match token to a chain")

@@ -30,8 +30,8 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 	if !ok {
 		return "", xc.AmountBlockchain{}, nil, fmt.Errorf("not a *TaskConfig: %T", txBuilder.Asset)
 	}
-	srcNative := task.SrcAsset.GetNativeAsset()
-	dstNative := task.DstAsset.GetNativeAsset()
+	srcNative := task.SrcAsset.GetChain()
+	dstNative := task.DstAsset.GetChain()
 
 	// value, either tx value (for payable functions) or 0
 	valueZero := xc.NewAmountBlockchainFromUint64(0)
@@ -40,7 +40,7 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 	valueConsumed := false
 
 	// tx.to, typically contract address
-	to, _ := task.SrcAsset.GetContract()
+	to := task.SrcAsset.GetContract()
 
 	// data
 	var data []byte
@@ -58,7 +58,7 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 		// pass
 	case string:
 		if contract == "dst_asset" {
-			to, _ = task.DstAsset.GetContract()
+			to = task.DstAsset.GetContract()
 		} else if contract != "" {
 			to = contract
 		}
@@ -109,7 +109,7 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 				paddedAddr := common.LeftPadBytes(addr.Bytes(), 32)
 				data = append(data, paddedAddr...)
 			case "contract":
-				contract, _ := task.SrcAsset.GetContract()
+				contract := task.SrcAsset.GetContract()
 				addr := common.HexToAddress(contract)
 				paddedAddr := common.LeftPadBytes(addr.Bytes(), 32)
 				data = append(data, paddedAddr...)
@@ -195,7 +195,7 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 
 func (txBuilder TxBuilder) BuildTaskTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetNativeAsset()
+	native := txBuilder.Asset.GetChain()
 	// .GetAssetConfig()
 
 	txInput.GasLimit = 800_000
@@ -264,9 +264,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 		return contract, value, payload, err
 	}
 
-	dstContract, _ := task.DstAsset.GetContract()
-	dstDecimals, _ := task.DstAsset.GetDecimals()
-	priceUSD, ok := txInput.GetUsdPrice(xc.NativeAsset(task.DstAsset.GetNativeAsset().Asset), dstContract)
+	priceUSD, ok := txInput.GetUsdPrice(xc.NativeAsset(task.DstAsset.GetChain().Asset), task.DstAsset.GetContract())
 
 	if !ok || priceUSD.String() == "0" {
 		return contract, value, payload, fmt.Errorf("token price for %s is required to calculate arbiter fee", task.DstAsset.ID())
@@ -286,7 +284,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 
 	// - name: arbiterFee
 	//   type: uint256
-	arbiterFee := numTokens.ToBlockchain(dstDecimals)
+	arbiterFee := numTokens.ToBlockchain(task.DstAsset.GetDecimals())
 	paddedValue := common.LeftPadBytes(arbiterFee.Int().Bytes(), 32)
 	payload = append(payload, paddedValue...)
 
@@ -302,7 +300,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 
 func (txBuilder TxBuilder) BuildWormholeTransferTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetNativeAsset()
+	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 800_000
 	if native.Asset == string(xc.KLAY) {

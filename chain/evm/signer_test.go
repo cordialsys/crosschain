@@ -8,14 +8,14 @@ import (
 
 func (s *CrosschainTestSuite) TestNewSigner() {
 	require := s.Require()
-	signer, err := NewSigner(&xc.NativeAssetConfig{})
+	signer, err := NewSigner(&xc.ChainConfig{})
 	require.Nil(err)
 	require.NotNil(signer)
 }
 
 func (s *CrosschainTestSuite) TestImportPrivateKey() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 	key, err := signer.ImportPrivateKey("289c28")
 	require.Equal(key, xc.PrivateKey{0x28, 0x9c, 0x28})
 	require.Nil(err)
@@ -46,7 +46,7 @@ func (s *CrosschainTestSuite) TestSign() {
 	}
 
 	for _, v := range vectors {
-		signer, _ := NewSigner(&xc.NativeAssetConfig{})
+		signer, _ := NewSigner(&xc.ChainConfig{})
 		bytesPri, _ := hex.DecodeString(v.pri)
 		bytesMsg, _ := hex.DecodeString(v.msg)
 		sig, err := signer.Sign(xc.PrivateKey(bytesPri), xc.TxDataToSign(bytesMsg))
@@ -58,7 +58,7 @@ func (s *CrosschainTestSuite) TestSign() {
 
 func (s *CrosschainTestSuite) TestSignErr() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 
 	sig, err := signer.Sign(xc.PrivateKey{}, xc.TxDataToSign{})
 	require.NotNil(err)

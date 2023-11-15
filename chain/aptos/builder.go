@@ -93,7 +93,7 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 	copy(to_addr[:], mustDecodeHex(string(to)))
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
 
-	contract, _ := txb.Asset.GetContract()
+	contract := txb.Asset.GetContract()
 
 	typeTag, err := transactionbuilder.NewTypeTagStructFromString(contract)
 	if err != nil {

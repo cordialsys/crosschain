@@ -28,7 +28,7 @@ type TxInput struct {
 
 // NewClient returns a new Crosschain Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	url := cfgI.GetNativeAsset().Clients[0].URL
+	url := cfgI.GetChain().Clients[0].URL
 	return &Client{
 		Asset: cfgI,
 		URL:   url,
@@ -38,7 +38,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 func (client *Client) nextClient() (xc.Client, error) {
 	cfg := client.Asset
-	driver := cfg.GetNativeAsset().Driver
+	driver := cfg.GetChain().Driver
 	if driver == "" {
 		return nil, errors.New("crosschain client fallback is disabled")
 	}
@@ -46,13 +46,13 @@ func (client *Client) nextClient() (xc.Client, error) {
 }
 
 func (client *Client) apiAsset() *types.AssetReq {
-	native := client.Asset.GetNativeAsset()
-	contract, _ := client.Asset.GetContract()
-	decimals, _ := client.Asset.GetDecimals()
+	native := client.Asset.GetChain()
+	contract := client.Asset.GetContract()
+	decimals := client.Asset.GetDecimals()
 	assetSymbol := ""
 	// attempt to deduce the asset symbol
 	switch asset := client.Asset.(type) {
-	case *xc.NativeAssetConfig:
+	case *xc.ChainConfig:
 		assetSymbol = asset.Asset
 	case *xc.TokenAssetConfig:
 		assetSymbol = asset.Asset
@@ -132,7 +132,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 // SubmitTx submits via a Crosschain endpoint
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	chain := string(client.Asset.GetNativeAsset().Asset)
+	chain := string(client.Asset.GetChain().Asset)
 	data, err := txInput.Serialize()
 	if err != nil {
 		return err

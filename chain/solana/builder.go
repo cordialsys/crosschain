@@ -33,15 +33,15 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.TaskConfig:
 		return txBuilder.NewTask(from, to, amount, input)
-	case *xc.NativeAssetConfig:
+	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 	case *xc.TokenAssetConfig:
 		return txBuilder.NewTokenTransfer(from, to, amount, input)
 	default:
 		// TODO this should return error
-		contract, _ := asset.GetContract()
+		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetNativeAsset().Asset,
+			"chain":      asset.GetChain().Asset,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("new transfer for unknown asset type")
@@ -96,11 +96,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	asset := txBuilder.Asset
 	txInput := input.(*TxInput)
 
-	contract, ok := asset.GetContract()
-	if !ok {
+	contract := asset.GetContract()
+	if contract == "" {
 		return nil, errors.New("asset does not have a contract")
 	}
-	decimals, _ := asset.GetDecimals()
+	decimals := asset.GetDecimals()
 
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
@@ -235,7 +235,7 @@ func (txBuilder TxBuilder) BuildWrapTx(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	contract, _ := asset.GetContract()
+	contract := asset.GetContract()
 	accountContract, err := solana.PublicKeyFromBase58(string(contract))
 	if err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 		return nil, err
 	}
 
-	contract, _ := asset.GetContract()
+	contract := asset.GetContract()
 	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract))
 	if err != nil {
 		return nil, err

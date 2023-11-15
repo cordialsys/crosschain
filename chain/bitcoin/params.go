@@ -56,7 +56,7 @@ func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
 	}
 }
 
-func GetParams(cfg *xc.NativeAssetConfig) (*chaincfg.Params, error) {
+func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
 	switch xc.NativeAsset(cfg.Asset) {
 	case xc.BTC, xc.BCH:
 		return BtcNetworks.GetParams(cfg.Net), nil

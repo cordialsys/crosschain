@@ -41,7 +41,7 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 	}, nil
 }
 
-func DefaultMaxGasPrice(nativeAsset *xc.NativeAssetConfig) float64 {
+func DefaultMaxGasPrice(nativeAsset *xc.ChainConfig) float64 {
 	// Don't spend more than e.g. 2 LUNA on a transaction
 	maxFee := DefaultMaxTotalFeeHuman.ToBlockchain(nativeAsset.Decimals)
 	return TotalFeeToFeePerGas(maxFee.String(), NativeTransferGasLimit)
@@ -50,7 +50,7 @@ func DefaultMaxGasPrice(nativeAsset *xc.NativeAssetConfig) float64 {
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetNativeAsset()
+	native := txBuilder.Asset.GetChain()
 	max := native.ChainMaxGasPrice
 	if max <= 0 {
 		max = DefaultMaxGasPrice(native)
@@ -122,7 +122,7 @@ func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amoun
 	if txInput.GasLimit == 0 {
 		txInput.GasLimit = TokenTransferGasLimit
 	}
-	contract, _ := asset.GetContract()
+	contract := asset.GetContract()
 	contractTransferMsg := fmt.Sprintf(`{"transfer": {"amount": "%s", "recipient": "%s"}}`, amount.String(), to)
 	msgSend := &wasmtypes.MsgExecuteContract{
 		Sender:   string(from),
@@ -135,7 +135,7 @@ func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amoun
 
 func (txBuilder TxBuilder) GetDenom() string {
 	asset := txBuilder.Asset
-	denom := asset.GetNativeAsset().ChainCoin
+	denom := asset.GetChain().ChainCoin
 	if token, ok := asset.(*xc.TokenAssetConfig); ok {
 		if token.Contract != "" {
 			denom = token.Contract
@@ -169,9 +169,9 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 		return nil, err
 	}
 
-	gasDenom := asset.GetNativeAsset().GasCoin
+	gasDenom := asset.GetChain().GasCoin
 	if gasDenom == "" {
-		gasDenom = asset.GetNativeAsset().ChainCoin
+		gasDenom = asset.GetChain().ChainCoin
 	}
 	cosmosBuilder.SetMemo(input.Memo)
 	cosmosBuilder.SetGasLimit(input.GasLimit)
@@ -181,10 +181,10 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 			Amount: types.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
 		},
 	}
-	taxRate := txBuilder.Asset.GetNativeAsset().ChainTransferTax
+	taxRate := txBuilder.Asset.GetChain().ChainTransferTax
 	tax := GetTaxFrom(amount, taxRate)
 	if tax.Uint64() > 0 {
-		taxDenom := asset.GetNativeAsset().ChainCoin
+		taxDenom := asset.GetChain().ChainCoin
 		if token, ok := asset.(*xc.TokenAssetConfig); ok && token.Contract != "" {
 			taxDenom = token.Contract
 		}
@@ -210,7 +210,7 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
 	sigsV2 := []signingtypes.SignatureV2{
 		{
-			PubKey: getPublicKey(asset.GetNativeAsset(), input.FromPublicKey),
+			PubKey: getPublicKey(asset.GetChain(), input.FromPublicKey),
 			Data: &signingtypes.SingleSignatureData{
 				SignMode:  sigMode,
 				Signature: nil,
@@ -225,14 +225,14 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 
 	signerData := signing.SignerData{
 		AccountNumber: input.AccountNumber,
-		ChainID:       asset.GetNativeAsset().ChainIDStr,
+		ChainID:       asset.GetChain().ChainIDStr,
 		Sequence:      input.Sequence,
 	}
 	sighashData, err := cosmosTxConfig.SignModeHandler().GetSignBytes(sigMode, signerData, cosmosBuilder.GetTx())
 	if err != nil {
 		return nil, err
 	}
-	sighash := getSighash(asset.GetNativeAsset(), sighashData)
+	sighash := getSighash(asset.GetChain(), sighashData)
 	return &Tx{
 		CosmosTx:        cosmosBuilder.GetTx(),
 		ParsedTransfers: []types.Msg{msg},

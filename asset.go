@@ -178,7 +178,7 @@ type ClientConfig struct {
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
-type NativeAssetConfig struct {
+type ChainConfig struct {
 	Asset                string          `yaml:"asset,omitempty"`
 	Driver               string          `yaml:"driver,omitempty"`
 	Net                  string          `yaml:"net,omitempty"`
@@ -221,17 +221,17 @@ type TokenAssetConfig struct {
 
 	// Token configs are joined with a chain config upon loading.
 	// If there is no matching native asset config, there will be a loading error.
-	NativeAssetConfig *NativeAssetConfig `yaml:"-"`
+	ChainConfig *ChainConfig `yaml:"-"`
 }
 
 // type AssetMetadataConfig struct {
 // 	PriceUSD AmountHumanReadable `yaml:"-"`
 // }
 
-var _ ITask = &NativeAssetConfig{}
+var _ ITask = &ChainConfig{}
 var _ ITask = &TokenAssetConfig{}
 
-func (c NativeAssetConfig) String() string {
+func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
 		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
@@ -239,24 +239,24 @@ func (c NativeAssetConfig) String() string {
 	)
 }
 
-func (asset *NativeAssetConfig) ID() AssetID {
+func (asset *ChainConfig) ID() AssetID {
 	return GetAssetIDFromAsset("", asset.Asset)
 }
 
-func (asset *NativeAssetConfig) GetDecimals() (int32, bool) {
-	return asset.Decimals, true
+func (asset *ChainConfig) GetDecimals() int32 {
+	return asset.Decimals
 }
 
 // func (asset NativeAssetConfig) GetDriver() Driver {
 // 	return Driver(asset.Driver)
 // }
 
-func (asset *NativeAssetConfig) GetNativeAsset() *NativeAssetConfig {
+func (asset *ChainConfig) GetChain() *ChainConfig {
 	return asset
 }
 
-func (native *NativeAssetConfig) GetContract() (string, bool) {
-	return "", false
+func (native *ChainConfig) GetContract() string {
+	return ""
 }
 
 // TODO we should delete these extra fields that are indicative of chain
@@ -270,7 +270,7 @@ func (native *NativeAssetConfig) GetContract() (string, bool) {
 
 // Return list of clients with the "default" client added
 // if it's not already there
-func (asset NativeAssetConfig) GetAllClients() []*ClientConfig {
+func (asset ChainConfig) GetAllClients() []*ClientConfig {
 	defaultCfg := &ClientConfig{
 		Driver: asset.Driver,
 		URL:    asset.URL,
@@ -291,7 +291,7 @@ func (asset NativeAssetConfig) GetAllClients() []*ClientConfig {
 }
 
 // Return all clients that are not crosschain driver
-func (asset NativeAssetConfig) GetNativeClients() []*ClientConfig {
+func (asset ChainConfig) GetNativeClients() []*ClientConfig {
 	clients := asset.GetAllClients()
 	filtered := []*ClientConfig{}
 	for _, client := range clients {
@@ -302,13 +302,13 @@ func (asset NativeAssetConfig) GetNativeClients() []*ClientConfig {
 	return filtered
 }
 
-func (native *NativeAssetConfig) GetAssetSymbol() (string, bool) {
-	return native.Asset, true
+func (native *ChainConfig) GetAssetSymbol() string {
+	return native.Asset
 }
 
 func (c *TokenAssetConfig) String() string {
 	net := ""
-	native := c.GetNativeAsset()
+	native := c.GetChain()
 	if native != nil {
 		net = native.Net
 	}
@@ -322,22 +322,22 @@ func (asset *TokenAssetConfig) ID() AssetID {
 	return GetAssetIDFromAsset(asset.Asset, asset.Chain)
 }
 
-func (asset *TokenAssetConfig) GetNativeAsset() *NativeAssetConfig {
-	return asset.NativeAssetConfig
+func (asset *TokenAssetConfig) GetChain() *ChainConfig {
+	return asset.ChainConfig
 }
 
 //	func (asset *TokenAssetConfig) GetDriver() Driver {
 //		return Driver(asset.GetNativeAsset().Driver)
 //	}
-func (asset *TokenAssetConfig) GetDecimals() (int32, bool) {
-	return asset.Decimals, true
+func (asset *TokenAssetConfig) GetDecimals() int32 {
+	return asset.Decimals
 }
 
-func (token *TokenAssetConfig) GetContract() (string, bool) {
-	return token.Contract, true
+func (token *TokenAssetConfig) GetContract() string {
+	return token.Contract
 }
-func (token *TokenAssetConfig) GetAssetSymbol() (string, bool) {
-	return token.Asset, true
+func (token *TokenAssetConfig) GetAssetSymbol() string {
+	return token.Asset
 }
 
 // func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {

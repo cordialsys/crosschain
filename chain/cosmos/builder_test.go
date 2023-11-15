@@ -43,7 +43,7 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 		},
 	} {
 
-		asset := &xc.NativeAssetConfig{
+		asset := &xc.ChainConfig{
 			Asset:            "XPLA",
 			ChainCoin:        "axpla",
 			ChainPrefix:      "xpla",
@@ -114,7 +114,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 		},
 	} {
 
-		asset := &xc.NativeAssetConfig{
+		asset := &xc.ChainConfig{
 			Asset:            "LUNA",
 			ChainCoin:        "uluna",
 			ChainPrefix:      "terra",

@@ -39,7 +39,7 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 		if driver == xc.DriverAptos || driver == xc.DriverBitcoin || driver == xc.DriverSubstrate {
 			continue
 		}
-		fakeAsset := &xc.NativeAssetConfig{
+		fakeAsset := &xc.ChainConfig{
 			// URL:         server.URL,
 			Driver: string(driver),
 		}
@@ -57,7 +57,7 @@ func (s *CrosschainTestSuite) TestAllNewTxBuilder() {
 		if driver == xc.DriverBitcoin {
 			continue
 		}
-		fakeAsset := &xc.NativeAssetConfig{
+		fakeAsset := &xc.ChainConfig{
 			Driver: string(driver),
 		}
 		res, err := NewTxBuilder(fakeAsset)
@@ -70,7 +70,7 @@ func (s *CrosschainTestSuite) TestAllNewSigner() {
 	require := s.Require()
 
 	for _, driver := range xc.SupportedDrivers {
-		fakeAsset := &xc.NativeAssetConfig{
+		fakeAsset := &xc.ChainConfig{
 			Driver: string(driver),
 		}
 		res, err := NewSigner(fakeAsset)
@@ -87,7 +87,7 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 		if driver == xc.DriverBitcoin {
 			continue
 		}
-		fakeAsset := &xc.NativeAssetConfig{
+		fakeAsset := &xc.ChainConfig{
 			Driver: string(driver),
 		}
 		res, err := NewAddressBuilder(fakeAsset)

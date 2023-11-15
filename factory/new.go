@@ -70,7 +70,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 		Config:       cfg,
 	}
 	for _, asset := range assetsList {
-		disabled := asset.GetNativeAsset().Disabled
+		disabled := asset.GetChain().Disabled
 		if disabled != nil && *disabled {
 			// skip unless explicity including
 			if !options.UseDisabledChains {
@@ -78,7 +78,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			}
 		}
 		// dereference secrets
-		if native, ok := asset.(*xc.NativeAssetConfig); ok {
+		if native, ok := asset.(*xc.ChainConfig); ok {
 			if native.Auth != "" {
 				var err error
 				native.AuthSecret, err = config.GetSecret(native.Auth)

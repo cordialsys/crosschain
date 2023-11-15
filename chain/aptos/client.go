@@ -21,7 +21,7 @@ var _ xc.FullClientWithGas = &Client{}
 
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	client, err := aptosclient.Dial(context.Background(), cfg.URL)
 	return &Client{
 		Asset:       cfgI,
@@ -124,7 +124,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		BlockTime:   int64((tx.Timestamp / 1000) / 1000),
 		TxID:        tx.Hash,
 		BlockIndex:  int64(tx.Version),
-		ExplorerURL: fmt.Sprintf("/txn/%d?network=%s", tx.Version, client.Asset.GetNativeAsset().Net),
+		ExplorerURL: fmt.Sprintf("/txn/%d?network=%s", tx.Version, client.Asset.GetChain().Net),
 	}, nil
 }
 
@@ -156,7 +156,7 @@ func (client *Client) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc
 func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
 	// invoke EstimateGasFunc callback, if registered
 	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.GetNativeAsset().Asset
+		nativeAsset := client.Asset.GetChain().Asset
 		res, err := client.EstimateGasFunc(xc.NativeAsset(nativeAsset))
 		if err != nil {
 			// continue with default implementation as fallback

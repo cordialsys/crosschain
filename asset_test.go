@@ -40,7 +40,7 @@ func (s *CrosschainTestSuite) TestChainType() {
 
 func (s *CrosschainTestSuite) TestAssetConfig() {
 	require := s.Require()
-	assetConfig := NativeAssetConfig{
+	assetConfig := ChainConfig{
 		Asset:      "myasset",
 		Net:        "mynet",
 		URL:        "myurl",

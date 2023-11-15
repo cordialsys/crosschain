@@ -38,7 +38,7 @@ var (
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
 func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
-	params, err := GetParams(asset.GetNativeAsset())
+	params, err := GetParams(asset.GetChain())
 	if err != nil {
 		return AddressBuilder{}, err
 	}
@@ -52,7 +52,7 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	if ab.asset.GetNativeAsset().Asset == string(xc.BCH) {
+	if ab.asset.GetChain().Asset == string(xc.BCH) {
 		addressPubKey, err := NewBchAddressPubKey(publicKeyBytes, ab.params)
 		if err != nil {
 			return "", err

@@ -29,14 +29,14 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 	if err != nil {
 		return zero, err
 	}
-	native := client.Asset.GetNativeAsset()
+	native := client.Asset.GetChain()
 	denoms := []string{
 		native.ChainCoin,
 		native.GasCoin,
 	}
 	minFeeRaw, err := ParseMinGasError(res, denoms)
 	if err != nil {
-		defaultGas := client.Asset.GetNativeAsset().ChainGasPriceDefault
+		defaultGas := client.Asset.GetChain().ChainGasPriceDefault
 		return defaultGas, nil
 	}
 	// Need to convert total fee into gas price (cost per gas)
@@ -48,7 +48,7 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 // The only way currently to determine this price is to try to submit a tx for free
 // and look at the error log.
 func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*Tx, error) {
-	native := client.Asset.GetNativeAsset()
+	native := client.Asset.GetChain()
 	builder, err := NewTxBuilder(native)
 	if err != nil {
 		return nil, err

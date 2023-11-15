@@ -75,7 +75,7 @@ var NewClient = NewBlockchairClient
 
 // NewClient returns a new Bitcoin Client
 func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
-	native := cfgI.GetNativeAsset()
+	native := cfgI.GetChain()
 	opts := DefaultClientOptions()
 	httpClient := http.Client{}
 	httpClient.Timeout = opts.Timeout
@@ -152,7 +152,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 	tx.msgTx.Deserialize(bytes.NewReader(data))
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
-	asset := client.Asset.GetNativeAsset().Asset
+	asset := client.Asset.GetChain().Asset
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain

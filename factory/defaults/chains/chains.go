@@ -47,5 +47,5 @@ var mainnetData string
 //go:embed testnet.yaml
 var testnetData string
 
-var Mainnet map[string]*xc.NativeAssetConfig
-var Testnet map[string]*xc.NativeAssetConfig
+var Mainnet map[string]*xc.ChainConfig
+var Testnet map[string]*xc.ChainConfig

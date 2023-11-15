@@ -73,7 +73,7 @@ func NewTxInput() *TxInput {
 }
 
 func configToEVMClientURL(cfgI xc.ITask) string {
-	cfg := cfgI.GetNativeAsset()
+	cfg := cfgI.GetChain()
 	if cfg.Provider == "infura" {
 		return cfg.URL + "/" + cfg.AuthSecret
 	}
@@ -114,7 +114,7 @@ func ReplaceIncompatiableEvmResponses(body []byte) []byte {
 
 // NewClient returns a new EVM Client
 func NewClient(asset xc.ITask) (*Client, error) {
-	nativeAsset := asset.GetNativeAsset()
+	nativeAsset := asset.GetChain()
 	url := configToEVMClientURL(asset)
 
 	// c, err := rpc.DialContext(context.Background(), url)
@@ -161,7 +161,7 @@ func NewLegacyClient(cfg xc.ITask) (*Client, error) {
 
 // FetchTxInput returns tx input for a EVM tx
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
-	nativeAsset := client.Asset.GetNativeAsset()
+	nativeAsset := client.Asset.GetChain()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	result := NewTxInput()
@@ -220,7 +220,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 // FetchTxInfo returns tx info for a EVM tx
 func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.TxInfo, error) {
-	nativeAsset := client.Asset.GetNativeAsset()
+	nativeAsset := client.Asset.GetChain()
 	txHashHex := TrimPrefixes(string(txHashStr))
 	txHash := common.HexToHash(txHashHex)
 
@@ -366,7 +366,7 @@ func (e *EvmGasEstimation) GetGasTipCap() xc.AmountBlockchain {
 }
 
 func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error) {
-	native := client.Asset.GetNativeAsset()
+	native := client.Asset.GetChain()
 	estimate := EvmGasEstimation{
 		BaseFee:   xc.NewAmountBlockchainFromUint64(0),
 		GasTipCap: xc.NewAmountBlockchainFromUint64(0),
@@ -438,12 +438,12 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 // Fetch the balance of the asset that this client is configured for
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	// native
-	if _, ok := client.Asset.(*xc.NativeAssetConfig); ok {
+	if _, ok := client.Asset.(*xc.ChainConfig); ok {
 		return client.FetchNativeBalance(ctx, address)
 	}
 
 	// token
-	contract, _ := client.Asset.GetContract()
+	contract := client.Asset.GetContract()
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	tokenAddress, _ := HexToAddress(xc.Address(contract))
 	instance, err := erc20.NewErc20(tokenAddress, client.EthClient)

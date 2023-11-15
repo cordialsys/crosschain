@@ -25,14 +25,14 @@ func TestExampleTestSuite(t *testing.T) {
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, err := NewAddressBuilder(&xc.ChainConfig{})
 	require.NotNil(builder)
 	require.EqualError(err, "not implemented")
 }
 
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(xc.Address(""), address)
 	require.EqualError(err, "not implemented")
@@ -40,7 +40,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey([]byte{})
 	require.NotNil(addresses)
 	require.EqualError(err, "not implemented")
@@ -50,14 +50,14 @@ func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 
 func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require := s.Require()
-	builder, err := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, err := NewTxBuilder(&xc.ChainConfig{})
 	require.NotNil(builder)
 	require.EqualError(err, "not implemented")
 }
 
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -69,7 +69,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 
 func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -81,7 +81,7 @@ func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 
 func (s *CrosschainTestSuite) TestNewTransfer() {
 	require := s.Require()
-	builder, _ := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, _ := NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -95,14 +95,14 @@ func (s *CrosschainTestSuite) TestNewTransfer() {
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.NativeAssetConfig{})
+	client, err := NewClient(&xc.ChainConfig{})
 	require.NotNil(client)
 	require.EqualError(err, "not implemented")
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require := s.Require()
-	client, _ := NewClient(&xc.NativeAssetConfig{})
+	client, _ := NewClient(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	input, err := client.FetchTxInput(s.Ctx, from, to)
@@ -112,14 +112,14 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 func (s *CrosschainTestSuite) TestSubmitTx() {
 	require := s.Require()
-	client, _ := NewClient(&xc.NativeAssetConfig{})
+	client, _ := NewClient(&xc.ChainConfig{})
 	err := client.SubmitTx(s.Ctx, &Tx{})
 	require.EqualError(err, "not implemented")
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
-	client, _ := NewClient(&xc.NativeAssetConfig{})
+	client, _ := NewClient(&xc.ChainConfig{})
 	info, err := client.FetchTxInfo(s.Ctx, xc.TxHash("hash"))
 	require.NotNil(info)
 	require.EqualError(err, "not implemented")
@@ -129,14 +129,14 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 
 func (s *CrosschainTestSuite) TestNewSigner() {
 	require := s.Require()
-	signer, err := NewSigner(&xc.NativeAssetConfig{})
+	signer, err := NewSigner(&xc.ChainConfig{})
 	require.NotNil(signer)
 	require.EqualError(err, "not implemented")
 }
 
 func (s *CrosschainTestSuite) TestImportPrivateKey() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 	key, err := signer.ImportPrivateKey("key")
 	require.NotNil(key)
 	require.EqualError(err, "not implemented")
@@ -144,7 +144,7 @@ func (s *CrosschainTestSuite) TestImportPrivateKey() {
 
 func (s *CrosschainTestSuite) TestSign() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.NativeAssetConfig{})
+	signer, _ := NewSigner(&xc.ChainConfig{})
 	sig, err := signer.Sign(xc.PrivateKey{}, xc.TxDataToSign{})
 	require.NotNil(sig)
 	require.EqualError(err, "not implemented")

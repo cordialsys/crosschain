@@ -14,7 +14,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 	server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
 	defer close()
 
-	client, err := NewClient(&xc.NativeAssetConfig{URL: server.URL})
+	client, err := NewClient(&xc.ChainConfig{URL: server.URL})
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -30,7 +30,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		err   string
 	}{
 		{
-			asset: &xc.NativeAssetConfig{},
+			asset: &xc.ChainConfig{},
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -49,7 +49,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			err: "",
 		},
 		{
-			asset: &xc.NativeAssetConfig{},
+			asset: &xc.ChainConfig{},
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -67,7 +67,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 		server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
 
-		asset := v.asset.GetNativeAsset()
+		asset := v.asset.GetChain()
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
 		// cut out the gas estimation
@@ -103,7 +103,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	}, 200)
 	server.StatusCodes = []int{200, 200, 400}
 	defer close()
-	asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet", URL: server.URL}
+	asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet", URL: server.URL}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -225,7 +225,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 		server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
 
-		asset := &xc.NativeAssetConfig{Net: "devnet"}
+		asset := &xc.ChainConfig{Net: "devnet"}
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
 		if v.err != "" {
@@ -257,14 +257,14 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		err   string
 	}{
 		{
-			&xc.NativeAssetConfig{},
+			&xc.ChainConfig{},
 			`{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
 			"1000000",
 			"",
 		},
 		{
 			// TODO I can't find any tokens on aptos
-			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", NativeAssetConfig: &xc.NativeAssetConfig{Asset: string(xc.APTOS)}},
+			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: &xc.ChainConfig{Asset: string(xc.APTOS)}},
 			[]string{
 				`{}`,
 				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
@@ -273,7 +273,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 			"failed to parse",
 		},
 		{
-			&xc.NativeAssetConfig{},
+			&xc.ChainConfig{},
 			`null`,
 			"0",
 			"",
@@ -286,7 +286,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		defer close()
 
 		asset := v.asset
-		asset.GetNativeAsset().URL = server.URL
+		asset.GetChain().URL = server.URL
 		client, _ := NewClient(asset)
 		if v.err != "" {
 			// errors should return 400 status code.
@@ -311,7 +311,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
-	asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet"}
+	asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet"}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -349,8 +349,8 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
-	native_asset := &xc.NativeAssetConfig{Asset: string(xc.APTOS), Net: "devnet"}
-	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", NativeAssetConfig: native_asset}
+	native_asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet"}
+	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", ChainConfig: native_asset}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -385,7 +385,7 @@ func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	require.Equal("a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", hex.EncodeToString(ser))
 
 	// use invalid contract address
-	bad_asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x112345", NativeAssetConfig: native_asset}
+	bad_asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x112345", ChainConfig: native_asset}
 	builder, _ = NewTxBuilder(bad_asset)
 	_, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
 	require.ErrorContains(err, "Invalid struct tag string literal")

@@ -19,14 +19,14 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	publicKey := getPublicKey(ab.Asset.GetNativeAsset(), publicKeyBytes)
+	publicKey := getPublicKey(ab.Asset.GetChain(), publicKeyBytes)
 	rawAddress := publicKey.Address()
 
 	err := sdk.VerifyAddressFormat(rawAddress)
 	if err != nil {
 		return xc.Address(""), err
 	}
-	bech32Addr, err := sdk.Bech32ifyAddressBytes(ab.Asset.GetNativeAsset().ChainPrefix, rawAddress)
+	bech32Addr, err := sdk.Bech32ifyAddressBytes(ab.Asset.GetChain().ChainPrefix, rawAddress)
 	return xc.Address(bech32Addr), err
 }
 

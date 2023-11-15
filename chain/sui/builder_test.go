@@ -13,7 +13,7 @@ func (s *CrosschainTestSuite) TestTransferHash() {
 	from := "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9"
 	to := "0xaa8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de6600"
 	from_pk, _ := hex.DecodeString("6a03aadd27a3753c3af2d676591528f3d8209f337b9506163479bc5e61f67ebd")
-	builder, err := NewTxBuilder(&xc.NativeAssetConfig{})
+	builder, err := NewTxBuilder(&xc.ChainConfig{})
 	require.NoError(err)
 
 	gasCoin := *suiCoin("0x8192d5c2b5722c60866761927d5a0737cd55d0c2b1150eabf818253795b38998", "HmMNQCsgudhDdXGe9X75WVyPbJnjFApq1EvFhaRzNB1n", 10_000_000_000, 1852477)

@@ -16,7 +16,7 @@ type AddressBuilder struct {
 
 // NewAddressBuilder creates a new Template AddressBuilder
 func NewAddressBuilder(cfgI xc.ITask) (xc.AddressBuilder, error) {
-	return AddressBuilder{byte(cfgI.GetNativeAsset().ChainID)}, nil
+	return AddressBuilder{byte(cfgI.GetChain().ChainID)}, nil
 }
 
 // GetAddressFromPublicKey returns an Address given a public key

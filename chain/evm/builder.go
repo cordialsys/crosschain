@@ -43,7 +43,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	case *xc.TaskConfig:
 		return txBuilder.NewTask(from, to, amount, input)
 
-	case *xc.NativeAssetConfig:
+	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 
 	case *xc.TokenAssetConfig:
@@ -51,9 +51,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 	default:
 		// TODO this should return error
-		contract, _ := asset.GetContract()
+		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetNativeAsset().Asset,
+			"chain":      asset.GetChain().Asset,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("new transfer for unknown asset type")
@@ -68,7 +68,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetNativeAsset()
+	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 90_000
 	if native.Asset == string(xc.ArbETH) {
@@ -81,7 +81,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetNativeAsset()
+	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 350_000
 	if native.Asset == string(xc.EmROSE) {
@@ -92,7 +92,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	contract, _ := txBuilder.Asset.GetContract()
+	contract := txBuilder.Asset.GetContract()
 	payload, err := txBuilder.buildERC20Payload(to, amount)
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountB
 	if err != nil {
 		return nil, err
 	}
-	chainID := new(big.Int).SetInt64(txBuilder.Asset.GetNativeAsset().ChainID)
+	chainID := new(big.Int).SetInt64(txBuilder.Asset.GetChain().ChainID)
 
 	if txBuilder.Legacy {
 		return &Tx{
@@ -147,7 +147,7 @@ func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountB
 	}
 
 	// Protection from setting very high gas tip
-	maxTipGwei := uint64(txBuilder.Asset.GetNativeAsset().ChainMaxGasPrice)
+	maxTipGwei := uint64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
 	if maxTipGwei == 0 {
 		maxTipGwei = DefaultMaxTipCapGwei
 	}

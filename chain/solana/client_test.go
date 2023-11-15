@@ -14,7 +14,7 @@ import (
 
 func (s *SolanaTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.NativeAssetConfig{})
+	client, err := NewClient(&xc.ChainConfig{})
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -62,7 +62,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 		err               string
 	}{
 		{
-			asset: &xc.NativeAssetConfig{},
+			asset: &xc.ChainConfig{},
 			// valid blockhash
 			resp:            `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
@@ -158,7 +158,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:               "",
 		},
 		{
-			asset: &xc.NativeAssetConfig{},
+			asset: &xc.ChainConfig{},
 			resp: []string{
 				// invalid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"error","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -182,7 +182,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "decode: invalid base58 digit",
 		},
 		{
-			asset:           &xc.NativeAssetConfig{},
+			asset:           &xc.ChainConfig{},
 			resp:            `null`,
 			blockHash:       "",
 			toIsATA:         false,
@@ -190,7 +190,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "error fetching blockhash",
 		},
 		{
-			asset:           &xc.NativeAssetConfig{},
+			asset:           &xc.ChainConfig{},
 			resp:            `{}`,
 			blockHash:       "",
 			toIsATA:         false,
@@ -198,7 +198,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			err:             "error fetching blockhash",
 		},
 		{
-			asset:           &xc.NativeAssetConfig{},
+			asset:           &xc.ChainConfig{},
 			resp:            errors.New(`{"message": "custom RPC error", "code": 123}`),
 			blockHash:       "",
 			toIsATA:         false,
@@ -213,12 +213,12 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 		defer close()
 		fmt.Println("ASSET", v.asset)
 		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-			token.NativeAssetConfig = &xc.NativeAssetConfig{
+			token.ChainConfig = &xc.ChainConfig{
 				URL:   server.URL,
 				Asset: "SOL",
 			}
 		} else {
-			v.asset.(*xc.NativeAssetConfig).URL = server.URL
+			v.asset.(*xc.ChainConfig).URL = server.URL
 		}
 
 		client, _ := NewClient(v.asset)
@@ -261,7 +261,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 
 	server, close := testtypes.MockJSONRPC(&s.Suite, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
-	client, _ := NewClient(&xc.NativeAssetConfig{Asset: string(xc.SOL), URL: server.URL})
+	client, _ := NewClient(&xc.ChainConfig{Asset: string(xc.SOL), URL: server.URL})
 	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 	})
@@ -270,7 +270,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 func (s *SolanaTestSuite) TestSubmitTxErr() {
 	require := s.Require()
 
-	client, _ := NewClient(&xc.NativeAssetConfig{})
+	client, _ := NewClient(&xc.ChainConfig{})
 	tx := &Tx{
 		SolTx:          &solana.Transaction{},
 		ParsedSolTx:    &rpc.ParsedTransaction{},
@@ -314,7 +314,7 @@ func (s *SolanaTestSuite) TestAccountBalance() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.NativeAssetConfig{URL: server.URL})
+		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 		balance, err := client.FetchNativeBalance(s.Ctx, from)
 
@@ -367,7 +367,7 @@ func (s *SolanaTestSuite) TestTokenBalance() {
 		defer close()
 
 		client, _ := NewClient(&xc.TokenAssetConfig{
-			NativeAssetConfig: &xc.NativeAssetConfig{
+			ChainConfig: &xc.ChainConfig{
 				URL: server.URL,
 			},
 			Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
@@ -555,7 +555,7 @@ func (s *SolanaTestSuite) TestFetchTxInfo() {
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.NativeAssetConfig{URL: server.URL})
+		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
 		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.tx))
 
 		if v.err != "" {
