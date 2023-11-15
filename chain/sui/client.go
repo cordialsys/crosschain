@@ -137,7 +137,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 			abs := amt.Abs()
 			totalSent = totalSent.Add(&abs)
 			sources = append(sources, &xc.TxInfoEndpoint{
-				Asset:           xc.Asset(asset),
+				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
 				Address:         xc.Address(from),
@@ -148,7 +148,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 			destinationAmount = amt
 			totalReceived = totalReceived.Add(&amt)
 			destinations = append(destinations, &xc.TxInfoEndpoint{
-				Asset:           xc.Asset(asset),
+				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
 				Address:         xc.Address(to),

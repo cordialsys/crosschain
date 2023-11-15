@@ -234,4 +234,5 @@ chains:
         chain_gas_multiplier: 10.0
         # translates to roughly max 50 HASH in gas per tx
         chain_max_gas_price: 125000.0
-
+        indexer_type: cosmos
+        polling_period: 5m

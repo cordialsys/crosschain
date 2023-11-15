@@ -43,7 +43,7 @@ type TxInfoEndpoint struct {
 	ContractAddress ContractAddress  `json:"contract,omitempty"`
 	Amount          AmountBlockchain `json:"amount"`
 	NativeAsset     NativeAsset      `json:"chain"`
-	Asset           Asset            `json:"asset,omitempty"`
+	Asset           string           `json:"asset,omitempty"`
 	// AssetConfig     *AssetConfig     `json:"asset_config,omitempty"`
 }
 

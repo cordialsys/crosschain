@@ -5,7 +5,7 @@ import "fmt"
 func (s *CrosschainTestSuite) TestTypesAssetVsNativeAsset() {
 	require := s.Require()
 	require.Equal(NativeAsset("SOL"), SOL)
-	require.NotEqual(Asset("SOL"), SOL)
+	require.NotEqual("SOL", SOL)
 }
 
 func (s *CrosschainTestSuite) TestAssetDriver() {

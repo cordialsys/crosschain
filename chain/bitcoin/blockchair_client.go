@@ -354,7 +354,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           xc.Asset(asset),
+			Asset:           asset,
 		})
 	}
 
@@ -376,7 +376,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 				Address:     xc.Address(out.Recipient),
 				Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 				NativeAsset: xc.NativeAsset(asset),
-				Asset:       xc.Asset(asset),
+				Asset:       asset,
 			})
 		}
 	}

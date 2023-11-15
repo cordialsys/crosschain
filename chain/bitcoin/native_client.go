@@ -183,7 +183,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           xc.Asset(asset),
+			Asset:           asset,
 		})
 	}
 
@@ -215,7 +215,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			ContractAddress: "",
 			Amount:          value,
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           xc.Asset(asset),
+			Asset:           asset,
 		})
 	}
 

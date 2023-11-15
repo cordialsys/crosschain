@@ -334,7 +334,7 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 				asset = native.Asset
 			}
 			// this isn't really needed, but more to pass along a descriptive name
-			dst.Asset = Asset(asset)
+			dst.Asset = asset
 			dst.ContractAddress = ContractAddress(contractAddress)
 		}
 		result.Destinations[i] = dst

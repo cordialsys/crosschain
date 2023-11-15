@@ -74,19 +74,15 @@ type TaskConfigOperationParamDefaults struct {
 type ITask interface {
 	ID() AssetID
 
-	// TODO you should be able to just `.GetNativeAsset().Driver`
-	// GetDriver() Driver
-	// TODO rename to ChainConfig?
 	GetNativeAsset() *NativeAssetConfig
-	// TODO not needed - this should be a type switch?
-	// GetTask() *TaskConfig
 
+	// Get associated asset decimals if it exists
 	GetDecimals() (int32, bool)
 
 	// Get associated contract if it exists
 	GetContract() (string, bool)
 
-	// Get asset symbol (e.g. 'USDC') if it exists
+	// Get asset symbol (e.g. 'USDC') if it exists.  Does not include the chain.
 	GetAssetSymbol() (string, bool)
 
 	// Informational / debugging

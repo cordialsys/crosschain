@@ -5,29 +5,6 @@ import (
 	"strings"
 )
 
-// Asset is an asset on a blockchain. It can be a token or native asset.
-type Asset string
-
-// AssetType is the type of an asset, either native or token
-type AssetType string
-
-// List of supported AssetType
-const (
-	AssetTypeNative = AssetType("native")
-	AssetTypeToken  = AssetType("token")
-	AssetTypeTask   = AssetType("task")
-)
-
-// ChainType is the type of a chain
-type ChainType string
-
-// List of supported ChainType
-const (
-	ChainTypeUnknown = ChainType("unknown")
-	ChainTypeUTXO    = ChainType("utxo")
-	ChainTypeAccount = ChainType("account")
-)
-
 type SignatureType string
 
 const (
@@ -38,7 +15,7 @@ const (
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
 // In Crosschain, for simplicity, a NativeAsset represents a chain.
-type NativeAsset Asset
+type NativeAsset string
 
 // List of supported NativeAsset
 const (
@@ -231,15 +208,9 @@ type NativeAssetConfig struct {
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
 	Disabled             *bool           `yaml:"disabled,omitempty"`
 
-	// Tokens
-	// Contract string `yaml:"contract,omitempty"`
-	// Name     string `yaml:"name,omitempty"`
-
 	// Internal
+	// dereferenced api token if used
 	AuthSecret string `yaml:"-"`
-	// Type       AssetType `yaml:"-"`
-	// NativeAsset NativeAsset         `yaml:"-"`
-	Metadata AssetMetadataConfig `yaml:"-"`
 }
 
 type TokenAssetConfig struct {
@@ -248,13 +219,14 @@ type TokenAssetConfig struct {
 	Decimals int32  `yaml:"decimals,omitempty"`
 	Contract string `yaml:"contract,omitempty"`
 
-	NativeAssetConfig *NativeAssetConfig  `yaml:"-"`
-	Metadata          AssetMetadataConfig `yaml:"-"`
+	// Token configs are joined with a chain config upon loading.
+	// If there is no matching native asset config, there will be a loading error.
+	NativeAssetConfig *NativeAssetConfig `yaml:"-"`
 }
 
-type AssetMetadataConfig struct {
-	PriceUSD AmountHumanReadable `yaml:"-"`
-}
+// type AssetMetadataConfig struct {
+// 	PriceUSD AmountHumanReadable `yaml:"-"`
+// }
 
 var _ ITask = &NativeAssetConfig{}
 var _ ITask = &TokenAssetConfig{}
