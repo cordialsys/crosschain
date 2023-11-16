@@ -240,7 +240,6 @@ require (
 
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
-	// replace wasmd instead of using local types to avoid protobuf conflicts
 	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
 	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
 )

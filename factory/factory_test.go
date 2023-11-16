@@ -126,7 +126,8 @@ func (s *CrosschainTestSuite) TestNewSigner() {
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		builder, _ := s.Factory.NewAddressBuilder(asset)
+		builder, err := s.Factory.NewAddressBuilder(asset)
+		require.NoError(err)
 		require.NotNil(builder)
 	}
 

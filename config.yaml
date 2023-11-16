@@ -3,7 +3,7 @@ crosschain:
   # Add overrides or new chains here.
   chains:
     ETH:
-      # asset: ETH
+      chain: ETH
       driver: evm
       net: testnet
       url: 'https://goerli.infura.io/v3'
@@ -14,7 +14,7 @@ crosschain:
       explorer_url: 'https://goerli.etherscan.io'
       decimals: 18
     MATIC:
-      asset: MATIC
+      chain: MATIC
       driver: evm
       net: testnet
       url: 'https://rpc-mumbai.matic.today'

@@ -179,9 +179,8 @@ type ClientConfig struct {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type ChainConfig struct {
-	Chain NativeAsset `yaml:"chain,omitempty"`
-	// deprecated
-	XAssetDeprecated     NativeAsset     `yaml:"asset,omitempty"`
+	Chain                NativeAsset     `yaml:"chain,omitempty"`
+	XAssetDeprecated     NativeAsset     `yaml:"asset,omitempty"` // deprecated
 	Driver               Driver          `yaml:"driver,omitempty"`
 	Net                  string          `yaml:"net,omitempty"`
 	Clients              []*ClientConfig `yaml:"clients,omitempty"`
@@ -209,6 +208,8 @@ type ChainConfig struct {
 	PollingPeriod        string          `yaml:"polling_period,omitempty"`
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
 	Disabled             *bool           `yaml:"disabled,omitempty"`
+
+	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
 	// Internal
 	// dereferenced api token if used

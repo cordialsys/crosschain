@@ -18,6 +18,9 @@ func init() {
 		if chain.Net == "" {
 			chain.Net = maincfg.Network
 		}
+		if chain.ConfirmationsFinal == 0 {
+			chain.ConfirmationsFinal = 6
+		}
 
 		// default to using xc client
 		defaultUrl := "https://crosschain.cordialapis.com"
@@ -36,6 +39,9 @@ func init() {
 	for _, chain := range Testnet {
 		if chain.Net == "" {
 			chain.Net = testcfg.Network
+		}
+		if chain.ConfirmationsFinal == 0 {
+			chain.ConfirmationsFinal = 2
 		}
 		// no testnet support in xc service yet
 	}
