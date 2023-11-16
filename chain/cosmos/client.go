@@ -145,7 +145,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	switch client.Asset.(type) {
 	case *xc.ChainConfig:
 		txInput.GasLimit = NativeTransferGasLimit
-		if client.Asset.GetChain().Asset == string(xc.HASH) {
+		if client.Asset.GetChain().Chain == xc.HASH {
 			txInput.GasLimit = 200_000
 		}
 	default:

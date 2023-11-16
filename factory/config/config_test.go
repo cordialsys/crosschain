@@ -106,9 +106,9 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 
 	// viper lowercases the config keys, but yaml natively
 	// is case sensitive.
-	require.Equal("ATOM", cfg.Chains["ATOM"].Asset)
+	require.Equal(xc.ATOM, cfg.Chains["ATOM"].Chain)
 	require.Equal("Cosmos", cfg.Chains["ATOM"].ChainName)
-	require.Equal("SOL", cfg.Chains["SOL"].Asset)
+	require.Equal(xc.SOL, cfg.Chains["SOL"].Chain)
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
 
 	require.Equal("USDC", cfg.Tokens["USDC.SOL"].Asset)
@@ -337,7 +337,7 @@ crosschain:
 		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
 		eth, err := f.GetAssetConfig("", "ETH")
 		require.NoError(err)
-		require.Equal("ETH", eth.GetChain().Asset)
+		require.Equal(xc.ETH, eth.GetChain().Chain)
 		require.Equal(tc.expectedAuth, eth.GetChain().AuthSecret)
 		require.Equal(tc.expectedUrl, eth.GetChain().URL)
 
@@ -352,13 +352,13 @@ func (s *CrosschainTestSuite) TestSorted() {
 		cfg := factoryconfig.Config{
 			Chains: map[string]*xc.ChainConfig{
 				"BBB": {
-					Asset: "BBB",
+					Chain: "BBB",
 				},
 				"AAA": {
-					Asset: "AAA",
+					Chain: "AAA",
 				},
 				"CCC": {
-					Asset: "CCC",
+					Chain: "CCC",
 				},
 			},
 			Tasks: map[string]*xc.TaskConfig{

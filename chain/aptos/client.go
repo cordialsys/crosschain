@@ -156,7 +156,7 @@ func (client *Client) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc
 func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
 	// invoke EstimateGasFunc callback, if registered
 	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.GetChain().Asset
+		nativeAsset := client.Asset.GetChain().Chain
 		res, err := client.EstimateGasFunc(xc.NativeAsset(nativeAsset))
 		if err != nil {
 			// continue with default implementation as fallback

@@ -20,7 +20,7 @@ var _ xc.TxInputWithPricing = &TxPriceInput{}
 
 func (input *TxPriceInput) SetUsdPrice(chain xc.NativeAsset, contract string, priceUsd xc.AmountHumanReadable) {
 	// normalize the contract
-	contract = normalize.Normalize(contract, string(chain))
+	contract = normalize.Normalize(contract, chain)
 	// remove any existing
 	input.removeUsdPrice(chain, contract)
 	// add new
@@ -32,7 +32,7 @@ func (input *TxPriceInput) SetUsdPrice(chain xc.NativeAsset, contract string, pr
 }
 
 func (input *TxPriceInput) GetUsdPrice(chain xc.NativeAsset, contract string) (xc.AmountHumanReadable, bool) {
-	contract = normalize.Normalize(contract, string(chain))
+	contract = normalize.Normalize(contract, chain)
 	for _, price := range input.Prices {
 		if price.Chain == chain && price.Contract == contract {
 			return price.PriceUsd, true

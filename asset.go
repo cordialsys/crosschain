@@ -171,7 +171,7 @@ type AssetID string
 
 // ClientConfig is the model used to represent a client inside an AssetConfig
 type ClientConfig struct {
-	Driver   string `yaml:"driver"`
+	Driver   Driver `yaml:"driver"`
 	URL      string `yaml:"url,omitempty"`
 	Auth     string `yaml:"auth,omitempty"`
 	Provider string `yaml:"provider,omitempty"`
@@ -179,8 +179,10 @@ type ClientConfig struct {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type ChainConfig struct {
-	Asset                string          `yaml:"asset,omitempty"`
-	Driver               string          `yaml:"driver,omitempty"`
+	Chain NativeAsset `yaml:"chain,omitempty"`
+	// deprecated
+	XAssetDeprecated     NativeAsset     `yaml:"asset,omitempty"`
+	Driver               Driver          `yaml:"driver,omitempty"`
 	Net                  string          `yaml:"net,omitempty"`
 	Clients              []*ClientConfig `yaml:"clients,omitempty"`
 	URL                  string          `yaml:"url,omitempty"`
@@ -214,10 +216,10 @@ type ChainConfig struct {
 }
 
 type TokenAssetConfig struct {
-	Asset    string `yaml:"asset,omitempty"`
-	Chain    string `yaml:"chain,omitempty"`
-	Decimals int32  `yaml:"decimals,omitempty"`
-	Contract string `yaml:"contract,omitempty"`
+	Asset    string      `yaml:"asset,omitempty"`
+	Chain    NativeAsset `yaml:"chain,omitempty"`
+	Decimals int32       `yaml:"decimals,omitempty"`
+	Contract string      `yaml:"contract,omitempty"`
 
 	// Token configs are joined with a chain config upon loading.
 	// If there is no matching native asset config, there will be a loading error.
@@ -235,12 +237,12 @@ func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
 		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.ID(), c.Asset, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth, c.Provider,
+		c.ID(), c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth, c.Provider,
 	)
 }
 
 func (asset *ChainConfig) ID() AssetID {
-	return GetAssetIDFromAsset("", asset.Asset)
+	return GetAssetIDFromAsset("", asset.Chain)
 }
 
 func (asset *ChainConfig) GetDecimals() int32 {
@@ -295,7 +297,7 @@ func (asset ChainConfig) GetNativeClients() []*ClientConfig {
 	clients := asset.GetAllClients()
 	filtered := []*ClientConfig{}
 	for _, client := range clients {
-		if client.Driver != string(DriverCrosschain) {
+		if client.Driver != DriverCrosschain {
 			filtered = append(filtered, client)
 		}
 	}
@@ -303,7 +305,7 @@ func (asset ChainConfig) GetNativeClients() []*ClientConfig {
 }
 
 func (native *ChainConfig) GetAssetSymbol() string {
-	return native.Asset
+	return string(native.Chain)
 }
 
 func (c *TokenAssetConfig) String() string {
@@ -354,7 +356,7 @@ func (token *TokenAssetConfig) GetAssetSymbol() string {
 // 	return nil
 // }
 
-func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, string) {
+func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
 	if asset == "" && nativeAsset == "" {
 		return "", ""
 	}
@@ -379,7 +381,7 @@ func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, string)
 		}
 	}
 
-	return asset, nativeAsset
+	return asset, NativeAsset(nativeAsset)
 }
 
 // GetAssetIDFromAsset return the canonical AssetID given two input strings asset, nativeAsset.
@@ -390,19 +392,19 @@ func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, string)
 // - GetAssetIDFromAsset("USDC", "SOL") -> "USDC.SOL"
 // - GetAssetIDFromAsset("USDC.SOL", "") -> "USDC.SOL"
 // See tests for more examples.
-func GetAssetIDFromAsset(asset string, nativeAsset string) AssetID {
+func GetAssetIDFromAsset(asset string, nativeAsset NativeAsset) AssetID {
 	// id is SYMBOL for ERC20 and SYMBOL.CHAIN for others
 	// e.g. BTC, ETH, USDC, SOL, USDC.SOL
-	asset, nativeAsset = parseAssetAndNativeAsset(asset, nativeAsset)
+	asset, nativeAsset = parseAssetAndNativeAsset(asset, string(nativeAsset))
 	validNative := NativeAsset(asset).IsValid()
 
 	// native asset, e.g. BTC, ETH, SOL
-	if asset == nativeAsset {
+	if asset == string(nativeAsset) {
 		return AssetID(asset)
 	}
 	if nativeAsset == "ETH" && !validNative {
 		return AssetID(asset + ".ETH")
 	}
 	// token, e.g. USDC, USDC.SOL
-	return AssetID(asset + "." + nativeAsset)
+	return AssetID(asset + "." + string(nativeAsset))
 }

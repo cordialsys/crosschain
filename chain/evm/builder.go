@@ -53,7 +53,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		// TODO this should return error
 		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Asset,
+			"chain":      asset.GetChain().Chain,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("new transfer for unknown asset type")
@@ -71,7 +71,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 90_000
-	if native.Asset == string(xc.ArbETH) {
+	if native.Chain == xc.ArbETH {
 		txInput.GasLimit = 4_000_000
 	}
 
@@ -84,10 +84,10 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 350_000
-	if native.Asset == string(xc.EmROSE) {
+	if native.Chain == xc.EmROSE {
 		txInput.GasLimit = 500_000
 	}
-	if native.Asset == string(xc.ArbETH) {
+	if native.Chain == xc.ArbETH {
 		txInput.GasLimit = 4_000_000
 	}
 

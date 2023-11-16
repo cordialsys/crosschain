@@ -41,7 +41,7 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 		}
 		fakeAsset := &xc.ChainConfig{
 			// URL:         server.URL,
-			Driver: string(driver),
+			Driver: driver,
 		}
 		res, err := NewClient(fakeAsset, driver)
 		require.NoError(err, "Missing driver for NewClient: "+driver)
@@ -58,7 +58,7 @@ func (s *CrosschainTestSuite) TestAllNewTxBuilder() {
 			continue
 		}
 		fakeAsset := &xc.ChainConfig{
-			Driver: string(driver),
+			Driver: driver,
 		}
 		res, err := NewTxBuilder(fakeAsset)
 		require.NoError(err, "Missing driver for NewTxBuilder: "+driver)
@@ -71,7 +71,7 @@ func (s *CrosschainTestSuite) TestAllNewSigner() {
 
 	for _, driver := range xc.SupportedDrivers {
 		fakeAsset := &xc.ChainConfig{
-			Driver: string(driver),
+			Driver: driver,
 		}
 		res, err := NewSigner(fakeAsset)
 		require.NoError(err, "Missing driver for NewSigner: "+driver)
@@ -88,7 +88,7 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 			continue
 		}
 		fakeAsset := &xc.ChainConfig{
-			Driver: string(driver),
+			Driver: driver,
 		}
 		res, err := NewAddressBuilder(fakeAsset)
 		require.NoError(err, "Missing driver for NewAddressBuilder: "+driver)

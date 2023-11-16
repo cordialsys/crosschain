@@ -233,7 +233,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 // FetchBalance fetches token balance for a Substrate address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetChain().Asset == client.Asset.GetChain().Asset {
+	if client.Asset.GetChain().Chain == client.Asset.GetChain().Chain {
 		return client.FetchNativeBalance(ctx, address)
 	} else {
 		return xc.AmountBlockchain{}, errors.New("unsupported asset")

@@ -1,7 +1,7 @@
 network: "mainnet"
 chains:
     ACA:
-        asset: ACA
+        chain: ACA
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -13,7 +13,7 @@ chains:
         indexer_type: rpc
         polling_period: 15m
     APTOS:
-        asset: APTOS
+        chain: APTOS
         driver: aptos
         clients:
             - driver: crosschain
@@ -26,7 +26,7 @@ chains:
         indexer_type: aptos
         polling_period: 8m
     ATOM:
-        asset: ATOM
+        chain: ATOM
         driver: cosmos
         clients:
             - driver: crosschain
@@ -42,7 +42,7 @@ chains:
         indexer_type: cosmos
         polling_period: 5m
     AVAX:
-        asset: AVAX
+        chain: AVAX
         driver: evm
         clients:
             - driver: crosschain
@@ -54,7 +54,7 @@ chains:
         indexer_type: covalent
         polling_period: 6m
     ArbETH:
-        asset: ArbETH
+        chain: ArbETH
         driver: evm
         clients:
             - driver: crosschain
@@ -67,7 +67,7 @@ chains:
         indexer_type: rpc
         polling_period: 10m
     AurETH:
-        asset: AurETH
+        chain: AurETH
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -79,7 +79,7 @@ chains:
         indexer_type: rpc
         polling_period: 15m
     BCH:
-        asset: BCH
+        chain: BCH
         driver: bitcoin
         clients:
             - driver: crosschain
@@ -93,7 +93,7 @@ chains:
         indexer_type: blockchair
         polling_period: 10m
     BNB:
-        asset: BNB
+        chain: BNB
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -105,7 +105,7 @@ chains:
         indexer_type: covalent
         polling_period: 6m
     BTC:
-        asset: BTC
+        chain: BTC
         driver: bitcoin
         clients:
             - driver: crosschain
@@ -119,7 +119,7 @@ chains:
         indexer_type: blockchair
         polling_period: 10m
     CELO:
-        asset: CELO
+        chain: CELO
         driver: evm
         clients:
             - driver: crosschain
@@ -132,7 +132,7 @@ chains:
         indexer_type: blockscout
         polling_period: 6m
     CHZ:
-        asset: CHZ
+        chain: CHZ
         driver: evm-legacy
         url: ""
         chain_id: 99999
@@ -145,7 +145,7 @@ chains:
         disabled: true
         no_gas_fees: true
     CHZ2:
-        asset: CHZ2
+        chain: CHZ2
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -158,7 +158,7 @@ chains:
         indexer_type: blockscout
         polling_period: 6m
     DOGE:
-        asset: DOGE
+        chain: DOGE
         driver: bitcoin
         clients:
             - driver: crosschain
@@ -172,7 +172,7 @@ chains:
         indexer_type: blockchair
         polling_period: 10m
     ETC:
-        asset: ETC
+        chain: ETC
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -185,7 +185,7 @@ chains:
         indexer_url: https://etc.blockscout.com
         polling_period: 10m
     ETH:
-        asset: ETH
+        chain: ETH
         driver: evm
         clients:
             - driver: crosschain
@@ -197,7 +197,7 @@ chains:
         indexer_type: covalent
         polling_period: 3m
     ETHW:
-        asset: ETHW
+        chain: ETHW
         driver: evm
         clients:
             - driver: crosschain
@@ -209,7 +209,7 @@ chains:
         indexer_type: rpc
         polling_period: 5m
     FTM:
-        asset: FTM
+        chain: FTM
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -221,7 +221,7 @@ chains:
         indexer_type: covalent
         polling_period: 6m
     INJ:
-        asset: INJ
+        chain: INJ
         driver: cosmos
         clients:
             - driver: crosschain
@@ -237,7 +237,7 @@ chains:
         indexer_type: cosmos
         polling_period: 5m
     KAR:
-        asset: KAR
+        chain: KAR
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -249,7 +249,7 @@ chains:
         indexer_type: rpc
         polling_period: 15m
     KLAY:
-        asset: KLAY
+        chain: KLAY
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -261,7 +261,7 @@ chains:
         indexer_type: rpc
         polling_period: 15m
     LTC:
-        asset: LTC
+        chain: LTC
         driver: bitcoin
         clients:
             - driver: crosschain
@@ -275,7 +275,7 @@ chains:
         indexer_type: blockchair
         polling_period: 10m
     LUNA:
-        asset: LUNA
+        chain: LUNA
         driver: cosmos
         clients:
             - driver: crosschain
@@ -290,7 +290,7 @@ chains:
         indexer_type: cosmos
         polling_period: 5m
     LUNC:
-        asset: LUNC
+        chain: LUNC
         driver: cosmos
         clients:
             - driver: crosschain
@@ -309,7 +309,7 @@ chains:
         indexer_type: cosmos
         polling_period: 5m
     MATIC:
-        asset: MATIC
+        chain: MATIC
         driver: evm
         clients:
             - driver: crosschain
@@ -324,7 +324,7 @@ chains:
         polling_period: 6m
         chain_max_gas_price: 120
     OAS:
-        asset: OAS
+        chain: OAS
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -337,7 +337,7 @@ chains:
         indexer_type: blockscout
         polling_period: 6m
     OptETH:
-        asset: OptETH
+        chain: OptETH
         driver: evm
         clients:
             - driver: crosschain
@@ -349,7 +349,7 @@ chains:
         indexer_type: rpc
         polling_period: 15m
     EmROSE:
-        asset: EmROSE
+        chain: EmROSE
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -361,7 +361,7 @@ chains:
         indexer_type: covalent
         polling_period: 6m
     SEI:
-        asset: SEI
+        chain: SEI
         driver: cosmos
         clients:
             - driver: crosschain
@@ -378,7 +378,7 @@ chains:
         polling_period: 15m
         disabled: true
     SOL:
-        asset: SOL
+        chain: SOL
         driver: solana
         clients:
             - driver: crosschain
@@ -389,7 +389,7 @@ chains:
         indexer_type: solana
         polling_period: 3m
     SUI:
-        asset: SUI
+        chain: SUI
         driver: sui
         clients:
             - driver: crosschain
@@ -400,7 +400,7 @@ chains:
         indexer_type: rpc
         polling_period: 3m
     TIA:
-        asset: TIA
+        chain: TIA
         driver: cosmos
         clients:
             - driver: crosschain
@@ -415,7 +415,7 @@ chains:
         polling_period: 15m
         disabled: true
     XDC:
-        asset: XDC
+        chain: XDC
         driver: evm-legacy
         clients:
             - driver: crosschain
@@ -428,7 +428,7 @@ chains:
         indexer_type: blocksscan
         polling_period: 6m
     XPLA:
-        asset: XPLA
+        chain: XPLA
         driver: cosmos
         clients:
             - driver: crosschain
@@ -444,7 +444,7 @@ chains:
         indexer_type: cosmos
         polling_period: 5m
     HASH:
-        asset: HASH
+        chain: HASH
         driver: cosmos
         url: https://rpc.provenance.io
         chain_id_str: pio-mainnet-1

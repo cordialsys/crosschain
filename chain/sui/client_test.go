@@ -152,7 +152,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Asset: string(xc.SUI), Net: "devnet", URL: server.URL}
+		asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
@@ -174,7 +174,7 @@ func (s *CrosschainTestSuite) TestInvalidTxFetchTxInfo() {
 	require := s.Require()
 	server, close := testtypes.MockJSONRPC(&s.Suite, "")
 	defer close()
-	asset := &xc.ChainConfig{Asset: string(xc.SUI), Net: "devnet", URL: server.URL}
+	asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 	asset.URL = server.URL
 	client, _ := NewClient(asset)
 
@@ -651,7 +651,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		fmt.Println("Running ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		nativeAsset := &xc.ChainConfig{Asset: string(xc.SUI), Net: "devnet", URL: server.URL}
+		nativeAsset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 		nativeAsset.URL = server.URL
 		var asset xc.ITask = nativeAsset
 		if v.token != nil {
@@ -771,7 +771,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		ctx := context.Background()
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Asset: string(xc.SUI), Net: "devnet", URL: server.URL}
+		asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 
 		asset.URL = server.URL
 		client, err := NewClient(asset)

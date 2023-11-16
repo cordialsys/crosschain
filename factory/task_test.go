@@ -223,7 +223,7 @@ func (s *CrosschainTestSuite) TestWormholeTransfer() {
 
 	// put the price in the tx_input
 	dstPrice, _ := xc.NewAmountHumanReadableFromStr("2.5")
-	txInput.SetUsdPrice(xc.NativeAsset(dstAsset.GetChain().Asset), dstAsset.GetContract(), dstPrice)
+	txInput.SetUsdPrice(xc.NativeAsset(dstAsset.GetChain().Chain), dstAsset.GetContract(), dstPrice)
 
 	tx, err := txBuilder.NewTransfer("from", xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.NoError(err)

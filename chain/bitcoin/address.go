@@ -52,7 +52,7 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	if ab.asset.GetChain().Asset == string(xc.BCH) {
+	if ab.asset.GetChain().Chain == xc.BCH {
 		addressPubKey, err := NewBchAddressPubKey(publicKeyBytes, ab.params)
 		if err != nil {
 			return "", err

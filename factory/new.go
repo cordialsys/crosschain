@@ -30,7 +30,6 @@ func NewFactory(options *FactoryOptions) *Factory {
 		panic(err)
 	}
 
-	// use testnet
 	switch cfg.Network {
 	case "mainet":
 		// done
@@ -83,7 +82,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 				var err error
 				native.AuthSecret, err = config.GetSecret(native.Auth)
 				if err != nil {
-					logrus.WithError(err).WithField("chain", native.Asset).Error("could access secret")
+					logrus.WithError(err).WithField("chain", native.Chain).Error("could access secret")
 				}
 			}
 		}

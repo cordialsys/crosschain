@@ -1,7 +1,7 @@
 network: "testnet"
 chains:
     APTOS:
-        asset: APTOS
+        chain: APTOS
         driver: aptos
         net: devnet
         url: https://fullnode.devnet.aptoslabs.com
@@ -9,7 +9,7 @@ chains:
         explorer_url: https://explorer.devnet.aptos.dev
         decimals: 8
     ATOM:
-        asset: ATOM
+        chain: ATOM
         driver: cosmos
         url: https://rpc.sentry-01.theta-testnet.polypore.xyz
         chain_id_str: theta-testnet-001
@@ -20,7 +20,7 @@ chains:
         explorer_url: https://explorer.theta-testnet.polypore.xyz
         decimals: 6
     AVAX:
-        asset: AVAX
+        chain: AVAX
         driver: evm
         url: https://api.avax-test.network/ext/bc/C/rpc
         chain_id: 43113
@@ -30,14 +30,14 @@ chains:
         indexer_url: https://api.covalenthq.com/v1
         indexer_type: covalent
     BCH:
-        asset: BCH
+        chain: BCH
         driver: bitcoin
         url: ""
         chain_name: Bitcoin Cash (Testnet)
         decimals: 8
         indexer_type: none
     BNB:
-        asset: BNB
+        chain: BNB
         driver: evm-legacy
         url: https://data-seed-prebsc-1-s1.binance.org:8545
         chain_id: 97
@@ -45,7 +45,7 @@ chains:
         explorer_url: https://testnet.bscscan.com
         decimals: 18
     BTC:
-        asset: BTC
+        chain: BTC
         driver: bitcoin
         url: https://api.blockchair.com/bitcoin/testnet
         auth: env:BLOCKCHAIR_API_TOKEN
@@ -54,7 +54,7 @@ chains:
         explorer_url: https://blockchair.com/bitcoin/testnet
         decimals: 8
     CELO:
-        asset: CELO
+        chain: CELO
         driver: evm
         url: https://alfajores-forno.celo-testnet.org
         chain_id: 44787
@@ -63,7 +63,7 @@ chains:
         decimals: 18
         indexer_type: rpc
     CHZ:
-        asset: CHZ
+        chain: CHZ
         driver: "evm-legacy"
         net: testnet
         url: ''
@@ -75,7 +75,7 @@ chains:
         disabled: true
         decimals: 18
     CHZ2:
-        asset: CHZ2
+        chain: CHZ2
         driver: evm-legacy
         url: https://spicy-rpc.chiliz.com
         chain_id: 88882
@@ -85,14 +85,14 @@ chains:
         indexer_url: https://spicy-explorer.chiliz.com
         indexer_type: blockscout
     DOGE:
-        asset: DOGE
+        chain: DOGE
         driver: bitcoin
         url: ""
         chain_name: Dogecoin (Testnet)
         decimals: 8
         indexer_type: none
     ETC:
-        asset: ETC
+        chain: ETC
         driver: evm-legacy
         url: https://www.ethercluster.com/mordor
         chain_id: 63
@@ -100,7 +100,7 @@ chains:
         decimals: 18
         indexer_type: none
     ETH:
-        asset: ETH
+        chain: ETH
         driver: evm
         url: https://goerli.infura.io/v3
         auth: env:INFURA_API_TOKEN
@@ -111,7 +111,7 @@ chains:
         decimals: 18
         indexer_type: rpc
     FTM:
-        asset: FTM
+        chain: FTM
         driver: evm-legacy
         url: https://rpc.testnet.fantom.network
         chain_id: 4002
@@ -120,7 +120,7 @@ chains:
         decimals: 18
         indexer_type: none
     KAR:
-        asset: KAR
+        chain: KAR
         driver: "evm-legacy"
         net: testnet
         url: 'http://103.253.145.222:8545'
@@ -130,7 +130,7 @@ chains:
         indexer_type: "none"
         decimals: 12
     KLAY:
-        asset: KLAY
+        chain: KLAY
         driver: "evm-legacy"
         net: testnet
         url: 'https://public-node-api.klaytnapi.com/v1/cypress'
@@ -140,7 +140,7 @@ chains:
         indexer_type: "none"
         decimals: 18
     INJ:
-        asset: INJ
+        chain: INJ
         driver: cosmos
         url: https://k8s.testnet.tm.injective.network
         chain_id_str: injective-888
@@ -152,7 +152,7 @@ chains:
         explorer_url: https://testnet.explorer.injective.network
         decimals: 18
     LUNA:
-        asset: LUNA
+        chain: LUNA
         driver: cosmos
         url: https://terra-testnet-rpc.polkachu.com
         chain_id_str: pisco-1
@@ -163,7 +163,7 @@ chains:
         explorer_url: https://finder.terra.money/testnet
         decimals: 6
     LUNC:
-        asset: LUNC
+        chain: LUNC
         driver: cosmos
         url: ""
         chain_id_str: bombay-12
@@ -173,7 +173,7 @@ chains:
         chain_coin_hd_path: 330
         decimals: 6
     MATIC:
-        asset: MATIC
+        chain: MATIC
         driver: evm
         url: https://rpc-mumbai.matic.today
         chain_id: 80001
@@ -182,7 +182,7 @@ chains:
         decimals: 18
         indexer_type: rpc
     EmROSE:
-        asset: EmROSE
+        chain: EmROSE
         driver: evm-legacy
         url: https://testnet.emerald.oasis.dev
         chain_id: 42261
@@ -190,7 +190,7 @@ chains:
         decimals: 18
         indexer_type: none
     SOL:
-        asset: SOL
+        chain: SOL
         driver: solana
         net: devnet
         url: https://api.devnet.solana.com
@@ -200,7 +200,7 @@ chains:
         indexer_type: solana
         polling_period: 2m
     SUI:
-        asset: SUI
+        chain: SUI
         driver: sui
         net: devnet
         url: https://fullnode.devnet.sui.io:443
@@ -210,7 +210,7 @@ chains:
         indexer_type: rpc
         polling_period: 2m
     XPLA:
-        asset: XPLA
+        chain: XPLA
         driver: cosmos
         url: https://cube-rpc.xpla.dev
         chain_id_str: cube_47-5
@@ -221,7 +221,7 @@ chains:
         explorer_url: https://explorer.xpla.io/testnet
         decimals: 18
     HASH:
-        asset: HASH
+        chain: HASH
         driver: cosmos
         url: https://rpc.test.provenance.io
         chain_id_str: pio-testnet-1

@@ -200,7 +200,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Asset: string(xc.ETH), URL: server.URL, ChainGasMultiplier: v.multiplier}
+		asset := &xc.ChainConfig{Chain: xc.ETH, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)
 		if v.legacy {
 			client, err = NewLegacyClient(asset)
@@ -491,7 +491,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Asset: string(xc.ETH), Net: "testnet", URL: server.URL, ChainID: 5}
+		asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
 
 		asset.URL = server.URL
 		client, _ := NewClient(asset)

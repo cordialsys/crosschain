@@ -31,7 +31,7 @@ func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 	return TxBuilder{
 		Asset:  cfgI,
 		Params: params,
-		isBch:  native.Asset == string(xc.BCH),
+		isBch:  native.Chain == xc.BCH,
 	}, nil
 }
 
@@ -66,7 +66,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	gasPrice := local_input.GasPricePerByte
 	// 255 for bitcoin, 300 for bch
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(uint64(255 * len(local_input.UnspentOutputs)))
-	if xc.NativeAsset(txBuilder.Asset.GetChain().Asset) == xc.BCH {
+	if xc.NativeAsset(txBuilder.Asset.GetChain().Chain) == xc.BCH {
 		estimatedTxBytesLength = xc.NewAmountBlockchainFromUint64(uint64(300 * len(local_input.UnspentOutputs)))
 	}
 	fee := gasPrice.Mul(&estimatedTxBytesLength)

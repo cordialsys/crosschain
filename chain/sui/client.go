@@ -141,7 +141,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
 				Address:         xc.Address(from),
-				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Asset),
+				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
 			})
 		} else {
 			to = bal.Owner.AddressOwner.String()
@@ -152,7 +152,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
 				Address:         xc.Address(to),
-				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Asset),
+				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
 			})
 		}
 	}

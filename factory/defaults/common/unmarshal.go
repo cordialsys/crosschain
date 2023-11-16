@@ -34,6 +34,7 @@ func Unmarshal(data string) *config.Config {
 	if err != nil {
 		panic(err)
 	}
+	cfg.MigrateFields()
 
 	cfg.Chains = lowercaseMap(cfg.Chains)
 	cfg.Tokens = lowercaseMap(cfg.Tokens)

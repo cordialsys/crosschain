@@ -95,7 +95,7 @@ func (f *TestFactory) ConvertAmountStrToBlockchain(asset xc.ITask, humanAmountSt
 }
 
 // GetAssetConfig returns an AssetConfig by asset and native asset (chain)
-func (f *TestFactory) GetAssetConfig(asset string, nativeAsset string) (xc.ITask, error) {
+func (f *TestFactory) GetAssetConfig(asset string, nativeAsset xc.NativeAsset) (xc.ITask, error) {
 	return f.DefaultFactory.GetAssetConfig(asset, nativeAsset)
 }
 
@@ -119,7 +119,7 @@ func (f *TestFactory) GetMultiAssetConfig(srcAssetID xc.AssetID, dstAssetID xc.A
 }
 
 // GetAssetConfigByContract returns an AssetConfig by contract and native asset (chain)
-func (f *TestFactory) GetAssetConfigByContract(contract string, nativeAsset string) (xc.ITask, error) {
+func (f *TestFactory) GetAssetConfigByContract(contract string, nativeAsset xc.NativeAsset) (xc.ITask, error) {
 	return f.DefaultFactory.GetAssetConfigByContract(contract, nativeAsset)
 }
 
@@ -141,7 +141,7 @@ func (f *TestFactory) UnregisterGetAssetConfigCallback() {
 	f.DefaultFactory.UnregisterGetAssetConfigCallback()
 }
 
-func (f *TestFactory) RegisterGetAssetConfigByContractCallback(callback func(contract string, nativeAsset string) (xc.ITask, error)) {
+func (f *TestFactory) RegisterGetAssetConfigByContractCallback(callback func(contract string, nativeAsset xc.NativeAsset) (xc.ITask, error)) {
 	f.DefaultFactory.RegisterGetAssetConfigByContractCallback(callback)
 }
 

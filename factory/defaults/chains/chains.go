@@ -23,12 +23,12 @@ func init() {
 		defaultUrl := "https://crosschain.cordialapis.com"
 		if chain.URL == "" && len(chain.Clients) == 0 {
 			chain.Clients = append(chain.Clients, &xc.ClientConfig{
-				Driver: string(xc.DriverCrosschain),
+				Driver: xc.DriverCrosschain,
 				URL:    defaultUrl,
 			})
 		}
 		for _, client := range chain.Clients {
-			if client.Driver == string(xc.DriverCrosschain) && client.URL == "" {
+			if client.Driver == xc.DriverCrosschain && client.URL == "" {
 				client.URL = defaultUrl
 			}
 		}

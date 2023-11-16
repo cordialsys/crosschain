@@ -74,7 +74,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if contract == "" {
 		if _, ok := asset.(*xc.ChainConfig); !ok {
 			logrus.WithFields(logrus.Fields{
-				"chain":      asset.GetChain().Asset,
+				"chain":      asset.GetChain().Chain,
 				"asset_type": fmt.Sprintf("%T", asset),
 			}).Warn("no associated contract but not native asset")
 		}
@@ -338,7 +338,7 @@ func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Addre
 	default:
 		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Asset,
+			"chain":      asset.GetChain().Chain,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("fetching balance for unknown asset type")

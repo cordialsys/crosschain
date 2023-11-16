@@ -41,7 +41,7 @@ func (s *CrosschainTestSuite) TestChainType() {
 func (s *CrosschainTestSuite) TestAssetConfig() {
 	require := s.Require()
 	assetConfig := ChainConfig{
-		Asset:      "myasset",
+		Chain:      "myasset",
 		Net:        "mynet",
 		URL:        "myurl",
 		Auth:       "myauth",
@@ -54,89 +54,91 @@ func (s *CrosschainTestSuite) TestAssetConfig() {
 
 func (s *CrosschainTestSuite) TestParseAssetAndNativeAsset() {
 	require := s.Require()
-	var asset, native string
+	var asset string
+	var native NativeAsset
 
 	asset, native = parseAssetAndNativeAsset("", "SOL")
 	require.Equal("SOL", asset)
-	require.Equal("SOL", native)
+	require.Equal(SOL, native)
 
 	asset, native = parseAssetAndNativeAsset("", "ETH")
 	require.Equal("ETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("ETH", "ETH")
 	require.Equal("ETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC", "SOL")
 	require.Equal("USDC", asset)
-	require.Equal("SOL", native)
+	require.Equal(SOL, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC", "ETH")
 	require.Equal("USDC", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC", "")
 	require.Equal("USDC", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC.SOL", "")
 	require.Equal("USDC", asset)
-	require.Equal("SOL", native)
+	require.Equal(SOL, native)
 
 	// WETH
 	asset, native = parseAssetAndNativeAsset("WETH", "")
 	require.Equal("WETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH.ETH", "")
 	require.Equal("WETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH", "ETH")
 	require.Equal("WETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH", "MATIC")
 	require.Equal("WETH", asset)
-	require.Equal("MATIC", native)
+	require.Equal(MATIC, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH.MATIC", "")
 	require.Equal("WETH", asset)
-	require.Equal("MATIC", native)
+	require.Equal(MATIC, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH.SOL", "")
 	require.Equal("WETH", asset)
-	require.Equal("SOL", native)
+	require.Equal(SOL, native)
 
 	asset, native = parseAssetAndNativeAsset("WETH", "SOL")
 	require.Equal("WETH", asset)
-	require.Equal("SOL", native)
+	require.Equal(SOL, native)
 }
 
 func (s *CrosschainTestSuite) TestParseAssetAndNativeAssetEdgeCases() {
 	require := s.Require()
-	var asset, native string
+	var asset string
+	var native NativeAsset
 
 	asset, native = parseAssetAndNativeAsset("", "")
 	require.Equal("", asset)
-	require.Equal("", native)
+	require.Equal(NativeAsset(""), native)
 
 	asset, native = parseAssetAndNativeAsset("", "test")
 	require.Equal("test", asset)
-	require.Equal("test", native)
+	require.Equal(NativeAsset("test"), native)
 
 	asset, native = parseAssetAndNativeAsset("USDC.sol", "") // invalid
 	require.Equal("USDC.sol", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC.WETH", "") // invalid
 	require.Equal("USDC.WETH", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 
 	asset, native = parseAssetAndNativeAsset("USDC.ETH.SOL", "") // invalid
 	require.Equal("USDC.ETH.SOL", asset)
-	require.Equal("ETH", native)
+	require.Equal(ETH, native)
 }
 
 func (s *CrosschainTestSuite) TestGetAssetIDFromAsset() {

@@ -329,7 +329,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 	}
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
-	asset := client.Asset.GetChain().Asset
+	asset := client.Asset.GetChain().Chain
 
 	for _, in := range data.Inputs {
 		hash, _ := hex.DecodeString(in.TxHash)
@@ -354,7 +354,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           asset,
+			Asset:           string(asset),
 		})
 	}
 
@@ -376,7 +376,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 				Address:     xc.Address(out.Recipient),
 				Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 				NativeAsset: xc.NativeAsset(asset),
-				Asset:       asset,
+				Asset:       string(asset),
 			})
 		}
 	}

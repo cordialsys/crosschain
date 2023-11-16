@@ -215,7 +215,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
 			token.ChainConfig = &xc.ChainConfig{
 				URL:   server.URL,
-				Asset: "SOL",
+				Chain: "SOL",
 			}
 		} else {
 			v.asset.(*xc.ChainConfig).URL = server.URL
@@ -261,7 +261,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 
 	server, close := testtypes.MockJSONRPC(&s.Suite, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
-	client, _ := NewClient(&xc.ChainConfig{Asset: string(xc.SOL), URL: server.URL})
+	client, _ := NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
 	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 	})

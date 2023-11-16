@@ -49,12 +49,12 @@ type NormalizeOptions struct {
 // NormalizeAddressString normalizes an address or hash
 // If possible (if it's hex), it will be lowercased.
 // You may specify if you want to remove or ensure the common prefix (if there is one).
-func Normalize(address string, nativeAsset string, optionsMaybe ...*NormalizeOptions) string {
+func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*NormalizeOptions) string {
 	if address == "" {
 		return ""
 	}
 	if nativeAsset == "" {
-		nativeAsset = string(xc.ETH)
+		nativeAsset = xc.ETH
 	}
 	options := &NormalizeOptions{
 		NoPrefix: false,
@@ -68,7 +68,7 @@ func Normalize(address string, nativeAsset string, optionsMaybe ...*NormalizeOpt
 	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
 	case xc.DriverEVM, xc.DriverEVMLegacy:
 		prefix := "0x"
-		if nativeAsset == string(xc.XDC) {
+		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix
 			address = strings.TrimPrefix(address, prefix)
 			prefix = "xdc"
@@ -125,11 +125,11 @@ func Normalize(address string, nativeAsset string, optionsMaybe ...*NormalizeOpt
 }
 
 // deprecated, use Normalize
-func NormalizeAddressString(address string, nativeAsset string, optionsMaybe ...*NormalizeOptions) string {
+func NormalizeAddressString(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*NormalizeOptions) string {
 	return Normalize(address, nativeAsset, optionsMaybe...)
 }
 
-func AddressEqual(address1 string, address2 string, nativeAsset string) bool {
+func AddressEqual(address1 string, address2 string, nativeAsset xc.NativeAsset) bool {
 	addr1 := NormalizeAddressString(address1, nativeAsset)
 	addr2 := NormalizeAddressString(address2, nativeAsset)
 	return addr1 == addr2

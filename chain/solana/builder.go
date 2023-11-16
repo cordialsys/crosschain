@@ -41,7 +41,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		// TODO this should return error
 		contract := asset.GetContract()
 		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Asset,
+			"chain":      asset.GetChain().Chain,
 			"contract":   contract,
 			"asset_type": fmt.Sprintf("%T", asset),
 		}).Warn("new transfer for unknown asset type")

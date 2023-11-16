@@ -49,16 +49,10 @@ func (client *Client) apiAsset() *types.AssetReq {
 	native := client.Asset.GetChain()
 	contract := client.Asset.GetContract()
 	decimals := client.Asset.GetDecimals()
-	assetSymbol := ""
-	// attempt to deduce the asset symbol
-	switch asset := client.Asset.(type) {
-	case *xc.ChainConfig:
-		assetSymbol = asset.Asset
-	case *xc.TokenAssetConfig:
-		assetSymbol = asset.Asset
-	}
+	assetSymbol := client.Asset.GetAssetSymbol()
+
 	return &types.AssetReq{
-		ChainReq: &types.ChainReq{Chain: string(native.Asset)},
+		ChainReq: &types.ChainReq{Chain: string(native.Chain)},
 		Asset:    assetSymbol,
 		Contract: contract,
 		Decimals: strconv.FormatInt(int64(decimals), 10),
@@ -132,7 +126,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 // SubmitTx submits via a Crosschain endpoint
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	chain := string(client.Asset.GetChain().Asset)
+	chain := string(client.Asset.GetChain().Chain)
 	data, err := txInput.Serialize()
 	if err != nil {
 		return err

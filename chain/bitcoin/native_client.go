@@ -152,7 +152,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 	tx.msgTx.Deserialize(bytes.NewReader(data))
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
-	asset := client.Asset.GetChain().Asset
+	asset := client.Asset.GetChain().Chain
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain
@@ -183,7 +183,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           asset,
+			Asset:           string(asset),
 		})
 	}
 
@@ -215,7 +215,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			ContractAddress: "",
 			Amount:          value,
 			NativeAsset:     xc.NativeAsset(asset),
-			Asset:           asset,
+			Asset:           string(asset),
 		})
 	}
 

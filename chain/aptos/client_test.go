@@ -103,7 +103,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	}, 200)
 	server.StatusCodes = []int{200, 200, 400}
 	defer close()
-	asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet", URL: server.URL}
+	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet", URL: server.URL}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -264,7 +264,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		},
 		{
 			// TODO I can't find any tokens on aptos
-			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: &xc.ChainConfig{Asset: string(xc.APTOS)}},
+			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: &xc.ChainConfig{Chain: xc.APTOS}},
 			[]string{
 				`{}`,
 				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
@@ -311,7 +311,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
-	asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet"}
+	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -349,7 +349,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
-	native_asset := &xc.ChainConfig{Asset: string(xc.APTOS), Net: "devnet"}
+	native_asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
 	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", ChainConfig: native_asset}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")

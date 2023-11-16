@@ -125,7 +125,7 @@ func isEVMOS(asset *xc.ChainConfig) bool {
 }
 
 func isINJ(asset *xc.ChainConfig) bool {
-	return asset.Asset == string(xc.INJ)
+	return asset.Chain == xc.INJ
 }
 
 func getPublicKey(asset *xc.ChainConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {

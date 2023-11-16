@@ -57,7 +57,7 @@ func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
 }
 
 func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
-	switch xc.NativeAsset(cfg.Asset) {
+	switch xc.NativeAsset(cfg.Chain) {
 	case xc.BTC, xc.BCH:
 		return BtcNetworks.GetParams(cfg.Net), nil
 	case xc.DOGE:
@@ -65,7 +65,7 @@ func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
 	case xc.LTC:
 		return LtcNetworks.GetParams(cfg.Net), nil
 	}
-	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Asset))
+	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Chain))
 }
 
 var BtcNetworks *NetworkTriple = &NetworkTriple{

@@ -308,7 +308,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 		Signer: types.LatestSignerForChainID(chainID),
 	}
 
-	info := confirmedTx.ParseTransfer(receipt, xc.NativeAsset(nativeAsset.Asset))
+	info := confirmedTx.ParseTransfer(receipt, xc.NativeAsset(nativeAsset.Chain))
 
 	result.From = confirmedTx.From()
 	result.To = confirmedTx.To()
@@ -374,7 +374,7 @@ func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error)
 	}
 
 	// KLAY has fixed gas price of 250 ston
-	if native.Asset == string(xc.KLAY) {
+	if native.Chain == xc.KLAY {
 		return EvmGasEstimation{
 			BaseFee: xc.NewAmountBlockchainFromUint64(250_000_000_000),
 		}, nil

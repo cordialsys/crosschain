@@ -29,16 +29,30 @@ type Config struct {
 	parsed bool `yaml:"-"`
 }
 
+func (cfg *Config) MigrateFields() {
+	for _, cfg := range cfg.Chains {
+		if cfg.XAssetDeprecated != "" && cfg.Chain == "" {
+			logrus.WithField("chain", cfg.Chain).Warn(".asset field is deprecated, please migrate to using .chain field instead")
+			cfg.Chain = cfg.XAssetDeprecated
+		}
+	}
+}
+
 func (cfg *Config) Parse() {
 	// Add all tokens + native assets to same list
 	cfg.chainsAndTokens = []xc.ITask{}
+	cfg.MigrateFields()
 	for _, chain := range cfg.Chains {
+		// migrate deprecated fields
+		if chain.XAssetDeprecated != "" && chain.Chain == "" {
+			chain.Chain = chain.XAssetDeprecated
+		}
 		cfg.chainsAndTokens = append(cfg.chainsAndTokens, chain)
 	}
 	for _, token := range cfg.Tokens {
 		// match to a chain
 		for _, chain := range cfg.Chains {
-			if chain.Asset == token.Chain {
+			if chain.Chain == token.Chain {
 				copy := *chain
 				token.ChainConfig = &copy
 			}

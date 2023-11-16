@@ -39,7 +39,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 	defer rpcClose()
 
 	client, err := NewClient(&xc.ChainConfig{
-		Asset:    "DOT",
+		Chain:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,
 		Decimals: 10,
@@ -60,7 +60,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	defer httpClose()
 
 	client, err := NewClient(&xc.ChainConfig{
-		Asset:       "DOT",
+		Chain:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
 		ChainID:     0,
@@ -91,7 +91,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 	defer httpClose()
 
 	client, err := NewClient(&xc.ChainConfig{
-		Asset:       "DOT",
+		Chain:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
 		ChainID:     0,
@@ -139,7 +139,7 @@ func (s *CrosschainTestSuite) TestEstimateGas() {
 	defer rpcClose()
 
 	client, err := NewClient(&xc.ChainConfig{
-		Asset:    "DOT",
+		Chain:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,
 		Decimals: 10,

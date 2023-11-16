@@ -44,7 +44,7 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 	} {
 
 		asset := &xc.ChainConfig{
-			Asset:            "XPLA",
+			Chain:            "XPLA",
 			ChainCoin:        "axpla",
 			ChainPrefix:      "xpla",
 			ChainTransferTax: tc.TaxRate,
@@ -115,7 +115,7 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 	} {
 
 		asset := &xc.ChainConfig{
-			Asset:            "LUNA",
+			Chain:            "LUNA",
 			ChainCoin:        "uluna",
 			ChainPrefix:      "terra",
 			ChainMaxGasPrice: tc.max,
