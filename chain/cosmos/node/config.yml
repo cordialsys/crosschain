@@ -1,0 +1,27 @@
+version: 1
+build:
+  proto:
+    path: proto
+    third_party_paths:
+    - third_party/proto
+    - proto_vendor
+accounts:
+- name: alice
+  # xpla1mmu56rh6syyruc5xeea2f82askyk5tvts8xnqf
+  mnemonic: wave twelve half orange lemon weapon staff rate mom taxi express audit wrap riot kidney buyer dust harsh snack chief minute taxi table zone
+  coins:
+  - 2000000000000000000000stake
+  - 2000000000000000000000axpla
+  - 2000000000000000000000inj
+  - 2000000000000000000000mytoken
+- name: bob
+  # xpla1n799mdlu9kuf9f6mcvm940kcgnhe9ku4s8a36d
+  mnemonic: parade subject shiver green parent cigar life amateur human impulse effort wasp sun diet someone cover curve tower topple mistake wine like solve funny
+  coins:
+  - 2000000000000000000000stake
+  - 2000000000000000000000axpla
+  - 2000000000000000000000inj
+  - 2000000000000000000000mytoken
+validators:
+- name: alice
+  bonded: 200000000000000stake

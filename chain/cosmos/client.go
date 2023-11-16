@@ -286,19 +286,16 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 
 func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address) (xc.AmountBlockchain, CosmoAssetType, error) {
 	// attempt getting the x/bank module balance first.
-	fmt.Println("-- bank")
 	bal, bankErr := client.fetchBankModuleBalance(ctx, address, client.Asset)
 	if bankErr == nil {
 		return bal, BANK, nil
 	}
 
 	// attempt getting the cw20 balance.
-	fmt.Println("-- cw20")
 	bal, cw20Err := client.fetchCw20Balance(ctx, address, client.Asset)
 	if cw20Err == nil {
 		return bal, CW20, nil
 	}
-	fmt.Println("-- done")
 
 	return bal, "", fmt.Errorf("could not determine balance for bank (%v) or cw20 (%v)", bankErr, cw20Err)
 }
