@@ -219,20 +219,13 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		// check ATA
 		tokenAccount, ok := tx.ToTokenAccount()
 		if ok {
-			var accountInfo TokenAccountInfo
-			info, err := client.SolClient.GetAccountInfoWithOpts(ctx, tokenAccount, &rpc.GetAccountInfoOpts{
-				Commitment: rpc.CommitmentFinalized,
-				Encoding:   "jsonParsed",
-			})
+			tokenAccountInfo, err := client.LookupTokenAccount(ctx, tokenAccount)
 			if err != nil {
-				return result, err
+				// pass
+			} else {
+				toAddr = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
+				result.ContractAddress = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
 			}
-			accountInfo, err = ParseRpcData(info.Value.Data)
-			if err != nil {
-				return result, err
-			}
-			toAddr = xc.Address(accountInfo.Parsed.Info.Owner)
-			result.ContractAddress = xc.ContractAddress(accountInfo.Parsed.Info.Mint)
 		}
 	}
 
@@ -241,6 +234,22 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	result.Amount = tx.Amount()
 
 	return result, nil
+}
+
+func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (TokenAccountInfo, error) {
+	var accountInfo TokenAccountInfo
+	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, tokenAccount, &rpc.GetAccountInfoOpts{
+		Commitment: rpc.CommitmentFinalized,
+		Encoding:   "jsonParsed",
+	})
+	if err != nil {
+		return TokenAccountInfo{}, err
+	}
+	accountInfo, err = ParseRpcData(info.Value.Data)
+	if err != nil {
+		return TokenAccountInfo{}, err
+	}
+	return accountInfo, nil
 }
 
 // FindAssociatedTokenAddress returns the associated token account (ATA) for a given account and token
