@@ -84,7 +84,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/bitcoin-cash
-        auth: ENV:BLOCKCHAIR_API_KEY
+        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Bitcoin Cash
         explorer_url: https://blockchair.com/bitcoin-cash
@@ -110,7 +110,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/bitcoin
-        auth: ENV:BLOCKCHAIR_API_TOKEN
+        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Bitcoin
         explorer_url: https://blockchair.com/bitcoin
@@ -163,7 +163,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/dogecoin
-        auth: ENV:BLOCKCHAIR_API_KEY
+        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Dogecoin
         explorer_url: https://blockchair.com/dogecoin
@@ -190,6 +190,9 @@ chains:
         clients:
             - driver: crosschain
         url: https://ethereum.publicnode.com
+        # url: https://mainnet.infura.io/v3
+        # auth: env:CORDIAL_INFURA_API_TOKEN
+        # provider: infura
         chain_id: 1
         chain_name: Ethereum
         explorer_url: https://etherscan.io
@@ -266,7 +269,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/litecoin
-        auth: ENV:BLOCKCHAIR_API_KEY
+        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Litecoin
         explorer_url: https://blockchair.com/litecoin

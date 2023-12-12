@@ -48,11 +48,14 @@ chains:
         chain: BTC
         driver: bitcoin
         url: https://api.blockchair.com/bitcoin/testnet
-        auth: env:BLOCKCHAIR_API_TOKEN
+        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Bitcoin (Testnet)
         explorer_url: https://blockchair.com/bitcoin/testnet
         decimals: 8
+        indexer_url: https://api.blockchair.com/bitcoin/testnet
+        indexer_type: blockchair
+        polling_period: 2m
     CELO:
         chain: CELO
         driver: evm
@@ -102,9 +105,10 @@ chains:
     ETH:
         chain: ETH
         driver: evm
-        url: https://goerli.infura.io/v3
-        auth: env:INFURA_API_TOKEN
-        provider: infura
+        # url: https://goerli.infura.io/v3
+        # auth: env:CORDIAL_INFURA_API_TOKEN
+        # provider: infura
+        url: https://ethereum-goerli.publicnode.com
         chain_id: 5
         chain_name: Ethereum (Goerli)
         explorer_url: https://goerli.etherscan.io
