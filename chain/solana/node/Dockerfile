@@ -6,7 +6,7 @@ ENV PATH="${PATH}:/root/.local/share/solana/install/active_release/bin" RUST_BAC
 RUN yum install bzip2 python3 python3-pip -y
 RUN pip3 install flask
 
-# install solana CLI tools
+# install solana CLI tools (currently no linux/arm option)
 RUN sh -c "$(curl -sSfL https://release.solana.com/v1.17.5/install)"
 
 # generate a wallet to request funds to
