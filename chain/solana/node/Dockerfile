@@ -1,4 +1,5 @@
-FROM us-docker.pkg.dev/cordialsys/containers/build-base:latest
+# pin linux/amd64 as solana cli does not provide binaries for arm
+FROM --platform=linux/amd64 us-docker.pkg.dev/cordialsys/containers/build-base:latest
 WORKDIR /root
 
 ENV PATH="${PATH}:/root/.local/share/solana/install/active_release/bin" RUST_BACKTRACE=1

@@ -11,7 +11,7 @@ def system(cmd: str):
 @app.route("/fund/<denom>/<address>/<int:amount>")
 def fund(denom:str, address: str, amount: int):
     faucet_alice_addr = "xpla1mmu56rh6syyruc5xeea2f82askyk5tvts8xnqf"
-    system(f"exampled tx bank send {faucet_alice_addr} {address} {amount}{denom} --from alice -y")
+    system(f"exampled tx bank send {faucet_alice_addr} {address} {amount}{denom} --from alice -y --chain-id example")
     # wait for block
     time.sleep(3)
     return {
