@@ -53,6 +53,10 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 	if address == "" {
 		return ""
 	}
+	if address == string(nativeAsset) {
+		// In some cases e.g. ("ETH", "ETH") is passed, and we should not normalize anything.
+		return address
+	}
 	if nativeAsset == "" {
 		nativeAsset = xc.ETH
 	}
