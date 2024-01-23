@@ -95,6 +95,18 @@ func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 	return []byte(bodyStr)
 }
 
+func NewClientFrom(chain xc.NativeAsset, chainId string, chainPrefix string, rpcUrl string) (*Client, error) {
+
+	nativeAsset := &xc.ChainConfig{
+		Chain:       chain,
+		Driver:      xc.DriverCosmos,
+		URL:         rpcUrl,
+		ChainPrefix: chainPrefix,
+		ChainIDStr:  chainId,
+	}
+	return NewClient(nativeAsset)
+}
+
 // NewClient returns a new Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	asset := cfgI
@@ -292,7 +304,7 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 	}
 
 	// attempt getting the cw20 balance.
-	bal, cw20Err := client.fetchCw20Balance(ctx, address, client.Asset)
+	bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
 	if cw20Err == nil {
 		return bal, CW20, nil
 	}
@@ -300,9 +312,9 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 	return bal, "", fmt.Errorf("could not determine balance for bank (%v) or cw20 (%v)", bankErr, cw20Err)
 }
 
-func (client *Client) fetchCw20Balance(ctx context.Context, address xc.Address, asset xc.ITask) (xc.AmountBlockchain, error) {
+func (client *Client) FetchCw20Balance(ctx context.Context, address xc.Address, contract string) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	contractAddress := asset.GetContract()
+	contractAddress := contract
 
 	_, err := types.GetFromBech32(string(address), client.Prefix)
 	if err != nil {
