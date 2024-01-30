@@ -215,6 +215,9 @@ func (client *Client) SimulateGas(ctx context.Context, from xc.Address, to xc.Ad
 		// try getting gas estimate without sending funds
 		msg.Value = zero
 		gasLimit, err = client.EthClient.EstimateGas(ctx, msg)
+	} else if err != nil && strings.Contains(err.Error(), "less than the block's baseFeePerGas") {
+		// this estimate does not work with hardhat -> use defaults
+		return client.DefaultMaxGasLimit(), nil
 	}
 	if err != nil {
 		return 0, fmt.Errorf("could not simulate tx: %v", err)

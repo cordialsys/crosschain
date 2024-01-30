@@ -11,8 +11,8 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: parseInt(chainId),
-      hardfork: 'london',
-      baseFeePerGas: "10000000000",
+      hardfork: 'shanghai',
+      baseFeePerGas: "0",
       mining: {
         auto: false,
         interval: 3000
