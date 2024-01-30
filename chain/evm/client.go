@@ -11,6 +11,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/erc20"
 	"github.com/cordialsys/crosschain/utils"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -159,8 +160,70 @@ func NewLegacyClient(cfg xc.ITask) (*Client, error) {
 	return client, nil
 }
 
+func (client *Client) DefaultMaxGasLimit() uint64 {
+	// Set absolute gas limits for safety
+	gasLimit := uint64(90_000)
+	native := client.Asset.GetChain()
+	if client.Asset.GetContract() != "" {
+		// token
+		gasLimit = 500_000
+	}
+	if native.Chain == xc.ArbETH {
+		// arbeth specifically has different gas limit scale
+		gasLimit = 4_000_000
+	}
+	return gasLimit
+}
+
+// Simulate a transaction to get the estimated gas limit
+func (client *Client) SimulateGas(ctx context.Context, from xc.Address, to xc.Address, txInput *TxInput) (uint64, error) {
+	builder, err := NewTxBuilder(client.Asset)
+	if err != nil {
+		return 0, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+	if client.Legacy {
+		builder, err = NewLegacyTxBuilder(client.Asset)
+		if err != nil {
+			return 0, fmt.Errorf("could not prepare to simulate legacy: %v", err)
+		}
+	}
+	zero := big.NewInt(0)
+	fromAddr, _ := HexToAddress(from)
+
+	// TODO it may be more accurate to use the actual amount for the transfer,
+	// but that will require changing the interface to pass amount.
+	// For now we'll use the smallest amount (1).
+	tx, err := builder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
+	if err != nil {
+		return 0, fmt.Errorf("could not build simulated tx: %v", err)
+	}
+	ethTx := tx.(*Tx).EthTx
+	msg := ethereum.CallMsg{
+		From: fromAddr,
+		To:   ethTx.To(),
+		// use a high limit just for the estimation
+		Gas:        8_000_000,
+		GasPrice:   zero,
+		GasFeeCap:  zero,
+		GasTipCap:  zero,
+		Value:      ethTx.Value(),
+		Data:       ethTx.Data(),
+		AccessList: types.AccessList{},
+	}
+	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
+	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
+		// try getting gas estimate without sending funds
+		msg.Value = zero
+		gasLimit, err = client.EthClient.EstimateGas(ctx, msg)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("could not simulate tx: %v", err)
+	}
+	return gasLimit, nil
+}
+
 // FetchTxInput returns tx input for a EVM tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	nativeAsset := client.Asset.GetChain()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
@@ -172,13 +235,13 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	result.GasPrice = zero
 
 	// Nonce
-	var targetAddr common.Address
+	var fromAddr common.Address
 	var err error
-	targetAddr, err = HexToAddress(from)
+	fromAddr, err = HexToAddress(from)
 	if err != nil {
 		return zero, fmt.Errorf("bad to address '%v': %v", from, err)
 	}
-	nonce, err := client.EthClient.NonceAt(ctx, targetAddr, nil)
+	nonce, err := client.EthClient.NonceAt(ctx, fromAddr, nil)
 	if err != nil {
 		return result, err
 	}
@@ -196,6 +259,16 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	} else {
 		result.GasTipCap = zero
 	}
+
+	gasLimit, err := client.SimulateGas(ctx, from, to, result)
+	if err != nil {
+		return nil, err
+	}
+	defaultMax := client.DefaultMaxGasLimit()
+	if gasLimit == 0 || gasLimit > defaultMax {
+		gasLimit = defaultMax
+	}
+	result.GasLimit = uint64(gasLimit)
 
 	return result, nil
 }

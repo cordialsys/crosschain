@@ -68,28 +68,12 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetChain()
-
-	txInput.GasLimit = 90_000
-	if native.Chain == xc.ArbETH {
-		txInput.GasLimit = 4_000_000
-	}
-
 	return txBuilder.buildEvmTxWithPayload(to, amount, []byte{}, txInput)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-	native := txBuilder.Asset.GetChain()
-
-	txInput.GasLimit = 350_000
-	if native.Chain == xc.EmROSE {
-		txInput.GasLimit = 500_000
-	}
-	if native.Chain == xc.ArbETH {
-		txInput.GasLimit = 4_000_000
-	}
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	contract := txBuilder.Asset.GetContract()
