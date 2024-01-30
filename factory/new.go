@@ -2,6 +2,7 @@ package factory
 
 import (
 	"os"
+	"strings"
 	"sync"
 
 	xc "github.com/cordialsys/crosschain"
@@ -20,21 +21,31 @@ type FactoryOptions struct {
 
 func NewFactory(options *FactoryOptions) *Factory {
 	// Use our config file loader
-	cfg := factoryconfig.Config{}
-	if v := os.Getenv("XC_TESTNET"); v != "" {
-		cfg.Network = "testnet"
-	}
-
-	err := config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
+	// Load into an empty config just to detect if the user passed in a .Network value.
+	detectMainnetInConfig := factoryconfig.Config{}
+	err := config.RequireConfig("crosschain", &detectMainnetInConfig, factoryconfig.Config{})
 	if err != nil {
 		panic(err)
+	}
+
+	cfg := factoryconfig.Config{}
+	err = config.RequireConfig("crosschain", &cfg, defaults.Mainnet)
+	if err != nil {
+		panic(err)
+	}
+
+	if detectMainnetInConfig.Network == "" {
+		// If the user did not pass in a network value, we will consider XC_TESTNET variable.
+		if v := strings.ToLower(os.Getenv("XC_TESTNET")); v == "1" || v == "true" {
+			cfg.Network = "testnet"
+		}
 	}
 
 	switch cfg.Network {
 	case "mainet":
 		// done
 	case "testnet":
-		cfg = factoryconfig.Config{}
+		cfg = factoryconfig.Config{Network: cfg.Network}
 		err = config.RequireConfig("crosschain", &cfg, defaults.Testnet)
 		if err != nil {
 			panic(err)

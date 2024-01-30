@@ -2,6 +2,8 @@ package factory
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -9,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/chain/solana"
+	"github.com/cordialsys/crosschain/config/constants"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
@@ -448,6 +451,35 @@ func (s *CrosschainTestSuite) TestConfig() {
 	require := s.Require()
 	cfg := s.Factory.GetConfig()
 	require.NotNil(cfg)
+}
+
+func (s *CrosschainTestSuite) TestConfigDefaults() {
+	require := s.Require()
+
+	tmpPath, err := os.MkdirTemp("", "xctest2")
+	require.NoError(err)
+	tmpConfigFile := filepath.Join(tmpPath, "config.yaml")
+	err = os.WriteFile(tmpConfigFile, []byte("crosschain:\n"), os.ModePerm)
+	require.NoError(err)
+
+	// change dir to somewhere that config files are not present
+	os.Setenv(constants.ConfigEnv, tmpConfigFile)
+	defer os.Unsetenv(constants.ConfigEnv)
+	f := NewDefaultFactory()
+	cfg := f.GetConfig()
+	require.NotNil(cfg)
+
+	// default should be mainnet
+	require.Equal("mainnet", cfg.Network)
+
+	// now if we set XC_TESTNET, it should be testnet defaults
+	os.Setenv("XC_TESTNET", "1")
+	defer os.Unsetenv("XC_TESTNET")
+	f = NewDefaultFactory()
+	cfg = f.GetConfig()
+	require.Equal("testnet", cfg.Network)
+
+	os.RemoveAll(tmpPath)
 }
 
 func (s *CrosschainTestSuite) TestTxInputSerDeser() {
