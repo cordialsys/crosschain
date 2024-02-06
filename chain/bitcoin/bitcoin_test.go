@@ -208,7 +208,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		require.NotZero(btcInput.UnspentOutputs[0].Index)
 		// string should be reversed
 		require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
-		require.EqualValues(60, btcInput.GasPricePerByte.Uint64())
+		require.EqualValues(12, btcInput.GasPricePerByte.Uint64())
 
 		// should be sorted with the largest utxo used first
 		firstValue := btcInput.UnspentOutputs[0].Value.Uint64()

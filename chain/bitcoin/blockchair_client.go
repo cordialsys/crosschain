@@ -401,7 +401,7 @@ func (client *BlockchairClient) RegisterEstimateGasCallback(estimateGas xc.Estim
 func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
 	// estimate using last 1 blocks
 	numBlocks := 1
-	fallbackGasPerByte := xc.NewAmountBlockchainFromUint64(2)
+	fallbackGasPerByte := xc.NewAmountBlockchainFromUint64(10)
 	satsPerByteFloat, err := client.EstimateGasFee(ctx, int64(numBlocks))
 
 	if err != nil {
@@ -412,24 +412,28 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
 
-	satsPerByte := uint64(satsPerByteFloat)
-
-	// Custom BTC Gas multiplier logic
-	// if estimate < 12sats => floor to 60sats
-	// If 12sats <= estimate <= 60sats => 5x estimate
-	// if 60sats < estimate < 2000sats => 2x estimate
-	// if estimate >= 2000sats => 1.1x estimate
-	if satsPerByte < 12 {
-		satsPerByte = 60
-	} else if satsPerByte >= 12 && satsPerByte <= 60 {
-		satsPerByte *= 5
-	} else if satsPerByte > 60 && satsPerByte < 2000 {
-		satsPerByte *= 2
-	} else {
-		satsPerByteFloat := float64(satsPerByte)
-		satsPerByteFloat *= 1.1
-		satsPerByte = uint64(satsPerByteFloat)
+	// Min 10 sats/byte
+	if satsPerByteFloat < 10 {
+		satsPerByteFloat = 10
 	}
+	// add 20% extra default
+	defaultMultiplier := 1.2
+	multiplier := client.Asset.GetChain().ChainGasMultiplier
+	if multiplier < 0.01 {
+		multiplier = defaultMultiplier
+	}
+
+	satsPerByteFloat *= multiplier
+
+	max := client.Asset.GetChain().ChainMaxGasPrice
+	if max < 0.01 {
+		// max 1k sats/byte
+		max = 1000
+	}
+	if satsPerByteFloat > max {
+		satsPerByteFloat = max
+	}
+	satsPerByte := uint64(satsPerByteFloat)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
 }
