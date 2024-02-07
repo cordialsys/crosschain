@@ -94,6 +94,8 @@ chains:
         chain_name: Dogecoin (Testnet)
         decimals: 8
         indexer_type: none
+        # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
+        chain_max_gas_price: 50000000
     ETC:
         chain: ETC
         driver: evm-legacy

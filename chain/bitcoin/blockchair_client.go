@@ -427,8 +427,8 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 
 	max := client.Asset.GetChain().ChainMaxGasPrice
 	if max < 0.01 {
-		// max 1k sats/byte
-		max = 1000
+		// max 10k sats/byte
+		max = 10000
 	}
 	if satsPerByteFloat > max {
 		satsPerByteFloat = max
