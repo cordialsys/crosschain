@@ -22,7 +22,7 @@ type Tx struct {
 
 var _ xc.Tx = &Tx{}
 
-type parsedTxInfo struct {
+type SourcesAndDests struct {
 	Sources      []*xc.TxInfoEndpoint
 	Destinations []*xc.TxInfoEndpoint
 }
@@ -67,51 +67,16 @@ func (tx Tx) Serialize() ([]byte, error) {
 }
 
 // ParseTransfer parses a tx and extracts higher-level transfer information
-func (tx *Tx) ParseTransfer(receipt *types.Receipt, nativeAsset xc.NativeAsset) parsedTxInfo {
-	// 1. first try parsing as an abi we natively support.
-	if tx.IsContract() {
-		info, err := tx.ParseMultisendTransferTx()
-		if err != nil {
-			// ignore
-		} else {
-			return info
-		}
+func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
 
-		info, err = tx.ParseERC20TransferTx(nativeAsset)
-		if err != nil {
-			// ignore
-		} else {
-			return info
-		}
-	}
-
-	// 2. try parsing using the logs
-	infoLogs := tx.parseReceipt(receipt, nativeAsset)
-	if len(infoLogs.Destinations) > 0 {
-		return infoLogs
-	}
-
-	// 3. use to/from/amount from the tf
-	amount := tx.Amount()
-	return parsedTxInfo{
-		Sources: []*xc.TxInfoEndpoint{{
-			Address:     tx.From(),
-			NativeAsset: nativeAsset,
-			Amount:      amount,
-		}},
-		Destinations: []*xc.TxInfoEndpoint{{
-			Address:     tx.To(),
-			NativeAsset: nativeAsset,
-			Amount:      amount,
-		}},
-	}
-}
-
-func (tx *Tx) parseReceipt(receipt *types.Receipt, nativeAsset xc.NativeAsset) parsedTxInfo {
 	loggedSources := []*xc.TxInfoEndpoint{}
 	loggedDestinations := []*xc.TxInfoEndpoint{}
 	for _, log := range receipt.Logs {
 		event, _ := ERC20.EventByID(log.Topics[0])
+		if event != nil {
+
+			fmt.Println("PARSE LOG", event.RawName)
+		}
 		if event != nil && event.RawName == "Transfer" {
 			erc20, _ := erc20.NewErc20(receipt.ContractAddress, nil)
 			tf, err := erc20.ParseTransfer(*log)
@@ -133,11 +98,35 @@ func (tx *Tx) parseReceipt(receipt *types.Receipt, nativeAsset xc.NativeAsset) p
 			})
 		}
 	}
-	return parsedTxInfo{
+	return SourcesAndDests{
 		Sources:      loggedSources,
 		Destinations: loggedDestinations,
 	}
+	// // 2. try parsing using the logs
+	// infoLogs := tx.parseReceipt(receipt, nativeAsset)
+	// if len(infoLogs.Destinations) > 0 {
+	// 	return infoLogs
+	// }
+
+	// // 3. use to/from/amount from the tf
+	// amount := tx.Amount()
+	// return SourcesAndDests{
+	// 	Sources: []*xc.TxInfoEndpoint{{
+	// 		Address:     tx.From(),
+	// 		NativeAsset: nativeAsset,
+	// 		Amount:      amount,
+	// 	}},
+	// 	Destinations: []*xc.TxInfoEndpoint{{
+	// 		Address:     tx.To(),
+	// 		NativeAsset: nativeAsset,
+	// 		Amount:      amount,
+	// 	}},
+	// }
 }
+
+// func (tx *Tx) parseReceipt(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
+
+// }
 
 // IsContract returns whether a tx is a contract or native transfer
 func (tx Tx) IsContract() bool {
@@ -229,10 +218,10 @@ func ensure0x(address string) string {
 }
 
 // ParseERC20TransferTx parses the tx payload as ERC20 transfer
-func (tx Tx) ParseERC20TransferTx(nativeAsset xc.NativeAsset) (parsedTxInfo, error) {
+func (tx Tx) ParseERC20TransferTx(nativeAsset xc.NativeAsset) (SourcesAndDests, error) {
 	payload := tx.EthTx.Data()
 	if len(payload) != 4+32*2 || hex.EncodeToString(payload[:4]) != "a9059cbb" {
-		return parsedTxInfo{}, errors.New("payload is not ERC20.transfer(address,uint256)")
+		return SourcesAndDests{}, errors.New("payload is not ERC20.transfer(address,uint256)")
 	}
 
 	var buf1 [20]byte
@@ -242,7 +231,7 @@ func (tx Tx) ParseERC20TransferTx(nativeAsset xc.NativeAsset) (parsedTxInfo, err
 	copy(buf2[:], payload[4+32:4+2*32])
 	amount := new(big.Int).SetBytes(buf2[:])
 
-	return parsedTxInfo{
+	return SourcesAndDests{
 		// the from should be the tx sender
 		Sources: []*xc.TxInfoEndpoint{{
 			Address:         tx.From(),
@@ -258,74 +247,4 @@ func (tx Tx) ParseERC20TransferTx(nativeAsset xc.NativeAsset) (parsedTxInfo, err
 			NativeAsset:     xc.NativeAsset(nativeAsset),
 		}},
 	}, nil
-}
-
-// ParseMultisendTransferTx parses the tx payload as multi-send transfer
-func (tx Tx) ParseMultisendTransferTx() (parsedTxInfo, error) {
-	res := parsedTxInfo{}
-	payload := tx.EthTx.Data()
-
-	abiSigETH := "1a1da075"
-	abiSigERC20 := "ca350aa6"
-	if len(payload) < 4 {
-		return res, errors.New("evm payload is miscellaneous")
-	}
-	abiSig := hex.EncodeToString(payload[:4])
-	if abiSig != abiSigETH && abiSig != abiSigERC20 {
-		// log.Printf("invalid abi=%s", abiSig)
-		return res, errors.New("payload is not multisend (1a1da075 or ca350aa6)")
-	}
-
-	offset := 4 + 32*2 // ignore first 2 params
-
-	// read array len
-	var buf20 [20]byte
-	var buf [32]byte
-	copy(buf[:], payload[offset:offset+32])
-	offset += 32
-
-	arrayLen := int(new(big.Int).SetBytes(buf[:]).Int64())
-	numParams := 2
-	if abiSig == abiSigERC20 {
-		numParams = 3
-	}
-	if len(payload) != offset+numParams*32*arrayLen {
-		// log.Printf("invalid payload len=%d / %d", len(buf), offset+numParams*32*arrayLen)
-		return res, errors.New("payload is not multisend (len)")
-	}
-
-	for i := 0; i < arrayLen; i++ {
-		res.Destinations = append(res.Destinations, &xc.TxInfoEndpoint{})
-		if abiSig == abiSigETH {
-			res.Destinations[i].Asset = "ETH"
-			// to
-			copy(buf20[:], payload[offset+12:offset+32])
-			res.Destinations[i].Address = xc.Address(ensure0x(common.Address(buf20).String()))
-			offset += 32
-			// amount
-			copy(buf[:], payload[offset:offset+32])
-			res.Destinations[i].Amount = xc.AmountBlockchain(*new(big.Int).SetBytes(buf[:]))
-			offset += 32
-		} else if abiSig == abiSigERC20 {
-			// asset
-			copy(buf20[:], payload[offset+12:offset+32])
-			res.Destinations[i].ContractAddress = xc.ContractAddress(ensure0x(common.Address(buf20).String()))
-			offset += 32
-			// to
-			copy(buf20[:], payload[offset+12:offset+32])
-			res.Destinations[i].Address = xc.Address(ensure0x(common.Address(buf20).String()))
-			offset += 32
-			// amount
-			copy(buf[:], payload[offset:offset+32])
-			res.Destinations[i].Amount = xc.AmountBlockchain(*new(big.Int).SetBytes(buf[:]))
-			offset += 32
-		}
-	}
-
-	// a single source, the contract
-	res.Sources = append(res.Sources, &xc.TxInfoEndpoint{
-		Address: xc.Address(tx.ContractAddress()),
-	})
-
-	return res, nil
 }

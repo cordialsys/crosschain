@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/sirupsen/logrus"
 )
 
 const DEFAULT_GAS_PRICE = 20_000_000_000
@@ -38,7 +39,6 @@ func init() {
 type Client struct {
 	Asset           xc.ITask
 	EthClient       *ethclient.Client
-	RpcClient       *rpc.Client
 	ChainId         *big.Int
 	Interceptor     *utils.HttpInterceptor
 	EstimateGasFunc xc.EstimateGasFunc
@@ -133,7 +133,6 @@ func NewClient(asset xc.ITask) (*Client, error) {
 	return &Client{
 		Asset:           asset,
 		EthClient:       client,
-		RpcClient:       c,
 		ChainId:         nil,
 		Interceptor:     interceptor,
 		EstimateGasFunc: nil,
@@ -290,7 +289,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		if err != nil {
 			return err
 		}
-		return client.RpcClient.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(bz))
+		return client.EthClient.Client().CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(bz))
 	}
 }
 
@@ -384,15 +383,42 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 		Signer: types.LatestSignerForChainID(chainID),
 	}
 
-	info := confirmedTx.ParseTransfer(receipt, xc.NativeAsset(nativeAsset.Chain))
+	tokenMovements := confirmedTx.ParseTokenLogs(receipt, xc.NativeAsset(nativeAsset.Chain))
+	ethMovements, err := client.TraceEthMovements(ctx, txHash)
+	if err != nil {
+		// Not all RPC nodes support this trace call, so we'll just drop reporting
+		// internal eth movements if there's an issue.
+		logrus.WithFields(logrus.Fields{
+			"tx_hash": txHashStr,
+			"chain":   nativeAsset.Chain,
+			"error":   err,
+		}).Warn("could not trace ETH tx")
+		// set default eth movements
+		amount := tx.Value()
+		zero := big.NewInt(0)
+		if amount.Cmp(zero) > 0 {
+			ethMovements = SourcesAndDests{
+				Sources: []*xc.TxInfoEndpoint{{
+					Address:     confirmedTx.From(),
+					NativeAsset: nativeAsset.Chain,
+					Amount:      xc.AmountBlockchain(*amount),
+				}},
+				Destinations: []*xc.TxInfoEndpoint{{
+					Address:     confirmedTx.To(),
+					NativeAsset: nativeAsset.Chain,
+					Amount:      xc.AmountBlockchain(*amount),
+				}},
+			}
+		}
+	}
 
 	result.From = confirmedTx.From()
 	result.To = confirmedTx.To()
 	result.ContractAddress = confirmedTx.ContractAddress()
 	result.Amount = confirmedTx.Amount()
 	result.Fee = confirmedTx.Fee(baseFee, gasUsed)
-	result.Sources = info.Sources
-	result.Destinations = info.Destinations
+	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
+	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 
 	return result, nil
 }
