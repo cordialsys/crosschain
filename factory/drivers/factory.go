@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/tron"
 )
 
 func NewClient(cfg ITask, driver Driver) (Client, error) {
@@ -31,6 +32,8 @@ func NewClient(cfg ITask, driver Driver) (Client, error) {
 		return bitcoin.NewClient(cfg)
 	case DriverSubstrate:
 		return substrate.NewClient(cfg)
+	case DriverTron:
+		return tron.NewClient(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -53,6 +56,8 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 		return bitcoin.NewTxBuilder(cfg)
 	case DriverSubstrate:
 		return substrate.NewTxBuilder(cfg)
+	case DriverTron:
+		return tron.NewTxBuilder(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -73,6 +78,8 @@ func NewSigner(cfg ITask) (Signer, error) {
 		return sui.NewSigner(cfg)
 	case DriverSubstrate:
 		return substrate.NewSigner(cfg)
+	case DriverTron:
+		return tron.NewSigner(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -93,6 +100,8 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return sui.NewAddressBuilder(cfg)
 	case DriverSubstrate:
 		return substrate.NewAddressBuilder(cfg)
+	case DriverTron:
+		return tron.NewAddressBuilder(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -113,6 +122,8 @@ func CheckError(driver Driver, err error) ClientError {
 		return sui.CheckError(err)
 	case DriverSubstrate:
 		return substrate.CheckError(err)
+	case DriverTron:
+		return tron.CheckError(err)
 	}
 	return UnknownError
 }

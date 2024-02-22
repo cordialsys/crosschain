@@ -6,23 +6,32 @@ crosschain:
       chain: ETH
       driver: evm
       net: testnet
-      url: 'https://goerli.infura.io/v3'
-      auth: 'env:INFURA_API_TOKEN'
+      url: "https://goerli.infura.io/v3"
+      auth: "env:INFURA_API_TOKEN"
       provider: infura
       chain_id: 5
       chain_name: Ethereum (Goerli)
-      explorer_url: 'https://goerli.etherscan.io'
+      explorer_url: "https://goerli.etherscan.io"
       decimals: 18
     MATIC:
       chain: MATIC
       driver: evm
       net: testnet
-      url: 'https://rpc-mumbai.matic.today'
+      url: "https://rpc-mumbai.matic.today"
       chain_id: 80001
       chain_name: Polygon (Mumbai)
-      explorer_url: 'https://mumbai.polygonscan.com'
+      explorer_url: "https://mumbai.polygonscan.com"
       decimals: 18
       chain_max_gas_price: 100
+    TRX:
+      chain: TRX
+      driver: tron
+      net: testnet
+      url: "https://nile.trongrid.io"
+      chain_name: Nile
+      explorer_url: "http://nile.tronscan.org"
+      decimals: 6
+      chain_max_gas_price: 2000000000
   tokens:
     USDC.INJ:
       asset: USDC
@@ -31,3 +40,9 @@ crosschain:
       decimals: 18
       contract: peggy0x44C21afAaF20c270EBbF5914Cfc3b5022173FEB7
       type: "native"
+    USDT.TRX:
+      asset: USDT
+      chain: TRX
+      net: ""
+      decimals: 6
+      contract: TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj

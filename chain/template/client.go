@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/utils"
 )
 
 // Client for Template
@@ -13,6 +14,14 @@ type Client struct {
 
 // TxInput for Template
 type TxInput struct {
+	xc.TxInputEnvelope
+	utils.TxPriceInput
+}
+
+func NewTxInput() *TxInput {
+	return &TxInput{
+		TxInputEnvelope: xc.TxInputEnvelope{},
+	}
 }
 
 // NewClient returns a new Template Client

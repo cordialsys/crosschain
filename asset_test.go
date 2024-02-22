@@ -17,6 +17,7 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 	require.Equal(DriverSolana, NativeAsset(SOL).Driver())
 	require.Equal(DriverCosmos, NativeAsset(ATOM).Driver())
 	require.Equal(DriverSubstrate, NativeAsset(DOT).Driver())
+	require.Equal(DriverTron, NativeAsset(TRX).Driver())
 }
 
 func (s *CrosschainTestSuite) TestChainType() {
@@ -84,6 +85,14 @@ func (s *CrosschainTestSuite) TestParseAssetAndNativeAsset() {
 	asset, native = parseAssetAndNativeAsset("USDC.SOL", "")
 	require.Equal("USDC", asset)
 	require.Equal(SOL, native)
+
+	asset, native = parseAssetAndNativeAsset("USDC", "TRX")
+	require.Equal("USDC", asset)
+	require.Equal(TRX, native)
+
+	asset, native = parseAssetAndNativeAsset("USDC.TRX", "")
+	require.Equal("USDC", asset)
+	require.Equal(TRX, native)
 
 	// WETH
 	asset, native = parseAssetAndNativeAsset("WETH", "")

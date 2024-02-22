@@ -128,6 +128,35 @@ func getBalancePolkadot(ctx context.Context, xc *factory.Factory) {
 	fmt.Printf("DOT: %s\n", humanBalance)
 }
 
+func getBalanceTron(ctx context.Context, xc *factory.Factory) {
+	asset, err := xc.GetAssetConfig("", "TRX")
+	if err != nil {
+		panic("unsupported asset")
+	}
+	address := xc.MustAddress(asset, "TS5QgZWumgK9dU5SH2HbB6kpxhmh5PfPt1")
+	client, _ := xc.NewClient(asset)
+	balance, err := client.(crosschain.ClientBalance).FetchNativeBalance(ctx, address)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("TRX: %s\n", balance)
+	humanBalance, _ := xc.ConvertAmountToHuman(asset, balance)
+	fmt.Printf("TRX (human): %s\n", humanBalance)
+
+	token, err := xc.GetAssetConfig("USDT", "TRX")
+	if err != nil {
+		panic("unsupported asset")
+	}
+	client, _ = xc.NewClient(token)
+	balance, err = client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("USDT on TRX: %s\n", balance)
+	humanBalance, _ = xc.ConvertAmountToHuman(token, balance)
+	fmt.Printf("USDT on TRX (human): %s\n", humanBalance)
+}
+
 func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 	asset, err := xc.GetAssetConfig("", "SOL")
 	if err != nil {
@@ -166,5 +195,6 @@ func main() {
 	// getBalanceEthereum(ctx, xc)
 	// getBalanceBitcoin(ctx, xc)
 	// getBalancePolkadot(ctx, xc)
-	getBalanceSolana(ctx, xc)
+	//getBalanceSolana(ctx, xc)
+	getBalanceTron(ctx, xc)
 }

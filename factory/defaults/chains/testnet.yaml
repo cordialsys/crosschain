@@ -242,3 +242,12 @@ chains:
         chain_max_gas_price: 125000.0
         indexer_type: cosmos
         polling_period: 5m
+    TRX:
+        chain: TRX
+        driver: tron
+        net: testnet
+        url: "https://nile.trongrid.io"
+        chain_name: Nile
+        explorer_url: "http://nile.tronscan.org"
+        decimals: 6
+        chain_max_gas_price: 1000000000

@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/tron"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -124,6 +125,8 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 			input = sui.NewTxInput()
 		case xc.DriverSubstrate:
 			input = substrate.NewTxInput()
+		case xc.DriverTron:
+			input = tron.NewTxInput()
 		default:
 			require.Fail("must add driver to test: " + string(driver))
 		}

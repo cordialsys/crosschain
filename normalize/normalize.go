@@ -123,6 +123,8 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 			address = strings.ToLower(address)
 		}
 
+	case xc.DriverTron:
+		// TODO
 	default:
 	}
 	return address

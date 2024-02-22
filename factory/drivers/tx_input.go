@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/tron"
 )
 
 func MarshalTxInput(txInput xc.TxInput) ([]byte, error) {
@@ -52,6 +53,10 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 		return &txInput, err
 	case xc.DriverSubstrate:
 		var txInput substrate.TxInput
+		err := json.Unmarshal(buf, &txInput)
+		return &txInput, err
+	case xc.DriverTron:
+		var txInput tron.TxInput
 		err := json.Unmarshal(buf, &txInput)
 		return &txInput, err
 	default:

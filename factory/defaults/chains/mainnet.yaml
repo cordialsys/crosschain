@@ -404,6 +404,15 @@ chains:
         decimals: 9
         indexer_type: rpc
         polling_period: 3m
+    TRX:
+        chain: TRX
+        driver: tron
+        net: mainnet
+        url: "https://api.trongrid.io"
+        chain_name: Tron
+        explorer_url: "http://tronscan.org"
+        decimals: 6
+        chain_max_gas_price: 2000000000
     TIA:
         chain: TIA
         driver: cosmos

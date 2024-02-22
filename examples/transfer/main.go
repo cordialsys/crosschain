@@ -19,7 +19,12 @@ func main() {
 
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("", "HASH")
+	asset, err := xc.GetAssetConfig("", crosschain.TRX)
+	if err != nil {
+		panic("unsupported asset: " + err.Error())
+	}
+
+	asset, err = xc.GetAssetConfig("USDT.TRX", crosschain.TRX)
 	if err != nil {
 		panic("unsupported asset: " + err.Error())
 	}
@@ -48,10 +53,9 @@ func main() {
 	if err != nil {
 		panic("could create from address: " + err.Error())
 	}
-	fmt.Println("from:", from)
-	to := xc.MustAddress(asset, "tp1uywe3m7uknt8wkj78l5xar9exsthh3l3kzkuxe")
-	amount := xc.MustAmountBlockchain(asset, "0.001")
-
+	to := xc.MustAddress(asset, "TSfyiLMj2QP1cDfob1igwQEjDFQTcVjVVP")
+	amount := xc.MustAmountBlockchain(asset, "5")
+	fmt.Println(amount)
 	// to create a tx, we typically need some input from the blockchain
 	// e.g., nonce for Ethereum, recent block for Solana, gas data, ...
 	// (network needed)
@@ -68,7 +72,6 @@ func main() {
 	if inputWithAmount, ok := input.(crosschain.TxInputWithAmount); ok {
 		inputWithAmount.SetAmount(amount)
 	}
-	fmt.Printf("%+v\n", input)
 
 	// create tx
 	// (no network, no private key needed)
@@ -82,15 +85,12 @@ func main() {
 		panic(err)
 	}
 	sighash := sighashes[0]
-	fmt.Printf("%+v\n", tx)
-	fmt.Printf("signing: %x\n", sighash)
 
 	// sign the tx sighash
 	signature, err := signer.Sign(fromPrivateKey, sighash)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("signature: %x\n", signature)
 
 	// complete the tx by adding its signature
 	// (no network, no private key needed)
@@ -101,13 +101,12 @@ func main() {
 
 	// submit the tx, wait a bit, fetch the tx info
 	// (network needed)
-	fmt.Printf("tx id: %s\n", tx.Hash())
 	err = client.SubmitTx(ctx, tx)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Zzz...")
-	time.Sleep(60 * time.Second)
+	time.Sleep(10 * time.Second)
 	info, err := client.FetchTxInfo(ctx, tx.Hash())
 	if err != nil {
 		panic(err)
