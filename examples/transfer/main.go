@@ -24,10 +24,10 @@ func main() {
 		panic("unsupported asset: " + err.Error())
 	}
 
-	asset, err = xc.GetAssetConfig("USDT.TRX", crosschain.TRX)
-	if err != nil {
-		panic("unsupported asset: " + err.Error())
-	}
+	// asset, err = xc.GetAssetConfig("USDT", crosschain.TRX)
+	// if err != nil {
+	// 	panic("unsupported asset: " + err.Error())
+	// }
 
 	// set your own private key and address
 	// you can get them, for example, from your Phantom wallet
@@ -53,8 +53,8 @@ func main() {
 	if err != nil {
 		panic("could create from address: " + err.Error())
 	}
-	to := xc.MustAddress(asset, "TSfyiLMj2QP1cDfob1igwQEjDFQTcVjVVP")
-	amount := xc.MustAmountBlockchain(asset, "5")
+	to := xc.MustAddress(asset, "TFzvbsVRAYDtPGc4KdFNUZophTDxfKD3G1")
+	amount := xc.MustAmountBlockchain(asset, "0.5")
 	fmt.Println(amount)
 	// to create a tx, we typically need some input from the blockchain
 	// e.g., nonce for Ethereum, recent block for Solana, gas data, ...

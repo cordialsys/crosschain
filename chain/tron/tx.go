@@ -19,15 +19,10 @@ var _ xc.Tx = &Tx{}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	serialised, err := tx.Serialize()
-	if err != nil {
-		panic(err)
-	}
+	hashBase, _ := proto.Marshal(tx.tronTx.RawData)
+	digest := sha256.Sum256(hashBase)
 
-	hasher := sha256.New()
-	hasher.Write(serialised)
-
-	return xc.TxHash(hex.EncodeToString(hasher.Sum(nil)))
+	return xc.TxHash(hex.EncodeToString(digest[:]))
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
@@ -54,5 +49,5 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
-	return proto.Marshal(tx.tronTx.GetRawData())
+	return proto.Marshal(tx.tronTx)
 }

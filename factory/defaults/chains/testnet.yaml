@@ -1,253 +1,254 @@
 network: "testnet"
 chains:
-    APTOS:
-        chain: APTOS
-        driver: aptos
-        net: devnet
-        url: https://fullnode.devnet.aptoslabs.com
-        chain_name: Aptos (Devnet)
-        explorer_url: https://explorer.devnet.aptos.dev
-        decimals: 8
-    ATOM:
-        chain: ATOM
-        driver: cosmos
-        url: https://rpc.sentry-01.theta-testnet.polypore.xyz
-        chain_id_str: theta-testnet-001
-        chain_name: Cosmos (Theta Testnet)
-        chain_prefix: cosmos
-        chain_coin: uatom
-        chain_coin_hd_path: 118
-        explorer_url: https://explorer.theta-testnet.polypore.xyz
-        decimals: 6
-    AVAX:
-        chain: AVAX
-        driver: evm
-        url: https://api.avax-test.network/ext/bc/C/rpc
-        chain_id: 43113
-        chain_name: Avalanche (Fuji Testnet)
-        explorer_url: https://testnet.snowtrace.io
-        decimals: 18
-        indexer_url: https://api.covalenthq.com/v1
-        indexer_type: covalent
-    BCH:
-        chain: BCH
-        driver: bitcoin
-        url: ""
-        chain_name: Bitcoin Cash (Testnet)
-        decimals: 8
-        indexer_type: none
-    BNB:
-        chain: BNB
-        driver: evm-legacy
-        url: https://data-seed-prebsc-1-s1.binance.org:8545
-        chain_id: 97
-        chain_name: Binance Smart Chain (Testnet)
-        explorer_url: https://testnet.bscscan.com
-        decimals: 18
-    BTC:
-        chain: BTC
-        driver: bitcoin
-        url: https://api.blockchair.com/bitcoin/testnet
-        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-        provider: blockchair
-        chain_name: Bitcoin (Testnet)
-        explorer_url: https://blockchair.com/bitcoin/testnet
-        decimals: 8
-        indexer_url: https://api.blockchair.com/bitcoin/testnet
-        indexer_type: blockchair
-        polling_period: 2m
-    CELO:
-        chain: CELO
-        driver: evm
-        url: https://alfajores-forno.celo-testnet.org
-        chain_id: 44787
-        chain_name: Celo (Testnet)
-        explorer_url: https://alfajores-blockscout.celo-testnet.org/
-        decimals: 18
-        indexer_type: rpc
-    CHZ:
-        chain: CHZ
-        driver: "evm-legacy"
-        net: testnet
-        url: ''
-        chain_id: 0 # TBD, do not currently know the chain id.
-        chain_name: Chiliz (Testnet)
-        explorer_url: ''
-        indexer_type: "none"
-        no_gas_fees: true
-        disabled: true
-        decimals: 18
-    CHZ2:
-        chain: CHZ2
-        driver: evm-legacy
-        url: https://spicy-rpc.chiliz.com
-        chain_id: 88882
-        chain_name: Chiliz 2.0 (testnet)
-        explorer_url: https://spicy-explorer.chiliz.com
-        decimals: 18
-        indexer_url: https://spicy-explorer.chiliz.com
-        indexer_type: blockscout
-    DOGE:
-        chain: DOGE
-        driver: bitcoin
-        url: ""
-        chain_name: Dogecoin (Testnet)
-        decimals: 8
-        indexer_type: none
-        # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
-        chain_max_gas_price: 50000000
-    ETC:
-        chain: ETC
-        driver: evm-legacy
-        url: https://www.ethercluster.com/mordor
-        chain_id: 63
-        chain_name: Ethereum Classic (Mordor)
-        decimals: 18
-        indexer_type: none
-    ETH:
-        chain: ETH
-        driver: evm
-        # url: https://goerli.infura.io/v3
-        # auth: env:CORDIAL_INFURA_API_TOKEN
-        # provider: infura
-        url: https://ethereum-goerli.publicnode.com
-        chain_id: 5
-        chain_name: Ethereum (Goerli)
-        explorer_url: https://goerli.etherscan.io
-        decimals: 18
-        indexer_type: rpc
-    FTM:
-        chain: FTM
-        driver: evm-legacy
-        url: https://rpc.testnet.fantom.network
-        chain_id: 4002
-        chain_name: Fantom (Testnet)
-        explorer_url: https://testnet.ftmscan.com
-        decimals: 18
-        indexer_type: none
-    KAR:
-        chain: KAR
-        driver: "evm-legacy"
-        net: testnet
-        url: 'http://103.253.145.222:8545'
-        chain_id: 686
-        chain_name: Karura (Testnet)
-        explorer_url: 'https://karura.subscan.io'
-        indexer_type: "none"
-        decimals: 12
-    KLAY:
-        chain: KLAY
-        driver: "evm-legacy"
-        net: testnet
-        url: 'https://public-node-api.klaytnapi.com/v1/cypress'
-        chain_id: 1001
-        chain_name: Klaytn (Baobab Testnet)
-        explorer_url: 'https://api.baobab.klaytn.net:8651'
-        indexer_type: "none"
-        decimals: 18
-    INJ:
-        chain: INJ
-        driver: cosmos
-        url: https://k8s.testnet.tm.injective.network
-        chain_id_str: injective-888
-        chain_name: Injective (Testnet)
-        chain_prefix: inj
-        chain_coin: inj
-        chain_coin_hd_path: 60
-        chain_gas_price_default: 5e+08
-        explorer_url: https://testnet.explorer.injective.network
-        decimals: 18
-    LUNA:
-        chain: LUNA
-        driver: cosmos
-        url: https://terra-testnet-rpc.polkachu.com
-        chain_id_str: pisco-1
-        chain_name: Terra (Testnet)
-        chain_prefix: terra
-        chain_coin: uluna
-        chain_coin_hd_path: 330
-        explorer_url: https://finder.terra.money/testnet
-        decimals: 6
-    LUNC:
-        chain: LUNC
-        driver: cosmos
-        url: ""
-        chain_id_str: bombay-12
-        chain_name: Terra Classic (Testnet)
-        chain_prefix: terra
-        chain_coin: uluna
-        chain_coin_hd_path: 330
-        decimals: 6
-    MATIC:
-        chain: MATIC
-        driver: evm
-        url: https://rpc-mumbai.matic.today
-        chain_id: 80001
-        chain_name: Polygon (Mumbai)
-        explorer_url: https://mumbai.polygonscan.com
-        decimals: 18
-        indexer_type: rpc
-    EmROSE:
-        chain: EmROSE
-        driver: evm-legacy
-        url: https://testnet.emerald.oasis.dev
-        chain_id: 42261
-        chain_name: Oasis Emerald (Testnet)
-        decimals: 18
-        indexer_type: none
-    SOL:
-        chain: SOL
-        driver: solana
-        net: devnet
-        url: https://api.devnet.solana.com
-        chain_name: Solana (Devnet)
-        explorer_url: https://explorer.solana.com
-        decimals: 9
-        indexer_type: solana
-        polling_period: 2m
-    SUI:
-        chain: SUI
-        driver: sui
-        net: devnet
-        url: https://fullnode.devnet.sui.io:443
-        chain_name: Sui (Devnet)
-        explorer_url: https://explorer.sui.io
-        decimals: 9
-        indexer_type: rpc
-        polling_period: 2m
-    XPLA:
-        chain: XPLA
-        driver: cosmos
-        url: https://cube-rpc.xpla.dev
-        chain_id_str: cube_47-5
-        chain_name: XPLA (Testnet)
-        chain_prefix: xpla
-        chain_coin: axpla
-        chain_coin_hd_path: 60
-        explorer_url: https://explorer.xpla.io/testnet
-        decimals: 18
-    HASH:
-        chain: HASH
-        driver: cosmos
-        url: https://rpc.test.provenance.io
-        chain_id_str: pio-testnet-1
-        chain_name: Provenance (Testnet)
-        chain_prefix: tp
-        chain_coin: nhash
-        chain_coin_hd_path: 1
-        explorer_url: https://explorer.test.provenance.io
-        decimals: 9
-        chain_gas_multiplier: 10.0
-        # translates to roughly max 50 HASH in gas per tx
-        chain_max_gas_price: 125000.0
-        indexer_type: cosmos
-        polling_period: 5m
-    TRX:
-        chain: TRX
-        driver: tron
-        net: testnet
-        url: "https://nile.trongrid.io"
-        chain_name: Nile
-        explorer_url: "http://nile.tronscan.org"
-        decimals: 6
-        chain_max_gas_price: 1000000000
+  APTOS:
+    chain: APTOS
+    driver: aptos
+    net: devnet
+    url: https://fullnode.devnet.aptoslabs.com
+    chain_name: Aptos (Devnet)
+    explorer_url: https://explorer.devnet.aptos.dev
+    decimals: 8
+  ATOM:
+    chain: ATOM
+    driver: cosmos
+    url: https://rpc.sentry-01.theta-testnet.polypore.xyz
+    chain_id_str: theta-testnet-001
+    chain_name: Cosmos (Theta Testnet)
+    chain_prefix: cosmos
+    chain_coin: uatom
+    chain_coin_hd_path: 118
+    explorer_url: https://explorer.theta-testnet.polypore.xyz
+    decimals: 6
+  AVAX:
+    chain: AVAX
+    driver: evm
+    url: https://api.avax-test.network/ext/bc/C/rpc
+    chain_id: 43113
+    chain_name: Avalanche (Fuji Testnet)
+    explorer_url: https://testnet.snowtrace.io
+    decimals: 18
+    indexer_url: https://api.covalenthq.com/v1
+    indexer_type: covalent
+  BCH:
+    chain: BCH
+    driver: bitcoin
+    url: ""
+    chain_name: Bitcoin Cash (Testnet)
+    decimals: 8
+    indexer_type: none
+  BNB:
+    chain: BNB
+    driver: evm-legacy
+    url: https://data-seed-prebsc-1-s1.binance.org:8545
+    chain_id: 97
+    chain_name: Binance Smart Chain (Testnet)
+    explorer_url: https://testnet.bscscan.com
+    decimals: 18
+  BTC:
+    chain: BTC
+    driver: bitcoin
+    url: https://api.blockchair.com/bitcoin/testnet
+    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
+    provider: blockchair
+    chain_name: Bitcoin (Testnet)
+    explorer_url: https://blockchair.com/bitcoin/testnet
+    decimals: 8
+    indexer_url: https://api.blockchair.com/bitcoin/testnet
+    indexer_type: blockchair
+    polling_period: 2m
+  CELO:
+    chain: CELO
+    driver: evm
+    url: https://alfajores-forno.celo-testnet.org
+    chain_id: 44787
+    chain_name: Celo (Testnet)
+    explorer_url: https://alfajores-blockscout.celo-testnet.org/
+    decimals: 18
+    indexer_type: rpc
+  CHZ:
+    chain: CHZ
+    driver: "evm-legacy"
+    net: testnet
+    url: ""
+    chain_id: 0 # TBD, do not currently know the chain id.
+    chain_name: Chiliz (Testnet)
+    explorer_url: ""
+    indexer_type: "none"
+    no_gas_fees: true
+    disabled: true
+    decimals: 18
+  CHZ2:
+    chain: CHZ2
+    driver: evm-legacy
+    url: https://spicy-rpc.chiliz.com
+    chain_id: 88882
+    chain_name: Chiliz 2.0 (testnet)
+    explorer_url: https://spicy-explorer.chiliz.com
+    decimals: 18
+    indexer_url: https://spicy-explorer.chiliz.com
+    indexer_type: blockscout
+  DOGE:
+    chain: DOGE
+    driver: bitcoin
+    url: ""
+    chain_name: Dogecoin (Testnet)
+    decimals: 8
+    indexer_type: none
+    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
+    chain_max_gas_price: 50000000
+  ETC:
+    chain: ETC
+    driver: evm-legacy
+    url: https://www.ethercluster.com/mordor
+    chain_id: 63
+    chain_name: Ethereum Classic (Mordor)
+    decimals: 18
+    indexer_type: none
+  ETH:
+    chain: ETH
+    driver: evm
+    # url: https://goerli.infura.io/v3
+    # auth: env:CORDIAL_INFURA_API_TOKEN
+    # provider: infura
+    url: https://ethereum-goerli.publicnode.com
+    chain_id: 5
+    chain_name: Ethereum (Goerli)
+    explorer_url: https://goerli.etherscan.io
+    decimals: 18
+    indexer_type: rpc
+  FTM:
+    chain: FTM
+    driver: evm-legacy
+    url: https://rpc.testnet.fantom.network
+    chain_id: 4002
+    chain_name: Fantom (Testnet)
+    explorer_url: https://testnet.ftmscan.com
+    decimals: 18
+    indexer_type: none
+  KAR:
+    chain: KAR
+    driver: "evm-legacy"
+    net: testnet
+    url: "http://103.253.145.222:8545"
+    chain_id: 686
+    chain_name: Karura (Testnet)
+    explorer_url: "https://karura.subscan.io"
+    indexer_type: "none"
+    decimals: 12
+  KLAY:
+    chain: KLAY
+    driver: "evm-legacy"
+    net: testnet
+    url: "https://public-node-api.klaytnapi.com/v1/cypress"
+    chain_id: 1001
+    chain_name: Klaytn (Baobab Testnet)
+    explorer_url: "https://api.baobab.klaytn.net:8651"
+    indexer_type: "none"
+    decimals: 18
+  INJ:
+    chain: INJ
+    driver: cosmos
+    url: https://k8s.testnet.tm.injective.network
+    chain_id_str: injective-888
+    chain_name: Injective (Testnet)
+    chain_prefix: inj
+    chain_coin: inj
+    chain_coin_hd_path: 60
+    chain_gas_price_default: 5e+08
+    explorer_url: https://testnet.explorer.injective.network
+    decimals: 18
+  LUNA:
+    chain: LUNA
+    driver: cosmos
+    url: https://terra-testnet-rpc.polkachu.com
+    chain_id_str: pisco-1
+    chain_name: Terra (Testnet)
+    chain_prefix: terra
+    chain_coin: uluna
+    chain_coin_hd_path: 330
+    explorer_url: https://finder.terra.money/testnet
+    decimals: 6
+  LUNC:
+    chain: LUNC
+    driver: cosmos
+    url: ""
+    chain_id_str: bombay-12
+    chain_name: Terra Classic (Testnet)
+    chain_prefix: terra
+    chain_coin: uluna
+    chain_coin_hd_path: 330
+    decimals: 6
+  MATIC:
+    chain: MATIC
+    driver: evm
+    url: https://rpc-mumbai.matic.today
+    chain_id: 80001
+    chain_name: Polygon (Mumbai)
+    explorer_url: https://mumbai.polygonscan.com
+    decimals: 18
+    indexer_type: rpc
+  EmROSE:
+    chain: EmROSE
+    driver: evm-legacy
+    url: https://testnet.emerald.oasis.dev
+    chain_id: 42261
+    chain_name: Oasis Emerald (Testnet)
+    decimals: 18
+    indexer_type: none
+  SOL:
+    chain: SOL
+    driver: solana
+    net: devnet
+    url: https://api.devnet.solana.com
+    chain_name: Solana (Devnet)
+    explorer_url: https://explorer.solana.com
+    decimals: 9
+    indexer_type: solana
+    polling_period: 2m
+  SUI:
+    chain: SUI
+    driver: sui
+    net: devnet
+    url: https://fullnode.devnet.sui.io:443
+    chain_name: Sui (Devnet)
+    explorer_url: https://explorer.sui.io
+    decimals: 9
+    indexer_type: rpc
+    polling_period: 2m
+  XPLA:
+    chain: XPLA
+    driver: cosmos
+    url: https://cube-rpc.xpla.dev
+    chain_id_str: cube_47-5
+    chain_name: XPLA (Testnet)
+    chain_prefix: xpla
+    chain_coin: axpla
+    chain_coin_hd_path: 60
+    explorer_url: https://explorer.xpla.io/testnet
+    decimals: 18
+  HASH:
+    chain: HASH
+    driver: cosmos
+    url: https://rpc.test.provenance.io
+    chain_id_str: pio-testnet-1
+    chain_name: Provenance (Testnet)
+    chain_prefix: tp
+    chain_coin: nhash
+    chain_coin_hd_path: 1
+    explorer_url: https://explorer.test.provenance.io
+    decimals: 9
+    chain_gas_multiplier: 10.0
+    # translates to roughly max 50 HASH in gas per tx
+    chain_max_gas_price: 125000.0
+    indexer_type: cosmos
+    polling_period: 5m
+  TRX:
+    chain: TRX
+    driver: tron
+    net: testnet
+    url: "https://nile.trongrid.io"
+    chain_name: Nile
+    explorer_url: "http://nile.tronscan.org"
+    decimals: 6
+    # 200 tron fee limit
+    chain_max_gas_price: 2000000000

@@ -31,7 +31,7 @@ crosschain:
       chain_name: Nile
       explorer_url: "http://nile.tronscan.org"
       decimals: 6
-      chain_max_gas_price: 2000000000
+      chain_max_gas_price: 200000000
   tokens:
     USDC.INJ:
       asset: USDC

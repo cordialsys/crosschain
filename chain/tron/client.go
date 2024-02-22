@@ -2,19 +2,16 @@ package tron
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/fbsobreira/gotron-sdk/pkg/address"
-	"github.com/fbsobreira/gotron-sdk/pkg/client"
 	"github.com/fbsobreira/gotron-sdk/pkg/common"
-	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var _ xc.Client = &Client{}
@@ -23,7 +20,8 @@ const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a
 
 // Client for Template
 type Client struct {
-	client *client.GrpcClient
+	// client *client.GrpcClient
+	client *httpclient.Client
 
 	contract         xc.ContractAddress
 	blockExplorerURL string
@@ -55,8 +53,9 @@ func NewTxInput() *TxInput {
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 
-	client := client.NewGrpcClient(cfg.URL)
-	err := client.Start(grpc.WithTransportCredentials(insecure.NewCredentials()))
+	client, err := httpclient.NewHttpClient(cfg.URL)
+	// client := client.NewGrpcClient(cfg.URL)
+	// err := client.Start(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +68,15 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.Transfer(string(from), string(to), 5)
+	dummyTx, err := client.client.CreateTransaction(string(from), string(to), 5)
 	if err != nil {
 		return nil, err
 	}
 
-	input.RefBlockBytes = dummyTx.Transaction.RawData.RefBlockBytes
-	input.RefBlockHash = dummyTx.Transaction.RawData.RefBlockHash
-	input.Expiration = dummyTx.Transaction.RawData.Expiration
+	input.RefBlockBytes = dummyTx.RawData.RefBlockBytes
+	input.RefBlockHash = dummyTx.RawData.RefBlockHashBytes
+	// give 2 hours (miliseconds)
+	input.Expiration = time.Now().Add(time.Hour * 2).UnixMilli()
 
 	return input, nil
 }
@@ -84,8 +84,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 // SubmitTx submits a Tron tx
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	t := tx.(*Tx)
+	bz, err := t.Serialize()
+	if err != nil {
+		return err
+	}
 
-	_, err := client.client.Broadcast(t.tronTx)
+	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 
 	return err
 }
@@ -101,7 +105,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		return xc.TxInfo{}, err
 	}
 
-	block, err := client.client.GetBlockByNum(info.GetBlockNumber())
+	block, err := client.client.GetBlockByNum(info.BlockNumber)
 	if err != nil {
 		return xc.TxInfo{}, err
 	}
@@ -109,7 +113,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	var from xc.Address
 	var to xc.Address
 	var amount xc.AmountBlockchain
-	sources, destinations := deserialiseTransactionEvents(info.GetLog())
+	sources, destinations := deserialiseTransactionEvents(info.Logs)
 	// If we cannot retrieve transaction events, we can infer that the TX is a native transfer
 	if len(sources) == 0 && len(destinations) == 0 {
 		from, to, amount, err = deserialiseNativeTransfer(tx)
@@ -134,21 +138,21 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	}
 
 	txInfo := xc.TxInfo{
-		BlockHash:       string(common.BytesToHexString(block.Blockid)),
+		BlockHash:       block.BlockId,
 		TxID:            string(txHash),
 		ExplorerURL:     client.blockExplorerURL + fmt.Sprintf("/transaction/%s", string(txHash)),
 		From:            from,
 		To:              to,
-		ContractAddress: xc.ContractAddress(address.HexToAddress(common.BytesToHexString(info.GetContractAddress())).String()),
+		ContractAddress: xc.ContractAddress(info.ContractAddress),
 		Amount:          amount,
-		Fee:             xc.NewAmountBlockchainFromUint64(uint64(info.GetFee())),
-		BlockIndex:      info.GetBlockNumber(),
-		BlockTime:       info.GetBlockTimeStamp() / 1000,
+		Fee:             xc.NewAmountBlockchainFromUint64(uint64(info.Fee)),
+		BlockIndex:      int64(info.BlockNumber),
+		BlockTime:       int64(info.BlockTimeStamp / 1000),
 		Confirmations:   0,
 		Status:          xc.TxStatusSuccess,
 		Sources:         sources,
 		Destinations:    destinations,
-		Time:            info.GetBlockTimeStamp(),
+		Time:            int64(info.BlockTimeStamp),
 		TimeReceived:    0,
 		Error:           "",
 	}
@@ -157,7 +161,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 }
 
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	a, err := client.client.TRC20ContractBalance(string(address), string(client.contract))
+	a, err := client.client.ReadTrc20Balance(string(address), string(client.contract))
 	if err != nil {
 		return xc.AmountBlockchain{}, err
 	}
@@ -174,7 +178,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.NewAmountBlockchainFromUint64(uint64(resp.Balance)), nil
 }
 
-func deserialiseTransactionEvents(log []*core.TransactionInfo_Log) ([]*xc.TxInfoEndpoint, []*xc.TxInfoEndpoint) {
+func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xc.TxInfoEndpoint, []*xc.TxInfoEndpoint) {
 	sources := make([]*xc.TxInfoEndpoint, 0)
 	destinations := make([]*xc.TxInfoEndpoint, 0)
 
@@ -212,26 +216,24 @@ func deserialiseTransactionEvents(log []*core.TransactionInfo_Log) ([]*xc.TxInfo
 	return sources, destinations
 }
 
-func deserialiseNativeTransfer(tx *core.Transaction) (xc.Address, xc.Address, xc.AmountBlockchain, error) {
+func deserialiseNativeTransfer(tx *httpclient.GetTransactionIDResponse) (xc.Address, xc.Address, xc.AmountBlockchain, error) {
 	if len(tx.RawData.Contract) != 1 {
 		return "", "", xc.AmountBlockchain{}, fmt.Errorf("unsupported transaction")
 	}
 
 	contract := tx.RawData.Contract[0]
 
-	if contract.Type != core.Transaction_Contract_TransferContract {
+	if contract.Type != "TransferContract" {
 		return "", "", xc.AmountBlockchain{}, fmt.Errorf("unsupported transaction")
 	}
-
-	params := new(core.TransferContract)
-	err := anypb.UnmarshalTo(contract.Parameter, params, proto.UnmarshalOptions{})
+	transferContract, err := contract.AsTransferContract()
 	if err != nil {
-		return "", "", xc.AmountBlockchain{}, fmt.Errorf("unsupported transaction: %w", err)
+		return "", "", xc.AmountBlockchain{}, fmt.Errorf("invalid transfer-contract: %v", err)
 	}
 
-	from := xc.Address(address.Address(params.OwnerAddress).String())
-	to := xc.Address(address.Address(params.ToAddress).String())
-	amount := params.Amount
+	from := xc.Address(address.Address(transferContract.Owner).String())
+	to := xc.Address(address.Address(transferContract.To).String())
+	amount := transferContract.Amount
 
 	return from, to, xc.NewAmountBlockchainFromUint64(uint64(amount)), nil
 }

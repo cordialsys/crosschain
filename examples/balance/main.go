@@ -133,7 +133,7 @@ func getBalanceTron(ctx context.Context, xc *factory.Factory) {
 	if err != nil {
 		panic("unsupported asset")
 	}
-	address := xc.MustAddress(asset, "TS5QgZWumgK9dU5SH2HbB6kpxhmh5PfPt1")
+	address := xc.MustAddress(asset, "TFzvbsVRAYDtPGc4KdFNUZophTDxfKD3G1")
 	client, _ := xc.NewClient(asset)
 	balance, err := client.(crosschain.ClientBalance).FetchNativeBalance(ctx, address)
 	if err != nil {
