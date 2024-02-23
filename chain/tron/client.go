@@ -5,13 +5,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	"github.com/cordialsys/crosschain/utils"
-	"github.com/fbsobreira/gotron-sdk/pkg/address"
-	"github.com/fbsobreira/gotron-sdk/pkg/common"
+	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
 var _ xc.Client = &Client{}
@@ -189,24 +189,24 @@ func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xc.TxInfoEndpoint, 
 		destination.NativeAsset = xc.TRX
 
 		// The addresses in the TVM omits the prefix 0x41, so we add it here to allow us to parse the addresses
-		eventContract := address.HexToAddress("0x41" + common.BytesToHexString(event.Address)[2:])
-		eventMethod := common.BytesToHexString(event.Topics[0])
-		eventSource := address.HexToAddress("0x41" + common.BytesToHexString(event.Topics[1])[26:])      // Remove padding
-		eventDestination := address.HexToAddress("0x41" + common.BytesToHexString(event.Topics[2])[26:]) // Remove padding
+		eventContractB58 := base58.CheckEncode(event.Address, 0x41)
+		eventSourceB58 := base58.CheckEncode(event.Topics[1][12:], 0x41)      // Remove padding
+		eventDestinationB58 := base58.CheckEncode(event.Topics[2][12:], 0x41) // Remove padding
+		eventMethodBz := event.Topics[0]
 
 		eventValue := new(big.Int)
-		eventValue.SetString(common.BytesToHexString(event.Data), 0) // event value is returned as a padded big int hex
+		eventValue.SetString(hex.EncodeToString(event.Data), 16) // event value is returned as a padded big int hex
 
-		if eventMethod != TRANSFER_EVENT_HASH_HEX {
+		if hex.EncodeToString(eventMethodBz) != strings.TrimPrefix(TRANSFER_EVENT_HASH_HEX, "0x") {
 			continue
 		}
 
-		source.ContractAddress = xc.ContractAddress(eventContract.String())
-		destination.ContractAddress = xc.ContractAddress(eventContract.String())
+		source.ContractAddress = xc.ContractAddress(eventContractB58)
+		destination.ContractAddress = xc.ContractAddress(eventContractB58)
 
-		source.Address = xc.Address(eventSource.String())
+		source.Address = xc.Address(eventSourceB58)
 		source.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
-		destination.Address = xc.Address(eventDestination.String())
+		destination.Address = xc.Address(eventDestinationB58)
 		destination.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
 
 		sources = append(sources, source)
@@ -231,8 +231,8 @@ func deserialiseNativeTransfer(tx *httpclient.GetTransactionIDResponse) (xc.Addr
 		return "", "", xc.AmountBlockchain{}, fmt.Errorf("invalid transfer-contract: %v", err)
 	}
 
-	from := xc.Address(address.Address(transferContract.Owner).String())
-	to := xc.Address(address.Address(transferContract.To).String())
+	from := xc.Address(transferContract.Owner)
+	to := xc.Address(transferContract.To)
 	amount := transferContract.Amount
 
 	return from, to, xc.NewAmountBlockchainFromUint64(uint64(amount)), nil

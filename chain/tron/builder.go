@@ -1,14 +1,20 @@
 package tron
 
 import (
+	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/fbsobreira/gotron-sdk/pkg/abi"
-	"github.com/fbsobreira/gotron-sdk/pkg/address"
-	"github.com/fbsobreira/gotron-sdk/pkg/proto/core"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/okx/go-wallet-sdk/coins/tron"
+	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
+	"github.com/okx/go-wallet-sdk/crypto/base58"
+	"golang.org/x/crypto/sha3"
+
+	eABI "github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // TxBuilder for Template
@@ -53,25 +59,26 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	from_bytes, err := address.Base58ToAddress(string(from))
+	from_bytes, err := tron.GetAddressHash(string(from))
 	if err != nil {
 		return nil, err
 	}
-
-	to_bytes, err := address.Base58ToAddress(string(to))
+	to_bytes, err := tron.GetAddressHash(string(to))
 	if err != nil {
 		return nil, err
 	}
-
 	params := &core.TransferContract{}
 	params.Amount = amount.Int().Int64()
 	params.OwnerAddress = from_bytes
 	params.ToAddress = to_bytes
 
 	contract := &core.Transaction_Contract{}
-	contract.PermissionId = 0
 	contract.Type = core.Transaction_Contract_TransferContract
-	contract.Parameter, _ = anypb.New(params)
+	param, err := ptypes.MarshalAny(params)
+	if err != nil {
+		return nil, err
+	}
+	contract.Parameter = param
 
 	i := input.(*TxInput)
 	tx := new(core.Transaction)
@@ -81,46 +88,81 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	tx.RawData.RefBlockBytes = i.RefBlockBytes
 	tx.RawData.RefBlockHash = i.RefBlockHash
 	tx.RawData.Timestamp = i.Timestamp
+	bz, _ := json.Marshal(tx)
+	fmt.Println(string(bz))
 
 	return &Tx{
 		tronTx: tx,
 	}, nil
 }
 
+// Signature of a method
+func Signature(method string) []byte {
+	// hash method
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write([]byte(method))
+	b := hasher.Sum(nil)
+	return b[:4]
+}
+
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	from_bytes, err := address.Base58ToAddress(string(from))
+	from_bytes, _, err := base58.CheckDecode(string(from))
 	if err != nil {
 		return nil, err
 	}
 
-	to_bytes, err := address.Base58ToAddress(string(to))
+	to_bytes, _, err := base58.CheckDecode(string(to))
 	if err != nil {
 		return nil, err
 	}
 
-	contract_bytes, err := address.Base58ToAddress(txBuilder.Asset.GetContract())
+	contract_bytes, _, err := base58.CheckDecode(txBuilder.Asset.GetContract())
 	if err != nil {
 		return nil, err
 	}
 
-	param, err := abi.Pack("transfer(address,uint256)", []abi.Param{
-		{"address": to_bytes.String()},
-		{"uint256": amount.String()},
+	addrType, err := eABI.NewType("address", "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("internal type construction error: %v", err)
+	}
+	amountType, err := eABI.NewType("address", "", nil)
+	if err != nil {
+		return nil, fmt.Errorf("internal type construction error: %v", err)
+	}
+	args := eABI.Arguments{
+		{
+			Type: addrType,
+		},
+		{
+			Type: amountType,
+		},
+	}
+
+	paramBz, err := args.PackValues([]interface{}{
+		common.BytesToAddress(to_bytes),
+		amount.Int(),
 	})
+	methodSig := Signature("transfer(address,uint256)")
+	data := append(methodSig, paramBz...)
+
 	if err != nil {
 		return nil, err
 	}
 
 	params := &core.TriggerSmartContract{}
 	params.ContractAddress = contract_bytes
-	params.Data = param
+	params.Data = data
 	params.OwnerAddress = from_bytes
 	params.CallValue = 0
 
 	contract := &core.Transaction_Contract{}
 	contract.Type = core.Transaction_Contract_TriggerSmartContract
-	contract.Parameter, _ = anypb.New(params)
+	param, err := ptypes.MarshalAny(params)
+	if err != nil {
+		return nil, err
+	}
+	contract.Parameter = param
 
 	i := input.(*TxInput)
 	tx := &core.Transaction{}

@@ -9,7 +9,7 @@ require (
 	github.com/CosmWasm/wasmd v0.41.0
 	github.com/btcsuite/btcd v0.23.4
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/btcsuite/btcd/btcutil v1.1.2
+	github.com/btcsuite/btcd/btcutil v1.1.3
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
@@ -21,21 +21,22 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.3
 	github.com/cosmos/cosmos-sdk v0.47.4
 	github.com/cosmos/gogoproto v1.4.10
-	github.com/ethereum/go-ethereum v1.12.2
-	github.com/fbsobreira/gotron-sdk v0.0.0-20230907131216-1e824406fe8c
+	github.com/ethereum/go-ethereum v1.12.1
 	github.com/gagliardetto/binary v0.7.7
 	github.com/gagliardetto/solana-go v1.8.3
 	github.com/golang/protobuf v1.5.3
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hashicorp/vault/api v1.9.0
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20220519162058-e5cd3c3b3f3a
+	github.com/okx/go-wallet-sdk/coins/tron v0.0.0-20240115052846-46f0a371aa74
+	github.com/okx/go-wallet-sdk/crypto v0.0.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/test-go/testify v1.1.4
 	go.mongodb.org/mongo-driver v1.11.0
-	golang.org/x/crypto v0.11.0
+	golang.org/x/crypto v0.12.0
 	google.golang.org/api v0.126.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20230629202037-9506855d4529
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98
@@ -176,8 +177,8 @@ require (
 	github.com/mostynb/zstdpool-freelist v0.0.0-20201229113212-927304c0c3b1 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
+	github.com/okx/go-wallet-sdk/util v0.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pborman/uuid v1.2.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/petermattis/goid v0.0.0-20230317030725-371a4b8eda08 // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect
@@ -189,12 +190,10 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rakyll/statik v0.1.7 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rjeczalik/notify v0.9.3 // indirect
 	github.com/rs/cors v1.8.3 // indirect
 	github.com/rs/zerolog v1.29.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
-	github.com/shengdoushi/base58 v1.0.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
@@ -224,12 +223,12 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/ratelimit v0.2.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/term v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/term v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
@@ -245,13 +244,5 @@ require (
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
-	github.com/ethereum/go-ethereum => github.com/ethereum/go-ethereum v1.12.0
-	github.com/fbsobreira/gotron-sdk => github.com/cordialsys/gotron-sdk v0.0.0-20240130183447-cce5508ac900
-	github.com/fbsobreira/gotron-sdk/pkg/abi => github.com/cordialsys/gotron-sdk/pkg/abi v0.0.0-20240130183447-cce5508ac900
-	github.com/fbsobreira/gotron-sdk/pkg/address => github.com/cordialsys/gotron-sdk/pkg/address v0.0.0-20240130183447-cce5508ac900
-	github.com/fbsobreira/gotron-sdk/pkg/client => github.com/cordialsys/gotron-sdk/pkg/client v0.0.0-20240130183447-cce5508ac900
-	github.com/fbsobreira/gotron-sdk/pkg/common => github.com/cordialsys/gotron-sdk/pkg/common v0.0.0-20240130183447-cce5508ac900
-	github.com/fbsobreira/gotron-sdk/pkg/proto/core => github.com/cordialsys/gotron-sdk/pkg/proto/core v0.0.0-20240130183447-cce5508ac900
 	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
-	golang.org/x/exp => golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 )

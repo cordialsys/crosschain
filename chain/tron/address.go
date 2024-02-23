@@ -1,11 +1,11 @@
 package tron
 
 import (
-	"crypto/ecdsa"
+	"encoding/hex"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/fbsobreira/gotron-sdk/pkg/address"
+	"github.com/okx/go-wallet-sdk/coins/tron"
 )
 
 // AddressBuilder for Template
@@ -19,15 +19,11 @@ func NewAddressBuilder(cfgI xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	var publicKey *ecdsa.PublicKey
-	var err error
-	publicKey, err = crypto.UnmarshalPubkey(publicKeyBytes)
-	if err != nil {
-		return xc.Address(""), err
+	if len(publicKeyBytes) < 32 {
+		return "", fmt.Errorf("invalid secp256k1 public key")
 	}
-
-	address := address.PubkeyToAddress(*publicKey).String()
-	return xc.Address(address), nil
+	address, err := tron.GetAddressByPublicKey(hex.EncodeToString(publicKeyBytes))
+	return xc.Address(address), err
 }
 
 // GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key

@@ -53,6 +53,7 @@ func main() {
 	if err != nil {
 		panic("could create from address: " + err.Error())
 	}
+	fmt.Println("sending from: ", from)
 	to := xc.MustAddress(asset, "TFzvbsVRAYDtPGc4KdFNUZophTDxfKD3G1")
 	amount := xc.MustAmountBlockchain(asset, "0.5")
 	fmt.Println(amount)

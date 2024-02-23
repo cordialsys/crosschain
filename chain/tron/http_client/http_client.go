@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/fbsobreira/gotron-sdk/pkg/address"
+	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
 // Implement basic tron client that use's TRON's http api.
@@ -352,15 +352,16 @@ func (c *Client) TriggerConstantContracts(ownerAddress string, contract string, 
 }
 
 func (c *Client) ReadTrc20Balance(fromAddress string, contract string) (*big.Int, error) {
-	addrB, err := address.Base58ToAddress(fromAddress)
+	addrB, _, err := base58.CheckDecode(fromAddress)
 	if err != nil {
 		return &big.Int{}, err
 	}
-	contractB, err := address.Base58ToAddress(contract)
+	addrHex := hex.EncodeToString(addrB)
+	contractB, _, err := base58.CheckDecode(contract)
 	if err != nil {
 		return &big.Int{}, err
 	}
-	req := "0000000000000000000000000000000000000000000000000000000000000000"[len(addrB.Hex())-2:] + addrB.Hex()[2:]
+	req := "0000000000000000000000000000000000000000000000000000000000000000"[len(addrHex):] + addrHex
 	ownerAddress := hex.EncodeToString(addrB)
 	contractHex := hex.EncodeToString(contractB)
 	_, _ = ownerAddress, contractHex
