@@ -110,6 +110,10 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, max
 
 	addressScript, _ := hex.DecodeString(data.Address.ScriptHex)
 	for _, u := range data.Utxo {
+		if u.Block <= 0 {
+			// do not permit unconfirmed UTXO
+			continue
+		}
 		hash, _ := hex.DecodeString(u.TxHash)
 		// reverse
 		for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
@@ -201,6 +205,8 @@ type blockchairUTXO struct {
 	Index   uint32 `json:"index"`
 	Value   uint64 `json:"value"`
 	Address string `json:"address,omitempty"`
+	// This will be >0 if the UTXO is confirmed
+	Block int64 `json:"block_id"`
 }
 
 type blockchairOutput struct {

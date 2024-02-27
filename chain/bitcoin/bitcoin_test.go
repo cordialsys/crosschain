@@ -170,8 +170,11 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	for _, v := range testcases {
 		utxoJsons := []string{}
 		for i, utxo := range v.utxos {
-			s := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
+			s := fmt.Sprintf(`{"block_id":100,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
+			// should not include unconfirmed utxo
+			sBad := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
 			utxoJsons = append(utxoJsons, s)
+			utxoJsons = append(utxoJsons, sBad)
 		}
 
 		server, close := testtypes.MockHTTP(&s.Suite, []string{
