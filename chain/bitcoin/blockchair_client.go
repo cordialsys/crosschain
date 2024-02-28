@@ -440,8 +440,8 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 	if satsPerByteFloat < 10 {
 		satsPerByteFloat = 10
 	}
-	// add 20% extra default
-	defaultMultiplier := 1.2
+	// add 50% extra default
+	defaultMultiplier := 1.5
 	multiplier := client.Asset.GetChain().ChainGasMultiplier
 	if multiplier < 0.01 {
 		multiplier = defaultMultiplier
