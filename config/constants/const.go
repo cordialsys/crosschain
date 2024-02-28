@@ -5,8 +5,9 @@ import (
 	"path/filepath"
 )
 
-var DefaultHomeEnv string = "CORDIAL_HOME"
-var ConfigEnv string = "CORDIAL_CONFIG"
+const DefaultHomeEnv string = "CORDIAL_HOME"
+const ConfigEnv string = "CORDIAL_CONFIG"
+
 var DefaultHome string
 
 func init() {
@@ -17,8 +18,9 @@ func init() {
 		// ~/.cordial default
 		userHomeDir, err := os.UserHomeDir()
 		if err != nil {
-			panic(err)
+			DefaultHome = "/data"
+		} else {
+			DefaultHome = filepath.Join(userHomeDir, ".cordial")
 		}
-		DefaultHome = filepath.Join(userHomeDir, ".cordial")
 	}
 }
