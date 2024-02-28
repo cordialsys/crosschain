@@ -109,9 +109,27 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, max
 	}
 
 	addressScript, _ := hex.DecodeString(data.Address.ScriptHex)
+
+	// We calculate a threshold of 5% of the total BTC balance
+	// To skip including small valued UTXO as part of the total utxo set.
+	// This is done to avoid the case of including a UTXO from some tx with a very low
+	// fee and making this TX get stuck.  However we'll still include our own remainder
+	// UTXO's or large valued (>5%) UTXO's.
+
+	// TODO a better way to do this would be to do during `.SetAmount` on the txInput,
+	// So we can filter exactly for the target amount we need to send.
+	oneBtc := uint64(1 * 100_000_000)
+	totalSats := uint64(0)
 	for _, u := range data.Utxo {
-		if u.Block <= 0 {
-			// do not permit unconfirmed UTXO
+		totalSats += u.Value
+	}
+	threshold := uint64(0)
+	if totalSats > oneBtc {
+		threshold = (totalSats * 5) / 100
+	}
+	for _, u := range data.Utxo {
+		if u.Block <= 0 && u.Value < threshold {
+			// do not permit small-valued unconfirmed UTXO
 			continue
 		}
 		hash, _ := hex.DecodeString(u.TxHash)

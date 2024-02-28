@@ -171,10 +171,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		utxoJsons := []string{}
 		for i, utxo := range v.utxos {
 			s := fmt.Sprintf(`{"block_id":100,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
-			// should not include unconfirmed utxo
-			sBad := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
 			utxoJsons = append(utxoJsons, s)
-			utxoJsons = append(utxoJsons, sBad)
 		}
 
 		server, close := testtypes.MockHTTP(&s.Suite, []string{
@@ -221,6 +218,39 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		require.Equal(firstValue, btcInput.UnspentOutputs[0].Value.Uint64())
 
 	}
+}
+
+func (s *CrosschainTestSuite) TestFetchTxInputUnconfirmedUtxo() {
+	require := s.Require()
+
+	utxo1 := fmt.Sprintf(`{"block_id":100,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 0, 100*100_000_000)
+	// should not include unconfirmed utxo that are relatively "small"
+	utxo2 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 2, 1*100_000_000)
+	// this one is unconfirmed but makes up a significant part of the balance, so it should get used.
+	utxo3 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 1, 100*100_000_000)
+	utxoJsons := []string{utxo1, utxo2, utxo3}
+
+	server, close := testtypes.MockHTTP(&s.Suite, []string{
+		// fetch UnspentOutputs
+		fmt.Sprintf(
+			`{"data":{"mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6":{"address":{"type":"pubkeyhash","script_hex":"76a914652dac91ff1b130616cb11ce33b0ac2f1b4df89188ac","balance":2392235,"balance_usd":0,"received":35323650,"received_usd":0,"spent":32931415,"spent_usd":0,"output_count":12,"unspent_output_count":1,"first_seen_receiving":"2023-04-12 16:16:31","last_seen_receiving":"2023-04-13 15:15:24","first_seen_spending":"2023-04-12 22:28:01","last_seen_spending":"2023-04-13 15:15:24","scripthash_type":null,"transaction_count":12},"transactions":["c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","bb84ca051f523835f6b74a09264869f48c585a9e664c450de99905a59f8f410d","81ad62df63a86d2aa4cf524fdff4a6d85f9e51437137c3294482d29499e04e1a","c5175760193f00c33291669e0f3e2628fc1c1aaa083e29ae7f3ed23e2da4cf56","46be2eb86cbc249f0e2c43430fff35cc626a814b014ba6809bb7c03124662efa","3d380e087e07ab392de5e7653ccea054c3394c95f9378463522c8a094a21b584","cc0746e4dfb5e5da26f27810d29666be44b825bacfbec297454ea3e0903a2440","e7d3bf1722af2fcb0ec27b03ca32ec6079d45640e02a7fe3a43947d20a84285e","8b503826b34e7c44e5b0fda2ab378cbbef3992765322e60cc7b27ad777f05202","49d5fd5d9c6909b7a4e0af010a0693244cd0067c7d7cc16ec5948fc779638310","3013bb3657c545c881cac232ee6341e57656669e464103d8af3c1ddf859bde06","b054cd53be7fc8cb75d33372c0b8867f17a4cd49c367d413d0147719fd14c5f6"],"utxo":[%s]}},"context":{"code":200,"source":"D","limit":"100,100","offset":"0,0","results":1,"state":2428749,"market_price_usd":30494,"cache":{"live":true,"duration":20,"since":"2023-04-13 15:16:43","until":"2023-04-13 15:17:03","time":null},"api":{"version":"2.0.95-ie","last_major_update":"2022-11-07 02:00:00","next_major_update":null,"documentation":"https:\/\/blockchair.com\/api\/docs","notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"},"servers":"API4,TBTC0","time":0.8323581218719482,"render_time":0.00943303108215332,"full_time":0.8417911529541016,"request_cost":1}}`,
+			strings.Join(utxoJsons, ","),
+		),
+		// fetch blockinfo (for estimate gas)
+		`{"data":{"blocks":2428756,"transactions":65332308,"outputs":173266703,"circulation":2099211173546005,"blocks_24h":125,"transactions_24h":9376,"difficulty":104649090.3851,"volume_24h":9305170450343,"mempool_transactions":91,"mempool_size":25369,"mempool_tps":0.21666666666666667,"mempool_total_fee_usd":0,"best_block_height":2428755,"best_block_hash":"00000000000000171993c83855edbbdb4b596a80d7979b9906199a152c02e602","best_block_time":"2023-04-13 15:55:31","blockchain_size":28727851118,"average_transaction_fee_24h":5919,"inflation_24h":305175750,"median_transaction_fee_24h":208,"cdd_24h":10812.844745459975,"mempool_outputs":308,"largest_transaction_24h":{"hash":"bb7fb631e27a18b8802ead03f3ee14b69ae71edb845697f98e0f072b845b0be4","value_usd":0},"hashrate_24h":"650455020414125","inflation_usd_24h":0,"average_transaction_fee_usd_24h":0,"median_transaction_fee_usd_24h":0,"market_price_usd":0,"market_price_btc":0,"market_price_usd_change_24h_percentage":0,"market_cap_usd":0,"market_dominance_percentage":0,"next_retarget_time_estimate":"2023-04-17 02:55:52","next_difficulty_estimate":107945581,"suggested_transaction_fee_per_byte_sat":1,"hodling_addresses":10010301},"context":{"code":200,"source":"A","state":2428755,"market_price_usd":30467,"cache":{"live":false,"duration":"Ignore","since":"2023-04-13 16:03:49","until":"2023-04-13 16:05:00","time":2.86102294921875e-6},"api":{"version":"2.0.95-ie","last_major_update":"2022-11-07 02:00:00","next_major_update":null,"documentation":"https:\/\/blockchair.com\/api\/docs","notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"},"servers":"API4,TBTC0","time":1.8575801849365234,"render_time":0.007244110107421875,"full_time":0.007246971130371094,"request_cost":1}}`,
+	}, 200)
+	defer close()
+	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", AuthSecret: "1234"}
+	client, _ := NewClient(asset)
+
+	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
+	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
+	input, err := client.FetchTxInput(s.Ctx, from, to)
+	require.NoError(err)
+	btcInput := input.(*TxInput)
+	require.Len(btcInput.UnspentOutputs, 2)
+	require.EqualValues(100*100_000_000, btcInput.UnspentOutputs[0].Value.Uint64())
+	require.EqualValues(100*100_000_000, btcInput.UnspentOutputs[1].Value.Uint64())
 }
 
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
