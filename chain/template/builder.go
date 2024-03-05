@@ -11,6 +11,8 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
+var _ xc.TxBuilder = &TxBuilder{}
+
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 	return TxBuilder{

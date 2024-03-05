@@ -2,6 +2,10 @@ crosschain:
   network: testnet
   # Add overrides or new chains here.
   chains:
+    BTC:
+      url: "https://api.blockchair.com/bitcoin/testnet"
+      auth: "env:BLOCKCHAIR_API_TOKEN"
+      chain_max_gas_price: 2
     ETH:
       chain: ETH
       driver: evm

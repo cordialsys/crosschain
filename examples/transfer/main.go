@@ -19,7 +19,7 @@ func main() {
 
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("", crosschain.TRX)
+	asset, err := xc.GetAssetConfig("", crosschain.BTC)
 	if err != nil {
 		panic("unsupported asset: " + err.Error())
 	}
@@ -54,8 +54,8 @@ func main() {
 		panic("could create from address: " + err.Error())
 	}
 	fmt.Println("sending from: ", from)
-	to := xc.MustAddress(asset, "TFzvbsVRAYDtPGc4KdFNUZophTDxfKD3G1")
-	amount := xc.MustAmountBlockchain(asset, "0.5")
+	to := xc.MustAddress(asset, "mwn2Jf8ACJn3rH2hJ6EGHEmyswiUJUb8MR")
+	amount := xc.MustAmountBlockchain(asset, "0.00001")
 	fmt.Println(amount)
 	// to create a tx, we typically need some input from the blockchain
 	// e.g., nonce for Ethereum, recent block for Solana, gas data, ...

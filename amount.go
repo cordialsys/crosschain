@@ -88,6 +88,27 @@ func (amount *AmountBlockchain) ToHuman(decimals int32) AmountHumanReadable {
 	return AmountHumanReadable(dec)
 }
 
+func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainConfig) AmountBlockchain {
+	if chain.ChainGasMultiplier > 0.01 {
+		return MultiplyByFloat(amount, chain.ChainGasMultiplier)
+	}
+	// no multiplier configured, return same
+	return amount
+}
+
+func MultiplyByFloat(amount AmountBlockchain, multiplier float64) AmountBlockchain {
+	if amount.Uint64() == 0 {
+		return amount
+	}
+	// We are computing (100000 * multiplier * amount) / 100000
+	precision := uint64(1000000)
+	multBig := NewAmountBlockchainFromUint64(uint64(float64(precision) * multiplier))
+	divBig := NewAmountBlockchainFromUint64(precision)
+	product := multBig.Mul(&amount)
+	result := product.Div(&divBig)
+	return result
+}
+
 // NewAmountBlockchainFromUint64 creates a new AmountBlockchain from a uint64
 func NewAmountBlockchainFromUint64(u64 uint64) AmountBlockchain {
 	bigInt := new(big.Int).SetUint64(u64)

@@ -53,3 +53,25 @@ func (s *CrosschainTestSuite) TestNewAmountHumanReadableFromStr() {
 	require.NotNil(amount)
 	require.Equal(amount.String(), "0")
 }
+
+func (s *CrosschainTestSuite) TestLegacyGasCalculation() {
+	require := s.Require()
+
+	// Multiplier should default to 1
+	require.EqualValues(
+		1000,
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{}).Uint64(),
+	)
+	require.EqualValues(
+		1200,
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: 1.2}).Uint64(),
+	)
+	require.EqualValues(
+		500,
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: .5}).Uint64(),
+	)
+	require.EqualValues(
+		1500,
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: 1.5}).Uint64(),
+	)
+}

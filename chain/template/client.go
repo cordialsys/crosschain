@@ -12,6 +12,8 @@ import (
 type Client struct {
 }
 
+var _ xc.Client = &Client{}
+
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
@@ -20,7 +22,9 @@ type TxInput struct {
 
 func NewTxInput() *TxInput {
 	return &TxInput{
-		TxInputEnvelope: xc.TxInputEnvelope{},
+		TxInputEnvelope: xc.TxInputEnvelope{
+			Type: "INPUT_DRIVER_HERE",
+		},
 	}
 }
 

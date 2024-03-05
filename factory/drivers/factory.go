@@ -8,6 +8,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
+	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
@@ -19,7 +20,7 @@ func NewClient(cfg ITask, driver Driver) (Client, error) {
 	case DriverEVM:
 		return evm.NewClient(cfg)
 	case DriverEVMLegacy:
-		return evm.NewLegacyClient(cfg)
+		return evm_legacy.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewClient(cfg)
 	case DriverSolana:
@@ -43,7 +44,7 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	case DriverEVM:
 		return evm.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
-		return evm.NewLegacyTxBuilder(cfg)
+		return evm_legacy.NewTxBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewTxBuilder(cfg)
 	case DriverSolana:
@@ -64,8 +65,10 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 
 func NewSigner(cfg ITask) (Signer, error) {
 	switch Driver(cfg.GetChain().Driver) {
-	case DriverEVM, DriverEVMLegacy:
+	case DriverEVM:
 		return evm.NewSigner(cfg)
+	case DriverEVMLegacy:
+		return evm_legacy.NewSigner(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewSigner(cfg)
 	case DriverSolana:
@@ -86,8 +89,10 @@ func NewSigner(cfg ITask) (Signer, error) {
 
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
-	case DriverEVM, DriverEVMLegacy:
+	case DriverEVM:
 		return evm.NewAddressBuilder(cfg)
+	case DriverEVMLegacy:
+		return evm_legacy.NewAddressBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewAddressBuilder(cfg)
 	case DriverSolana:
@@ -108,7 +113,9 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 
 func CheckError(driver Driver, err error) ClientError {
 	switch driver {
-	case DriverEVM, DriverEVMLegacy:
+	case DriverEVM:
+		return evm.CheckError(err)
+	case DriverEVMLegacy:
 		return evm.CheckError(err)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.CheckError(err)

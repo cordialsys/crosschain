@@ -11,52 +11,8 @@ import (
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
 	client, err := NewClient(&xc.ChainConfig{})
+	require.NoError(err)
 	require.NotNil(client)
-	require.False(client.Legacy)
-	require.Nil(err)
-}
-
-func (s *CrosschainTestSuite) TestNewLegacyClient() {
-	require := s.Require()
-	client, err := NewLegacyClient(&xc.ChainConfig{})
-	require.NotNil(client)
-	require.True(client.Legacy)
-	require.Nil(err)
-}
-
-func (s *CrosschainTestSuite) TestLegacyGasCalculation() {
-	require := s.Require()
-
-	// Should sum 1000 + 200
-	estimate := EvmGasEstimation{
-		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
-		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
-		Multiplier: 1.0,
-	}
-
-	// Multiplier should default to 1
-	require.EqualValues(1200, estimate.MultipliedLegacyGasPrice().Uint64())
-	estimate = EvmGasEstimation{
-		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
-		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
-		Multiplier: 0.0,
-	}
-	require.EqualValues(1200, estimate.MultipliedLegacyGasPrice().Uint64())
-
-	// 1.5x
-	estimate = EvmGasEstimation{
-		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
-		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
-		Multiplier: 1.5,
-	}
-	require.EqualValues(1800, estimate.MultipliedLegacyGasPrice().Uint64())
-	// 0.5x
-	estimate = EvmGasEstimation{
-		BaseFee:    xc.NewAmountBlockchainFromUint64(1000),
-		GasTipCap:  xc.NewAmountBlockchainFromUint64(200),
-		Multiplier: 0.5,
-	}
-	require.EqualValues(600, estimate.MultipliedLegacyGasPrice().Uint64())
 }
 
 func (s *CrosschainTestSuite) TestAccountBalance() {
@@ -148,7 +104,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
 				GasTipCap:       xc.NewAmountBlockchainFromUint64(30000000000),
 				// legacy price
-				GasPrice: xc.NewAmountBlockchainFromUint64(50000000000 + 30000000000),
+				// GasPrice: xc.NewAmountBlockchainFromUint64(50000000000 + 30000000000),
 			},
 			err:        "",
 			multiplier: 1.0,
@@ -173,44 +129,18 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// GasTip should not get multiplied
 				GasTipCap: xc.NewAmountBlockchainFromUint64(2000000000),
 				// legacy price
-				GasPrice: xc.NewAmountBlockchainFromUint64((90000000000 + 2000000000) * 2),
+				// GasPrice: xc.NewAmountBlockchainFromUint64((90000000000 + 2000000000) * 2),
 			},
 			err:        "",
 			multiplier: 2.0,
-		},
-		{
-			name: "fetchTxInput legacy",
-			resp: []string{
-				// eth_getTransactionCount
-				`"0x6"`,
-				// eth_gasPrice
-				`"0xba43b7400"`,
-				// eth_estimateGas
-				`"0x52e4"`,
-			},
-			val: &TxInput{
-				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
-				Nonce:           6,
-				GasLimit:        21220,
-				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
-				GasTipCap:       xc.NewAmountBlockchainFromUint64(0),
-				// legacy price
-				GasPrice: xc.NewAmountBlockchainFromUint64(50000000000),
-			},
-			err:        "",
-			multiplier: 1.0,
-			legacy:     true,
 		},
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.ETH, URL: server.URL, ChainGasMultiplier: v.multiplier}
+		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)
-		if v.legacy {
-			client, err = NewLegacyClient(asset)
-		}
 		require.NoError(err)
 		input, err := client.FetchTxInput(s.Ctx, xc.Address(""), xc.Address(""))
 		require.NoError(err)

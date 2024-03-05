@@ -211,7 +211,7 @@ func (txBuilder TxBuilder) BuildTaskTx(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	return txBuilder.buildEvmTxWithPayload(xc.Address(contract), value, payload, txInput)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), value, payload, txInput)
 }
 
 func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
@@ -312,5 +312,5 @@ func (txBuilder TxBuilder) BuildWormholeTransferTx(from xc.Address, to xc.Addres
 		return nil, err
 	}
 
-	return txBuilder.buildEvmTxWithPayload(xc.Address(contract), value, payload, txInput)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), value, payload, txInput)
 }

@@ -144,6 +144,8 @@ chains:
     chain_name: Klaytn (Baobab Testnet)
     explorer_url: "https://api.baobab.klaytn.net:8651"
     indexer_type: "none"
+    # KLAY wants fixed gas prices (no change/multiplier)
+    chain_gas_multiplier: 1
     decimals: 18
   INJ:
     chain: INJ

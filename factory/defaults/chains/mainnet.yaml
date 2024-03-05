@@ -262,6 +262,8 @@ chains:
         chain_id: 8217
         chain_name: Klaytn
         explorer_url: https://scope.klaytn.com
+        # KLAY wants fixed gas prices (no change/multiplier)
+        chain_gas_multiplier: 1
         decimals: 18
         indexer_type: rpc
         polling_period: 15m

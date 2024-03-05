@@ -9,6 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
+	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
@@ -35,8 +36,12 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 		var txInput cosmos.TxInput
 		err := json.Unmarshal(buf, &txInput)
 		return &txInput, err
-	case xc.DriverEVM, xc.DriverEVMLegacy:
+	case xc.DriverEVM:
 		var txInput evm.TxInput
+		err := json.Unmarshal(buf, &txInput)
+		return &txInput, err
+	case xc.DriverEVMLegacy:
+		var txInput evm_legacy.TxInput
 		err := json.Unmarshal(buf, &txInput)
 		return &txInput, err
 	case xc.DriverSolana:

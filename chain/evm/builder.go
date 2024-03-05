@@ -13,10 +13,21 @@ import (
 
 var DefaultMaxTipCapGwei uint64 = 5
 
+type GethTxBuilder interface {
+	BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, input xc.TxInput) (xc.Tx, error)
+}
+
+// supports evm after london merge
+type EvmTxBuilder struct {
+}
+
+var _ GethTxBuilder = &EvmTxBuilder{}
+
 // TxBuilder for EVM
 type TxBuilder struct {
-	Asset  xc.ITask
-	Legacy bool
+	Asset         xc.ITask
+	gethTxBuilder GethTxBuilder
+	// Legacy bool
 }
 
 var _ xc.TxBuilder = &TxBuilder{}
@@ -24,18 +35,23 @@ var _ xc.TxBuilder = &TxBuilder{}
 // NewTxBuilder creates a new EVM TxBuilder
 func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 	return TxBuilder{
-		Asset:  asset,
-		Legacy: false,
+		Asset:         asset,
+		gethTxBuilder: &EvmTxBuilder{},
 	}, nil
 }
 
-// NewTxBuilder creates a new EVM TxBuilder for legacy tx
-func NewLegacyTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
-	return TxBuilder{
-		Asset:  asset,
-		Legacy: true,
-	}, nil
+func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) xc.TxBuilder {
+	txBuilder.gethTxBuilder = buider
+	return txBuilder
 }
+
+// NewTxBuilder creates a new EVM TxBuilder for legacy tx
+// func NewLegacyTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
+// 	return TxBuilder{
+// 		Asset: asset,
+// 		// Legacy: true,
+// 	}, nil
+// }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
@@ -67,24 +83,22 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
-	return txBuilder.buildEvmTxWithPayload(to, amount, []byte{}, txInput)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), to, amount, []byte{}, input)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	contract := txBuilder.Asset.GetContract()
-	payload, err := txBuilder.buildERC20Payload(to, amount)
+	payload, err := BuildERC20Payload(to, amount)
 	if err != nil {
 		return nil, err
 	}
-	return txBuilder.buildEvmTxWithPayload(xc.Address(contract), zero, payload, txInput)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), zero, payload, input)
 }
 
-func (txBuilder TxBuilder) buildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
+func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
 	transferFnSignature := []byte("transfer(address,uint256)")
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(transferFnSignature)
@@ -109,29 +123,16 @@ func (txBuilder TxBuilder) buildERC20Payload(to xc.Address, amount xc.AmountBloc
 	return data, nil
 }
 
-func (txBuilder TxBuilder) buildEvmTxWithPayload(to xc.Address, value xc.AmountBlockchain, data []byte, input *TxInput) (xc.Tx, error) {
+func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
 	address, err := HexToAddress(to)
 	if err != nil {
 		return nil, err
 	}
-	chainID := new(big.Int).SetInt64(txBuilder.Asset.GetChain().ChainID)
-
-	if txBuilder.Legacy {
-		return &Tx{
-			EthTx: types.NewTransaction(
-				input.Nonce,
-				address,
-				value.Int(),
-				input.GasLimit,
-				input.GasPrice.Int(),
-				data,
-			),
-			Signer: types.LatestSignerForChainID(chainID),
-		}, nil
-	}
+	chainID := new(big.Int).SetInt64(chain.ChainID)
+	input := inputRaw.(*TxInput)
 
 	// Protection from setting very high gas tip
-	maxTipGwei := uint64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
+	maxTipGwei := uint64(chain.ChainMaxGasPrice)
 	if maxTipGwei == 0 {
 		maxTipGwei = DefaultMaxTipCapGwei
 	}

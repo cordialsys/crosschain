@@ -42,7 +42,7 @@ type Client struct {
 	ChainId         *big.Int
 	Interceptor     *utils.HttpInterceptor
 	EstimateGasFunc xc.EstimateGasFunc
-	Legacy          bool
+	// Legacy          bool
 }
 
 var _ xc.FullClientWithGas = &Client{}
@@ -57,7 +57,7 @@ type TxInput struct {
 	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
 	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
 	// LegacyTx
-	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
+	// GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 	// Task params
 	Params []string `json:"params,omitempty"`
 }
@@ -136,7 +136,7 @@ func NewClient(asset xc.ITask) (*Client, error) {
 		ChainId:         nil,
 		Interceptor:     interceptor,
 		EstimateGasFunc: nil,
-		Legacy:          false,
+		// Legacy:          false,
 	}, nil
 }
 
@@ -150,14 +150,14 @@ func (client *Client) ChainID() (*big.Int, error) {
 }
 
 // NewLegacyClient returns a new EVM Client for legacy tx
-func NewLegacyClient(cfg xc.ITask) (*Client, error) {
-	client, err := NewClient(cfg)
-	if err != nil {
-		return nil, err
-	}
-	client.Legacy = true
-	return client, nil
-}
+// func NewLegacyClient(cfg xc.ITask) (*Client, error) {
+// 	client, err := NewClient(cfg)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	// client.Legacy = true
+// 	return client, nil
+// }
 
 func (client *Client) DefaultMaxGasLimit() uint64 {
 	// Set absolute gas limits for safety
@@ -175,24 +175,24 @@ func (client *Client) DefaultMaxGasLimit() uint64 {
 }
 
 // Simulate a transaction to get the estimated gas limit
-func (client *Client) SimulateGas(ctx context.Context, from xc.Address, to xc.Address, txInput *TxInput) (uint64, error) {
-	builder, err := NewTxBuilder(client.Asset)
-	if err != nil {
-		return 0, fmt.Errorf("could not prepare to simulate: %v", err)
-	}
-	if client.Legacy {
-		builder, err = NewLegacyTxBuilder(client.Asset)
-		if err != nil {
-			return 0, fmt.Errorf("could not prepare to simulate legacy: %v", err)
-		}
-	}
+func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxBuilder, from xc.Address, to xc.Address, txInput xc.TxInput) (uint64, error) {
+	// builder, err := newTxBuilder(client.Asset)
+	// if err != nil {
+	// 	return 0, fmt.Errorf("could not prepare to simulate: %v", err)
+	// }
+	// if client.Legacy {
+	// 	builder, err = NewLegacyTxBuilder(client.Asset)
+	// 	if err != nil {
+	// 		return 0, fmt.Errorf("could not prepare to simulate legacy: %v", err)
+	// 	}
+	// }
 	zero := big.NewInt(0)
 	fromAddr, _ := HexToAddress(from)
 
 	// TODO it may be more accurate to use the actual amount for the transfer,
 	// but that will require changing the interface to pass amount.
 	// For now we'll use the smallest amount (1).
-	tx, err := builder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
+	tx, err := txBuilder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
 	if err != nil {
 		return 0, fmt.Errorf("could not build simulated tx: %v", err)
 	}
@@ -221,7 +221,26 @@ func (client *Client) SimulateGas(ctx context.Context, from xc.Address, to xc.Ad
 	if err != nil {
 		return 0, fmt.Errorf("could not simulate tx: %v", err)
 	}
+
+	defaultMax := client.DefaultMaxGasLimit()
+	if gasLimit == 0 || gasLimit > defaultMax {
+		gasLimit = defaultMax
+	}
 	return gasLimit, nil
+}
+
+func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, error) {
+	var fromAddr common.Address
+	var err error
+	fromAddr, err = HexToAddress(from)
+	if err != nil {
+		return 0, fmt.Errorf("bad to address '%v': %v", from, err)
+	}
+	nonce, err := client.EthClient.NonceAt(ctx, fromAddr, nil)
+	if err != nil {
+		return 0, err
+	}
+	return nonce, nil
 }
 
 // FetchTxInput returns tx input for a EVM tx
@@ -234,16 +253,9 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	// Gas tip (priority fee) calculation
 	result.GasTipCap = xc.NewAmountBlockchainFromUint64(DEFAULT_GAS_TIP)
 	result.GasFeeCap = zero
-	result.GasPrice = zero
 
 	// Nonce
-	var fromAddr common.Address
-	var err error
-	fromAddr, err = HexToAddress(from)
-	if err != nil {
-		return zero, fmt.Errorf("bad to address '%v': %v", from, err)
-	}
-	nonce, err := client.EthClient.NonceAt(ctx, fromAddr, nil)
+	nonce, err := client.GetNonce(ctx, from)
 	if err != nil {
 		return result, err
 	}
@@ -251,24 +263,30 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 	// Gas
 	if !nativeAsset.NoGasFees {
-		estimate, err := client.EstimateGas(ctx)
+		latestHeader, err := client.EthClient.HeaderByNumber(ctx, nil)
 		if err != nil {
 			return result, err
 		}
-		result.GasPrice = estimate.MultipliedLegacyGasPrice() // legacy
-		result.GasFeeCap = estimate.MultipliedBaseFee()       // normal
-		result.GasTipCap = estimate.GetGasTipCap()
+
+		gasTipCap, err := client.EthClient.SuggestGasTipCap(ctx)
+		if err != nil {
+			return result, err
+		}
+		// should only multiply one cap, not both.
+		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee).ApplyGasPriceMultiplier(client.Asset.GetChain())
+		result.GasTipCap = xc.AmountBlockchain(*gasTipCap)
 	} else {
 		result.GasTipCap = zero
 	}
 
-	gasLimit, err := client.SimulateGas(ctx, from, to, result)
+	builder, err := NewTxBuilder(client.Asset)
+	if err != nil {
+		return 0, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+
+	gasLimit, err := client.SimulateGasWithLimit(ctx, builder, from, to, result)
 	if err != nil {
 		return nil, err
-	}
-	defaultMax := client.DefaultMaxGasLimit()
-	if gasLimit == 0 || gasLimit > defaultMax {
-		gasLimit = defaultMax
 	}
 	result.GasLimit = uint64(gasLimit)
 
@@ -421,100 +439,6 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 
 	return result, nil
-}
-
-type EvmGasEstimation struct {
-	BaseFee    xc.AmountBlockchain
-	GasTipCap  xc.AmountBlockchain
-	Multiplier float64
-	Legacy     bool
-}
-
-func MultiplyByFloat(amount xc.AmountBlockchain, multiplier float64) xc.AmountBlockchain {
-	if amount.Uint64() == 0 {
-		return amount
-	}
-	// We are computing (100000 * multiplier * amount) / 100000
-	precision := uint64(1000000)
-	multBig := xc.NewAmountBlockchainFromUint64(uint64(float64(precision) * multiplier))
-	divBig := xc.NewAmountBlockchainFromUint64(precision)
-	product := multBig.Mul(&amount)
-	result := product.Div(&divBig)
-	return result
-}
-
-// Returns multiplier if set, otherwise default 1
-func (e *EvmGasEstimation) GetMultiplierOrDefault() float64 {
-	multiplier := e.Multiplier
-	if multiplier == 0.0 {
-		multiplier = 1
-	}
-	return multiplier
-}
-func (e *EvmGasEstimation) MultipliedLegacyGasPrice() xc.AmountBlockchain {
-	baseFee := e.BaseFee
-	tip := e.GasTipCap
-
-	// add the tip and base fee together for legacy
-	sum := tip.Add(&baseFee)
-	return MultiplyByFloat(sum, e.GetMultiplierOrDefault())
-}
-
-func (e *EvmGasEstimation) MultipliedBaseFee() xc.AmountBlockchain {
-	return MultiplyByFloat(e.BaseFee, e.GetMultiplierOrDefault())
-}
-func (e *EvmGasEstimation) GetGasTipCap() xc.AmountBlockchain {
-	return e.GasTipCap
-}
-
-func (client *Client) EstimateGas(ctx context.Context) (EvmGasEstimation, error) {
-	native := client.Asset.GetChain()
-	estimate := EvmGasEstimation{
-		BaseFee:   xc.NewAmountBlockchainFromUint64(0),
-		GasTipCap: xc.NewAmountBlockchainFromUint64(0),
-		Legacy:    client.Legacy,
-	}
-
-	// KLAY has fixed gas price of 250 ston
-	if native.Chain == xc.KLAY {
-		return EvmGasEstimation{
-			BaseFee: xc.NewAmountBlockchainFromUint64(250_000_000_000),
-		}, nil
-	}
-
-	// legacy gas estimation via SuggestGasPrice
-	if client.Legacy {
-		baseFee, err := client.EthClient.SuggestGasPrice(ctx)
-		if err != nil {
-			return estimate, err
-		} else {
-			estimate.BaseFee = xc.AmountBlockchain(*baseFee)
-		}
-	} else {
-		latest, err := client.EthClient.HeaderByNumber(ctx, nil)
-		if err != nil {
-			return estimate, err
-		} else {
-			estimate.BaseFee = xc.AmountBlockchain(*latest.BaseFee)
-		}
-		gasTipCap, err := client.EthClient.SuggestGasTipCap(ctx)
-		if err != nil {
-			return estimate, err
-		} else {
-			estimate.GasTipCap = xc.AmountBlockchain(*gasTipCap)
-		}
-	}
-	defaultPrice := xc.NewAmountBlockchainFromUint64(DEFAULT_GAS_PRICE)
-	if estimate.BaseFee.Cmp(&defaultPrice) < 0 {
-		estimate.BaseFee = defaultPrice
-	}
-
-	estimate.Multiplier = 2.0
-	if native.ChainGasMultiplier > 0.0 {
-		estimate.Multiplier = native.ChainGasMultiplier
-	}
-
-	return estimate, nil
 }
 
 // RegisterEstimateGasCallback registers a callback to get gas price
