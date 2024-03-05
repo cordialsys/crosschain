@@ -1,4 +1,4 @@
-package bitcoin
+package bitcoin_cash
 
 import (
 	"bytes"

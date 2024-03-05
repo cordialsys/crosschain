@@ -41,15 +41,15 @@ type Recipient struct {
 
 // Tx for Bitcoin
 type Tx struct {
-	msgTx      *wire.MsgTx
-	signed     bool
-	recipients []Recipient
+	MsgTx      *wire.MsgTx
+	Signed     bool
+	Recipients []Recipient
 
-	amount xc.AmountBlockchain
-	input  TxInput
-	from   xc.Address
-	to     xc.Address
-	isBch  bool
+	Amount xc.AmountBlockchain
+	Input  TxInput
+	From   xc.Address
+	To     xc.Address
+	// isBch  bool
 }
 
 var _ xc.Tx = &Tx{}
@@ -75,7 +75,7 @@ func (tx *Tx) txHashNormal() xc.TxHash {
 	return xc.TxHash(hex.EncodeToString(txhash[:]))
 }
 func (tx *Tx) txHashNormalBytes() []byte {
-	txhash := tx.msgTx.TxHash()
+	txhash := tx.MsgTx.TxHash()
 	return txhash[:]
 }
 
@@ -85,9 +85,9 @@ func bzToString(bz []byte) string {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	sighashes := make([]xc.TxDataToSign, len(tx.input.UnspentOutputs))
+	sighashes := make([]xc.TxDataToSign, len(tx.Input.UnspentOutputs))
 
-	for i, utxo := range tx.input.UnspentOutputs {
+	for i, utxo := range tx.Input.UnspentOutputs {
 		txin := Input{
 			Output: utxo,
 		}
@@ -101,29 +101,21 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		var hash []byte
 		var err error
 		log.Debugf("Sighashes params: sigScript=%s IsPayToWitnessPubKeyHash(pubKeyScript)=%t", bzToString(sigScript), txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
-		if tx.isBch {
-			if sigScript == nil {
-				hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(tx.msgTx, fetcher), txscript.SigHashAll, tx.msgTx, i, int64(value))
+		if sigScript == nil {
+			if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) {
+				log.Debugf("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+				hash, err = txscript.CalcWitnessSigHash(pubKeyScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
 			} else {
-				hash = CalculateBchBip143Sighash(sigScript, txscript.NewTxSigHashes(tx.msgTx, fetcher), txscript.SigHashAll, tx.msgTx, i, int64(value))
+				log.Debugf("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+				hash, err = txscript.CalcSignatureHash(pubKeyScript, txscript.SigHashAll, tx.MsgTx, i)
 			}
 		} else {
-			if sigScript == nil {
-				if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) {
-					log.Debugf("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
-					hash, err = txscript.CalcWitnessSigHash(pubKeyScript, txscript.NewTxSigHashes(tx.msgTx, fetcher), txscript.SigHashAll, tx.msgTx, i, int64(value))
-				} else {
-					log.Debugf("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
-					hash, err = txscript.CalcSignatureHash(pubKeyScript, txscript.SigHashAll, tx.msgTx, i)
-				}
+			if txscript.IsPayToWitnessScriptHash(pubKeyScript) {
+				log.Debugf("CalcWitnessSigHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
+				hash, err = txscript.CalcWitnessSigHash(sigScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
 			} else {
-				if txscript.IsPayToWitnessScriptHash(pubKeyScript) {
-					log.Debugf("CalcWitnessSigHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
-					hash, err = txscript.CalcWitnessSigHash(sigScript, txscript.NewTxSigHashes(tx.msgTx, fetcher), txscript.SigHashAll, tx.msgTx, i, int64(value))
-				} else {
-					log.Debugf("CalcSignatureHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
-					hash, err = txscript.CalcSignatureHash(sigScript, txscript.SigHashAll, tx.msgTx, i)
-				}
+				log.Debugf("CalcSignatureHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
+				hash, err = txscript.CalcSignatureHash(sigScript, txscript.SigHashAll, tx.MsgTx, i)
 			}
 		}
 		if err != nil {
@@ -136,50 +128,60 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	return sighashes, nil
 }
 
+// returns (r, s, err)
+func DecodeEcdsaSignature(signature xc.TxSignature) (btcec.ModNScalar, btcec.ModNScalar, error) {
+	var err error
+	var r btcec.ModNScalar
+	var s btcec.ModNScalar
+	rsv := [65]byte{}
+	if len(signature) != 65 && len(signature) != 64 {
+		return r, s, errors.New("signature must be 64 or 65 length serialized bytestring of r,s, and recovery byte")
+	}
+	copy(rsv[:], signature)
+
+	// Decode the signature and the pubkey script.
+	rInt := new(big.Int).SetBytes(rsv[:32])
+	sInt := new(big.Int).SetBytes(rsv[32:64])
+
+	rBz := r.Bytes()
+	sBz := s.Bytes()
+	rInt.FillBytes(rBz[:])
+	sInt.FillBytes(sBz[:])
+	r.SetBytes(&rBz)
+	s.SetBytes(&sBz)
+	return r, s, err
+}
+
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
-	if tx.signed {
+	if tx.Signed {
 		return fmt.Errorf("already signed")
 	}
-	if len(signatures) != len(tx.msgTx.TxIn) {
-		return fmt.Errorf("expected %v signatures, got %v signatures", len(tx.msgTx.TxIn), len(signatures))
+	if len(signatures) != len(tx.MsgTx.TxIn) {
+		return fmt.Errorf("expected %v signatures, got %v signatures", len(tx.MsgTx.TxIn), len(signatures))
 	}
 
 	for i, rsvBytes := range signatures {
-		var err error
-		rsv := [65]byte{}
-		if len(rsvBytes) != 65 && len(rsvBytes) != 64 {
-			return errors.New("signature must be 64 or 65 length serialized bytestring of r,s, and recovery byte")
+		r, s, err := DecodeEcdsaSignature(rsvBytes)
+		if err != nil {
+			return err
 		}
-		copy(rsv[:], rsvBytes)
-
-		// Decode the signature and the pubkey script.
-		rInt := new(big.Int).SetBytes(rsv[:32])
-		sInt := new(big.Int).SetBytes(rsv[32:64])
-		var r btcec.ModNScalar
-		var s btcec.ModNScalar
-		rBz := r.Bytes()
-		sBz := s.Bytes()
-		rInt.FillBytes(rBz[:])
-		sInt.FillBytes(sBz[:])
-		r.SetBytes(&rBz)
-		s.SetBytes(&sBz)
 
 		signature := ecdsa.NewSignature(&r, &s)
-		pubKeyScript := tx.input.UnspentOutputs[i].PubKeyScript
+		pubKeyScript := tx.Input.UnspentOutputs[i].PubKeyScript
 		var sigScript []byte = nil
 
 		// Support segwit.
 		if sigScript == nil {
 			if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
 				log.Debug("append signature (segwit)")
-				tx.msgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.input.FromPublicKey})
+				tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.Input.FromPublicKey})
 				continue
 			}
 		} else {
 			if txscript.IsPayToWitnessScriptHash(sigScript) {
 				log.Debug("append signature + sigscript (segwit)")
-				tx.msgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.input.FromPublicKey, sigScript})
+				tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.Input.FromPublicKey, sigScript})
 				continue
 			}
 		}
@@ -187,29 +189,26 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		// Support non-segwit
 		builder := txscript.NewScriptBuilder()
 		sigHashByte := txscript.SigHashAll
-		if tx.isBch {
-			sigHashByte = sigHashByte | SighashForkID
-		}
 		builder.AddData(append(signature.Serialize(), byte(sigHashByte)))
-		builder.AddData(tx.input.FromPublicKey)
+		builder.AddData(tx.Input.FromPublicKey)
 		log.Debug("append signature (non-segwit)")
 		if sigScript != nil {
 			log.Debug("append sigScript (non-segwit)")
 			builder.AddData(sigScript)
 		}
-		tx.msgTx.TxIn[i].SignatureScript, err = builder.Script()
+		tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
 		if err != nil {
 			return err
 		}
 	}
 
-	tx.signed = true
+	tx.Signed = true
 	return nil
 }
 
 func (tx *Tx) Serialize() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	if err := tx.msgTx.Serialize(buf); err != nil {
+	if err := tx.MsgTx.Serialize(buf); err != nil {
 		return []byte{}, err
 	}
 	return buf.Bytes(), nil
@@ -218,17 +217,17 @@ func (tx *Tx) Serialize() ([]byte, error) {
 // Outputs returns the UTXO outputs in the underlying transaction.
 func (tx *Tx) Outputs() ([]Output, error) {
 	hash := tx.txHashNormal()
-	outputs := make([]Output, len(tx.msgTx.TxOut))
+	outputs := make([]Output, len(tx.MsgTx.TxOut))
 	for i := range outputs {
 		outputs[i].Outpoint = Outpoint{
 			Hash:  []byte(hash),
 			Index: uint32(i),
 		}
-		outputs[i].PubKeyScript = tx.msgTx.TxOut[i].PkScript
-		if tx.msgTx.TxOut[i].Value < 0 {
+		outputs[i].PubKeyScript = tx.MsgTx.TxOut[i].PkScript
+		if tx.MsgTx.TxOut[i].Value < 0 {
 			return nil, fmt.Errorf("bad output %v: value is less than zero", i)
 		}
-		outputs[i].Value = xc.NewAmountBlockchainFromUint64(uint64(tx.msgTx.TxOut[i].Value))
+		outputs[i].Value = xc.NewAmountBlockchainFromUint64(uint64(tx.MsgTx.TxOut[i].Value))
 	}
 	return outputs, nil
 }
@@ -256,7 +255,7 @@ func (tx *Tx) DetectToAndAmount(from string, expectedTo string) (string, xc.Amou
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	totalOut := xc.NewAmountBlockchainFromUint64(0)
 
-	for _, recipient := range tx.recipients {
+	for _, recipient := range tx.Recipients {
 		addr := string(recipient.To)
 		value := recipient.Value
 
@@ -275,7 +274,4 @@ func (tx *Tx) DetectToAndAmount(from string, expectedTo string) (string, xc.Amou
 		totalOut = totalOut.Add(&value)
 	}
 	return to, amount, totalOut
-}
-func (tx *Tx) IsBch() bool {
-	return tx.isBch
 }

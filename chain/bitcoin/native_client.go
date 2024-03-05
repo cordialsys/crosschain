@@ -145,18 +145,18 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	data, _ := hex.DecodeString(resp.Hex)
 	tx := &Tx{
-		input:  *NewTxInput(),
-		msgTx:  &wire.MsgTx{},
-		signed: true,
+		Input:  *NewTxInput(),
+		MsgTx:  &wire.MsgTx{},
+		Signed: true,
 	}
-	tx.msgTx.Deserialize(bytes.NewReader(data))
+	tx.MsgTx.Deserialize(bytes.NewReader(data))
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
 	asset := client.Asset.GetChain().Chain
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain
-	for _, txIn := range tx.msgTx.TxIn {
+	for _, txIn := range tx.MsgTx.TxIn {
 		hash := make([]byte, len(txIn.PreviousOutPoint.Hash))
 		copy(hash[:], txIn.PreviousOutPoint.Hash[:])
 
@@ -177,7 +177,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Address: xc.Address(addresses[0].String()),
 		}
 		inputs = append(inputs, input)
-		tx.input.UnspentOutputs = append(tx.input.UnspentOutputs, input.Output)
+		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
 		sources = append(sources, &xc.TxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
@@ -209,7 +209,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			To:    xc.Address(recipientAddr),
 			Value: value,
 		}
-		tx.recipients = append(tx.recipients, recipient)
+		tx.Recipients = append(tx.Recipients, recipient)
 		destinations = append(destinations, &xc.TxInfoEndpoint{
 			Address:         xc.Address(recipientAddr),
 			ContractAddress: "",

@@ -90,7 +90,7 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 		}
 		address = strings.ToLower(address)
 
-	case xc.DriverBitcoin:
+	case xc.DriverBitcoinCash, xc.DriverBitcoin:
 		// remove bitcoincash: prefix
 		if strings.Contains(address, ":") {
 			address = strings.Split(address, ":")[1]

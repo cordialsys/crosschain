@@ -346,10 +346,10 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 
 	// build Tx
 	tx := &Tx{
-		input:      *NewTxInput(),
-		recipients: []Recipient{},
-		msgTx:      &wire.MsgTx{},
-		signed:     true,
+		Input:      *NewTxInput(),
+		Recipients: []Recipient{},
+		MsgTx:      &wire.MsgTx{},
+		Signed:     true,
 	}
 	inputs := []Input{}
 	// btc chains the native asset and asset are the same
@@ -371,7 +371,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 			// SigScript: sigScript,
 			Address: xc.Address(in.Recipient),
 		}
-		tx.input.UnspentOutputs = append(tx.input.UnspentOutputs, input.Output)
+		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
 		sources = append(sources, &xc.TxInfoEndpoint{
 			Address:         input.Address,
@@ -387,7 +387,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 			To:    xc.Address(out.Recipient),
 			Value: xc.NewAmountBlockchainFromUint64(out.Value),
 		}
-		tx.recipients = append(tx.recipients, recipient)
+		tx.Recipients = append(tx.Recipients, recipient)
 
 	}
 

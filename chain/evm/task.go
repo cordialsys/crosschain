@@ -14,14 +14,13 @@ import (
 )
 
 func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
 	task := txBuilder.Asset.(*xc.TaskConfig)
 
 	switch task.Code {
 	case "WormholeTransferTx":
-		return txBuilder.BuildWormholeTransferTx(from, to, amount, txInput)
+		return txBuilder.BuildWormholeTransferTx(from, to, amount, input)
 	}
-	return txBuilder.BuildTaskTx(from, to, amount, txInput)
+	return txBuilder.BuildTaskTx(from, to, amount, input)
 }
 
 func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, input *TxInput) (string, xc.AmountBlockchain, []byte, error) {
@@ -211,7 +210,7 @@ func (txBuilder TxBuilder) BuildTaskTx(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), value, payload, txInput)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), value, payload, input)
 }
 
 func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {

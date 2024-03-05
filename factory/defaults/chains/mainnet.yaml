@@ -80,7 +80,7 @@ chains:
         polling_period: 15m
     BCH:
         chain: BCH
-        driver: bitcoin
+        driver: bitcoin-cash
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/bitcoin-cash
@@ -110,6 +110,7 @@ chains:
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/bitcoin
+        chain_gas_multiplier: 1.5
         auth: env:CORDIAL_BLOCKCHAIR_API_KEY
         provider: blockchair
         chain_name: Bitcoin
@@ -159,7 +160,7 @@ chains:
         polling_period: 6m
     DOGE:
         chain: DOGE
-        driver: bitcoin
+        driver: bitcoin-legacy
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/dogecoin
@@ -269,7 +270,7 @@ chains:
         polling_period: 15m
     LTC:
         chain: LTC
-        driver: bitcoin
+        driver: bitcoin-legacy
         clients:
             - driver: crosschain
         url: https://api.blockchair.com/litecoin

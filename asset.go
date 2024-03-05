@@ -104,16 +104,18 @@ type Driver string
 
 // List of supported Driver
 const (
-	DriverAptos       = Driver("aptos")
-	DriverBitcoin     = Driver("bitcoin")
-	DriverCosmos      = Driver("cosmos")
-	DriverCosmosEvmos = Driver("evmos")
-	DriverEVM         = Driver("evm")
-	DriverEVMLegacy   = Driver("evm-legacy")
-	DriverSubstrate   = Driver("substrate")
-	DriverSolana      = Driver("solana")
-	DriverSui         = Driver("sui")
-	DriverTron        = Driver("tron")
+	DriverAptos         = Driver("aptos")
+	DriverBitcoin       = Driver("bitcoin")
+	DriverBitcoinCash   = Driver("bitcoin-cash")
+	DriverBitcoinLegacy = Driver("bitcoin-legacy")
+	DriverCosmos        = Driver("cosmos")
+	DriverCosmosEvmos   = Driver("evmos")
+	DriverEVM           = Driver("evm")
+	DriverEVMLegacy     = Driver("evm-legacy")
+	DriverSubstrate     = Driver("substrate")
+	DriverSolana        = Driver("solana")
+	DriverSui           = Driver("sui")
+	DriverTron          = Driver("tron")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -121,6 +123,8 @@ const (
 var SupportedDrivers = []Driver{
 	DriverAptos,
 	DriverBitcoin,
+	DriverBitcoinCash,
+	DriverBitcoinLegacy,
 	DriverCosmos,
 	DriverCosmosEvmos,
 	DriverEVM,
@@ -137,8 +141,12 @@ func (native NativeAsset) IsValid() bool {
 
 func (native NativeAsset) Driver() Driver {
 	switch native {
-	case BCH, BTC, DOGE, LTC:
+	case BTC:
 		return DriverBitcoin
+	case BCH:
+		return DriverBitcoinCash
+	case DOGE, LTC:
+		return DriverBitcoinLegacy
 	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH:
 		return DriverEVM
 	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
@@ -161,7 +169,9 @@ func (native NativeAsset) Driver() Driver {
 
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
-	case DriverBitcoin, DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+		return K256
+	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256
 	case DriverAptos, DriverSolana, DriverSui:
 		return Ed255

@@ -31,7 +31,7 @@ chains:
     indexer_type: covalent
   BCH:
     chain: BCH
-    driver: bitcoin
+    driver: bitcoin-cash
     url: ""
     chain_name: Bitcoin Cash (Testnet)
     decimals: 8
@@ -89,13 +89,20 @@ chains:
     indexer_type: blockscout
   DOGE:
     chain: DOGE
-    driver: bitcoin
+    driver: bitcoin-legacy
     url: ""
     chain_name: Dogecoin (Testnet)
     decimals: 8
     indexer_type: none
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
+  LTC:
+    chain: LTC
+    driver: bitcoin-legacy
+    url: ""
+    chain_name: Litecoin (Testnet)
+    decimals: 8
+    indexer_type: none
   ETC:
     chain: ETC
     driver: evm-legacy

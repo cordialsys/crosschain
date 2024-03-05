@@ -10,15 +10,29 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/sirupsen/logrus"
 )
 
 const TxVersion int32 = 2
 
 // TxBuilder for Bitcoin
 type TxBuilder struct {
-	Asset  xc.ITask
-	Params *chaincfg.Params
-	isBch  bool
+	Asset          xc.ITask
+	Params         *chaincfg.Params
+	AddressDecoder AddressDecoder
+	// isBch  bool
+}
+
+type AddressDecoder interface {
+	Decode(to xc.Address, params *chaincfg.Params) (btcutil.Address, error)
+}
+
+type BtcAddressDecoder struct{}
+
+var _ AddressDecoder = &BtcAddressDecoder{}
+
+func (*BtcAddressDecoder) Decode(addr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
+	return btcutil.DecodeAddress(string(addr), params)
 }
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
@@ -29,10 +43,16 @@ func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 		return TxBuilder{}, err
 	}
 	return TxBuilder{
-		Asset:  cfgI,
-		Params: params,
-		isBch:  native.Chain == xc.BCH,
+		Asset:          cfgI,
+		Params:         params,
+		AddressDecoder: &BtcAddressDecoder{},
+		// isBch:  native.Chain == xc.BCH,
 	}, nil
+}
+
+func (txBuilder TxBuilder) WithAddressDecoder(decoder AddressDecoder) TxBuilder {
+	txBuilder.AddressDecoder = decoder
+	return txBuilder
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
@@ -94,22 +114,13 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 	// Outputs
 	for _, recipient := range recipients {
-		addr, err := btcutil.DecodeAddress(string(recipient.To), txBuilder.Params)
+		addr, err := txBuilder.AddressDecoder.Decode(recipient.To, txBuilder.Params)
 		if err != nil {
-			// try to decode as BCH
-			bchaddr, err2 := DecodeBchAddress(string(recipient.To), txBuilder.Params)
-			if err2 != nil {
-				return nil, errors.Join(err, err2)
-			}
-			addr, err2 = BchAddressFromBytes(bchaddr, txBuilder.Params)
-			if err2 != nil {
-				return nil, errors.Join(err, err2)
-			}
+			return nil, err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
-			fmt.Println(err)
-			fmt.Println("trying to paytoaddr", recipient.To)
+			logrus.WithError(err).WithField("to", recipient.To).Error("trying paytoaddr")
 			return nil, err
 		}
 		value := recipient.Value.Int().Int64()
@@ -120,15 +131,14 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	}
 
 	tx := Tx{
-		msgTx: msgTx,
+		MsgTx: msgTx,
 
-		from:   from,
-		to:     to,
-		amount: amount,
-		input:  local_input,
+		From:   from,
+		To:     to,
+		Amount: amount,
+		Input:  local_input,
 
-		recipients: recipients,
-		isBch:      txBuilder.isBch,
+		Recipients: recipients,
 	}
 	return &tx, nil
 }

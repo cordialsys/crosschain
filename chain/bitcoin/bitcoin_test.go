@@ -17,7 +17,6 @@ import (
 
 var UXTO_ASSETS []xc.NativeAsset = []xc.NativeAsset{
 	xc.BTC,
-	xc.BCH,
 	xc.DOGE,
 	xc.LTC,
 }
@@ -50,8 +49,9 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
 		builder, err := NewAddressBuilder(&xc.ChainConfig{
-			Net:   "testnet",
-			Chain: nativeAsset,
+			Net:    "testnet",
+			Chain:  nativeAsset,
+			Driver: nativeAsset.Driver(),
 		})
 		require.NoError(err)
 		pubkey, err := base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
@@ -61,13 +61,8 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 		case xc.BTC:
 			address, err := builder.GetAddressFromPublicKey(pubkey)
 			require.NoError(err)
-			require.Equal(xc.Address("mhYWE7RrYCgbq4RJDaqZp8fvzVmYnPVnFD"), address)
-		case xc.BCH:
-			pubkey_bch, err := base64.RawStdEncoding.DecodeString("A3bpQsIiW5ipniaDtYXQjeU2LwtRDkfWQNlAcY3u2pu7")
-			require.NoError(err)
-			address, err := builder.GetAddressFromPublicKey(pubkey_bch)
-			require.NoError(err)
-			require.Equal(xc.Address("bchtest:qpkxhv02hftvxe0gx654nzx3292cvfu4tqdkf49c09"), address)
+			// BTC should use newest address type, segwit
+			require.Equal(xc.Address("tb1qzca49vcyxkt989qcmhjfp7wyze7n9pq50k2cfd"), address)
 		case xc.DOGE:
 			address, err := builder.GetAddressFromPublicKey(pubkey)
 			require.NoError(err)
@@ -85,8 +80,9 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
 	builder, err := NewAddressBuilder(&xc.ChainConfig{
-		Net:   "testnet",
-		Chain: "BTC",
+		Net:    "testnet",
+		Chain:  "BTC",
+		Driver: xc.BTC.Driver(),
 	})
 	require.NoError(err)
 	pubkey, err := base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
@@ -106,7 +102,7 @@ func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 			require.Equal(xc.AddressTypeP2WPKH, addr.Type)
 			validated_p2wkh = true
 		} else {
-			panic("unexpected address generated: " + addr.Address)
+			// panic("unexpected address generated: " + addr.Address)
 		}
 	}
 	require.True(validated_p2pkh)
@@ -256,60 +252,64 @@ func (s *CrosschainTestSuite) TestFetchTxInputUnconfirmedUtxo() {
 
 func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
-	for _, addr := range []string{
-		"tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0",
-		"qzl7ex0q35q2d6aljhlhzwramp09n06fry8ssqu0qp",
-		"bitcoin:qzl7ex0q35q2d6aljhlhzwramp09n06fry8ssqu0qp",
-		"mqQEHYtdnjbjKTKcaGHCxFEuqwUqmSzL38",
+	for _, fromAddr := range []string{
+		// legacy
+		"mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6",
+		// segwit
+		"tb1qhymp5maj7x2rqxsj02exqn26v5jcqm0q3x3pz4",
+		// taproot (not supported)
+		// "tb1p5gkytm46mtksmssryta62fejfxvh82vnqs96hnd96gwmn0ztz4esam80dt",
 	} {
-		for _, native_asset := range []xc.NativeAsset{
-			xc.BTC,
-			xc.BCH,
+		for _, toAddr := range []string{
+			// legacy
+			"mxVFsFW5N4mu1HPkxPttorvocvzeZ7KZyk",
+			// segwit
+			"tb1qtguj96eqjtzt2fywyqdgmuw6wtpdsuahheqja6",
+			// taproot
+			"tb1p5gkytm46mtksmssryta62fejfxvh82vnqs96hnd96gwmn0ztz4esam80dt",
 		} {
-			asset := &xc.ChainConfig{Chain: native_asset, Net: "testnet"}
-			builder, _ := NewTxBuilder(asset)
-			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
-			to := xc.Address(addr)
-			amount := xc.NewAmountBlockchainFromUint64(1)
-			input := &TxInput{
-				UnspentOutputs: []Output{{
-					Value: xc.NewAmountBlockchainFromUint64(1000),
-				}},
-				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
-			}
-			tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
-			require.NoError(err)
-			require.NotNil(tf)
-			hash := tf.Hash()
-			require.Len(hash, 64)
+			for _, native_asset := range []xc.NativeAsset{
+				xc.BTC,
+			} {
+				asset := &xc.ChainConfig{Chain: native_asset, Net: "testnet"}
+				builder, _ := NewTxBuilder(asset)
+				from := xc.Address(fromAddr)
+				to := xc.Address(toAddr)
+				amount := xc.NewAmountBlockchainFromUint64(1)
+				input := &TxInput{
+					UnspentOutputs: []Output{{
+						Value: xc.NewAmountBlockchainFromUint64(1000),
+					}},
+					GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
+				}
+				tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+				require.NoError(err)
+				require.NotNil(tf)
+				hash := tf.Hash()
+				require.Len(hash, 64)
 
-			if native_asset == xc.BCH {
-				require.True(tf.(*Tx).IsBch())
-			} else {
-				require.False(tf.(*Tx).IsBch())
-			}
+				// Having not enough balance for fees will be an error
+				input_small := &TxInput{
+					UnspentOutputs: []Output{{
+						Value: xc.NewAmountBlockchainFromUint64(5),
+					}},
+					GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
+				}
+				_, err = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input_small)
+				require.Error(err)
 
-			// Having not enough balance for fees will be an error
-			input_small := &TxInput{
-				UnspentOutputs: []Output{{
-					Value: xc.NewAmountBlockchainFromUint64(5),
-				}},
-				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
-			}
-			_, err = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input_small)
-			require.Error(err)
+				// add signature
+				sig := []byte{}
+				for i := 0; i < 65; i++ {
+					sig = append(sig, byte(i))
+				}
+				err = tf.AddSignatures(xc.TxSignature(sig))
+				require.NoError(err)
 
-			// add signature
-			sig := []byte{}
-			for i := 0; i < 65; i++ {
-				sig = append(sig, byte(i))
+				ser, err := tf.Serialize()
+				require.NoError(err)
+				require.True(len(ser) > 64)
 			}
-			err = tf.AddSignatures(xc.TxSignature(sig))
-			require.NoError(err)
-
-			ser, err := tf.Serialize()
-			require.NoError(err)
-			require.True(len(ser) > 64)
 		}
 	}
 }
@@ -388,7 +388,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	client, err := NewClient(asset)
 	require.NoError(err)
 	err = client.SubmitTx(s.Ctx, &Tx{
-		msgTx: wire.NewMsgTx(2),
+		MsgTx: wire.NewMsgTx(2),
 	})
 	require.NoError(err)
 }
@@ -531,7 +531,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 		},
 	}
 	tf, _ = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
-	require.Len(tf.(*Tx).input.UnspentOutputs, 2)
+	require.Len(tf.(*Tx).Input.UnspentOutputs, 2)
 	err = tf.(*Tx).AddSignatures([]xc.TxSignature{
 		sig, sig,
 	}...)

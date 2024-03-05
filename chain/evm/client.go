@@ -60,6 +60,9 @@ type TxInput struct {
 	// GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 	// Task params
 	Params []string `json:"params,omitempty"`
+
+	// For legacy implementation only
+	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 }
 
 var _ xc.TxInput = &TxInput{}

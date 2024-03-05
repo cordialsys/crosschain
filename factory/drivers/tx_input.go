@@ -48,7 +48,7 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 		var txInput solana.TxInput
 		err := json.Unmarshal(buf, &txInput)
 		return &txInput, err
-	case xc.DriverBitcoin:
+	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
 		var txInput bitcoin.TxInput
 		err := json.Unmarshal(buf, &txInput)
 		return &txInput, err
