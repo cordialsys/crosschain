@@ -149,7 +149,7 @@ chains:
     decimals: 18
   INJ:
     chain: INJ
-    driver: cosmos
+    driver: evmos
     url: https://k8s.testnet.tm.injective.network
     chain_id_str: injective-888
     chain_name: Injective (Testnet)

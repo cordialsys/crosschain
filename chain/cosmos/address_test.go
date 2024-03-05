@@ -89,6 +89,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 		NativeAsset     xc.NativeAsset
 		Mnemonic        string
 		Address         string
+		Driver          xc.Driver
 	}
 	for _, tc := range []testcase{
 		{
@@ -97,6 +98,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "SEI",
 			Mnemonic:        "protect scorpion scorpion answer joy question hollow short despair cube lumber stable toilet hat inflict fresh pigeon firm model foot excite broom dice gather",
 			Address:         "sei1auf4yetx9z3lq5f93d8p8mm4j3lpt9s077m455",
+			Driver:          xc.DriverCosmos,
 		},
 		{
 			ChainCoinHDPath: 60,
@@ -104,6 +106,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "INJ",
 			Mnemonic:        "captain dial clerk knee milk depart canyon stomach example smoke nominee vicious zero between enjoy outside exile original toddler casual broken roast episode car",
 			Address:         "inj12szvunq39ky0lq20t9cy3tcs49n8k56v9q38fj",
+			Driver:          xc.DriverCosmosEvmos,
 		},
 		{
 			ChainCoinHDPath: 60,
@@ -111,6 +114,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "XPLA",
 			Mnemonic:        "script mercy language economy cat demand fruit page green license device air fatigue neither release mansion actor bitter latin toddler bright expand please salute",
 			Address:         "xpla18tqp4j6ndm9fmly4t5mzgwh5zeg9rqrpm7zfnp",
+			Driver:          xc.DriverCosmos,
 		},
 		{
 			ChainCoinHDPath: 330,
@@ -118,6 +122,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "LUNA",
 			Mnemonic:        "deer cotton advice flight female rotate health pond fortune guide soft brother broken sad gym pony rain lonely avoid chicken carpet trash tuna clean",
 			Address:         "terra1evfrnqr9l5yxjp7ejektl2xmjdqlz08tuundzw",
+			Driver:          xc.DriverCosmos,
 		},
 		{
 			ChainCoinHDPath: 118,
@@ -125,6 +130,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "TIA",
 			Mnemonic:        "kid unique sadness clap embody grit sure couch crack muffin neutral rule cotton market apology cute brass laundry rural social exile peasant expand useless",
 			Address:         "celestia1cl5k4awzka64ck974j4kshzezhmznpg66724xj",
+			Driver:          xc.DriverCosmos,
 		},
 		{
 			ChainCoinHDPath: 118,
@@ -132,6 +138,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "ATOM",
 			Mnemonic:        "tide wage unit rack permit parent easy theme require focus honey connect intact furnace device tiger enter often cycle immense wire either better crush",
 			Address:         "cosmos18jfym2e7gt7a5eclgawp4lwgh6n7ud77ak6vzt",
+			Driver:          xc.DriverCosmos,
 		},
 		{
 			ChainCoinHDPath: 1,
@@ -139,6 +146,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			NativeAsset:     "HASH",
 			Mnemonic:        "increase embark dice perfect october camera cousin matrix congress prosper fix what shiver staff undo airport master shadow swift level arch push industry gauge",
 			Address:         "tp1x0wf90nl6rymz26d73l8hesk7neag82ka2zsv6",
+			Driver:          xc.DriverCosmos,
 		},
 	} {
 
@@ -146,6 +154,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 			ChainCoinHDPath: uint32(tc.ChainCoinHDPath),
 			ChainPrefix:     tc.ChainPrefix,
 			Chain:           tc.NativeAsset,
+			Driver:          tc.Driver,
 		}
 		signer, err := NewSigner(asset)
 		require.NoError(err)
@@ -160,7 +169,7 @@ func (s *CrosschainTestSuite) TestKeyDerivation() {
 
 		if tc.Address != string(address) {
 			// try to discover what the derivation path is
-			for i := 0; i < 2048; i++ {
+			for i := 0; i < 512; i++ {
 				asset.ChainCoinHDPath = uint32(i)
 				signer, _ = NewSigner(asset)
 				privkey, _ = signer.ImportPrivateKey(tc.Mnemonic)

@@ -9,6 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
+	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
@@ -111,8 +112,10 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 	for _, driver := range xc.SupportedDrivers {
 		var input xc.TxInput
 		switch driver {
-		case xc.DriverEVM, xc.DriverEVMLegacy:
+		case xc.DriverEVM:
 			input = evm.NewTxInput()
+		case xc.DriverEVMLegacy:
+			input = evm_legacy.NewTxInput()
 		case xc.DriverCosmos, xc.DriverCosmosEvmos:
 			input = cosmos.NewTxInput()
 		case xc.DriverSolana:

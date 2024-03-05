@@ -227,7 +227,7 @@ chains:
         polling_period: 6m
     INJ:
         chain: INJ
-        driver: cosmos
+        driver: evmos
         clients:
             - driver: crosschain
         url: https://injective-rpc.polkachu.com

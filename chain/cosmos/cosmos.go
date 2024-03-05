@@ -4,15 +4,12 @@ import (
 	"crypto/sha256"
 
 	xc "github.com/cordialsys/crosschain"
-
-	// "github.com/terra-money/core/x/vesting"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
-	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
 	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -64,14 +61,9 @@ var ModuleBasics = module.NewBasicManager(
 	params.AppModuleBasic{},
 	crisis.AppModuleBasic{},
 	slashing.AppModuleBasic{},
-	// ibc.AppModuleBasic{},
 	feegrantmodule.AppModuleBasic{},
 	upgrade.AppModuleBasic{},
 	evidence.AppModuleBasic{},
-	// transfer.AppModuleBasic{},
-	// vesting.AppModuleBasic{},
-	// ica.AppModuleBasic{},
-	// router.AppModuleBasic{},
 	authzmodule.AppModuleBasic{},
 )
 
@@ -116,22 +108,11 @@ func MakeCosmosConfig() EncodingConfig {
 	return cosmosCfg
 }
 
-// func isNativeAsset(asset *xc.AssetConfig) bool {
-// 	return asset.Type == xc.AssetTypeNative || len(asset.Contract) < LEN_NATIVE_ASSET
-// }
-
 func isEVMOS(asset *xc.ChainConfig) bool {
 	return xc.Driver(asset.Driver) == xc.DriverCosmosEvmos
 }
 
-func isINJ(asset *xc.ChainConfig) bool {
-	return asset.Chain == xc.INJ
-}
-
 func getPublicKey(asset *xc.ChainConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {
-	if isINJ(asset) {
-		return &injethsecp256k1.PubKey{Key: publicKeyBytes}
-	}
 	if isEVMOS(asset) {
 		return &ethsecp256k1.PubKey{Key: publicKeyBytes}
 	}
@@ -139,7 +120,7 @@ func getPublicKey(asset *xc.ChainConfig, publicKeyBytes xc.PublicKey) cryptotype
 }
 
 func getSighash(asset *xc.ChainConfig, sigData []byte) []byte {
-	if isEVMOS(asset) || isINJ(asset) {
+	if isEVMOS(asset) {
 		return crypto.Keccak256(sigData)
 	}
 	sighash := sha256.Sum256(sigData)
