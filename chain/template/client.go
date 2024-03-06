@@ -12,7 +12,7 @@ import (
 type Client struct {
 }
 
-var _ xc.Client = &Client{}
+var _ xc.FullClient = &Client{}
 
 // TxInput for Template
 type TxInput struct {
@@ -46,4 +46,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 // FetchTxInfo returns tx info for a Template tx
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
 	return xc.TxInfo{}, errors.New("not implemented")
+}
+
+func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+	return xc.AmountBlockchain{}, errors.New("not implemented")
+}
+
+func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+	return xc.AmountBlockchain{}, errors.New("not implemented")
 }

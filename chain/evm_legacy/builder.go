@@ -1,7 +1,6 @@
 package evm_legacy
 
 import (
-	"fmt"
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
@@ -22,7 +21,6 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 	if err != nil {
 		return builder, err
 	}
-	fmt.Println("-- new legacy tx builder:: ", asset.GetChain().Chain)
 	return builder.(evm.TxBuilder).WithTxBuilder(&LegacyEvmTxBuilder{}), nil
 }
 

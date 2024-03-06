@@ -12,7 +12,7 @@ type Client struct {
 	EvmClient *evm.Client
 }
 
-var _ xc.Client = &Client{}
+var _ xc.FullClient = &Client{}
 
 type TxInput = evm.TxInput
 
@@ -76,4 +76,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
 	return client.EvmClient.FetchTxInfo(ctx, txHash)
+}
+
+func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+	return client.EvmClient.FetchNativeBalance(ctx, address)
+}
+
+func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+	return client.EvmClient.FetchBalance(ctx, address)
 }
