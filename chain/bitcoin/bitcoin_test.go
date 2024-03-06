@@ -76,6 +76,23 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 		}
 	}
 }
+func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyUsesCompressed() {
+	require := s.Require()
+	builder, err := NewAddressBuilder(&xc.ChainConfig{
+		Net:    "testnet",
+		Chain:  xc.BTC,
+		Driver: xc.DriverBitcoin,
+	})
+	require.NoError(err)
+	compressedPubkey, _ := hex.DecodeString("0228a9dd8c304464e0d0f011ca3dccb0e373afd2f5c51e89113b8be2a905687fb9")
+	uncompressedPubkey, _ := hex.DecodeString("0428a9dd8c304464e0d0f011ca3dccb0e373afd2f5c51e89113b8be2a905687fb967cf9090845d6e8cac68f7bedf4335ed946c678b371c8cad7dbd5f63f1a9e992")
+
+	addressCompressed, _ := builder.GetAddressFromPublicKey(compressedPubkey)
+	addressUncompressed, _ := builder.GetAddressFromPublicKey(uncompressedPubkey)
+
+	require.EqualValues("tb1q6y6kkfsrzhlex4u8eel436cyh26qmlmjxgwrel", addressCompressed)
+	require.EqualValues("tb1q6y6kkfsrzhlex4u8eel436cyh26qmlmjxgwrel", addressUncompressed)
+}
 
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()

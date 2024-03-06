@@ -42,6 +42,9 @@ func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
 	if err != nil {
 		return fmt.Errorf("invalid public key %v: %v", publicKeyStr, err)
 	}
+	// should we force compressed public key here?
+	// if wallet was generated with uncompressed, we should assume that was
+	// intentional, and stick with that.
 	err = txInput.SetPublicKey(publicKeyBytes)
 
 	return err

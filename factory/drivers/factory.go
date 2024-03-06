@@ -6,6 +6,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
@@ -29,8 +30,10 @@ func NewClient(cfg ITask, driver Driver) (Client, error) {
 		return aptos.NewClient(cfg)
 	case DriverSui:
 		return sui.NewClient(cfg)
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy:
 		return bitcoin.NewClient(cfg)
+	case DriverBitcoinCash:
+		return bitcoin_cash.NewClient(cfg)
 	case DriverSubstrate:
 		return substrate.NewClient(cfg)
 	case DriverTron:
@@ -53,8 +56,10 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 		return aptos.NewTxBuilder(cfg)
 	case DriverSui:
 		return sui.NewTxBuilder(cfg)
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy:
 		return bitcoin.NewTxBuilder(cfg)
+	case DriverBitcoinCash:
+		return bitcoin_cash.NewTxBuilder(cfg)
 	case DriverSubstrate:
 		return substrate.NewTxBuilder(cfg)
 	case DriverTron:
@@ -75,8 +80,10 @@ func NewSigner(cfg ITask) (Signer, error) {
 		return solana.NewSigner(cfg)
 	case DriverAptos:
 		return aptos.NewSigner(cfg)
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy:
 		return bitcoin.NewSigner(cfg)
+	case DriverBitcoinCash:
+		return bitcoin_cash.NewSigner(cfg)
 	case DriverSui:
 		return sui.NewSigner(cfg)
 	case DriverSubstrate:
@@ -99,8 +106,10 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return solana.NewAddressBuilder(cfg)
 	case DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy:
 		return bitcoin.NewAddressBuilder(cfg)
+	case DriverBitcoinCash:
+		return bitcoin_cash.NewAddressBuilder(cfg)
 	case DriverSui:
 		return sui.NewAddressBuilder(cfg)
 	case DriverSubstrate:
@@ -123,8 +132,10 @@ func CheckError(driver Driver, err error) ClientError {
 		return solana.CheckError(err)
 	case DriverAptos:
 		return aptos.CheckError(err)
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy:
 		return bitcoin.CheckError(err)
+	case DriverBitcoinCash:
+		return bitcoin_cash.CheckError(err)
 	case DriverSui:
 		return sui.CheckError(err)
 	case DriverSubstrate:

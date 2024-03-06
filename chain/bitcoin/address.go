@@ -60,10 +60,12 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	// if len(publicKeyBytes) == 32 {
 	// 	publicKeyBytes = append([]byte{0x02}, publicKeyBytes...)
 	// }
-	_, err := btcec.ParsePubKey(publicKeyBytes)
+	pubkey, err := btcec.ParsePubKey(publicKeyBytes)
 	if err != nil {
 		return "", err
 	}
+	// force compressed format, BTC wallets should use uncompressed.
+	publicKeyBytes = pubkey.SerializeCompressed()
 	if ab.asset.GetChain().Driver == xc.DriverBitcoinLegacy {
 		return ab.GetLegacyAddress(publicKeyBytes)
 	} else {

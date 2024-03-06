@@ -3,6 +3,7 @@ package bitcoin
 import (
 	"encoding/hex"
 
+	btcec "github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -47,10 +48,7 @@ func (signer *Signer) Sign(privateKeyBytes xc.PrivateKey, data xc.TxDataToSign) 
 }
 
 func (signer Signer) PublicKey(privateKey xc.PrivateKey) (xc.PublicKey, error) {
-	ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(privateKey))
-	if err != nil {
-		return []byte{}, err
-	}
-	pubkey := crypto.FromECDSAPub(&ecdsaKey.PublicKey)
-	return pubkey, nil
+	_, pub := btcec.PrivKeyFromBytes(privateKey)
+	// btc addresses nearly always should use compressed pk
+	return pub.SerializeCompressed(), nil
 }
