@@ -213,6 +213,7 @@ chains:
     explorer_url: https://explorer.solana.com
     decimals: 9
     indexer_type: solana
+    chain_gas_multiplier: 1.5
     polling_period: 2m
   SUI:
     chain: SUI

@@ -16,9 +16,8 @@ func (s *SolanaTestSuite) TestNewSigner() {
 func (s *SolanaTestSuite) TestImportPrivateKey() {
 	require := s.Require()
 	signer, _ := NewSigner(&xc.ChainConfig{})
-	key, err := signer.ImportPrivateKey("key")
-	require.Equal(key, xc.PrivateKey{0x2, 0x3d, 0xa6})
-	require.Nil(err)
+	_, err := signer.ImportPrivateKey("key")
+	require.Error(err)
 }
 
 func (s *SolanaTestSuite) TestSign() {

@@ -7,6 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/gagliardetto/solana-go"
 	ata "github.com/gagliardetto/solana-go/programs/associated-token-account"
+	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
 	"github.com/sirupsen/logrus"
@@ -54,7 +55,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput xc.TxInput) (xc.Tx, error) {
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
 		return nil, err
@@ -63,6 +64,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	if err != nil {
 		return nil, err
 	}
+	input := txInput.(*TxInput)
 
 	// txLog := map[string]string{
 	// 	"type":      "system.Transfer",
@@ -71,16 +73,23 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	// 	"recipient": accountTo.String(),
 	// }
 	// log.Print(txLog)
+	instructions := []solana.Instruction{
+		system.NewTransferInstruction(
+			amount.Uint64(),
+			accountFrom,
+			accountTo,
+		).Build(),
+	}
+	priorityFee := input.GetLimitedPrioritizationFee(txBuilder.Asset.GetChain())
+	if priorityFee > 0 {
+		instructions = append(instructions,
+			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),
+		)
+	}
 
 	tx, err := solana.NewTransaction(
-		[]solana.Instruction{
-			system.NewTransferInstruction(
-				amount.Uint64(),
-				accountFrom,
-				accountTo,
-			).Build(),
-		},
-		input.(*TxInput).RecentBlockHash,
+		instructions,
+		input.RecentBlockHash,
 		solana.TransactionPayer(accountFrom),
 	)
 	if err != nil {
@@ -194,6 +203,14 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		if remainingBalanceToSend.Cmp(&zero) > 0 {
 			return nil, errors.New("cannot send requested amount in single tx, try sending smaller amount")
 		}
+	}
+
+	// add priority fee last
+	priorityFee := txInput.GetLimitedPrioritizationFee(txBuilder.Asset.GetChain())
+	if priorityFee > 0 {
+		instructions = append(instructions,
+			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),
+		)
 	}
 
 	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)

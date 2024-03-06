@@ -199,7 +199,7 @@ func (s *CrosschainTestSuite) TestMustPrivateKey() {
 		if xc.NativeAsset(asset.Chain) != xc.SOL {
 			continue
 		}
-		privateKey := s.Factory.MustPrivateKey(asset, "myprivatekey")
+		privateKey := s.Factory.MustPrivateKey(asset, "944DC4CEE6BC73FE606E4CC9056691045CC48697A11D323CADC54F650F95207C")
 		require.NotNil(privateKey, "Error on: "+asset.Chain)
 	}
 }

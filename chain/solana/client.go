@@ -18,10 +18,28 @@ import (
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
-	RecentBlockHash     solana.Hash     `json:"recent_block_hash,omitempty"`
-	ToIsATA             bool            `json:"to_is_ata,omitempty"`
-	ShouldCreateATA     bool            `json:"should_create_ata,omitempty"`
-	SourceTokenAccounts []*TokenAccount `json:"source_token_accounts,omitempty"`
+	RecentBlockHash     solana.Hash         `json:"recent_block_hash,omitempty"`
+	ToIsATA             bool                `json:"to_is_ata,omitempty"`
+	ShouldCreateATA     bool                `json:"should_create_ata,omitempty"`
+	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
+	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee"`
+}
+
+// Returns the microlamports to set the compute budget unit price.
+// It will not go about the max price amount for safety concerns.
+func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 {
+	fee := input.PrioritizationFee.Uint64()
+	max := uint64(chain.ChainMaxGasPrice)
+	if max == 0 {
+		// set default max price to spend max 1 SOL on a transaction
+		// 1 SOL = (1 * 10 ** 9) * 10 ** 6 microlamports
+		// /200_000 compute units
+		max = 5_000_000_000
+	}
+	if fee > max {
+		fee = max
+	}
+	return fee
 }
 
 type TokenAccount struct {
@@ -142,6 +160,38 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 			return nil, errors.New("no balance to send solana token")
 		}
 	}
+
+	// fetch priority fee info
+	accountsToLock := solana.PublicKeySlice{}
+	if contract != "" {
+		mint, _ := solana.PublicKeyFromBase58(contract)
+		accountsToLock = append(accountsToLock, mint)
+	}
+	fees, err := client.SolClient.GetRecentPrioritizationFees(ctx, accountsToLock)
+	if err != nil {
+		return txInput, fmt.Errorf("could not lookup priority fees: %v", err)
+	}
+	priority_fee_count := uint64(0)
+	// start with 100 min priority fee, then average in the recent priority fees paid.
+	priority_fee_sum := uint64(100)
+	for _, fee := range fees {
+		if fee.PrioritizationFee > 0 {
+			priority_fee_sum += fee.PrioritizationFee
+			priority_fee_count += 1
+		}
+	}
+	if priority_fee_count > 0 {
+		txInput.PrioritizationFee = xc.NewAmountBlockchainFromUint64(
+			priority_fee_sum / priority_fee_count,
+		)
+	} else {
+		// default 100
+		txInput.PrioritizationFee = xc.NewAmountBlockchainFromUint64(
+			100,
+		)
+	}
+	// apply multiplier
+	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain())
 
 	return txInput, nil
 }

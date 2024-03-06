@@ -2,6 +2,8 @@ package solana
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
+	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
@@ -18,7 +20,18 @@ func NewSigner(cfgI xc.ITask) (xc.Signer, error) {
 
 // ImportPrivateKey imports a Solana private key
 func (signer Signer) ImportPrivateKey(privateKey string) (xc.PrivateKey, error) {
-	return xc.PrivateKey(base58.Decode(privateKey)), nil
+	// try hex first
+	bz, err := hex.DecodeString(privateKey)
+	if err == nil && len(bz) == 32 {
+		key := ed25519.NewKeyFromSeed(bz)
+		return xc.PrivateKey(key), nil
+	}
+	// use base58 directly
+	base58bz := base58.Decode(privateKey)
+	if len(base58bz) != 64 {
+		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
+	}
+	return xc.PrivateKey(base58bz), nil
 }
 
 // Sign a Solana tx

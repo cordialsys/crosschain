@@ -55,8 +55,9 @@ func (s *SolanaTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 	contract := "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
-		Contract: contract,
-		Decimals: 6,
+		Contract:    contract,
+		Decimals:    6,
+		ChainConfig: &xc.ChainConfig{},
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
@@ -134,8 +135,9 @@ func (s *SolanaTestSuite) TestNewMultiTokenTransfer() {
 	require := s.Require()
 	contract := "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
 	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
-		Contract: contract,
-		Decimals: 6,
+		Contract:    contract,
+		Decimals:    6,
+		ChainConfig: &xc.ChainConfig{},
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
@@ -269,8 +271,9 @@ func (s *SolanaTestSuite) TestNewTransfer() {
 func (s *SolanaTestSuite) TestNewTransferAsToken() {
 	require := s.Require()
 	builder, _ := NewTxBuilder(&xc.TokenAssetConfig{
-		Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-		Decimals: 6,
+		Contract:    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+		Decimals:    6,
+		ChainConfig: &xc.ChainConfig{},
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
