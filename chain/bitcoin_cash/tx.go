@@ -68,23 +68,6 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		}
 
 		signature := ecdsa.NewSignature(&r, &s)
-		// pubKeyScript := tx.Input.UnspentOutputs[i].PubKeyScript
-		// var sigScript []byte = nil
-
-		// // Support segwit.
-		// if sigScript == nil {
-		// 	if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
-		// 		log.Debug("append signature (segwit)")
-		// 		tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.Input.FromPublicKey})
-		// 		continue
-		// 	}
-		// } else {
-		// 	if txscript.IsPayToWitnessScriptHash(sigScript) {
-		// 		log.Debug("append signature + sigscript (segwit)")
-		// 		tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{append(signature.Serialize(), byte(txscript.SigHashAll)), tx.Input.FromPublicKey, sigScript})
-		// 		continue
-		// 	}
-		// }
 
 		// Support non-segwit
 		builder := txscript.NewScriptBuilder()
