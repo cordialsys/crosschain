@@ -19,16 +19,23 @@ func main() {
 	ctx := context.Background()
 
 	// os.Args[]
-	if len(os.Args) != 4 {
-		log.Fatalf("usage: ./main <chain> <amount> <destination>")
+	if len(os.Args) != 4 && len(os.Args) != 5 {
+		log.Fatalf("usage: ./main [asset] <chain> <amount> <destination>")
 	}
+	assetInput := ""
 	chainInput := os.Args[1]
 	amountInput := os.Args[2]
 	destination := os.Args[3]
+	if len(os.Args) > 4 {
+		assetInput = os.Args[1]
+		chainInput = os.Args[2]
+		amountInput = os.Args[3]
+		destination = os.Args[4]
+	}
 
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("", crosschain.NativeAsset(chainInput))
+	asset, err := xc.GetAssetConfig(assetInput, crosschain.NativeAsset(chainInput))
 	if err != nil {
 		panic("unsupported asset: " + err.Error())
 	}
@@ -118,11 +125,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("submitted tx with hash %s\n", tx.Hash())
 	fmt.Println("Zzz...")
-	time.Sleep(10 * time.Second)
-	info, err := client.FetchTxInfo(ctx, tx.Hash())
-	if err != nil {
-		panic(err)
+	for i := 0; i < 10; i++ {
+		time.Sleep(5 * time.Second)
+		info, err := client.FetchTxInfo(ctx, tx.Hash())
+		if err != nil {
+			fmt.Printf("could not find tx %s yet, trying again...\n", tx.Hash())
+			continue
+		}
+		fmt.Printf("%+v\n", info)
+		return
 	}
-	fmt.Printf("%+v\n", info)
+	panic("could not find submitted transaction by hash: " + tx.Hash())
 }
