@@ -4,6 +4,7 @@ import (
 	_ "embed"
 
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
 
@@ -66,12 +67,12 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		ChainID:     0,
 		ExplorerURL: http.URL,
 	})
-	require.Equal(CheckError(err), xc.NetworkError) // Intentionally missing RPC
+	require.Equal(CheckError(err), xclient.NetworkError) // Intentionally missing RPC
 	require.NotNil(client.Asset)
 
-	res, err := client.FetchTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb")
+	res, err := client.FetchLegacyTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb")
 	require.Nil(err)
-	correct := xc.TxInfo{
+	correct := xc.LegacyTxInfo{
 		BlockHash:  "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 		TxID:       "16097417-2",
 		From:       xc.Address("138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
@@ -97,12 +98,12 @@ func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 		ChainID:     0,
 		ExplorerURL: http.URL,
 	})
-	require.Equal(CheckError(err), xc.NetworkError)
+	require.Equal(CheckError(err), xclient.NetworkError)
 	require.NotNil(client.Asset)
 
 	// Nonexistent hash
-	_, err = client.FetchTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c02811")
-	require.Equal(CheckError(err), xc.NetworkError)
+	_, err = client.FetchLegacyTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c02811")
+	require.Equal(CheckError(err), xclient.NetworkError)
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInput() {

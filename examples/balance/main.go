@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory"
 )
 
@@ -15,7 +14,7 @@ func getBalanceSui(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "0x7d20dcdb2bca4f508ea9613994683eb4e76e9c4ed371169677c1be02aaf0b58e")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +30,7 @@ func getBalanceAptos(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +46,7 @@ func getBalanceInjective(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "inj162x3ax7z6ksquhshlqh6d498kr60qdx7wqf9we")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -60,7 +59,7 @@ func getBalanceInjective(ctx context.Context, xc *factory.Factory) {
 		panic(err)
 	}
 	client, _ = xc.NewClient(token)
-	balance, err = client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err = client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +74,7 @@ func getBalanceEthereum(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +87,7 @@ func getBalanceEthereum(ctx context.Context, xc *factory.Factory) {
 		panic(err)
 	}
 	client, _ = xc.NewClient(token)
-	balance, err = client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err = client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +102,7 @@ func getBalanceBitcoin(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "tb1q3ayl6ml4054lr2snhm5qx8mv6epulnqhv6k2kk")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +118,7 @@ func getBalancePolkadot(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchNativeBalance(ctx, address)
+	balance, err := client.FetchNativeBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -135,7 +134,7 @@ func getBalanceTron(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "TFzvbsVRAYDtPGc4KdFNUZophTDxfKD3G1")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchNativeBalance(ctx, address)
+	balance, err := client.FetchNativeBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +147,7 @@ func getBalanceTron(ctx context.Context, xc *factory.Factory) {
 		panic("unsupported asset")
 	}
 	client, _ = xc.NewClient(token)
-	balance, err = client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err = client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -164,7 +163,7 @@ func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 	}
 	address := xc.MustAddress(asset, "44UY77prgrQmf4sbD9pyyk3dqRQPMM32QQv4YTHjLReh")
 	client, _ := xc.NewClient(asset)
-	balance, err := client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}
@@ -177,7 +176,7 @@ func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 		panic(err)
 	}
 	client, _ = xc.NewClient(token)
-	balance, err = client.(crosschain.ClientBalance).FetchBalance(ctx, address)
+	balance, err = client.FetchBalance(ctx, address)
 	if err != nil {
 		panic(err)
 	}

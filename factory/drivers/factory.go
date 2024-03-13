@@ -14,9 +14,10 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
-func NewClient(cfg ITask, driver Driver) (Client, error) {
+func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 	switch driver {
 	case DriverEVM:
 		return evm.NewClient(cfg)
@@ -120,7 +121,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
 
-func CheckError(driver Driver, err error) ClientError {
+func CheckError(driver Driver, err error) xclient.ClientError {
 	switch driver {
 	case DriverEVM:
 		return evm.CheckError(err)
@@ -143,5 +144,5 @@ func CheckError(driver Driver, err error) ClientError {
 	case DriverTron:
 		return tron.CheckError(err)
 	}
-	return UnknownError
+	return xclient.UnknownError
 }

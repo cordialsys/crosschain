@@ -21,7 +21,7 @@ func mustDecodeHex(h string) []byte {
 	return bz
 }
 
-func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []*xc.TxInfoEndpoint {
+func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []*xc.LegacyTxInfoEndpoint {
 	switch payload := payload.(type) {
 	case *transactionbuilder.TransactionPayloadEntryFunction:
 		if len(payload.Args) > 0 {
@@ -30,11 +30,11 @@ func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []
 				err := lcs.Unmarshal(payload.Args[1], &amount)
 				if err != nil {
 					logrus.Errorf("could not unmarshal amount: %v\n", err)
-					return []*xc.TxInfoEndpoint{}
+					return []*xc.LegacyTxInfoEndpoint{}
 				}
 			}
 			to_addr := payload.Args[0]
-			return []*xc.TxInfoEndpoint{
+			return []*xc.LegacyTxInfoEndpoint{
 				{
 					Address: xc.Address(to_addr),
 					Amount:  xc.NewAmountBlockchainFromUint64(amount),
@@ -48,10 +48,10 @@ func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []
 			fmt.Println("1", payload.Arguments[1])
 			addresses := payload.Arguments[0].([]interface{})
 			amounts := payload.Arguments[1].([]interface{})
-			destinations := []*xc.TxInfoEndpoint{}
+			destinations := []*xc.LegacyTxInfoEndpoint{}
 			for i := 0; i < len(addresses) && i < len(amounts); i++ {
 				amountStr := amounts[i].(string)
-				destinations = append(destinations, &xc.TxInfoEndpoint{
+				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 					Address: xc.Address(addresses[i].(string)),
 					Amount:  xc.NewAmountBlockchainFromStr(amountStr),
 				})
@@ -63,7 +63,7 @@ func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []
 				amount = xc.NewAmountBlockchainFromStr(payload.Arguments[1].(string))
 			}
 			to_addr := payload.Arguments[0].(string)
-			return []*xc.TxInfoEndpoint{
+			return []*xc.LegacyTxInfoEndpoint{
 				{
 					Address: xc.Address(to_addr),
 					Amount:  amount,
@@ -75,5 +75,5 @@ func destinationsFromTxPayload(payload transactionbuilder.TransactionPayload) []
 	default:
 		logrus.Errorf("unrecognized payload type: %T\n", payload)
 	}
-	return []*xc.TxInfoEndpoint{}
+	return []*xc.LegacyTxInfoEndpoint{}
 }

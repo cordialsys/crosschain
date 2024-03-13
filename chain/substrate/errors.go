@@ -5,27 +5,27 @@ package substrate
 import (
 	"strings"
 
-	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
-func CheckError(err error) xc.ClientError {
+func CheckError(err error) xclient.ClientError {
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "insufficient funds for gas * price + value") {
-		return xc.NoBalanceForGas
+		return xclient.NoBalanceForGas
 	}
 	if strings.Contains(msg, "insufficient funds for transfer") {
-		return xc.NoBalance
+		return xclient.NoBalance
 	}
 	if strings.Contains(msg, "transaction underpriced") ||
 		strings.Contains(msg, "response body closed") ||
 		strings.Contains(msg, "not found") ||
 		strings.Contains(msg, "eof") ||
 		strings.Contains(msg, "bad rpc url") {
-		return xc.NetworkError
+		return xclient.NetworkError
 	}
 	if strings.Contains(msg, "transaction already in block chain") ||
 		strings.Contains(msg, "already known") {
-		return xc.TransactionExists
+		return xclient.TransactionExists
 	}
-	return xc.UnknownError
+	return xclient.UnknownError
 }

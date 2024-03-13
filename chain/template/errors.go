@@ -1,9 +1,9 @@
 package newchain
 
 import (
-	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
-func CheckError(err error) xc.ClientError {
+func CheckError(err error) xclient.ClientError {
 	return ""
 }

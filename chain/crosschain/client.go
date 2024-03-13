@@ -12,6 +12,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers"
 )
 
@@ -36,7 +37,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) nextClient() (xc.Client, error) {
+func (client *Client) nextClient() (xclient.Client, error) {
 	cfg := client.Asset
 	driver := cfg.GetChain().Driver
 	if driver == "" {
@@ -149,8 +150,8 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return err
 }
 
-// FetchTxInfo returns tx info from a Crosschain endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+// FetchLegacyTxInfo returns tx info from a Crosschain endpoint
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	res, err := client.apiCall(ctx, "/info", &types.TxInfoReq{
 		AssetReq: client.apiAsset(),
 		TxHash:   string(txHash),
@@ -159,14 +160,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		// Fallback to default client
 		nextClient, err2 := client.nextClient()
 		if err2 != nil {
-			return xc.TxInfo{}, err
+			return xc.LegacyTxInfo{}, err
 		}
 		log.Printf("crosschain client.FetchTxInfo - fall back to node err=%s", err)
-		return nextClient.FetchTxInfo(ctx, txHash)
+		return nextClient.FetchLegacyTxInfo(ctx, txHash)
 	}
 	var r types.TxInfoRes
 	err = json.Unmarshal(res, &r)
-	return r.TxInfo, err
+	return r.LegacyTxInfo, err
 }
 
 // FetchNativeBalance fetches account balance from a Crosschain endpoint
@@ -191,7 +192,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 			return zero, err
 		}
 		log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
-		return nextClient.(xc.ClientBalance).FetchNativeBalance(ctx, address)
+		return nextClient.FetchNativeBalance(ctx, address)
 	}
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
@@ -212,7 +213,7 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 			return zero, err
 		}
 		log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
-		return nextClient.(xc.ClientBalance).FetchNativeBalance(ctx, address)
+		return nextClient.FetchNativeBalance(ctx, address)
 	}
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)

@@ -227,7 +227,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		asset xc.ITask
 		tx    string
 		resp  interface{}
-		val   xc.TxInfo
+		val   xc.LegacyTxInfo
 		err   string
 	}{
 		{
@@ -242,7 +242,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// abci_info
 				`{"jsonrpc":"2.0","id":2,"result":{"response":{"data":"terra","version":"v2.2.0","last_block_height":"2803726","last_block_app_hash":"Ds7V/wiEMX5P06kXiX6Ye1G08MfLPJhdTXl95lBydZ0="}}}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				TxID:            "E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 				ExplorerURL:     "/tx/E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
@@ -255,12 +255,12 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockTime:       1668891362,
 				Confirmations:   48860,
 				Status:          0,
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address: "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{
+				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 						ContractAddress: "uluna",
@@ -282,7 +282,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// abci_info
 				`{"jsonrpc":"2.0","id":2,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"1359640","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				ExplorerURL:     "/tx/7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
@@ -295,12 +295,12 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockTime:       1669849454,
 				Confirmations:   107,
 				Status:          0,
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{
+				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 						ContractAddress: "axpla",
@@ -322,7 +322,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// abci_info
 				`{"jsonrpc":"2.0","id":2,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"4855889","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				TxID:            "2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 				ExplorerURL:     "/tx/2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 				From:            "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
@@ -335,7 +335,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockTime:       1669849454,
 				Confirmations:   198,
 				Status:          0,
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
@@ -362,7 +362,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{
+				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
@@ -396,35 +396,35 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`{}`,
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`null`,
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			errors.New(`{"message": "custom RPC error", "code": 123}`),
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"custom RPC error",
 		},
 		{
 			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"",
 			"",
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"error unmarshalling: invalid character",
 		},
 		{
 			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
 			"invalid-sig",
 			"",
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"encoding/hex: invalid byte",
 		},
 	}
@@ -436,10 +436,10 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		asset := v.asset
 		asset.GetChain().URL = server.URL
 		client, _ := NewClient(asset)
-		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.tx))
+		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.tx))
 
 		if v.err != "" {
-			require.Equal(xc.TxInfo{}, txInfo)
+			require.Equal(xc.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(err, v.err)
 		} else {
 			require.Nil(err)

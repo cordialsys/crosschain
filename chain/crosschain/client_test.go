@@ -104,15 +104,15 @@ func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
-	txInfo := xc.TxInfo{
+	txInfo := xc.LegacyTxInfo{
 		BlockHash:     "block-hash",
 		BlockIndex:    2,
 		TxID:          "tx-hash",
 		Confirmations: 10,
 	}
 	resObj := types.TxInfoRes{
-		TxInfoReq: &types.TxInfoReq{},
-		TxInfo:    txInfo,
+		TxInfoReq:    &types.TxInfoReq{},
+		LegacyTxInfo: txInfo,
 	}
 	res, _ := json.Marshal(resObj)
 
@@ -123,7 +123,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	client.URL = server.URL
 
 	txHash := xc.TxHash("hash")
-	info, err := client.FetchTxInfo(s.Ctx, txHash)
+	info, err := client.FetchLegacyTxInfo(s.Ctx, txHash)
 	require.Nil(err)
 	require.IsType(txInfo, info)
 	require.Equal(txInfo, info)
@@ -139,7 +139,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 	client.URL = server.URL
 
 	txHash := xc.TxHash("hash")
-	_, err := client.FetchTxInfo(s.Ctx, txHash)
+	_, err := client.FetchLegacyTxInfo(s.Ctx, txHash)
 	require.EqualError(err, "api-error")
 }
 
@@ -159,7 +159,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
 
 	// note: need a valid tx hash because go-solana checks
 	txHash := xc.TxHash("5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw")
-	_, err := client.FetchTxInfo(s.Ctx, txHash)
+	_, err := client.FetchLegacyTxInfo(s.Ctx, txHash)
 	require.ErrorContains(err, "custom RPC error")
 }
 

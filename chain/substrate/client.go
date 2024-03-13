@@ -16,16 +16,17 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
 // Client for Substrate
 type Client struct {
 	DotClient       *gsrpc.SubstrateAPI
 	Asset           xc.ITask
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xc.Client = &Client{}
+var _ xclient.Client = &Client{}
 
 // TxInput for Substrate
 type TxInput struct {
@@ -157,18 +158,18 @@ type TxInfoResponse struct {
 	Data TxInfoData `json:"data"`
 }
 
-func (client *Client) ParseTxInfo(body []byte) (xc.TxInfo, error) {
+func (client *Client) ParseTxInfo(body []byte) (xc.LegacyTxInfo, error) {
 	var TxInfoResp TxInfoResponse
 	err := json.Unmarshal(body, &TxInfoResp)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	if len(TxInfoResp.Data.BlockHash) == 0 {
-		return xc.TxInfo{}, errors.New("not found")
+		return xc.LegacyTxInfo{}, errors.New("not found")
 	}
 	human, _ := xc.NewAmountHumanReadableFromStr(TxInfoResp.Data.Transfer.Amount)
 
-	return xc.TxInfo{
+	return xc.LegacyTxInfo{
 		BlockHash:  TxInfoResp.Data.BlockHash,
 		TxID:       TxInfoResp.Data.ExtIndex,
 		From:       xc.Address(TxInfoResp.Data.Transfer.From),
@@ -180,8 +181,8 @@ func (client *Client) ParseTxInfo(body []byte) (xc.TxInfo, error) {
 	}, nil
 }
 
-// FetchTxInfo returns tx info for a Substrate tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+// FetchLegacyTxInfo returns tx info for a Substrate tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	if !strings.HasPrefix(string(txHash), "0x") {
 		txHash = "0x" + txHash
 	}
@@ -192,19 +193,19 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-API-Key", asset.AuthSecret)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	explorerClient := &http.Client{}
 	resp, err := explorerClient.Do(req)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	return client.ParseTxInfo(body)
 }
@@ -305,6 +306,6 @@ func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, err
 	return total.Div(&size), nil
 }
 
-func (client *Client) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc) {
+func (client *Client) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
 	client.EstimateGasFunc = estimateGas
 }

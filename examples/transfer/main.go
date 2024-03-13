@@ -129,7 +129,7 @@ func main() {
 	fmt.Println("Zzz...")
 	for i := 0; i < 10; i++ {
 		time.Sleep(5 * time.Second)
-		info, err := client.FetchTxInfo(ctx, tx.Hash())
+		info, err := client.FetchLegacyTxInfo(ctx, tx.Hash())
 		if err != nil {
 			fmt.Printf("could not find tx %s yet, trying again...\n", tx.Hash())
 			continue

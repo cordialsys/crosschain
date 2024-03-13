@@ -2,6 +2,7 @@ package testutil
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/config"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
@@ -11,7 +12,7 @@ import (
 type TestFactory struct {
 	DefaultFactory factory.FactoryContext
 
-	NewClientFunc               func(asset xc.ITask) (xc.Client, error)
+	NewClientFunc               func(asset xc.ITask) (xclient.Client, error)
 	NewTxBuilderFunc            func(asset xc.ITask) (xc.TxBuilder, error)
 	NewSignerFunc               func(asset xc.ITask) (xc.Signer, error)
 	NewAddressBuilderFunc       func(asset xc.ITask) (xc.AddressBuilder, error)
@@ -21,7 +22,7 @@ type TestFactory struct {
 var _ factory.FactoryContext = &TestFactory{}
 
 // NewClient creates a new Client
-func (f *TestFactory) NewClient(asset xc.ITask) (xc.Client, error) {
+func (f *TestFactory) NewClient(asset xc.ITask) (xclient.Client, error) {
 	if f.NewClientFunc != nil {
 		return f.NewClientFunc(asset)
 	}
@@ -129,7 +130,7 @@ func (f *TestFactory) EnrichAssetConfig(partialCfg *xc.TokenAssetConfig) (*xc.To
 }
 
 // EnrichDestinations augments a TxInfo by resolving assets and amounts in TxInfo.Destinations
-func (f *TestFactory) EnrichDestinations(activity xc.ITask, txInfo xc.TxInfo) (xc.TxInfo, error) {
+func (f *TestFactory) EnrichDestinations(activity xc.ITask, txInfo xc.LegacyTxInfo) (xc.LegacyTxInfo, error) {
 	return f.DefaultFactory.EnrichDestinations(activity, txInfo)
 }
 

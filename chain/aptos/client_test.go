@@ -149,7 +149,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	vectors := []struct {
 		tx   string
 		resp interface{}
-		val  xc.TxInfo
+		val  xc.LegacyTxInfo
 		err  string
 	}{
 		{
@@ -161,7 +161,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
 				ExplorerURL:     "/txn/3509309?network=devnet",
@@ -174,7 +174,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockIndex:      3509309,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Destinations: []*xc.TxInfoEndpoint{{
+				Destinations: []*xc.LegacyTxInfoEndpoint{{
 					Address: "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 					Amount:  xc.NewAmountBlockchainFromUint64(123400000),
 				}},
@@ -187,7 +187,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				`{"chain_id":58,"epoch":"61","ledger_version":"3532090","oldest_ledger_version":"0","ledger_timestamp":"1683058921700697","node_role":"full_node","oldest_block_height":"0","block_height":"1320608","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"message":"Transaction not found by Transaction hash(0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3221)","error_code":"transaction_not_found","vm_error_code":null}`,
 			},
-			xc.TxInfo{},
+			xc.LegacyTxInfo{},
 			"Transaction not found by Transaction",
 		},
 		// multisend
@@ -199,7 +199,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				`{"block_height":"67467400","block_hash":"0x65a99fc435368aef999ebd6ce962347ae15adb659de5a5e4f4fd3e5736eead70","block_timestamp":"1688879042654550","first_version":"176278669","last_version":"176278675","transactions":null}`,
 				`{"chain_id":1,"epoch":"3257","ledger_version":"177862741","oldest_ledger_version":"0","ledger_timestamp":"1689016648102542","node_role":"full_node","oldest_block_height":"0","block_height":"68013901","git_hash":"f43ce082abbdaa3a8b38ac07d928feed4248eb73"}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				TxID:            "0x06a6c25f3601895a3d3330f6ba4696fb8e677973aa56aa7b0ea362915bcff39c",
 				BlockHash:       "176278674",
 				ExplorerURL:     "/txn/176278674?network=devnet",
@@ -212,7 +212,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockIndex:      176278674,
 				BlockTime:       1688879042,
 				Confirmations:   546501,
-				Destinations: []*xc.TxInfoEndpoint{{
+				Destinations: []*xc.LegacyTxInfoEndpoint{{
 					Address: "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
 					Amount:  xc.NewAmountBlockchainFromUint64(140099000000),
 				}},
@@ -233,10 +233,10 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			server.StatusCodes = []int{400, 400, 400, 400, 400}
 		}
 		server.Response = v.resp
-		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.tx))
+		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.tx))
 
 		if v.err != "" {
-			require.Equal(xc.TxInfo{}, txInfo)
+			require.Equal(xc.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(err, v.err)
 		} else {
 			require.Nil(err)

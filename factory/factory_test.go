@@ -9,7 +9,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/cosmos"
-	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
+	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/config/constants"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -63,7 +63,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 		// default
 		client, _ := s.Factory.NewClient(asset)
 		require.NotNil(client)
-		_, ok := client.(*xcclient.Client)
+		_, ok := client.(*remoteclient.Client)
 		require.False(ok)
 	}
 
@@ -81,14 +81,14 @@ func (s *CrosschainTestSuite) TestNewClient() {
 	// should return a xc client
 	client, _ := s.Factory.NewClient(chainWithXcClient)
 	require.NotNil(client)
-	_, ok := client.(*xcclient.Client)
+	_, ok := client.(*remoteclient.Client)
 	require.True(ok)
 
 	// should _not_ return a xc client
 	s.Factory.NoXcClients = true
 	client, _ = s.Factory.NewClient(chainWithXcClient)
 	require.NotNil(client)
-	_, ok = client.(*xcclient.Client)
+	_, ok = client.(*remoteclient.Client)
 	require.False(ok)
 	s.Factory.NoXcClients = false
 

@@ -19,7 +19,7 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.Nat
 
 	// fetch tx info
 	client, _ := xc.NewClient(asset)
-	info, err := client.FetchTxInfo(ctx, crosschain.TxHash(txHash))
+	info, err := client.FetchLegacyTxInfo(ctx, crosschain.TxHash(txHash))
 	if err != nil {
 		panic(err)
 	}

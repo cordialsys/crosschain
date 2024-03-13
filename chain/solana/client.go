@@ -10,6 +10,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/sirupsen/logrus"
 
+	xclient "github.com/cordialsys/crosschain/client"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
@@ -60,7 +61,7 @@ type Client struct {
 	Asset     xc.ITask
 }
 
-var _ xc.Client = &Client{}
+var _ xclient.Client = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -213,9 +214,9 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return err
 }
 
-// FetchTxInfo returns tx info for a Solana tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
-	result := xc.TxInfo{}
+// FetchLegacyTxInfo returns tx info for a Solana tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	result := xc.LegacyTxInfo{}
 
 	txSig, err := solana.SignatureFromBase58(string(txHash))
 	if err != nil {

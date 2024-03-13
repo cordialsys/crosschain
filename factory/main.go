@@ -7,7 +7,8 @@ import (
 	"sync"
 
 	. "github.com/cordialsys/crosschain"
-	xcclient "github.com/cordialsys/crosschain/chain/crosschain"
+	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/normalize"
@@ -15,7 +16,7 @@ import (
 
 // FactoryContext is the main Factory interface
 type FactoryContext interface {
-	NewClient(asset ITask) (Client, error)
+	NewClient(asset ITask) (xclient.Client, error)
 	NewTxBuilder(asset ITask) (TxBuilder, error)
 	NewSigner(asset ITask) (Signer, error)
 	NewAddressBuilder(asset ITask) (AddressBuilder, error)
@@ -35,7 +36,7 @@ type FactoryContext interface {
 	ConvertAmountStrToBlockchain(asset ITask, humanAmountStr string) (AmountBlockchain, error)
 
 	EnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAssetConfig, error)
-	EnrichDestinations(asset ITask, txInfo TxInfo) (TxInfo, error)
+	EnrichDestinations(asset ITask, txInfo LegacyTxInfo) (LegacyTxInfo, error)
 
 	GetAssetConfig(asset string, nativeAsset NativeAsset) (ITask, error)
 	GetAssetConfigByContract(contract string, nativeAsset NativeAsset) (ITask, error)
@@ -312,7 +313,7 @@ func (f *Factory) cfgEnrichToken(partialCfg *TokenAssetConfig) (*TokenAssetConfi
 	return cfg, nil
 }
 
-func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, error) {
+func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo LegacyTxInfo) (LegacyTxInfo, error) {
 	native := activity.GetChain()
 	result := txInfo
 
@@ -336,7 +337,7 @@ func (f *Factory) cfgEnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, 
 }
 
 // NewClient creates a new Client
-func (f *Factory) NewClient(cfg ITask) (Client, error) {
+func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	nativeAsset := cfg.GetChain()
 	clients := nativeAsset.GetAllClients()
 	if f.NoXcClients {
@@ -346,7 +347,7 @@ func (f *Factory) NewClient(cfg ITask) (Client, error) {
 	for _, client := range clients {
 		switch Driver(client.Driver) {
 		case DriverCrosschain:
-			return xcclient.NewClient(cfg)
+			return remoteclient.NewClient(cfg)
 		default:
 			return drivers.NewClient(cfg, Driver(client.Driver))
 		}
@@ -422,7 +423,7 @@ func (f *Factory) EnrichAssetConfig(partialCfg *TokenAssetConfig) (*TokenAssetCo
 }
 
 // EnrichDestinations augments a TxInfo by resolving assets and amounts in TxInfo.Destinations
-func (f *Factory) EnrichDestinations(activity ITask, txInfo TxInfo) (TxInfo, error) {
+func (f *Factory) EnrichDestinations(activity ITask, txInfo LegacyTxInfo) (LegacyTxInfo, error) {
 	return f.cfgEnrichDestinations(activity, txInfo)
 }
 
@@ -518,6 +519,6 @@ func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
 	return builder.GetAddressFromPublicKey(publicKey)
 }
 
-func CheckError(driver Driver, err error) ClientError {
+func CheckError(driver Driver, err error) xclient.ClientError {
 	return drivers.CheckError(driver, err)
 }

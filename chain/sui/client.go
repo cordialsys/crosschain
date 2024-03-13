@@ -11,13 +11,14 @@ import (
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
 // Client for Sui
 type Client struct {
 	Asset           xc.ITask
 	SuiClient       *client.Client
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 }
 
 // NewClient returns a new Sui Client
@@ -30,7 +31,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, err
 }
 
-var _ xc.FullClientWithGas = &Client{}
+var _ xclient.FullClientWithGas = &Client{}
 
 type SuiMethod string
 
@@ -82,7 +83,7 @@ func (c *Client) FetchCheckpoint(ctx context.Context, checkpoint uint64) (*Check
 	return resp, err
 }
 
-func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	opts := types.SuiTransactionBlockResponseOptions{
 		ShowInput:          true,
 		ShowEffects:        true,
@@ -93,29 +94,29 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 	}
 	txHashBz, err := lib.NewBase58(string(txHash))
 	if err != nil || txHashBz == nil || len(txHashBz.Data()) < 10 || len(txHashBz.Data()) > 33 {
-		return xc.TxInfo{}, errors.Join(errors.New("could not decode txHash"), err)
+		return xc.LegacyTxInfo{}, errors.Join(errors.New("could not decode txHash"), err)
 	}
 
 	resp, err := c.SuiClient.GetTransactionBlock(ctx, *txHashBz, opts)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	// get latest checkpoint so we can compute our confirmations
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	if resp.Checkpoint == nil {
-		return xc.TxInfo{}, errors.New("sui endpoint failed to provide checkpoint")
+		return xc.LegacyTxInfo{}, errors.New("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	// latestCheckpoint.Epoch
-	sources := []*xc.TxInfoEndpoint{}
-	destinations := []*xc.TxInfoEndpoint{}
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	destinations := []*xc.LegacyTxInfoEndpoint{}
 
 	from := ""
 	to := ""
@@ -136,7 +137,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 			from = bal.Owner.AddressOwner.String()
 			abs := amt.Abs()
 			totalSent = totalSent.Add(&abs)
-			sources = append(sources, &xc.TxInfoEndpoint{
+			sources = append(sources, &xc.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
@@ -147,7 +148,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 			to = bal.Owner.AddressOwner.String()
 			destinationAmount = amt
 			totalReceived = totalReceived.Add(&amt)
-			destinations = append(destinations, &xc.TxInfoEndpoint{
+			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
@@ -165,7 +166,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, 
 		status = xc.TxStatusFailure
 	}
 
-	return xc.TxInfo{
+	return xc.LegacyTxInfo{
 		BlockHash:       txCheckpoint.Digest,
 		TxID:            resp.Digest.String(),
 		From:            xc.Address(from),
@@ -236,7 +237,7 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	epoch := xc.NewAmountBlockchainFromStr(latestCheckpoint.Epoch)
 

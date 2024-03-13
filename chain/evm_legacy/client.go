@@ -6,13 +6,14 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
 type Client struct {
 	EvmClient *evm.Client
 }
 
-var _ xc.FullClient = &Client{}
+var _ xclient.FullClient = &Client{}
 
 type TxInput = evm.TxInput
 
@@ -74,8 +75,8 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return client.EvmClient.SubmitTx(ctx, txInput)
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
-	return client.EvmClient.FetchTxInfo(ctx, txHash)
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	return client.EvmClient.FetchLegacyTxInfo(ctx, txHash)
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

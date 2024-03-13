@@ -8,16 +8,17 @@ import (
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
 // Client for Aptos
 type Client struct {
 	Asset           xc.ITask
 	AptosClient     *aptosclient.RestClient
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xc.FullClientWithGas = &Client{}
+var _ xclient.FullClientWithGas = &Client{}
 
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -76,20 +77,20 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return err
 }
 
-// FetchTxInfo returns tx info for a Aptos tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+// FetchLegacyTxInfo returns tx info for a Aptos tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	tx_height := block.BlockHeight
@@ -102,7 +103,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 
 	destinations := destinationsFromTxPayload(tx.Payload)
 	if len(destinations) == 0 {
-		return xc.TxInfo{}, errors.New("no desitnations")
+		return xc.LegacyTxInfo{}, errors.New("no desitnations")
 
 	}
 	to := xc.Address("")
@@ -112,7 +113,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		amount = destinations[0].Amount
 	}
 
-	return xc.TxInfo{
+	return xc.LegacyTxInfo{
 		To:            to,
 		From:          xc.Address(tx.Sender),
 		Amount:        amount,
@@ -149,7 +150,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.AmountBlockchain(*balance), nil
 }
 
-func (client *Client) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc) {
+func (client *Client) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
 	client.EstimateGasFunc = estimateGas
 }
 

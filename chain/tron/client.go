@@ -10,11 +10,12 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
-var _ xc.Client = &Client{}
+var _ xclient.Client = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
@@ -94,20 +95,20 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return err
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	tx, err := client.client.GetTransactionByID(string(txHash))
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	info, err := client.client.GetTransactionInfoByID(string(txHash))
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	block, err := client.client.GetBlockByNum(info.BlockNumber)
 	if err != nil {
-		return xc.TxInfo{}, err
+		return xc.LegacyTxInfo{}, err
 	}
 
 	var from xc.Address
@@ -118,16 +119,16 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 	if len(sources) == 0 && len(destinations) == 0 {
 		from, to, amount, err = deserialiseNativeTransfer(tx)
 		if err != nil {
-			return xc.TxInfo{}, err
+			return xc.LegacyTxInfo{}, err
 		}
 
-		source := new(xc.TxInfoEndpoint)
+		source := new(xc.LegacyTxInfoEndpoint)
 		source.Address = from
 		source.Amount = amount
 		source.Asset = "TRX"
 		source.NativeAsset = xc.TRX
 
-		destination := new(xc.TxInfoEndpoint)
+		destination := new(xc.LegacyTxInfoEndpoint)
 		destination.Address = to
 		destination.Amount = amount
 		destination.Asset = "TRX"
@@ -137,7 +138,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxI
 		destinations = append(destinations, destination)
 	}
 
-	txInfo := xc.TxInfo{
+	txInfo := xc.LegacyTxInfo{
 		BlockHash:       block.BlockId,
 		TxID:            string(txHash),
 		ExplorerURL:     client.blockExplorerURL + fmt.Sprintf("/transaction/%s", string(txHash)),
@@ -178,13 +179,13 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.NewAmountBlockchainFromUint64(uint64(resp.Balance)), nil
 }
 
-func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xc.TxInfoEndpoint, []*xc.TxInfoEndpoint) {
-	sources := make([]*xc.TxInfoEndpoint, 0)
-	destinations := make([]*xc.TxInfoEndpoint, 0)
+func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint) {
+	sources := make([]*xc.LegacyTxInfoEndpoint, 0)
+	destinations := make([]*xc.LegacyTxInfoEndpoint, 0)
 
 	for _, event := range log {
-		source := new(xc.TxInfoEndpoint)
-		destination := new(xc.TxInfoEndpoint)
+		source := new(xc.LegacyTxInfoEndpoint)
+		destination := new(xc.LegacyTxInfoEndpoint)
 		source.NativeAsset = xc.TRX
 		destination.NativeAsset = xc.TRX
 

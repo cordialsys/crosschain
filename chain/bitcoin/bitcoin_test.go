@@ -420,7 +420,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", AuthSecret: "1234"}
 	client, err := NewClient(asset)
 	require.NoError(err)
-	info, err := client.FetchTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
+	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
 	require.NotNil(info)
 	require.NoError(err)
 	require.EqualValues(100000, info.Amount.Uint64())

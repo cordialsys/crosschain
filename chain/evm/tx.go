@@ -23,8 +23,8 @@ type Tx struct {
 var _ xc.Tx = &Tx{}
 
 type SourcesAndDests struct {
-	Sources      []*xc.TxInfoEndpoint
-	Destinations []*xc.TxInfoEndpoint
+	Sources      []*xc.LegacyTxInfoEndpoint
+	Destinations []*xc.LegacyTxInfoEndpoint
 }
 
 // Hash returns the tx hash or id
@@ -69,8 +69,8 @@ func (tx Tx) Serialize() ([]byte, error) {
 // ParseTransfer parses a tx and extracts higher-level transfer information
 func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
 
-	loggedSources := []*xc.TxInfoEndpoint{}
-	loggedDestinations := []*xc.TxInfoEndpoint{}
+	loggedSources := []*xc.LegacyTxInfoEndpoint{}
+	loggedDestinations := []*xc.LegacyTxInfoEndpoint{}
 	for _, log := range receipt.Logs {
 		event, _ := ERC20.EventByID(log.Topics[0])
 		if event != nil {
@@ -84,13 +84,13 @@ func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset)
 				fmt.Println("could not parse log: ", log.Index)
 				continue
 			}
-			loggedDestinations = append(loggedDestinations, &xc.TxInfoEndpoint{
+			loggedDestinations = append(loggedDestinations, &xc.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.To.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),
 				NativeAsset:     nativeAsset,
 			})
-			loggedSources = append(loggedSources, &xc.TxInfoEndpoint{
+			loggedSources = append(loggedSources, &xc.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.From.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),
@@ -233,14 +233,14 @@ func (tx Tx) ParseERC20TransferTx(nativeAsset xc.NativeAsset) (SourcesAndDests, 
 
 	return SourcesAndDests{
 		// the from should be the tx sender
-		Sources: []*xc.TxInfoEndpoint{{
+		Sources: []*xc.LegacyTxInfoEndpoint{{
 			Address:         tx.From(),
 			Amount:          xc.AmountBlockchain(*amount),
 			ContractAddress: tx.ContractAddress(),
 			NativeAsset:     xc.NativeAsset(nativeAsset),
 		}},
 		// destination
-		Destinations: []*xc.TxInfoEndpoint{{
+		Destinations: []*xc.LegacyTxInfoEndpoint{{
 			Address:         to,
 			ContractAddress: tx.ContractAddress(),
 			Amount:          xc.AmountBlockchain(*amount),

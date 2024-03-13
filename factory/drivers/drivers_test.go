@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xclient "github.com/cordialsys/crosschain/client"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -110,7 +111,7 @@ func (s *CrosschainTestSuite) TestAllCheckError() {
 
 	for _, driver := range xc.SupportedDrivers {
 		anError := CheckError(driver, errors.New("eof"))
-		require.NotEqual(anError, xc.UnknownError, "Missing driver for CheckError: "+driver)
+		require.NotEqual(anError, xclient.UnknownError, "Missing driver for CheckError: "+driver)
 	}
 }
 

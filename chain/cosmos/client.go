@@ -18,6 +18,7 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 
 	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
@@ -77,7 +78,7 @@ type Client struct {
 	Prefix string
 }
 
-var _ xc.FullClientWithGas = &Client{}
+var _ xclient.FullClientWithGas = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 	bodyStr := string(body)
@@ -202,9 +203,9 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return nil
 }
 
-// FetchTxInfo returns tx info for a Cosmos tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
-	result := xc.TxInfo{
+// FetchLegacyTxInfo returns tx info for a Cosmos tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	result := xc.LegacyTxInfo{
 		Fee:           xc.AmountBlockchain{},
 		BlockIndex:    0,
 		BlockTime:     0,

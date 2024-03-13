@@ -49,7 +49,7 @@ type TxInfoReq struct {
 
 type TxInfoRes struct {
 	*TxInfoReq
-	xc.TxInfo `json:"tx_info,omitempty"`
+	xc.LegacyTxInfo `json:"tx_info,omitempty"`
 }
 
 type SubmitTxReq struct {

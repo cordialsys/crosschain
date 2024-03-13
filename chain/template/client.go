@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 )
 
@@ -12,7 +13,7 @@ import (
 type Client struct {
 }
 
-var _ xc.FullClient = &Client{}
+var _ xclient.FullClient = &Client{}
 
 // TxInput for Template
 type TxInput struct {
@@ -43,9 +44,9 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return errors.New("not implemented")
 }
 
-// FetchTxInfo returns tx info for a Template tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
-	return xc.TxInfo{}, errors.New("not implemented")
+// FetchLegacyTxInfo returns tx info for a Template tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	return xc.LegacyTxInfo{}, errors.New("not implemented")
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

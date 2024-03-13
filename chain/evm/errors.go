@@ -3,17 +3,17 @@ package evm
 import (
 	"strings"
 
-	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
-func CheckError(err error) xc.ClientError {
+func CheckError(err error) xclient.ClientError {
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "insufficient funds for gas * price + value") {
-		return xc.NoBalanceForGas
+		return xclient.NoBalanceForGas
 	}
 	if strings.Contains(msg, "insufficient funds for transfer") ||
 		strings.Contains(msg, "insufficient funds of the sender") {
-		return xc.NoBalance
+		return xclient.NoBalance
 	}
 	// Polygon seems to return "transaction underpriced" but still forwarding the tx the chain,
 	// that eventually accepts the tx.
@@ -23,11 +23,11 @@ func CheckError(err error) xc.ClientError {
 		strings.Contains(msg, "response body closed") ||
 		strings.Contains(msg, "not found") ||
 		strings.Contains(msg, "eof") {
-		return xc.NetworkError
+		return xclient.NetworkError
 	}
 	if strings.Contains(msg, "transaction already in block chain") ||
 		strings.Contains(msg, "already known") {
-		return xc.TransactionExists
+		return xclient.TransactionExists
 	}
-	return xc.UnknownError
+	return xclient.UnknownError
 }

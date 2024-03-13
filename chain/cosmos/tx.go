@@ -190,13 +190,13 @@ func (tx Tx) Fee() xc.AmountBlockchain {
 }
 
 // Sources returns the sources of a Tx
-func (tx Tx) Sources() []*xc.TxInfoEndpoint {
-	sources := []*xc.TxInfoEndpoint{}
+func (tx Tx) Sources() []*xc.LegacyTxInfoEndpoint {
+	sources := []*xc.LegacyTxInfoEndpoint{}
 	for _, parsedTransfer := range tx.ParsedTransfers {
 		switch tf := parsedTransfer.(type) {
 		case *banktypes.MsgSend:
 			from := tf.FromAddress
-			sources = append(sources, &xc.TxInfoEndpoint{
+			sources = append(sources, &xc.LegacyTxInfoEndpoint{
 				Address: xc.Address(from),
 			})
 			// currently assume/support single-source transfers
@@ -205,7 +205,7 @@ func (tx Tx) Sources() []*xc.TxInfoEndpoint {
 			msg := Cw20MsgTransfer{}
 			_ = json.Unmarshal(tf.Msg, &msg)
 			if msg.Transfer != nil {
-				sources = append(sources, &xc.TxInfoEndpoint{
+				sources = append(sources, &xc.LegacyTxInfoEndpoint{
 					Address:         xc.Address(tf.Sender),
 					ContractAddress: xc.ContractAddress(tf.Contract),
 					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),
@@ -219,15 +219,15 @@ func (tx Tx) Sources() []*xc.TxInfoEndpoint {
 }
 
 // Destinations returns the destinations of a Tx
-func (tx Tx) Destinations() []*xc.TxInfoEndpoint {
-	destinations := []*xc.TxInfoEndpoint{}
+func (tx Tx) Destinations() []*xc.LegacyTxInfoEndpoint {
+	destinations := []*xc.LegacyTxInfoEndpoint{}
 	for _, parsedTransfer := range tx.ParsedTransfers {
 		switch tf := parsedTransfer.(type) {
 		case *banktypes.MsgSend:
 			to := tf.ToAddress
 			denom := tf.Amount[0].Denom
 			amount := tf.Amount[0].Amount.BigInt()
-			destinations = append(destinations, &xc.TxInfoEndpoint{
+			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 				Address:         xc.Address(to),
 				ContractAddress: xc.ContractAddress(denom),
 				Amount:          xc.AmountBlockchain(*amount),
@@ -236,7 +236,7 @@ func (tx Tx) Destinations() []*xc.TxInfoEndpoint {
 			msg := Cw20MsgTransfer{}
 			_ = json.Unmarshal(tf.Msg, &msg)
 			if msg.Transfer != nil {
-				destinations = append(destinations, &xc.TxInfoEndpoint{
+				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 					Address:         xc.Address(msg.Transfer.Recipient),
 					ContractAddress: xc.ContractAddress(tf.Contract),
 					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),

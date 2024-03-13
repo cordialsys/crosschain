@@ -4,6 +4,7 @@ import (
 	"context"
 
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -12,7 +13,7 @@ type MockedClient struct {
 	mock.Mock
 }
 
-var _ xc.ClientBalance = &MockedClient{}
+var _ xclient.FullClient = &MockedClient{}
 
 // FetchTxInput fetches tx input, mocked
 func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -21,9 +22,13 @@ func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.
 }
 
 // FetchTxInfo fetches tx info, mocked
-func (m *MockedClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	args := m.Called(ctx, txHash)
-	return args.Get(0).(xc.TxInfo), args.Error(1)
+	return args.Get(0).(xc.LegacyTxInfo), args.Error(1)
+}
+func (m *MockedClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+	args := m.Called(ctx, txHash)
+	return args.Get(0).(xclient.TxInfo), args.Error(1)
 }
 
 // SubmitTx submits a tx, mocked

@@ -120,7 +120,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 	client, _ := NewClient(&xc.ChainConfig{})
-	info, err := client.FetchTxInfo(s.Ctx, xc.TxHash("hash"))
+	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("hash"))
 	require.NotNil(info)
 	require.EqualError(err, "not implemented")
 }

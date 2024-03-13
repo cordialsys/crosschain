@@ -20,7 +20,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	vectors := []struct {
 		name string
 		resp interface{}
-		val  xc.TxInfo
+		val  xc.LegacyTxInfo
 		err  string
 	}{
 		{
@@ -33,7 +33,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// grab the checkpoint for the tx
 				`{"epoch":"18","sequenceNumber":"1953362","digest":"BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB","networkTotalTransactions":"4594815","previousDigest":"QnwDCY5dJgpY9rRGbYseG8pQgdacHGtXgjC9TPVyKh8","epochRollingGasCostSummary":{"computationCost":"256697889685794","storageCost":"781589532800","storageRebate":"744825062520","nonRefundableStorageFee":"7523485480"},"timestampMs":"1683124849673","transactions":["UMeT2asZr2hsqT3n3vHmfE4UaNMjkVpoQvUpkRpfddd","3V6WU3ofLCd4pfujYnsEY95y4DxQhW8JM6m2Hy8XTbqg","7NHKPiWjTPM84ZBdi9othG3HCw2LUbxfFe183SWdTwhh","9i1bZ9mtMjMsjzvLRwP2YF9DUvLztiY1QbQVWfgGNrRJ","A5w6t3SkpHTUmCA14L7q9bnVQXsKWv5XRrKTP7wM7xCd","FohJy8o9qf3Qwag6wdWA6XCJeJEvjUmMzWgDhVPxMUnU","GAgWaGyeUoRSKGJQS3Mbs3PYeqfFLHtHpyXmHXGAiMAe","Hbo9qbYRj5XncBtpyzEro2aXYgWiThFEJTj8XmR5ArBg","J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9"],"checkpointCommitments":[],"validatorSignature":"k7orjPUoopsGMd6eR3JDie70DwppJ3t/F2BVMNDN06vX1FMDgscBuXf970TXoD9z"}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9",
 				ExplorerURL:   "https://explorer.sui.io/txblock/J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9?network=devnet",
@@ -42,7 +42,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockIndex:    1953362,
 				BlockTime:     1683124849,
 				Confirmations: 15705,
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:     "0x7d20dcdb2bca4f508ea9613994683eb4e76e9c4ed371169677c1be02aaf0b58e",
 						Amount:      xc.NewAmountBlockchainFromStr("10001997880"),
@@ -50,7 +50,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						NativeAsset: "SUI",
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{
+				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("10000000000"),
@@ -74,7 +74,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// grab the checkpoint for the tx
 				`{"epoch":"18","sequenceNumber":"1953362","digest":"BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB","networkTotalTransactions":"4594815","previousDigest":"QnwDCY5dJgpY9rRGbYseG8pQgdacHGtXgjC9TPVyKh8","epochRollingGasCostSummary":{"computationCost":"256697889685794","storageCost":"781589532800","storageRebate":"744825062520","nonRefundableStorageFee":"7523485480"},"timestampMs":"1683124849673","transactions":["UMeT2asZr2hsqT3n3vHmfE4UaNMjkVpoQvUpkRpfddd","3V6WU3ofLCd4pfujYnsEY95y4DxQhW8JM6m2Hy8XTbqg","7NHKPiWjTPM84ZBdi9othG3HCw2LUbxfFe183SWdTwhh","9i1bZ9mtMjMsjzvLRwP2YF9DUvLztiY1QbQVWfgGNrRJ","A5w6t3SkpHTUmCA14L7q9bnVQXsKWv5XRrKTP7wM7xCd","FohJy8o9qf3Qwag6wdWA6XCJeJEvjUmMzWgDhVPxMUnU","GAgWaGyeUoRSKGJQS3Mbs3PYeqfFLHtHpyXmHXGAiMAe","Hbo9qbYRj5XncBtpyzEro2aXYgWiThFEJTj8XmR5ArBg","J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9"],"checkpointCommitments":[],"validatorSignature":"k7orjPUoopsGMd6eR3JDie70DwppJ3t/F2BVMNDN06vX1FMDgscBuXf970TXoD9z"}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "9aFfSrP7jvvteSS4q8L8RMC71NbfBeK1FK8aWcw8c8py",
 				ExplorerURL:   "https://explorer.sui.io/txblock/9aFfSrP7jvvteSS4q8L8RMC71NbfBeK1FK8aWcw8c8py?network=devnet",
@@ -83,7 +83,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockIndex:    2652859,
 				BlockTime:     1683667808,
 				Confirmations: 15705,
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("1079040"),
@@ -91,7 +91,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						NativeAsset: "SUI",
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{},
+				Destinations: []*xc.LegacyTxInfoEndpoint{},
 				Fee:          xc.NewAmountBlockchainFromStr("1079040"),
 				Error:        "InsufficientCoinBalance in command 2",
 				Status:       xc.TxStatusFailure,
@@ -108,7 +108,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				// sui_getCheckpoint
 				`{"epoch":"1","sequenceNumber":"213114","digest":"8S4qJohEmkdebSt2t9nHmtWquK39KZVJK5bKrARYNBYP","networkTotalTransactions":"1673546","previousDigest":"93hv9hGLRfRZXt78mV6fytQYWXM9grW81H72eyqJYDco","epochRollingGasCostSummary":{"computationCost":"785450001460","storageCost":"1810842150400","storageRebate":"1744678497672","nonRefundableStorageFee":"17623015128"},"timestampMs":"1683903105617","transactions":["26jr9a6RR8G9TKpXySwnArwMTtqGSoN5BPddp9tsuKLo","2fy33DVLoKw1Qfe4PBEpyYZyTDSsy4UTVLZvUsEASEZt","3SV6qmb4wXKYWTnivjHQL8xH41MRq7Vj7hsZsspWfERf","4d3MhqoRk2gESQUoVNyNDWQxGVLoTWbFxhdhjtsNcEPb","7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP","8xUKJfoJKyC8GbMPnNM4iWjEER5CEsru6XQ4adax3HBN","DrJegZcM4kWEMyEcJp18UiymaqFnWZBpTUhPGSKW2gir","EKrnLwFDrtYVcmPC8pFwZAJQQC4e1LhorPbHa3EG6E2H","G9tReX5eo1REF1Vxrn4yxGd4WM7PsVZ1oMRQBnNUnYWh"],"checkpointCommitments":[],"validatorSignature":"iEOUB8jhgUky5jAE45hhAuQ0o4lUjphOTc79jtTjBo/aajRlO2UMIuzXUXAgBwyq"}`,
 			},
-			xc.TxInfo{
+			xc.LegacyTxInfo{
 				BlockHash:       "8S4qJohEmkdebSt2t9nHmtWquK39KZVJK5bKrARYNBYP",
 				TxID:            "7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP",
 				ExplorerURL:     "https://explorer.sui.io/txblock/7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP?network=devnet",
@@ -118,7 +118,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				BlockTime:       1683903105,
 				Confirmations:   8838,
 				ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-				Sources: []*xc.TxInfoEndpoint{
+				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:          xc.NewAmountBlockchainFromStr("1500000000000"),
@@ -126,7 +126,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
 					},
 				},
-				Destinations: []*xc.TxInfoEndpoint{
+				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("1611816"),
@@ -157,10 +157,10 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
 
-		txInfo, err := client.FetchTxInfo(s.Ctx, xc.TxHash(v.val.TxID))
+		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.val.TxID))
 
 		if v.err != "" {
-			require.Equal(xc.TxInfo{}, txInfo)
+			require.Equal(xc.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(err, v.err)
 		} else {
 			require.Nil(err)
@@ -178,7 +178,7 @@ func (s *CrosschainTestSuite) TestInvalidTxFetchTxInfo() {
 	asset.URL = server.URL
 	client, _ := NewClient(asset)
 
-	_, err := client.FetchTxInfo(s.Ctx, xc.TxHash("invalidhash"))
+	_, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("invalidhash"))
 	require.ErrorContains(err, "could not decode txHash")
 
 }

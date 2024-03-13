@@ -65,12 +65,12 @@ func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash)
 	for _, trace := range traces {
 		if trace.Value.ToInt().Cmp(zero) > 0 {
 			amount := xc.AmountBlockchain(*trace.Value.ToInt())
-			sourcesAndDests.Sources = append(sourcesAndDests.Destinations, &xc.TxInfoEndpoint{
+			sourcesAndDests.Sources = append(sourcesAndDests.Destinations, &xc.LegacyTxInfoEndpoint{
 				Address:     xc.Address(trace.From.String()),
 				Amount:      amount,
 				NativeAsset: native,
 			})
-			sourcesAndDests.Destinations = append(sourcesAndDests.Destinations, &xc.TxInfoEndpoint{
+			sourcesAndDests.Destinations = append(sourcesAndDests.Destinations, &xc.LegacyTxInfoEndpoint{
 				Address:     xc.Address(trace.To.String()),
 				Amount:      amount,
 				NativeAsset: native,

@@ -58,13 +58,13 @@ func (tx Tx) ContractAddress() xc.ContractAddress {
 }
 
 // Sources returns the sources of a Tx
-func (tx Tx) Sources() []*xc.TxInfoEndpoint {
-	sources := []*xc.TxInfoEndpoint{}
+func (tx Tx) Sources() []*xc.LegacyTxInfoEndpoint {
+	sources := []*xc.LegacyTxInfoEndpoint{}
 	return sources
 }
 
 // Destinations returns the destinations of a Tx
-func (tx Tx) Destinations() []*xc.TxInfoEndpoint {
-	destinations := []*xc.TxInfoEndpoint{}
+func (tx Tx) Destinations() []*xc.LegacyTxInfoEndpoint {
+	destinations := []*xc.LegacyTxInfoEndpoint{}
 	return destinations
 }

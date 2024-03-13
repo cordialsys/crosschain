@@ -14,6 +14,7 @@ import (
 
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,10 +23,10 @@ type BlockchairClient struct {
 	opts            ClientOptions
 	httpClient      http.Client
 	Asset           xc.ITask
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xc.FullClientWithGas = &BlockchairClient{}
+var _ xclient.FullClientWithGas = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
@@ -316,9 +317,9 @@ func (client *BlockchairClient) send(ctx context.Context, resp interface{}, meth
 	return &apiData.Context, err
 }
 
-func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	var data blockchairTransactionData
-	txWithInfo := &xc.TxInfo{
+	txWithInfo := &xc.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
 		Fee:    xc.NewAmountBlockchainFromUint64(0),
 	}
@@ -341,8 +342,8 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 	}
 	txWithInfo.TxID = data.Transaction.Hash
 
-	sources := []*xc.TxInfoEndpoint{}
-	destinations := []*xc.TxInfoEndpoint{}
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	destinations := []*xc.LegacyTxInfoEndpoint{}
 
 	// build Tx
 	tx := &Tx{
@@ -373,7 +374,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 		}
 		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
-		sources = append(sources, &xc.TxInfoEndpoint{
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
@@ -396,7 +397,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 	to, amount, _ := tx.DetectToAndAmount(from, expectedTo)
 	for _, out := range data.Outputs {
 		if out.Recipient != from {
-			destinations = append(destinations, &xc.TxInfoEndpoint{
+			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 				Address:     xc.Address(out.Recipient),
 				Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 				NativeAsset: xc.NativeAsset(asset),
@@ -418,7 +419,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHash xc.TxHas
 }
 
 // EstimateGas(ctx context.Context) (AmountBlockchain, error)
-func (client *BlockchairClient) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc) {
+func (client *BlockchairClient) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
 	client.EstimateGasFunc = estimateGas
 }
 

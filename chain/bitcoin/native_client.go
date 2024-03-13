@@ -19,6 +19,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
 	"go.mongodb.org/mongo-driver/mongo/address"
 )
@@ -66,10 +67,10 @@ type NativeClient struct {
 	opts            ClientOptions
 	httpClient      http.Client
 	Asset           xc.ITask
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xc.FullClientWithGas = &NativeClient{}
+var _ xclient.FullClientWithGas = &NativeClient{}
 
 var NewClient = NewBlockchairClient
 
@@ -122,15 +123,15 @@ func (client *NativeClient) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return nil
 }
 
-// FetchTxInfo returns tx info for a Bitcoin tx
-func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xc.TxInfo, error) {
+// FetchLegacyTxInfo returns tx info for a Bitcoin tx
+func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	resp := btcjson.GetTransactionResult{}
 
 	// TODO use to-address to figure out the current amount in btc transfer.
 	expectedTo := ""
 
 	if err := client.send(ctx, &resp, "gettransaction", txHash); err != nil {
-		return xc.TxInfo{}, fmt.Errorf("bad \"gettransaction\": %v", err)
+		return xc.LegacyTxInfo{}, fmt.Errorf("bad \"gettransaction\": %v", err)
 	}
 	j1, _ := json.Marshal(resp)
 	log.Printf("res: %s", j1)
@@ -140,8 +141,8 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 	feeDec = feeDec.Abs().Shift(8)
 	fee := feeDec.BigInt()
 
-	sources := []*xc.TxInfoEndpoint{}
-	destinations := []*xc.TxInfoEndpoint{}
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	destinations := []*xc.LegacyTxInfoEndpoint{}
 
 	data, _ := hex.DecodeString(resp.Hex)
 	tx := &Tx{
@@ -166,11 +167,11 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		output, _, err := client.Output(ctx, outpoint)
 		if err != nil {
-			return xc.TxInfo{}, fmt.Errorf("error retrieving input details: %v", err)
+			return xc.LegacyTxInfo{}, fmt.Errorf("error retrieving input details: %v", err)
 		}
 		_, addresses, _, err := txscript.ExtractPkScriptAddrs(output.PubKeyScript, client.opts.Chaincfg)
 		if err != nil || len(addresses) != 1 {
-			return xc.TxInfo{}, fmt.Errorf("error extracting address from input: %v", err)
+			return xc.LegacyTxInfo{}, fmt.Errorf("error extracting address from input: %v", err)
 		}
 		input := Input{
 			Output:  output,
@@ -178,7 +179,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		inputs = append(inputs, input)
 		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
-		sources = append(sources, &xc.TxInfoEndpoint{
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
@@ -202,7 +203,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 		value := output.Value
 		_, addresses, _, err := txscript.ExtractPkScriptAddrs(output.PubKeyScript, client.opts.Chaincfg)
 		if err != nil || len(addresses) != 1 {
-			return xc.TxInfo{}, fmt.Errorf("error extracting address from output: %v", err)
+			return xc.LegacyTxInfo{}, fmt.Errorf("error extracting address from output: %v", err)
 		}
 		recipientAddr := addresses[0].String()
 		recipient := Recipient{
@@ -210,7 +211,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Value: value,
 		}
 		tx.Recipients = append(tx.Recipients, recipient)
-		destinations = append(destinations, &xc.TxInfoEndpoint{
+		destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 			Address:         xc.Address(recipientAddr),
 			ContractAddress: "",
 			Amount:          value,
@@ -225,7 +226,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (
 		fee = (*big.Int)(&newfee)
 	}
 
-	return xc.TxInfo{
+	return xc.LegacyTxInfo{
 		From:          xc.Address(from),
 		To:            xc.Address(to),
 		Amount:        amount,
@@ -431,7 +432,7 @@ func (client *NativeClient) Output(ctx context.Context, outpoint Outpoint) (Outp
 }
 
 // EstimateGas(ctx context.Context) (AmountBlockchain, error)
-func (client *NativeClient) RegisterEstimateGasCallback(estimateGas xc.EstimateGasFunc) {
+func (client *NativeClient) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
 	client.EstimateGasFunc = estimateGas
 }
 

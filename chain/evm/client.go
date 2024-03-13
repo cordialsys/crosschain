@@ -10,6 +10,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/erc20"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -41,11 +42,11 @@ type Client struct {
 	EthClient       *ethclient.Client
 	ChainId         *big.Int
 	Interceptor     *utils.HttpInterceptor
-	EstimateGasFunc xc.EstimateGasFunc
+	EstimateGasFunc xclient.EstimateGasFunc
 	// Legacy          bool
 }
 
-var _ xc.FullClientWithGas = &Client{}
+var _ xclient.FullClientWithGas = &Client{}
 
 // TxInput for EVM
 type TxInput struct {
@@ -314,13 +315,13 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	}
 }
 
-// FetchTxInfo returns tx info for a EVM tx
-func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.TxInfo, error) {
+// FetchLegacyTxInfo returns tx info for a EVM tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.LegacyTxInfo, error) {
 	nativeAsset := client.Asset.GetChain()
 	txHashHex := TrimPrefixes(string(txHashStr))
 	txHash := common.HexToHash(txHashHex)
 
-	result := xc.TxInfo{
+	result := xc.LegacyTxInfo{
 		TxID:        txHashHex,
 		ExplorerURL: nativeAsset.ExplorerURL + "/tx/0x" + txHashHex,
 	}
@@ -419,12 +420,12 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 		zero := big.NewInt(0)
 		if amount.Cmp(zero) > 0 {
 			ethMovements = SourcesAndDests{
-				Sources: []*xc.TxInfoEndpoint{{
+				Sources: []*xc.LegacyTxInfoEndpoint{{
 					Address:     confirmedTx.From(),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
 				}},
-				Destinations: []*xc.TxInfoEndpoint{{
+				Destinations: []*xc.LegacyTxInfoEndpoint{{
 					Address:     confirmedTx.To(),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
@@ -445,7 +446,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.
 }
 
 // RegisterEstimateGasCallback registers a callback to get gas price
-func (client *Client) RegisterEstimateGasCallback(fn xc.EstimateGasFunc) {
+func (client *Client) RegisterEstimateGasCallback(fn xclient.EstimateGasFunc) {
 	client.EstimateGasFunc = fn
 }
 

@@ -103,7 +103,7 @@ func main() {
 	}
 	fmt.Println("Zzz...")
 	time.Sleep(20 * time.Second)
-	info, err := client.FetchTxInfo(ctx, tx.Hash())
+	info, err := client.FetchLegacyTxInfo(ctx, tx.Hash())
 	if err != nil {
 		panic(err)
 	}
