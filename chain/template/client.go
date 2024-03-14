@@ -44,9 +44,14 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return errors.New("not implemented")
 }
 
-// FetchLegacyTxInfo returns tx info for a Template tx
+// Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	return xc.LegacyTxInfo{}, errors.New("not implemented")
+}
+
+// Returns transaction info - new endpoint
+func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+	return xclient.TxInfo{}, errors.New("not implemented")
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

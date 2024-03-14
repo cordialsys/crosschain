@@ -17,7 +17,7 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 )
 
-func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
+func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	switch driver {
 	case DriverEVM:
 		return evm.NewClient(cfg)

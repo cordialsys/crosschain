@@ -2,6 +2,7 @@ package types
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	xclient "github.com/cordialsys/crosschain/client"
 	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
@@ -47,9 +48,13 @@ type TxInfoReq struct {
 	TxHash string `json:"tx_hash"`
 }
 
-type TxInfoRes struct {
+type TxLegacyInfoRes struct {
 	*TxInfoReq
 	xc.LegacyTxInfo `json:"tx_info,omitempty"`
+}
+
+type TransactionInfoRes struct {
+	xclient.TxInfo
 }
 
 type SubmitTxReq struct {

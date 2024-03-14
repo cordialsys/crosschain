@@ -70,7 +70,7 @@ type NativeClient struct {
 	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xclient.FullClientWithGas = &NativeClient{}
+var _ xclient.Client = &NativeClient{}
 
 var NewClient = NewBlockchairClient
 

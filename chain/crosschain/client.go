@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -23,6 +24,8 @@ type Client struct {
 	Http  *http.Client
 }
 
+var _ xclient.FullClient = &Client{}
+
 // TxInput for Template
 type TxInput struct {
 }
@@ -37,7 +40,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) nextClient() (xclient.Client, error) {
+func (client *Client) nextClient() (xclient.FullClient, error) {
 	cfg := client.Asset
 	driver := cfg.GetChain().Driver
 	if driver == "" {
@@ -60,14 +63,21 @@ func (client *Client) apiAsset() *types.AssetReq {
 	}
 }
 
-func (client *Client) apiCall(ctx context.Context, url string, data interface{}) ([]byte, error) {
+func (client *Client) apiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
+	// Create HTTP POST request
+	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, path)
+	return client.apiCallWithUrl(ctx, "POST", apiURL, data)
+}
+
+func (client *Client) apiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
 	// Serialize the request
 	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(data)
-
-	// Create HTTP POST request
-	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, url)
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, buf)
+	if data != nil {
+		json.NewEncoder(buf).Encode(data)
+	} else {
+		buf = nil
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -89,18 +99,12 @@ func (client *Client) apiCall(ctx context.Context, url string, data interface{})
 		return nil, errors.New(r.Message)
 	}
 
-	// Parse API response
-	var r types.ApiResponse
-	err = json.NewDecoder(res.Body).Decode(&r)
+	bz, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return result
-	// The result here is map[string]interface{}, in order to cast it
-	// in the caller the easier way is to re-serialize it and let the
-	// caller deserialize it.
-	return json.Marshal(r)
+	return bz, nil
 }
 
 // FetchTxInput returns tx input from a Crosschain endpoint
@@ -162,12 +166,30 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err2 != nil {
 			return xc.LegacyTxInfo{}, err
 		}
-		log.Printf("crosschain client.FetchTxInfo - fall back to node err=%s", err)
+		log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
 		return nextClient.FetchLegacyTxInfo(ctx, txHash)
 	}
-	var r types.TxInfoRes
+	var r types.TxLegacyInfoRes
 	err = json.Unmarshal(res, &r)
 	return r.LegacyTxInfo, err
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	chain := client.Asset.GetChain().Chain
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)
+	res, err := client.apiCallWithUrl(ctx, "GET", apiURL, nil)
+	if err != nil {
+		// Fallback to default client
+		nextClient, err2 := client.nextClient()
+		if err2 != nil {
+			return xclient.TxInfo{}, err
+		}
+		log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
+		return nextClient.FetchTxInfo(ctx, txHashStr)
+	}
+	r := types.TransactionInfoRes{}
+	err = json.Unmarshal(res, &r)
+	return r.TxInfo, err
 }
 
 // FetchNativeBalance fetches account balance from a Crosschain endpoint

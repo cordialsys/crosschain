@@ -31,7 +31,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, err
 }
 
-var _ xclient.FullClientWithGas = &Client{}
+var _ xclient.FullClient = &Client{}
 
 type SuiMethod string
 
@@ -185,6 +185,16 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		Error:        resp.Effects.Data.V1.Status.Error,
 		Status:       status,
 	}, nil
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Utxo), nil
 }
 
 func (c *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {

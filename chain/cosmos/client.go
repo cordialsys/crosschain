@@ -78,7 +78,7 @@ type Client struct {
 	Prefix string
 }
 
-var _ xclient.FullClientWithGas = &Client{}
+var _ xclient.FullClient = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 	bodyStr := string(body)
@@ -269,6 +269,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	return result, nil
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil
 }
 
 // GetAccount returns a Cosmos account

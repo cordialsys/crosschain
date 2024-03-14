@@ -18,7 +18,7 @@ type Client struct {
 	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xclient.FullClientWithGas = &Client{}
+var _ xclient.FullClient = &Client{}
 
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -127,6 +127,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		BlockIndex:  int64(tx.Version),
 		ExplorerURL: fmt.Sprintf("/txn/%d?network=%s", tx.Version, client.Asset.GetChain().Net),
 	}, nil
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
 
 // FetchBalance fetches balance for an Aptos address

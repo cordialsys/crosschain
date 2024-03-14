@@ -26,7 +26,7 @@ type BlockchairClient struct {
 	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xclient.FullClientWithGas = &BlockchairClient{}
+var _ xclient.FullClient = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
@@ -416,6 +416,17 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	txWithInfo.Destinations = destinations
 
 	return *txWithInfo, nil
+}
+
+func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
 
 // EstimateGas(ctx context.Context) (AmountBlockchain, error)

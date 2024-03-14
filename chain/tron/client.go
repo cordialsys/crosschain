@@ -15,7 +15,7 @@ import (
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
-var _ xclient.Client = &Client{}
+var _ xclient.FullClient = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 
@@ -26,6 +26,7 @@ type Client struct {
 
 	contract         xc.ContractAddress
 	blockExplorerURL string
+	chain            xc.NativeAsset
 }
 
 // TxInput for Template
@@ -61,7 +62,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		return nil, err
 	}
 
-	return &Client{client, xc.ContractAddress(cfgI.GetContract()), cfgI.GetChain().ExplorerURL}, nil
+	return &Client{
+		client,
+		xc.ContractAddress(cfgI.GetContract()),
+		cfgI.GetChain().ExplorerURL,
+		cfg.Chain,
+	}, nil
 }
 
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -125,14 +131,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		source := new(xc.LegacyTxInfoEndpoint)
 		source.Address = from
 		source.Amount = amount
-		source.Asset = "TRX"
-		source.NativeAsset = xc.TRX
+		source.Asset = string(client.chain)
+		source.NativeAsset = client.chain
 
 		destination := new(xc.LegacyTxInfoEndpoint)
 		destination.Address = to
 		destination.Amount = amount
-		destination.Asset = "TRX"
-		destination.NativeAsset = xc.TRX
+		destination.Asset = string(client.chain)
+		destination.NativeAsset = client.chain
 
 		sources = append(sources, source)
 		destinations = append(destinations, destination)
@@ -159,6 +165,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	return txInfo, nil
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(client.chain, legacyTx, xclient.Account), nil
 }
 
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

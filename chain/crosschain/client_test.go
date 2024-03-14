@@ -110,7 +110,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		TxID:          "tx-hash",
 		Confirmations: 10,
 	}
-	resObj := types.TxInfoRes{
+	resObj := types.TxLegacyInfoRes{
 		TxInfoReq:    &types.TxInfoReq{},
 		LegacyTxInfo: txInfo,
 	}

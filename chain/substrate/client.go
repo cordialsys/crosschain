@@ -26,7 +26,7 @@ type Client struct {
 	EstimateGasFunc xclient.EstimateGasFunc
 }
 
-var _ xclient.Client = &Client{}
+var _ xclient.FullClient = &Client{}
 
 // TxInput for Substrate
 type TxInput struct {
@@ -208,6 +208,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		return xc.LegacyTxInfo{}, err
 	}
 	return client.ParseTxInfo(body)
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Account), nil
 }
 
 // FetchNativeBalance fetches account balance for a Substrate address

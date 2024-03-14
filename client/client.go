@@ -10,7 +10,6 @@ import (
 type Client interface {
 	FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error)
 	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
-	// FetchTxInfo(ctx context.Context, txHash TxHash) (TxInfo, error)
 	SubmitTx(ctx context.Context, tx xc.Tx) error
 
 	FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
@@ -21,10 +20,7 @@ type EstimateGasFunc func(native xc.NativeAsset) (xc.AmountBlockchain, error)
 
 type FullClient interface {
 	Client
-}
-
-type FullClientWithGas interface {
-	Client
+	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (TxInfo, error)
 }
 
 type ClientError string

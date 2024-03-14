@@ -61,7 +61,7 @@ type Client struct {
 	Asset     xc.ITask
 }
 
-var _ xclient.Client = &Client{}
+var _ xclient.FullClient = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -285,6 +285,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	result.Amount = tx.Amount()
 
 	return result, nil
+}
+
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Account), nil
 }
 
 func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (TokenAccountInfo, error) {

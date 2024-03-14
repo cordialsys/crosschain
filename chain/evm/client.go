@@ -38,15 +38,13 @@ func init() {
 
 // Client for EVM
 type Client struct {
-	Asset           xc.ITask
-	EthClient       *ethclient.Client
-	ChainId         *big.Int
-	Interceptor     *utils.HttpInterceptor
-	EstimateGasFunc xclient.EstimateGasFunc
-	// Legacy          bool
+	Asset       xc.ITask
+	EthClient   *ethclient.Client
+	ChainId     *big.Int
+	Interceptor *utils.HttpInterceptor
 }
 
-var _ xclient.FullClientWithGas = &Client{}
+var _ xclient.FullClient = &Client{}
 
 // TxInput for EVM
 type TxInput struct {
@@ -57,7 +55,6 @@ type TxInput struct {
 	// DynamicFeeTx
 	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
 	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
-	// LegacyTx
 	// GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 	// Task params
 	Params []string `json:"params,omitempty"`
@@ -135,12 +132,10 @@ func NewClient(asset xc.ITask) (*Client, error) {
 
 	client := ethclient.NewClient(c)
 	return &Client{
-		Asset:           asset,
-		EthClient:       client,
-		ChainId:         nil,
-		Interceptor:     interceptor,
-		EstimateGasFunc: nil,
-		// Legacy:          false,
+		Asset:       asset,
+		EthClient:   client,
+		ChainId:     nil,
+		Interceptor: interceptor,
 	}, nil
 }
 
@@ -152,16 +147,6 @@ func (client *Client) ChainID() (*big.Int, error) {
 	}
 	return client.ChainId, err
 }
-
-// NewLegacyClient returns a new EVM Client for legacy tx
-// func NewLegacyClient(cfg xc.ITask) (*Client, error) {
-// 	client, err := NewClient(cfg)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	// client.Legacy = true
-// 	return client, nil
-// }
 
 func (client *Client) DefaultMaxGasLimit() uint64 {
 	// Set absolute gas limits for safety
@@ -180,16 +165,6 @@ func (client *Client) DefaultMaxGasLimit() uint64 {
 
 // Simulate a transaction to get the estimated gas limit
 func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxBuilder, from xc.Address, to xc.Address, txInput xc.TxInput) (uint64, error) {
-	// builder, err := newTxBuilder(client.Asset)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("could not prepare to simulate: %v", err)
-	// }
-	// if client.Legacy {
-	// 	builder, err = NewLegacyTxBuilder(client.Asset)
-	// 	if err != nil {
-	// 		return 0, fmt.Errorf("could not prepare to simulate legacy: %v", err)
-	// 	}
-	// }
 	zero := big.NewInt(0)
 	fromAddr, _ := HexToAddress(from)
 
@@ -338,10 +313,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	}
 
 	chainID := new(big.Int).SetInt64(nativeAsset.ChainID)
-	// chainID, err := client.EthClient.ChainID(ctx)
-	// if err != nil {
-	// 	return result, fmt.Errorf("fetching chain ID: %v", err)
-	// }
 
 	// If the transaction is still pending, return an empty txInfo.
 	if pending {
@@ -445,9 +416,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	return result, nil
 }
 
-// RegisterEstimateGasCallback registers a callback to get gas price
-func (client *Client) RegisterEstimateGasCallback(fn xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = fn
+func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil
 }
 
 // Fetch the balance of the native asset that this client is configured for
