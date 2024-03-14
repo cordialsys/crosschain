@@ -117,10 +117,10 @@ chains:
     # url: https://goerli.infura.io/v3
     # auth: env:CORDIAL_INFURA_API_TOKEN
     # provider: infura
-    url: https://ethereum-goerli.publicnode.com
-    chain_id: 5
-    chain_name: Ethereum (Goerli)
-    explorer_url: https://goerli.etherscan.io
+    url: https://ethereum-sepolia.publicnode.com
+    chain_id: 11155111
+    chain_name: Ethereum (Sepolia)
+    explorer_url: https://sepolia.etherscan.io
     decimals: 18
     indexer_type: rpc
   FTM:
