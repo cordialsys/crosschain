@@ -133,6 +133,9 @@ func (tx Tx) IsContract() bool {
 	if tx.EthTx == nil {
 		return false
 	}
+	if tx.EthTx.To() == nil {
+		return false
+	}
 	payload := tx.EthTx.Data()
 	return len(payload) > 0
 }
@@ -165,6 +168,9 @@ func (tx Tx) To() xc.Address {
 			return info.Destinations[0].Address
 		}
 	}
+	if tx.EthTx.To() == nil {
+		return xc.Address("")
+	}
 	return xc.Address(tx.EthTx.To().String())
 }
 
@@ -185,7 +191,7 @@ func (tx Tx) Amount() xc.AmountBlockchain {
 
 // ContractAddress returns the contract address for a token transfer
 func (tx Tx) ContractAddress() xc.ContractAddress {
-	if tx.IsContract() {
+	if tx.IsContract() && tx.EthTx.To() != nil {
 		return xc.ContractAddress(tx.EthTx.To().String())
 	}
 	return xc.ContractAddress("")

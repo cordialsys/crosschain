@@ -19,14 +19,14 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.Nat
 
 	// fetch tx info
 	client, _ := xc.NewClient(asset)
-	info, err := client.FetchLegacyTxInfo(ctx, crosschain.TxHash(txHash))
+	info, err := client.FetchTxInfo(ctx, crosschain.TxHash(txHash))
 	if err != nil {
 		panic(err)
 	}
-	info, _ = xc.EnrichDestinations(asset, info)
+
 	fmt.Printf("%+v\n", info)
-	for _, dst := range info.Destinations {
-		fmt.Printf("destination: %+v\n", dst)
+	for _, dst := range info.Transfers {
+		fmt.Printf("transfer: %+v\n", dst)
 	}
 }
 
