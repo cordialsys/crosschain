@@ -243,6 +243,17 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 	}, nil
 }
 
+func (client *NativeClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// remap to new tx
+	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
+}
+
 func (client *NativeClient) send(ctx context.Context, resp interface{}, method string, params ...interface{}) error {
 	// Encode the request.
 	data, err := encodeRequest(method, params)

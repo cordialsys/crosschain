@@ -9,8 +9,13 @@ import (
 // Client is a client that can fetch data and submit tx to a public blockchain
 type Client interface {
 	FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error)
-	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
+
 	SubmitTx(ctx context.Context, tx xc.Tx) error
+
+	// Fetching transaction info - legacy endpoint
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
+	// Fetching transaction info
+	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (TxInfo, error)
 
 	FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
 	FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
@@ -20,7 +25,6 @@ type EstimateGasFunc func(native xc.NativeAsset) (xc.AmountBlockchain, error)
 
 type FullClient interface {
 	Client
-	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (TxInfo, error)
 }
 
 type ClientError string
