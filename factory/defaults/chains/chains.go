@@ -23,7 +23,7 @@ func init() {
 		}
 
 		// default to using xc client
-		defaultUrl := "https://crosschain.cordialapis.com"
+		defaultUrl := "https://connector.cordialapis.com"
 		if chain.URL == "" && len(chain.Clients) == 0 {
 			chain.Clients = append(chain.Clients, &xc.ClientConfig{
 				Driver: xc.DriverCrosschain,
