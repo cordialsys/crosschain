@@ -3,6 +3,7 @@ package evm
 import (
 	"context"
 	"math/big"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
@@ -80,4 +81,45 @@ func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash)
 
 	return sourcesAndDests, nil
 
+}
+
+type TxPoolResult struct {
+	// map of nonce to txinfo
+	Pending map[string]*TxPoolTxInfo `json:"pending"`
+	// Queued  map[string]*TxPoolTxInfo `json:"pending"`
+}
+
+func (result *TxPoolResult) PendingCount() int {
+	if result.Pending == nil {
+		return 0
+	}
+	return len(result.Pending)
+}
+
+// return first pending tx for a given address (should only be 1 entry..)
+func (result *TxPoolResult) InfoFor(address string) (*TxPoolTxInfo, bool) {
+	for _, info := range result.Pending {
+		if strings.EqualFold(info.From, address) {
+			return info, true
+		}
+	}
+	return nil, false
+}
+
+type TxPoolPendingMap struct {
+}
+type TxPoolTxInfo struct {
+	From                 string      `json:"from"`
+	Gas                  hexutil.Big `json:"gas"`
+	GasPrice             hexutil.Big `json:"gasPrice"`
+	MaxFeePerGas         hexutil.Big `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas hexutil.Big `json:"maxPriorityFeePerGas"`
+	Hash                 string      `json:"hash"`
+}
+
+// Get current pending transaction queue for a given address
+func (client *Client) TxPoolContentFrom(ctx context.Context, from common.Address) (*TxPoolResult, error) {
+	var result TxPoolResult
+	err := client.EthClient.Client().CallContext(ctx, &result, "txpool_contentFrom", from.Hex())
+	return &result, err
 }

@@ -254,6 +254,34 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		// should only multiply one cap, not both.
 		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee).ApplyGasPriceMultiplier(client.Asset.GetChain())
 		result.GasTipCap = xc.AmountBlockchain(*gasTipCap)
+
+		fromAddr, _ := HexToAddress(from)
+		pendingTxInfo, err := client.TxPoolContentFrom(ctx, fromAddr)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could see pending tx pool")
+		} else {
+			pending, ok := pendingTxInfo.InfoFor(string(from))
+			if ok {
+				// if there's a pending tx, we want to replace it (use 15% increase).
+				minMaxFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxFeePerGas.ToInt()), 1.15)
+				minPriorityFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxPriorityFeePerGas.ToInt()), 1.15)
+				log := logrus.WithFields(logrus.Fields{
+					"from":        from,
+					"old-tx":      pending.Hash,
+					"old-fee-cap": result.GasFeeCap.String(),
+					"new-fee-cap": minMaxFee.String(),
+				})
+				if result.GasFeeCap.Cmp(&minMaxFee) < 0 {
+					log.Debug("replacing max-fee-cap because of pending tx")
+					result.GasFeeCap = minMaxFee
+				}
+				if result.GasTipCap.Cmp(&minPriorityFee) < 0 {
+					log.Debug("replacing max-priority-fee-cap because of pending tx")
+					result.GasTipCap = minPriorityFee
+				}
+			}
+		}
+
 	} else {
 		result.GasTipCap = zero
 	}

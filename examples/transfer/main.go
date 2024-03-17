@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 )
 
 func main() {
 	// initialize crosschain
+	config.ConfigureLogger("debug")
 	xc := factory.NewDefaultFactory()
 	ctx := context.Background()
 

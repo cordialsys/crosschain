@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 )
 
@@ -185,6 +186,7 @@ func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 }
 
 func main() {
+	config.ConfigureLogger("debug")
 	// initialize crosschain
 	xc := factory.NewDefaultFactory()
 	ctx := context.Background()
