@@ -102,10 +102,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	feeu256 := xc.NewAmountBlockchainFromUint64(gas_used * unit_price)
 
 	destinations := destinationsFromTxPayload(tx.Payload)
-	if len(destinations) == 0 {
-		return xc.LegacyTxInfo{}, errors.New("no desitnations")
-
-	}
 	to := xc.Address("")
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if len(destinations) == 1 {
