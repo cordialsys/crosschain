@@ -222,13 +222,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return result, err
 	}
-
+	// confusingly, '0' is the latest version, which comes after 'legacy' (no version).
+	maxVersion := uint64(0)
 	res, err := client.SolClient.GetTransaction(
 		ctx,
 		txSig,
 		&rpc.GetTransactionOpts{
-			Encoding:   solana.EncodingBase64,
-			Commitment: rpc.CommitmentFinalized,
+			Encoding:                       solana.EncodingBase64,
+			Commitment:                     rpc.CommitmentFinalized,
+			MaxSupportedTransactionVersion: &maxVersion,
 		},
 	)
 	if err != nil {
