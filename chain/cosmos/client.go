@@ -312,6 +312,14 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 	// attempt getting the x/bank module balance first.
 	bal, bankErr := client.fetchBankModuleBalance(ctx, address, client.Asset)
 	if bankErr == nil {
+		if bal.Uint64() == 0 {
+			// sometimes x/bank will incorrectly return 0 balance for invalid bank assets (like on terra chain).
+			// so if there's 0 bal, we double check if there's an cw20 balance.
+			bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
+			if cw20Err == nil && bal.Uint64() > 0 {
+				return bal, CW20, nil
+			}
+		}
 		return bal, BANK, nil
 	}
 

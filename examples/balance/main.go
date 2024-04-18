@@ -45,7 +45,8 @@ func getBalanceInjective(ctx context.Context, xc *factory.Factory) {
 	if err != nil {
 		panic("unsupported asset")
 	}
-	address := xc.MustAddress(asset, "inj162x3ax7z6ksquhshlqh6d498kr60qdx7wqf9we")
+	fmt.Println("rpc-url: ", asset.GetChain().URL)
+	address := xc.MustAddress(asset, "inj1akxycslq8cjt0uffw4rjmfm3echchptu52a2dq")
 	client, _ := xc.NewClient(asset)
 	balance, err := client.FetchBalance(ctx, address)
 	if err != nil {
@@ -55,7 +56,7 @@ func getBalanceInjective(ctx context.Context, xc *factory.Factory) {
 	humanBalance, _ := xc.ConvertAmountToHuman(asset, balance)
 	fmt.Printf("inj: %s\n", humanBalance)
 
-	token, err := xc.GetAssetConfig("USDT", "INJ")
+	token, err := xc.GetAssetConfig("ETH", "INJ")
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +66,7 @@ func getBalanceInjective(ctx context.Context, xc *factory.Factory) {
 		panic(err)
 	}
 	humanBalance, _ = xc.ConvertAmountToHuman(token, balance)
-	fmt.Printf("USDT.INJ: %s\n", humanBalance)
+	fmt.Printf("INJ peggy asset: %s\n", humanBalance)
 }
 
 func getBalanceEthereum(ctx context.Context, xc *factory.Factory) {
@@ -185,6 +186,33 @@ func getBalanceSolana(ctx context.Context, xc *factory.Factory) {
 	fmt.Printf("USDC.SOL: %s\n", humanBalance)
 }
 
+func getBalanceLunc(ctx context.Context, xc *factory.Factory) {
+	asset, err := xc.GetAssetConfig("", "LUNC")
+	if err != nil {
+		panic("unsupported asset")
+	}
+	fmt.Println("rpc-url: ", asset.GetChain().URL)
+
+	address := xc.MustAddress(asset, "terra12tqxwj5vupwdpdcd302emhpn7gg3jypsr6u30m")
+	client, _ := xc.NewClient(asset)
+	balance, err := client.FetchBalance(ctx, address)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("balance native raw: %s\n", balance.String())
+
+	token, err := xc.GetAssetConfig("ETH", "LUNC")
+	if err != nil {
+		panic(err)
+	}
+	client, _ = xc.NewClient(token)
+	balance, err = client.FetchBalance(ctx, address)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("cw20 balance: %s\n", balance.String())
+}
+
 func main() {
 	config.ConfigureLogger("debug")
 	// initialize crosschain
@@ -192,10 +220,10 @@ func main() {
 	ctx := context.Background()
 	// getBalanceSui(ctx, xc)
 	// getBalanceAptos(ctx, xc)
-	// getBalanceInjective(ctx, xc)
+	getBalanceInjective(ctx, xc)
 	// getBalanceEthereum(ctx, xc)
 	// getBalanceBitcoin(ctx, xc)
 	// getBalancePolkadot(ctx, xc)
 	//getBalanceSolana(ctx, xc)
-	getBalanceTron(ctx, xc)
+	// getBalanceLunc(ctx, xc)
 }
