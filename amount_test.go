@@ -54,6 +54,18 @@ func (s *CrosschainTestSuite) TestNewAmountHumanReadableFromStr() {
 	require.Equal(amount.String(), "0")
 }
 
+func (s *CrosschainTestSuite) TestNewBlockchainAmountStr() {
+	require := s.Require()
+	amount := NewAmountBlockchainFromStr("10")
+	require.EqualValues(amount.Uint64(), 10)
+
+	amount = NewAmountBlockchainFromStr("10.1")
+	require.EqualValues(amount.Uint64(), 0)
+
+	amount = NewAmountBlockchainFromStr("0x10")
+	require.EqualValues(amount.Uint64(), 16)
+}
+
 func (s *CrosschainTestSuite) TestLegacyGasCalculation() {
 	require := s.Require()
 

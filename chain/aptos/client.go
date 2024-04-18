@@ -2,13 +2,16 @@ package aptos
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for Aptos
@@ -77,6 +80,55 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return err
 }
 
+type ChangeAndEvents struct {
+	Change AptosChangeInner
+	Events []aptostypes.Event
+}
+
+func (ch *ChangeAndEvents) ContractAddress() string {
+	return parseContractAddress(ch.Change.Type)
+}
+
+type AptosChangeInner struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+type CoinStoreChange struct {
+	DepositEvents  AptosEvents `json:"deposit_events"`
+	WithdrawEvents AptosEvents `json:"withdraw_events"`
+}
+type AptosEvents struct {
+	Counter string `json:"counter"`
+	Guid    GuidId `json:"guid"`
+}
+type EventId struct {
+	CreationNumber string `json:"creation_num"`
+	AccountAddress string `json:"addr"`
+}
+type GuidId struct {
+	Id EventId `json:"id"`
+}
+
+type CoinDepositEvent struct {
+	Amount string `json:"amount"`
+}
+type CoinWithdrawEvent = CoinDepositEvent // same structure
+
+func reserializeJson(obj any, target any) error {
+	bz, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bz, target)
+}
+
+// Transform "0x1::coin::CoinStore<x>" -> x
+func parseContractAddress(typeString string) string {
+	typeString = strings.Replace(typeString, "0x1::coin::CoinStore<", "", 1)
+	typeString = strings.Replace(typeString, ">", "", 1)
+	return typeString
+}
+
 // FetchLegacyTxInfo returns tx info for a Aptos tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 
@@ -101,10 +153,93 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	gas_used := tx.GasUsed
 	feeu256 := xc.NewAmountBlockchainFromUint64(gas_used * unit_price)
 
-	destinations := destinationsFromTxPayload(tx.Payload)
+	coinChanges := []ChangeAndEvents{}
+	// we look at the changes in a transaction and join them with the events.
+	// From this view, we can see which coins moved where.
+	for _, ch := range tx.Changes {
+		changeInner := AptosChangeInner{}
+		err := reserializeJson(ch.Data, &changeInner)
+		if err != nil {
+			return xc.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
+		}
+		if strings.HasPrefix(changeInner.Type, "0x1::coin::CoinStore") {
+			change := &CoinStoreChange{}
+			err := json.Unmarshal(changeInner.Data, change)
+			if err != nil {
+				return xc.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
+			}
+			changeAndEvents := ChangeAndEvents{
+				Change: changeInner,
+			}
+
+			for _, ev := range tx.Events {
+				if ev.Guid.AccountAddress == change.DepositEvents.Guid.Id.AccountAddress &&
+					ev.Guid.CreationNumber == change.DepositEvents.Guid.Id.CreationNumber {
+					changeAndEvents.Events = append(changeAndEvents.Events, ev)
+				}
+			}
+			coinChanges = append(coinChanges, changeAndEvents)
+		}
+	}
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	destinations := []*xc.LegacyTxInfoEndpoint{}
+
+	for _, coinChange := range coinChanges {
+		for _, ev := range coinChange.Events {
+			switch ev.Type {
+			case "0x1::coin::WithdrawEvent":
+				withdraw := &CoinWithdrawEvent{}
+				err := reserializeJson(ev.Data, withdraw)
+				if err != nil {
+					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
+					continue
+				}
+				contract := xc.ContractAddress(coinChange.ContractAddress())
+				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+					ContractAddress:            contract,
+					LegacyAptosContractAddress: string(contract),
+					NativeAsset:                client.Asset.GetChain().Chain,
+					Address:                    xc.Address(ev.Guid.AccountAddress),
+					Amount:                     xc.NewAmountBlockchainFromStr(withdraw.Amount),
+				})
+			case "0x1::coin::DepositEvent":
+				deposit := &CoinDepositEvent{}
+				err := reserializeJson(ev.Data, deposit)
+				if err != nil {
+					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
+					continue
+				}
+				contract := xc.ContractAddress(coinChange.ContractAddress())
+				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+					ContractAddress:            contract,
+					LegacyAptosContractAddress: string(contract),
+					NativeAsset:                client.Asset.GetChain().Chain,
+					Address:                    xc.Address(ev.Guid.AccountAddress),
+					Amount:                     xc.NewAmountBlockchainFromStr(deposit.Amount),
+				})
+			default:
+				// skip / unknown.
+			}
+		}
+	}
+
+	// Legacy behavior expects that ContractAddress is blank for Aptos native asset -- this is not done
+	// for new txinfo endpoint.
+	for _, endpoint := range sources {
+		if endpoint.ContractAddress == "0x1::aptos_coin::AptosCoin" {
+			endpoint.ContractAddress = ""
+		}
+	}
+	for _, endpoint := range destinations {
+		if endpoint.ContractAddress == "0x1::aptos_coin::AptosCoin" {
+			endpoint.ContractAddress = ""
+		}
+	}
+
+	// destinations := destinationsFromTxPayload(tx.Payload)
 	to := xc.Address("")
 	amount := xc.NewAmountBlockchainFromUint64(0)
-	if len(destinations) == 1 {
+	if len(destinations) > 0 {
 		to = destinations[0].Address
 		amount = destinations[0].Amount
 	}
@@ -113,6 +248,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		To:            to,
 		From:          xc.Address(tx.Sender),
 		Amount:        amount,
+		Sources:       sources,
 		Destinations:  destinations,
 		Fee:           feeu256,
 		Confirmations: int64(confirmations),
@@ -131,7 +267,13 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 		return xclient.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain().Chain
-
+	// undo the legacy behavior
+	for _, endpoint := range legacyTx.Sources {
+		endpoint.ContractAddress = xc.ContractAddress(endpoint.LegacyAptosContractAddress)
+	}
+	for _, endpoint := range legacyTx.Destinations {
+		endpoint.ContractAddress = xc.ContractAddress(endpoint.LegacyAptosContractAddress)
+	}
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
