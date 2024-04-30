@@ -29,7 +29,11 @@ func getViper() *viper.Viper {
 	v.SetConfigType("yaml")
 
 	// If the config location env is set, use that.
-	v.SetConfigFile(os.Getenv(constants.ConfigEnv))
+	if os.Getenv(constants.ConfigEnv) != "" {
+		v.SetConfigFile(os.Getenv(constants.ConfigEnv))
+	} else {
+		v.SetConfigFile(os.Getenv(constants.ConfigEnvOld))
+	}
 
 	// otherwise, prioritize current path or parent
 	v.AddConfigPath(".")

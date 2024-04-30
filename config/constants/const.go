@@ -6,7 +6,8 @@ import (
 )
 
 const DefaultHomeEnv string = "CORDIAL_HOME"
-const ConfigEnv string = "CORDIAL_CONFIG"
+const ConfigEnvOld string = "CORDIAL_CONFIG"
+const ConfigEnv string = "CROSSCHAIN_CONFIG"
 
 var DefaultHome string
 
