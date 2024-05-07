@@ -25,7 +25,7 @@ func getViper() *viper.Viper {
 	// new instance of viper to avoid conflicts with, e.g., cosmos
 	v := viper.New()
 	// config file is config.yaml
-	v.SetConfigName("config")
+	v.SetConfigName("config.yaml")
 	v.SetConfigType("yaml")
 
 	// If the config location env is set, use that.
