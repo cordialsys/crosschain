@@ -220,7 +220,7 @@ message MsgERC20DeployedClaim {
 message MsgERC20DeployedClaimResponse {}
 
 // This call allows the sender (and only the sender)
-// to cancel a given MsgSendToEth and recieve a refund
+// to cancel a given MsgSendToEth and receive a refund
 // of the tokens
 message MsgCancelSendToEth {
   option (cosmos.msg.v1.signer) = "sender";

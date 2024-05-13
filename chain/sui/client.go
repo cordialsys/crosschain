@@ -158,7 +158,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		}
 	}
 
-	// fee is difference between total sent and recieved in balance changes
+	// fee is difference between total sent and received in balance changes
 	fee := totalSent.Sub(&totalReceived)
 
 	status := xc.TxStatusSuccess
