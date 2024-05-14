@@ -146,7 +146,7 @@ func (f *Factory) cfgFromAssetByContract(contract string, nativeAsset NativeAsse
 			return f.callbackGetAssetConfigByContract(contract, nativeAsset)
 		}
 	}
-	return &TokenAssetConfig{}, fmt.Errorf("invalid contract: '%s'", contract)
+	return &TokenAssetConfig{}, fmt.Errorf("unknown contract: '%s'", contract)
 }
 
 func (f *Factory) enrichTask(task *TaskConfig, srcAssetID AssetID, dstAssetID AssetID) (*TaskConfig, error) {

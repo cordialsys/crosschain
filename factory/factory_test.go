@@ -422,7 +422,7 @@ func (s *CrosschainTestSuite) TestGetAssetConfigByContract() {
 
 	assetI, err = s.Factory.GetAssetConfigByContract("0x123456", "ETH")
 	asset = assetI.(*xc.TokenAssetConfig)
-	require.EqualError(err, "invalid contract: '0x123456'")
+	require.EqualError(err, "unknown contract: '0x123456'")
 	require.NotNil(asset)
 	require.Equal("", asset.Asset)
 }

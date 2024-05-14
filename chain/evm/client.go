@@ -201,6 +201,22 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 		return 0, fmt.Errorf("could not simulate tx: %v", err)
 	}
 
+	// heuristic: Sometimes tokens can have inconsistent gas spends. Where the gas spent is _sometimes_ higher than what we see in simulation.
+	// To avoid this, we can opportunistically increase the gas budget if there is Enough native asset present.  We don't want to increase the gas budget if we can't
+	// afford it, as this can also be a source of failure.
+	if client.Asset.GetContract() != "" {
+		// always add 1k gas extra
+		gasLimit += 1_000
+		amountEth, err := client.FetchNativeBalance(ctx, from)
+		oneEthHuman, _ := xc.NewAmountHumanReadableFromStr("1")
+		oneEth := oneEthHuman.ToBlockchain(client.Asset.GetChain().Decimals)
+		// add 70k more if we can clearly afford it
+		if err == nil && amountEth.Cmp(&oneEth) >= 0 {
+			// increase gas budget 70k
+			gasLimit += 70_000
+		}
+	}
+
 	defaultMax := client.DefaultMaxGasLimit()
 	if gasLimit == 0 || gasLimit > defaultMax {
 		gasLimit = defaultMax
