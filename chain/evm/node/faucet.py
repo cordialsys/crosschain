@@ -27,9 +27,13 @@ def fund(chain_id:str, contract: str):
         "id":1,
         "jsonrpc":"2.0",
     })
-    print("response content:\n",r.content)
+    print("response content:\n",r.content, flush=True)
+    if 'error' in r.json():
+        print("FAILED", flush=True)
+        return {}, 500
+
     return {
-    }
+    }, r.status_code
 
 
 if __name__ == "__main__":
