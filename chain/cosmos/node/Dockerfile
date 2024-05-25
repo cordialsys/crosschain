@@ -3,7 +3,7 @@ WORKDIR /root
 
 
 RUN yum install python3 python3-pip -y
-RUN pip3 install flask
+RUN pip3 install flask requests
 
 # install ignite
 RUN curl https://get.ignite.com/cli! | bash
@@ -18,10 +18,9 @@ RUN ignite chain init
 
 # we should also add wasm + cw20 contract, but ignite is still working on the wasm plugin.
 
-COPY faucet.py /root/faucet.py
+COPY faucet.py /faucet.py
 
-# run both the validator + faucet script
-EXPOSE 26657 26658
-
+ENV RPC_PORT 10000
+ENV FAUCET_PORT 10001
 # skip invariant checks as some settings in genesis are broken
-CMD ["bash", "-c", "(python3 /root/faucet.py &) ; exampled start"]
+CMD ["bash", "-c", "(python3 /faucet.py &) ; exampled start --rpc.laddr tcp://127.0.0.1:${RPC_PORT}"]

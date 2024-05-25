@@ -1,6 +1,7 @@
 import os, time
 from flask import Flask
 from flask import request
+import requests
 
 app = Flask(__name__)
 
@@ -19,11 +20,14 @@ def fund(chain_id:str, contract: str):
     content = request.get_json(force=True)
     amount = content.get('amount', '1')
     address = content['address']
-
-    faucet_alice_addr = "xpla1mmu56rh6syyruc5xeea2f82askyk5tvts8xnqf"
-    system(f"exampled tx bank send {faucet_alice_addr} {address} {amount}{contract} --from alice -y --chain-id example --node tcp://127.0.0.1:{RPC_PORT}")
-    # wait for block
-    time.sleep(3)
+    # https://hardhat.org/hardhat-network/docs/reference#hardhat_setbalance
+    r = requests.post(f"http://127.0.0.1:{RPC_PORT}", json={
+        "method":"hardhat_setBalance",
+        "params":[address, hex(int(amount))],
+        "id":1,
+        "jsonrpc":"2.0",
+    })
+    print("response content:\n",r.content)
     return {
     }
 
