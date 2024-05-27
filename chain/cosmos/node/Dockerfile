@@ -23,4 +23,4 @@ COPY faucet.py /faucet.py
 ENV RPC_PORT 10000
 ENV FAUCET_PORT 10001
 # skip invariant checks as some settings in genesis are broken
-CMD ["bash", "-c", "(python3 /faucet.py &) ; exampled start --rpc.laddr tcp://127.0.0.1:${RPC_PORT}"]
+CMD ["bash", "-c", "(python3 /faucet.py &) ; exampled start --rpc.laddr tcp://0.0.0.0:${RPC_PORT}"]

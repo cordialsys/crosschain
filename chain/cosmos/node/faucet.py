@@ -19,6 +19,7 @@ def fund(chain_id:str, contract: str):
     content = request.get_json(force=True)
     amount = content.get('amount', '1')
     address = content['address']
+    print(f"REQUEST address={address} contract={contract} amount={amount}", flush=True)
 
     faucet_alice_addr = "xpla1mmu56rh6syyruc5xeea2f82askyk5tvts8xnqf"
     system(f"exampled tx bank send {faucet_alice_addr} {address} {amount}{contract} --from alice -y --chain-id example --node tcp://127.0.0.1:{RPC_PORT}")
