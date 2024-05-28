@@ -8,9 +8,10 @@ import (
 type SignatureType string
 
 const (
-	K256    = SignatureType("k256")
-	Ed255   = SignatureType("ed255")
-	Schnorr = SignatureType("schnorr")
+	K256Keccak = SignatureType("k256-keccak")
+	K256Sha256 = SignatureType("k256-sha256")
+	Ed255      = SignatureType("ed255")
+	Schnorr    = SignatureType("schnorr")
 )
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
@@ -170,9 +171,9 @@ func (native NativeAsset) Driver() Driver {
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
-		return K256
+		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
-		return K256
+		return K256Keccak
 	case DriverAptos, DriverSolana, DriverSui:
 		return Ed255
 	case DriverSubstrate:
