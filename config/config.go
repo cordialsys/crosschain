@@ -136,6 +136,10 @@ func GetSecret(uri string) (string, error) {
 		if len(path) > 1 && path[0] == '~' {
 			path = strings.Replace(path, "~", os.Getenv("HOME"), 1)
 		}
+		_, err := os.Stat(path)
+		if err != nil {
+			return "", err
+		}
 		file, err := os.Open(path)
 		defer file.Close()
 		if err != nil {
