@@ -2,6 +2,7 @@ package client
 
 import (
 	"path/filepath"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/normalize"
@@ -39,6 +40,15 @@ func NewAddressName(chain xc.NativeAsset, address string) AddressName {
 	}
 	name := filepath.Join("chains", string(chain), "addresses", address)
 	return AddressName(name)
+}
+
+func (name TransactionName) Chain() string {
+	p := strings.Split(string(name), "/")
+	if len(p) > 3 {
+		return p[1]
+	} else {
+		return ""
+	}
 }
 
 type Balances map[AssetName]xc.AmountBlockchain
