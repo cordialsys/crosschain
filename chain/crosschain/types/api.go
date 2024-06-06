@@ -68,6 +68,12 @@ type SubmitTxRes struct {
 
 var _ xc.Tx = &SubmitTxReq{}
 
+func NewBinaryTx(serializedSignedTx []byte) xc.Tx {
+	return &SubmitTxReq{
+		TxData: serializedSignedTx,
+	}
+}
+
 func (tx *SubmitTxReq) Hash() xc.TxHash {
 	panic("not implemented")
 }
