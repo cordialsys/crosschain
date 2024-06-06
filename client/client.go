@@ -41,6 +41,9 @@ const TransactionFailure ClientError = "TransactionFailure"
 // A transaction failed to submit because it already exists
 const TransactionExists ClientError = "TransactionExists"
 
+// deadline exceeded and transaction can no longer be accepted
+const TransactionTimedout ClientError = "TransactionTimedOut"
+
 // A network error occured -- there may be nothing wrong with the transaction
 const NetworkError ClientError = "NetworkError"
 
