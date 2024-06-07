@@ -20,6 +20,17 @@ type TxInputWithAmount interface {
 	SetAmount(AmountBlockchain)
 }
 
+// For chains/transactions that leverage memo field
+type TxInputWithMemo interface {
+	SetMemo(string)
+}
+
+// For chains/transactions that can benefit from knowing the timestamp
+type TxInputWithUnix interface {
+	SetUnix(int64)
+}
+
+// Legacy
 type TxInputWithPricing interface {
 	SetUsdPrice(nativeAsset NativeAsset, contract string, priceUsd AmountHumanReadable)
 	GetUsdPrice(nativeAsset NativeAsset, contract string) (AmountHumanReadable, bool)

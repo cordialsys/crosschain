@@ -45,9 +45,17 @@ type TxInput struct {
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
 }
 
+var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithPublicKey = &TxInput{}
+var _ xc.TxInputWithMemo = &TxInput{}
+
 func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
 	txInput.FromPublicKey = publicKeyBytes
 	return nil
+}
+
+func (txInput *TxInput) SetMemo(memo string) {
+	txInput.Memo = memo
 }
 
 func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
