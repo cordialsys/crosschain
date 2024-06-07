@@ -1,6 +1,7 @@
 package solana
 
 import (
+	"fmt"
 	"strings"
 
 	xclient "github.com/cordialsys/crosschain/client"
@@ -8,6 +9,7 @@ import (
 
 func CheckError(err error) xclient.ClientError {
 	msg := strings.ToLower(err.Error())
+	fmt.Println("-- CHECKING ERROR: ", msg)
 	if strings.Contains(msg, "transaction underpriced") {
 		return xclient.TransactionFailure
 	}
@@ -18,14 +20,18 @@ func CheckError(err error) xclient.ClientError {
 	if strings.Contains(msg, "insufficient funds for transfer") {
 		return xclient.NoBalance
 	}
+	if strings.Contains(msg, "blockhash not found") {
+		return xclient.TransactionTimedOut
+	}
+	if strings.Contains(msg, "transaction already in block chain") ||
+		strings.Contains(msg, "transaction has already been processed") {
+		return xclient.TransactionExists
+	}
 	if strings.Contains(msg, "response body closed") ||
 		strings.Contains(msg, "not found") ||
 		strings.Contains(msg, "eof") {
 		return xclient.NetworkError
 	}
-	if strings.Contains(msg, "transaction already in block chain") ||
-		strings.Contains(msg, "already known") {
-		return xclient.TransactionExists
-	}
+
 	return xclient.UnknownError
 }

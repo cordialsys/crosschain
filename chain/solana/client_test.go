@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
@@ -33,6 +34,11 @@ func (s *SolanaTestSuite) TestFindAssociatedTokenAddress() {
 	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx")
 	require.ErrorContains(err, "invalid length")
 	require.Equal("", ata)
+}
+
+func (s *SolanaTestSuite) TestErrors() {
+	require := s.Require()
+	require.Equal(xcclient.TransactionTimedOut, CheckError(errors.New("Transaction simulation failed: Blockhash not found")))
 }
 
 /*
