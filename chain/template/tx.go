@@ -28,6 +28,11 @@ func (tx *Tx) AddSignatures(...xc.TxSignature) error {
 	return errors.New("not implemented")
 }
 
+// GetSignatures returns back signatures, which may be used for signed-transaction broadcasting
+func (tx *Tx) GetSignatures() []xc.TxSignature {
+	return []xc.TxSignature{}
+}
+
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 	return []byte{}, errors.New("not implemented")

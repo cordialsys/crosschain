@@ -61,7 +61,8 @@ type TransactionInfoRes struct {
 
 type SubmitTxReq struct {
 	*ChainReq
-	TxData []byte `json:"tx_data"`
+	TxData       []byte   `json:"tx_data"`
+	TxSignatures [][]byte `json:"tx_signatures"`
 }
 
 type SubmitTxRes struct {
@@ -70,9 +71,10 @@ type SubmitTxRes struct {
 
 var _ xc.Tx = &SubmitTxReq{}
 
-func NewBinaryTx(serializedSignedTx []byte) xc.Tx {
+func NewBinaryTx(serializedSignedTx []byte, TxSignatures [][]byte) xc.Tx {
 	return &SubmitTxReq{
-		TxData: serializedSignedTx,
+		TxData:       serializedSignedTx,
+		TxSignatures: TxSignatures,
 	}
 }
 
@@ -82,8 +84,18 @@ func (tx *SubmitTxReq) Hash() xc.TxHash {
 func (tx *SubmitTxReq) Sighashes() ([]xc.TxDataToSign, error) {
 	panic("not implemented")
 }
-func (tx *SubmitTxReq) AddSignatures(...xc.TxSignature) error {
-	panic("not implemented")
+func (tx *SubmitTxReq) AddSignatures(sigs ...xc.TxSignature) error {
+	for _, sig := range sigs {
+		tx.TxSignatures = append(tx.TxSignatures, sig)
+	}
+	return nil
+}
+func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
+	sigs := []xc.TxSignature{}
+	for _, sig := range tx.TxSignatures {
+		sigs = append(sigs, sig)
+	}
+	return sigs
 }
 func (tx *SubmitTxReq) Serialize() ([]byte, error) {
 	return tx.TxData, nil

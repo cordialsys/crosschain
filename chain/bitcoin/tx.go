@@ -48,6 +48,7 @@ type Tx struct {
 	MsgTx      *wire.MsgTx
 	Signed     bool
 	Recipients []Recipient
+	Signatures []xc.TxSignature
 
 	Amount xc.AmountBlockchain
 	Input  *TxInput
@@ -161,6 +162,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	if tx.Signed {
 		return fmt.Errorf("already signed")
 	}
+	tx.Signatures = signatures
 	if len(signatures) != len(tx.MsgTx.TxIn) {
 		return fmt.Errorf("expected %v signatures, got %v signatures", len(tx.MsgTx.TxIn), len(signatures))
 	}
@@ -194,6 +196,10 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 
 	tx.Signed = true
 	return nil
+}
+
+func (tx *Tx) GetSignatures() []xc.TxSignature {
+	return tx.Signatures
 }
 
 func (tx *Tx) Serialize() ([]byte, error) {

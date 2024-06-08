@@ -104,5 +104,7 @@ type Tx interface {
 	Hash() TxHash
 	Sighashes() ([]TxDataToSign, error)
 	AddSignatures(...TxSignature) error
+	// only needed for RPC endpoints that require signatures in separate fields
+	GetSignatures() []TxSignature
 	Serialize() ([]byte, error)
 }

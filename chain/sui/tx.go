@@ -42,13 +42,28 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	}
 	return
 }
+func CoinEqual(coin1 *types.Coin, coin2 *types.Coin) bool {
+	return bytes.Equal(coin1.CoinObjectId.Data(), (coin2.CoinObjectId.Data())) &&
+		bytes.Equal(coin1.Digest.Data(), coin2.Digest.Data())
+}
+
 func (input *TxInput) coinsDisjoint(other *TxInput) (disjoint bool) {
-	// disjoint set of coins means independence
-	for _, coin1 := range other.Coins {
-		for _, coin2 := range input.Coins {
+	if CoinEqual(&input.GasCoin, &other.GasCoin) {
+		return false
+	}
+
+	for _, coinOther := range other.Coins {
+		for _, coinInput := range input.Coins {
 			// sui object id's are globally unique.
-			if bytes.Equal(coin1.CoinObjectId.Data(), coin2.CoinObjectId.Data()) {
+			if CoinEqual(coinOther, coinInput) {
 				// not disjoint
+				return false
+			}
+			// double check against the gas coin
+			if CoinEqual(coinOther, &input.GasCoin) {
+				return false
+			}
+			if CoinEqual(coinInput, &other.GasCoin) {
 				return false
 			}
 		}
@@ -146,9 +161,6 @@ func NewTxInput() *TxInput {
 	}
 }
 
-type SignatureGetter interface {
-	GetSignatures() [][]byte
-}
 type Tx struct {
 	// Input      TxInput
 	signatures [][]byte
@@ -157,7 +169,6 @@ type Tx struct {
 }
 
 var _ xc.Tx = &Tx{}
-var _ SignatureGetter = &Tx{}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
@@ -201,6 +212,11 @@ func (tx Tx) Serialize() ([]byte, error) {
 	}
 	return bytes, nil
 }
-func (tx Tx) GetSignatures() [][]byte {
-	return tx.signatures
+
+func (tx Tx) GetSignatures() []xc.TxSignature {
+	sigs := []xc.TxSignature{}
+	for _, sig := range tx.signatures {
+		sigs = append(sigs, sig)
+	}
+	return sigs
 }

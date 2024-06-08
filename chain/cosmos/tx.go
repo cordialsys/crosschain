@@ -24,10 +24,11 @@ type Tx struct {
 	CosmosTxBuilder client.TxBuilder
 	CosmosTxEncoder types.TxEncoder
 	SigsV2          []signingtypes.SignatureV2
+	InputSignatures []xc.TxSignature
 	TxDataToSign    []byte
 }
 
-var _ xc.Tx = Tx{}
+var _ xc.Tx = &Tx{}
 
 type Cw20MsgTransfer struct {
 	Transfer *Cw20Transfer `json:"transfer,omitempty"`
@@ -56,7 +57,7 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 }
 
 // AddSignatures adds a signature to Tx
-func (tx Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	if tx.SigsV2 == nil || len(tx.SigsV2) < 1 || tx.CosmosTxBuilder == nil {
 		return errors.New("transaction not initialized")
 	}
@@ -75,7 +76,12 @@ func (tx Tx) AddSignatures(signatures ...xc.TxSignature) error {
 			Signature: sig,
 		}
 	}
+	tx.InputSignatures = signatures
 	return tx.CosmosTxBuilder.SetSignatures(tx.SigsV2...)
+}
+
+func (tx Tx) GetSignatures() []xc.TxSignature {
+	return tx.InputSignatures
 }
 
 // Serialize serializes a Tx

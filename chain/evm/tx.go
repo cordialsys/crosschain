@@ -15,8 +15,9 @@ import (
 
 // Tx for EVM
 type Tx struct {
-	EthTx  *types.Transaction
-	Signer types.Signer
+	EthTx      *types.Transaction
+	Signer     types.Signer
+	Signatures []xc.TxSignature
 	// parsed info
 }
 
@@ -55,7 +56,12 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		return err
 	}
 	tx.EthTx = signedTx
+	tx.Signatures = []xc.TxSignature{signatures[0]}
 	return nil
+}
+
+func (tx Tx) GetSignatures() []xc.TxSignature {
+	return tx.Signatures
 }
 
 // Serialize returns the serialized tx

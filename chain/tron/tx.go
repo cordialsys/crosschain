@@ -47,6 +47,16 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	return nil
 }
 
+func (tx *Tx) GetSignatures() []xc.TxSignature {
+	sigs := []xc.TxSignature{}
+	if tx.tronTx != nil {
+		for _, sig := range tx.tronTx.Signature {
+			sigs = append(sigs, sig)
+		}
+	}
+	return sigs
+}
+
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 	return proto.Marshal(tx.tronTx)

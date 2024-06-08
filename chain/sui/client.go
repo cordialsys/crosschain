@@ -301,13 +301,10 @@ func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	if err != nil {
 		return err
 	}
-	var sigs [][]byte
+	// var sigs [][]byte
 	sigsB64 := []any{}
-	if getter, ok := tx.(SignatureGetter); ok {
-		sigs = getter.GetSignatures()
-	} else {
-		return errors.New("cannot get signatures to submit sui transaction, must implement GetSignatures()")
-	}
+	sigs := tx.GetSignatures()
+
 	for _, sig := range sigs {
 		sigsB64 = append(sigsB64, lib.Base64Data(sig))
 	}

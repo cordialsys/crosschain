@@ -282,6 +282,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 	client, _ := NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
 	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
+		Signatures:         []xc.TxSignature{{1, 2, 3, 4}},
 	})
 	require.NoError(err)
 }

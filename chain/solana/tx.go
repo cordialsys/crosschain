@@ -15,9 +15,10 @@ import (
 
 // Tx for Solana, encapsulating a solana.Transaction and other info
 type Tx struct {
-	SolTx          *solana.Transaction
-	ParsedSolTx    *rpc.ParsedTransaction // similar, but different type
-	parsedTransfer interface{}
+	SolTx           *solana.Transaction
+	ParsedSolTx     *rpc.ParsedTransaction // similar, but different type
+	parsedTransfer  interface{}
+	inputSignatures []xc.TxSignature
 }
 
 var _ xc.Tx = Tx{}
@@ -56,7 +57,12 @@ func (tx Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		copy(solSignatures[i][:], signature)
 	}
 	tx.SolTx.Signatures = solSignatures
+	tx.inputSignatures = signatures
 	return nil
+}
+
+func (tx Tx) GetSignatures() []xc.TxSignature {
+	return tx.inputSignatures
 }
 
 func NewTxFrom(solTx *solana.Transaction) *Tx {

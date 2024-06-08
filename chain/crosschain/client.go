@@ -140,9 +140,16 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	if err != nil {
 		return err
 	}
+	xcSignatures := txInput.GetSignatures()
+	signatures := [][]byte{}
+	for _, sig := range xcSignatures {
+		signatures = append(signatures, sig)
+	}
+
 	res, err := client.apiCall(ctx, "/submit", &types.SubmitTxReq{
-		ChainReq: &types.ChainReq{Chain: chain},
-		TxData:   data,
+		ChainReq:     &types.ChainReq{Chain: chain},
+		TxData:       data,
+		TxSignatures: signatures,
 	})
 	if err != nil {
 		// Fallback to default client

@@ -23,6 +23,7 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithPublicKey = &TxInput{}
 
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -58,7 +59,7 @@ type Tx struct {
 	tx_signature       []byte
 }
 
-var _ xc.TxInputWithPublicKey = &TxInput{}
+var _ xc.Tx = &Tx{}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
@@ -97,6 +98,14 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	tx.tx_serialized = serialized
 
 	return nil
+}
+
+func (tx *Tx) GetSignatures() []xc.TxSignature {
+	sigs := []xc.TxSignature{}
+	if len(tx.tx_signature) > 0 {
+		sigs = append(sigs, tx.tx_signature)
+	}
+	return sigs
 }
 
 func (tx Tx) Serialize() ([]byte, error) {

@@ -15,6 +15,7 @@ type Tx struct {
 	rv                   types.RuntimeVersion
 	tip, nonce           uint64
 	era                  uint16
+	inputSignatures      []xc.TxSignature
 }
 
 var _ xc.Tx = &Tx{}
@@ -78,7 +79,12 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		Tip:   types.NewUCompactFromUInt(tx.tip),
 	}
 	tx.extrinsic.Version |= 0x80
+	tx.inputSignatures = []xc.TxSignature{signatures[0]}
 	return nil
+}
+
+func (tx Tx) GetSignatures() []xc.TxSignature {
+	return tx.inputSignatures
 }
 
 // Serialize returns the serialized tx
