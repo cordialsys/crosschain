@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/sirupsen/logrus"
@@ -30,6 +31,9 @@ type TxInput struct {
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
+// Solana recent-block-hash timeout margin
+const SafetyTimeoutMargin = (5 * time.Minute)
+
 // Returns the microlamports to set the compute budget unit price.
 // It will not go about the max price amount for safety concerns.
 func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 {
@@ -46,24 +50,33 @@ func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 
 	}
 	return fee
 }
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
+
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// no conflicts on solana as txs are easily parallelizeable through
 	// the recent-block-hash mechanism.
-	return false
+	return true
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	otherInput, ok := other.(*TxInput)
-	if ok {
-		if input.Timestamp > 0 && input.Timestamp < otherInput.Timestamp {
-			diff := otherInput.Timestamp - input.Timestamp
+
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	for _, other := range others {
+		oldInput, ok := other.(*TxInput)
+		if ok {
+			diff := input.Timestamp - oldInput.Timestamp
 			// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
-			if diff > 5*60 && otherInput.RecentBlockHash != input.RecentBlockHash {
-				return true
+			// and different hash to consider it safe from double-send.
+			if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.RecentBlockHash.Equals(input.RecentBlockHash) {
+				// not yet safe
+				return false
 			}
+		} else {
+			// can't tell (this shouldn't happen) - default false
+			return false
 		}
 	}
-	return false
+	// all timed out - we're safe
+	return true
 }
+
 func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 }

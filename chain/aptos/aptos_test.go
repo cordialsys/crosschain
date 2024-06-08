@@ -7,15 +7,15 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type CrosschainTestSuite struct {
+type AptosTestSuite struct {
 	suite.Suite
 	Ctx context.Context
 }
 
-func (s *CrosschainTestSuite) SetupTest() {
+func (s *AptosTestSuite) SetupTest() {
 	s.Ctx = context.Background()
 }
 
 func TestAptosTestSuite(t *testing.T) {
-	suite.Run(t, new(CrosschainTestSuite))
+	suite.Run(t, new(AptosTestSuite))
 }

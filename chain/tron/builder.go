@@ -1,7 +1,6 @@
 package tron
 
 import (
-	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -82,14 +81,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 	i := input.(*TxInput)
 	tx := new(core.Transaction)
-	tx.RawData = new(core.TransactionRaw)
-	tx.RawData.Contract = []*core.Transaction_Contract{contract}
-	tx.RawData.Expiration = i.Expiration
-	tx.RawData.RefBlockBytes = i.RefBlockBytes
-	tx.RawData.RefBlockHash = i.RefBlockHash
-	tx.RawData.Timestamp = i.Timestamp
-	bz, _ := json.Marshal(tx)
-	fmt.Println(string(bz))
+	tx.RawData = i.ToRawData(contract)
+	// bz, _ := json.Marshal(tx)
+	// fmt.Println(string(bz))
 
 	return &Tx{
 		tronTx: tx,
@@ -166,12 +160,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 
 	i := input.(*TxInput)
 	tx := &core.Transaction{}
-	tx.RawData = new(core.TransactionRaw)
-	tx.RawData.Contract = []*core.Transaction_Contract{contract}
-	tx.RawData.Expiration = i.Expiration
-	tx.RawData.RefBlockBytes = i.RefBlockBytes
-	tx.RawData.RefBlockHash = i.RefBlockHash
-	tx.RawData.Timestamp = i.Timestamp
+	tx.RawData = i.ToRawData(contract)
+	// set limit for token contracts
 	tx.RawData.FeeLimit = int64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
 
 	return &Tx{

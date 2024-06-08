@@ -73,11 +73,22 @@ func NewTxInput() *TxInput {
 		},
 	}
 }
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	return true
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	// different sequence means independence
+	if evmOther, ok := other.(*TxInput); ok {
+		return evmOther.Nonce != input.Nonce
+	}
+	return
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return !input.IsConflict(other)
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	// all same sequence means no double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// sequence all same - we're safe
+	return true
 }
 
 func configToEVMClientURL(cfgI xc.ITask) string {

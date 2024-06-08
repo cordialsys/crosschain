@@ -172,3 +172,14 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	err := tx.AddSignatures([]xc.TxSignature{}...)
 	require.EqualError(err, "not implemented")
 }
+
+// TxInput
+
+func (s *CrosschainTestSuite) TestSafeFromDoubleSpend() {
+	require := s.Require()
+	newInput := &TxInput{}
+	oldInput1 := &TxInput{}
+	// Defaults are false but each chain has conditions
+	require.False(newInput.SafeFromDoubleSend(oldInput1))
+	require.False(newInput.IndependentOf(oldInput1))
+}

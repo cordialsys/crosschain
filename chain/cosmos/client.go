@@ -49,11 +49,24 @@ var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithMemo = &TxInput{}
 
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	return true
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	// different sequence means independence
+	if cosmosOther, ok := other.(*TxInput); ok {
+		// cosmos address could own multiple accounts too which each have independent sequence.
+		return cosmosOther.AccountNumber != input.AccountNumber ||
+			cosmosOther.Sequence != input.Sequence
+	}
+	return
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return !input.IsConflict(other)
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	// all same sequence means no double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// sequence all same - we're safe
+	return true
 }
 func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
 	txInput.FromPublicKey = publicKeyBytes

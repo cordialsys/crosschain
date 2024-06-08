@@ -1,6 +1,7 @@
 package sui
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"sort"
@@ -29,12 +30,45 @@ type TxInput struct {
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	// assume conflict
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if suiOther, ok := other.(*TxInput); ok {
+		// if epoch changed, means independence as one txInput expired
+		if suiOther.CurrentEpoch != input.CurrentEpoch {
+			return true
+		}
+		if input.coinsDisjoint(suiOther) {
+			return true
+		}
+	}
+	return
+}
+func (input *TxInput) coinsDisjoint(other *TxInput) (disjoint bool) {
+	// disjoint set of coins means independence
+	for _, coin1 := range other.Coins {
+		for _, coin2 := range input.Coins {
+			// sui object id's are globally unique.
+			if bytes.Equal(coin1.CoinObjectId.Data(), coin2.CoinObjectId.Data()) {
+				// not disjoint
+				return false
+			}
+		}
+	}
 	return true
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return false
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	// all same sequence means no double send
+	for _, other := range others {
+		if suiOther, ok := other.(*TxInput); ok {
+			if input.coinsDisjoint(suiOther) && input.CurrentEpoch == suiOther.CurrentEpoch {
+				return false
+			}
+		} else {
+			// can't tell, default false
+			return false
+		}
+	}
+	// all either disjoint or different epoches - we're safe
+	return true
 }
 
 func (input *TxInput) SetPublicKey(pubkey xc.PublicKey) error {

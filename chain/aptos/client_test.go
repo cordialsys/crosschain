@@ -8,7 +8,7 @@ import (
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
 
-func (s *CrosschainTestSuite) TestNewClient() {
+func (s *AptosTestSuite) TestNewClient() {
 	require := s.Require()
 	resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 	server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
@@ -19,7 +19,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 	require.Nil(err)
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInput() {
+func (s *AptosTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
 	vectors := []struct {
@@ -92,7 +92,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestSubmitTx() {
+func (s *AptosTestSuite) TestSubmitTx() {
 	require := s.Require()
 	server, close := testtypes.MockHTTP(&s.Suite, []string{
 		`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -143,7 +143,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInfo() {
+func (s *AptosTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
 	vectors := []struct {
@@ -253,7 +253,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestFetchBalance() {
+func (s *AptosTestSuite) TestFetchBalance() {
 	require := s.Require()
 
 	vectors := []struct {
@@ -314,7 +314,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestNewNativeTransfer() {
+func (s *AptosTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
 	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
@@ -352,7 +352,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	require.Equal("a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab8503000000000000000200000000000000000000000000000000000000000000000000000000000000010d6170746f735f6163636f756e74087472616e73666572000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", hex.EncodeToString(ser))
 }
 
-func (s *CrosschainTestSuite) TestNewTokenTransfer() {
+func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
 	native_asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}

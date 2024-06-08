@@ -30,11 +30,31 @@ func NewTxInput() *TxInput {
 	}
 }
 
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	return true
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if btcOther, ok := other.(*TxInput); ok {
+		// check if any utxo are spent twice
+		for _, utxo1 := range btcOther.UnspentOutputs {
+			for _, utxo2 := range input.UnspentOutputs {
+				if utxo1.Outpoint.Equals(&utxo2.Outpoint) {
+					// not independent
+					return false
+				}
+			}
+		}
+		return true
+	}
+	return
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return !input.IsConflict(other)
+
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	// any disjoint set of utxo's can risk double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// conflicting utxo for all - we're safe
+	return true
 }
 
 func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {

@@ -6,14 +6,14 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-func (s *CrosschainTestSuite) TestNewAddressBuilder() {
+func (s *AptosTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	builder, err := NewAddressBuilder(&xc.ChainConfig{})
 	require.Nil(err)
 	require.NotNil(builder)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
+func (s *AptosTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 	bytes, _ := hex.DecodeString("E0651D94176024B0C137C23A782D50291C04C8B5BCEDD4A7CD066BF4C0D21B22")
@@ -27,7 +27,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require.Equal(xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85"), address)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
+func (s *AptosTestSuite) TestGetAddressFromPublicKeyErr() {
 	require := s.Require()
 	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
 
@@ -45,7 +45,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
 	require.EqualError(err, "invalid format for ed25519 public key")
 }
 
-func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
+func (s *AptosTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
 	builder, _ := NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
 	bytes, _ := hex.DecodeString("E0651D94176024B0C137C23A782D50291C04C8B5BCEDD4A7CD066BF4C0D21B22")

@@ -40,12 +40,22 @@ type TxInput struct {
 	Nonce       uint64               `json:"nonce,omitempty"`
 }
 
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	// assume conflict
-	return true
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	// different sequence means independence
+	if substrateOther, ok := other.(*TxInput); ok {
+		return substrateOther.Nonce != input.Nonce
+	}
+	return
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return false
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	// all same sequence means no double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// sequence all same - we're safe
+	return true
 }
 
 // NewClient returns a new Substrate Client

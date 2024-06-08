@@ -2,6 +2,7 @@ package solana
 
 import (
 	"encoding/hex"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	bin "github.com/gagliardetto/binary"
@@ -196,4 +197,38 @@ func (s *SolanaTestSuite) TestTxSerialize() {
 	serialized, err = tx.Serialize()
 	require.Nil(err)
 	require.Equal(serialized, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
+}
+
+func (s *SolanaTestSuite) TestSafeFromDoubleSpend() {
+	require := s.Require()
+	startTime := int64((100 * time.Hour).Seconds())
+	newInput := &TxInput{
+		RecentBlockHash: solana.Hash([32]byte{1}),
+		Timestamp:       startTime,
+	}
+	oldInput1 := &TxInput{
+		RecentBlockHash: solana.Hash([32]byte{2}),
+		Timestamp:       startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+	}
+	oldInput2_bad := &TxInput{
+		RecentBlockHash: solana.Hash([32]byte{3}),
+		Timestamp:       startTime - int64(SafetyTimeoutMargin.Seconds()/2),
+	}
+	oldInput3_bad_futureTime := &TxInput{
+		RecentBlockHash: solana.Hash([32]byte{4}),
+		Timestamp:       startTime + int64(SafetyTimeoutMargin.Seconds()),
+	}
+	oldInput1_sameHash := &TxInput{
+		RecentBlockHash: solana.Hash([32]byte{1}),
+		Timestamp:       startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+	}
+
+	require.True(newInput.SafeFromDoubleSend(oldInput1))
+	require.False(newInput.SafeFromDoubleSend(oldInput2_bad))
+	require.False(newInput.SafeFromDoubleSend(oldInput3_bad_futureTime))
+	require.False(newInput.SafeFromDoubleSend(oldInput1_sameHash))
+
+	// solana always independent
+	require.True(newInput.IndependentOf(oldInput1))
+	require.True(newInput.IndependentOf(oldInput2_bad))
 }

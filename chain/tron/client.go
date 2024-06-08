@@ -11,13 +11,14 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/utils"
+	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
 var _ xclient.FullClient = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+const TX_TIMEOUT = 2 * time.Hour
 
 // Client for Template
 type Client struct {
@@ -32,18 +33,20 @@ type Client struct {
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	utils.TxPriceInput
 
 	// 6th to 8th (exclusive) byte of the reference block height
-	RefBlockBytes []byte
+	RefBlockBytes []byte `json:"ref_block_bytes,omitempty"`
 	// 8th to 16th (exclusive) byte of the reference block hash
-	RefBlockHash []byte
+	RefBlockHash []byte `json:"ref_block_hash,omitempty"`
 
-	Expiration int64
-	Timestamp  int64
+	// Expiration time (seconds)
+	Expiration int64 `json:"expiration,omitempty"`
+	// Transaction creation time (seconds)
+	Timestamp int64 `json:"timestamp,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithUnix = &TxInput{}
 
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -53,12 +56,42 @@ func NewTxInput() *TxInput {
 	}
 }
 
-func (input *TxInput) IsConflict(other xc.TxInput) bool {
-	// assume conflict
+func (input *TxInput) SetUnix(unix int64) {
+	input.Timestamp = unix
+	input.Expiration = unix + int64((TX_TIMEOUT).Seconds())
+}
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	// tron uses recent-block-hash like mechanism like solana, but with explicit timestamps
 	return true
 }
-func (input *TxInput) CanRetry(other xc.TxInput) bool {
-	return false
+func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	for _, other := range others {
+		oldInput, ok := other.(*TxInput)
+		if ok {
+			if input.Timestamp <= oldInput.Expiration {
+				return false
+			}
+		} else {
+			// can't tell (this shouldn't happen) - default false
+			return false
+		}
+	}
+	// all others timed out - we're safe
+	return true
+}
+
+func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.TransactionRaw {
+	return &core.TransactionRaw{
+		Contract:      []*core.Transaction_Contract{contract},
+		RefBlockBytes: input.RefBlockBytes,
+		RefBlockHash:  input.RefBlockHash,
+		// tron wants milliseconds
+		Expiration: time.Unix(input.Expiration, 0).UnixMilli(),
+		Timestamp:  time.Unix(input.Timestamp, 0).UnixMilli(),
+
+		// unused ?
+		RefBlockNum: 0,
+	}
 }
 
 // NewClient returns a new Template Client
@@ -92,8 +125,9 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 	input.RefBlockBytes = dummyTx.RawData.RefBlockBytes
 	input.RefBlockHash = dummyTx.RawData.RefBlockHashBytes
-	// give 2 hours (miliseconds)
-	input.Expiration = time.Now().Add(time.Hour * 2).UnixMilli()
+	// set timeout period
+	input.Timestamp = time.Now().Unix()
+	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
 
 	return input, nil
 }
