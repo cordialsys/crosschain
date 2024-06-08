@@ -154,7 +154,9 @@ func (s *CrosschainTestSuite) TestTxHash() {
 func (s *CrosschainTestSuite) TestTxSighashes() {
 	require := s.Require()
 	tx := Tx{
-		&bitcoin.Tx{},
+		&bitcoin.Tx{
+			Input: &bitcoin.TxInput{},
+		},
 	}
 	sighashes, err := tx.Sighashes()
 	require.NotNil(sighashes)

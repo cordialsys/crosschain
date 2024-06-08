@@ -23,8 +23,12 @@ type TxInput struct {
 	ToIsATA             bool                `json:"to_is_ata,omitempty"`
 	ShouldCreateATA     bool                `json:"should_create_ata,omitempty"`
 	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
-	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee"`
+	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
+	Timestamp           int64               `json:"timestamp,omitempty"`
 }
+
+var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithUnix = &TxInput{}
 
 // Returns the microlamports to set the compute budget unit price.
 // It will not go about the max price amount for safety concerns.
@@ -41,6 +45,27 @@ func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 
 		fee = max
 	}
 	return fee
+}
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	// no conflicts on solana as txs are easily parallelizeable through
+	// the recent-block-hash mechanism.
+	return false
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	otherInput, ok := other.(*TxInput)
+	if ok {
+		if input.Timestamp > 0 && input.Timestamp < otherInput.Timestamp {
+			diff := otherInput.Timestamp - input.Timestamp
+			// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
+			if diff > 5*60 && otherInput.RecentBlockHash != input.RecentBlockHash {
+				return true
+			}
+		}
+	}
+	return false
+}
+func (input *TxInput) SetUnix(unix int64) {
+	input.Timestamp = unix
 }
 
 type TokenAccount struct {

@@ -146,7 +146,7 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 
 	data, _ := hex.DecodeString(resp.Hex)
 	tx := &Tx{
-		Input:  *NewTxInput(),
+		Input:  NewTxInput(),
 		MsgTx:  &wire.MsgTx{},
 		Signed: true,
 	}

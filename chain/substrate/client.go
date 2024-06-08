@@ -40,6 +40,14 @@ type TxInput struct {
 	Nonce       uint64               `json:"nonce,omitempty"`
 }
 
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	// assume conflict
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return false
+}
+
 // NewClient returns a new Substrate Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	rpcurl := cfgI.GetChain().URL

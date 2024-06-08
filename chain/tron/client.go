@@ -43,12 +43,22 @@ type TxInput struct {
 	Timestamp  int64
 }
 
+var _ xc.TxInput = &TxInput{}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverTron,
 		},
 	}
+}
+
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	// assume conflict
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return false
 }
 
 // NewClient returns a new Template Client

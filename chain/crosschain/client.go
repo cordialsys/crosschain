@@ -66,7 +66,12 @@ func (client *Client) apiAsset() *types.AssetReq {
 func (client *Client) apiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
 	// Create HTTP POST request
 	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, path)
-	return client.apiCallWithUrl(ctx, "POST", apiURL, data)
+	response, err := client.apiCallWithUrl(ctx, "POST", apiURL, data)
+	if err != nil {
+		return response, err
+	}
+
+	return response, nil
 }
 
 func (client *Client) apiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
@@ -123,10 +128,9 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
 		return nextClient.FetchTxInput(ctx, from, to)
 	}
-	var r types.TxInputRes
-	_ = json.Unmarshal(res, &r)
-	rSer, _ := json.Marshal(r.TxInput)
-	return drivers.UnmarshalTxInput(rSer)
+	var r = &types.TxInputRes{}
+	_ = json.Unmarshal(res, r)
+	return drivers.UnmarshalTxInput(r.TxInput)
 }
 
 // SubmitTx submits via a Crosschain endpoint

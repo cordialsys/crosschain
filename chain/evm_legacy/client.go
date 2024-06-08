@@ -17,6 +17,8 @@ var _ xclient.FullClient = &Client{}
 
 type TxInput = evm.TxInput
 
+var _ xc.TxInput = &TxInput{}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
@@ -60,7 +62,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	}
 	builder, err := NewTxBuilder(client.EvmClient.Asset)
 	if err != nil {
-		return 0, fmt.Errorf("could not prepare to simulate legacy: %v", err)
+		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
 	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, builder, from, to, result)
 	if err != nil {

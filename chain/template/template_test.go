@@ -61,7 +61,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
-	input := TxInput{}
+	input := &TxInput{}
 	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
 	require.Nil(tf)
 	require.EqualError(err, "not implemented")
@@ -73,7 +73,7 @@ func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
-	input := TxInput{}
+	input := &TxInput{}
 	tf, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
 	require.Nil(tf)
 	require.EqualError(err, "not implemented")
@@ -85,7 +85,7 @@ func (s *CrosschainTestSuite) TestNewTransfer() {
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
-	input := TxInput{}
+	input := &TxInput{}
 	tf, err := builder.NewTransfer(from, to, amount, input)
 	require.Nil(tf)
 	require.EqualError(err, "not implemented")

@@ -6,6 +6,8 @@ import (
 
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
 type TxInput interface {
+	TxInputIsConflict
+	TxInputCanRetry
 }
 
 // TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
@@ -28,6 +30,26 @@ type TxInputWithMemo interface {
 // For chains/transactions that can benefit from knowing the timestamp
 type TxInputWithUnix interface {
 	SetUnix(int64)
+}
+
+// Implementing this interface determines whether if two different
+// input conflict with one another, assuming the same address is used.
+// Examples:
+// - using the same nonce or sequence is a conflict
+// - spending the same resources or utxo's is a conflict
+// - solana (using recent_block_hash) doesn't have any conflicts typically
+// This is used to determine if a transaction needs to be queued or if it can be immediately signed & broadcasted.
+type TxInputIsConflict interface {
+	IsConflict(other TxInput) bool
+}
+
+// Similar to TxInputCheckConflict, this provides another requirement to check to see if a transaction can be retried
+// safely, without risk of double-sending.  This is not used in queuing, only to check for retry safety.
+// Examples:
+// - Solana typically has no conflicts, but need to ensure (a) new blockhash is used, and (b) sufficient time has passed.
+// - If there are conflict(s), then !IsConflict() could be used (a new transaction with a conflict will not double spend).
+type TxInputCanRetry interface {
+	CanRetry(other TxInput) bool
 }
 
 // Legacy

@@ -26,7 +26,16 @@ type TxInput struct {
 	CurrentEpoch uint64 `json:"current_epoch,omitempty"`
 }
 
+var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
+
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	// assume conflict
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return false
+}
 
 func (input *TxInput) SetPublicKey(pubkey xc.PublicKey) error {
 	input.Pubkey = pubkey

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
 	"google.golang.org/genproto/googleapis/rpc/status"
@@ -40,7 +42,7 @@ type TxInputReq struct {
 
 type TxInputRes struct {
 	*TxInputReq
-	xc.TxInput `json:"raw_tx_input,omitempty"`
+	TxInput json.RawMessage `json:"raw_tx_input,omitempty"`
 }
 
 type TxInfoReq struct {

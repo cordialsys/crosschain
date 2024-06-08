@@ -19,6 +19,7 @@ type TxInput struct {
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 }
 
+var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithAmount = &TxInput{}
 
@@ -27,6 +28,13 @@ func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverBitcoin),
 	}
+}
+
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return !input.IsConflict(other)
 }
 
 func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {

@@ -22,6 +22,8 @@ type TxInput struct {
 	Pubkey         []byte `json:"pubkey,omitempty"`
 }
 
+var _ xc.TxInput = &TxInput{}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
@@ -30,8 +32,15 @@ func NewTxInput() *TxInput {
 	}
 }
 
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return !input.IsConflict(other)
+}
+
 type Tx struct {
-	Input              TxInput
+	Input              *TxInput
 	tx                 transactionbuilder.RawTransaction
 	tx_serialized      []byte
 	tx_signing_message []byte

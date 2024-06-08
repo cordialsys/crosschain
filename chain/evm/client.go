@@ -73,6 +73,12 @@ func NewTxInput() *TxInput {
 		},
 	}
 }
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return !input.IsConflict(other)
+}
 
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetChain()
@@ -304,7 +310,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 	builder, err := NewTxBuilder(client.Asset)
 	if err != nil {
-		return 0, fmt.Errorf("could not prepare to simulate: %v", err)
+		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}
 
 	gasLimit, err := client.SimulateGasWithLimit(ctx, builder, from, to, result)

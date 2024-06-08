@@ -46,9 +46,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	txInput := evm.NewTxInput()
 	txInput.Nonce = 1234567
+	txInputBz, _ := json.Marshal(txInput)
 	resObj := types.TxInputRes{
 		TxInputReq: &types.TxInputReq{},
-		TxInput:    txInput,
+		TxInput:    txInputBz,
 	}
 	res, _ := json.Marshal(resObj)
 
@@ -61,7 +62,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	from := xc.Address("from")
 	to := xc.Address("to")
 	input, err := client.FetchTxInput(s.Ctx, from, to)
-	require.Nil(err)
+	require.NoError(err)
 	require.IsType(txInput, input)
 	require.Equal(txInput, input)
 }

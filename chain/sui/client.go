@@ -242,12 +242,12 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 
 	all_coins, err := c.GetAllCoinsFor(ctx, from, contract)
 	if err != nil {
-		return TxInput{}, err
+		return &TxInput{}, err
 	}
 
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return &TxInput{}, err
 	}
 	epoch := xc.NewAmountBlockchainFromStr(latestCheckpoint.Epoch)
 
@@ -270,7 +270,7 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 		// we need to fetch our sui objects
 		all_sui_coins, err := c.GetAllCoinsFor(ctx, from, native)
 		if err != nil {
-			return TxInput{}, err
+			return &TxInput{}, err
 		}
 		SortCoins(all_sui_coins)
 		if len(all_sui_coins) > 0 {

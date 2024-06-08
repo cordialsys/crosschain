@@ -374,7 +374,7 @@ func (s *CrosschainTestSuite) TestNewTransfer_Token() {
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
 	amount := xc.AmountBlockchain{}
-	input := TxInput{}
+	input := &TxInput{}
 	tf, err := builder.NewTransfer(from, to, amount, input)
 	require.Nil(tf)
 	require.ErrorContains(err, "not implemented")
@@ -486,7 +486,9 @@ func (s *CrosschainTestSuite) TestTxHash() {
 
 func (s *CrosschainTestSuite) TestTxSighashes() {
 	require := s.Require()
-	tx := Tx{}
+	tx := Tx{
+		Input: &TxInput{},
+	}
 	sighashes, err := tx.Sighashes()
 	require.NotNil(sighashes)
 	require.NoError(err)
@@ -499,7 +501,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
 	amount := xc.NewAmountBlockchainFromUint64(10)
-	input := TxInput{
+	input := &TxInput{
 		UnspentOutputs: []Output{{
 			Value: xc.NewAmountBlockchainFromUint64(1000),
 		}},
@@ -538,7 +540,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 
 	// 2 inputs = 2 sigs
 	amount = xc.NewAmountBlockchainFromUint64(15000)
-	input = TxInput{
+	input = &TxInput{
 		UnspentOutputs: []Output{{
 			Value: xc.NewAmountBlockchainFromUint64(10000),
 		},

@@ -347,7 +347,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 
 	// build Tx
 	tx := &Tx{
-		Input:      *NewTxInput(),
+		Input:      NewTxInput(),
 		Recipients: []Recipient{},
 		MsgTx:      &wire.MsgTx{},
 		Signed:     true,

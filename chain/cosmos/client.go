@@ -49,6 +49,12 @@ var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithMemo = &TxInput{}
 
+func (input *TxInput) IsConflict(other xc.TxInput) bool {
+	return true
+}
+func (input *TxInput) CanRetry(other xc.TxInput) bool {
+	return !input.IsConflict(other)
+}
 func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
 	txInput.FromPublicKey = publicKeyBytes
 	return nil

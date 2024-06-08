@@ -23,15 +23,10 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	var local_input TxInput
+	var local_input *TxInput
 	var ok bool
-	// Either ptr or full type is okay.
-	if local_input, ok = input.(TxInput); !ok {
-		var ptr *TxInput
-		if ptr, ok = (input.(*TxInput)); !ok {
-			return &Tx{}, errors.New("xc.TxInput is not from an sui chain")
-		}
-		local_input = *ptr
+	if local_input, ok = input.(*TxInput); !ok {
+		return &Tx{}, errors.New("xc.TxInput is not from an sui chain")
 	}
 	if len(local_input.Pubkey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")

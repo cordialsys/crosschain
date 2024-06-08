@@ -46,7 +46,7 @@ type Tx struct {
 	Recipients []Recipient
 
 	Amount xc.AmountBlockchain
-	Input  TxInput
+	Input  *TxInput
 	From   xc.Address
 	To     xc.Address
 	// isBch  bool
