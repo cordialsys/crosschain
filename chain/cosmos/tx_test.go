@@ -143,30 +143,3 @@ func (s *CrosschainTestSuite) TestTxSerialize() {
 	require.EqualError(err, "transaction not initialized")
 	require.Equal(serialized, []byte{})
 }
-
-func (s *CrosschainTestSuite) TestSafeFromDoubleSpend() {
-	require := s.Require()
-	newInput := &TxInput{
-		AccountNumber: 1,
-		Sequence:      1,
-	}
-	oldInput1 := &TxInput{
-		AccountNumber: 1,
-		Sequence:      1,
-	}
-	oldInput2_bad := &TxInput{
-		AccountNumber: 2,
-		Sequence:      2,
-	}
-	oldInput3_bad := &TxInput{
-		AccountNumber: 2,
-		Sequence:      1,
-	}
-
-	require.True(newInput.SafeFromDoubleSend(oldInput1))
-	require.False(newInput.SafeFromDoubleSend(oldInput2_bad))
-	require.False(newInput.SafeFromDoubleSend(oldInput3_bad))
-
-	require.False(newInput.IndependentOf(oldInput1))
-	require.True(newInput.IndependentOf(oldInput2_bad))
-}

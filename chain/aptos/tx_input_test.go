@@ -1,4 +1,4 @@
-package tron
+package aptos
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-func (s *CrosschainTestSuite) TestTxInputConflicts() {
+func (s *AptosTestSuite) TestTxInputConflicts() {
 	require := s.Require()
 	type testcase struct {
 		newInput xc.TxInput
@@ -18,49 +18,28 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 	vectors := []testcase{
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  100,
-				Expiration: 999,
-			},
-			independent:     true,
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 10},
+			independent:     false,
 			doubleSpendSafe: true,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  100,
-				Expiration: 2001,
-			},
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 11},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  0,
-				Expiration: 1000000,
-			},
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 9},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
+			newInput: &TxInput{SequenceNumber: 10},
 			oldInput: nil,
-			// tron is always independent
-			independent:     true,
+			// default false, not always independent
+			independent:     false,
 			doubleSpendSafe: false,
 		},
 	}

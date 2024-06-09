@@ -1,4 +1,4 @@
-package sui
+package sui_test
 
 import (
 	"context"
@@ -9,10 +9,26 @@ import (
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
+	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/shopspring/decimal"
 )
+
+func mustCoinToObject(coin *types.Coin) *bcs.ObjectArg__ImmOrOwnedObject {
+	obj, err := CoinToObject(coin)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+func mustHexToPure(str string) *bcs.CallArg__Pure {
+	data, err := HexToPure(str)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
 
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
@@ -184,7 +200,7 @@ func (s *CrosschainTestSuite) TestInvalidTxFetchTxInfo() {
 }
 
 func coinObject(contract string, id string, digest string, amount uint64, version int) *types.Coin {
-	coinId, err := decodeHex(id)
+	coinId, err := DecodeHex(id)
 	if err != nil {
 		panic(err)
 	}
@@ -249,11 +265,11 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split (gas coin balance - gas budget)
-				u64ToPure(28969157920 - 2_000_000_000),
+				U64ToPure(28969157920 - 2_000_000_000),
 				// merged coins after gas coin
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6", "u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo", 2001904720, 1852477))},
 				// split amt (transfer amount)
-				u64ToPure(1_500_000_000),
+				U64ToPure(1_500_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -313,7 +329,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split
-				u64ToPure(3000000000),
+				U64ToPure(3000000000),
 				// merged coins after gas coin (sorted by value)
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0xc587db1fbe680b769c1a562a09f2c871a087bafa542c7cb73db6064e2b791bdf", "7Y2zjQxn2wj5jhrvS5NBKCFJDzWHZ4UMG7XJNNioNgTS", 1897841920, 1852477))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x87bae5d7376e857106f7908eab6f7106ea3f7c2a1b3349f99925bb12631b1ff0", "9GeMg1yw4J9ck62XR3KHXi72kfVVeuqfAcK5rL3hRdVK", 1500000000, 1852477))},
@@ -324,7 +340,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0xfb889571ed135b9bd1c1fd7d00d69694305bb74113efa087c18d6444528da091", "8XS5rHkHwoYtSq2Fg49NbZsxRT6tM5n31wx3bKMjpRDy", 900000000, 1852477))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6", "SNiJ8aV9rerhbVTwZikSAWVgJPhx9jxaPXdGcfeYut9", 45035120, 1852477))},
 				// split amt (transfer amount)
-				u64ToPure(3_000_000_000),
+				U64ToPure(3_000_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -385,7 +401,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				// no merge coin this time
 
 				// split amt (transfer amount)
-				u64ToPure(1_000_000_000),
+				U64ToPure(1_000_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -458,7 +474,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split
-				u64ToPure(33002007760),
+				U64ToPure(33002007760),
 				// merged coins after gas coin (sorted by value)
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x3150377d1db0395abfd3b19cfeca94eaf5987a12b95a0aab431195e77399f092", "7xvFhTk5r3RCLQPcybUeTuwAUKAy8ozXN5EbKsnvp9Qb", 10000000000, 1852505))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x5a23ee6e22faa7017b11ad24e7c8ced1d33465cfd06656bc028eb21c6f4cad97", "67APB8hNkhBWmARr49RRXwQGgCC3A8VMxcLKbftUiYQF", 10000000000, 1852505))},
@@ -468,7 +484,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0xe33119108d864f4169d7ed7fa963f51aaed7ef7107d8785cca237916e5079d7c", "FUzqDFoq73G1WecQacFv2WmX83ezk16DGZkkzLTwCbvJ", 10000000000, 1852505))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x8192d5c2b5722c60866761927d5a0737cd55d0c2b1150eabf818253795b38998", "5MYcnxjPkzxG3bwPaLkDKG9snzeZVLFwQ25pePL1vDH7", 1997992240, 1852505))},
 				// split amt (transfer amount)
-				u64ToPure(95_000_000_000),
+				U64ToPure(95_000_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -539,7 +555,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					207737,
 				))},
 				// split amt (transfer amount)
-				u64ToPure(3_000_000_000),
+				U64ToPure(3_000_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -618,7 +634,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				))},
 
 				// split amt (transfer amount)
-				u64ToPure(1_500_000_000_000),
+				U64ToPure(1_500_000_000_000),
 				// destination address
 				mustHexToPure(to),
 			},
@@ -687,10 +703,10 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		}
 		suiTx := tx.(*Tx).Tx
 		// check various properties of the sui tx
-		fromData, _ := hexToAddress(string(from))
+		fromData, _ := HexToAddress(string(from))
 		expiration := bcs.TransactionExpiration__Epoch(21)
-		gasObjectId, _ := hexToObjectID(local_input.GasCoin.CoinObjectId.String())
-		gasDigest, _ := base58ToObjectDigest(local_input.GasCoin.Digest.String())
+		gasObjectId, _ := HexToObjectID(local_input.GasCoin.CoinObjectId.String())
+		gasDigest, _ := Base58ToObjectDigest(local_input.GasCoin.Digest.String())
 		gasVersion := local_input.GasCoin.Version.Uint64()
 
 		gasCoin := ObjectRef{

@@ -52,6 +52,15 @@ type TxInputConflicts interface {
 	SafeFromDoubleSend(previousAttempts ...TxInput) (safe bool)
 }
 
+func SameTxInputTypes[T TxInput](as T, inputs ...TxInput) bool {
+	for _, input := range inputs {
+		if _, ok := input.(T); !ok {
+			return false
+		}
+	}
+	return true
+}
+
 // Legacy
 type TxInputWithPricing interface {
 	SetUsdPrice(nativeAsset NativeAsset, contract string, priceUsd AmountHumanReadable)

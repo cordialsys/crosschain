@@ -1,85 +1,222 @@
-package sui
+package sui_test
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
+	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/coming-chat/go-sui/v2/types"
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/sui"
 )
 
 func (s *CrosschainTestSuite) TestCoinEqual() {
 	require := s.Require()
 	require.True(
-		CoinEqual(
-			suiCoin(fmt.Sprintf("%064s", "01"), "01", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "01"), "01", 0, 0),
+		sui.CoinEqual(
+			newPoint("01", 1),
+			newPoint("01", 1),
 		),
 	)
 
 	require.False(
-		CoinEqual(
-			suiCoin(fmt.Sprintf("%064s", "01"), "01", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "02"), "01", 0, 0),
+		sui.CoinEqual(
+			newPoint("01", 1),
+			newPoint("02", 1),
 		),
 	)
 	require.False(
-		CoinEqual(
-			suiCoin(fmt.Sprintf("%064s", "01"), "01", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "01"), "02", 0, 0),
+		sui.CoinEqual(
+			newPoint("01", 1),
+			newPoint("01", 2),
 		),
 	)
 }
-func (s *CrosschainTestSuite) TestSafeFromDoubleSpend() {
+
+func newPoint(hexDigest string, globalId byte) *types.Coin {
+	hexDigest = fmt.Sprintf("%02s", hexDigest)
+	digest, err := hex.DecodeString(hexDigest)
+	if err != nil {
+		panic(err)
+	}
+
+	return suiCoin(
+		// 32 byte hex, 0 padded
+		fmt.Sprintf("%064s", hex.EncodeToString([]byte{(globalId)})),
+		base58.Encode(digest),
+		0, 0,
+	)
+}
+
+func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	require := s.Require()
-	newInput := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "100"), "", 0, 0),
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "01"), "", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "02"), "", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "03"), "", 0, 0),
-		},
-	}
-	oldInput1_confict := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "50"), "", 0, 0),
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "02"), "", 0, 0), // conflict
-			suiCoin(fmt.Sprintf("%064s", "04"), "", 0, 0),
-		},
-	}
-	oldInput2_good := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "51"), "", 0, 0),
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "11"), "", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "21"), "", 0, 0),
-			suiCoin(fmt.Sprintf("%064s", "31"), "", 0, 0),
-		},
-	}
-	oldInput3_good := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "52"), "", 0, 0),
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "04"), "", 0, 0),
-		},
-	}
-	oldInput_badGasCoin1 := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "53"), "", 0, 0),
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "100"), "", 0, 0), // conflict
-		},
-	}
-	oldInput_badGasCoin2 := &TxInput{
-		GasCoin: *suiCoin(fmt.Sprintf("%064s", "100"), "", 0, 0), // conflict
-		Coins: []*types.Coin{
-			suiCoin(fmt.Sprintf("%064s", "54"), "", 0, 0),
-		},
+	type testcase struct {
+		newInput      xc.TxInput
+		oldInput      xc.TxInput
+		moreOldInputs []xc.TxInput
+
+		independent     bool
+		doubleSpendSafe bool
 	}
 
-	require.True(newInput.SafeFromDoubleSend(oldInput1_confict))
-	require.False(newInput.SafeFromDoubleSend(oldInput2_good))
-	require.False(newInput.SafeFromDoubleSend(oldInput3_good))
-
-	require.False(newInput.IndependentOf(oldInput1_confict))
-	require.True(newInput.IndependentOf(oldInput2_good))
-	require.True(newInput.IndependentOf(oldInput3_good))
-
-	require.False(newInput.IndependentOf(oldInput_badGasCoin1))
-	require.False(newInput.IndependentOf(oldInput_badGasCoin2))
+	vectors := []testcase{
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 101),
+				Coins: []*types.Coin{
+					newPoint("00", 11),
+					newPoint("00", 21),
+				},
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 101),
+				Coins: []*types.Coin{
+					newPoint("00", 1), //conflict
+					newPoint("00", 21),
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 101),
+				Coins: []*types.Coin{
+					newPoint("01", 1), // no conflict
+					newPoint("00", 21),
+				},
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100), //conflict
+				Coins: []*types.Coin{
+					newPoint("00", 11),
+					newPoint("00", 21),
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 200),
+				Coins: []*types.Coin{
+					newPoint("00", 100), //conflict
+					newPoint("00", 21),
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			// conflict
+			oldInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			moreOldInputs: []xc.TxInput{
+				// conflict
+				&sui.TxInput{
+					GasCoin: *newPoint("00", 100),
+					Coins: []*types.Coin{
+						newPoint("00", 1),
+						newPoint("00", 2),
+					},
+				},
+				// no conflict
+				&sui.TxInput{
+					GasCoin: *newPoint("00", 200),
+					Coins: []*types.Coin{
+						newPoint("00", 10),
+						newPoint("00", 11),
+					},
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+					newPoint("00", 3),
+				},
+			},
+			oldInput: nil,
+			// must be false for both, not always independent
+			independent:     false,
+			doubleSpendSafe: false,
+		},
+	}
+	for i, v := range vectors {
+		newBz, _ := json.Marshal(v.newInput)
+		oldBz, _ := json.Marshal(v.oldInput)
+		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
+		fmt.Println()
+		require.Equal(
+			v.newInput.IndependentOf(v.oldInput),
+			v.independent,
+			"IndependentOf",
+		)
+		require.Equal(
+			v.newInput.SafeFromDoubleSend(append(v.moreOldInputs, v.oldInput)...),
+			v.doubleSpendSafe,
+			"SafeFromDoubleSend",
+		)
+	}
 }

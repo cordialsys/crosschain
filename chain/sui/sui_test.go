@@ -1,4 +1,4 @@
-package sui
+package sui_test
 
 import (
 	"context"

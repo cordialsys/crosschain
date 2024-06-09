@@ -58,6 +58,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+	if !xc.SameTxInputTypes(input, others...) {
+		return false
+	}
 	for _, other := range others {
 		oldInput, ok := other.(*TxInput)
 		if ok {

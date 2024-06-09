@@ -1,4 +1,4 @@
-package bitcoin
+package bitcoin_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	. "github.com/cordialsys/crosschain/chain/bitcoin"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )

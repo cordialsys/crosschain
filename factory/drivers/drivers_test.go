@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -54,9 +55,6 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 func (s *CrosschainTestSuite) TestAllNewClient() {
 	require := s.Require()
 
-	// server, close := testtypes.MockHTTP(&s.Suite, "{}")
-	// defer close()
-
 	for _, driver := range xc.SupportedDrivers {
 		// TODO: these require custom params for NewClient
 		if driver == xc.DriverAptos || driver == xc.DriverSubstrate {
@@ -66,6 +64,32 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 		res, err := NewClient(createChainFor(driver), driver)
 		require.NoError(err, "Missing driver for NewClient: "+driver)
 		require.NotNil(res)
+	}
+}
+
+func (s *CrosschainTestSuite) TestAllNewInput() {
+	require := s.Require()
+	_, err := NewTxInput("randomthing")
+	require.Error(err)
+
+	for _, driver := range xc.SupportedDrivers {
+		input, err := NewTxInput(driver)
+		require.NoError(err, "Missing driver for NewClient: "+driver)
+		require.NotNil(input)
+
+		// no panics
+		_ = input.IndependentOf(nil)
+		_ = input.SafeFromDoubleSend(nil)
+
+		// marshals
+		bz, err := MarshalTxInput(input)
+		require.NoError(err)
+
+		input2, err := UnmarshalTxInput(bz)
+		require.NoError(err)
+
+		// ensure same concrete type back
+		require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
 	}
 }
 

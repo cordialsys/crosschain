@@ -17,7 +17,7 @@ type ObjectRef struct {
 	Field2 bcs.ObjectDigest
 }
 
-func decodeHex(str string) ([]byte, error) {
+func DecodeHex(str string) ([]byte, error) {
 	if strings.HasPrefix(str, "0x") {
 		return hex.DecodeString(str[2:])
 	}
@@ -34,8 +34,8 @@ func toObjectID(slice []byte) (bcs.ObjectID, error) {
 	}, nil
 }
 
-func hexToObjectID(str string) (bcs.ObjectID, error) {
-	bytes, err := decodeHex(str)
+func HexToObjectID(str string) (bcs.ObjectID, error) {
+	bytes, err := DecodeHex(str)
 	if err != nil {
 		return bcs.ObjectID{}, err
 	}
@@ -43,19 +43,19 @@ func hexToObjectID(str string) (bcs.ObjectID, error) {
 	return toObjectID(bytes)
 }
 
-func u64ToPure(x uint64) *bcs.CallArg__Pure {
+func U64ToPure(x uint64) *bcs.CallArg__Pure {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
 	pure := bcs.CallArg__Pure(bytes)
 	return &pure
 }
 
-func coinToObject(coin *types.Coin) (*bcs.ObjectArg__ImmOrOwnedObject, error) {
-	id, err := hexToObjectID(coin.CoinObjectId.String())
+func CoinToObject(coin *types.Coin) (*bcs.ObjectArg__ImmOrOwnedObject, error) {
+	id, err := HexToObjectID(coin.CoinObjectId.String())
 	if err != nil {
 		return &bcs.ObjectArg__ImmOrOwnedObject{}, fmt.Errorf("could not decode coin id: %v", err)
 	}
-	digest, err := base58ToObjectDigest(string(coin.Digest.String()))
+	digest, err := Base58ToObjectDigest(string(coin.Digest.String()))
 	if err != nil {
 		return &bcs.ObjectArg__ImmOrOwnedObject{}, fmt.Errorf("could not decode coin digest: %v", err)
 	}
@@ -67,28 +67,14 @@ func coinToObject(coin *types.Coin) (*bcs.ObjectArg__ImmOrOwnedObject, error) {
 		Field2: digest,
 	}, nil
 }
-func mustCoinToObject(coin *types.Coin) *bcs.ObjectArg__ImmOrOwnedObject {
-	obj, err := coinToObject(coin)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-func hexToPure(str string) (*bcs.CallArg__Pure, error) {
-	bytes, err := decodeHex(str)
+
+func HexToPure(str string) (*bcs.CallArg__Pure, error) {
+	bytes, err := DecodeHex(str)
 	if err != nil {
 		return &bcs.CallArg__Pure{}, err
 	}
 	pure := bcs.CallArg__Pure(bytes)
 	return &pure, nil
-}
-
-func mustHexToPure(str string) *bcs.CallArg__Pure {
-	data, err := hexToPure(str)
-	if err != nil {
-		panic(err)
-	}
-	return data
 }
 
 func toAddress(slice []byte) bcs.SuiAddress {
@@ -99,8 +85,8 @@ func toAddress(slice []byte) bcs.SuiAddress {
 	return array
 }
 
-func hexToAddress(str string) (bcs.SuiAddress, error) {
-	bytes, err := decodeHex(str)
+func HexToAddress(str string) (bcs.SuiAddress, error) {
+	bytes, err := DecodeHex(str)
 	if err != nil {
 		return bcs.SuiAddress{}, err
 	}
@@ -115,7 +101,7 @@ func base58ToBytes(str string) ([]byte, error) {
 	return bytes, nil
 }
 
-func base58ToObjectDigest(str string) (bcs.ObjectDigest, error) {
+func Base58ToObjectDigest(str string) (bcs.ObjectDigest, error) {
 	bytes, err := base58ToBytes(str)
 	if err != nil {
 		return bcs.ObjectDigest{}, err

@@ -20,6 +20,30 @@ func MarshalTxInput(txInput xc.TxInput) ([]byte, error) {
 	return json.Marshal(txInput)
 }
 
+func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
+	switch driver {
+	case xc.DriverAptos:
+		return aptos.NewTxInput(), nil
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
+		return cosmos.NewTxInput(), nil
+	case xc.DriverEVM:
+		return evm.NewTxInput(), nil
+	case xc.DriverEVMLegacy:
+		return evm_legacy.NewTxInput(), nil
+	case xc.DriverSolana:
+		return solana.NewTxInput(), nil
+	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
+		return bitcoin.NewTxInput(), nil
+	case xc.DriverSui:
+		return sui.NewTxInput(), nil
+	case xc.DriverSubstrate:
+		return substrate.NewTxInput(), nil
+	case xc.DriverTron:
+		return tron.NewTxInput(), nil
+	}
+	return nil, fmt.Errorf("no tx-input mapped for driver %s", driver)
+}
+
 func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	var env xc.TxInputEnvelope
 	buf := []byte(data)
@@ -27,44 +51,13 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	if err != nil {
 		return nil, err
 	}
-	switch env.Type {
-	case xc.DriverAptos:
-		var txInput aptos.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverCosmos, xc.DriverCosmosEvmos:
-		var txInput cosmos.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverEVM:
-		var txInput evm.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverEVMLegacy:
-		var txInput evm_legacy.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverSolana:
-		var txInput solana.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
-		var txInput bitcoin.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverSui:
-		var txInput sui.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverSubstrate:
-		var txInput substrate.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	case xc.DriverTron:
-		var txInput tron.TxInput
-		err := json.Unmarshal(buf, &txInput)
-		return &txInput, err
-	default:
-		return nil, fmt.Errorf("invalid TxInput type: %s", env.Type)
+	input, err := NewTxInput(env.Type)
+	if err != nil {
+		return nil, err
 	}
+	err = json.Unmarshal(buf, input)
+	if err != nil {
+		return nil, err
+	}
+	return input, nil
 }

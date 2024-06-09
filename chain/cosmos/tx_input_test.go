@@ -1,4 +1,4 @@
-package tron
+package cosmos
 
 import (
 	"encoding/json"
@@ -18,49 +18,35 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 	vectors := []testcase{
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  100,
-				Expiration: 999,
-			},
-			independent:     true,
+			newInput:        &TxInput{Sequence: 10},
+			oldInput:        &TxInput{Sequence: 10},
+			independent:     false,
 			doubleSpendSafe: true,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  100,
-				Expiration: 2001,
-			},
+			// may have different accounts
+			newInput:        &TxInput{Sequence: 10, AccountNumber: 10},
+			oldInput:        &TxInput{Sequence: 10, AccountNumber: 11},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
-			oldInput: &TxInput{
-				Timestamp:  0,
-				Expiration: 1000000,
-			},
+			newInput:        &TxInput{Sequence: 10},
+			oldInput:        &TxInput{Sequence: 11},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
-				Timestamp:  1000,
-				Expiration: 2000,
-			},
+			newInput:        &TxInput{Sequence: 10},
+			oldInput:        &TxInput{Sequence: 9},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput: &TxInput{Sequence: 10},
 			oldInput: nil,
-			// tron is always independent
-			independent:     true,
+			// default false, not always independent
+			independent:     false,
 			doubleSpendSafe: false,
 		},
 	}

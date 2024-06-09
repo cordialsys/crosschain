@@ -35,21 +35,21 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	// from = xc.Address(strings.Replace(string(from), "0x", "", 1))
 	// to = xc.Address(strings.Replace(string(to), "0x", "", 1))
 
-	fromData, err := hexToAddress(string(from))
+	fromData, err := HexToAddress(string(from))
 	if err != nil {
 		return &Tx{}, fmt.Errorf("could not decode from address: %v", err)
 	}
-	toPure, err := hexToPure(string(to))
+	toPure, err := HexToPure(string(to))
 	if err != nil {
 		return &Tx{}, fmt.Errorf("could not decode to address: %v", err)
 	}
 
-	gasObjectId, err := hexToObjectID(local_input.GasCoin.CoinObjectId.String())
+	gasObjectId, err := HexToObjectID(local_input.GasCoin.CoinObjectId.String())
 	if err != nil {
 		return &Tx{}, fmt.Errorf("could not decode gas coin object id: %v", err)
 	}
 	local_input.GasCoin.Digest.Data()
-	gasDigest, err := base58ToObjectDigest(
+	gasDigest, err := Base58ToObjectDigest(
 		local_input.GasCoin.Digest.String(),
 		// string(local_input.GasCoin.Digest.Data()),
 	)
@@ -104,7 +104,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if local_input.IsNativeTransfer() && len(local_input.Coins) > 0 {
 		// Split off the remainder from gas budget
 		remainder := local_input.GasCoin.Balance.Uint64() - local_input.GasBudget
-		cmd_inputs = append(cmd_inputs, u64ToPure(remainder))
+		cmd_inputs = append(cmd_inputs, U64ToPure(remainder))
 
 		commands = append(commands, &bcs.Command__SplitCoins{
 			Field0: &bcs.Argument__GasCoin{},
@@ -123,7 +123,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		// The first coin becomes our "primary coin"
 		primaryCoinInput = ArgumentInput(uint16(len(cmd_inputs)))
 
-		obj, err := coinToObject(local_input.Coins[0])
+		obj, err := CoinToObject(local_input.Coins[0])
 		if err != nil {
 			return &Tx{}, err
 		}
@@ -141,7 +141,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 			if i > MaxCoinObjects {
 				break
 			}
-			obj, err := coinToObject(coin)
+			obj, err := CoinToObject(coin)
 			if err != nil {
 				return &Tx{}, err
 			}
@@ -172,7 +172,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 			ArgumentInput(uint16(len(cmd_inputs))),
 		},
 	})
-	cmd_inputs = append(cmd_inputs, u64ToPure(amount.Uint64()))
+	cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
 
 	// send the new split object
 	commands = append(commands, &bcs.Command__TransferObjects{
