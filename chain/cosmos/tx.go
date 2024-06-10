@@ -38,14 +38,18 @@ type Cw20Transfer struct {
 	Recipient string `json:"recipient,omitempty"`
 }
 
+func tmHash(bz []byte) xc.TxHash {
+	txID := tmhash.Sum(bz)
+	return xc.TxHash(hex.EncodeToString(txID))
+}
+
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
 	serialized, err := tx.Serialize()
 	if err != nil || serialized == nil || len(serialized) == 0 {
 		return ""
 	}
-	txID := tmhash.Sum(serialized)
-	return xc.TxHash(hex.EncodeToString(txID))
+	return tmHash(serialized)
 }
 
 // Sighashes returns the tx payload to sign, aka sighash

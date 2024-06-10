@@ -223,17 +223,16 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 }
 
 // SubmitTx submits a Cosmos tx
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	tx := txInput.(*Tx)
+func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	txBytes, _ := tx.Serialize()
-	txID := tx.Hash()
 
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast tx %v: %v", txID, err)
+		return fmt.Errorf("failed to broadcast tx %v", err)
 	}
 
 	if res.Code != 0 {
+		txID := tmHash(txBytes)
 		return fmt.Errorf("tx %v failed code: %v, log: %v", txID, res.Code, res.RawLog)
 	}
 

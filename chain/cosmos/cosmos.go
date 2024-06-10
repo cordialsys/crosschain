@@ -10,6 +10,7 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
+	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
 	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -113,6 +114,10 @@ func isEVMOS(asset *xc.ChainConfig) bool {
 }
 
 func getPublicKey(asset *xc.ChainConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {
+	if asset.Chain == xc.INJ {
+		// injective has their own ethsecp256k1 type..
+		return &injethsecp256k1.PubKey{Key: publicKeyBytes}
+	}
 	if isEVMOS(asset) {
 		return &ethsecp256k1.PubKey{Key: publicKeyBytes}
 	}
