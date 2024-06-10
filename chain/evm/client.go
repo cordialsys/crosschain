@@ -300,10 +300,15 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee).ApplyGasPriceMultiplier(client.Asset.GetChain())
 		result.GasTipCap = xc.AmountBlockchain(*gasTipCap)
 
+		if result.GasFeeCap.Cmp(&result.GasTipCap) < 0 {
+			// increase max fee cap to accomodate tip if needed
+			result.GasFeeCap = result.GasTipCap
+		}
+
 		fromAddr, _ := HexToAddress(from)
 		pendingTxInfo, err := client.TxPoolContentFrom(ctx, fromAddr)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could see pending tx pool")
+			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could not see pending tx pool")
 		} else {
 			pending, ok := pendingTxInfo.InfoFor(string(from))
 			if ok {

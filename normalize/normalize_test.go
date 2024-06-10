@@ -3,6 +3,7 @@ package normalize_test
 import (
 	"testing"
 
+	xc "github.com/cordialsys/crosschain"
 	n "github.com/cordialsys/crosschain/normalize"
 	"github.com/stretchr/testify/suite"
 )
@@ -18,129 +19,194 @@ func TestCrosschain(t *testing.T) {
 	suite.Run(t, new(NormalizeTestSuite))
 }
 
-func (s *NormalizeTestSuite) TestNormalize() {
+func (s *NormalizeTestSuite) TestNormalizeTransactionHash() {
 	require := s.Require()
-	address := ""
 
-	address = n.Normalize("myaddress", "BTC")
-	require.Equal("myaddress", address) // no normalization
+	type testcase struct {
+		chain xc.NativeAsset
+		inp   string
+		out   string
+	}
+	vectors := []testcase{
+		{
+			chain: xc.BTC,
+			inp:   "a0766c5c99739bcd6e41d3e42500400e6a1688c1c5cd0fff775f5e4c4137b071",
+			out:   "a0766c5c99739bcd6e41d3e42500400e6a1688c1c5cd0fff775f5e4c4137b071",
+		},
+		{
+			chain: xc.BTC,
+			inp:   "0xAAABBBCCC",
+			out:   "aaabbbccc",
+		},
+		{
+			chain: xc.LUNA,
+			inp:   "123456aABB",
+			out:   "000000000000000000000000000000000000000000000000000000123456aabb",
+		},
+		{
+			chain: xc.LUNA,
+			inp:   "0x123456aABB",
+			out:   "000000000000000000000000000000000000000000000000000000123456aabb",
+		},
+	}
+	for _, v := range vectors {
+		normalizedOut := n.TransactionHash(v.inp, v.chain)
+		require.Equal(v.out, normalizedOut)
 
-	address = n.Normalize("bitcoincash:myaddress", "BCH")
-	require.Equal("myaddress", address)
+		normalizedOut2 := n.TransactionHash(v.inp, v.chain)
+		require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
+	}
+}
 
-	address = n.Normalize("0x0ECE", "")
-	require.Equal("0x0ece", address) // lowercase
+func (s *NormalizeTestSuite) TestNormalizeAddress() {
+	require := s.Require()
 
-	address = n.Normalize("0x0ECE", "ETH")
-	require.Equal("0x0ece", address)
-	address = n.Normalize("0x0ECE", "APTOS")
-	require.Equal("0x0ece", address)
-	address = n.Normalize("0x0ECE", "SUI")
-	require.Equal("0x0ece", address)
+	type testcase struct {
+		chain xc.NativeAsset
+		inp   string
+		out   string
+	}
+	vectors := []testcase{
+		{
+			chain: xc.BTC,
+			inp:   "myaddress",
+			out:   "myaddress",
+		},
+		{
+			chain: xc.BCH,
+			inp:   "bitcoincash:myaddress",
+			out:   "myaddress",
+		},
+		{
+			// default to ETH if input has 0x
+			chain: "",
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			// do not default without 0x
+			chain: "",
+			inp:   "0ECE",
+			out:   "0ECE",
+		},
+		{
+			chain: xc.ETH,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.ETH,
+			inp:   "0ECE", // add the prefix in
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.APTOS,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.SUI,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.SUI,
+			inp:   "coin::Coin<0x11AAbbCCdd::coin::NAME>",
+			out:   "0x11aabbccdd::coin::NAME",
+		},
+		{
+			chain: xc.APTOS,
+			inp:   "coin::Coin<0x11AAbbCCdd::coin::NAME>",
+			out:   "0x11aabbccdd::coin::NAME",
+		},
+		{
+			chain: xc.XDC,
+			inp:   "0x0ECE",
+			out:   "xdc0ece",
+		},
+		{
+			chain: xc.XDC,
+			inp:   "xdc0ece",
+			out:   "xdc0ece",
+		},
+		{
+			chain: xc.SOL,
+			inp:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
+			out:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
+		},
+		{
+			chain: xc.TRX,
+			inp:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+			out:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+		},
+	}
+	for _, v := range vectors {
+		normalizedOut := n.Normalize(v.inp, v.chain)
+		require.Equal(v.out, normalizedOut)
 
-	address = n.Normalize("0x0ECE", "XDC")
-	require.Equal("xdc0ece", address)
+		normalizedOut2 := n.Normalize(v.inp, v.chain)
+		require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
+	}
 
-	// no prefix
-	address = n.Normalize("0x0ECE", "ETH", &n.NormalizeOptions{
-		NoPrefix: true,
-	})
-	require.Equal("0ece", address)
-	address = n.Normalize("0x0ECE", "APTOS", &n.NormalizeOptions{
-		NoPrefix: true,
-	})
-	require.Equal("0ece", address)
-	address = n.Normalize("0x0ECE", "SUI", &n.NormalizeOptions{
-		NoPrefix: true,
-	})
-	require.Equal("0ece", address)
-
-	// add the prefix back
-	address = n.Normalize("0ECE", "ETH")
-	require.Equal("0x0ece", address)
-	address = n.Normalize("0ECE", "APTOS")
-	require.Equal("0x0ece", address)
-
-	// zero pad
-	address = n.Normalize("0x0ECE", "ETH", &n.NormalizeOptions{
-		ZeroPad: true,
-	})
-	require.Equal("0x0000000000000000000000000000000000000ece", address)
-
-	address = n.Normalize("0xECE", "ETH", &n.NormalizeOptions{
-		NoPrefix: true,
-		ZeroPad:  true,
-	})
-	require.Equal("0000000000000000000000000000000000000ece", address)
-
-	address = n.Normalize("0xECE", "APTOS", &n.NormalizeOptions{
-		NoPrefix: true,
-		ZeroPad:  true,
-	})
-	require.Equal("0000000000000000000000000000000000000000000000000000000000000ece", address)
-
-	address = n.Normalize("0xECE", "SUI", &n.NormalizeOptions{
-		NoPrefix: false,
-		ZeroPad:  true,
-	})
-	require.Equal("0x0000000000000000000000000000000000000000000000000000000000000ece", address)
-
-	// transaction hashes
-	hash := n.Normalize("0x0ECE", "ETH", &n.NormalizeOptions{
-		ZeroPad:         true,
-		NoPrefix:        true,
-		TransactionHash: true,
-	})
-	require.Equal("0000000000000000000000000000000000000000000000000000000000000ece", hash)
-
-	hash = n.Normalize("0x0ECE", "APTOS", &n.NormalizeOptions{
-		ZeroPad:         true,
-		NoPrefix:        true,
-		TransactionHash: true,
-	})
-	require.Equal("0000000000000000000000000000000000000000000000000000000000000ece", hash)
-
-	hash = n.Normalize("Z1NLbnNcJkKvd8bg2WsmAoE741vMumbc27HHdQbzVyv", "SUI", &n.NormalizeOptions{
-		NoPrefix:        false,
-		ZeroPad:         true,
-		TransactionHash: true,
-	})
-	require.Equal("Z1NLbnNcJkKvd8bg2WsmAoE741vMumbc27HHdQbzVyv", hash)
-
-	// should return empty string still
-	hash = n.Normalize("", "ETH", &n.NormalizeOptions{
-		ZeroPad:         true,
-		NoPrefix:        true,
-		TransactionHash: true,
-	})
-	require.Equal("", hash)
 }
 
 func (s *NormalizeTestSuite) TestMoveAddressNormalize() {
 	require := s.Require()
-	// Test that only the hexadecimal string part of move addresses gets normalized
-	// and that coin::Coin<> is removed
-	naddr := n.NormalizeMoveAddress("0x11AAbbCCdd")
-	require.Equal("0x11aabbccdd", naddr)
 
-	naddr = n.NormalizeMoveAddress("0x11AAbbCCdd::coin::NAME")
-	require.Equal("0x11aabbccdd::coin::NAME", naddr)
+	type testcase struct {
+		inp string
+		out string
+	}
+	vectors := []testcase{
+		{
+			inp: "0x11AAbbCCdd",
+			out: "0x11aabbccdd",
+		},
+		{
+			inp: "11AAbbCCdd",
+			out: "0x11aabbccdd",
+		},
+		{
+			inp: "0x11AAbbCCdd::coin::NAME",
+			out: "0x11aabbccdd::coin::NAME",
+		},
+		{
+			inp: "11AAbbCCdd::coin::NAME",
+			out: "0x11aabbccdd::coin::NAME",
+		},
+		// only lowercase the hexidecimal part, even if using different separators
+		{
+			inp: "0x11AAbbCCdd--coin--NAME",
+			out: "0x11aabbccdd--coin--NAME",
+		},
+		{
+			inp: "0x11AAbbCCdd__coin__NAME",
+			out: "0x11aabbccdd__coin__NAME",
+		},
+		{
+			inp: "coin::Coin<0x11AAbbCCdd::coin::NAME>",
+			out: "0x11aabbccdd::coin::NAME",
+		},
+		{
+			inp: "coin::Coin<0x1::coin::NAME>",
+			out: "0x1::coin::NAME",
+		},
+		{
+			inp: "coin::Coin<1::coin::NAME>",
+			out: "0x1::coin::NAME",
+		},
+	}
+	for _, v := range vectors {
+		out := n.NormalizeMoveAddress(v.inp)
+		require.Equal(v.out, out)
 
-	naddr = n.NormalizeMoveAddress("coin::Coin<0x11AAbbCCdd::coin::NAME>")
-	require.Equal("0x11aabbccdd::coin::NAME", naddr)
+		out2 := n.NormalizeMoveAddress(v.inp)
+		require.Equal(out, out2, "NormalizeMoveAddress should be idempotent")
 
-	naddr = n.NormalizeMoveAddress("coin::Coin<0x1::coin::NAME>")
-	require.Equal("0x1::coin::NAME", naddr)
-}
+		normalizedOut := n.Normalize(v.inp, xc.SUI)
+		require.Equal(v.out, normalizedOut, "Normalize should be the same as NormalizeMoveAddress for move chain")
 
-func (s *NormalizeTestSuite) TestNormalizeCosmos() {
-	require := s.Require()
-	address := n.Normalize("123456aABB", "LUNA", &n.NormalizeOptions{TransactionHash: true})
-	require.Equal("123456aabb", address)
-	// default should remove prefix
-	address = n.Normalize("0x123456aABB", "LUNA", &n.NormalizeOptions{TransactionHash: true})
-	require.Equal("123456aabb", address)
-
-	address = n.Normalize("0x123456aABB", "LUNA", &n.NormalizeOptions{TransactionHash: true, ZeroPad: true})
-	require.Equal("000000000000000000000000000000000000000000000000000000123456aabb", address)
+		normalizedOut2 := n.Normalize(v.inp, xc.SUI)
+		require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
+	}
 }

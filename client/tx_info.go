@@ -13,9 +13,7 @@ type AssetName string
 type AddressName string
 
 func NewTransactionName(chain xc.NativeAsset, txHash string) TransactionName {
-	txHash = normalize.Normalize(txHash, chain, &normalize.NormalizeOptions{
-		TransactionHash: true,
-	})
+	txHash = normalize.TransactionHash(txHash, chain)
 	name := filepath.Join("chains", string(chain), "transactions", txHash)
 	return TransactionName(name)
 }

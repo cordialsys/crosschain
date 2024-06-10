@@ -1,6 +1,7 @@
 package normalize
 
 import (
+	"encoding/hex"
 	"regexp"
 	"strings"
 
@@ -17,14 +18,24 @@ func NormalizeMoveAddress(address string) string {
 	}
 	address = strings.Replace(address, "coin::Coin<", "", 1)
 	address = strings.Replace(address, ">", "", 1)
+	if !strings.HasPrefix(address, "0x") {
+		address = "0x" + address
+	}
 
 	match := r.FindString(address)
 	if match != "" {
 		// replace the hexadeciaml portion of the string with lowercase
 		matchLower := strings.ToLower(match)
 		address = strings.Replace(address, match, matchLower, 1)
+
 		return address
 	} else {
+		// check if it's valid hex
+		_, err := hex.DecodeString(address)
+		if err == nil {
+			address = strings.ToLower(address)
+		}
+
 		return address
 	}
 }
@@ -43,13 +54,13 @@ type NormalizeOptions struct {
 	NoPrefix bool
 	ZeroPad  bool
 	// is this a transaction hash instead of an address?
-	TransactionHash bool
+	// TransactionHash bool
 }
 
 // NormalizeAddressString normalizes an address or hash
 // If possible (if it's hex), it will be lowercased.
 // You may specify if you want to remove or ensure the common prefix (if there is one).
-func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*NormalizeOptions) string {
+func Normalize(address string, nativeAsset xc.NativeAsset) string {
 	if address == "" {
 		return ""
 	}
@@ -57,15 +68,12 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 		// In some cases e.g. ("ETH", "ETH") is passed, and we should not normalize anything.
 		return address
 	}
-	if nativeAsset == "" {
+	if nativeAsset == "" && strings.HasPrefix(address, "0x") {
 		nativeAsset = xc.ETH
 	}
 	options := &NormalizeOptions{
 		NoPrefix: false,
 		ZeroPad:  false,
-	}
-	if len(optionsMaybe) > 0 && optionsMaybe[0] != nil {
-		options = optionsMaybe[0]
 	}
 
 	address = strings.TrimSpace(address)
@@ -78,11 +86,7 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 			prefix = "xdc"
 		}
 		if options.ZeroPad {
-			if options.TransactionHash {
-				address = zeroPadHex(prefix, address, 64)
-			} else {
-				address = zeroPadHex(prefix, address, 40)
-			}
+			address = zeroPadHex(prefix, address, 40)
 		}
 		address = strings.TrimPrefix(address, prefix)
 		if !options.NoPrefix {
@@ -96,33 +100,15 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 			address = strings.Split(address, ":")[1]
 		}
 	case xc.DriverAptos, xc.DriverSui:
-		if driver == xc.DriverSui && options.TransactionHash {
-			// Sui transaction hashes are not hex
-			return address
-		}
 		address = NormalizeMoveAddress(address)
-		if strings.Contains(address, "<") || strings.Contains(address, "::") {
-			// no prefix is used for contract addresses
-		} else {
-			if options.ZeroPad {
-				address = zeroPadHex("0x", address, 64)
-			}
+		if options.NoPrefix {
 			address = strings.TrimPrefix(address, "0x")
-			if !options.NoPrefix {
-				address = "0x" + address
-			}
-			address = strings.ToLower(address)
 		}
 	case xc.DriverCosmos:
-		if options.TransactionHash {
-			// cosmos hash tx do not prefix 0x, so we always remove.
-			address = strings.TrimPrefix(address, "0x")
-			if options.ZeroPad {
-				address = zeroPadHex("", address, 64)
-			}
-			address = strings.ToLower(address)
-		}
+		// nothing to do, bech32
 
+	case xc.DriverSolana:
+		// nothing to do, base58
 	case xc.DriverTron:
 		// TODO
 	default:
@@ -130,9 +116,58 @@ func Normalize(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*Norm
 	return address
 }
 
+// Normalize a transaction hash
+func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
+	if hash == "" {
+		return ""
+	}
+
+	hash = strings.TrimSpace(hash)
+
+	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
+	case xc.DriverEVM, xc.DriverEVMLegacy:
+		prefix := "0x"
+		if nativeAsset == xc.XDC {
+			// XDC chain uses a different prefix
+			hash = strings.TrimPrefix(hash, prefix)
+			prefix = "xdc"
+		}
+		hash = zeroPadHex(prefix, hash, 64)
+
+		// TODO should we include 0x prefix?
+		hash = strings.TrimPrefix(hash, prefix)
+		hash = prefix + hash
+		hash = strings.ToLower(hash)
+
+	case xc.DriverBitcoinCash, xc.DriverBitcoin:
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = strings.ToLower(hash)
+
+	case xc.DriverAptos, xc.DriverSui:
+		if driver == xc.DriverSui {
+			// Sui transaction hashes are not hex
+			return hash
+		}
+		hash = NormalizeMoveAddress(hash)
+
+	case xc.DriverCosmos:
+		// cosmos hash tx do not prefix 0x, so we always remove.
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
+
+	case xc.DriverSolana:
+		// nothing to do, base58
+	case xc.DriverTron:
+		// TODO
+	default:
+	}
+	return hash
+}
+
 // deprecated, use Normalize
-func NormalizeAddressString(address string, nativeAsset xc.NativeAsset, optionsMaybe ...*NormalizeOptions) string {
-	return Normalize(address, nativeAsset, optionsMaybe...)
+func NormalizeAddressString(address string, nativeAsset xc.NativeAsset) string {
+	return Normalize(address, nativeAsset)
 }
 
 func AddressEqual(address1 string, address2 string, nativeAsset xc.NativeAsset) bool {
