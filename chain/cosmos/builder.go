@@ -222,9 +222,14 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 		return nil, err
 	}
 
+	chainId := input.ChainId
+	if chainId == "" {
+		chainId = asset.GetChain().ChainIDStr
+	}
+
 	signerData := signing.SignerData{
 		AccountNumber: input.AccountNumber,
-		ChainID:       asset.GetChain().ChainIDStr,
+		ChainID:       chainId,
 		Sequence:      input.Sequence,
 	}
 	sighashData, err := cosmosTxConfig.SignModeHandler().GetSignBytes(sigMode, signerData, cosmosBuilder.GetTx())

@@ -43,6 +43,7 @@ type TxInput struct {
 	FromPublicKey []byte  `json:"from_pubkey,omitempty"`
 
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
+	ChainId   string         `json:"chain_id,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -194,6 +195,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	default:
 		txInput.GasLimit = TokenTransferGasLimit
 	}
+
+	status, err := client.Ctx.Client.Status(context.Background())
+	if err != nil {
+		return txInput, fmt.Errorf("could not lookup chain_id: %v", err)
+	}
+	txInput.ChainId = status.NodeInfo.Network
 
 	if !client.Asset.GetChain().NoGasFees {
 		gasPrice, err := client.EstimateGasPrice(ctx)

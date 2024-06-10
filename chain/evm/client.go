@@ -61,6 +61,8 @@ type TxInput struct {
 
 	// For legacy implementation only
 	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
+
+	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -160,13 +162,13 @@ func NewClient(asset xc.ITask) (*Client, error) {
 }
 
 // ChainID returns the ChainID
-func (client *Client) ChainID() (*big.Int, error) {
-	var err error
-	if client.ChainId == nil {
-		client.ChainId, err = client.EthClient.ChainID(context.Background())
-	}
-	return client.ChainId, err
-}
+// func (client *Client) ChainID() (*big.Int, error) {
+// 	var err error
+// 	if client.ChainId == nil {
+// 		client.ChainId, err = client.EthClient.ChainID(context.Background())
+// 	}
+// 	return client.ChainId, err
+// }
 
 func (client *Client) DefaultMaxGasLimit() uint64 {
 	// Set absolute gas limits for safety
@@ -275,6 +277,13 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		return result, err
 	}
 	result.Nonce = nonce
+
+	// chain ID
+	chainId, err := client.EthClient.ChainID(ctx)
+	if err != nil {
+		return result, fmt.Errorf("could not lookup chain_id: %v", err)
+	}
+	result.ChainId = xc.AmountBlockchain(*chainId)
 
 	// Gas
 	if !nativeAsset.NoGasFees {

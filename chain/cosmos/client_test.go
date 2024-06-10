@@ -38,9 +38,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
 			// `{"uluna": "0.015"}`,
 			&TxInput{
@@ -52,6 +53,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasPrice:        0.015,
 				Memo:            "",
 				AssetType:       BANK,
+				ChainId:         "chainId",
 			},
 			"",
 		},
@@ -62,9 +64,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
-				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -75,6 +78,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasPrice:        850000,
 				Memo:            "",
 				AssetType:       BANK,
+				ChainId:         "chainId",
 			},
 			"",
 		},
@@ -86,11 +90,12 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
-				`{"jsonrpc":"2.0","id":1,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance (fail)
-				`{"jsonrpc":"2.0","id":2,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get x/wasm cw20 balance
-				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -101,6 +106,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				GasPrice:        850000,
 				Memo:            "",
 				AssetType:       CW20,
+				ChainId:         "chainId",
 			},
 			"",
 		},
@@ -153,6 +159,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
 				`{"message": "custom HTTP error", "code": 123}`,
 			},
 			&TxInput{
@@ -160,6 +167,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				AccountNumber:   17241,
 				Sequence:        3,
 				GasLimit:        NativeTransferGasLimit,
+				ChainId:         "chainId",
 			},
 			"failed to estimate gas",
 		},
@@ -170,6 +178,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
 				"null",
 			},
 			&TxInput{
@@ -177,6 +186,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				AccountNumber:   17241,
 				GasLimit:        NativeTransferGasLimit,
 				Sequence:        3,
+				ChainId:         "chainId",
 			},
 			"failed to estimate gas",
 		},

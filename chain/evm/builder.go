@@ -128,8 +128,12 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 	if err != nil {
 		return nil, err
 	}
-	chainID := new(big.Int).SetInt64(chain.ChainID)
+
 	input := inputRaw.(*TxInput)
+	var chainId *big.Int = input.ChainId.Int()
+	if input.ChainId.Uint64() == 0 {
+		chainId = new(big.Int).SetInt64(chain.ChainID)
+	}
 
 	// Protection from setting very high gas tip
 	maxTipGwei := uint64(chain.ChainMaxGasPrice)
@@ -146,7 +150,7 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 
 	return &Tx{
 		EthTx: types.NewTx(&types.DynamicFeeTx{
-			ChainID:   chainID,
+			ChainID:   chainId,
 			Nonce:     input.Nonce,
 			GasTipCap: gasTipCap.Int(),
 			GasFeeCap: input.GasFeeCap.Int(),
@@ -155,6 +159,6 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 			Value:     value.Int(),
 			Data:      data,
 		}),
-		Signer: types.LatestSignerForChainID(chainID),
+		Signer: types.LatestSignerForChainID(chainId),
 	}, nil
 }
