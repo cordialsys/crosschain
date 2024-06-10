@@ -16,10 +16,19 @@ func NormalizeMoveAddress(address string) string {
 	if err != nil {
 		panic(err)
 	}
-	address = strings.Replace(address, "coin::Coin<", "", 1)
-	address = strings.Replace(address, ">", "", 1)
+	if strings.Contains(address, "coin::Coin<") {
+		address = strings.Replace(address, "coin::Coin<", "", 1)
+		address = strings.Replace(address, ">", "", 1)
+	}
 	if !strings.HasPrefix(address, "0x") {
-		address = "0x" + address
+		rHex, err := regexp.Compile("^[0-9a-fA-F]+")
+		if err != nil {
+			panic(err)
+		}
+		match := rHex.FindString(address)
+		if len(match) > 0 {
+			address = "0x" + address
+		}
 	}
 
 	match := r.FindString(address)

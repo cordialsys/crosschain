@@ -120,6 +120,11 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 			out:   "0x11aabbccdd::coin::NAME",
 		},
 		{
+			chain: xc.APTOS,
+			inp:   "other::Thing<0x11AAbbCCdd::coin::NAME>",
+			out:   "other::Thing<0x11aabbccdd::coin::NAME>",
+		},
+		{
 			chain: xc.XDC,
 			inp:   "0x0ECE",
 			out:   "xdc0ece",
