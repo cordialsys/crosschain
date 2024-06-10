@@ -265,7 +265,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split (gas coin balance - gas budget)
-				U64ToPure(28969157920 - 2_000_000_000),
+				U64ToPure(28969157920 - (2_000_000_000 + GAS_BUDGET_PER_COIN*2)),
 				// merged coins after gas coin
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6", "u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo", 2001904720, 1852477))},
 				// split amt (transfer amount)
@@ -297,7 +297,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(3),
 				},
 			},
-			2_000_000_000,
+			2_000_000_000 + GAS_BUDGET_PER_COIN*2,
 			nil,
 		},
 
@@ -329,7 +329,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split
-				U64ToPure(3000000000),
+				U64ToPure(3000000000 - GAS_BUDGET_PER_COIN*9),
 				// merged coins after gas coin (sorted by value)
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0xc587db1fbe680b769c1a562a09f2c871a087bafa542c7cb73db6064e2b791bdf", "7Y2zjQxn2wj5jhrvS5NBKCFJDzWHZ4UMG7XJNNioNgTS", 1897841920, 1852477))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x87bae5d7376e857106f7908eab6f7106ea3f7c2a1b3349f99925bb12631b1ff0", "9GeMg1yw4J9ck62XR3KHXi72kfVVeuqfAcK5rL3hRdVK", 1500000000, 1852477))},
@@ -375,7 +375,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(10),
 				},
 			},
-			2_000_000_000,
+			2_000_000_000 + GAS_BUDGET_PER_COIN*9,
+			// 2_000_000_000,
 			nil,
 		},
 		// Test with 1 sui coin
@@ -571,7 +572,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(2),
 				},
 			},
-			2_000_000_000,
+			2_000_000_000 + GAS_BUDGET_PER_COIN*1,
 			nil,
 		},
 
@@ -658,13 +659,13 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(5),
 				},
 			},
-			2_000_000_000,
+			2_000_000_000 + GAS_BUDGET_PER_COIN*4,
 			nil,
 		},
 	}
 
 	for _, v := range vectors {
-		fmt.Println("Running ", v.name)
+		fmt.Println("=== Running ", v.name)
 		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
 		defer close()
 		nativeAsset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}

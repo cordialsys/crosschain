@@ -33,6 +33,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 var _ xclient.FullClient = &Client{}
 
+const GAS_BUDGET_PER_COIN = uint64(20_000_000)
+
 type SuiMethod string
 
 var (
@@ -290,6 +292,10 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 	input.GasPrice = gasPrice.Uint64()
 	// 2 SUI
 	input.GasBudget = 2_000_000_000
+
+	// Incrementally increase budget per additional coin being consumed
+	input.GasBudget = input.GasBudget + GAS_BUDGET_PER_COIN*uint64(len(input.Coins))
+
 	input.ExcludeGasCoin()
 
 	return input, nil
