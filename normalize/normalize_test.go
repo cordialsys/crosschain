@@ -151,6 +151,10 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 
 		normalizedOut2 := n.Normalize(v.inp, v.chain)
 		require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
+
+		addressId := normalizeResourceId(normalizedOut)
+		addressIdNormalizedAgain := n.Normalize(addressId, v.chain)
+		require.Equal(addressId, addressIdNormalizedAgain, "Normalize should not change an address after converted to ID compatible form")
 	}
 
 }
