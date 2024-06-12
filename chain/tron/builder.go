@@ -162,7 +162,12 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	tx := &core.Transaction{}
 	tx.RawData = i.ToRawData(contract)
 	// set limit for token contracts
-	tx.RawData.FeeLimit = int64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
+	maxPrice := int64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
+	tx.RawData.FeeLimit = maxPrice
+	if tx.RawData.FeeLimit == 0 {
+		// 2k tron sanity limit
+		tx.RawData.FeeLimit = 2000000000
+	}
 
 	return &Tx{
 		tronTx: tx,

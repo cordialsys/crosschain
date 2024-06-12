@@ -19,6 +19,16 @@ func NewTxInput() *TxInput {
 	}
 }
 
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	// multiply the gas price using the default, or apply a strategy according to the enum
+	_ = multiplier
+	return nil
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
 	// default false

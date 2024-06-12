@@ -14,6 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/shopspring/decimal"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
@@ -50,6 +51,14 @@ var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithMemo = &TxInput{}
 
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	input.GasPrice, _ = multiplier.Mul(decimal.NewFromFloat(input.GasPrice)).Float64()
+	return nil
+}
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if cosmosOther, ok := other.(*TxInput); ok {

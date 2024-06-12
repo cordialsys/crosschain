@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,16 @@ func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverBitcoin),
 	}
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	gasPriceMultiplied := multiplier.Mul(decimal.NewFromBigInt(input.GasPricePerByte.Int(), 0)).BigInt()
+	input.GasPricePerByte = xc.AmountBlockchain(*gasPriceMultiplied)
+	return nil
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

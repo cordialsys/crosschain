@@ -60,3 +60,35 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 		)
 	}
 }
+
+func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
+	require := s.Require()
+	type testcase struct {
+		input      *TxInput
+		multiplier string
+		result     uint64
+		err        bool
+	}
+	vectors := []testcase{
+		{
+			input:      &TxInput{GasTipCap: xc.NewAmountBlockchainFromUint64(100), GasPrice: xc.NewAmountBlockchainFromUint64(100)},
+			multiplier: "1.5",
+			result:     150,
+		},
+		{
+			input:      &TxInput{GasTipCap: xc.NewAmountBlockchainFromUint64(100), GasPrice: xc.NewAmountBlockchainFromUint64(100)},
+			multiplier: "abc",
+			err:        true,
+		},
+	}
+	for i, v := range vectors {
+		desc := fmt.Sprintf("testcase %d: mult = %s", i, v.multiplier)
+		err := v.input.SetGasFeePriority(xc.GasFeePriority(v.multiplier))
+		if v.err {
+			require.Error(err, desc)
+		} else {
+			require.Equal(v.result, uint64(v.input.GasTipCap.Uint64()), desc)
+			require.Equal(v.result, uint64(v.input.GasPrice.Uint64()), desc)
+		}
+	}
+}

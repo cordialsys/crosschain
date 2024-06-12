@@ -9,6 +9,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 
 	xclient "github.com/cordialsys/crosschain/client"
@@ -49,6 +50,16 @@ func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 
 		fee = max
 	}
 	return fee
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	multipliedFee := multiplier.Mul(decimal.NewFromBigInt(input.PrioritizationFee.Int(), 0)).BigInt()
+	input.PrioritizationFee = xc.AmountBlockchain(*multipliedFee)
+	return nil
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

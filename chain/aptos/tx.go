@@ -8,6 +8,7 @@ import (
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
 	"github.com/coming-chat/lcs"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -31,6 +32,15 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverAptos,
 		},
 	}
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	input.GasPrice = multiplier.Mul(decimal.NewFromInt(int64(input.GasPrice))).BigInt().Uint64()
+	return nil
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

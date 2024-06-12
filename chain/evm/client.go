@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -74,6 +75,25 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverEVM,
 		},
 	}
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	multipliedTipCap := multiplier.Mul(decimal.NewFromBigInt(input.GasTipCap.Int(), 0)).BigInt()
+	input.GasTipCap = xc.AmountBlockchain(*multipliedTipCap)
+
+	if input.GasFeeCap.Cmp(&input.GasTipCap) < 0 {
+		// increase max fee cap to accomodate tip if needed
+		input.GasFeeCap = input.GasTipCap
+	}
+
+	// multiply the legacy gas price too
+	multipliedLegacyGasPrice := multiplier.Mul(decimal.NewFromBigInt(input.GasPrice.Int(), 0)).BigInt()
+	input.GasPrice = xc.AmountBlockchain(*multipliedLegacyGasPrice)
+	return nil
 }
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
@@ -296,9 +316,9 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		if err != nil {
 			return result, err
 		}
+		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee)
 		// should only multiply one cap, not both.
-		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee).ApplyGasPriceMultiplier(client.Asset.GetChain())
-		result.GasTipCap = xc.AmountBlockchain(*gasTipCap)
+		result.GasTipCap = xc.AmountBlockchain(*gasTipCap).ApplyGasPriceMultiplier(client.Asset.GetChain())
 
 		if result.GasFeeCap.Cmp(&result.GasTipCap) < 0 {
 			// increase max fee cap to accomodate tip if needed

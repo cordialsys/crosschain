@@ -10,6 +10,7 @@ import (
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -29,6 +30,16 @@ type TxInput struct {
 
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	multipliedGasPrice := multiplier.Mul(decimal.NewFromInt(int64(input.GasPrice)))
+	input.GasPrice = multipliedGasPrice.BigInt().Uint64()
+	return nil
+}
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if suiOther, ok := other.(*TxInput); ok {

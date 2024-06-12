@@ -374,7 +374,7 @@ func (token *TokenAssetConfig) GetAssetSymbol() string {
 // 	return nil
 // }
 
-func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
+func LegacyParseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
 	if asset == "" && nativeAsset == "" {
 		return "", ""
 	}
@@ -413,7 +413,7 @@ func parseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeA
 func GetAssetIDFromAsset(asset string, nativeAsset NativeAsset) AssetID {
 	// id is SYMBOL for ERC20 and SYMBOL.CHAIN for others
 	// e.g. BTC, ETH, USDC, SOL, USDC.SOL
-	asset, nativeAsset = parseAssetAndNativeAsset(asset, string(nativeAsset))
+	asset, nativeAsset = LegacyParseAssetAndNativeAsset(asset, string(nativeAsset))
 	validNative := NativeAsset(asset).IsValid()
 
 	// native asset, e.g. BTC, ETH, SOL

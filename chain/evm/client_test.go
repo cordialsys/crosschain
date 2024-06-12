@@ -135,9 +135,9 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
 				GasLimit:        21220,
-				GasFeeCap:       xc.NewAmountBlockchainFromUint64(90000000000 * 2),
-				// GasTip should not get multiplied
-				GasTipCap: xc.NewAmountBlockchainFromUint64(2000000000),
+				// GasFee should not get multiplied
+				GasFeeCap: xc.NewAmountBlockchainFromUint64(90000000000),
+				GasTipCap: xc.NewAmountBlockchainFromUint64(2000000000 * 2),
 				ChainId:   xc.NewAmountBlockchainFromUint64(0x123),
 				// legacy price
 				// GasPrice: xc.NewAmountBlockchainFromUint64((90000000000 + 2000000000) * 2),

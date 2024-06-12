@@ -56,6 +56,16 @@ func NewTxInput() *TxInput {
 	}
 }
 
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	// tron doesn't do prioritization
+	_ = multiplier
+	return nil
+}
+
 func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 	input.Expiration = unix + int64((TX_TIMEOUT).Seconds())

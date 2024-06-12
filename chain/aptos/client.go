@@ -369,7 +369,7 @@ func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, err
 
 	averUnitPrice := float32(totalUnitPrice) / float32(len(transactions))
 	// pay 25% premium
-	averUnitPrice = averUnitPrice * 1.25
+	// averUnitPrice = averUnitPrice * 1.25
 	// truncate
 	unit_price := xc.NewAmountBlockchainFromUint64(uint64(averUnitPrice))
 

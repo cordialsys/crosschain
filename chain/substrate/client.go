@@ -17,6 +17,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/shopspring/decimal"
 )
 
 // Client for Substrate
@@ -38,6 +39,16 @@ type TxInput struct {
 	CurNum      uint64               `json:"current_num,omitempty"`
 	Tip         uint64               `json:"tip,omitempty"`
 	Nonce       uint64               `json:"nonce,omitempty"`
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	multiplier, err := other.GetDefault()
+	if err != nil {
+		return err
+	}
+	multipliedTip := multiplier.Mul(decimal.NewFromInt(int64(input.Tip)))
+	input.Tip = multipliedTip.BigInt().Uint64()
+	return nil
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

@@ -1,4 +1,4 @@
-package crosschain
+package crosschain_test
 
 import (
 	"context"

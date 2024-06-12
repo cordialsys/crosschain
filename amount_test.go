@@ -1,6 +1,7 @@
-package crosschain
+package crosschain_test
 
 import (
+	. "github.com/cordialsys/crosschain"
 	"github.com/shopspring/decimal"
 )
 

@@ -7,6 +7,7 @@ import (
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
 type TxInput interface {
 	TxInputConflicts
+	TxInputGasFeeMultiplier
 }
 
 // TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
@@ -29,6 +30,10 @@ type TxInputWithMemo interface {
 // For chains/transactions that can benefit from knowing the timestamp
 type TxInputWithUnix interface {
 	SetUnix(int64)
+}
+
+type TxInputGasFeeMultiplier interface {
+	SetGasFeePriority(priority GasFeePriority) error
 }
 
 // This interface determines whether if different tx inputs conflict with one another.
