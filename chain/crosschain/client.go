@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -39,14 +38,14 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) nextClient() (xclient.FullClient, error) {
-	cfg := client.Asset
-	driver := cfg.GetChain().Driver
-	if driver == "" {
-		return nil, errors.New("crosschain client fallback is disabled")
-	}
-	return drivers.NewClient(cfg, xc.Driver(driver))
-}
+// func (client *Client) nextClient() (xclient.FullClient, error) {
+// 	cfg := client.Asset
+// 	driver := cfg.GetChain().Driver
+// 	if driver == "" {
+// 		return nil, errors.New("crosschain client fallback is disabled")
+// 	}
+// 	return drivers.NewClient(cfg, xc.Driver(driver))
+// }
 
 func (client *Client) apiAsset() *types.AssetReq {
 	native := client.Asset.GetChain()
@@ -103,7 +102,7 @@ func (client *Client) apiCallWithUrl(ctx context.Context, method string, url str
 		if err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf("%d: %s", r.Code, r.Message)
+		return nil, fmt.Errorf("%s", r.Message)
 	}
 
 	bz, err := io.ReadAll(res.Body)

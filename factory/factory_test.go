@@ -59,13 +59,6 @@ func (s *CrosschainTestSuite) TestNewDefaultFactory() {
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	for _, asset := range s.TestAssetConfigs {
-		// default
-		client, _ := s.Factory.NewClient(asset)
-		require.NotNil(client)
-		_, ok := client.(*remoteclient.Client)
-		require.False(ok)
-	}
 
 	chainWithXcClient := &xc.ChainConfig{
 		Driver: "solana",
@@ -319,7 +312,8 @@ func (s *CrosschainTestSuite) TestEnrichAssetConfig() {
 	require.NoError(err)
 	require.NotNil(assetCfgEnriched)
 	require.Equal("USDC", assetCfgEnriched.Asset)
-	require.NotEqual("", assetCfgEnriched.GetChain().URL)
+	// default should be crosschainapi client
+	require.NotEqual("", assetCfgEnriched.GetChain().GetAllClients()[0].URL)
 	require.NotEqual("", assetCfgEnriched.GetChain().Driver)
 
 	assetCfg.GetChain().URL = ""
