@@ -1,479 +1,382 @@
 network: "mainnet"
 chains:
-    ACA:
-        chain: ACA
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://eth-rpc-acala.aca-api.network
-        chain_id: 787
-        chain_name: Acala
-        explorer_url: https://acala.subscan.io
-        decimals: 12
-        indexer_type: rpc
-        polling_period: 15m
-    APTOS:
-        chain: APTOS
-        driver: aptos
-        clients:
-            - driver: crosschain
-        url: https://aptos-mainnet-rpc.allthatnode.com
-        chain_id: 1
-        chain_name: Aptos
-        explorer_url: https://explorer.aptoslabs.com/
-        decimals: 8
-        indexer_url: https://indexer.mainnet.aptoslabs.com
-        indexer_type: aptos
-        polling_period: 8m
-    ATOM:
-        chain: ATOM
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: https://cosmos-rpc.publicnode.com
-        chain_id_str: cosmoshub-4
-        chain_name: Cosmos
-        chain_prefix: cosmos
-        chain_coin: uatom
-        chain_coin_hd_path: 118
-        chain_gas_price_default: 0.1
-        explorer_url: https://atomscan.com
-        decimals: 6
-        indexer_type: cosmos
-        polling_period: 5m
-    AVAX:
-        chain: AVAX
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://api.avax.network/ext/bc/C/rpc
-        chain_id: 43114
-        chain_name: Avalanche C-Chain
-        explorer_url: https://snowtrace.io
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 6m
-    ArbETH:
-        chain: ArbETH
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://arb1.arbitrum.io/rpc
-        chain_id: 42161
-        chain_name: Arbitrum
-        chain_gas_multiplier: 0.05
-        explorer_url: https://arbiscan.io
-        decimals: 18
-        indexer_type: rpc
-        polling_period: 10m
-    AurETH:
-        chain: AurETH
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://mainnet.aurora.dev
-        chain_id: 1313161554
-        chain_name: Aurora
-        explorer_url: https://aurorascan.dev
-        decimals: 18
-        indexer_type: rpc
-        polling_period: 15m
-    BCH:
-        chain: BCH
-        driver: bitcoin-cash
-        clients:
-            - driver: crosschain
-        url: https://api.blockchair.com/bitcoin-cash
-        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-        provider: blockchair
-        chain_name: Bitcoin Cash
-        explorer_url: https://blockchair.com/bitcoin-cash
-        decimals: 8
-        indexer_url: https://api.blockchair.com/bitcoin-cash
-        indexer_type: blockchair
-        polling_period: 10m
-    BNB:
-        chain: BNB
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://bsc-dataseed.binance.org
-        chain_id: 56
-        chain_name: Binance Smart Chain
-        explorer_url: https://bscscan.com
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 6m
-    BTC:
-        chain: BTC
-        driver: bitcoin
-        clients:
-            - driver: crosschain
-        url: https://api.blockchair.com/bitcoin
-        chain_gas_multiplier: 1.5
-        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-        provider: blockchair
-        chain_name: Bitcoin
-        explorer_url: https://blockchair.com/bitcoin
-        decimals: 8
-        indexer_url: https://api.blockchair.com/bitcoin
-        indexer_type: blockchair
-        polling_period: 10m
-    CELO:
-        chain: CELO
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://forno.celo.org
-        chain_id: 42220
-        chain_name: Celo
-        explorer_url: https://explorer.celo.org
-        decimals: 18
-        indexer_url: https://explorer.celo.org/mainnet
-        indexer_type: blockscout
-        polling_period: 6m
-    CHZ:
-        chain: CHZ
-        driver: evm-legacy
-        url: ""
-        chain_id: 99999
-        chain_name: Chiliz
-        explorer_url: https://explorer.chiliz.com
-        decimals: 18
-        indexer_url: https://explorer.chiliz.com
-        indexer_type: blockscout
-        polling_period: 6m
-        disabled: true
-        no_gas_fees: true
-    CHZ2:
-        chain: CHZ2
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://rpc.chiliz.com
-        chain_id: 88888
-        chain_name: Chiliz 2.0
-        explorer_url: https://scan.chiliz.com
-        decimals: 18
-        indexer_url: https://scan.chiliz.com
-        indexer_type: blockscout
-        polling_period: 6m
-    DOGE:
-        chain: DOGE
-        driver: bitcoin-legacy
-        clients:
-            - driver: crosschain
-        url: https://api.blockchair.com/dogecoin
-        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-        provider: blockchair
-        chain_name: Dogecoin
-        explorer_url: https://blockchair.com/dogecoin
-        decimals: 8
-        indexer_url: https://api.blockchair.com/dogecoin
-        indexer_type: blockchair
-        polling_period: 10m
-        # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
-        chain_max_gas_price: 50000000
-    ETC:
-        chain: ETC
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://www.ethercluster.com/etc
-        chain_id: 61
-        chain_name: Ethereum Classic
-        explorer_url: https://blockscout.com/etc/mainnet
-        decimals: 18
-        indexer_type: blockscout
-        indexer_url: https://etc.blockscout.com
-        polling_period: 10m
-    ETH:
-        chain: ETH
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://ethereum.publicnode.com
-        # url: https://mainnet.infura.io/v3
-        # auth: env:CORDIAL_INFURA_API_TOKEN
-        # provider: infura
-        chain_id: 1
-        chain_name: Ethereum
-        explorer_url: https://etherscan.io
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 3m
-    ETHW:
-        chain: ETHW
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: http://mainnet.ethereumpow.org:80
-        chain_id: 10001
-        chain_name: EthereumPOW
-        explorer_url: https://etherscan.io
-        decimals: 18
-        indexer_type: rpc
-        polling_period: 5m
-    FTM:
-        chain: FTM
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://rpc.ftm.tools
-        chain_id: 250
-        chain_name: Fantom
-        explorer_url: https://ftmscan.com
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 6m
-    INJ:
-        chain: INJ
-        driver: evmos
-        clients:
-            - driver: crosschain
-        url: https://injective-rpc.polkachu.com
-        chain_id_str: injective-1
-        chain_name: Injective
-        chain_prefix: inj
-        chain_coin: inj
-        chain_coin_hd_path: 60
-        chain_gas_price_default: 5e+08
-        explorer_url: https://explorer.injective.network
-        decimals: 18
-        indexer_type: cosmos
-        polling_period: 5m
-    KAR:
-        chain: KAR
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://eth-rpc-karura.aca-api.network
-        chain_id: 686
-        chain_name: Karura
-        explorer_url: https://karura.subscan.io
-        decimals: 12
-        indexer_type: rpc
-        polling_period: 15m
-    KLAY:
-        chain: KLAY
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://public-node-api.klaytnapi.com/v1/cypress
-        chain_id: 8217
-        chain_name: Klaytn
-        explorer_url: https://scope.klaytn.com
-        # KLAY wants fixed gas prices (no change/multiplier)
-        chain_gas_multiplier: 1
-        decimals: 18
-        indexer_type: rpc
-        polling_period: 15m
-    LTC:
-        chain: LTC
-        driver: bitcoin-legacy
-        clients:
-            - driver: crosschain
-        url: https://api.blockchair.com/litecoin
-        auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-        provider: blockchair
-        chain_name: Litecoin
-        explorer_url: https://blockchair.com/litecoin
-        decimals: 8
-        indexer_url: https://api.blockchair.com/litecoin
-        indexer_type: blockchair
-        polling_period: 10m
-    LUNA:
-        chain: LUNA
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: https://terra-rpc.publicnode.com
-        chain_id_str: phoenix-1
-        chain_name: Terra
-        chain_prefix: terra
-        chain_coin: uluna
-        chain_coin_hd_path: 330
-        explorer_url: https://finder.terra.money
-        decimals: 6
-        indexer_type: cosmos
-        polling_period: 5m
-    LUNC:
-        chain: LUNC
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: https://terra-classic-rpc.publicnode.com
-        chain_id_str: columbus-5
-        chain_name: Terra Classic
-        chain_prefix: terra
-        chain_coin: uluna
-        gas_coin: uusd
-        chain_coin_hd_path: 330
-        chain_gas_price_default: 0.5
-        chain_gas_multiplier: 2
-        chain_transfer_tax: 0.005
-        explorer_url: https://finder.terra.money/classic
-        decimals: 6
-        indexer_type: cosmos
-        polling_period: 5m
-    MATIC:
-        chain: MATIC
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://polygon-rpc.com
-        chain_id: 137
-        chain_name: Polygon
-        chain_gas_multiplier: 4
-        chain_gas_tip: 20
-        explorer_url: https://polygonscan.com
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 6m
-        chain_max_gas_price: 120
-    OAS:
-        chain: OAS
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://rpc.mainnet.oasys.games
-        chain_id: 248
-        chain_name: Oasys
-        explorer_url: https://explorer.oasys.games
-        decimals: 18
-        indexer_url: https://scan.oasys.games
-        indexer_type: blockscout
-        polling_period: 6m
-    OptETH:
-        chain: OptETH
-        driver: evm
-        clients:
-            - driver: crosschain
-        url: https://mainnet.optimism.io
-        chain_id: 10
-        chain_name: Optimism
-        explorer_url: https://optimistic.etherscan.io
-        decimals: 18
-        indexer_type: rpc
-        polling_period: 15m
-    EmROSE:
-        chain: EmROSE
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://emerald.oasis.dev
-        chain_id: 42262
-        chain_name: Oasis
-        explorer_url: https://explorer.emerald.oasis.dev
-        decimals: 18
-        indexer_type: covalent
-        polling_period: 6m
-    SEI:
-        chain: SEI
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: "https://sei-rpc.polkachu.com/"
-        chain_id_str: pacific-1
-        chain_name: Sei
-        chain_prefix: sei
-        chain_coin: usei
-        chain_coin_hd_path: 118
-        chain_gas_price_default: 0.1
-        explorer_url: https://sei.explorers.guru/
-        decimals: 6
-        indexer_type: cosmos
-        polling_period: 15m
-        disabled: true
-    SOL:
-        chain: SOL
-        driver: solana
-        clients:
-            - driver: crosschain
-        url: https://api.mainnet-beta.solana.com
-        chain_name: Solana
-        explorer_url: https://explorer.solana.com
-        decimals: 9
-        indexer_type: solana
-        polling_period: 3m
-    SUI:
-        chain: SUI
-        driver: sui
-        clients:
-            - driver: crosschain
-        url: https://fullnode.mainnet.sui.io:443
-        chain_name: Sui
-        explorer_url: https://explorer.sui.io
-        decimals: 9
-        indexer_type: rpc
-        polling_period: 3m
-    TRX:
-        chain: TRX
-        driver: tron
-        net: mainnet
-        url: "https://api.trongrid.io"
-        chain_name: Tron
-        explorer_url: "http://tronscan.org"
-        decimals: 6
-        # 200 tron fee limit
-        chain_max_gas_price: 2000000000
-    TIA:
-        chain: TIA
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: ""
-        chain_name: Celestia
-        chain_prefix: celestia
-        chain_coin: utia
-        chain_coin_hd_path: 118
-        chain_gas_price_default: 0.1
-        decimals: 6
-        indexer_type: cosmos
-        polling_period: 15m
-        disabled: true
-    XDC:
-        chain: XDC
-        driver: evm-legacy
-        clients:
-            - driver: crosschain
-        url: https://rpc.xdcrpc.com
-        chain_id: 50
-        chain_name: XinFin
-        explorer_url: https://explorer.xinfin.network/
-        decimals: 18
-        indexer_url: https://xdc.blocksscan.io
-        indexer_type: blocksscan
-        polling_period: 6m
-    XPLA:
-        chain: XPLA
-        driver: cosmos
-        clients:
-            - driver: crosschain
-        url: https://dimension-rpc.xpla.dev
-        chain_id_str: dimension_37-1
-        chain_name: XPLA Chain
-        chain_prefix: xpla
-        chain_coin: axpla
-        chain_coin_hd_path: 60
-        chain_gas_price_default: 0.1
-        explorer_url: https://explorer.xpla.io/mainnet
-        decimals: 18
-        indexer_type: cosmos
-        polling_period: 5m
-    HASH:
-        chain: HASH
-        driver: cosmos
-        url: https://rpc.provenance.io
-        chain_id_str: pio-mainnet-1
-        chain_name: Provenance
-        chain_prefix: pb
-        chain_coin: nhash
-        chain_coin_hd_path: 1
-        explorer_url: https://explorer.provenance.io
-        decimals: 9
-        chain_gas_multiplier: 10.0
-        # translates to roughly max 50 HASH in gas per tx
-        chain_max_gas_price: 125000.0
-        indexer_type: cosmos
-        polling_period: 5m
+  ACA:
+    chain: ACA
+    driver: evm-legacy
+    chain_id: 787
+    chain_name: Acala
+    explorer_url: https://acala.subscan.io
+    decimals: 12
+    indexer_type: rpc
+    polling_period: 15m
+  APTOS:
+    chain: APTOS
+    driver: aptos
+    chain_id: 1
+    chain_name: Aptos
+    explorer_url: https://explorer.aptoslabs.com/
+    decimals: 8
+    indexer_url: https://indexer.mainnet.aptoslabs.com
+    indexer_type: aptos
+    polling_period: 8m
+  ATOM:
+    chain: ATOM
+    driver: cosmos
+    chain_id_str: cosmoshub-4
+    chain_name: Cosmos
+    chain_prefix: cosmos
+    chain_coin: uatom
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    explorer_url: https://atomscan.com
+    decimals: 6
+    indexer_type: cosmos
+    polling_period: 5m
+  AVAX:
+    chain: AVAX
+    driver: evm
+    chain_id: 43114
+    chain_name: Avalanche C-Chain
+    explorer_url: https://snowtrace.io
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 6m
+  ArbETH:
+    chain: ArbETH
+    driver: evm
+    chain_id: 42161
+    chain_name: Arbitrum
+    chain_gas_multiplier: 0.05
+    explorer_url: https://arbiscan.io
+    decimals: 18
+    indexer_type: rpc
+    polling_period: 10m
+  AurETH:
+    chain: AurETH
+    driver: evm-legacy
+    chain_id: 1313161554
+    chain_name: Aurora
+    explorer_url: https://aurorascan.dev
+    decimals: 18
+    indexer_type: rpc
+    polling_period: 15m
+  BCH:
+    chain: BCH
+    driver: bitcoin-cash
+    url: "https://api.blockchair.com/bitcoin-cash"
+    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
+    provider: blockchair
+    chain_name: Bitcoin Cash
+    explorer_url: https://blockchair.com/bitcoin-cash
+    decimals: 8
+    indexer_url: https://api.blockchair.com/bitcoin-cash
+    indexer_type: blockchair
+    polling_period: 10m
+  BNB:
+    chain: BNB
+    driver: evm-legacy
+    chain_id: 56
+    chain_name: Binance Smart Chain
+    explorer_url: https://bscscan.com
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 6m
+  BTC:
+    chain: BTC
+    driver: bitcoin
+    chain_gas_multiplier: 1.5
+    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
+    provider: blockchair
+    chain_name: Bitcoin
+    explorer_url: https://blockchair.com/bitcoin
+    decimals: 8
+    indexer_url: https://api.blockchair.com/bitcoin
+    indexer_type: blockchair
+    polling_period: 10m
+  CELO:
+    chain: CELO
+    driver: evm
+    chain_id: 42220
+    chain_name: Celo
+    explorer_url: https://explorer.celo.org
+    decimals: 18
+    indexer_url: https://explorer.celo.org/mainnet
+    indexer_type: blockscout
+    polling_period: 6m
+  CHZ:
+    chain: CHZ
+    driver: evm-legacy
+    chain_id: 99999
+    chain_name: Chiliz
+    explorer_url: https://explorer.chiliz.com
+    decimals: 18
+    indexer_url: https://explorer.chiliz.com
+    indexer_type: blockscout
+    polling_period: 6m
+    disabled: true
+    no_gas_fees: true
+  CHZ2:
+    chain: CHZ2
+    driver: evm-legacy
+    chain_id: 88888
+    chain_name: Chiliz 2.0
+    explorer_url: https://scan.chiliz.com
+    decimals: 18
+    indexer_url: https://scan.chiliz.com
+    indexer_type: blockscout
+    polling_period: 6m
+  DOGE:
+    chain: DOGE
+    driver: bitcoin-legacy
+    url: "https://api.blockchair.com/dogecoin"
+    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
+    provider: blockchair
+    chain_name: Dogecoin
+    explorer_url: https://blockchair.com/dogecoin
+    decimals: 8
+    indexer_url: https://api.blockchair.com/dogecoin
+    indexer_type: blockchair
+    polling_period: 10m
+    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
+    chain_max_gas_price: 50000000
+  ETC:
+    chain: ETC
+    driver: evm-legacy
+    chain_id: 61
+    chain_name: Ethereum Classic
+    explorer_url: https://blockscout.com/etc/mainnet
+    decimals: 18
+    indexer_type: blockscout
+    indexer_url: https://etc.blockscout.com
+    polling_period: 10m
+  ETH:
+    chain: ETH
+    driver: evm
+    # auth: env:CORDIAL_INFURA_API_TOKEN
+    # provider: infura
+    chain_id: 1
+    chain_name: Ethereum
+    explorer_url: https://etherscan.io
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 3m
+  ETHW:
+    chain: ETHW
+    driver: evm
+    chain_id: 10001
+    chain_name: EthereumPOW
+    explorer_url: https://etherscan.io
+    decimals: 18
+    indexer_type: rpc
+    polling_period: 5m
+  FTM:
+    chain: FTM
+    driver: evm-legacy
+    chain_id: 250
+    chain_name: Fantom
+    explorer_url: https://ftmscan.com
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 6m
+  INJ:
+    chain: INJ
+    driver: evmos
+    chain_id_str: injective-1
+    chain_name: Injective
+    chain_prefix: inj
+    chain_coin: inj
+    chain_coin_hd_path: 60
+    chain_gas_price_default: 5e+08
+    explorer_url: https://explorer.injective.network
+    decimals: 18
+    indexer_type: cosmos
+    polling_period: 5m
+  KAR:
+    chain: KAR
+    driver: evm-legacy
+    chain_id: 686
+    chain_name: Karura
+    explorer_url: https://karura.subscan.io
+    decimals: 12
+    indexer_type: rpc
+    polling_period: 15m
+  KLAY:
+    chain: KLAY
+    driver: evm-legacy
+    chain_id: 8217
+    chain_name: Klaytn
+    explorer_url: https://scope.klaytn.com
+    # KLAY wants fixed gas prices (no change/multiplier)
+    chain_gas_multiplier: 1
+    decimals: 18
+    indexer_type: rpc
+    polling_period: 15m
+  LTC:
+    chain: LTC
+    driver: bitcoin-legacy
+    url: https://api.blockchair.com/litecoin
+    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
+    provider: blockchair
+    chain_name: Litecoin
+    explorer_url: https://blockchair.com/litecoin
+    decimals: 8
+    indexer_url: https://api.blockchair.com/litecoin
+    indexer_type: blockchair
+    polling_period: 10m
+  LUNA:
+    chain: LUNA
+    driver: cosmos
+    chain_id_str: phoenix-1
+    chain_name: Terra
+    chain_prefix: terra
+    chain_coin: uluna
+    chain_coin_hd_path: 330
+    explorer_url: https://finder.terra.money
+    decimals: 6
+    indexer_type: cosmos
+    polling_period: 5m
+  LUNC:
+    chain: LUNC
+    driver: cosmos
+    chain_id_str: columbus-5
+    chain_name: Terra Classic
+    chain_prefix: terra
+    chain_coin: uluna
+    gas_coin: uusd
+    chain_coin_hd_path: 330
+    chain_gas_price_default: 0.5
+    chain_gas_multiplier: 2
+    chain_transfer_tax: 0.005
+    explorer_url: https://finder.terra.money/classic
+    decimals: 6
+    indexer_type: cosmos
+    polling_period: 5m
+  MATIC:
+    chain: MATIC
+    driver: evm
+    chain_id: 137
+    chain_name: Polygon
+    chain_gas_multiplier: 4
+    chain_gas_tip: 20
+    explorer_url: https://polygonscan.com
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 6m
+    chain_max_gas_price: 120
+  OAS:
+    chain: OAS
+    driver: evm-legacy
+    chain_id: 248
+    chain_name: Oasys
+    explorer_url: https://explorer.oasys.games
+    decimals: 18
+    indexer_url: https://scan.oasys.games
+    indexer_type: blockscout
+    polling_period: 6m
+  OptETH:
+    chain: OptETH
+    driver: evm
+    chain_id: 10
+    chain_name: Optimism
+    explorer_url: https://optimistic.etherscan.io
+    decimals: 18
+    indexer_type: rpc
+    polling_period: 15m
+  EmROSE:
+    chain: EmROSE
+    driver: evm-legacy
+    chain_id: 42262
+    chain_name: Oasis
+    explorer_url: https://explorer.emerald.oasis.dev
+    decimals: 18
+    indexer_type: covalent
+    polling_period: 6m
+  SEI:
+    chain: SEI
+    driver: cosmos
+    chain_id_str: pacific-1
+    chain_name: Sei
+    chain_prefix: sei
+    chain_coin: usei
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    explorer_url: https://sei.explorers.guru/
+    decimals: 6
+    indexer_type: cosmos
+    polling_period: 15m
+    disabled: true
+  SOL:
+    chain: SOL
+    driver: solana
+    chain_name: Solana
+    explorer_url: https://explorer.solana.com
+    decimals: 9
+    indexer_type: solana
+    polling_period: 3m
+  SUI:
+    chain: SUI
+    driver: sui
+    chain_name: Sui
+    explorer_url: https://explorer.sui.io
+    decimals: 9
+    indexer_type: rpc
+    polling_period: 3m
+  TRX:
+    chain: TRX
+    driver: tron
+    net: mainnet
+    chain_name: Tron
+    explorer_url: "http://tronscan.org"
+    decimals: 6
+    # 200 tron fee limit
+    chain_max_gas_price: 2000000000
+  TIA:
+    chain: TIA
+    driver: cosmos
+    chain_name: Celestia
+    chain_prefix: celestia
+    chain_coin: utia
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    decimals: 6
+    indexer_type: cosmos
+    polling_period: 15m
+    disabled: true
+  XDC:
+    chain: XDC
+    driver: evm-legacy
+    chain_id: 50
+    chain_name: XinFin
+    explorer_url: https://explorer.xinfin.network/
+    decimals: 18
+    indexer_url: https://xdc.blocksscan.io
+    indexer_type: blocksscan
+    polling_period: 6m
+  XPLA:
+    chain: XPLA
+    driver: cosmos
+    chain_id_str: dimension_37-1
+    chain_name: XPLA Chain
+    chain_prefix: xpla
+    chain_coin: axpla
+    chain_coin_hd_path: 60
+    chain_gas_price_default: 0.1
+    explorer_url: https://explorer.xpla.io/mainnet
+    decimals: 18
+    indexer_type: cosmos
+    polling_period: 5m
+  HASH:
+    chain: HASH
+    driver: cosmos
+    chain_id_str: pio-mainnet-1
+    chain_name: Provenance
+    chain_prefix: pb
+    chain_coin: nhash
+    chain_coin_hd_path: 1
+    explorer_url: https://explorer.provenance.io
+    decimals: 9
+    chain_gas_multiplier: 10.0
+    # translates to roughly max 50 HASH in gas per tx
+    chain_max_gas_price: 125000.0
+    indexer_type: cosmos
+    polling_period: 5m

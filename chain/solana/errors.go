@@ -1,7 +1,6 @@
 package solana
 
 import (
-	"fmt"
 	"strings"
 
 	xclient "github.com/cordialsys/crosschain/client"
@@ -9,7 +8,6 @@ import (
 
 func CheckError(err error) xclient.ClientError {
 	msg := strings.ToLower(err.Error())
-	fmt.Println("-- CHECKING ERROR: ", msg)
 	if strings.Contains(msg, "transaction underpriced") {
 		return xclient.TransactionFailure
 	}

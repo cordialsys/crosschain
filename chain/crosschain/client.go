@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -76,13 +75,16 @@ func (client *Client) apiCall(ctx context.Context, path string, data interface{}
 
 func (client *Client) apiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
 	// Serialize the request
-	buf := new(bytes.Buffer)
+	var req *http.Request
+	var err error
 	if data != nil {
+		buf := new(bytes.Buffer)
 		json.NewEncoder(buf).Encode(data)
+		req, err = http.NewRequestWithContext(ctx, method, url, buf)
 	} else {
-		buf = nil
+		// provide untyped nil to use no body. any "typed" nil will cause panic.
+		req, err = http.NewRequestWithContext(ctx, method, url, nil)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +103,7 @@ func (client *Client) apiCallWithUrl(ctx context.Context, method string, url str
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors.New(r.Message)
+		return nil, fmt.Errorf("%d: %s", r.Code, r.Message)
 	}
 
 	bz, err := io.ReadAll(res.Body)
@@ -120,14 +122,17 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		To:       string(to),
 	})
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return nil, err
-		}
-		log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
-		return nextClient.FetchTxInput(ctx, from, to)
+		return nil, err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return nil, err
+	// 	}
+	// 	log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
+	// 	return nextClient.FetchTxInput(ctx, from, to)
+	// }
 	var r = &types.TxInputRes{}
 	_ = json.Unmarshal(res, r)
 	return drivers.UnmarshalTxInput(r.TxInput)
@@ -152,14 +157,17 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 		TxSignatures: signatures,
 	})
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return err
-		}
-		log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
-		return nextClient.SubmitTx(ctx, txInput)
+		return err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return err
+	// 	}
+	// 	log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
+	// 	return nextClient.SubmitTx(ctx, txInput)
+	// }
 	var r types.SubmitTxRes
 	err = json.Unmarshal(res, &r)
 	return err
@@ -172,14 +180,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		TxHash:   string(txHash),
 	})
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return xc.LegacyTxInfo{}, err
-		}
-		log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
-		return nextClient.FetchLegacyTxInfo(ctx, txHash)
+		return xc.LegacyTxInfo{}, err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return xc.LegacyTxInfo{}, err
+	// 	}
+	// 	log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
+	// 	return nextClient.FetchLegacyTxInfo(ctx, txHash)
+	// }
 	var r types.TxLegacyInfoRes
 	err = json.Unmarshal(res, &r)
 	return r.LegacyTxInfo, err
@@ -190,14 +201,17 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)
 	res, err := client.apiCallWithUrl(ctx, "GET", apiURL, nil)
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return xclient.TxInfo{}, err
-		}
-		log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
-		return nextClient.FetchTxInfo(ctx, txHashStr)
+		return xclient.TxInfo{}, err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return xclient.TxInfo{}, err
+	// 	}
+	// 	log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
+	// 	return nextClient.FetchTxInfo(ctx, txHashStr)
+	// }
 	r := types.TransactionInfoRes{}
 	err = json.Unmarshal(res, &r)
 	return r.TxInfo, err
@@ -219,14 +233,17 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 		Address:  string(address),
 	})
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return zero, err
-		}
-		log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
-		return nextClient.FetchNativeBalance(ctx, address)
+		return zero, err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return zero, err
+	// 	}
+	// 	log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
+	// 	return nextClient.FetchNativeBalance(ctx, address)
+	// }
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
 	return r.BalanceRaw, err
@@ -240,14 +257,17 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 		Address:  string(address),
 	})
 	if err != nil {
-		// Fallback to default client
-		nextClient, err2 := client.nextClient()
-		if err2 != nil {
-			return zero, err
-		}
-		log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
-		return nextClient.FetchNativeBalance(ctx, address)
+		return zero, err
 	}
+	// if err != nil {
+	// 	// Fallback to default client
+	// 	nextClient, err2 := client.nextClient()
+	// 	if err2 != nil {
+	// 		return zero, err
+	// 	}
+	// 	log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
+	// 	return nextClient.FetchNativeBalance(ctx, address)
+	// }
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
 	return r.BalanceRaw, err

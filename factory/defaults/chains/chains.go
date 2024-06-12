@@ -24,16 +24,11 @@ func init() {
 
 		// default to using xc client
 		defaultUrl := "https://connector.cordialapis.com"
-		if chain.URL == "" && len(chain.Clients) == 0 {
-			chain.Clients = append(chain.Clients, &xc.ClientConfig{
+		chain.Clients = []*xc.ClientConfig{
+			{
 				Driver: xc.DriverCrosschain,
 				URL:    defaultUrl,
-			})
-		}
-		for _, client := range chain.Clients {
-			if client.Driver == xc.DriverCrosschain && client.URL == "" {
-				client.URL = defaultUrl
-			}
+			},
 		}
 	}
 	for _, chain := range Testnet {
@@ -43,7 +38,13 @@ func init() {
 		if chain.ConfirmationsFinal == 0 {
 			chain.ConfirmationsFinal = 2
 		}
-		// no testnet support in xc service yet
+		defaultUrl := "https://connector-testnet.cordialapis.com"
+		chain.Clients = []*xc.ClientConfig{
+			{
+				Driver: xc.DriverCrosschain,
+				URL:    defaultUrl,
+			},
+		}
 	}
 }
 
