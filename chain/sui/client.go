@@ -2,6 +2,7 @@ package sui
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for Sui
@@ -85,6 +87,19 @@ func (c *Client) FetchCheckpoint(ctx context.Context, checkpoint uint64) (*Check
 	return resp, err
 }
 
+func AddressOrObjectOwner(obj *types.ObjectOwner) (string, bool) {
+	if obj.AddressOwner != nil {
+		return obj.AddressOwner.String(), true
+	}
+	if obj.ObjectOwner != nil {
+		return obj.ObjectOwner.String(), true
+	}
+	if obj.SingleOwner != nil {
+		return obj.SingleOwner.String(), true
+	}
+	return "", false
+}
+
 func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	opts := types.SuiTransactionBlockResponseOptions{
 		ShowInput:          true,
@@ -124,21 +139,35 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 	to := ""
 	contract := ""
 	destinationAmount := xc.NewAmountBlockchainFromUint64(0)
-	totalSent := xc.NewAmountBlockchainFromUint64(0)
-	totalReceived := xc.NewAmountBlockchainFromUint64(0)
+	totalSuiSent := xc.NewAmountBlockchainFromUint64(0)
+	totalSuiReceived := xc.NewAmountBlockchainFromUint64(0)
 
 	for _, bal := range resp.BalanceChanges {
 		amt := xc.NewAmountBlockchainFromStr(bal.Amount)
+
 		asset := ""
 		contract = bal.CoinType
+		isSui := false
 		if strings.HasSuffix(bal.CoinType, "sui::SUI") && (strings.HasPrefix(bal.CoinType, "0x0000000000000000000000000000000000000000000000000000000000") || len(contract) < 16) {
 			contract = ""
 			asset = "SUI"
+			isSui = true
 		}
+		balBz, _ := json.Marshal(bal)
+		logrus.WithFields(logrus.Fields{
+			"chain":     c.Asset.GetChain().Chain,
+			"amount":    bal.Amount,
+			"coin_type": bal.CoinType,
+			"owner":     bal.Owner,
+			"is_sui":    isSui,
+			"bal":       string(balBz),
+		}).Trace("balance change")
 		if amt.Sign() < 0 {
-			from = bal.Owner.AddressOwner.String()
+			from, _ = AddressOrObjectOwner(&bal.Owner)
 			abs := amt.Abs()
-			totalSent = totalSent.Add(&abs)
+			if isSui {
+				totalSuiSent = totalSuiSent.Add(&abs)
+			}
 			sources = append(sources, &xc.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
@@ -147,9 +176,11 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
 			})
 		} else {
-			to = bal.Owner.AddressOwner.String()
+			to, _ = AddressOrObjectOwner(&bal.Owner)
 			destinationAmount = amt
-			totalReceived = totalReceived.Add(&amt)
+			if isSui {
+				totalSuiReceived = totalSuiReceived.Add(&amt)
+			}
 			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
@@ -161,7 +192,12 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 	}
 
 	// fee is difference between total sent and received in balance changes
-	fee := totalSent.Sub(&totalReceived)
+	fee := totalSuiSent.Sub(&totalSuiReceived)
+	logrus.WithFields(logrus.Fields{
+		"total_sui_recieved": totalSuiReceived.String(),
+		"total_sui_sent":     totalSuiSent.String(),
+		"fee":                fee.String(),
+	}).Trace("sui fee")
 
 	status := xc.TxStatusSuccess
 	if resp.Effects.Data.V1.Status.Error != "" {
