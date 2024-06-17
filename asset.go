@@ -194,6 +194,12 @@ type ClientConfig struct {
 	Provider string `yaml:"provider,omitempty"`
 }
 
+type ExplorerUrls struct {
+	Tx      string `yaml:"tx"`
+	Address string `yaml:"address"`
+	Token   string `yaml:"token"`
+}
+
 // AssetConfig is the model used to represent an asset read from config file or db
 type ChainConfig struct {
 	Chain                NativeAsset     `yaml:"chain,omitempty"`
@@ -225,6 +231,7 @@ type ChainConfig struct {
 	PollingPeriod        string          `yaml:"polling_period,omitempty"`
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
 	Disabled             *bool           `yaml:"disabled,omitempty"`
+	ExplorerUrls         ExplorerUrls    `yaml:"explorer_urls"`
 
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
