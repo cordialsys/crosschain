@@ -192,6 +192,7 @@ type ClientConfig struct {
 	URL      string `yaml:"url,omitempty"`
 	Auth     string `yaml:"auth,omitempty"`
 	Provider string `yaml:"provider,omitempty"`
+	Network  string `yaml:"network,omitempty"`
 }
 
 type ExplorerUrls struct {

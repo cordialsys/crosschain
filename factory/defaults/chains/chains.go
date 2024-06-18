@@ -13,6 +13,7 @@ func init() {
 
 	Mainnet = maincfg.Chains
 	Testnet = testcfg.Chains
+	defaultUrl := "https://connector.cordialapis.com"
 
 	for _, chain := range Mainnet {
 		if chain.Net == "" {
@@ -23,11 +24,12 @@ func init() {
 		}
 
 		// default to using xc client
-		defaultUrl := "https://connector.cordialapis.com"
 		chain.Clients = []*xc.ClientConfig{
 			{
 				Driver: xc.DriverCrosschain,
 				URL:    defaultUrl,
+				// default is mainnet
+				Network: "",
 			},
 		}
 	}
@@ -38,11 +40,11 @@ func init() {
 		if chain.ConfirmationsFinal == 0 {
 			chain.ConfirmationsFinal = 2
 		}
-		defaultUrl := "https://connector-testnet.cordialapis.com"
 		chain.Clients = []*xc.ClientConfig{
 			{
-				Driver: xc.DriverCrosschain,
-				URL:    defaultUrl,
+				Driver:  xc.DriverCrosschain,
+				URL:     defaultUrl,
+				Network: "!mainnet",
 			},
 		}
 	}

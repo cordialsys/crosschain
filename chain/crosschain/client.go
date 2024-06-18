@@ -17,9 +17,10 @@ import (
 
 // Client for Template
 type Client struct {
-	Asset xc.ITask
-	URL   string
-	Http  *http.Client
+	Asset   xc.ITask
+	URL     string
+	Http    *http.Client
+	Network string
 }
 
 var _ xclient.FullClient = &Client{}
@@ -31,10 +32,12 @@ type TxInput struct {
 // NewClient returns a new Crosschain Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	url := cfgI.GetChain().Clients[0].URL
+	network := cfgI.GetChain().Clients[0].Network
 	return &Client{
-		Asset: cfgI,
-		URL:   url,
-		Http:  &http.Client{},
+		Asset:   cfgI,
+		URL:     url,
+		Http:    &http.Client{},
+		Network: network,
 	}, nil
 }
 
@@ -64,7 +67,7 @@ func (client *Client) apiAsset() *types.AssetReq {
 func (client *Client) apiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
 	// Create HTTP POST request
 	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, path)
-	response, err := client.apiCallWithUrl(ctx, "POST", apiURL, data)
+	response, err := client.ApiCallWithUrl(ctx, "POST", apiURL, data)
 	if err != nil {
 		return response, err
 	}
@@ -72,7 +75,7 @@ func (client *Client) apiCall(ctx context.Context, path string, data interface{}
 	return response, nil
 }
 
-func (client *Client) apiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
+func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
 	// Serialize the request
 	var req *http.Request
 	var err error
@@ -86,6 +89,9 @@ func (client *Client) apiCallWithUrl(ctx context.Context, method string, url str
 	}
 	if err != nil {
 		return nil, err
+	}
+	if client.Network != "" {
+		req.Header.Add("network", client.Network)
 	}
 
 	// Send the request
@@ -198,7 +204,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
 	chain := client.Asset.GetChain().Chain
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)
-	res, err := client.apiCallWithUrl(ctx, "GET", apiURL, nil)
+	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
