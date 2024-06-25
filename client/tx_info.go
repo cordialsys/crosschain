@@ -3,6 +3,7 @@ package client
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/normalize"
@@ -71,6 +72,10 @@ type Transfer struct {
 type TxInfo struct {
 	// required: set the transaction name (chain + hash)
 	Name TransactionName `json:"name"`
+	// required: set the transaction hash/id
+	Hash string `json:"hash"`
+	// required: set the chain
+	Chain xc.NativeAsset `json:"chain"`
 	// required: set any fees paid
 	Fees Balances `json:"fees"`
 	// required: set any movements
@@ -92,6 +97,8 @@ type TxInfo struct {
 
 	// required: set the hash of the block of the transaction
 	BlockHash string `json:"block_hash"`
+	// required: set the time of the block of the transaction
+	BlockTime time.Time `json:"block_time"`
 	// optional: set the error of the transaction if there was an error
 	Error string `json:"error"`
 }
@@ -151,7 +158,11 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 	}
 
 	info := TxInfo{
-		Name:          NewTransactionName(chain, legacyTx.TxID),
+		Name: NewTransactionName(chain, legacyTx.TxID),
+		// Copy over chain/txHash as well to protect from name normalize mangling
+		Chain: chain,
+		Hash:  legacyTx.TxID,
+
 		Fees:          fees,
 		Transfers:     transfers,
 		Sources:       sources,
@@ -159,6 +170,7 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 		BlockHeight:   uint64(legacyTx.BlockIndex),
 		Confirmations: uint64(legacyTx.Confirmations),
 		BlockHash:     legacyTx.BlockHash,
+		BlockTime:     time.Unix(legacyTx.BlockTime, 0),
 		Error:         legacyTx.Error,
 	}
 	return info

@@ -298,6 +298,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	tx := NewTxFrom(solTx)
 	meta := res.Meta
+	if res.BlockTime != nil {
+		result.BlockTime = res.BlockTime.Time().Unix()
+	}
 
 	if res.Slot > 0 {
 		result.BlockIndex = int64(res.Slot)
