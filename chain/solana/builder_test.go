@@ -63,7 +63,7 @@ func (s *SolanaTestSuite) TestNewTokenTransfer() {
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 USDC
 
-	ataToStr, _ := FindAssociatedTokenAddress(string(to), string(contract))
+	ataToStr, _ := FindAssociatedTokenAddress(string(to), string(contract), solana.TokenProgramID)
 	ataTo := solana.MustPublicKeyFromBase58(ataToStr)
 
 	// transfer to existing ATA
@@ -85,8 +85,8 @@ func (s *SolanaTestSuite) TestNewTokenTransfer() {
 	solTx = tx.(*Tx).SolTx
 	require.Equal(0, len(solTx.Signatures))
 	require.Equal(2, len(solTx.Message.Instructions))
-	require.Equal(uint16(0x8), solTx.Message.Instructions[0].ProgramIDIndex)
-	require.Equal(uint16(0x6), solTx.Message.Instructions[1].ProgramIDIndex)
+	require.Equal(uint16(0x7), solTx.Message.Instructions[0].ProgramIDIndex)
+	require.Equal(uint16(0x8), solTx.Message.Instructions[1].ProgramIDIndex)
 	require.Equal(ataTo, solTx.Message.AccountKeys[1])
 
 	// transfer directly to ATA
@@ -147,7 +147,7 @@ func (s *SolanaTestSuite) TestNewMultiTokenTransfer() {
 	amountSmall2 := xc.NewAmountBlockchainFromUint64(150)
 	amountSmall3 := xc.NewAmountBlockchainFromUint64(200)
 
-	ataToStr, err := FindAssociatedTokenAddress(string(to), string(contract))
+	ataToStr, err := FindAssociatedTokenAddress(string(to), string(contract), solana.TokenProgramID)
 	require.NoError(err)
 	ataTo := solana.MustPublicKeyFromBase58(ataToStr)
 

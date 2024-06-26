@@ -23,15 +23,24 @@ func (s *SolanaTestSuite) TestNewClient() {
 func (s *SolanaTestSuite) TestFindAssociatedTokenAddress() {
 	require := s.Require()
 
-	ata, err := FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
-	require.Nil(err)
+	ata, err := FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
+	require.NoError(err)
 	require.Equal("DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
 
-	ata, err = FindAssociatedTokenAddress("", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")
+	// backwards compat with no token owner being used
+	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.PublicKey{})
+	require.NoError(err)
+	require.Equal("DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
+
+	ata, err = FindAssociatedTokenAddress("CMNyyCXkAQ5cfFS2zQEg6YPzd8fpHvMFbbbmUfjoPp1s", "BRfq2tdBXycyPA9PWeGFPA61327VNQMkZBE7rTAcvYDr", solana.Token2022ProgramID)
+	require.NoError(err)
+	require.Equal("5LJSMaVdHFzaDG6wPtRSL1RULtKWgrRubXcbeARsLLru", ata)
+
+	ata, err = FindAssociatedTokenAddress("", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
 	require.ErrorContains(err, "zero length string")
 	require.Equal("", ata)
 
-	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx")
+	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx", solana.TokenProgramID)
 	require.ErrorContains(err, "invalid length")
 	require.Equal("", ata)
 }
@@ -81,6 +90,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// valid ATA
@@ -100,6 +111,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// empty ATA
@@ -119,6 +132,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid ATA
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.20","slot":206509845},"value":{"amount":"10000","decimals":6,"uiAmount":0.01,"uiAmountString":"0.01"}},"id":1}`,
 				// valid ATA
@@ -139,6 +154,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// empty ATA
@@ -158,6 +175,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// empty ATA
@@ -189,6 +208,8 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			resp: []string{
 				// valid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account -> error getting token balance
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// priority fee

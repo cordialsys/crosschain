@@ -18,11 +18,17 @@ import (
 	"github.com/gagliardetto/solana-go/rpc"
 )
 
+// type TokenType string
+
+// var TokenSpl TokenType = "spl"
+// var Token2022 TokenType = "token2022"
+
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
 	RecentBlockHash     solana.Hash         `json:"recent_block_hash,omitempty"`
 	ToIsATA             bool                `json:"to_is_ata,omitempty"`
+	TokenProgram        solana.PublicKey    `json:"token_program"`
 	ShouldCreateATA     bool                `json:"should_create_ata,omitempty"`
 	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
 	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
@@ -152,6 +158,17 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		// native transfer
 		return txInput, nil
 	}
+	mint, err := solana.PublicKeyFromBase58(contract)
+	if err != nil {
+		return nil, fmt.Errorf("invalid mint address: %s: %v", contract, err)
+	}
+
+	// determine token program for the token
+	mintInfo, err := client.SolClient.GetAccountInfo(ctx, mint)
+	if err != nil {
+		return nil, err
+	}
+	txInput.TokenProgram = mintInfo.Value.Owner
 
 	// get account info - check if to is an owner or ata
 	accountTo, err := solana.PublicKeyFromBase58(string(to))
@@ -171,7 +188,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	// for tokens, get ata account info
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := FindAssociatedTokenAddress(string(to), contract)
+		ataToStr, err := FindAssociatedTokenAddress(string(to), contract, mintInfo.Value.Owner)
 		if err != nil {
 			return nil, err
 		}
@@ -216,10 +233,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 
 	// fetch priority fee info
 	accountsToLock := solana.PublicKeySlice{}
-	if contract != "" {
-		mint, _ := solana.PublicKeyFromBase58(contract)
-		accountsToLock = append(accountsToLock, mint)
-	}
+	accountsToLock = append(accountsToLock, mint)
 	fees, err := client.SolClient.GetRecentPrioritizationFees(ctx, accountsToLock)
 	if err != nil {
 		return txInput, fmt.Errorf("could not lookup priority fees: %v", err)
@@ -371,7 +385,7 @@ func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solan
 }
 
 // FindAssociatedTokenAddress returns the associated token account (ATA) for a given account and token
-func FindAssociatedTokenAddress(addr string, contract string) (string, error) {
+func FindAssociatedTokenAddress(addr string, contract string, tokenProgram solana.PublicKey) (string, error) {
 	address, err := solana.PublicKeyFromBase58(addr)
 	if err != nil {
 		return "", err
@@ -380,7 +394,17 @@ func FindAssociatedTokenAddress(addr string, contract string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	associatedAddr, _, err := solana.FindAssociatedTokenAddress(address, mint)
+	if len(tokenProgram) == 0 || tokenProgram.IsZero() {
+		tokenProgram = solana.TokenProgramID
+	}
+	associatedAddr, _, err := solana.FindProgramAddress(
+		[][]byte{
+			address[:],
+			tokenProgram[:],
+			mint[:],
+		},
+		solana.SPLAssociatedTokenAccountProgramID,
+	)
 	if err != nil {
 		return "", err
 	}

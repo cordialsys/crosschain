@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -84,6 +85,8 @@ func main() {
 	if err != nil {
 		panic("could not fetch" + err.Error())
 	}
+	inputBz, _ := json.MarshalIndent(input, "", "  ")
+	fmt.Println(string(inputBz))
 	if inputWithPublicKey, ok := input.(crosschain.TxInputWithPublicKey); ok {
 		fromPublicKeyStr := base64.StdEncoding.EncodeToString(publicKey)
 		inputWithPublicKey.SetPublicKeyFromStr(fromPublicKeyStr)

@@ -126,7 +126,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, err
 	}
 
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract))
+	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), solana.PublicKey(txInput.TokenProgram))
 	if err != nil {
 		return nil, err
 	}
@@ -137,21 +137,35 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := FindAssociatedTokenAddress(string(to), string(contract))
+		ataToStr, err := FindAssociatedTokenAddress(string(to), string(contract), solana.PublicKey(txInput.TokenProgram))
 		if err != nil {
 			return nil, err
 		}
 		ataTo = solana.MustPublicKeyFromBase58(ataToStr)
 	}
 
+	// Temporarily adjust the backend library to use a different program ID.
+	// This is to support token2022 and potential other future variants.
+	originalTokenId := token.ProgramID
+	defer token.SetProgramID(originalTokenId)
+	if !txInput.TokenProgram.IsZero() && !txInput.TokenProgram.Equals(originalTokenId) {
+		token.SetProgramID(txInput.TokenProgram)
+	}
+
 	instructions := []solana.Instruction{}
 	if txInput.ShouldCreateATA {
+		createAta := ata.NewCreateInstruction(
+			accountFrom,
+			accountTo,
+			accountContract,
+		).Build()
+		// Adjust the ata-create-account arguments:
+		// index 1 - associated token account
+		// index 5 - token program
+		createAta.Impl.(ata.Create).AccountMetaSlice[1].PublicKey = ataTo
+		createAta.Impl.(ata.Create).AccountMetaSlice[5].PublicKey = txInput.TokenProgram
 		instructions = append(instructions,
-			ata.NewCreateInstruction(
-				accountFrom,
-				accountTo,
-				accountContract,
-			).Build(),
+			createAta,
 		)
 	}
 	if len(txInput.SourceTokenAccounts) <= 1 {
@@ -258,7 +272,7 @@ func (txBuilder TxBuilder) BuildWrapTx(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract))
+	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +305,7 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 	}
 
 	contract := asset.GetContract()
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract))
+	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
 	if err != nil {
 		return nil, err
 	}
