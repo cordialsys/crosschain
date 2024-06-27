@@ -20,23 +20,19 @@ type NativeAsset string
 
 // List of supported NativeAsset
 const (
-	// UTXO
-	BCH  = NativeAsset("BCH")  // Bitcoin Cash
-	BTC  = NativeAsset("BTC")  // Bitcoin
-	DOGE = NativeAsset("DOGE") // Dogecoin
-	LTC  = NativeAsset("LTC")  // Litecoin
-
-	// Account-based
 	ACA    = NativeAsset("ACA")    // Acala
 	APTOS  = NativeAsset("APTOS")  // APTOS
 	ArbETH = NativeAsset("ArbETH") // Arbitrum
 	ATOM   = NativeAsset("ATOM")   // Cosmos
 	AurETH = NativeAsset("AurETH") // Aurora
 	AVAX   = NativeAsset("AVAX")   // Avalanche
+	BCH    = NativeAsset("BCH")    // Bitcoin Cash
 	BNB    = NativeAsset("BNB")    // Binance Coin
+	BTC    = NativeAsset("BTC")    // Bitcoin
 	CELO   = NativeAsset("CELO")   // Celo
 	CHZ    = NativeAsset("CHZ")    // Chiliz
 	CHZ2   = NativeAsset("CHZ2")   // Chiliz 2.0
+	DOGE   = NativeAsset("DOGE")   // Dogecoin
 	DOT    = NativeAsset("DOT")    // Polkadot
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
@@ -44,6 +40,7 @@ const (
 	FTM    = NativeAsset("FTM")    // Fantom
 	HASH   = NativeAsset("HASH")   // Provenance
 	INJ    = NativeAsset("INJ")    // Injective
+	LTC    = NativeAsset("LTC")    // Litecoin
 	LUNA   = NativeAsset("LUNA")   // Terra V2
 	LUNC   = NativeAsset("LUNC")   // Terra Classic
 	KAR    = NativeAsset("KAR")    // Karura
