@@ -333,7 +333,7 @@ crosschain:
 			return true
 		})
 
-		require.Equal(tc.expectedNetwork, f.Config.Network)
+		require.EqualValues(tc.expectedNetwork, f.Config.Network)
 		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
 		eth, err := f.GetAssetConfig("", "ETH")
 		require.NoError(err)

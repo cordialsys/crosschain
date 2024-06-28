@@ -8,12 +8,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type NetworkSetting string
+
+var Mainnet NetworkSetting = "mainnet"
+var Testnet NetworkSetting = "testnet"
+
 // Config is the full config containing all Assets
 type Config struct {
 	// which network to default to: "mainnet" or "testnet"
 	// Default: "testnet"
 
-	Network string `yaml:"network"`
+	Network NetworkSetting `yaml:"network"`
 	// map of lowercase(native_asset) -> NativeAssetObject
 	Chains map[string]*xc.ChainConfig `yaml:"chains"`
 	// map of lowercase(id) -> TokenAssetConfig

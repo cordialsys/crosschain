@@ -20,7 +20,7 @@ type Client struct {
 	Asset   xc.ITask
 	URL     string
 	Http    *http.Client
-	Network string
+	Network xc.NetworkSelector
 }
 
 var _ xclient.FullClient = &Client{}
@@ -91,7 +91,7 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 		return nil, err
 	}
 	if client.Network != "" {
-		req.Header.Add("network", client.Network)
+		req.Header.Add("network", string(client.Network))
 	}
 
 	// Send the request

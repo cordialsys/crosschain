@@ -464,14 +464,14 @@ func (s *CrosschainTestSuite) TestConfigDefaults() {
 	require.NotNil(cfg)
 
 	// default should be mainnet
-	require.Equal("mainnet", cfg.Network)
+	require.EqualValues("mainnet", cfg.Network)
 
 	// now if we set XC_TESTNET, it should be testnet defaults
 	os.Setenv("XC_TESTNET", "1")
 	defer os.Unsetenv("XC_TESTNET")
 	f = NewDefaultFactory()
 	cfg = f.GetConfig()
-	require.Equal("testnet", cfg.Network)
+	require.EqualValues("testnet", cfg.Network)
 
 	os.RemoveAll(tmpPath)
 }

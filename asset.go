@@ -179,17 +179,23 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 	return ""
 }
 
-// AssetID is an internal identifier for each asset
+// AssetID is an internal identifier for each asset (legacy/deprecated)
 // Examples: ETH, USDC, USDC.SOL - see tests for details
 type AssetID string
 
+// Network selector is used by crosschain client to select which network of a blockchain to select.
+type NetworkSelector string
+
+const Mainnets NetworkSelector = ""
+const NotMainnets NetworkSelector = "!mainnet"
+
 // ClientConfig is the model used to represent a client inside an AssetConfig
 type ClientConfig struct {
-	Driver   Driver `yaml:"driver"`
-	URL      string `yaml:"url,omitempty"`
-	Auth     string `yaml:"auth,omitempty"`
-	Provider string `yaml:"provider,omitempty"`
-	Network  string `yaml:"network,omitempty"`
+	Driver   Driver          `yaml:"driver"`
+	URL      string          `yaml:"url,omitempty"`
+	Auth     string          `yaml:"auth,omitempty"`
+	Provider string          `yaml:"provider,omitempty"`
+	Network  NetworkSelector `yaml:"network,omitempty"`
 }
 
 type ExplorerUrls struct {

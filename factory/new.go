@@ -37,12 +37,12 @@ func NewFactory(options *FactoryOptions) *Factory {
 	if detectMainnetInConfig.Network == "" {
 		// If the user did not pass in a network value, we will consider XC_TESTNET variable.
 		if v := strings.ToLower(os.Getenv("XC_TESTNET")); v == "1" || v == "true" {
-			cfg.Network = "testnet"
+			cfg.Network = factoryconfig.Testnet
 		}
 	}
 
 	switch cfg.Network {
-	case "mainet":
+	case "mainnet":
 		// done
 	case "testnet":
 		cfg = factoryconfig.Config{Network: cfg.Network}
@@ -52,9 +52,20 @@ func NewFactory(options *FactoryOptions) *Factory {
 		}
 	default:
 		// default to use mainnet to avoid using testnet by accident.
-		cfg.Network = "mainnet"
+		cfg.Network = factoryconfig.Mainnet
 	}
 
+	return NewDefaultFactoryWithConfig(&cfg, options)
+}
+
+func NewNotMainnetsFactory(options *FactoryOptions) *Factory {
+	cfg := factoryconfig.Config{}
+	err := config.RequireConfig("crosschain", &cfg, defaults.Testnet)
+	if err != nil {
+		panic(err)
+	}
+
+	cfg.Network = factoryconfig.Testnet
 	return NewDefaultFactoryWithConfig(&cfg, options)
 }
 

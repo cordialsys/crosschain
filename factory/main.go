@@ -511,6 +511,13 @@ func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
 	return privateKey
 }
 
+func (f *Factory) GetNetworkSelector() NetworkSelector {
+	if f.Config.Network == config.Mainnet {
+		return Mainnets
+	}
+	return NotMainnets
+}
+
 func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
 	builder, err := drivers.NewAddressBuilder(cfg)
 	if err != nil {
