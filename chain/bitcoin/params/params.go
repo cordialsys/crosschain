@@ -1,4 +1,4 @@
-package bitcoin
+package params
 
 import (
 	"errors"
@@ -6,6 +6,18 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
 )
+
+func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
+	switch xc.NativeAsset(cfg.Chain) {
+	case xc.BTC, xc.BCH:
+		return BtcNetworks.GetParams(cfg.Net), nil
+	case xc.DOGE:
+		return DogeNetworks.GetParams(cfg.Net), nil
+	case xc.LTC:
+		return LtcNetworks.GetParams(cfg.Net), nil
+	}
+	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Chain))
+}
 
 // UTXO chains have mainnet, testnet, and regtest/devnet network types built in.
 type Network string
@@ -54,18 +66,6 @@ func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
 	default:
 		return n.Regtest
 	}
-}
-
-func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
-	switch xc.NativeAsset(cfg.Chain) {
-	case xc.BTC, xc.BCH:
-		return BtcNetworks.GetParams(cfg.Net), nil
-	case xc.DOGE:
-		return DogeNetworks.GetParams(cfg.Net), nil
-	case xc.LTC:
-		return LtcNetworks.GetParams(cfg.Net), nil
-	}
-	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Chain))
 }
 
 var BtcNetworks *NetworkTriple = &NetworkTriple{

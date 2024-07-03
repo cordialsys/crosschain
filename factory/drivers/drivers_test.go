@@ -7,7 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/evm_legacy"
@@ -155,7 +155,7 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 		case xc.DriverAptos:
 			input = aptos.NewTxInput()
 		case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
-			input = bitcoin.NewTxInput()
+			input = bitcointxinput.NewTxInput()
 		case xc.DriverSui:
 			input = sui.NewTxInput()
 		case xc.DriverSubstrate:

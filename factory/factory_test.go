@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/chain/solana"
@@ -512,16 +512,16 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require.Equal(expected, typedCosmos)
 
 	// Bitcoin
-	inputBtc := bitcoin.NewTxInput()
-	inputBtc.UnspentOutputs = []bitcoin.Output{
+	inputBtc := bitcointxinput.NewTxInput()
+	inputBtc.UnspentOutputs = []bitcointxinput.Output{
 		{
-			Outpoint: bitcoin.Outpoint{
+			Outpoint: bitcointxinput.Outpoint{
 				Index: 1,
 			},
 			Value: xc.NewAmountBlockchainFromUint64(100),
 		},
 		{
-			Outpoint: bitcoin.Outpoint{
+			Outpoint: bitcointxinput.Outpoint{
 				Index: 2,
 			},
 			Value: xc.NewAmountBlockchainFromUint64(200),
@@ -534,8 +534,8 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 
 	require.Equal(inputBtc.UnspentOutputs[0].Value.String(), "100")
 	require.Equal(inputBtc.UnspentOutputs[1].Value.String(), "200")
-	require.EqualValues(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[0].Outpoint.Index, 1)
-	require.EqualValues(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Outpoint.Index, 2)
-	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[0].Value.String(), "100")
-	require.Equal(inputBtc2.(*bitcoin.TxInput).UnspentOutputs[1].Value.String(), "200")
+	require.EqualValues(inputBtc2.(*bitcointxinput.TxInput).UnspentOutputs[0].Outpoint.Index, 1)
+	require.EqualValues(inputBtc2.(*bitcointxinput.TxInput).UnspentOutputs[1].Outpoint.Index, 2)
+	require.Equal(inputBtc2.(*bitcointxinput.TxInput).UnspentOutputs[0].Value.String(), "100")
+	require.Equal(inputBtc2.(*bitcointxinput.TxInput).UnspentOutputs[1].Value.String(), "200")
 }

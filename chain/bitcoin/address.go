@@ -5,6 +5,7 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 )
 
 // AddressBuilder for Bitcoin
@@ -17,7 +18,7 @@ var _ xc.AddressBuilder = &AddressBuilder{}
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
 func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
-	params, err := GetParams(asset.GetChain())
+	params, err := params.GetParams(asset.GetChain())
 	if err != nil {
 		return AddressBuilder{}, err
 	}

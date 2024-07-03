@@ -10,6 +10,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/params"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,7 +41,7 @@ func (*BtcAddressDecoder) Decode(addr xc.Address, params *chaincfg.Params) (btcu
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 	native := cfgI.GetChain()
-	params, err := GetParams(native)
+	params, err := params.GetParams(native)
 	if err != nil {
 		return TxBuilder{}, err
 	}
@@ -70,10 +73,10 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 
-	var local_input *TxInput
+	var local_input *tx_input.TxInput
 	var ok bool
-	if local_input, ok = (input.(*TxInput)); !ok {
-		return &Tx{}, errors.New("xc.TxInput is not from a bitcoin chain")
+	if local_input, ok = (input.(*tx_input.TxInput)); !ok {
+		return &tx.Tx{}, errors.New("xc.TxInput is not from a bitcoin chain")
 	}
 	// Only need to save min utxo for the transfer.
 	totalSpend := local_input.SumUtxo()
@@ -88,7 +91,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 	transferAmountAndFee := amount.Add(&fee)
 	unspentAmountMinusTransferAndFee := totalSpend.Sub(&transferAmountAndFee)
-	recipients := []Recipient{
+	recipients := []tx.Recipient{
 		{
 			To:    to,
 			Value: amount,
@@ -125,7 +128,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		msgTx.AddTxOut(wire.NewTxOut(value, script))
 	}
 
-	tx := Tx{
+	tx := tx.Tx{
 		MsgTx: msgTx,
 
 		From:   from,

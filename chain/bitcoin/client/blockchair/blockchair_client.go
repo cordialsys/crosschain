@@ -1,4 +1,4 @@
-package bitcoin
+package blockchair
 
 import (
 	"bytes"
@@ -12,18 +12,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/params"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	log "github.com/sirupsen/logrus"
 )
 
 // Client for Bitcoin
 type BlockchairClient struct {
-	opts            ClientOptions
+	// opts            ClientOptions
 	httpClient      http.Client
 	Asset           xc.ITask
 	EstimateGasFunc xclient.EstimateGasFunc
+	Chaincfg        *chaincfg.Params
+	Url             string
+	ApiKey          string
+	Timeout         time.Duration
 }
 
 var _ xclient.FullClient = &BlockchairClient{}
@@ -32,21 +40,20 @@ var _ xclient.FullClient = &BlockchairClient{}
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
-	opts := DefaultClientOptions()
 	httpClient := http.Client{}
-	httpClient.Timeout = opts.Timeout
-	params, err := GetParams(cfg)
+	params, err := params.GetParams(cfg)
 	if err != nil {
 		return &BlockchairClient{}, err
 	}
-	opts.Chaincfg = params
-	opts.Host = cfg.URL
-	opts.Password = cfg.AuthSecret
+
 	if strings.TrimSpace(cfg.AuthSecret) == "" {
-		return &BlockchairClient{}, fmt.Errorf("api token required for blockchair blockchain client")
+		return &BlockchairClient{}, fmt.Errorf("api token required for blockchair blockchain client (set .auth reference)")
 	}
 	return &BlockchairClient{
-		opts:       opts,
+		ApiKey:     cfg.AuthSecret,
+		Url:        cfg.URL,
+		Timeout:    10 * time.Second,
+		Chaincfg:   params,
 		httpClient: httpClient,
 		Asset:      asset,
 	}, nil
@@ -69,7 +76,7 @@ func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return fmt.Errorf("bad tx: %v", err)
 	}
 
-	postUrl := fmt.Sprintf("%s/push/transaction?key=%s", client.opts.Host, client.opts.Password)
+	postUrl := fmt.Sprintf("%s/push/transaction?key=%s", client.Url, client.ApiKey)
 	postData := fmt.Sprintf("data=%s", hex.EncodeToString(serial))
 	log.Debug(postData)
 	res, err := client.httpClient.Post(postUrl, "application/x-www-form-urlencoded", bytes.NewBuffer([]byte(postData)))
@@ -100,9 +107,9 @@ func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return nil
 }
 
-func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, maxConf int64, addr xc.Address) ([]Output, error) {
+func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, maxConf int64, addr xc.Address) ([]tx_input.Output, error) {
 	var data blockchairAddressData
-	res := []Output{}
+	res := []tx_input.Output{}
 
 	_, err := client.send(ctx, &data, "/dashboards/address", string(addr))
 	if err != nil {
@@ -138,8 +145,8 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, max
 		for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
 			hash[i], hash[j] = hash[j], hash[i]
 		}
-		output := Output{
-			Outpoint: Outpoint{
+		output := tx_input.Output{
+			Outpoint: tx_input.Outpoint{
 				Hash:  hash,
 				Index: u.Index,
 			},
@@ -181,7 +188,7 @@ func (client *BlockchairClient) EstimateGasFee(ctx context.Context, numBlocks in
 
 // FetchTxInput returns tx input for a Bitcoin tx
 func (client *BlockchairClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	input := NewTxInput()
+	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
 	if err != nil {
 		return input, err
@@ -266,10 +273,10 @@ type blockchairNotFoundData struct {
 }
 
 func (client *BlockchairClient) send(ctx context.Context, resp interface{}, method string, params ...string) (*BlockchairContext, error) {
-	url := fmt.Sprintf("%s%s?key=%s", client.opts.Host, method, client.opts.Password)
+	url := fmt.Sprintf("%s%s?key=%s", client.Url, method, client.ApiKey)
 	if len(params) > 0 {
 		value := params[0]
-		url = fmt.Sprintf("%s%s/%s?key=%s", client.opts.Host, method, value, client.opts.Password)
+		url = fmt.Sprintf("%s%s/%s?key=%s", client.Url, method, value, client.ApiKey)
 	}
 
 	res, err := client.httpClient.Get(url)
@@ -346,13 +353,13 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	destinations := []*xc.LegacyTxInfoEndpoint{}
 
 	// build Tx
-	tx := &Tx{
-		Input:      NewTxInput(),
-		Recipients: []Recipient{},
+	txObject := &tx.Tx{
+		Input:      tx_input.NewTxInput(),
+		Recipients: []tx.Recipient{},
 		MsgTx:      &wire.MsgTx{},
 		Signed:     true,
 	}
-	inputs := []Input{}
+	inputs := []tx.Input{}
 	// btc chains the native asset and asset are the same
 	asset := client.Asset.GetChain().Chain
 
@@ -360,9 +367,9 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 		hash, _ := hex.DecodeString(in.TxHash)
 		// sigScript, _ := hex.DecodeString(in.ScriptHex)
 
-		input := Input{
-			Output: Output{
-				Outpoint: Outpoint{
+		input := tx.Input{
+			Output: tx_input.Output{
+				Outpoint: tx_input.Outpoint{
 					Hash:  hash,
 					Index: in.Index,
 				},
@@ -372,7 +379,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 			// SigScript: sigScript,
 			Address: xc.Address(in.Recipient),
 		}
-		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
+		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
 		sources = append(sources, &xc.LegacyTxInfoEndpoint{
 			Address:         input.Address,
@@ -384,17 +391,17 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	}
 
 	for _, out := range data.Outputs {
-		recipient := Recipient{
+		recipient := tx.Recipient{
 			To:    xc.Address(out.Recipient),
 			Value: xc.NewAmountBlockchainFromUint64(out.Value),
 		}
-		tx.Recipients = append(tx.Recipients, recipient)
+		txObject.Recipients = append(txObject.Recipients, recipient)
 
 	}
 
 	// detect from, to, amount
-	from, _ := DetectFrom(inputs)
-	to, amount, _ := tx.DetectToAndAmount(from, expectedTo)
+	from, _ := tx.DetectFrom(inputs)
+	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for _, out := range data.Outputs {
 		if out.Recipient != from {
 			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{

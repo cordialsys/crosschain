@@ -9,7 +9,7 @@ import (
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cosmos/btcutil/bech32"
 	"golang.org/x/crypto/ripemd160"
 )
@@ -37,7 +37,7 @@ var (
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
 func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
-	params, err := bitcoin.GetParams(asset.GetChain())
+	params, err := params.GetParams(asset.GetChain())
 	if err != nil {
 		return AddressBuilder{}, err
 	}

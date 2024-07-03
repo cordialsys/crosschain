@@ -1,4 +1,4 @@
-package bitcoin
+package tx
 
 import (
 	"bytes"
@@ -13,29 +13,14 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	log "github.com/sirupsen/logrus"
 )
 
-// A specific output from a transaction
-type Outpoint struct {
-	Hash  []byte `json:"hash"`
-	Index uint32 `json:"index"`
-}
-
-func (o *Outpoint) Equals(other *Outpoint) bool {
-	return bytes.Equal(o.Hash, other.Hash) && o.Index == other.Index
-}
-
-type Output struct {
-	Outpoint     `json:"outpoint"`
-	Value        xc.AmountBlockchain `json:"value"`
-	PubKeyScript []byte              `json:"pubkey_script"`
-}
-
 type Input struct {
-	Output    `json:"output"`
-	SigScript []byte     `json:"sig_script,omitempty"`
-	Address   xc.Address `json:"address,omitempty"`
+	tx_input.Output `json:"output"`
+	SigScript       []byte     `json:"sig_script,omitempty"`
+	Address         xc.Address `json:"address,omitempty"`
 }
 
 type Recipient struct {
@@ -51,7 +36,7 @@ type Tx struct {
 	Signatures []xc.TxSignature
 
 	Amount xc.AmountBlockchain
-	Input  *TxInput
+	Input  *tx_input.TxInput
 	From   xc.Address
 	To     xc.Address
 	// isBch  bool
@@ -211,11 +196,11 @@ func (tx *Tx) Serialize() ([]byte, error) {
 }
 
 // Outputs returns the UTXO outputs in the underlying transaction.
-func (tx *Tx) Outputs() ([]Output, error) {
+func (tx *Tx) Outputs() ([]tx_input.Output, error) {
 	hash := tx.txHashNormal()
-	outputs := make([]Output, len(tx.MsgTx.TxOut))
+	outputs := make([]tx_input.Output, len(tx.MsgTx.TxOut))
 	for i := range outputs {
-		outputs[i].Outpoint = Outpoint{
+		outputs[i].Outpoint = tx_input.Outpoint{
 			Hash:  []byte(hash),
 			Index: uint32(i),
 		}

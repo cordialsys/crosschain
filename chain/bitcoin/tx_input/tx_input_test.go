@@ -1,31 +1,32 @@
-package bitcoin_test
+package tx_input_test
 
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	"github.com/stretchr/testify/require"
 )
 
-func newPoint(hash []byte, index int) bitcoin.Outpoint {
-	return bitcoin.Outpoint{
+func newPoint(hash []byte, index int) tx_input.Outpoint {
+	return tx_input.Outpoint{
 		Hash:  hash,
 		Index: uint32(index),
 	}
 }
-func newInput(points ...bitcoin.Outpoint) *bitcoin.TxInput {
-	input := bitcoin.TxInput{}
+func newInput(points ...tx_input.Outpoint) *tx_input.TxInput {
+	input := tx_input.TxInput{}
 	for _, p := range points {
-		input.UnspentOutputs = append(input.UnspentOutputs, bitcoin.Output{
+		input.UnspentOutputs = append(input.UnspentOutputs, tx_input.Output{
 			Outpoint: p,
 		})
 	}
 	return &input
 }
 
-func (s *CrosschainTestSuite) TestTxInputConflicts() {
-	require := s.Require()
+func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
 		newInput xc.TxInput
 		oldInput xc.TxInput
@@ -100,11 +101,13 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
 		fmt.Println()
 		require.Equal(
+			t,
 			v.newInput.IndependentOf(v.oldInput),
 			v.independent,
 			"IndependentOf",
 		)
 		require.Equal(
+			t,
 			v.newInput.SafeFromDoubleSend(v.oldInput),
 			v.doubleSpendSafe,
 			"SafeFromDoubleSend",
@@ -112,27 +115,26 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
-	require := s.Require()
+func TestTxInputGasMultiplier(t *testing.T) {
 	type testcase struct {
-		input      *bitcoin.TxInput
+		input      *tx_input.TxInput
 		multiplier string
 		result     uint64
 		err        bool
 	}
 	vectors := []testcase{
 		{
-			input:      &bitcoin.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
+			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
 			multiplier: "1.5",
 			result:     150,
 		},
 		{
-			input:      &bitcoin.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
+			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
 			multiplier: "1",
 			result:     100,
 		},
 		{
-			input:      &bitcoin.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
+			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
 			multiplier: "abc",
 			err:        true,
 		},
@@ -141,9 +143,9 @@ func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
 		desc := fmt.Sprintf("testcase %d: mult = %s", i, v.multiplier)
 		err := v.input.SetGasFeePriority(xc.GasFeePriority(v.multiplier))
 		if v.err {
-			require.Error(err, desc)
+			require.Error(t, err, desc)
 		} else {
-			require.Equal(v.result, v.input.GasPricePerByte.Uint64(), desc)
+			require.Equal(t, v.result, v.input.GasPricePerByte.Uint64(), desc)
 		}
 	}
 }

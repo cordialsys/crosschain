@@ -8,23 +8,23 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	"github.com/btcsuite/btcd/txscript"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	log "github.com/sirupsen/logrus"
 )
 
 // Tx for Bitcoin
 type Tx struct {
-	*bitcoin.Tx
+	*tx.Tx
 }
 
-var _ xc.Tx = &Tx{}
+var _ xc.Tx = &tx.Tx{}
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	sighashes := make([]xc.TxDataToSign, len(tx.Input.UnspentOutputs))
+func (txObj *Tx) Sighashes() ([]xc.TxDataToSign, error) {
+	sighashes := make([]xc.TxDataToSign, len(txObj.Input.UnspentOutputs))
 
-	for i, utxo := range tx.Input.UnspentOutputs {
-		txin := bitcoin.Input{
+	for i, utxo := range txObj.Input.UnspentOutputs {
+		txin := tx.Input{
 			Output: utxo,
 		}
 		pubKeyScript := txin.PubKeyScript
@@ -38,9 +38,9 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		var err error
 		log.Debugf("Sighashes params: sigScript=%s IsPayToWitnessPubKeyHash(pubKeyScript)=%t", base64.RawStdEncoding.EncodeToString(sigScript), txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
 		if sigScript == nil {
-			hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
+			hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
 		} else {
-			hash = CalculateBchBip143Sighash(sigScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
+			hash = CalculateBchBip143Sighash(sigScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
 		}
 		if err != nil {
 			return []xc.TxDataToSign{}, err
@@ -53,16 +53,16 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
-	if tx.Signed {
+func (txObj *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+	if txObj.Signed {
 		return fmt.Errorf("already signed")
 	}
-	if len(signatures) != len(tx.MsgTx.TxIn) {
-		return fmt.Errorf("expected %v signatures, got %v signatures", len(tx.MsgTx.TxIn), len(signatures))
+	if len(signatures) != len(txObj.MsgTx.TxIn) {
+		return fmt.Errorf("expected %v signatures, got %v signatures", len(txObj.MsgTx.TxIn), len(signatures))
 	}
 
 	for i, rsvBytes := range signatures {
-		r, s, err := bitcoin.DecodeEcdsaSignature(rsvBytes)
+		r, s, err := tx.DecodeEcdsaSignature(rsvBytes)
 		if err != nil {
 			return err
 		}
@@ -74,19 +74,19 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		sigHashByte := txscript.SigHashAll
 		sigHashByte = sigHashByte | SighashForkID
 		builder.AddData(append(signature.Serialize(), byte(sigHashByte)))
-		builder.AddData(tx.Input.FromPublicKey)
+		builder.AddData(txObj.Input.FromPublicKey)
 		log.Debug("append signature (non-segwit)")
 		// if sigScript != nil {
 		// 	log.Debug("append sigScript (non-segwit)")
 		// 	builder.AddData(sigScript)
 		// }
-		tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
+		txObj.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
 		if err != nil {
 			return err
 		}
 	}
 
-	tx.Signed = true
+	txObj.Signed = true
 	return nil
 }
 

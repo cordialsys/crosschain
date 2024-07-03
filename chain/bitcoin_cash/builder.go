@@ -7,6 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 )
 
 // TxBuilder for Bitcoin
@@ -47,31 +48,25 @@ func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 }
 
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	tx, err := txBuilder.TxBuilder.NewTransfer(from, to, amount, input)
+	txObj, err := txBuilder.TxBuilder.NewTransfer(from, to, amount, input)
 	if err != nil {
-		return tx, err
+		return txObj, err
 	}
-	return &Tx{
-		Tx: tx.(*bitcoin.Tx),
-	}, nil
+	return txObj.(*tx.Tx), nil
 }
 
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	tx, err := txBuilder.TxBuilder.NewNativeTransfer(from, to, amount, input)
+	txObj, err := txBuilder.TxBuilder.NewNativeTransfer(from, to, amount, input)
 	if err != nil {
-		return tx, err
+		return txObj, err
 	}
-	return &Tx{
-		Tx: tx.(*bitcoin.Tx),
-	}, nil
+	return txObj.(*tx.Tx), nil
 }
 
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	tx, err := txBuilder.TxBuilder.NewTokenTransfer(from, to, amount, input)
+	txObj, err := txBuilder.TxBuilder.NewTokenTransfer(from, to, amount, input)
 	if err != nil {
-		return tx, err
+		return txObj, err
 	}
-	return &Tx{
-		Tx: tx.(*bitcoin.Tx),
-	}, nil
+	return txObj.(*tx.Tx), nil
 }

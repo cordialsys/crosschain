@@ -1,4 +1,4 @@
-package bitcoin
+package tx_input
 
 import (
 	"bytes"
@@ -11,6 +11,22 @@ import (
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
+
+// A specific output from a transaction
+type Outpoint struct {
+	Hash  []byte `json:"hash"`
+	Index uint32 `json:"index"`
+}
+
+func (o *Outpoint) Equals(other *Outpoint) bool {
+	return bytes.Equal(o.Hash, other.Hash) && o.Index == other.Index
+}
+
+type Output struct {
+	Outpoint     `json:"outpoint"`
+	Value        xc.AmountBlockchain `json:"value"`
+	PubKeyScript []byte              `json:"pubkey_script"`
+}
 
 // TxInput for Bitcoin
 type TxInput struct {

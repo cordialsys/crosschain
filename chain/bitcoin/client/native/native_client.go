@@ -1,4 +1,4 @@
-package bitcoin
+package native
 
 import (
 	"bytes"
@@ -19,6 +19,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/params"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
 	"go.mongodb.org/mongo-driver/mongo/address"
@@ -72,8 +75,6 @@ type NativeClient struct {
 
 var _ xclient.Client = &NativeClient{}
 
-var NewClient = NewBlockchairClient
-
 // NewClient returns a new Bitcoin Client
 func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 	native := cfgI.GetChain()
@@ -81,7 +82,7 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 	httpClient := http.Client{}
 	httpClient.Timeout = opts.Timeout
 	opts.Host = native.URL
-	params, err := GetParams(native)
+	params, err := params.GetParams(native)
 	if err != nil {
 		return &NativeClient{}, err
 	}
@@ -95,7 +96,7 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 
 // FetchTxInput returns tx input for a Bitcoin tx
 func (client *NativeClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	input := NewTxInput()
+	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
 	if err != nil {
 		return input, err
@@ -145,23 +146,23 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 	destinations := []*xc.LegacyTxInfoEndpoint{}
 
 	data, _ := hex.DecodeString(resp.Hex)
-	tx := &Tx{
-		Input:  NewTxInput(),
+	txObject := &tx.Tx{
+		Input:  tx_input.NewTxInput(),
 		MsgTx:  &wire.MsgTx{},
 		Signed: true,
 	}
-	tx.MsgTx.Deserialize(bytes.NewReader(data))
-	inputs := []Input{}
+	txObject.MsgTx.Deserialize(bytes.NewReader(data))
+	inputs := []tx.Input{}
 	// btc chains the native asset and asset are the same
 	asset := client.Asset.GetChain().Chain
 
 	// extract tx.inputs
 	// this is just raw data from the blockchain
-	for _, txIn := range tx.MsgTx.TxIn {
+	for _, txIn := range txObject.MsgTx.TxIn {
 		hash := make([]byte, len(txIn.PreviousOutPoint.Hash))
 		copy(hash[:], txIn.PreviousOutPoint.Hash[:])
 
-		outpoint := Outpoint{
+		outpoint := tx_input.Outpoint{
 			Hash:  hash,
 			Index: txIn.PreviousOutPoint.Index,
 		}
@@ -173,12 +174,12 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 		if err != nil || len(addresses) != 1 {
 			return xc.LegacyTxInfo{}, fmt.Errorf("error extracting address from input: %v", err)
 		}
-		input := Input{
+		input := tx.Input{
 			Output:  output,
 			Address: xc.Address(addresses[0].String()),
 		}
 		inputs = append(inputs, input)
-		tx.Input.UnspentOutputs = append(tx.Input.UnspentOutputs, input.Output)
+		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		sources = append(sources, &xc.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
@@ -191,14 +192,14 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 	// detect from address
 	// single input: from is the address of the single input = unspent output
 	// multiple inputs: from is the address of the unspent output with highest value
-	from, totalIn := DetectFrom(inputs)
+	from, totalIn := tx.DetectFrom(inputs)
 
 	// detect recipient addresses and fields: to, amount
 	// two outputs:
 	// - to is the address which is not the sender
 	// - amount is the value received
 	// more outputs: not really well defined, currently the last recipient
-	outputs, _ := tx.Outputs()
+	outputs, _ := txObject.Outputs()
 	for _, output := range outputs {
 		value := output.Value
 		_, addresses, _, err := txscript.ExtractPkScriptAddrs(output.PubKeyScript, client.opts.Chaincfg)
@@ -206,11 +207,11 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 			return xc.LegacyTxInfo{}, fmt.Errorf("error extracting address from output: %v", err)
 		}
 		recipientAddr := addresses[0].String()
-		recipient := Recipient{
+		recipient := tx.Recipient{
 			To:    xc.Address(recipientAddr),
 			Value: value,
 		}
-		tx.Recipients = append(tx.Recipients, recipient)
+		txObject.Recipients = append(txObject.Recipients, recipient)
 		destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 			Address:         xc.Address(recipientAddr),
 			ContractAddress: "",
@@ -220,7 +221,7 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 		})
 	}
 
-	to, amount, totalOut := tx.DetectToAndAmount(from, expectedTo)
+	to, amount, totalOut := txObject.DetectToAndAmount(from, expectedTo)
 	if resp.Fee == 0 && totalIn.Cmp(&totalOut) > 0 {
 		newfee := totalIn.Sub(&totalOut)
 		fee = (*big.Int)(&newfee)
@@ -295,30 +296,30 @@ func (client *NativeClient) send(ctx context.Context, resp interface{}, method s
 }
 
 // UnspentOutputs spendable by the given address.
-func (client *NativeClient) UnspentOutputs(ctx context.Context, minConf, maxConf int64, addr xc.Address) ([]Output, error) {
+func (client *NativeClient) UnspentOutputs(ctx context.Context, minConf, maxConf int64, addr xc.Address) ([]tx_input.Output, error) {
 	resp := []btcjson.ListUnspentResult{}
 	if err := client.send(ctx, &resp, "listunspent", minConf, maxConf, []string{string(addr)}); err != nil && err != io.EOF {
-		return []Output{}, fmt.Errorf("bad \"listunspent\": %v", err)
+		return []tx_input.Output{}, fmt.Errorf("bad \"listunspent\": %v", err)
 	}
-	outputs := make([]Output, len(resp))
+	outputs := make([]tx_input.Output, len(resp))
 	for i := range outputs {
 		amount, err := btcutil.NewAmount(resp[i].Amount)
 		if err != nil {
-			return []Output{}, fmt.Errorf("bad amount: %v", err)
+			return []tx_input.Output{}, fmt.Errorf("bad amount: %v", err)
 		}
 		if amount < 0 {
-			return []Output{}, fmt.Errorf("bad amount: %v", amount)
+			return []tx_input.Output{}, fmt.Errorf("bad amount: %v", amount)
 		}
 		pubKeyScript, err := hex.DecodeString(resp[i].ScriptPubKey)
 		if err != nil {
-			return []Output{}, fmt.Errorf("bad pubkey script: %v", err)
+			return []tx_input.Output{}, fmt.Errorf("bad pubkey script: %v", err)
 		}
 		txid, err := chainhash.NewHashFromStr(resp[i].TxID)
 		if err != nil {
-			return []Output{}, fmt.Errorf("bad txid: %v", err)
+			return []tx_input.Output{}, fmt.Errorf("bad txid: %v", err)
 		}
-		outputs[i] = Output{
-			Outpoint: Outpoint{
+		outputs[i] = tx_input.Output{
+			Outpoint: tx_input.Outpoint{
 				Hash:  txid[:],
 				Index: resp[i].Vout,
 			},
@@ -415,29 +416,29 @@ func (client *NativeClient) LatestBlock(ctx context.Context) (uint64, error) {
 }
 
 // Output associated with an outpoint, and its number of confirmations.
-func (client *NativeClient) Output(ctx context.Context, outpoint Outpoint) (Output, uint64, error) {
+func (client *NativeClient) Output(ctx context.Context, outpoint tx_input.Outpoint) (tx_input.Output, uint64, error) {
 	resp := btcjson.TxRawResult{}
 	hash := chainhash.Hash{}
 	copy(hash[:], outpoint.Hash)
 	if err := client.send(ctx, &resp, "getrawtransaction", hash.String(), 1); err != nil {
-		return Output{}, 0, fmt.Errorf("bad \"getrawtransaction\": %v", err)
+		return tx_input.Output{}, 0, fmt.Errorf("bad \"getrawtransaction\": %v", err)
 	}
 	if outpoint.Index >= uint32(len(resp.Vout)) {
-		return Output{}, 0, fmt.Errorf("bad index: %v is out of range", outpoint.Index)
+		return tx_input.Output{}, 0, fmt.Errorf("bad index: %v is out of range", outpoint.Index)
 	}
 	vout := resp.Vout[outpoint.Index]
 	amount, err := btcutil.NewAmount(vout.Value)
 	if err != nil {
-		return Output{}, 0, fmt.Errorf("bad amount: %v", err)
+		return tx_input.Output{}, 0, fmt.Errorf("bad amount: %v", err)
 	}
 	if amount < 0 {
-		return Output{}, 0, fmt.Errorf("bad amount: %v", amount)
+		return tx_input.Output{}, 0, fmt.Errorf("bad amount: %v", amount)
 	}
 	pubKeyScript, err := hex.DecodeString(vout.ScriptPubKey.Hex)
 	if err != nil {
-		return Output{}, 0, fmt.Errorf("bad pubkey script: %v", err)
+		return tx_input.Output{}, 0, fmt.Errorf("bad pubkey script: %v", err)
 	}
-	output := Output{
+	output := tx_input.Output{
 		Outpoint:     outpoint,
 		Value:        xc.NewAmountBlockchainFromUint64(uint64(amount)),
 		PubKeyScript: pubKeyScript,

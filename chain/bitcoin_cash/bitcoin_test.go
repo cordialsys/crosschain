@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -91,8 +92,8 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 			to := xc.Address(addr)
 			amount := xc.NewAmountBlockchainFromUint64(1)
-			input := &bitcoin.TxInput{
-				UnspentOutputs: []bitcoin.Output{{
+			input := &tx_input.TxInput{
+				UnspentOutputs: []tx_input.Output{{
 					Value: xc.NewAmountBlockchainFromUint64(1000),
 				}},
 				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
@@ -104,8 +105,8 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 			require.Len(hash, 64)
 
 			// Having not enough balance for fees will be an error
-			input_small := &bitcoin.TxInput{
-				UnspentOutputs: []bitcoin.Output{{
+			input_small := &tx_input.TxInput{
+				UnspentOutputs: []tx_input.Output{{
 					Value: xc.NewAmountBlockchainFromUint64(5),
 				}},
 				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
@@ -138,8 +139,8 @@ func (s *CrosschainTestSuite) TestTxHash() {
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
 	amount := xc.NewAmountBlockchainFromUint64(1)
-	input := &bitcoin.TxInput{
-		UnspentOutputs: []bitcoin.Output{{
+	input := &tx_input.TxInput{
+		UnspentOutputs: []tx_input.Output{{
 			Value: xc.NewAmountBlockchainFromUint64(1000),
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
@@ -147,15 +148,15 @@ func (s *CrosschainTestSuite) TestTxHash() {
 	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)
 
-	tx := tf.(*Tx)
+	tx := tf.(*tx.Tx)
 	require.Equal(xc.TxHash("0ebdd0e519cf4bf67ac4d924c07e3312483b09844c9f16f46c04f5fe1500c788"), tx.Hash())
 }
 
 func (s *CrosschainTestSuite) TestTxSighashes() {
 	require := s.Require()
 	tx := Tx{
-		&bitcoin.Tx{
-			Input: &bitcoin.TxInput{},
+		&tx.Tx{
+			Input: &tx_input.TxInput{},
 		},
 	}
 	sighashes, err := tx.Sighashes()
