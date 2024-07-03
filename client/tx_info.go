@@ -1,12 +1,14 @@
 package client
 
 import (
+	"math/big"
 	"path/filepath"
 	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/normalize"
+	"github.com/tidwall/btree"
 )
 
 type TransactionName string
@@ -50,57 +52,178 @@ func (name TransactionName) Chain() string {
 	}
 }
 
-type Balances map[AssetName]xc.AmountBlockchain
+type Balance struct {
+	Asset    AssetName              `json:"asset"`
+	Contract xc.ContractAddress     `json:"contract"`
+	Balance  xc.AmountBlockchain    `json:"balance"`
+	Amount   xc.AmountHumanReadable `json:"amount,omitempty"`
+}
+
+func NewBalance(chain xc.NativeAsset, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) *Balance {
+	assetName := NewAssetName(chain, string(contract))
+	var amount xc.AmountHumanReadable
+	return &Balance{
+		assetName,
+		contract,
+		balance,
+		amount,
+	}
+}
+
+type LegacyBalances map[AssetName]xc.AmountBlockchain
 type TransferSource struct {
 	From   AddressName         `json:"from"`
 	Asset  AssetName           `json:"asset"`
 	Amount xc.AmountBlockchain `json:"amount"`
 }
 
+type BalanceChange struct {
+	Asset    AssetName              `json:"asset"`
+	Contract xc.ContractAddress     `json:"contract"`
+	Balance  xc.AmountBlockchain    `json:"balance"`
+	Amount   xc.AmountHumanReadable `json:"amount,omitempty"`
+	Address  AddressName            `json:"address"`
+}
 type Transfer struct {
-	// required: from address(es) involved in sending the amount
-	From []AddressName `json:"from"`
-	// required: destination address
-	To AddressName `json:"to"`
-	// required: the asset sent (chain + asset contract)
-	Asset AssetName `json:"asset"`
-	// required: the amount of the asset sent
-	Amount xc.AmountBlockchain `json:"amount"`
+	// required: source debits
+	From []*BalanceChange `json:"from"`
+	// required: destination credits
+	To []*BalanceChange `json:"to"`
+
+	chain xc.NativeAsset
 }
 
-// This should match stoplight
+type Block struct {
+	// required: set the blockheight of the transaction
+	Height uint64 `json:"block_height"`
+	// required: set the hash of the block of the transaction
+	Hash string `json:"block_hash"`
+	// required: set the time of the block of the transaction
+	Time time.Time `json:"block_time"`
+}
+
+// This should roughly match stoplight
 type TxInfo struct {
-	// required: set the transaction name (chain + hash)
-	Name TransactionName `json:"name"`
 	// required: set the transaction hash/id
 	Hash string `json:"hash"`
 	// required: set the chain
 	Chain xc.NativeAsset `json:"chain"`
-	// required: set any fees paid
-	Fees Balances `json:"fees"`
+
+	// required: set the block info
+	Block *Block `json:"block"`
+
 	// required: set any movements
 	Transfers []*Transfer `json:"transfers"`
 
-	// optional: inform sources funding the transfers
-	// this is used to indicate utxo/inputs in utxo chains.
-	Sources []*TransferSource `json:"sources"`
-
-	// optional: set the signer or fee payer of the transaction
-	// often this is just the from address, but may not be applicable in utxo chains.
-	Sender AddressName `json:"sender"`
-
-	// required: set the blockheight of the transaction
-	BlockHeight uint64 `json:"block_height"`
+	// output-only: calculate via .CalcuateFees() method
+	Fees []*Balance `json:"fees"`
 
 	// required: set the confirmations at time of querying the info
 	Confirmations uint64 `json:"confirmations"`
-
-	// required: set the hash of the block of the transaction
-	BlockHash string `json:"block_hash"`
-	// required: set the time of the block of the transaction
-	BlockTime time.Time `json:"block_time"`
 	// optional: set the error of the transaction if there was an error
-	Error string `json:"error"`
+	Error *string `json:"error,omitempty"`
+}
+
+func NewBlock(height uint64, hash string, time time.Time) *Block {
+	return &Block{
+		height,
+		hash,
+		time,
+	}
+}
+
+func NewBalanceChange(chain xc.NativeAsset, contract xc.ContractAddress, address xc.Address, balance xc.AmountBlockchain, decimals *int) *BalanceChange {
+	if contract == "" {
+		contract = xc.ContractAddress(chain)
+	}
+	asset := NewAssetName(chain, string(contract))
+	addressName := NewAddressName(chain, string(address))
+	var amount xc.AmountHumanReadable
+
+	return &BalanceChange{
+		asset,
+		contract,
+		balance,
+		amount,
+		addressName,
+	}
+}
+
+func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations uint64, err *string) *TxInfo {
+	transfers := []*Transfer{}
+	fees := []*Balance{}
+	return &TxInfo{
+		hash,
+		chain,
+		block,
+		transfers,
+		fees,
+		confirmations,
+		err,
+	}
+}
+func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
+	tf := NewTransfer(info.Chain)
+	tf.AddSource(from, contract, balance, decimals)
+	tf.AddDestination(to, contract, balance, decimals)
+	info.Transfers = append(info.Transfers, tf)
+}
+
+func (info *TxInfo) AddFee(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
+	tf := NewTransfer(info.Chain)
+	tf.AddSource(from, contract, balance, decimals)
+	// no destination
+	info.Transfers = append(info.Transfers, tf)
+}
+func (info *TxInfo) AddTransfer(transfer *Transfer) {
+	info.Transfers = append(info.Transfers, transfer)
+}
+
+func (info *TxInfo) CalculateFees() []*Balance {
+	// use btree map to get deterministic order
+	var netBalances = btree.NewMap[AssetName, *big.Int](1)
+	contracts := map[AssetName]xc.ContractAddress{}
+	for _, tf := range info.Transfers {
+		for _, from := range tf.From {
+			netBalances.Set(from.Asset, xc.NewAmountBlockchainFromUint64(0).Int())
+			contracts[from.Asset] = from.Contract
+		}
+		for _, to := range tf.To {
+			netBalances.Set(to.Asset, xc.NewAmountBlockchainFromUint64(0).Int())
+			contracts[to.Asset] = to.Contract
+		}
+	}
+	for _, tf := range info.Transfers {
+		for _, from := range tf.From {
+			bal, _ := netBalances.GetMut(from.Asset)
+			bal.Add(bal, from.Balance.Int())
+		}
+
+		for _, to := range tf.To {
+			bal, _ := netBalances.GetMut(to.Asset)
+			bal.Sub(bal, to.Balance.Int())
+		}
+	}
+	balances := []*Balance{}
+	zero := big.NewInt(0)
+	netBalances.Ascend("", func(asset AssetName, net *big.Int) bool {
+		if net.Cmp(zero) != 0 {
+			balances = append(balances, NewBalance(info.Chain, contracts[asset], xc.AmountBlockchain(*net), nil))
+		}
+		return true
+	})
+	return balances
+}
+
+func NewTransfer(chain xc.NativeAsset) *Transfer {
+	return &Transfer{chain: chain}
+}
+
+func (tf *Transfer) AddSource(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
+	tf.From = append(tf.From, NewBalanceChange(tf.chain, contract, from, balance, decimals))
+}
+func (tf *Transfer) AddDestination(to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
+	tf.To = append(tf.To, NewBalanceChange(tf.chain, contract, to, balance, decimals))
 }
 
 type LegacyTxInfoMappingType string
@@ -109,69 +232,45 @@ var Utxo LegacyTxInfoMappingType = "utxo"
 var Account LegacyTxInfoMappingType = "account"
 
 func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
-	fees := Balances{}
-	fees[NewAssetName(
+	var errMsg *string
+	if legacyTx.Error != "" {
+		errMsg = &legacyTx.Error
+	}
+	txInfo := NewTxInfo(
+		NewBlock(uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
 		chain,
-		string(chain),
-	)] = legacyTx.Fee
-	sources := []*TransferSource{}
-	transfers := []*Transfer{}
+		legacyTx.TxID,
+		uint64(legacyTx.Confirmations),
+		errMsg,
+	)
+
 	if mappingType == Utxo {
-		// utxo movements should be mapped as many-to-one
-		fromAddresses := []AddressName{}
+		// utxo movements should be mapped as one large multitransfer
+		tf := NewTransfer(chain)
 		for _, source := range legacyTx.Sources {
-			from := NewAddressName(chain, string(source.Address))
-			sources = append(sources, &TransferSource{
-				From:   from,
-				Asset:  NewAssetName(chain, string(source.ContractAddress)),
-				Amount: source.Amount,
-			})
-			fromAddresses = append(fromAddresses, from)
+			tf.AddSource(source.Address, source.ContractAddress, source.Amount, nil)
 		}
 
 		for _, dest := range legacyTx.Destinations {
-			transfer := &Transfer{
-				From:   fromAddresses,
-				To:     NewAddressName(chain, string(dest.Address)),
-				Asset:  NewAssetName(chain, string(dest.ContractAddress)),
-				Amount: dest.Amount,
-			}
-			transfers = append(transfers, transfer)
+			tf.AddDestination(dest.Address, dest.ContractAddress, dest.Amount, nil)
 		}
-
+		txInfo.AddTransfer(tf)
 	} else {
 		// map as one-to-one
 		for i, dest := range legacyTx.Destinations {
-			fromAddr := string(legacyTx.From)
+			fromAddr := legacyTx.From
 			if i < len(legacyTx.Sources) {
-				fromAddr = string(legacyTx.Sources[i].Address)
+				fromAddr = legacyTx.Sources[i].Address
 			}
 
-			transfer := &Transfer{
-				From:   []AddressName{NewAddressName(chain, fromAddr)},
-				To:     NewAddressName(chain, string(dest.Address)),
-				Asset:  NewAssetName(chain, string(dest.ContractAddress)),
-				Amount: dest.Amount,
-			}
-			transfers = append(transfers, transfer)
+			txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil)
 		}
 	}
-
-	info := TxInfo{
-		Name: NewTransactionName(chain, legacyTx.TxID),
-		// Copy over chain/txHash as well to protect from name normalize mangling
-		Chain: chain,
-		Hash:  legacyTx.TxID,
-
-		Fees:          fees,
-		Transfers:     transfers,
-		Sources:       sources,
-		Sender:        NewAddressName(chain, string(legacyTx.From)),
-		BlockHeight:   uint64(legacyTx.BlockIndex),
-		Confirmations: uint64(legacyTx.Confirmations),
-		BlockHash:     legacyTx.BlockHash,
-		BlockTime:     time.Unix(legacyTx.BlockTime, 0),
-		Error:         legacyTx.Error,
+	zero := big.NewInt(0)
+	if legacyTx.Fee.Cmp((*xc.AmountBlockchain)(zero)) != 0 {
+		txInfo.AddFee(legacyTx.From, "", legacyTx.Fee, nil)
 	}
-	return info
+
+	txInfo.Fees = txInfo.CalculateFees()
+	return *txInfo
 }

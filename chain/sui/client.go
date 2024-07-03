@@ -231,6 +231,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 		return xclient.TxInfo{}, err
 	}
 
+	// delete the fee to avoid double counting.
+	// Sui, like btc, counts fee as difference between total sent and recv, which is already automatically counted.
+	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Utxo), nil
 }
