@@ -63,9 +63,8 @@ chains:
   BCH:
     chain: BCH
     driver: bitcoin-cash
-    url: "https://api.blockchair.com/bitcoin-cash"
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-    provider: blockchair
+    provider: blockbook
     chain_name: Bitcoin Cash
     explorer_url: https://blockchair.com/bitcoin-cash
     decimals: 8
@@ -86,7 +85,7 @@ chains:
     driver: bitcoin
     chain_gas_multiplier: 1.5
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-    provider: blockchair
+    provider: blockbook
     chain_name: Bitcoin
     explorer_url: https://blockchair.com/bitcoin
     decimals: 8
@@ -128,9 +127,8 @@ chains:
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
-    url: "https://api.blockchair.com/dogecoin"
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-    provider: blockchair
+    provider: blockbook
     chain_name: Dogecoin
     explorer_url: https://blockchair.com/dogecoin
     decimals: 8
@@ -214,9 +212,8 @@ chains:
   LTC:
     chain: LTC
     driver: bitcoin-legacy
-    url: https://api.blockchair.com/litecoin
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-    provider: blockchair
+    provider: blockbook
     chain_name: Litecoin
     explorer_url: https://blockchair.com/litecoin
     decimals: 8

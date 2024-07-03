@@ -225,7 +225,7 @@ func DetectFrom(inputs []Input) (string, xc.AmountBlockchain) {
 			max = value
 			from = string(input.Address)
 		}
-		fmt.Println("inputfrom: ", input.Address)
+		// fmt.Println("inputfrom: ", input.Address)
 		totalIn = totalIn.Add(&value)
 	}
 	return from, totalIn
@@ -245,14 +245,15 @@ func (tx *Tx) DetectToAndAmount(from string, expectedTo string) (string, xc.Amou
 			amount = amount.Add(&value)
 		}
 
+		// fmt.Println("from: ", from, "to: ", to)
 		// if we don't know "to", we set "to" as anything different than "from"
-		if expectedTo == "" && addr != from {
+		if to == "" && addr != from {
 			amount = value
 			to = addr
 		}
-		fmt.Println("recipient to: ", recipient.To)
 
 		totalOut = totalOut.Add(&value)
 	}
+	// fmt.Println("recipient to: ", to, amount.String())
 	return to, amount, totalOut
 }

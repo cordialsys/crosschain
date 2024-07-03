@@ -19,6 +19,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 )
 
 type BlockbookClient struct {
@@ -52,7 +53,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) {
 	var stats StatsResponse
 
-	err := client.get(ctx, "/api", &stats)
+	err := client.get(ctx, "/api/v2", &stats)
 	if err != nil {
 		return 0, err
 	}
@@ -134,7 +135,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	if data.BlockHeight > 0 {
 		txWithInfo.BlockTime = timestamp.Unix()
 		txWithInfo.BlockIndex = int64(data.BlockHeight)
-		// txWithInfo.BlockHash = n/a
+		txWithInfo.BlockHash = data.BlockHash
 		txWithInfo.Confirmations = int64(latestBlock) - int64(data.BlockHeight) + 1
 		txWithInfo.Status = xc.TxStatusSuccess
 	}
@@ -193,7 +194,6 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 			recipient.To = xc.Address(out.Addresses[0])
 		}
 		txObject.Recipients = append(txObject.Recipients, recipient)
-
 	}
 
 	// detect from, to, amount
@@ -280,8 +280,11 @@ func (client *BlockbookClient) FetchTxInput(ctx context.Context, from xc.Address
 }
 
 func (client *BlockbookClient) get(ctx context.Context, path string, resp interface{}) error {
+	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("%s/%s", client.Url, path)
-
+	logrus.WithFields(logrus.Fields{
+		"url": url,
+	}).Debug("get")
 	res, err := client.httpClient.Get(url)
 	if err != nil {
 		return fmt.Errorf("blockbook get failed: %v", err)
@@ -312,7 +315,10 @@ func (client *BlockbookClient) get(ctx context.Context, path string, resp interf
 
 func (client *BlockbookClient) post(ctx context.Context, path string, contentType string, input []byte, resp interface{}) error {
 	url := fmt.Sprintf("%s/%s", client.Url, path)
-
+	logrus.WithFields(logrus.Fields{
+		"url":  url,
+		"body": string(input),
+	}).Debug("post")
 	res, err := client.httpClient.Post(url, contentType, bytes.NewReader(input))
 	if err != nil {
 		return fmt.Errorf("blockbook post failed: %v", err)

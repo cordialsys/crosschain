@@ -43,7 +43,7 @@ chains:
     chain: BTC
     driver: bitcoin
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
-    provider: blockchair
+    provider: blockbook
     chain_name: Bitcoin (Testnet)
     explorer_url: https://blockchair.com/bitcoin/testnet
     decimals: 8

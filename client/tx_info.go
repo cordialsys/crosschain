@@ -53,15 +53,15 @@ func (name TransactionName) Chain() string {
 }
 
 type Balance struct {
-	Asset    AssetName              `json:"asset"`
-	Contract xc.ContractAddress     `json:"contract"`
-	Balance  xc.AmountBlockchain    `json:"balance"`
-	Amount   xc.AmountHumanReadable `json:"amount,omitempty"`
+	Asset    AssetName               `json:"asset"`
+	Contract xc.ContractAddress      `json:"contract"`
+	Balance  xc.AmountBlockchain     `json:"balance"`
+	Amount   *xc.AmountHumanReadable `json:"amount,omitempty"`
 }
 
 func NewBalance(chain xc.NativeAsset, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) *Balance {
 	assetName := NewAssetName(chain, string(contract))
-	var amount xc.AmountHumanReadable
+	var amount *xc.AmountHumanReadable
 	return &Balance{
 		assetName,
 		contract,
@@ -78,11 +78,11 @@ type TransferSource struct {
 }
 
 type BalanceChange struct {
-	Asset    AssetName              `json:"asset"`
-	Contract xc.ContractAddress     `json:"contract"`
-	Balance  xc.AmountBlockchain    `json:"balance"`
-	Amount   xc.AmountHumanReadable `json:"amount,omitempty"`
-	Address  AddressName            `json:"address"`
+	Asset    AssetName               `json:"asset"`
+	Contract xc.ContractAddress      `json:"contract"`
+	Balance  xc.AmountBlockchain     `json:"balance"`
+	Amount   *xc.AmountHumanReadable `json:"amount,omitempty"`
+	Address  AddressName             `json:"address"`
 }
 type Transfer struct {
 	// required: source debits
@@ -95,11 +95,11 @@ type Transfer struct {
 
 type Block struct {
 	// required: set the blockheight of the transaction
-	Height uint64 `json:"block_height"`
+	Height uint64 `json:"height"`
 	// required: set the hash of the block of the transaction
-	Hash string `json:"block_hash"`
+	Hash string `json:"hash"`
 	// required: set the time of the block of the transaction
-	Time time.Time `json:"block_time"`
+	Time time.Time `json:"time"`
 }
 
 // This should roughly match stoplight
@@ -139,7 +139,7 @@ func NewBalanceChange(chain xc.NativeAsset, contract xc.ContractAddress, address
 	}
 	asset := NewAssetName(chain, string(contract))
 	addressName := NewAddressName(chain, string(address))
-	var amount xc.AmountHumanReadable
+	var amount *xc.AmountHumanReadable
 
 	return &BalanceChange{
 		asset,

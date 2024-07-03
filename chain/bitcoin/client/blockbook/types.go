@@ -1,8 +1,6 @@
 package blockbook
 
 import (
-	"time"
-
 	xc "github.com/cordialsys/crosschain"
 )
 
@@ -10,22 +8,22 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 type BlockbookStats struct {
-	Coin            string    `json:"coin"`
-	Host            string    `json:"host"`
-	Version         string    `json:"version"`
-	GitCommit       string    `json:"gitCommit"`
-	BuildTime       time.Time `json:"buildTime"`
-	SyncMode        bool      `json:"syncMode"`
-	InitialSync     bool      `json:"initialSync"`
-	InSync          bool      `json:"inSync"`
-	BestHeight      int64     `json:"bestHeight"`
-	LastBlockTime   time.Time `json:"lastBlockTime"`
-	InSyncMempool   bool      `json:"inSyncMempool"`
-	LastMempoolTime time.Time `json:"lastMempoolTime"`
-	MempoolSize     int       `json:"mempoolSize"`
-	Decimals        int       `json:"decimals"`
-	DBSize          int64     `json:"dbSize"`
-	About           string    `json:"about"`
+	Coin            string `json:"coin"`
+	Host            string `json:"host"`
+	Version         string `json:"version"`
+	GitCommit       string `json:"gitCommit"`
+	BuildTime       string `json:"buildTime"`
+	SyncMode        bool   `json:"syncMode"`
+	InitialSync     bool   `json:"initialSync"`
+	InSync          bool   `json:"inSync"`
+	BestHeight      int64  `json:"bestHeight"`
+	LastBlockTime   string `json:"lastBlockTime"`
+	InSyncMempool   bool   `json:"inSyncMempool"`
+	LastMempoolTime string `json:"lastMempoolTime"`
+	MempoolSize     int    `json:"mempoolSize"`
+	Decimals        int    `json:"decimals"`
+	DBSize          int64  `json:"dbSize"`
+	About           string `json:"about"`
 }
 
 type BackendStats struct {
