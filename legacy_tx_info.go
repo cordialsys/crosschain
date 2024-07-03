@@ -34,4 +34,13 @@ type LegacyTxInfo struct {
 	TimeReceived    int64                   `json:"time_received,omitempty"`
 	// If this transaction failed, this is the reason why.
 	Error string `json:"error,omitempty"`
+	// to support new TxInfo model, we can't drop "change" btc movements
+	droppedBtcDestinations []*LegacyTxInfoEndpoint
+}
+
+func (info *LegacyTxInfo) AddDroppedDestination(dest *LegacyTxInfoEndpoint) {
+	info.droppedBtcDestinations = append(info.droppedBtcDestinations, dest)
+}
+func (info *LegacyTxInfo) GetDroppedBtcDestinations() []*LegacyTxInfoEndpoint {
+	return info.droppedBtcDestinations
 }

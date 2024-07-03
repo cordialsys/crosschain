@@ -104,6 +104,7 @@ type Block struct {
 
 // This should roughly match stoplight
 type TxInfo struct {
+	Name TransactionName `json:"name"`
 	// required: set the transaction hash/id
 	Hash string `json:"hash"`
 	// required: set the chain
@@ -152,7 +153,9 @@ func NewBalanceChange(chain xc.NativeAsset, contract xc.ContractAddress, address
 func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations uint64, err *string) *TxInfo {
 	transfers := []*Transfer{}
 	fees := []*Balance{}
+	name := NewTransactionName(chain, hash)
 	return &TxInfo{
+		name,
 		hash,
 		chain,
 		block,

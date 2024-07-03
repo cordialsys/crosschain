@@ -25,13 +25,11 @@ import (
 // Client for Bitcoin
 type BlockchairClient struct {
 	// opts            ClientOptions
-	httpClient      http.Client
-	Asset           xc.ITask
-	EstimateGasFunc xclient.EstimateGasFunc
-	Chaincfg        *chaincfg.Params
-	Url             string
-	ApiKey          string
-	Timeout         time.Duration
+	httpClient http.Client
+	Asset      xc.ITask
+	Chaincfg   *chaincfg.Params
+	Url        string
+	ApiKey     string
 }
 
 var _ xclient.FullClient = &BlockchairClient{}
@@ -52,7 +50,6 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	return &BlockchairClient{
 		ApiKey:     cfg.AuthSecret,
 		Url:        cfg.URL,
-		Timeout:    10 * time.Second,
 		Chaincfg:   params,
 		httpClient: httpClient,
 		Asset:      asset,
@@ -107,7 +104,7 @@ func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return nil
 }
 
-func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, maxConf int64, addr xc.Address) ([]tx_input.Output, error) {
+func (client *BlockchairClient) UnspentOutputs(ctx context.Context, addr xc.Address) ([]tx_input.Output, error) {
 	var data blockchairAddressData
 	res := []tx_input.Output{}
 
@@ -118,49 +115,14 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, minConf, max
 
 	addressScript, _ := hex.DecodeString(data.Address.ScriptHex)
 
-	// We calculate a threshold of 5% of the total BTC balance
-	// To skip including small valued UTXO as part of the total utxo set.
-	// This is done to avoid the case of including a UTXO from some tx with a very low
-	// fee and making this TX get stuck.  However we'll still include our own remainder
-	// UTXO's or large valued (>5%) UTXO's.
+	utxos := tx_input.FilterUnconfirmedHeuristic(data.Utxo)
+	outputs := tx_input.NewOutputs(utxos, addressScript)
 
-	// TODO a better way to do this would be to do during `.SetAmount` on the txInput,
-	// So we can filter exactly for the target amount we need to send.
-	oneBtc := uint64(1 * 100_000_000)
-	totalSats := uint64(0)
-	for _, u := range data.Utxo {
-		totalSats += u.Value
-	}
-	threshold := uint64(0)
-	if totalSats > oneBtc {
-		threshold = (totalSats * 5) / 100
-	}
-	for _, u := range data.Utxo {
-		if u.Block <= 0 && u.Value < threshold {
-			// do not permit small-valued unconfirmed UTXO
-			continue
-		}
-		hash, _ := hex.DecodeString(u.TxHash)
-		// reverse
-		for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
-			hash[i], hash[j] = hash[j], hash[i]
-		}
-		output := tx_input.Output{
-			Outpoint: tx_input.Outpoint{
-				Hash:  hash,
-				Index: u.Index,
-			},
-			Value:        xc.NewAmountBlockchainFromUint64(u.Value),
-			PubKeyScript: addressScript,
-		}
-		res = append(res, output)
-	}
-
-	return res, nil
+	return outputs, nil
 }
 
 func (client *BlockchairClient) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, address)
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, address)
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if err != nil {
 		return amount, err
@@ -189,7 +151,7 @@ func (client *BlockchairClient) EstimateGasFee(ctx context.Context, numBlocks in
 // FetchTxInput returns tx input for a Bitcoin tx
 func (client *BlockchairClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, xc.Address(from))
 	if err != nil {
 		return input, err
 	}
@@ -201,75 +163,6 @@ func (client *BlockchairClient) FetchTxInput(ctx context.Context, from xc.Addres
 	}
 
 	return input, nil
-}
-
-type blockchairStatsData struct {
-	Blocks       uint64  `json:"blocks"`
-	SuggestedFee float64 `json:"suggested_transaction_fee_per_byte_sat"`
-}
-
-type blockchairStats struct {
-	Data    blockchairStatsData `json:"data"`
-	Context BlockchairContext   `json:"context"`
-}
-
-type blockchairAddressFull struct {
-	ScriptHex string `json:"script_hex"`
-	Balance   uint64 `json:"balance"`
-}
-
-type blockchairTransactionFull struct {
-	Hash    string `json:"hash"`
-	Time    string `json:"time"`
-	Fee     uint64 `json:"fee"`
-	BlockId int64  `json:"block_id"`
-}
-
-type blockchairUTXO struct {
-	// BlockId uint64  `json:"block_id"`
-	TxHash  string `json:"transaction_hash"`
-	Index   uint32 `json:"index"`
-	Value   uint64 `json:"value"`
-	Address string `json:"address,omitempty"`
-	// This will be >0 if the UTXO is confirmed
-	Block int64 `json:"block_id"`
-}
-
-type blockchairOutput struct {
-	blockchairUTXO
-	Recipient string `json:"recipient"`
-	ScriptHex string `json:"script_hex"`
-}
-
-type blockchairInput struct {
-	blockchairOutput
-}
-
-type BlockchairContext struct {
-	Code  int32  `json:"code"` // 200 = ok
-	Error string `json:"error,omitempty"`
-	State int64  `json:"state"` // to count confirmations
-}
-
-type blockchairTransactionData struct {
-	Transaction blockchairTransactionFull `json:"transaction"`
-	Inputs      []blockchairInput         `json:"inputs"`
-	Outputs     []blockchairOutput        `json:"outputs"`
-}
-
-type blockchairAddressData struct {
-	// Transactions []blockchairTransaction `json:"transactions"`
-	Address blockchairAddressFull `json:"address"`
-	Utxo    []blockchairUTXO      `json:"utxo"`
-}
-
-type blockchairData struct {
-	Data    map[string]json.RawMessage `json:"data"`
-	Context BlockchairContext          `json:"context"`
-}
-type blockchairNotFoundData struct {
-	Data    []string          `json:"data"`
-	Context BlockchairContext `json:"context"`
 }
 
 func (client *BlockchairClient) send(ctx context.Context, resp interface{}, method string, params ...string) (*BlockchairContext, error) {
@@ -339,7 +232,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	}
 
 	txWithInfo.Fee = xc.NewAmountBlockchainFromUint64(data.Transaction.Fee)
-	timestamp, _ := time.Parse("2006-01-02 15:04:05", data.Transaction.Time)
+	timestamp, _ := time.Parse(time.DateTime, data.Transaction.Time)
 	if data.Transaction.BlockId > 0 {
 		txWithInfo.BlockTime = timestamp.Unix()
 		txWithInfo.BlockIndex = data.Transaction.BlockId
@@ -403,13 +296,17 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for _, out := range data.Outputs {
+		endpoint := &xc.LegacyTxInfoEndpoint{
+			Address:     xc.Address(out.Recipient),
+			Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
+			NativeAsset: xc.NativeAsset(asset),
+			Asset:       string(asset),
+		}
 		if out.Recipient != from {
-			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
-				Address:     xc.Address(out.Recipient),
-				Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
-				NativeAsset: xc.NativeAsset(asset),
-				Asset:       string(asset),
-			})
+			// legacy endpoint drops 'change' movements
+			destinations = append(destinations, endpoint)
+		} else {
+			txWithInfo.AddDroppedDestination(endpoint)
 		}
 	}
 
@@ -436,13 +333,11 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHashStr xc.Tx
 	// the new model will calculate fees from the difference of inflows/outflows
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 
+	// add back the change movements
+	legacyTx.Destinations = append(legacyTx.Destinations, legacyTx.GetDroppedBtcDestinations()...)
+
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
-}
-
-// EstimateGas(ctx context.Context) (AmountBlockchain, error)
-func (client *BlockchairClient) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = estimateGas
 }
 
 func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
@@ -459,28 +354,7 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
 
-	// Min 10 sats/byte
-	if satsPerByteFloat < 10 {
-		satsPerByteFloat = 10
-	}
-	// add 50% extra default
-	defaultMultiplier := 1.5
-	multiplier := client.Asset.GetChain().ChainGasMultiplier
-	if multiplier < 0.01 {
-		multiplier = defaultMultiplier
-	}
-
-	satsPerByteFloat *= multiplier
-
-	max := client.Asset.GetChain().ChainMaxGasPrice
-	if max < 0.01 {
-		// max 10k sats/byte
-		max = 10000
-	}
-	if satsPerByteFloat > max {
-		satsPerByteFloat = max
-	}
-	satsPerByte := uint64(satsPerByteFloat)
+	satsPerByte := tx_input.LegacyFeeFilter(uint64(satsPerByteFloat), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
 }

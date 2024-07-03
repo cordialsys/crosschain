@@ -167,3 +167,61 @@ func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockcha
 	}
 	return filtered
 }
+
+type UtxoI interface {
+	GetValue() uint64
+	GetBlock() uint64
+	GetTxHash() string
+	GetIndex() uint32
+}
+
+func FilterUnconfirmedHeuristic[UTXO UtxoI](unspentOutputs []UTXO) []UTXO {
+	// We calculate a threshold of 5% of the total BTC balance
+	// To skip including small valued UTXO as part of the total utxo set.
+	// This is done to avoid the case of including a UTXO from some tx with a very low
+	// fee and making this TX get stuck.  However we'll still include our own remainder
+	// UTXO's or large valued (>5%) UTXO's.
+
+	// TODO a better way to do this would be to do during `.SetAmount` on the txInput,
+	// So we can filter exactly for the target amount we need to send.
+	res := []UTXO{}
+	oneBtc := uint64(1 * 100_000_000)
+	totalSats := uint64(0)
+	for _, u := range unspentOutputs {
+		totalSats += u.GetValue()
+	}
+	threshold := uint64(0)
+	if totalSats > oneBtc {
+		threshold = (totalSats * 5) / 100
+	}
+	for _, u := range unspentOutputs {
+		if u.GetBlock() <= 0 && u.GetValue() < threshold {
+			// do not permit small-valued unconfirmed UTXO
+			continue
+		}
+		res = append(res, u)
+	}
+	return res
+}
+
+func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte) []Output {
+	res := []Output{}
+
+	for _, u := range unspentOutputs {
+		hash, _ := hex.DecodeString(u.GetTxHash())
+		// reverse
+		for i, j := 0, len(hash)-1; i < j; i, j = i+1, j-1 {
+			hash[i], hash[j] = hash[j], hash[i]
+		}
+		output := Output{
+			Outpoint: Outpoint{
+				Hash:  hash,
+				Index: u.GetIndex(),
+			},
+			Value:        xc.NewAmountBlockchainFromUint64(u.GetValue()),
+			PubKeyScript: addressScript,
+		}
+		res = append(res, output)
+	}
+	return res
+}
