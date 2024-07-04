@@ -194,7 +194,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 	// fee is difference between total sent and received in balance changes
 	fee := totalSuiSent.Sub(&totalSuiReceived)
 	logrus.WithFields(logrus.Fields{
-		"total_sui_recieved": totalSuiReceived.String(),
+		"total_sui_received": totalSuiReceived.String(),
 		"total_sui_sent":     totalSuiSent.String(),
 		"fee":                fee.String(),
 	}).Trace("sui fee")
