@@ -17,6 +17,9 @@ var Blockchair BitcoinClient = "blockchair"
 var Blockbook BitcoinClient = "blockbook"
 
 func NewClient(cfgI xc.ITask) (client.Client, error) {
+	if strings.Contains(cfgI.GetChain().URL, "api.blockchair.com") {
+		return blockchair.NewBlockchairClient(cfgI)
+	}
 
 	switch BitcoinClient(cfgI.GetChain().Provider) {
 	case Native:
@@ -26,10 +29,6 @@ func NewClient(cfgI xc.ITask) (client.Client, error) {
 	case Blockbook:
 		return blockbook.NewClient(cfgI)
 	default:
-		if strings.Contains(cfgI.GetChain().URL, "blockchair") {
-			return blockchair.NewBlockchairClient(cfgI)
-		}
-
 		return blockbook.NewClient(cfgI)
 	}
 }

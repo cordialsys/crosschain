@@ -2,7 +2,6 @@ package bitcoin_cash
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
@@ -24,27 +23,15 @@ func (txObj *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	sighashes := make([]xc.TxDataToSign, len(txObj.Input.UnspentOutputs))
 
 	for i, utxo := range txObj.Input.UnspentOutputs {
-		txin := tx.Input{
-			Output: utxo,
-		}
-		pubKeyScript := txin.PubKeyScript
-		sigScript := txin.SigScript
-		value := txin.Value.Uint64()
+		pubKeyScript := utxo.PubKeyScript
+		value := utxo.Value.Uint64()
 		fetcher := txscript.NewCannedPrevOutputFetcher(
 			pubKeyScript, int64(value),
 		)
 
 		var hash []byte
-		var err error
-		log.Debugf("Sighashes params: sigScript=%s IsPayToWitnessPubKeyHash(pubKeyScript)=%t", base64.RawStdEncoding.EncodeToString(sigScript), txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
-		if sigScript == nil {
-			hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
-		} else {
-			hash = CalculateBchBip143Sighash(sigScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
-		}
-		if err != nil {
-			return []xc.TxDataToSign{}, err
-		}
+		log.Debugf("Sighashes params: IsPayToWitnessPubKeyHash(pubKeyScript)=%t", txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
+		hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
 
 		sighashes[i] = hash
 	}

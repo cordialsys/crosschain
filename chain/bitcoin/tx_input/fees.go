@@ -7,8 +7,7 @@ func LegacyFeeFilter(satsPerByte uint64, multiplier float64, maxGasPrice float64
 	if satsPerByte < 10 {
 		satsPerByte = 10
 	}
-	// add 50% extra default
-	defaultMultiplier := 1.5
+	defaultMultiplier := 1.0
 	if multiplier < 0.01 {
 		multiplier = defaultMultiplier
 	}

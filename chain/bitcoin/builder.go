@@ -123,7 +123,10 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		}
 		value := recipient.Value.Int().Int64()
 		if value < 0 {
-			return nil, fmt.Errorf("expected value >= 0, got value %v", value)
+			diff := local_input.SumUtxo().Sub(&amount)
+			return nil, fmt.Errorf("not enough funds for fees, estimated fee is %s but only %s is left after transfer",
+				fee.ToHuman(txBuilder.Asset.GetDecimals()).String(), diff.ToHuman(txBuilder.Asset.GetDecimals()).String(),
+			)
 		}
 		msgTx.AddTxOut(wire.NewTxOut(value, script))
 	}

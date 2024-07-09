@@ -19,7 +19,6 @@ import (
 
 type Input struct {
 	tx_input.Output `json:"output"`
-	SigScript       []byte     `json:"sig_script,omitempty"`
 	Address         xc.Address `json:"address,omitempty"`
 }
 
@@ -69,45 +68,29 @@ func (tx *Tx) txHashNormalBytes() []byte {
 	return txhash[:]
 }
 
-func bzToString(bz []byte) string {
-	return base64.RawStdEncoding.EncodeToString(bz)
-}
-
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	sighashes := make([]xc.TxDataToSign, len(tx.Input.UnspentOutputs))
 
 	for i, utxo := range tx.Input.UnspentOutputs {
-		txin := Input{
-			Output: utxo,
-		}
-		pubKeyScript := txin.PubKeyScript
-		sigScript := txin.SigScript
-		value := txin.Value.Uint64()
+		pubKeyScript := utxo.PubKeyScript
+		value := utxo.Value.Uint64()
 		fetcher := txscript.NewCannedPrevOutputFetcher(
 			pubKeyScript, int64(value),
 		)
 
 		var hash []byte
 		var err error
-		log.Debugf("Sighashes params: sigScript=%s IsPayToWitnessPubKeyHash(pubKeyScript)=%t", bzToString(sigScript), txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
-		if sigScript == nil {
-			if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) {
-				log.Debugf("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
-				hash, err = txscript.CalcWitnessSigHash(pubKeyScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
-			} else {
-				log.Debugf("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
-				hash, err = txscript.CalcSignatureHash(pubKeyScript, txscript.SigHashAll, tx.MsgTx, i)
-			}
+
+		log.Debugf("Sighashes params: IsPayToWitnessPubKeyHash(pubKeyScript)=%t", txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
+		if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) {
+			log.Debugf("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+			hash, err = txscript.CalcWitnessSigHash(pubKeyScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
 		} else {
-			if txscript.IsPayToWitnessScriptHash(pubKeyScript) {
-				log.Debugf("CalcWitnessSigHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
-				hash, err = txscript.CalcWitnessSigHash(sigScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
-			} else {
-				log.Debugf("CalcSignatureHash with sigScript: %s", base64.RawURLEncoding.EncodeToString(sigScript))
-				hash, err = txscript.CalcSignatureHash(sigScript, txscript.SigHashAll, tx.MsgTx, i)
-			}
+			log.Debugf("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+			hash, err = txscript.CalcSignatureHash(pubKeyScript, txscript.SigHashAll, tx.MsgTx, i)
 		}
+
 		if err != nil {
 			return []xc.TxDataToSign{}, err
 		}

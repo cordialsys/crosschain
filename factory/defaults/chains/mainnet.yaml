@@ -83,7 +83,6 @@ chains:
   BTC:
     chain: BTC
     driver: bitcoin
-    chain_gas_multiplier: 1.5
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin

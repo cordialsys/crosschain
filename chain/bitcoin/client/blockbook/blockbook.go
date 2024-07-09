@@ -11,7 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
@@ -84,7 +86,19 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 	}
 
 	data = tx_input.FilterUnconfirmedHeuristic(data)
-	outputs := tx_input.NewOutputs(data, []byte{})
+	btcAddr, err := btcutil.DecodeAddress(
+		string(addr),
+		client.Chaincfg,
+	)
+	if err != nil {
+		return nil, err
+	}
+	script, err := txscript.PayToAddrScript(btcAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	outputs := tx_input.NewOutputs(data, script)
 
 	return outputs, nil
 }
@@ -314,6 +328,7 @@ func (client *BlockbookClient) get(ctx context.Context, path string, resp interf
 }
 
 func (client *BlockbookClient) post(ctx context.Context, path string, contentType string, input []byte, resp interface{}) error {
+	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("%s/%s", client.Url, path)
 	logrus.WithFields(logrus.Fields{
 		"url":  url,
@@ -333,9 +348,9 @@ func (client *BlockbookClient) post(ctx context.Context, path string, contentTyp
 		var errResponse ErrorResponse
 		err = json.Unmarshal(body, &errResponse)
 		if err == nil {
-			return fmt.Errorf("failed to get %s: %s", path, errResponse.Error)
+			return fmt.Errorf("failed to post %s: %s", path, errResponse.Error)
 		}
-		return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
+		return fmt.Errorf("failed to post %s: code=%d", path, res.StatusCode)
 	}
 
 	if resp != nil {
