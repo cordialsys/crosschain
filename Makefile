@@ -9,3 +9,6 @@ lint:
 
 fmt:
 	@go fmt ./...
+
+install:
+	CGO_ENABLED=0 go install -v ./cmd/...
