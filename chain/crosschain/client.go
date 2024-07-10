@@ -33,6 +33,12 @@ type TxInput struct {
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	url := cfgI.GetChain().Clients[0].URL
 	network := cfgI.GetChain().Clients[0].Network
+	// Determine API key, prioritizing value in client configuration
+	apiKey := cfgI.GetChain().Clients[0].Auth
+	if apiKey == "" {
+		apiKey = cfgI.GetChain().AuthSecret
+	}
+	_ = apiKey
 	return &Client{
 		Asset:   cfgI,
 		URL:     url,

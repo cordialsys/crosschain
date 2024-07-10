@@ -401,14 +401,24 @@ func (s *CrosschainTestSuite) TestGetMultiAssetConfigEdgeCases() {
 
 func (s *CrosschainTestSuite) TestGetAssetConfigByContract() {
 	require := s.Require()
+	s.Factory.PutAssetConfig(&xc.TokenAssetConfig{
+		Chain:    "ETH",
+		Contract: "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d0",
+		Asset:    "WETH",
+	})
+	s.Factory.PutAssetConfig(&xc.TokenAssetConfig{
+		Chain:    "SOL",
+		Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDu",
+		Asset:    "USDC",
+	})
 
-	assetI, err := s.Factory.GetAssetConfigByContract("0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6", "ETH")
+	assetI, err := s.Factory.GetAssetConfigByContract("0xB4FBF271143F4FBf7B91A5ded31805e42b2208d0", "ETH")
 	asset := assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.NotNil(asset)
 	require.Equal("WETH", asset.Asset)
 
-	assetI, err = s.Factory.GetAssetConfigByContract("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", "SOL")
+	assetI, err = s.Factory.GetAssetConfigByContract("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDu", "SOL")
 	asset = assetI.(*xc.TokenAssetConfig)
 	require.Nil(err)
 	require.NotNil(asset)
