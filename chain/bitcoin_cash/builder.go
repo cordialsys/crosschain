@@ -1,10 +1,6 @@
 package bitcoin_cash
 
 import (
-	"errors"
-
-	"github.com/btcsuite/btcd/btcutil"
-	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -15,26 +11,7 @@ type TxBuilder struct {
 	bitcoin.TxBuilder
 }
 
-type BchAddressDecoder struct{}
-
-var _ bitcoin.AddressDecoder = &BchAddressDecoder{}
 var _ xc.TxBuilder = &TxBuilder{}
-
-func (*BchAddressDecoder) Decode(inputAddr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
-	addr, err := btcutil.DecodeAddress(string(inputAddr), params)
-	if err != nil {
-		// try to decode as BCH
-		bchaddr, err2 := DecodeBchAddress(string(inputAddr), params)
-		if err2 != nil {
-			return nil, errors.Join(err, err2)
-		}
-		addr, err2 = BchAddressFromBytes(bchaddr, params)
-		if err2 != nil {
-			return nil, errors.Join(err, err2)
-		}
-	}
-	return addr, nil
-}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {

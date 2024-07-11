@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -22,20 +22,8 @@ const TxVersion int32 = 2
 type TxBuilder struct {
 	Asset          xc.ITask
 	Params         *chaincfg.Params
-	AddressDecoder AddressDecoder
+	AddressDecoder address.AddressDecoder
 	// isBch  bool
-}
-
-type AddressDecoder interface {
-	Decode(to xc.Address, params *chaincfg.Params) (btcutil.Address, error)
-}
-
-type BtcAddressDecoder struct{}
-
-var _ AddressDecoder = &BtcAddressDecoder{}
-
-func (*BtcAddressDecoder) Decode(addr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
-	return btcutil.DecodeAddress(string(addr), params)
 }
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
@@ -48,12 +36,12 @@ func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
 	return TxBuilder{
 		Asset:          cfgI,
 		Params:         params,
-		AddressDecoder: &BtcAddressDecoder{},
+		AddressDecoder: &address.BtcAddressDecoder{},
 		// isBch:  native.Chain == xc.BCH,
 	}, nil
 }
 
-func (txBuilder TxBuilder) WithAddressDecoder(decoder AddressDecoder) TxBuilder {
+func (txBuilder TxBuilder) WithAddressDecoder(decoder address.AddressDecoder) TxBuilder {
 	txBuilder.AddressDecoder = decoder
 	return txBuilder
 }

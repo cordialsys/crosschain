@@ -6,6 +6,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
+	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
@@ -108,7 +109,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
 	case DriverBitcoin, DriverBitcoinLegacy:
-		return bitcoin.NewAddressBuilder(cfg)
+		return bitcoinaddress.NewAddressBuilder(cfg)
 	case DriverBitcoinCash:
 		return bitcoin_cash.NewAddressBuilder(cfg)
 	case DriverSui:

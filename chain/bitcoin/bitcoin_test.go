@@ -9,6 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	. "github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/stretchr/testify/suite"
@@ -38,7 +39,7 @@ func TestBitcoinTestSuite(t *testing.T) {
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
-		builder, err := NewAddressBuilder(&xc.ChainConfig{Chain: nativeAsset})
+		builder, err := address.NewAddressBuilder(&xc.ChainConfig{Chain: nativeAsset})
 		require.NotNil(builder)
 		require.NoError(err)
 	}
@@ -47,7 +48,7 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
-		builder, err := NewAddressBuilder(&xc.ChainConfig{
+		builder, err := address.NewAddressBuilder(&xc.ChainConfig{
 			Net:    "testnet",
 			Chain:  nativeAsset,
 			Driver: nativeAsset.Driver(),
@@ -77,7 +78,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 }
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyUsesCompressed() {
 	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.ChainConfig{
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{
 		Net:    "testnet",
 		Chain:  xc.BTC,
 		Driver: xc.DriverBitcoin,
@@ -95,7 +96,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyUsesCompressed() {
 
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.ChainConfig{
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{
 		Net:    "testnet",
 		Chain:  "BTC",
 		Driver: xc.BTC.Driver(),

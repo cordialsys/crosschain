@@ -11,14 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+
+	// "github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
@@ -29,26 +31,30 @@ type BlockbookClient struct {
 	Asset      xc.ITask
 	Chaincfg   *chaincfg.Params
 	Url        string
+	decoder    address.AddressDecoder
 }
 
 var _ xclient.FullClient = &BlockbookClient{}
+var _ address.WithAddressDecoder = &BlockbookClient{}
 
 func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := http.Client{}
-	params, err := params.GetParams(cfg)
+	chaincfg, err := params.GetParams(cfg)
 	if err != nil {
 		return &BlockbookClient{}, err
 	}
 	url := cfg.URL
 	url = strings.TrimSuffix(url, "/")
+	decoder := address.NewAddressDecoder()
 
 	return &BlockbookClient{
-		Url:        url,
-		Chaincfg:   params,
-		httpClient: httpClient,
-		Asset:      asset,
+		httpClient,
+		asset,
+		chaincfg,
+		url,
+		decoder,
 	}, nil
 }
 
@@ -78,18 +84,29 @@ func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return nil
 }
 
+func (txBuilder *BlockbookClient) WithAddressDecoder(decoder address.AddressDecoder) address.WithAddressDecoder {
+	txBuilder.decoder = decoder
+	return txBuilder
+}
+
+const BitcoinCashPrefix = "bitcoincash:"
+
 func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Address) ([]tx_input.Output, error) {
 	var data UtxoResponse
-	err := client.get(ctx, fmt.Sprintf("api/v2/utxo/%s", addr), &data)
+	var formattedAddr string = string(addr)
+	if client.Asset.GetChain().Chain == xc.BCH {
+		if !strings.HasPrefix(string(addr), BitcoinCashPrefix) {
+			formattedAddr = fmt.Sprintf("%s%s", BitcoinCashPrefix, addr)
+		}
+	}
+
+	err := client.get(ctx, fmt.Sprintf("api/v2/utxo/%s", formattedAddr), &data)
 	if err != nil {
 		return nil, err
 	}
 
 	data = tx_input.FilterUnconfirmedHeuristic(data)
-	btcAddr, err := btcutil.DecodeAddress(
-		string(addr),
-		client.Chaincfg,
-	)
+	btcAddr, err := client.decoder.Decode(addr, client.Chaincfg)
 	if err != nil {
 		return nil, err
 	}

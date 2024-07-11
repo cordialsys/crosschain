@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -25,14 +26,16 @@ import (
 // Client for Bitcoin
 type BlockchairClient struct {
 	// opts            ClientOptions
-	httpClient http.Client
-	Asset      xc.ITask
-	Chaincfg   *chaincfg.Params
-	Url        string
-	ApiKey     string
+	httpClient     http.Client
+	Asset          xc.ITask
+	Chaincfg       *chaincfg.Params
+	Url            string
+	ApiKey         string
+	addressDecoder address.AddressDecoder
 }
 
 var _ xclient.FullClient = &BlockchairClient{}
+var _ address.WithAddressDecoder = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
@@ -48,12 +51,18 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 		return &BlockchairClient{}, fmt.Errorf("api token required for blockchair blockchain client (set .auth reference)")
 	}
 	return &BlockchairClient{
-		ApiKey:     cfg.AuthSecret,
-		Url:        cfg.URL,
-		Chaincfg:   params,
-		httpClient: httpClient,
-		Asset:      asset,
+		ApiKey:         cfg.AuthSecret,
+		Url:            cfg.URL,
+		Chaincfg:       params,
+		httpClient:     httpClient,
+		Asset:          asset,
+		addressDecoder: &address.BtcAddressDecoder{},
 	}, nil
+}
+
+func (txBuilder *BlockchairClient) WithAddressDecoder(decoder address.AddressDecoder) address.WithAddressDecoder {
+	txBuilder.addressDecoder = decoder
+	return txBuilder
 }
 
 func (client *BlockchairClient) LatestBlock(ctx context.Context) (uint64, error) {
