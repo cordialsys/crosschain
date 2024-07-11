@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
+	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cosmos/btcutil/bech32"
 	"golang.org/x/crypto/ripemd160"
@@ -21,6 +22,30 @@ type AddressBuilder struct {
 }
 
 var _ xc.AddressBuilder = &AddressBuilder{}
+
+type BchAddressDecoder struct{}
+
+func NewAddressDecoder() *BchAddressDecoder {
+	return &BchAddressDecoder{}
+}
+
+var _ bitcoinaddress.AddressDecoder = &BchAddressDecoder{}
+
+func (*BchAddressDecoder) Decode(inputAddr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
+	addr, err := btcutil.DecodeAddress(string(inputAddr), params)
+	if err != nil {
+		// try to decode as BCH
+		bchaddr, err2 := DecodeBchAddress(string(inputAddr), params)
+		if err2 != nil {
+			return nil, errors.Join(err, err2)
+		}
+		addr, err2 = BchAddressFromBytes(bchaddr, params)
+		if err2 != nil {
+			return nil, errors.Join(err, err2)
+		}
+	}
+	return addr, nil
+}
 
 var (
 	// Alphabet used by Bitcoin Cash to encode addresses.

@@ -1,4 +1,4 @@
-package bitcoin
+package address
 
 import (
 	btcec "github.com/btcsuite/btcd/btcec/v2"
@@ -15,6 +15,26 @@ type AddressBuilder struct {
 }
 
 var _ xc.AddressBuilder = &AddressBuilder{}
+
+type AddressDecoder interface {
+	Decode(to xc.Address, params *chaincfg.Params) (btcutil.Address, error)
+}
+
+type WithAddressDecoder interface {
+	WithAddressDecoder(decoder AddressDecoder) WithAddressDecoder
+}
+
+type BtcAddressDecoder struct{}
+
+var _ AddressDecoder = &BtcAddressDecoder{}
+
+func (*BtcAddressDecoder) Decode(addr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
+	return btcutil.DecodeAddress(string(addr), params)
+}
+
+func NewAddressDecoder() *BtcAddressDecoder {
+	return &BtcAddressDecoder{}
+}
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
 func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {

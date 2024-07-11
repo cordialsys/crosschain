@@ -19,12 +19,12 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
-	"go.mongodb.org/mongo-driver/mongo/address"
 )
 
 var (
@@ -71,9 +71,11 @@ type NativeClient struct {
 	httpClient      http.Client
 	Asset           xc.ITask
 	EstimateGasFunc xclient.EstimateGasFunc
+	addressDecoder  address.AddressDecoder
 }
 
 var _ xclient.Client = &NativeClient{}
+var _ address.WithAddressDecoder = &NativeClient{}
 
 // NewClient returns a new Bitcoin Client
 func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
@@ -92,6 +94,11 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 		httpClient: httpClient,
 		Asset:      cfgI,
 	}, nil
+}
+
+func (txBuilder *NativeClient) WithAddressDecoder(decoder address.AddressDecoder) address.WithAddressDecoder {
+	txBuilder.addressDecoder = decoder
+	return txBuilder
 }
 
 // FetchTxInput returns tx input for a Bitcoin tx
@@ -379,12 +386,12 @@ func (client *NativeClient) EstimateSmartFee(ctx context.Context, numBlocks int6
 }
 
 // Import an address into the RPC node to be tracked.
-func (client *NativeClient) ImportAddress(ctx context.Context, addr address.Address, label string, rescan bool) error {
-	if err := client.send(ctx, nil, "importaddress", string(addr), label, rescan); err != nil {
-		return fmt.Errorf("import address: %v", err)
-	}
-	return nil
-}
+// func (client *NativeClient) ImportAddress(ctx context.Context, addr address.Address, label string, rescan bool) error {
+// 	if err := client.send(ctx, nil, "importaddress", string(addr), label, rescan); err != nil {
+// 		return fmt.Errorf("import address: %v", err)
+// 	}
+// 	return nil
+// }
 
 func (client *NativeClient) GetWalletInfo(ctx context.Context) (float64, error) {
 	resp := btcjson.GetWalletInfoResult{}

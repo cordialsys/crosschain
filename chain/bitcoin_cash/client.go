@@ -1,5 +1,15 @@
 package bitcoin_cash
 
-import "github.com/cordialsys/crosschain/chain/bitcoin"
+import (
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin"
+	"github.com/cordialsys/crosschain/client"
+)
 
-var NewClient = bitcoin.NewClient
+func NewClient(cfgI xc.ITask) (client.Client, error) {
+	cli, err := bitcoin.NewBitcoinClient(cfgI)
+	if err != nil {
+		return cli, err
+	}
+	return cli.WithAddressDecoder(&BchAddressDecoder{}).(bitcoin.BtcClient), nil
+}
