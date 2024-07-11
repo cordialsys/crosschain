@@ -1,0 +1,16 @@
+name: Test Crosschain
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  test:
+    name: "Test crosschain"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - run: make lint test
