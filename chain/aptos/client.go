@@ -176,6 +176,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				if ev.Guid.AccountAddress == change.DepositEvents.Guid.Id.AccountAddress &&
 					ev.Guid.CreationNumber == change.DepositEvents.Guid.Id.CreationNumber {
 					changeAndEvents.Events = append(changeAndEvents.Events, ev)
+				} else if ev.Guid.AccountAddress == change.WithdrawEvents.Guid.Id.AccountAddress &&
+					ev.Guid.CreationNumber == change.WithdrawEvents.Guid.Id.CreationNumber {
+					changeAndEvents.Events = append(changeAndEvents.Events, ev)
 				}
 			}
 			coinChanges = append(coinChanges, changeAndEvents)
@@ -195,6 +198,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					continue
 				}
 				contract := xc.ContractAddress(coinChange.ContractAddress())
+				logrus.WithFields(logrus.Fields{
+					"chain":    client.Asset.GetChain().Chain,
+					"contract": contract,
+					"address":  xc.Address(ev.Guid.AccountAddress),
+					"amount":   withdraw.Amount,
+				}).Debug("withdraw-event")
 				sources = append(sources, &xc.LegacyTxInfoEndpoint{
 					ContractAddress:            contract,
 					LegacyAptosContractAddress: string(contract),
@@ -210,6 +219,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					continue
 				}
 				contract := xc.ContractAddress(coinChange.ContractAddress())
+				logrus.WithFields(logrus.Fields{
+					"chain":    client.Asset.GetChain().Chain,
+					"contract": contract,
+					"address":  xc.Address(ev.Guid.AccountAddress),
+					"amount":   deposit.Amount,
+				}).Debug("deposit-event")
 				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
 					ContractAddress:            contract,
 					LegacyAptosContractAddress: string(contract),
@@ -219,6 +234,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				})
 			default:
 				// skip / unknown.
+				logrus.WithFields(logrus.Fields{
+					"event": ev.Type,
+				}).Debug("unknown event")
 			}
 		}
 	}
@@ -274,6 +292,12 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	for _, endpoint := range legacyTx.Destinations {
 		endpoint.ContractAddress = xc.ContractAddress(endpoint.LegacyAptosContractAddress)
 	}
+
+	// manually set the fee to avoid using `chains/APTOS/assets/APTOS` as we should use the correct contract for aptos.
+	if legacyTx.FeeContract == "" {
+		legacyTx.FeeContract = "0x1::aptos_coin::AptosCoin"
+	}
+
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }

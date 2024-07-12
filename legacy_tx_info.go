@@ -24,6 +24,7 @@ type LegacyTxInfo struct {
 	ContractAddress ContractAddress         `json:"contract,omitempty"`
 	Amount          AmountBlockchain        `json:"amount"`
 	Fee             AmountBlockchain        `json:"fee"`
+	FeeContract     ContractAddress         `json:"fee_contract,omitempty"`
 	BlockIndex      int64                   `json:"block_index,omitempty"`
 	BlockTime       int64                   `json:"block_time,omitempty"`
 	Confirmations   int64                   `json:"confirmations,omitempty"`
