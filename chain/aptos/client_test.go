@@ -174,7 +174,12 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 				BlockIndex:      3509309,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Sources:         []*xc.LegacyTxInfoEndpoint{},
+				Sources: []*xc.LegacyTxInfoEndpoint{{
+					Address: "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
+					Amount:  xc.NewAmountBlockchainFromUint64(123400000),
+					// ContractAddress: "0x1::aptos_coin::AptosCoin",
+					LegacyAptosContractAddress: "0x1::aptos_coin::AptosCoin",
+				}},
 				Destinations: []*xc.LegacyTxInfoEndpoint{{
 					Address: "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 					Amount:  xc.NewAmountBlockchainFromUint64(123400000),
@@ -215,7 +220,12 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 				BlockIndex:      176278674,
 				BlockTime:       1688879042,
 				Confirmations:   546501,
-				Sources:         []*xc.LegacyTxInfoEndpoint{},
+				Sources: []*xc.LegacyTxInfoEndpoint{{
+					Address: "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
+					Amount:  xc.NewAmountBlockchainFromUint64(140099000000),
+					// ContractAddress: "0x1::aptos_coin::AptosCoin",
+					LegacyAptosContractAddress: "0x1::aptos_coin::AptosCoin",
+				}},
 				Destinations: []*xc.LegacyTxInfoEndpoint{{
 					Address: "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
 					Amount:  xc.NewAmountBlockchainFromUint64(140099000000),

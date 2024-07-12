@@ -219,7 +219,10 @@ func (info *TxInfo) CalculateFees() []*Balance {
 }
 
 func NewTransfer(chain xc.NativeAsset) *Transfer {
-	return &Transfer{chain: chain}
+	// avoid serializing null's in json
+	from := []*BalanceChange{}
+	to := []*BalanceChange{}
+	return &Transfer{from, to, chain}
 }
 
 func (tf *Transfer) AddSource(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
@@ -271,7 +274,7 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 	}
 	zero := big.NewInt(0)
 	if legacyTx.Fee.Cmp((*xc.AmountBlockchain)(zero)) != 0 {
-		txInfo.AddFee(legacyTx.From, "", legacyTx.Fee, nil)
+		txInfo.AddFee(legacyTx.From, legacyTx.FeeContract, legacyTx.Fee, nil)
 	}
 
 	txInfo.Fees = txInfo.CalculateFees()
