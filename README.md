@@ -149,6 +149,32 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Transaction reporting
 - [x] Wraps/unwraps: ETH, SOL, ...
 
+### Devnet nodes
+
+You can spin up your own devnet nodes + universal faucet API for testing.
+
+Example on EVM:
+
+```
+# build and run container
+cd chain/evm/node && docker build -t devnet-evm .
+devnet-evm
+docker run --name devnet-evm -p 10000:10000 -p 10001:10001 devnet-evm
+```
+
+Fund some asset onto an address using the faucet:
+
+```
+curl -X POST -d '{"amount": 1234, "address": "0x0000000000000000000000000000000000001234"}' localhost:10001/chains/ETH/assets/ETH
+```
+
+Query the devnet node:
+
+```
+curl localhost:10000 -X POST \
+  --data '{"method":"eth_getBalance","params":["0x0000000000000000000000000000000000001234", "latest"],"id":1,"jsonrpc":"2.0"}'
+```
+
 ## Contribute
 
 We welcome contribution, whether in form of bug fixed, documentation, new chains, new functionality.
