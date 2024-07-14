@@ -84,9 +84,10 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 
 func CmdXc() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "xc",
-		Short: "Manually interact with blockchains",
-		Args:  cobra.ExactArgs(0),
+		Use:          "xc",
+		Short:        "Manually interact with blockchains",
+		Args:         cobra.ExactArgs(0),
+		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			args, err := RpcArgsFromCmd(cmd)
 			if err != nil {

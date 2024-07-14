@@ -54,6 +54,7 @@ const (
 	SUI    = NativeAsset("SUI")    // SUI
 	XPLA   = NativeAsset("XPLA")   // XPLA
 	TIA    = NativeAsset("TIA")    // celestia
+	TON    = NativeAsset("TON")    // TON
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
 )
@@ -93,6 +94,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SUI,
 	XPLA,
 	TIA,
+	TON,
 	TRX,
 	SEI,
 }
@@ -114,6 +116,7 @@ const (
 	DriverSolana        = Driver("solana")
 	DriverSui           = Driver("sui")
 	DriverTron          = Driver("tron")
+	DriverTon           = Driver("ton")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -131,6 +134,7 @@ var SupportedDrivers = []Driver{
 	DriverSolana,
 	DriverSui,
 	DriverTron,
+	DriverTon,
 }
 
 func (native NativeAsset) IsValid() bool {
@@ -161,6 +165,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSubstrate
 	case TRX:
 		return DriverTron
+	case TON:
+		return DriverTon
 	}
 	return ""
 }
@@ -171,7 +177,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon:
 		return Ed255
 	case DriverSubstrate:
 		return Schnorr
