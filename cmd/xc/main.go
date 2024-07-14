@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -189,7 +188,5 @@ func assetConfig(chain *xc.ChainConfig, contractMaybe string, decimals int32) xc
 
 func main() {
 	rootCmd := CmdXc()
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	_ = rootCmd.Execute()
 }
