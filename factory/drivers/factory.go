@@ -44,7 +44,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverTon:
 		return ton.NewClient(cfg)
 	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
+	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
 func NewTxBuilder(cfg ITask) (TxBuilder, error) {
@@ -69,8 +69,10 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 		return substrate.NewTxBuilder(cfg)
 	case DriverTron:
 		return tron.NewTxBuilder(cfg)
+	case DriverTon:
+		return ton.NewTxBuilder(cfg)
 	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
+	return nil, errors.New("no tx-builder defined for: " + string(cfg.ID()))
 }
 
 func NewSigner(cfg ITask) (Signer, error) {
@@ -98,7 +100,7 @@ func NewSigner(cfg ITask) (Signer, error) {
 	case DriverTon:
 		return ton.NewSigner(cfg)
 	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
+	return nil, errors.New("no signer defined for: " + string(cfg.ID()))
 }
 
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
@@ -126,7 +128,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverTon:
 		return ton.NewAddressBuilder(cfg)
 	}
-	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
+	return nil, errors.New("no address builder defined for: " + string(cfg.ID()))
 }
 
 func CheckError(driver Driver, err error) xclient.ClientError {

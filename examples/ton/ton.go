@@ -1,19 +1,24 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
+	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
 func tryTon() error {
 	client := liteclient.NewConnectionPool()
+	configUrl := "https://ton-blockchain.github.io/testnet-global.config.json"
+	client.AddConnectionsFromConfigUrl(context.Background(), configUrl)
 	api := ton.NewAPIClient(client)
 	_ = api
 	fmt.Println("querying ton")
@@ -31,20 +36,18 @@ func tryTon() error {
 	s := w.Address().String()
 	fmt.Println(s)
 
-	// balance, err := w.GetBalance(context.Background(), nil)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	toAddr := address.MustParseAddr("0QA0jYhujQbxi5MGxEI14bAxP06bVQMFniyg-GL2cI2h45CW")
 
-	// if balance.Nano().Uint64() >= 3000000 {
-	// 	addr := address.MustParseAddr("EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N")
-	// 	err = w.Transfer(context.Background(), addr, tlb.MustFromTON("0.003"), "Hey bro, happy birthday!")
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// }
+	tf, err := w.BuildTransfer(toAddr, tlb.MustFromTON("0.003"), false, "")
+	if err != nil {
+		return err
+	}
+	c, _ := tlb.ToCell(tf.InternalMessage)
+	fmt.Println("transfer message: ", hex.EncodeToString(c.ToBOCWithFlags(false)))
 
-	return nil
+	err = w.Send(context.Background(), tf, true)
+
+	return err
 }
 
 func main() {

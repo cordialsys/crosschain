@@ -1,7 +1,10 @@
 package ton
 
 import (
+	"strings"
+
 	xc "github.com/cordialsys/crosschain"
+	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
@@ -40,4 +43,12 @@ func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []b
 			Type:    xc.AddressTypeDefault,
 		},
 	}, err
+}
+
+func ParseAddress(addr xc.Address) (*address.Address, error) {
+	addrS := string(addr)
+	if len(strings.Split(addrS, ":")) == 2 {
+		return address.ParseRawAddr(addrS)
+	}
+	return address.ParseAddr(addrS)
 }
