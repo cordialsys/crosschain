@@ -235,3 +235,7 @@ chains:
     decimals: 6
     # 200 tron fee limit
     chain_max_gas_price: 2000000000
+  TON:
+    chain: TON
+    driver: ton
+    decimals: 9

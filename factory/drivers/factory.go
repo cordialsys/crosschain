@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -40,6 +41,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return substrate.NewClient(cfg)
 	case DriverTron:
 		return tron.NewClient(cfg)
+	case DriverTon:
+		return ton.NewClient(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -92,6 +95,8 @@ func NewSigner(cfg ITask) (Signer, error) {
 		return substrate.NewSigner(cfg)
 	case DriverTron:
 		return tron.NewSigner(cfg)
+	case DriverTon:
+		return ton.NewSigner(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
@@ -118,6 +123,8 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return substrate.NewAddressBuilder(cfg)
 	case DriverTron:
 		return tron.NewAddressBuilder(cfg)
+	case DriverTon:
+		return ton.NewAddressBuilder(cfg)
 	}
 	return nil, errors.New("unsupported asset: " + string(cfg.ID()))
 }
