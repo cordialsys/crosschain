@@ -169,7 +169,7 @@ func CmdTxTransfer() *cobra.Command {
 
 			cli, err := xcFactory.NewClient(assetConfig(chain, "", decimals))
 			if err != nil {
-				return err
+				return fmt.Errorf("could not load client: %v", err)
 			}
 
 			input, err := cli.FetchTxInput(context.Background(), from, xc.Address(to))
@@ -192,7 +192,7 @@ func CmdTxTransfer() *cobra.Command {
 			// (no network, no private key needed)
 			builder, err := xcFactory.NewTxBuilder(assetConfig(chain, contract, decimals))
 			if err != nil {
-				return err
+				return fmt.Errorf("could not load tx-builder: %v", err)
 			}
 			tx, err := builder.NewTransfer(from, xc.Address(to), amountBlockchain, input)
 			if err != nil {
@@ -218,7 +218,7 @@ func CmdTxTransfer() *cobra.Command {
 			// (no network, no private key needed)
 			err = tx.AddSignatures(signatures...)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not add signature(s): %v", err)
 			}
 
 			// submit the tx, wait a bit, fetch the tx info

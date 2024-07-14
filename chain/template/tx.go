@@ -37,39 +37,3 @@ func (tx *Tx) GetSignatures() []xc.TxSignature {
 func (tx Tx) Serialize() ([]byte, error) {
 	return []byte{}, errors.New("not implemented")
 }
-
-// ParseTransfer parses a tx and extracts higher-level transfer information
-func (tx *Tx) ParseTransfer() {
-}
-
-// From is the sender of a transfer
-func (tx Tx) From() xc.Address {
-	return xc.Address("")
-}
-
-// To is the account receiving a transfer
-func (tx Tx) To() xc.Address {
-	return xc.Address("")
-}
-
-// Amount returns the tx amount
-func (tx Tx) Amount() xc.AmountBlockchain {
-	return xc.NewAmountBlockchainFromUint64(0)
-}
-
-// ContractAddress returns the contract address for a token transfer
-func (tx Tx) ContractAddress() xc.ContractAddress {
-	return xc.ContractAddress("")
-}
-
-// Sources returns the sources of a Tx
-func (tx Tx) Sources() []*xc.LegacyTxInfoEndpoint {
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	return sources
-}
-
-// Destinations returns the destinations of a Tx
-func (tx Tx) Destinations() []*xc.LegacyTxInfoEndpoint {
-	destinations := []*xc.LegacyTxInfoEndpoint{}
-	return destinations
-}
