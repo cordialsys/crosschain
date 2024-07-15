@@ -66,7 +66,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVMLegacy, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)

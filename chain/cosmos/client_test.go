@@ -194,7 +194,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	for i, v := range vectors {
 		fmt.Println("test vector", i)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		v.asset.URL = server.URL
@@ -275,6 +275,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Address:         "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 						ContractAddress: "uluna",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
+						Memo:            "faucet",
 					},
 				},
 			},
@@ -377,26 +378,31 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Address:         "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(18480304),
+						Memo:            "129333-dearella",
 					},
 					{
 						Address:         "xpla1m7e4yy2kr8y9efdg36y2hsu5etyucj222ywy6j",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
+						Memo:            "129333-dearella",
 					},
 					{
 						Address:         "xpla1q4xns7eu3z8u3acj4nd8za3nz3xvz7wcm73cp0",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
+						Memo:            "129333-dearella",
 					},
 					{
 						Address:         "xpla12xxryljjxarwgycjejf7ssrupaj78nmq8kccz6",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
+						Memo:            "129333-dearella",
 					},
 					{
 						Address:         "xpla1g8hkzkgfa3uq0cg9d6h99jk5nlg92lwx2jme2l",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
+						Memo:            "129333-dearella",
 					},
 				},
 			},
@@ -440,7 +446,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		asset := v.asset
@@ -557,7 +563,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 
 	for i, v := range vectors {
 		fmt.Println("==testcase", i)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		asset := v.asset

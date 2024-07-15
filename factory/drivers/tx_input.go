@@ -13,6 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/tron"
 )
 
@@ -40,6 +41,8 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 		return substrate.NewTxInput(), nil
 	case xc.DriverTron:
 		return tron.NewTxInput(), nil
+	case xc.DriverTon:
+		return ton.NewTxInput(), nil
 	}
 	return nil, fmt.Errorf("no tx-input mapped for driver %s", driver)
 }

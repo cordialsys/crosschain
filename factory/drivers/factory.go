@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
+	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -126,7 +127,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverTron:
 		return tron.NewAddressBuilder(cfg)
 	case DriverTon:
-		return ton.NewAddressBuilder(cfg)
+		return tonaddress.NewAddressBuilder(cfg)
 	}
 	return nil, errors.New("no address builder defined for: " + string(cfg.ID()))
 }
@@ -153,6 +154,8 @@ func CheckError(driver Driver, err error) xclient.ClientError {
 		return substrate.CheckError(err)
 	case DriverTron:
 		return tron.CheckError(err)
+	case DriverTon:
+		return ton.CheckError(err)
 	}
 	return xclient.UnknownError
 }

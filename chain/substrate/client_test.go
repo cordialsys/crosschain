@@ -36,7 +36,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 
 	// Note that these RPC calls do have IDs, which the client library increments per call but doesn't care if they
 	// don't match up. The test json files all use ID 1.
-	rpc, rpcClose := testtypes.MockJSONRPC(&s.Suite, []string{test_rpc_meta, test_rpc_meta, test_rpc_storage})
+	rpc, rpcClose := testtypes.MockJSONRPC(s.T(), []string{test_rpc_meta, test_rpc_meta, test_rpc_storage})
 	defer rpcClose()
 
 	client, err := NewClient(&xc.ChainConfig{
@@ -57,7 +57,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
-	http, httpClose := testtypes.MockHTTP(&s.Suite, test_http_tx, 200)
+	http, httpClose := testtypes.MockHTTP(s.T(), test_http_tx, 200)
 	defer httpClose()
 
 	client, err := NewClient(&xc.ChainConfig{
@@ -88,7 +88,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 	require := s.Require()
 
-	http, httpClose := testtypes.MockHTTP(&s.Suite, `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`, 200)
+	http, httpClose := testtypes.MockHTTP(s.T(), `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`, 200)
 	defer httpClose()
 
 	client, err := NewClient(&xc.ChainConfig{
@@ -121,7 +121,7 @@ func (s *CrosschainTestSuite) TestEstimateGas() {
 	require := s.Require()
 
 	// TODO: convert to Mock
-	rpc, rpcClose := testtypes.MockJSONRPC(&s.Suite, []string{
+	rpc, rpcClose := testtypes.MockJSONRPC(s.T(), []string{
 		test_rpc_meta,
 		test_rpc_meta,
 		// chain_getBlockHash

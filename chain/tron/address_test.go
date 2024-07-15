@@ -9,7 +9,7 @@ import (
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	builder, err := NewAddressBuilder(&xc.ChainConfig{})
-	require.Nil(err)
+	require.NoError(err)
 	require.NotNil(builder)
 }
 

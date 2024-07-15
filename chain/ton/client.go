@@ -14,7 +14,9 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/ton/api"
+	tontx "github.com/cordialsys/crosschain/chain/ton/tx"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 	"github.com/xssnick/tonutils-go/address"
@@ -79,6 +81,10 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %v", err)
 	}
+	logrus.WithFields(logrus.Fields{
+		"body":   string(body),
+		"status": resp.StatusCode,
+	}).Debug("response")
 
 	if resp.StatusCode == http.StatusOK {
 		if response != nil {
@@ -105,7 +111,7 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 	}
 }
 func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contract xc.ContractAddress) (xc.Address, error) {
-	ownerAddr, err := ParseAddress(from)
+	ownerAddr, err := tonaddress.ParseAddress(from)
 	if err != nil {
 		return "", err
 	}
@@ -145,8 +151,8 @@ func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contr
 }
 
 func (client *Client) EstimateMaxFee(ctx context.Context, from xc.Address, to xc.Address, contract string) (uint64, error) {
-	fromAddr, _ := ParseAddress(from)
-	toAddr, _ := ParseAddress(to)
+	fromAddr, _ := tonaddress.ParseAddress(from)
+	toAddr, _ := tonaddress.ParseAddress(to)
 	amount, _ := tlb.FromNano(big.NewInt(1), int(client.Asset.GetDecimals()))
 	example, err := BuildJettonTransfer(10, toAddr, fromAddr, toAddr, amount, tlb.MustFromTON("1.0"), "")
 	if err != nil {
@@ -201,17 +207,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		// starts at 0 when address isn't initialized yet
 	}
 
-	bal, err := client.FetchNativeBalance(ctx, from)
-	if err != nil {
-		return nil, err
-	}
-
 	input := &TxInput{
 		TxInputEnvelope: NewTxInput().TxInputEnvelope,
 		AccountStatus:   acc.Status,
 		Timestamp:       time.Now().Unix(),
 		Sequence:        sequence,
-		TonBalance:      bal,
+		TonBalance:      xc.NewAmountBlockchainFromStr(acc.Balance),
 	}
 
 	if client.Asset.GetContract() != "" {
@@ -238,7 +239,10 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if getAddrResponse.ExitCode == 0 && len(getAddrResponse.Stack) > 0 {
 		// Set the public key if the account is present on chain.
 		// If not, the public key will need to be set by caller.
-		input.SetPublicKeyFromStr(getAddrResponse.Stack[0].Value)
+		err = input.SetPublicKeyFromStr(getAddrResponse.Stack[0].Value)
+		if err != nil {
+			logrus.WithError(err).Warn("could not set public key from remote")
+		}
 	}
 
 	return input, nil
@@ -270,7 +274,7 @@ func (client *Client) LookupJettonMasterForTokenWallet(tokenWallet *address.Addr
 	if len(resp.JettonTransfers) == 0 {
 		return "", fmt.Errorf("could not resolve token master address: no transfer history")
 	}
-	masterAddr, err := ParseAddress(xc.Address(resp.JettonTransfers[0].JettonMaster))
+	masterAddr, err := tonaddress.ParseAddress(xc.Address(resp.JettonTransfers[0].JettonMaster))
 	if err != nil {
 		return "", err
 	}
@@ -395,7 +399,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				memo = msg.MessageContent.Decoded.Comment
 			}
 			if msg.Destination != nil && *msg.Destination != "" && msg.Value != nil {
-				addr, err := ParseAddress(xc.Address(*msg.Destination))
+				addr, err := tonaddress.ParseAddress(xc.Address(*msg.Destination))
 				if err != nil {
 					return xc.LegacyTxInfo{}, err
 				}
@@ -409,7 +413,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				})
 			}
 			if msg.Source != nil && *msg.Source != "" && msg.Value != nil {
-				addr, err := ParseAddress(xc.Address(*msg.Source))
+				addr, err := tonaddress.ParseAddress(xc.Address(*msg.Source))
 				if err != nil {
 					return xc.LegacyTxInfo{}, err
 				}
@@ -441,7 +445,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 		// Use the InMsg hash as this can be determined offline,
 		// whereas the tx.Hash is determined by the chain after submitting.
-		TxID:        tx.InMsg.Hash,
+		TxID:        tontx.Normalize(tx.InMsg.Hash),
 		ExplorerURL: "",
 
 		Sources:      sources,

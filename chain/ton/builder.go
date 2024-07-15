@@ -8,7 +8,9 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/ton/api"
+	tontx "github.com/cordialsys/crosschain/chain/ton/tx"
 	"github.com/sirupsen/logrus"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/tlb"
@@ -51,17 +53,17 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		if len(txInput.PublicKey) == 0 {
 			return nil, fmt.Errorf("did not set public-key in tx-input for new ton account %s", from)
 		}
-		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), DefaultWalletVersion, DefaultSubwalletId)
+		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), tonaddress.DefaultWalletVersion, tonaddress.DefaultSubwalletId)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	toAddr, err := ParseAddress(to)
+	toAddr, err := tonaddress.ParseAddress(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON destination %s: %v", to, err)
 	}
-	fromAddr, err := ParseAddress(from)
+	fromAddr, err := tonaddress.ParseAddress(from)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON address %s: %v", to, err)
 	}
@@ -84,7 +86,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		return nil, err
 	}
 
-	return NewTx(fromAddr, cellBuilder, stateInit), nil
+	return tontx.NewTx(fromAddr, cellBuilder, stateInit), nil
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
@@ -97,21 +99,21 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		if len(txInput.PublicKey) == 0 {
 			return nil, fmt.Errorf("did not set public-key in tx-input for new ton account %s", from)
 		}
-		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), DefaultWalletVersion, DefaultSubwalletId)
+		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), tonaddress.DefaultWalletVersion, tonaddress.DefaultSubwalletId)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	toAddr, err := ParseAddress(to)
+	toAddr, err := tonaddress.ParseAddress(to)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON destination %s: %v", to, err)
 	}
-	fromAddr, err := ParseAddress(from)
+	fromAddr, err := tonaddress.ParseAddress(from)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON address %s: %v", to, err)
 	}
-	tokenAddr, err := ParseAddress(txInput.TokenWallet)
+	tokenAddr, err := tonaddress.ParseAddress(txInput.TokenWallet)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON token address %s: %v", txInput.TokenWallet, err)
 	}
@@ -148,7 +150,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, err
 	}
 
-	return NewTx(fromAddr, cellBuilder, stateInit), nil
+	return tontx.NewTx(fromAddr, cellBuilder, stateInit), nil
 }
 
 func BuildTransfer(to *address.Address, amount tlb.Coins, bounce bool, comment string) (_ *wallet.Message, err error) {
@@ -206,7 +208,7 @@ func BuildV3UnsignedMessage(txInput *TxInput, messages []*wallet.Message) (*cell
 
 	seq := txInput.Sequence
 	expiration := time.Unix(txInput.Timestamp, 0).Add(2 * time.Hour).Unix()
-	payload := cell.BeginCell().MustStoreUInt(DefaultSubwalletId, 32).
+	payload := cell.BeginCell().MustStoreUInt(tonaddress.DefaultSubwalletId, 32).
 		MustStoreUInt(uint64(expiration), 32).
 		MustStoreUInt(uint64(seq), 32)
 

@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"testing"
 
-	"github.com/stretchr/testify/suite"
+	"github.com/stretchr/testify/require"
 )
 
 func wrapRPCResult(res string) string {
@@ -29,8 +30,7 @@ type MockJSONRPCServer struct {
 }
 
 // MockJSONRPC creates a new MockJSONRPCServer given a response, or array of responses
-func MockJSONRPC(s *suite.Suite, response interface{}) (mock *MockJSONRPCServer, close func()) {
-	require := s.Require()
+func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, close func()) {
 	mock = &MockJSONRPCServer{
 		Response: response,
 		Server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -59,7 +59,7 @@ func MockJSONRPC(s *suite.Suite, response interface{}) (mock *MockJSONRPCServer,
 			var err error
 			mock.body, err = io.ReadAll(req.Body)
 			log.Println("rpc>>", string(mock.body))
-			require.NoError(err)
+			require.NoError(t, err)
 
 			// JSON input, or serializable into JSON
 			var responseBody []byte
@@ -67,7 +67,7 @@ func MockJSONRPC(s *suite.Suite, response interface{}) (mock *MockJSONRPCServer,
 				responseBody = v
 			} else {
 				responseBody, err = json.Marshal(curResponse)
-				require.NoError(err)
+				require.NoError(t, err)
 			}
 			log.Println("<<rpc", string(responseBody))
 			rw.Write(responseBody)
@@ -86,8 +86,7 @@ type MockHTTPServer struct {
 }
 
 // MockHTTP creates a new MockHTTPServer given a response, or array of responses
-func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPServer, close func()) {
-	require := s.Require()
+func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPServer, close func()) {
 	mock = &MockHTTPServer{
 		Response:    response,
 		StatusCodes: []int{},
@@ -95,7 +94,7 @@ func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPS
 			curResponse := mock.Response
 			if a, ok := mock.Response.([]string); ok {
 				if mock.Counter >= len(a) {
-					s.Fail(fmt.Sprintf("received another request but there's no response configured len=%d count=%d", len(a), mock.Counter))
+					require.Fail(t, fmt.Sprintf("received another request but there's no response configured len=%d count=%d", len(a), mock.Counter))
 				}
 				curResponse = a[mock.Counter]
 			}
@@ -121,7 +120,7 @@ func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPS
 			var err error
 			mock.body, err = io.ReadAll(req.Body)
 			log.Println("http>>", req)
-			require.NoError(err)
+			require.NoError(t, err)
 
 			// JSON input, or serializable into JSON
 			var responseBody []byte
@@ -129,7 +128,7 @@ func MockHTTP(s *suite.Suite, response interface{}, status int) (mock *MockHTTPS
 				responseBody = v
 			} else {
 				responseBody, err = json.Marshal(curResponse)
-				require.NoError(err)
+				require.NoError(t, err)
 			}
 			log.Println("<<http", string(responseBody))
 			rw.Write(responseBody)

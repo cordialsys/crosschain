@@ -6,15 +6,6 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/aptos"
-	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	"github.com/cordialsys/crosschain/chain/cosmos"
-	"github.com/cordialsys/crosschain/chain/evm"
-	"github.com/cordialsys/crosschain/chain/evm_legacy"
-	"github.com/cordialsys/crosschain/chain/solana"
-	"github.com/cordialsys/crosschain/chain/substrate"
-	"github.com/cordialsys/crosschain/chain/sui"
-	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
 
 	"github.com/stretchr/testify/suite"
@@ -143,28 +134,8 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 	require := s.Require()
 	for _, driver := range xc.SupportedDrivers {
 		var input xc.TxInput
-		switch driver {
-		case xc.DriverEVM:
-			input = evm.NewTxInput()
-		case xc.DriverEVMLegacy:
-			input = evm_legacy.NewTxInput()
-		case xc.DriverCosmos, xc.DriverCosmosEvmos:
-			input = cosmos.NewTxInput()
-		case xc.DriverSolana:
-			input = solana.NewTxInput()
-		case xc.DriverAptos:
-			input = aptos.NewTxInput()
-		case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
-			input = bitcointxinput.NewTxInput()
-		case xc.DriverSui:
-			input = sui.NewTxInput()
-		case xc.DriverSubstrate:
-			input = substrate.NewTxInput()
-		case xc.DriverTron:
-			input = tron.NewTxInput()
-		default:
-			require.Fail("must add driver to test: " + string(driver))
-		}
+		input, err := NewTxInput(driver)
+		require.NoError(err)
 		bz, err := MarshalTxInput(input)
 		require.NoError(err)
 		_, err = UnmarshalTxInput(bz)
