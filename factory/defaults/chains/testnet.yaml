@@ -239,3 +239,4 @@ chains:
     chain: TON
     driver: ton
     decimals: 9
+    net: testnet

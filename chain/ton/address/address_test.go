@@ -48,6 +48,14 @@ func TestParseAddress(t *testing.T) {
 	require.Equal(t, "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", addr.String())
 }
 
+func TestParseTestnetAddress(t *testing.T) {
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Net: "testnet"})
+	bytes, _ := hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
+	derivedAddr, err := builder.GetAddressFromPublicKey(bytes)
+	require.NoError(t, err)
+	require.Equal(t, xc.Address("kQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSq08"), derivedAddr)
+}
+
 // func TestParseAddressMetadata(t *testing.T) {
 // 	addr1, err := tonutil.ParseAddr("EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to")
 // 	require.NoError(t, err)
