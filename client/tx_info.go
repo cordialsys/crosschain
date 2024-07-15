@@ -90,6 +90,8 @@ type Transfer struct {
 	// required: destination credits
 	To []*BalanceChange `json:"to"`
 
+	Memo string `json:"memo,omitempty"`
+
 	chain xc.NativeAsset
 }
 
@@ -165,8 +167,9 @@ func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations ui
 		err,
 	}
 }
-func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
+func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int, memo string) {
 	tf := NewTransfer(info.Chain)
+	tf.SetMemo(memo)
 	tf.AddSource(from, contract, balance, decimals)
 	tf.AddDestination(to, contract, balance, decimals)
 	info.Transfers = append(info.Transfers, tf)
@@ -222,7 +225,8 @@ func NewTransfer(chain xc.NativeAsset) *Transfer {
 	// avoid serializing null's in json
 	from := []*BalanceChange{}
 	to := []*BalanceChange{}
-	return &Transfer{from, to, chain}
+	memo := ""
+	return &Transfer{from, to, memo, chain}
 }
 
 func (tf *Transfer) AddSource(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
@@ -230,6 +234,9 @@ func (tf *Transfer) AddSource(from xc.Address, contract xc.ContractAddress, bala
 }
 func (tf *Transfer) AddDestination(to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
 	tf.To = append(tf.To, NewBalanceChange(tf.chain, contract, to, balance, decimals))
+}
+func (tf *Transfer) SetMemo(memo string) {
+	tf.Memo = memo
 }
 
 type LegacyTxInfoMappingType string
@@ -269,7 +276,7 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 				fromAddr = legacyTx.Sources[i].Address
 			}
 
-			txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil)
+			txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil, dest.Memo)
 		}
 	}
 	zero := big.NewInt(0)

@@ -25,7 +25,7 @@ func TestTxInfoFees(t *testing.T) {
 		var from xc.Address = xc.Address(fmt.Sprintf("from-%d", i))
 		var to xc.Address = xc.Address(fmt.Sprintf("to-%d", i))
 
-		tx.AddSimpleTransfer(from, to, "", xc.NewAmountBlockchainFromUint64(10), nil)
+		tx.AddSimpleTransfer(from, to, "", xc.NewAmountBlockchainFromUint64(10), nil, "")
 		require.Len(t, tx.CalculateFees(), 0)
 	}
 
@@ -46,6 +46,9 @@ func TestTxInfoFees(t *testing.T) {
 	require.Len(t, tx.CalculateFees(), 2)
 	require.Equal(t, "65", tx.CalculateFees()[0].Balance.String())
 	require.Equal(t, "120", tx.CalculateFees()[1].Balance.String())
+
+	tx.AddSimpleTransfer("a", "b", "", xc.NewAmountBlockchainFromUint64(0), nil, "memo")
+	require.Equal(t, "memo", tx.Transfers[len(tx.Transfers)-1].Memo)
 
 }
 
