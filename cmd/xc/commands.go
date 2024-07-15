@@ -70,7 +70,7 @@ func CmdTxInput() *cobra.Command {
 				return fmt.Errorf("could not fetch transaction inputs: %v", err)
 			}
 
-			bz, _ := json.Marshal(input)
+			bz, _ := json.MarshalIndent(input, "", "  ")
 			fmt.Println(string(bz))
 			return nil
 		},

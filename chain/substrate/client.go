@@ -18,6 +18,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for Substrate
@@ -32,7 +33,7 @@ var _ xclient.FullClient = &Client{}
 // TxInput for Substrate
 type TxInput struct {
 	xc.TxInputEnvelope
-	Meta        types.Metadata       `json:"meta,omitempty"`
+	Meta        Metadata             `json:"meta,omitempty"`
 	GenesisHash types.Hash           `json:"genesis_hash,omitempty"`
 	CurHash     types.Hash           `json:"current_hash,omitempty"`
 	Rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
@@ -96,33 +97,36 @@ func NewTxInput() *TxInput {
 	}
 }
 
-func (client *Client) FetchTxInputChain() (*TxInput, error) {
+func (client *Client) FetchTxInputChain() (*types.Metadata, *TxInput, error) {
 	txInput := NewTxInput()
 	rpc := client.DotClient.RPC
 	meta, err := rpc.State.GetMetadataLatest()
 	if err != nil {
-		return &TxInput{}, err
+		return meta, &TxInput{}, err
 	}
-	txInput.Meta = *meta
+	txInput.Meta, err = ParseMeta(meta)
+	if err != nil {
+		return meta, &TxInput{}, err
+	}
 	txInput.GenesisHash, err = rpc.Chain.GetBlockHash(0)
 	if err != nil {
-		return &TxInput{}, err
+		return meta, &TxInput{}, err
 	}
 	rv, err := rpc.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return &TxInput{}, err
+		return meta, &TxInput{}, err
 	}
 	txInput.Rv = *rv
 	header, err := rpc.Chain.GetHeaderLatest()
 	if err != nil {
-		return &TxInput{}, err
+		return meta, &TxInput{}, err
 	}
 	txInput.CurNum = uint64(header.Number)
 	txInput.CurHash, err = rpc.Chain.GetBlockHash(txInput.CurNum)
 	if err != nil {
-		return &TxInput{}, err
+		return meta, &TxInput{}, err
 	}
-	return txInput, nil
+	return meta, txInput, nil
 }
 
 func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (uint64, error) {
@@ -144,12 +148,12 @@ func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (u
 
 // FetchTxInput returns tx input for a Substrate tx
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	txInput, err := client.FetchTxInputChain()
+	meta, txInput, err := client.FetchTxInputChain()
 	if err != nil {
 		return &TxInput{}, err
 	}
 	txInput.Tip = client.Asset.GetChain().ChainGasTip
-	txInput.Nonce, err = client.FetchAccountNonce(txInput.Meta, from)
+	txInput.Nonce, err = client.FetchAccountNonce(*meta, from)
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -164,7 +168,9 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	}
 
 	var res string
-	err = client.DotClient.Client.Call(&res, "author_submitExtrinsic", codec.HexEncodeToString(data))
+	encoded := codec.HexEncodeToString(data)
+	logrus.WithField("tx", encoded).Debug("submitting tx")
+	err = client.DotClient.Client.Call(&res, "author_submitExtrinsic", encoded)
 	if err != nil {
 		return err
 	}
