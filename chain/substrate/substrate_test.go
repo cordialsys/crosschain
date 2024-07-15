@@ -1,4 +1,4 @@
-package substrate
+package substrate_test
 
 import (
 	"context"

@@ -1,13 +1,16 @@
-package substrate
+package substrate_test
 
-import xc "github.com/cordialsys/crosschain"
+import (
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate"
+)
 
 func (s *CrosschainTestSuite) TestTx() {
 	// TODO: write tests
 	require := s.Require()
-	builder, err := NewTxBuilder(&xc.TaskConfig{})
-	require.Nil(err)
-	txInput := NewTxInput()
+	builder, err := substrate.NewTxBuilder(&xc.TaskConfig{})
+	require.NoError(err)
+	txInput := substrate.NewTxInput()
 
 	builder.NewTransfer(
 		xc.Address("5D4ZHEUiqCnpPBBizYSRJ1wDhdEfxHvoe4ogoUep636kgDVW"),

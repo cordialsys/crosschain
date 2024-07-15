@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
@@ -29,6 +30,9 @@ func (signer Signer) ImportPrivateKey(privateKey string) (xc.PrivateKey, error) 
 	seedBytes, err := codec.HexDecodeString(privateKey)
 	if err != nil {
 		return []byte{}, err
+	}
+	if len(seedBytes) != ed25519.SeedSize {
+		return nil, fmt.Errorf("expected private key seed to be %d bytes, got %d bytes", ed25519.SeedSize, len(seedBytes))
 	}
 	return xc.PrivateKey(seedBytes), nil
 

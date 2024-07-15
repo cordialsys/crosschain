@@ -1,11 +1,14 @@
-package substrate
+package substrate_test
 
 import (
 	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate"
 )
+
+type TxInput = substrate.TxInput
 
 func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	require := s.Require()
