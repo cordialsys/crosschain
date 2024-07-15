@@ -2,9 +2,9 @@ package ton
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -12,9 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/tlb"
+	"github.com/xssnick/tonutils-go/ton/jetton"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 	"github.com/xssnick/tonutils-go/tvm/cell"
 )
+
+var Zero = xc.NewAmountBlockchainFromUint64(0)
 
 // TxBuilder for Template
 type TxBuilder struct {
@@ -86,7 +89,66 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return nil, errors.New("not implemented")
+	txInput := input.(*TxInput)
+
+	var stateInit *tlb.StateInit
+	var err error
+	if txInput.AccountStatus != api.Active {
+		if len(txInput.PublicKey) == 0 {
+			return nil, fmt.Errorf("did not set public-key in tx-input for new ton account %s", from)
+		}
+		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), DefaultWalletVersion, DefaultSubwalletId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	toAddr, err := ParseAddress(to)
+	if err != nil {
+		return nil, fmt.Errorf("invalid TON destination %s: %v", to, err)
+	}
+	fromAddr, err := ParseAddress(from)
+	if err != nil {
+		return nil, fmt.Errorf("invalid TON address %s: %v", to, err)
+	}
+	tokenAddr, err := ParseAddress(txInput.TokenWallet)
+	if err != nil {
+		return nil, fmt.Errorf("invalid TON token address %s: %v", txInput.TokenWallet, err)
+	}
+	amountTlb, err := tlb.FromNano((*big.Int)(&amount), int(txBuilder.Asset.GetDecimals()))
+	if err != nil {
+		return nil, err
+	}
+
+	// Spend max 0.2 TON per Jetton transfer.  If we don't have 0.2 TON, we should
+	// lower the max to our balance less max-fees.
+	maxJettonFee := xc.NewAmountBlockchainFromUint64(200000000)
+	remainingTonBal := txInput.TonBalance.Sub(&txInput.EstimatedMaxFee)
+	if maxJettonFee.Cmp(&remainingTonBal) > 0 && remainingTonBal.Cmp(&Zero) > 0 {
+		maxJettonFee = remainingTonBal
+	}
+
+	tfMsg, err := BuildJettonTransfer(uint64(txInput.Timestamp), fromAddr, tokenAddr, toAddr, amountTlb, tlb.FromNanoTON(maxJettonFee.Int()), txInput.Memo)
+	if err != nil {
+		return nil, err
+	}
+	msgs := []*wallet.Message{}
+
+	msgs = append(msgs, tfMsg)
+
+	logrus.WithFields(logrus.Fields{
+		"messages":       len(msgs),
+		"state-init":     stateInit != nil,
+		"chain":          txBuilder.Asset.GetChain().Chain,
+		"max-jetton-fee": maxJettonFee.String(),
+	}).Debug("building tx")
+
+	cellBuilder, err := BuildV3UnsignedMessage(txInput, msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTx(fromAddr, cellBuilder, stateInit), nil
 }
 
 func BuildTransfer(to *address.Address, amount tlb.Coins, bounce bool, comment string) (_ *wallet.Message, err error) {
@@ -110,19 +172,32 @@ func BuildTransfer(to *address.Address, amount tlb.Coins, bounce bool, comment s
 	}, nil
 }
 
-// func BuildAccountInit(from *address.Address, stateInit *tlb.StateInit) (_ *wallet.Message, err error) {
-// 	return &wallet.Message{
-// 		Mode: wallet.PayGasSeparately + wallet.IgnoreErrors,
-// 		InternalMessage: &tlb.InternalMessage{
-// 			IHRDisabled: false,
-// 			Bounce:      false,
-// 			DstAddr:     from,
-// 			Amount:      tlb.Coins{},
-// 			Body:        nil,
-// 			StateInit:   stateInit,
-// 		},
-// 	}, nil
-// }
+// Jetton is the TON token standard
+func BuildJettonTransfer(randomInt uint64, from *address.Address, tokenWallet *address.Address, to *address.Address, amount tlb.Coins, maxFee tlb.Coins, comment string) (_ *wallet.Message, err error) {
+	var body *cell.Cell
+	if comment != "" {
+		body, err = wallet.CreateCommentCell(comment)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	tokenBody, err := tlb.ToCell(jetton.TransferPayload{
+		QueryID:     randomInt,
+		Amount:      amount,
+		Destination: to,
+		// For some reason we have to send TON with the jetton transfer
+		// and this address receives excess TON that wasn't needed.
+		ResponseDestination: from,
+		CustomPayload:       body,
+		ForwardTONAmount:    tlb.ZeroCoins,
+		ForwardPayload:      nil,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return wallet.SimpleMessage(tokenWallet, maxFee, tokenBody), nil
+}
 
 func BuildV3UnsignedMessage(txInput *TxInput, messages []*wallet.Message) (*cell.Builder, error) {
 	if len(messages) > 4 {
@@ -140,14 +215,8 @@ func BuildV3UnsignedMessage(txInput *TxInput, messages []*wallet.Message) (*cell
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert internal message %d to cell: %w", i, err)
 		}
-		boc := intMsg.ToBOCWithFlags(false)
-		fmt.Println("intmsg: ", hex.EncodeToString(boc))
 		payload.MustStoreUInt(uint64(message.Mode), 8).MustStoreRef(intMsg)
-
 	}
-
-	// sign := payload.EndCell().Sign(s.wallet.key)
-	// msg := cell.BeginCell().MustStoreSlice(sign, 512).MustStoreBuilder(payload).EndCell()
 
 	return payload, nil
 }

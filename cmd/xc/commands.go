@@ -131,6 +131,10 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			memo, err := cmd.Flags().GetString("memo")
+			if err != nil {
+				return err
+			}
 			if decimalsStr == "" && contract != "" {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
@@ -167,7 +171,7 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			logrus.WithField("address", from).Info("sending from")
 
-			cli, err := xcFactory.NewClient(assetConfig(chain, "", decimals))
+			cli, err := xcFactory.NewClient(assetConfig(chain, contract, decimals))
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
@@ -184,7 +188,13 @@ func CmdTxTransfer() *cobra.Command {
 			if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
 				inputWithAmount.SetAmount(amountBlockchain)
 			}
-
+			if memo != "" {
+				if txInputWithMemo, ok := input.(xc.TxInputWithMemo); ok {
+					txInputWithMemo.SetMemo(memo)
+				} else {
+					return fmt.Errorf("cannot set memo; chain driver currently does not support memos")
+				}
+			}
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
@@ -245,6 +255,7 @@ func CmdTxTransfer() *cobra.Command {
 	}
 	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
 	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
+	cmd.Flags().String("memo", "", "set a memo for the transfer.")
 	return cmd
 }
 

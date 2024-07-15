@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -16,6 +17,10 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
+	"github.com/xssnick/tonutils-go/address"
+	"github.com/xssnick/tonutils-go/tlb"
+	"github.com/xssnick/tonutils-go/ton/jetton"
+	"github.com/xssnick/tonutils-go/tvm/cell"
 )
 
 // Client for Template
@@ -62,6 +67,7 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 	if cli.ApiKey != "" {
 		request.Header.Add("X-API-Key", cli.ApiKey)
 	}
+	logrus.WithField("url", url).Debug(method)
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to GET: %v", err)
@@ -98,14 +104,77 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 		return fmt.Errorf("unknown ton error (%d)", resp.StatusCode)
 	}
 }
+func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contract xc.ContractAddress) (xc.Address, error) {
+	ownerAddr, err := ParseAddress(from)
+	if err != nil {
+		return "", err
+	}
+	addrCell := cell.BeginCell().MustStoreAddr(ownerAddr).EndCell()
+	// .BeginParse()
+	getTokenWalletResponse := &api.GetMethodResponse{}
+	err = client.post("api/v3/runGetMethod", &api.GetMethodRequest{
+		Address: string(client.Asset.GetContract()),
+		Method:  api.GetWalletAddressMethod,
+		Stack: []api.StackItem{
+			{
+				Type:  "slice",
+				Value: base64.StdEncoding.EncodeToString(addrCell.ToBOC()),
+			},
+		},
+	}, getTokenWalletResponse)
+	if err != nil {
+		return "", err
+	}
+	if getTokenWalletResponse.ExitCode != 0 || len(getTokenWalletResponse.Stack) == 0 {
+		return "", fmt.Errorf("could not lookup token wallet for %s (%d)", from, getTokenWalletResponse.ExitCode)
+	}
+	rawBoc := getTokenWalletResponse.Stack[0].Value
+	boc, err := base64.RawStdEncoding.DecodeString(rawBoc)
+	if err != nil {
+		return "", fmt.Errorf("invalid encoding for token-wallet: %v", err)
+	}
+	tokenCell, err := cell.FromBOC(boc)
+	if err != nil {
+		return "", fmt.Errorf("invalid boc for token-wallet: %v", err)
+	}
+	addr, err := tokenCell.BeginParse().LoadAddr()
+	if err != nil {
+		return "", fmt.Errorf("invalid token-wallet returned for address: %v", err)
+	}
+	return xc.Address(addr.String()), nil
+}
+
+func (client *Client) EstimateMaxFee(ctx context.Context, from xc.Address, to xc.Address, contract string) (uint64, error) {
+	fromAddr, _ := ParseAddress(from)
+	toAddr, _ := ParseAddress(to)
+	amount, _ := tlb.FromNano(big.NewInt(1), int(client.Asset.GetDecimals()))
+	example, err := BuildJettonTransfer(10, toAddr, fromAddr, toAddr, amount, tlb.MustFromTON("1.0"), "")
+	if err != nil {
+		return 0, err
+	}
+	c, err := tlb.ToCell(example.InternalMessage)
+	if err != nil {
+		return 0, err
+	}
+
+	feeEstimateResp := &api.FeeEstimateResponse{}
+	err = client.post("api/v3/estimateFee", &api.FeeEstimateRequest{
+		Address: string(from),
+		Body:    base64.StdEncoding.EncodeToString(c.ToBOC()),
+	}, feeEstimateResp)
+	if err != nil {
+		return 0, fmt.Errorf("could not estimate fee: %v", err)
+	}
+	// Multiply up as the fee is often 2-3x different than what's estimated...
+	maxFee := (feeEstimateResp.Sum() * 10)
+	if maxFee > 0 {
+		return uint64(maxFee), nil
+	}
+	return 0, nil
+}
 
 // FetchTxInput returns tx input for a Template tx
 func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// info := &api.MasterChainInfo{}
-	// err := client.get("/api/v3/masterchainInfo", info)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not get main chain info: %v", err)
-	// }
 	var err error
 	acc := &api.GetAccountResponse{}
 	err = client.get(fmt.Sprintf("/api/v3/account?address=%s", from), acc)
@@ -132,12 +201,29 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		// starts at 0 when address isn't initialized yet
 	}
 
+	bal, err := client.FetchNativeBalance(ctx, from)
+	if err != nil {
+		return nil, err
+	}
+
 	input := &TxInput{
 		TxInputEnvelope: NewTxInput().TxInputEnvelope,
-		// MasterChainInfo: *info,
-		AccountStatus: acc.Status,
-		Timestamp:     time.Now().Unix(),
-		Sequence:      sequence,
+		AccountStatus:   acc.Status,
+		Timestamp:       time.Now().Unix(),
+		Sequence:        sequence,
+		TonBalance:      bal,
+	}
+
+	if client.Asset.GetContract() != "" {
+		input.TokenWallet, err = client.GetTokenWallet(ctx, from, xc.ContractAddress(client.Asset.GetContract()))
+		if err != nil {
+			return input, err
+		}
+		maxFee, err := client.EstimateMaxFee(ctx, input.TokenWallet, to, client.Asset.GetContract())
+		if err != nil {
+			return input, err
+		}
+		input.EstimatedMaxFee = xc.NewAmountBlockchainFromUint64(maxFee)
 	}
 
 	getAddrResponse := &api.GetMethodResponse{}
@@ -165,7 +251,6 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return err
 	}
 	bzBase64 := base64.StdEncoding.EncodeToString(bz)
-	fmt.Printf("\n%s\n", hex.EncodeToString(bz))
 	resp := &api.SubmitMessageResponse{}
 	err = client.post("api/v3/message", &api.SubmitMessageRequest{
 		Boc: bzBase64,
@@ -173,8 +258,107 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("submitted: ", resp.MessageHash)
 	return nil
+}
+
+func (client *Client) LookupJettonMasterForTokenWallet(tokenWallet *address.Address) (xc.ContractAddress, error) {
+	resp := &api.JettonTransfersResponse{}
+	err := client.get(fmt.Sprintf("/api/v3/jetton/transfers?jetton_wallet=%s&direction=both&limit=1&offset=0&sort=desc", tokenWallet.String()), resp)
+	if err != nil {
+		return "", fmt.Errorf("could not resolve token master address: %v", err)
+	}
+	if len(resp.JettonTransfers) == 0 {
+		return "", fmt.Errorf("could not resolve token master address: no transfer history")
+	}
+	masterAddr, err := ParseAddress(xc.Address(resp.JettonTransfers[0].JettonMaster))
+	if err != nil {
+		return "", err
+	}
+	return xc.ContractAddress(masterAddr.String()), nil
+}
+
+// This detects any JettonMessage in the nest of "InternalMessage"
+// This may need to be expanded as Jetton transfer could be nested deeper in more 'InternalMessages'
+func (client *Client) DetectJettonMovements(tx *api.Transaction) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint, error) {
+	boc, err := base64.StdEncoding.DecodeString(tx.InMsg.MessageContent.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	inMsg, err := cell.FromBOC(boc)
+	if err != nil {
+		return nil, nil, err
+	}
+	inMsgMsg, err := inMsg.BeginParse().LoadRefCell()
+	if err != nil {
+		return nil, nil, err
+	}
+	internalMsg := &tlb.InternalMessage{}
+	err = tlb.LoadFromCell(internalMsg, inMsgMsg.BeginParse())
+	if err != nil {
+		return nil, nil, err
+	}
+	if internalMsg.Body == nil {
+		logrus.Debug("no jetton transfer detected (no body)")
+		return nil, nil, nil
+	}
+
+	jettonTfMaybe := &jetton.TransferPayload{}
+	err = tlb.LoadFromCell(jettonTfMaybe, internalMsg.Body.BeginParse())
+	if err != nil {
+		// give up here - no jetton movement(s)
+		logrus.WithError(err).Debug("no jetton transfer detected")
+		return nil, nil, nil
+	}
+	tokenWallet := internalMsg.DstAddr
+	tokenMasterAddr, err := client.LookupJettonMasterForTokenWallet(tokenWallet)
+	if err != nil {
+		return nil, nil, err
+	}
+	chain := client.Asset.GetChain().Chain
+	amount := xc.AmountBlockchain(*jettonTfMaybe.Amount.Nano())
+	sources := []*xc.LegacyTxInfoEndpoint{
+		{
+			// this is the token wallet of the sender/owner
+			Address:         xc.Address(tokenWallet.String()),
+			Amount:          amount,
+			ContractAddress: tokenMasterAddr,
+			NativeAsset:     chain,
+		},
+	}
+
+	dests := []*xc.LegacyTxInfoEndpoint{
+		{
+			// this is the token wallet of the sender/owner
+			Address:         xc.Address(jettonTfMaybe.Destination.String()),
+			Amount:          amount,
+			ContractAddress: tokenMasterAddr,
+			NativeAsset:     chain,
+		},
+	}
+
+	return sources, dests, nil
+}
+
+// Prioritize getting tx by msg-hash as it's deterministic offline.  Fallback to using chain-calculated tx hash.
+func (client *Client) FetchTonTxByHash(ctx context.Context, txHash xc.TxHash) (api.Transaction, error) {
+	transactions := &api.TransactionsData{}
+
+	err := client.get(fmt.Sprintf("api/v3/transactionsByMessage?direction=in&msg_hash=%s", url.QueryEscape(string(txHash))), transactions)
+	if err != nil {
+		return api.Transaction{}, err
+	}
+	if len(transactions.Transactions) == 0 {
+		// try looking up by chain-issued hash
+		err = client.get(fmt.Sprintf("api/v3/transactions?hash=%s", url.QueryEscape(string(txHash))), transactions)
+		if err != nil {
+			return api.Transaction{}, err
+		}
+
+		if len(transactions.Transactions) == 0 {
+			return api.Transaction{}, fmt.Errorf("no TON transaction found by %s", txHash)
+		}
+	}
+	return transactions.Transactions[0], nil
 }
 
 // Returns transaction info - legacy/old endpoint
@@ -184,15 +368,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	transactions := &api.TransactionsData{}
-	err = client.get(fmt.Sprintf("api/v3/transactions?hash=%s", txHash), transactions)
+
+	tx, err := client.FetchTonTxByHash(ctx, txHash)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	if len(transactions.Transactions) == 0 {
-		return xc.LegacyTxInfo{}, fmt.Errorf("no TON transaction found by %s", txHash)
-	}
-	tx := transactions.Transactions[0]
 
 	sources := []*xc.LegacyTxInfoEndpoint{}
 	dests := []*xc.LegacyTxInfoEndpoint{}
@@ -237,13 +417,22 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
+	jettonSources, jettonDests, err := client.DetectJettonMovements(&tx)
+	if err != nil {
+		return xc.LegacyTxInfo{}, err
+	}
+	sources = append(sources, jettonSources...)
+	dests = append(dests, jettonDests...)
+
 	info := xc.LegacyTxInfo{
 		BlockHash:     tx.BlockRef.Shard,
 		BlockIndex:    tx.McBlockSeqno,
 		BlockTime:     tx.Now,
 		Confirmations: chainInfo.Last.Seqno - tx.McBlockSeqno,
 
-		TxID:        tx.Hash,
+		// Use the InMsg hash as this can be determined offline,
+		// whereas the tx.Hash is determined by the chain after submitting.
+		TxID:        tx.InMsg.Hash,
 		ExplorerURL: "",
 
 		Sources:      sources,

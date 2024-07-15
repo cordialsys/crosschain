@@ -1,9 +1,7 @@
 package ton
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -39,32 +37,23 @@ func (tx Tx) Hash() xc.TxHash {
 	if tx.ExternalMessage.Body == nil {
 		return ""
 	}
-	hash1 := tx.ExternalMessage.Body.Hash()
-	hash2 := tx.ExternalMessage.Payload().Hash()
-	fmt.Println("1 - ", hex.EncodeToString(hash1))
-	fmt.Println("2 - ", hex.EncodeToString(hash2))
 	ext, err := tlb.ToCell(tx.ExternalMessage)
 	if err != nil {
 		panic(err)
 	}
-	bz := ext.ToBOCWithFlags(true)
-	hash3 := sha256.Sum256(bz)
-	fmt.Println("3 - ", hex.EncodeToString(hash3[:]))
-	hash4 := cell.BeginCell().MustStoreRef(tx.ExternalMessage.Body).EndCell().Hash()
-	fmt.Println("4 - ", hex.EncodeToString(hash4[:]))
 
-	reborn, err := cell.FromBOC(bz)
+	// Only way to calculate the correct hash is to reserialize it
+	bz := ext.ToBOC()
+	parsed, err := cell.FromBOC(bz)
 	if err != nil {
 		panic(err)
 	}
-	hash5 := reborn.Hash()
-	fmt.Println("5 - ", hex.EncodeToString(hash5[:]))
-	// reborn.H
-	// cell.BeginCell().S
+	hash := parsed.Hash()
+
 	// TON tends to support loading transactions in either hex, base64-std, or base64url.
 	// We choose base64-std as this is what is reported by default by the RPC nodes when downloading
 	// transactions.  It's also the default on mainnet TONViewer explorer.
-	return xc.TxHash(base64.StdEncoding.EncodeToString(hash5[:]))
+	return xc.TxHash(base64.StdEncoding.EncodeToString(hash[:]))
 }
 
 func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
