@@ -50,7 +50,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
-	cmd.PersistentFlags().String("api-key", "", "api-key to use for client.")
+	cmd.PersistentFlags().String("api-key", "", "Api key to use for client (may set CORDIAL_API_KEY).")
 	cmd.PersistentFlags().String("provider", "", "Provider to use for chain client.  Only valid for BTC chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
 	cmd.PersistentFlags().Bool("not-mainnet", false, "Do not use mainnets, instead use a test or dev network.")
@@ -68,6 +68,13 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	notmainnet, _ := cmd.Flags().GetBool("not-mainnet")
 	provider, _ := cmd.Flags().GetString("provider")
 	apikey, _ := cmd.Flags().GetString("api-key")
+	if apikey == "" {
+		apikey = os.Getenv("CORDIAL_API_KEY")
+		if apikey == "" {
+			// alias
+			apikey = os.Getenv("TREASURY_API_KEY")
+		}
+	}
 
 	return &RpcArgs{
 		Chain:          chain,
