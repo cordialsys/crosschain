@@ -14,11 +14,14 @@ import (
 type TxInput struct {
 	xc.TxInputEnvelope
 	// MasterChainInfo api.MasterChainInfo `json:"master_chain_info"`
-	AccountStatus api.AccountStatus `json:"account_status"`
-	Sequence      uint64            `json:"sequence"`
-	PublicKey     xc.PublicKey      `json:"public_key,omitempty"`
-	Memo          string            `json:"memo,omitempty"`
-	Timestamp     int64             `json:"timestamp"`
+	AccountStatus   api.AccountStatus   `json:"account_status"`
+	Sequence        uint64              `json:"sequence"`
+	PublicKey       xc.PublicKey        `json:"public_key,omitempty"`
+	Memo            string              `json:"memo,omitempty"`
+	Timestamp       int64               `json:"timestamp"`
+	TokenWallet     xc.Address          `json:"token_wallet"`
+	EstimatedMaxFee xc.AmountBlockchain `json:"estimated_max_fee"`
+	TonBalance      xc.AmountBlockchain `json:"ton_balance"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -66,12 +69,22 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
-	// default false
+	// different sequence means independence
+	if evmOther, ok := other.(*TxInput); ok {
+		return evmOther.Sequence != input.Sequence
+	}
 	return
 }
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	// safe from double send ?
-	// default false
-	return
+	if !xc.SameTxInputTypes(input, others...) {
+		return false
+	}
+	// all same sequence means no double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// sequence all same - we're safe
+	return true
 }

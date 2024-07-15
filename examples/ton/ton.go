@@ -12,6 +12,7 @@ import (
 	"github.com/xssnick/tonutils-go/liteclient"
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton"
+	"github.com/xssnick/tonutils-go/ton/jetton"
 	"github.com/xssnick/tonutils-go/ton/wallet"
 )
 
@@ -47,7 +48,23 @@ func tryTon() error {
 
 	err = w.Send(context.Background(), tf, true)
 
-	return err
+	token := jetton.NewJettonMasterClient(api, address.MustParseAddr("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di"))
+
+	// find our jetton wallet
+	tokenWallet, err := token.GetJettonWallet(context.Background(), w.WalletAddress())
+	if err != nil {
+		return err
+	}
+	_ = tokenWallet
+	amountTokens := tlb.MustFromDecimal("0.1", 9)
+	transferPayload, err := tokenWallet.BuildTransferPayloadV2(toAddr, toAddr, amountTokens, tlb.ZeroCoins, nil, nil)
+	if err != nil {
+		return err
+	}
+	msg := wallet.SimpleMessage(tokenWallet.Address(), tlb.MustFromTON("0.05"), transferPayload)
+	return w.Send(context.Background(), msg)
+
+	// return err
 }
 
 func main() {

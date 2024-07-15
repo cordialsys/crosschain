@@ -101,6 +101,7 @@ type GetMethod string
 
 var GetPublicKeyMethod GetMethod = "get_public_key"
 var GetSequenceMethod GetMethod = "seqno"
+var GetWalletAddressMethod GetMethod = "get_wallet_address"
 
 type GetMethodRequest struct {
 	Address string      `json:"address"`
@@ -113,4 +114,34 @@ type SubmitMessageRequest struct {
 }
 type SubmitMessageResponse struct {
 	MessageHash string `json:"message_hash"`
+}
+
+type Fees struct {
+	InFwdFee   int64 `json:"in_fwd_fee"`
+	StorageFee int64 `json:"storage_fee"`
+	GasFee     int64 `json:"gas_fee"`
+	FwdFee     int64 `json:"fwd_fee"`
+}
+
+func (f *Fees) Sum() int64 {
+	return f.InFwdFee + f.StorageFee + f.GasFee + f.FwdFee
+}
+
+type FeeEstimateResponse struct {
+	SourceFees      Fees   `json:"source_fees"`
+	DestinationFees []Fees `json:"destination_fees"`
+}
+
+func (f *FeeEstimateResponse) Sum() int64 {
+	sum := int64(0)
+	sum += f.SourceFees.Sum()
+	for _, dst := range f.DestinationFees {
+		sum += dst.Sum()
+	}
+	return sum
+}
+
+type FeeEstimateRequest struct {
+	Address string `json:"address"`
+	Body    string `json:"body"`
 }
