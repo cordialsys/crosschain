@@ -309,6 +309,11 @@ func (client *Client) DetectJettonMovements(tx *api.Transaction) ([]*xc.LegacyTx
 		logrus.WithError(err).Debug("no jetton transfer detected")
 		return nil, nil, nil
 	}
+	memo, ok := ParseComment(jettonTfMaybe.ForwardPayload)
+	fmt.Println("memo ", memo, ok)
+	if !ok {
+		memo, _ = ParseComment(jettonTfMaybe.CustomPayload)
+	}
 	tokenWallet := internalMsg.DstAddr
 	tokenMasterAddr, err := client.LookupJettonMasterForTokenWallet(tokenWallet)
 	if err != nil {
@@ -323,16 +328,17 @@ func (client *Client) DetectJettonMovements(tx *api.Transaction) ([]*xc.LegacyTx
 			Amount:          amount,
 			ContractAddress: tokenMasterAddr,
 			NativeAsset:     chain,
+			Memo:            memo,
 		},
 	}
 
 	dests := []*xc.LegacyTxInfoEndpoint{
 		{
-			// this is the token wallet of the sender/owner
 			Address:         xc.Address(jettonTfMaybe.Destination.String()),
 			Amount:          amount,
 			ContractAddress: tokenMasterAddr,
 			NativeAsset:     chain,
+			Memo:            memo,
 		},
 	}
 
@@ -379,12 +385,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	chain := client.Asset.GetChain().Chain
 
 	totalFee := xc.NewAmountBlockchainFromStr(tx.TotalFees)
-	memos := []string{}
 
 	for _, msg := range tx.OutMsgs {
 		if msg.Bounced != nil && *msg.Bounced {
 			// if the message bounced, do no add endpoints
 		} else {
+			memo := ""
+			if msg.MessageContent.Decoded != nil && msg.MessageContent.Decoded.Type == "text_comment" {
+				memo = msg.MessageContent.Decoded.Comment
+			}
 			if msg.Destination != nil && *msg.Destination != "" && msg.Value != nil {
 				addr, err := ParseAddress(xc.Address(*msg.Destination))
 				if err != nil {
@@ -396,6 +405,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					ContractAddress: "",
 					Amount:          value,
 					NativeAsset:     chain,
+					Memo:            memo,
 				})
 			}
 			if msg.Source != nil && *msg.Source != "" && msg.Value != nil {
@@ -409,12 +419,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					ContractAddress: "",
 					Amount:          value,
 					NativeAsset:     chain,
+					Memo:            memo,
 				})
 			}
 		}
-		if msg.MessageContent.Decoded != nil && msg.MessageContent.Decoded.Type == "text_comment" {
-			memos = append(memos, msg.MessageContent.Decoded.Comment)
-		}
+
 	}
 
 	jettonSources, jettonDests, err := client.DetectJettonMovements(&tx)
@@ -437,7 +446,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 		Sources:      sources,
 		Destinations: dests,
-		Memos:        memos,
 		Fee:          totalFee,
 		From:         "",
 		To:           "",

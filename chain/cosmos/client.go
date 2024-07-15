@@ -305,6 +305,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	result.Sources = tx.Sources()
 	result.Destinations = tx.Destinations()
 
+	// Set memo if set
+	if withMemo, ok := decodedTx.(types.TxWithMemo); ok {
+		memo := withMemo.GetMemo()
+		for _, dst := range result.Destinations {
+			dst.Memo = memo
+		}
+	}
+
 	result.BlockIndex = resultRaw.Height
 	result.BlockTime = blockResultRaw.Block.Header.Time.Unix()
 	result.Confirmations = abciInfo.Response.LastBlockHeight - result.BlockIndex

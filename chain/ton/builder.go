@@ -220,3 +220,14 @@ func BuildV3UnsignedMessage(txInput *TxInput, messages []*wallet.Message) (*cell
 
 	return payload, nil
 }
+
+func ParseComment(body *cell.Cell) (string, bool) {
+	if body != nil {
+		l := body.BeginParse()
+		if val, err := l.LoadUInt(32); err == nil && val == 0 {
+			str, _ := l.LoadStringSnake()
+			return str, true
+		}
+	}
+	return "", false
+}
