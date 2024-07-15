@@ -40,6 +40,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 		fakeAsset.Chain = "BCH"
 		fakeAsset.AuthSecret = "1234"
 	}
+	if driver == xc.DriverSubstrate {
+		fakeAsset.ChainPrefix = "0"
+	}
 	return fakeAsset
 }
 

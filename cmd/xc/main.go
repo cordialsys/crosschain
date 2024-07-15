@@ -117,6 +117,9 @@ func CmdXc() *cobra.Command {
 			}
 
 			xcFactory := factory.NewDefaultFactory()
+			if args.NotMainnet {
+				xcFactory = factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+			}
 			var nativeAsset xc.NativeAsset
 			for _, chainOption := range xc.NativeAssetList {
 				if strings.EqualFold(string(chainOption), args.Chain) {

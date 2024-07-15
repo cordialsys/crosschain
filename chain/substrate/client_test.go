@@ -1,9 +1,10 @@
-package substrate
+package substrate_test
 
 import (
 	_ "embed"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate"
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
@@ -26,7 +27,7 @@ var test_http_tx string
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(&xc.ChainConfig{})
+	client, err := substrate.NewClient(&xc.ChainConfig{})
 	require.NotNil(err)
 	require.Nil(client.DotClient)
 }
@@ -39,7 +40,7 @@ func (s *CrosschainTestSuite) TestBalance() {
 	rpc, rpcClose := testtypes.MockJSONRPC(s.T(), []string{test_rpc_meta, test_rpc_meta, test_rpc_storage})
 	defer rpcClose()
 
-	client, err := NewClient(&xc.ChainConfig{
+	client, err := substrate.NewClient(&xc.ChainConfig{
 		Chain:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,
@@ -60,14 +61,14 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	http, httpClose := testtypes.MockHTTP(s.T(), test_http_tx, 200)
 	defer httpClose()
 
-	client, err := NewClient(&xc.ChainConfig{
+	client, err := substrate.NewClient(&xc.ChainConfig{
 		Chain:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
 		ChainID:     0,
 		ExplorerURL: http.URL,
 	})
-	require.Equal(CheckError(err), xclient.NetworkError) // Intentionally missing RPC
+	require.Equal(substrate.CheckError(err), xclient.NetworkError) // Intentionally missing RPC
 	require.NotNil(client.Asset)
 
 	res, err := client.FetchLegacyTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb")
@@ -91,19 +92,19 @@ func (s *CrosschainTestSuite) TestFetchTxInfoFail() {
 	http, httpClose := testtypes.MockHTTP(s.T(), `{"code":0,"message":"Success","generated_at":1688400923,"data":null}`, 200)
 	defer httpClose()
 
-	client, err := NewClient(&xc.ChainConfig{
+	client, err := substrate.NewClient(&xc.ChainConfig{
 		Chain:       "DOT",
 		Driver:      "substrate",
 		Decimals:    10,
 		ChainID:     0,
 		ExplorerURL: http.URL,
 	})
-	require.Equal(CheckError(err), xclient.NetworkError)
+	require.Equal(substrate.CheckError(err), xclient.NetworkError)
 	require.NotNil(client.Asset)
 
 	// Nonexistent hash
 	_, err = client.FetchLegacyTxInfo(s.Ctx, "47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c02811")
-	require.Equal(CheckError(err), xclient.NetworkError)
+	require.Equal(substrate.CheckError(err), xclient.NetworkError)
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInput() {
@@ -139,7 +140,7 @@ func (s *CrosschainTestSuite) TestEstimateGas() {
 	})
 	defer rpcClose()
 
-	client, err := NewClient(&xc.ChainConfig{
+	client, err := substrate.NewClient(&xc.ChainConfig{
 		Chain:    "DOT",
 		Driver:   "substrate",
 		URL:      rpc.URL,

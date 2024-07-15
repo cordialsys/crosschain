@@ -1,22 +1,23 @@
-package substrate
+package substrate_test
 
 import (
 	"encoding/hex"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate"
 )
 
 func (s *CrosschainTestSuite) TestNewSigner() {
 	require := s.Require()
-	signer, err := NewSigner(&xc.ChainConfig{})
+	signer, err := substrate.NewSigner(&xc.ChainConfig{})
 	require.Nil(err)
 	require.NotNil(signer)
 }
 
 func (s *CrosschainTestSuite) TestImportPrivateKey() {
 	require := s.Require()
-	signer, _ := NewSigner(&xc.ChainConfig{})
+	signer, _ := substrate.NewSigner(&xc.ChainConfig{})
 	key, err := signer.ImportPrivateKey("0x0931ee5849b18ce7699982d3222b6b861e28336462659e709f93e9d903986da7")
 	require.Nil(err)
 	require.Equal(hex.EncodeToString(key), "0931ee5849b18ce7699982d3222b6b861e28336462659e709f93e9d903986da7")
@@ -39,7 +40,7 @@ func (s *CrosschainTestSuite) TestSign() {
 		},
 	}
 	for _, v := range vectors {
-		signer, _ := NewSigner(&xc.ChainConfig{})
+		signer, _ := substrate.NewSigner(&xc.ChainConfig{})
 		bytesPri, _ := hex.DecodeString(v.pri)
 		bytesMsg, _ := hex.DecodeString(v.msg)
 		sig, err := signer.Sign(xc.PrivateKey(bytesPri), xc.TxDataToSign(bytesMsg))

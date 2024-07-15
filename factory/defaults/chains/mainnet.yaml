@@ -136,6 +136,12 @@ chains:
     polling_period: 10m
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
+  DOT:
+    chain: DOT
+    driver: substrate
+    decimals: 10
+    chain_name: Polkadot
+    chain_prefix: "0"
   ETC:
     chain: ETC
     driver: evm-legacy
