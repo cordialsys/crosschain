@@ -5,6 +5,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	xc "github.com/cordialsys/crosschain"
 )
 
@@ -37,13 +38,15 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 	// We use transfer_keep_alive to avoid accounts being reaped for sending too much balance that it no longer has the
 	// existential deposit. This would cause the account to get reaped, which can cause future TXs to have duped hashes
-	call, err := types.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
+	call, err := NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
 	if err != nil {
 		return &Tx{}, err
 	}
+	// types.NewCall()
 
 	return &Tx{
-		extrinsic:   types.NewExtrinsic(call),
+		// extrinsic:   types.NewExtrinsic(call),
+		extrinsic:   extrinsic.NewDynamicExtrinsic(&call),
 		sender:      sender,
 		nonce:       txInput.Nonce,
 		genesisHash: txInput.GenesisHash,
