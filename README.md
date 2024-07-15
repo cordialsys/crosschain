@@ -29,7 +29,7 @@ Usage:
 
 Available Commands:
   address     Derive an address from the PRIVATE_KEY environment variable.
-  balance     Check balance of an asset.
+  balance     Check balance of an asset.  Reported as big integer, not accounting for any decimals.
   chains      List information on all supported chains.
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
@@ -132,7 +132,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Polkadot
 - [x] Solana
 - [x] Sui
-- [ ] TON
+- [x] TON
 - [x] Tron
 
 ### Assets
