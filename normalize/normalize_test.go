@@ -48,6 +48,16 @@ func (s *NormalizeTestSuite) TestNormalizeTransactionHash() {
 			inp:   "0x123456aABB",
 			out:   "000000000000000000000000000000000000000000000000000000123456aabb",
 		},
+		{
+			chain: xc.TON,
+			inp:   "0x123456aABB",
+			out:   "123456aabb",
+		},
+		{
+			chain: xc.TON,
+			inp:   "WkQx6xKpNhRBMMfHXykhcPknSc8IuNclmCEXFBily+8=",
+			out:   "5a4431eb12a936144130c7c75f292170f92749cf08b8d7259821171418a5cbef",
+		},
 	}
 	for _, v := range vectors {
 		normalizedOut := n.TransactionHash(v.inp, v.chain)
@@ -143,6 +153,16 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 			chain: xc.TRX,
 			inp:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
 			out:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+		},
+		{
+			chain: xc.TON,
+			inp:   "0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A",
+			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
+		},
+		{
+			chain: xc.TON,
+			inp:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
+			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
 		},
 	}
 	for _, v := range vectors {

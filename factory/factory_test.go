@@ -87,7 +87,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST", URL: "a url"})
 	_, err := s.Factory.NewClient(asset)
-	require.ErrorContains(err, "unsupported asset")
+	require.ErrorContains(err, "no client defined for")
 
 	// no clients can be derived without a driver or url
 	asset, _ = s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST2"})
@@ -104,7 +104,7 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST"})
 	_, err := s.Factory.NewTxBuilder(asset)
-	require.ErrorContains(err, "unsupported asset")
+	require.ErrorContains(err, "no tx-builder defined for")
 }
 
 func (s *CrosschainTestSuite) TestNewSigner() {
@@ -116,7 +116,7 @@ func (s *CrosschainTestSuite) TestNewSigner() {
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST"})
 	_, err := s.Factory.NewSigner(asset)
-	require.ErrorContains(err, "unsupported asset")
+	require.ErrorContains(err, "no signer defined for")
 }
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
@@ -129,7 +129,7 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST"})
 	_, err := s.Factory.NewAddressBuilder(asset)
-	require.ErrorContains(err, "unsupported asset")
+	require.ErrorContains(err, "no address builder defined for")
 }
 
 // GetObject functions (excluding config)

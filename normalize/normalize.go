@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
+	tontx "github.com/cordialsys/crosschain/chain/ton/tx"
 )
 
 // Given an address like coin::Coin<0x11AAbbCCdd::coin::NAME>,
@@ -120,6 +122,9 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverTron:
 		// TODO
+	case xc.DriverTon:
+		// convert the "0:1234" format to base64 if needed
+		address, _ = tonaddress.Normalize(address)
 	default:
 	}
 	return address
@@ -169,6 +174,8 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverTron:
 		// TODO
+	case xc.DriverTon:
+		return tontx.Normalize(hash)
 	default:
 	}
 	return hash

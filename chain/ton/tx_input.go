@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/ton/api"
+	"github.com/shopspring/decimal"
 )
 
 // TxInput for Template
@@ -63,8 +64,9 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	if err != nil {
 		return err
 	}
-	// multiply the gas price using the default, or apply a strategy according to the enum
-	_ = multiplier
+	// TON doesn't have prioritization fees but we can map it to update the max fee reservation
+	multipliedFee := multiplier.Mul(decimal.NewFromBigInt(input.EstimatedMaxFee.Int(), 0)).BigInt()
+	input.EstimatedMaxFee = xc.AmountBlockchain(*multipliedFee)
 	return nil
 }
 

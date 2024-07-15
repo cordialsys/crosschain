@@ -1,8 +1,10 @@
-package ton
+package tx
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/xssnick/tonutils-go/address"
@@ -50,10 +52,9 @@ func (tx Tx) Hash() xc.TxHash {
 	}
 	hash := parsed.Hash()
 
-	// TON tends to support loading transactions in either hex, base64-std, or base64url.
-	// We choose base64-std as this is what is reported by default by the RPC nodes when downloading
-	// transactions.  It's also the default on mainnet TONViewer explorer.
-	return xc.TxHash(base64.StdEncoding.EncodeToString(hash[:]))
+	// TON supports loading transaction by either hex, base64-std, or base64url.
+	// We choose hex as it's preferred in explorers and doesn't have special characters.
+	return xc.TxHash(hex.EncodeToString(hash))
 }
 
 func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
@@ -86,4 +87,19 @@ func (tx Tx) Serialize() ([]byte, error) {
 	}
 	bz := ext.ToBOCWithFlags(false)
 	return bz, nil
+}
+
+// Normal to hex as it doesn't have any special characters
+func Normalize(txhash string) string {
+	txhash = strings.TrimPrefix(txhash, "0x")
+	if bz, err := hex.DecodeString(txhash); err == nil {
+		return hex.EncodeToString(bz)
+	}
+	if bz, err := base64.StdEncoding.DecodeString(txhash); err == nil {
+		return hex.EncodeToString(bz)
+	}
+	if bz, err := base64.RawURLEncoding.DecodeString(txhash); err == nil {
+		return hex.EncodeToString(bz)
+	}
+	return txhash
 }

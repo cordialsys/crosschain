@@ -46,7 +46,7 @@ func (s *CrosschainTestSuite) TestAccountBalance() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
@@ -183,7 +183,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)
@@ -490,7 +490,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
 

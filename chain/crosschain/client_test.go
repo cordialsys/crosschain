@@ -52,7 +52,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
+	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -69,7 +69,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 func (s *CrosschainTestSuite) TestFetchTxInputError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -84,10 +84,10 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 // func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
 // 	require := s.Require()
 
-// 	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 // 	defer close()
 
-// 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
+// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
 // 	defer close2()
 
 // 	s.Asset.GetChain().Driver = xc.DriverSolana
@@ -116,7 +116,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
+	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -132,7 +132,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -146,10 +146,10 @@ func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 // func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
 // 	require := s.Require()
 
-// 	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 // 	defer close()
 
-// 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
+// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
 // 	defer close2()
 
 // 	s.Asset.GetChain().Driver = xc.DriverSolana
@@ -171,7 +171,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
+	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -189,7 +189,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 func (s *CrosschainTestSuite) TestSubmitTxError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -206,10 +206,10 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 // func (s *CrosschainTestSuite) TestSubmitTxErrorFallback() {
 // 	require := s.Require()
 
-// 	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 // 	defer close()
 
-// 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
+// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
 // 	defer close2()
 
 // 	s.Asset.GetChain().Driver = xc.DriverSolana
@@ -235,7 +235,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	}
 	res, _ := json.Marshal(resObj)
 
-	server, close := testtypes.MockHTTP(&s.Suite, string(res), 200)
+	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -254,7 +254,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
 	client, _ := NewClient(s.Asset)
@@ -271,10 +271,10 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 // func (s *CrosschainTestSuite) TestFetchBalanceErrorFallback() {
 // 	require := s.Require()
 
-// 	server, close := testtypes.MockHTTP(&s.Suite, `{"code":3,"message":"api-error"}`, 400)
+// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 // 	defer close()
 
-// 	server2, close2 := testtypes.MockJSONRPC(&s.Suite, errors.New(`{"message": "custom RPC error", "code": 123}`))
+// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
 // 	defer close2()
 
 // 	s.Asset.GetChain().Driver = xc.DriverSolana

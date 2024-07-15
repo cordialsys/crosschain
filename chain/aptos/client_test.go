@@ -11,7 +11,7 @@ import (
 func (s *AptosTestSuite) TestNewClient() {
 	require := s.Require()
 	resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-	server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
+	server, close := testtypes.MockHTTP(s.T(), resp, 200)
 	defer close()
 
 	client, err := NewClient(&xc.ChainConfig{URL: server.URL})
@@ -65,7 +65,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 	for _, v := range vectors {
 
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
+		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 
 		asset := v.asset.GetChain()
 		asset.URL = server.URL
@@ -94,7 +94,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 
 func (s *AptosTestSuite) TestSubmitTx() {
 	require := s.Require()
-	server, close := testtypes.MockHTTP(&s.Suite, []string{
+	server, close := testtypes.MockHTTP(s.T(), []string{
 		`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 		// transaction submitted
 		`{"hash":"0x5ec9ac15dee869a7364f31534e9d98db09c6dd028a64aa95b2b6d896348c4c94","sender":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682","sequence_number":"2","max_gas_amount":"2000","gas_unit_price":"100","expiration_timestamp_secs":"1683068558920777","payload":{"function":"0x1::aptos_account::transfer","type_arguments":[],"arguments":["0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365","12300000"],"type":"entry_function_payload"},"signature":{"public_key":"0xa09bb3957ad788bfcfd3f7c5eda9ab2876ff0de8db38dafdf439cfe3f96673b6","signature":"0xc32be4211fe1655e86d4d1558fdc48252e01e9f8ca9d14a1c815fce0913e9eac0360eb2991d3ea58a19e64461e9404a41e31aa20d4ba4bc184a353cecb8c9d0e","type":"ed25519_signature"}}`,
@@ -239,7 +239,7 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 
 	for _, v := range vectors {
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
+		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 
 		asset := &xc.ChainConfig{Net: "devnet"}
 		asset.URL = server.URL
@@ -298,7 +298,7 @@ func (s *AptosTestSuite) TestFetchBalance() {
 
 	for _, v := range vectors {
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(&s.Suite, resp, 200)
+		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 		defer close()
 
 		asset := v.asset

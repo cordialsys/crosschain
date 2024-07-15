@@ -248,7 +248,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 
 	for i, v := range vectors {
 		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		fmt.Println("ASSET", v.asset)
 		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
@@ -269,7 +269,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			require.Nil(input)
 			require.ErrorContains(err, v.err)
 		} else {
-			require.Nil(err)
+			require.NoError(err)
 			require.NotNil(input)
 			require.Equal(v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
 			require.Equal(v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
@@ -298,7 +298,7 @@ func (s *SolanaTestSuite) TestSubmitTxSuccess() {
 	serialized_tx, err := tx.Serialize()
 	require.NoError(err)
 
-	server, close := testtypes.MockJSONRPC(&s.Suite, fmt.Sprintf("\"%s\"", tx.Hash()))
+	server, close := testtypes.MockJSONRPC(s.T(), fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
 	client, _ := NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
 	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
@@ -351,7 +351,7 @@ func (s *SolanaTestSuite) TestAccountBalance() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
@@ -403,7 +403,7 @@ func (s *SolanaTestSuite) TestTokenBalance() {
 
 	for i, v := range vectors {
 		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		client, _ := NewClient(&xc.TokenAssetConfig{
@@ -592,7 +592,7 @@ func (s *SolanaTestSuite) TestFetchTxInfo() {
 
 	for i, v := range vectors {
 		fmt.Println("test case ", i)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 
 		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})

@@ -166,7 +166,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 
@@ -188,7 +188,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 }
 func (s *CrosschainTestSuite) TestInvalidTxFetchTxInfo() {
 	require := s.Require()
-	server, close := testtypes.MockJSONRPC(&s.Suite, "")
+	server, close := testtypes.MockJSONRPC(s.T(), "")
 	defer close()
 	asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 	asset.URL = server.URL
@@ -666,7 +666,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 
 	for _, v := range vectors {
 		fmt.Println("=== Running ", v.name)
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		nativeAsset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 		nativeAsset.URL = server.URL
@@ -786,7 +786,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	for _, v := range vectors {
 		fmt.Println("Running ", v.name)
 		ctx := context.Background()
-		server, close := testtypes.MockJSONRPC(&s.Suite, v.resp)
+		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.SUI, Net: "devnet", URL: server.URL}
 

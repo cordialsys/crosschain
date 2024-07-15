@@ -1,4 +1,4 @@
-package ton
+package address
 
 import (
 	"strings"
@@ -50,5 +50,14 @@ func ParseAddress(addr xc.Address) (*address.Address, error) {
 	if len(strings.Split(addrS, ":")) == 2 {
 		return address.ParseRawAddr(addrS)
 	}
+
 	return address.ParseAddr(addrS)
+}
+
+func Normalize(address string) (string, error) {
+	addr, err := ParseAddress(xc.Address(address))
+	if err != nil {
+		return address, err
+	}
+	return addr.String(), nil
 }
