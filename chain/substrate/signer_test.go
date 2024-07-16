@@ -1,9 +1,9 @@
 package substrate_test
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/substrate"
 )
@@ -24,7 +24,6 @@ func (s *CrosschainTestSuite) TestImportPrivateKey() {
 }
 
 func (s *CrosschainTestSuite) TestSign() {
-	// SR25519 signatures are nondeterministic
 	require := s.Require()
 	vectors := []struct {
 		pri string
@@ -44,14 +43,11 @@ func (s *CrosschainTestSuite) TestSign() {
 		bytesPri, _ := hex.DecodeString(v.pri)
 		bytesMsg, _ := hex.DecodeString(v.msg)
 		sig, err := signer.Sign(xc.PrivateKey(bytesPri), xc.TxDataToSign(bytesMsg))
-		require.Nil(err)
+		require.NoError(err)
 		require.NotNil(sig)
-		ok, err := signature.Verify(bytesMsg, sig, hex.EncodeToString(bytesPri))
-		require.Nil(err)
-		require.True(ok)
 
-		ok, err = signature.Verify(bytesMsg, sig, hex.EncodeToString(bytesMsg))
-		require.Nil(err)
-		require.False(ok)
+		publicKey, _ := signer.PublicKey(bytesPri)
+		ok := ed25519.Verify(ed25519.PublicKey(publicKey), bytesMsg, sig)
+		require.True(ok)
 	}
 }

@@ -12,6 +12,8 @@ import (
 // How many blocks the transaction will stay valid for
 const MORTAL_PERIOD = 4096
 
+var DefaultMaxTotalTipHuman, _ = xc.NewAmountHumanReadableFromStr("2")
+
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset xc.ITask
@@ -42,17 +44,25 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if err != nil {
 		return &Tx{}, err
 	}
-	// types.NewCall()
 
-	return &Tx{
+	tip := txInput.Tip
+	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.GetChain().Decimals).Uint64()
+	if tip > maxTip {
+		tip = maxTip
+	}
+
+	tx := &Tx{
 		// extrinsic:   types.NewExtrinsic(call),
+		meta:        txInput.Meta,
 		extrinsic:   extrinsic.NewDynamicExtrinsic(&call),
 		sender:      sender,
 		nonce:       txInput.Nonce,
 		genesisHash: txInput.GenesisHash,
 		curHash:     txInput.CurHash,
 		rv:          txInput.Rv,
-		tip:         txInput.Tip,
+		tip:         tip,
 		era:         uint16(txInput.CurNum%MORTAL_PERIOD<<4) + uint16(math.Log2(MORTAL_PERIOD)-1),
-	}, nil
+	}
+	err = tx.build()
+	return tx, err
 }

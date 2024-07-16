@@ -5,17 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"math/big"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate/api"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
@@ -23,9 +23,10 @@ import (
 
 // Client for Substrate
 type Client struct {
-	DotClient       *gsrpc.SubstrateAPI
-	Asset           xc.ITask
-	EstimateGasFunc xclient.EstimateGasFunc
+	DotClient    *gsrpc.SubstrateAPI
+	Asset        xc.ITask
+	substrateUrl string
+	apiKey       string
 }
 
 var _ xclient.FullClient = &Client{}
@@ -33,7 +34,8 @@ var _ xclient.FullClient = &Client{}
 // TxInput for Substrate
 type TxInput struct {
 	xc.TxInputEnvelope
-	Meta        Metadata             `json:"meta,omitempty"`
+	Meta Metadata `json:"meta,omitempty"`
+	// MetaData2   types.Metadata       `json:"meta2"`
 	GenesisHash types.Hash           `json:"genesis_hash,omitempty"`
 	CurHash     types.Hash           `json:"current_hash,omitempty"`
 	Rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
@@ -76,18 +78,47 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 // NewClient returns a new Substrate Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	rpcurl := cfgI.GetChain().URL
-	if rpcurl != "" {
-		client, err := gsrpc.NewSubstrateAPI(rpcurl)
-		return &Client{
-			DotClient: client,
-			Asset:     cfgI,
-		}, err
-	} else {
-		// Gracefully continue even if no URL provided (still include asset in returned client)
-		return &Client{
-			Asset: cfgI,
-		}, errors.New("bad rpc url")
+
+	txInfoClientI, err := NewTxInfoClient(cfgI)
+	if err != nil {
+		return nil, err
 	}
+	txInfoClient := txInfoClientI.(*Client)
+
+	client, err := gsrpc.NewSubstrateAPI(rpcurl)
+	return &Client{
+		DotClient:    client,
+		Asset:        cfgI,
+		substrateUrl: txInfoClient.substrateUrl,
+		apiKey:       txInfoClient.apiKey,
+	}, err
+}
+
+type TxInfoClient interface {
+	// Fetching transaction info - legacy endpoint
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
+	// Fetching transaction info
+	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error)
+}
+
+func NewTxInfoClient(cfgI xc.ITask) (TxInfoClient, error) {
+	indexerUrl := cfgI.GetChain().IndexerUrl
+	apiKey := cfgI.GetChain().AuthSecret
+
+	help := `The substrate driver relies on a supported subscan endpoint (https://support.subscan.io).\n` +
+		`This is used only to download transactions (extrinics) by their hash, as this is not natively supported by substrate chains.`
+	if indexerUrl == "" {
+		return nil, fmt.Errorf(`must set .indexer_url\n` + help)
+	}
+	if apiKey == "" {
+		return nil, fmt.Errorf(`must set .api-key\n` + help)
+	}
+	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
+	return &Client{
+		Asset:        cfgI,
+		substrateUrl: indexerUrl,
+		apiKey:       apiKey,
+	}, nil
 }
 
 // NewTxInput returns a new Substrate TxInput
@@ -108,6 +139,7 @@ func (client *Client) FetchTxInputChain() (*types.Metadata, *TxInput, error) {
 	if err != nil {
 		return meta, &TxInput{}, err
 	}
+	// txInput.MetaData2 = *meta
 	txInput.GenesisHash, err = rpc.Chain.GetBlockHash(0)
 	if err != nil {
 		return meta, &TxInput{}, err
@@ -152,12 +184,47 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.Tip = client.Asset.GetChain().ChainGasTip
 	txInput.Nonce, err = client.FetchAccountNonce(*meta, from)
 	if err != nil {
 		return &TxInput{}, err
 	}
+	amt, err := client.EstimateTip(ctx)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"chain": client.Asset.GetChain().Chain,
+			"error": err,
+		}).Warn("could not estimate gas fee")
+	}
+	txInput.Tip = amt
+
 	return txInput, nil
+}
+
+type RpcError struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data,omitempty"`
+}
+
+// The current rpc client omits the .data in it's err.Error() method
+func AsRpcErrorMaybe(inputError error) error {
+	bz, err := json.Marshal(inputError)
+	if err != nil {
+		return inputError
+	}
+	var outputError RpcError
+	err = json.Unmarshal(bz, &outputError)
+	if err != nil {
+		return inputError
+	}
+	if outputError.Code != 0 && len(outputError.Message) > 0 {
+		if outputError.Data != nil {
+			return fmt.Errorf("%s: %v (%d)", outputError.Message, outputError.Data, outputError.Code)
+		} else {
+			return fmt.Errorf("%s (%d)", outputError.Message, outputError.Code)
+		}
+	}
+	return inputError
 }
 
 // SubmitTx submits a Substrate tx
@@ -172,50 +239,89 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	logrus.WithField("tx", encoded).Debug("submitting tx")
 	err = client.DotClient.Client.Call(&res, "author_submitExtrinsic", encoded)
 	if err != nil {
-		return err
+		return AsRpcErrorMaybe(err)
 	}
 	return nil
 }
 
-type TxInfoTransfer struct {
-	Amount string `json:"amount"`
-	From   string `json:"from"`
-	To     string `json:"to"`
-}
-
-type TxInfoData struct {
-	Transfer  TxInfoTransfer `json:"transfer"`
-	BlockHash string         `json:"block_hash"`
-	ExtIndex  string         `json:"extrinsic_index"`
-	Fee       string         `json:"fee"`
-	BlockNum  float64        `json:"block_num"`
-	BlockTime float64        `json:"block_timestamp"`
-}
-
-type TxInfoResponse struct {
-	Data TxInfoData `json:"data"`
-}
-
 func (client *Client) ParseTxInfo(body []byte) (xc.LegacyTxInfo, error) {
-	var TxInfoResp TxInfoResponse
-	err := json.Unmarshal(body, &TxInfoResp)
+	var txInfoResp api.SubscanExtrinsicResponse
+	err := json.Unmarshal(body, &txInfoResp)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	if len(TxInfoResp.Data.BlockHash) == 0 {
+	if len(txInfoResp.Data.BlockHash) == 0 {
 		return xc.LegacyTxInfo{}, errors.New("not found")
 	}
-	human, _ := xc.NewAmountHumanReadableFromStr(TxInfoResp.Data.Transfer.Amount)
+
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	destinations := []*xc.LegacyTxInfoEndpoint{}
+	addressBuilder, err := NewAddressBuilder(client.Asset)
+	if err != nil {
+		return xc.LegacyTxInfo{}, err
+	}
+	chain := client.Asset.GetChain().Chain
+
+	// parse known events
+	for _, ev := range txInfoResp.Data.Event {
+		handle := ev.ModuleID + "." + ev.EventID
+		switch handle {
+		case "balances.Transfer":
+			_, err := ev.ParseParams()
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+			fromId, err := api.GetParamAccountId(&ev, "from")
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+			toId, err := api.GetParamAccountId(&ev, "to")
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+			amount, err := api.GetParamInt(&ev, "amount")
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+
+			from, _ := addressBuilder.GetAddressFromPublicKey(fromId)
+			to, _ := addressBuilder.GetAddressFromPublicKey(toId)
+
+			sources = append(sources, &xc.LegacyTxInfoEndpoint{
+				Address:     from,
+				NativeAsset: chain,
+				Amount:      amount,
+			})
+			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+				Address:     to,
+				NativeAsset: chain,
+				Amount:      amount,
+			})
+		}
+
+	}
+	amount := xc.NewAmountBlockchainFromUint64(0)
+	from := xc.Address("")
+	to := xc.Address("")
+	if len(sources) > 0 {
+		from = sources[0].Address
+	}
+	if len(destinations) > 0 {
+		amount = destinations[0].Amount
+		to = destinations[0].Address
+	}
 
 	return xc.LegacyTxInfo{
-		BlockHash:  TxInfoResp.Data.BlockHash,
-		TxID:       TxInfoResp.Data.ExtIndex,
-		From:       xc.Address(TxInfoResp.Data.Transfer.From),
-		To:         xc.Address(TxInfoResp.Data.Transfer.To),
-		Amount:     human.ToBlockchain(client.Asset.GetChain().Decimals),
-		Fee:        xc.NewAmountBlockchainFromStr(TxInfoResp.Data.Fee),
-		BlockIndex: int64(TxInfoResp.Data.BlockNum),
-		BlockTime:  int64(TxInfoResp.Data.BlockTime),
+		BlockHash:    txInfoResp.Data.BlockHash,
+		TxID:         txInfoResp.Data.ExtrinsicHash,
+		From:         from,
+		To:           to,
+		Amount:       amount,
+		Fee:          xc.NewAmountBlockchainFromStr(txInfoResp.Data.Fee),
+		BlockIndex:   int64(txInfoResp.Data.BlockNum),
+		BlockTime:    int64(txInfoResp.Data.BlockTimestamp),
+		Sources:      sources,
+		Destinations: destinations,
 	}, nil
 }
 
@@ -226,10 +332,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	var reqBody = []byte(`{"hash": "` + txHash + `"}`)
 
-	asset := client.Asset.GetChain()
-	req, err := http.NewRequest("POST", asset.ExplorerURL+"/api/scan/extrinsic", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", client.substrateUrl+"/api/scan/extrinsic", bytes.NewBuffer(reqBody))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-API-Key", asset.AuthSecret)
+	if client.apiKey != "" {
+		req.Header.Add("X-API-Key", client.apiKey)
+	}
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
@@ -241,7 +348,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
@@ -282,78 +389,32 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 // FetchBalance fetches token balance for a Substrate address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetChain().Chain == client.Asset.GetChain().Chain {
+	if client.Asset.GetContract() == "" {
 		return client.FetchNativeBalance(ctx, address)
 	} else {
 		return xc.AmountBlockchain{}, errors.New("unsupported asset")
 	}
 }
 
-// Create sample extrinsic with a transaction
-func (client *Client) SampleTransaction(ctx context.Context) (xc.Tx, error) {
-	sampleAddr := xc.Address(signature.TestKeyringPairAlice.Address)
-	txInput, err := client.FetchTxInput(ctx, sampleAddr, sampleAddr)
+// EstimateTip looks at the latest extrinsics to try to calculate an average tip paid
+func (client *Client) EstimateTip(ctx context.Context) (uint64, error) {
+	block, err := client.DotClient.RPC.Chain.GetBlockLatest()
 	if err != nil {
-		return &Tx{}, err
-	}
-	builder, err := NewTxBuilder(client.Asset)
-	if err != nil {
-		return &Tx{}, err
-	}
-	tx, err := builder.NewTransfer(sampleAddr, sampleAddr, xc.NewAmountBlockchainFromUint64(1), txInput)
-	if err != nil {
-		return &Tx{}, err
-	}
-	sighashes, err := tx.Sighashes()
-	if err != nil {
-		return &Tx{}, err
-	}
-	signer, err := NewSigner(client.Asset)
-	if err != nil {
-		return &Tx{}, err
-	}
-	signature, err := signer.Sign(xc.PrivateKey(signature.TestKeyringPairAlice.PublicKey), sighashes[0])
-	if err != nil {
-		return &Tx{}, err
-	}
-	err = tx.AddSignatures(signature)
-	if err != nil {
-		return &Tx{}, err
-	}
-	return tx, nil
-}
-
-// EstimateGas estimates the fee for a Substrate transaction (extrinsic)
-func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	tx, err := client.SampleTransaction(ctx)
-	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
-	}
-	enc, err := tx.Serialize()
-	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
-	}
-	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
+		return 0, err
 	}
 
-	var resp interface{}
-	err = client.DotClient.Client.Call(&resp, "payment_queryFeeDetails", codec.HexEncodeToString(enc))
-	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
+	var total uint64
+	var count uint64
+	for _, ext := range block.Block.Extrinsics {
+		tip := ext.Signature.Tip.Int64()
+		if tip > 0 {
+			total += uint64(tip)
+			count += 1
+		}
+	}
+	if count < 5 {
+		return 0, nil
 	}
 
-	fees := resp.(map[string]interface{})["inclusionFee"].(map[string]interface{})
-	var total xc.AmountBlockchain
-	for _, fee := range fees {
-		var feeInt big.Int
-		feeInt.SetString(fee.(string), 0)
-		total = total.Add((*xc.AmountBlockchain)(&feeInt))
-	}
-	size := xc.NewAmountBlockchainFromUint64(uint64(len(enc)))
-	return total.Div(&size), nil
-}
-
-func (client *Client) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = estimateGas
+	return total / count, nil
 }

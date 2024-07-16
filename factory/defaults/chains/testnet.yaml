@@ -89,10 +89,11 @@ chains:
   DOT:
     chain: DOT
     driver: substrate
-    decimals: 10
+    decimals: 12 # different decimals from mainnet
     chain_id: 1001
-    chain_name: Paseo
+    chain_name: Rococo
     chain_prefix: "42"
+    indexer_url: "https://rococo.api.subscan.io"
   LTC:
     chain: LTC
     driver: bitcoin-legacy

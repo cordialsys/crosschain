@@ -1,13 +1,13 @@
 package substrate
 
 import (
-	"encoding/hex"
+	"fmt"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic/extensions"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -15,12 +15,14 @@ import (
 type Tx struct {
 	// extrinsic            types.Extrinsic
 	extrinsic            extrinsic.DynamicExtrinsic
+	meta                 Metadata
 	sender               types.MultiAddress
 	genesisHash, curHash types.Hash
 	rv                   types.RuntimeVersion
 	tip, nonce           uint64
 	era                  uint16
 	inputSignatures      []xc.TxSignature
+	payload              *extrinsic.Payload
 }
 
 var _ xc.Tx = &Tx{}
@@ -37,66 +39,64 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	mb, err := codec.Encode(tx.extrinsic.Method)
-	if err != nil {
-		return []xc.TxDataToSign{}, err
+	b, err := codec.Encode(tx.payload)
+	// if data is longer than 256 bytes, must hash it first
+	if len(b) > 256 {
+		h := blake2b.Sum256(b)
+		b = h[:]
 	}
-
-	payload := types.ExtrinsicPayloadV4{
-		ExtrinsicPayloadV3: types.ExtrinsicPayloadV3{
-			Method: mb,
-			Era: types.ExtrinsicEra{
-				IsMortalEra: true,
-				AsMortalEra: types.MortalEra{
-					First:  byte(tx.era & 0xff),
-					Second: byte(tx.era >> 8),
-				},
-			},
-			Nonce:       types.NewUCompactFromUInt(tx.nonce),
-			Tip:         types.NewUCompactFromUInt(tx.tip),
-			SpecVersion: tx.rv.SpecVersion,
-			GenesisHash: tx.genesisHash,
-			BlockHash:   tx.curHash,
-		},
-		TransactionVersion: tx.rv.TransactionVersion,
-	}
-
-	b, err := codec.Encode(payload)
 	return []xc.TxDataToSign{b}, err
+}
+
+func (tx *Tx) build() error {
+	// tx.extrinsic.Sign()
+	if tx.extrinsic.Type() != types.ExtrinsicVersion4 {
+		return fmt.Errorf("unsupported extrinsic version: %v (isSigned: %v, type: %v)", tx.extrinsic.Version, tx.extrinsic.IsSigned(), tx.extrinsic.Type())
+	}
+	encodedMethod, err := codec.Encode(tx.extrinsic.Method)
+	if err != nil {
+		return fmt.Errorf("encode method: %w", err)
+	}
+	fieldValues := extrinsic.SignedFieldValues{}
+
+	opts := []extrinsic.SigningOption{
+		extrinsic.WithEra(types.ExtrinsicEra{IsImmortalEra: true}, tx.genesisHash),
+		extrinsic.WithNonce(types.NewUCompactFromUInt(uint64(tx.nonce))),
+		extrinsic.WithTip(types.NewUCompactFromUInt(tx.tip)),
+		extrinsic.WithSpecVersion(tx.rv.SpecVersion),
+		extrinsic.WithTransactionVersion(tx.rv.TransactionVersion),
+		extrinsic.WithGenesisHash(tx.genesisHash),
+		extrinsic.WithMetadataMode(extensions.CheckMetadataModeDisabled, extensions.CheckMetadataHash{Hash: types.NewEmptyOption[types.H256]()}),
+	}
+	for _, opt := range opts {
+		opt(fieldValues)
+	}
+
+	payload, err := createPayload(&tx.meta, encodedMethod)
+	if err != nil {
+		return fmt.Errorf("creating payload: %w", err)
+	}
+	err = payload.MutateSignedFields(fieldValues)
+	if err != nil {
+		return fmt.Errorf("mutate signed fields: %w", err)
+	}
+	tx.payload = payload
+	return nil
 }
 
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
-	tx.extrinsic.Sign()
-	fieldValues := extrinsic.SignedFieldValues{}
-
-	extrinsic.WithEra(types.ExtrinsicEra{
-		IsMortalEra: true,
-		AsMortalEra: types.MortalEra{
-			First:  byte(tx.era & 0xff),
-			Second: byte(tx.era >> 8),
-		},
-	}, tx.genesisHash)(fieldValues)
-
 	tx.extrinsic.Signature = &extrinsic.Signature{
 		Signer: tx.sender,
 		Signature: types.MultiSignature{
-			// IsSr25519: true,
-			// AsSr25519: types.NewSignature(signatures[0]),
 			IsEd25519: true,
 			AsEd25519: types.NewSignature(signatures[0]),
 		},
-		SignedFields: []*extrinsic.SignedField{
-			// ,
-		},
-
-		// Era: ,
-		// Nonce: types.NewUCompactFromUInt(tx.nonce),
-		// Tip:   types.NewUCompactFromUInt(tx.tip),
+		SignedFields: tx.payload.SignedFields,
 	}
-	tx.extrinsic.Version |= 0x80
+	tx.extrinsic.Version |= types.ExtrinsicBitSigned
 	tx.inputSignatures = []xc.TxSignature{signatures[0]}
-	logrus.WithField("signature", hex.EncodeToString(signatures[0])).Debug("set signature")
+	// logrus.WithField("signature", hex.EncodeToString(signatures[0])).Debug("set signature")
 	return nil
 }
 
