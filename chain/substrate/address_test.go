@@ -58,13 +58,20 @@ func (s *CrosschainTestSuite) TestSubstrateChainsHavePrefix() {
 			if chain, ok := asset.(*xc.ChainConfig); ok {
 				if chain.Chain.Driver() == xc.DriverSubstrate {
 					// validate that chain_prefix is set
-					help := fmt.Sprintf("Invalid configuration for %s %s. Substrate chains must have the correct chain prefix byte set, see https://polkadot.subscan.io/tools/format_transform",
+					help := fmt.Sprintf("Invalid configuration for %s %s. Substrate chains must have the correct chain prefix u16 set, see https://polkadot.subscan.io/tools/format_transform",
 						cfg.Config.Network,
 						chain.Chain,
 					)
 					require.NotEmpty(chain.ChainPrefix, help)
-					_, err := strconv.ParseUint(chain.ChainPrefix, 10, 8)
+					_, err := strconv.ParseUint(chain.ChainPrefix, 10, 16)
 					require.NoError(err, help)
+
+					// check indexer url
+					help = fmt.Sprintf("Invalid configuration for %s %s. Need indexer_url set for supported subscan endpoint, see https://support.subscan.io/",
+						cfg.Config.Network,
+						chain.Chain,
+					)
+					require.NotEmpty(chain.IndexerUrl, help)
 				}
 			}
 		}

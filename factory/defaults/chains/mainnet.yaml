@@ -142,6 +142,7 @@ chains:
     decimals: 10
     chain_name: Polkadot
     chain_prefix: "0"
+    indexer_url: "https://polkadot.api.subscan.io"
   ETC:
     chain: ETC
     driver: evm-legacy

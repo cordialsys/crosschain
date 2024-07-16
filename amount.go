@@ -129,11 +129,7 @@ func NewAmountBlockchainToMaskFloat64(f64 float64) AmountBlockchain {
 func NewAmountBlockchainFromStr(str string) AmountBlockchain {
 	var ok bool
 	var bigInt *big.Int
-	if strings.HasPrefix(str, "0x") {
-		bigInt, ok = new(big.Int).SetString(strings.TrimPrefix(str, "0x"), 16)
-	} else {
-		bigInt, ok = new(big.Int).SetString(str, 10)
-	}
+	bigInt, ok = new(big.Int).SetString(str, 0)
 	if !ok {
 		return NewAmountBlockchainFromUint64(0)
 	}

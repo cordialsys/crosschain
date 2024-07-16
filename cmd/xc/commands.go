@@ -242,7 +242,7 @@ func CmdTxTransfer() *cobra.Command {
 				time.Sleep(5 * time.Second)
 				info, err := cli.FetchTxInfo(context.Background(), tx.Hash())
 				if err != nil {
-					logrus.WithField("hash", tx.Hash()).Info("could not find tx on chain yet, trying again...")
+					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again...")
 					continue
 				}
 				bz, _ := json.MarshalIndent(info, "", "  ")
