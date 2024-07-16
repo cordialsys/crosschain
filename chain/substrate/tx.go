@@ -2,6 +2,7 @@ package substrate
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
@@ -27,25 +28,21 @@ type Tx struct {
 
 var _ xc.Tx = &Tx{}
 
-// Hash returns the tx hash or id
-func (tx Tx) Hash() xc.TxHash {
-	ser, err := tx.Serialize()
-	if err != nil {
-		return xc.TxHash("")
+func NewTx(extrinsic extrinsic.DynamicExtrinsic, sender types.MultiAddress, tip uint64, txInput *TxInput) (*Tx, error) {
+	tx := &Tx{
+		// extrinsic:   types.NewExtrinsic(call),
+		meta:        txInput.Meta,
+		extrinsic:   extrinsic,
+		sender:      sender,
+		nonce:       txInput.Nonce,
+		genesisHash: txInput.GenesisHash,
+		curHash:     txInput.CurHash,
+		rv:          txInput.Rv,
+		tip:         tip,
+		era:         uint16(txInput.CurrentHeight%MORTAL_PERIOD<<4) + uint16(math.Log2(MORTAL_PERIOD)-1),
 	}
-	hash := blake2b.Sum256(ser)
-	return xc.TxHash(codec.HexEncodeToString(hash[:]))
-}
-
-// Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	b, err := codec.Encode(tx.payload)
-	// if data is longer than 256 bytes, must hash it first
-	if len(b) > 256 {
-		h := blake2b.Sum256(b)
-		b = h[:]
-	}
-	return []xc.TxDataToSign{b}, err
+	err := tx.build()
+	return tx, err
 }
 
 func (tx *Tx) build() error {
@@ -82,6 +79,27 @@ func (tx *Tx) build() error {
 	}
 	tx.payload = payload
 	return nil
+}
+
+// Hash returns the tx hash or id
+func (tx Tx) Hash() xc.TxHash {
+	ser, err := tx.Serialize()
+	if err != nil {
+		return xc.TxHash("")
+	}
+	hash := blake2b.Sum256(ser)
+	return xc.TxHash(codec.HexEncodeToString(hash[:]))
+}
+
+// Sighashes returns the tx payload to sign, aka sighash
+func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+	b, err := codec.Encode(tx.payload)
+	// if data is longer than 256 bytes, must hash it first
+	if len(b) > 256 {
+		h := blake2b.Sum256(b)
+		b = h[:]
+	}
+	return []xc.TxDataToSign{b}, err
 }
 
 // AddSignatures adds a signature to Tx

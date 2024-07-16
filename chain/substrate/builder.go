@@ -1,8 +1,6 @@
 package substrate
 
 import (
-	"math"
-
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
@@ -51,18 +49,5 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		tip = maxTip
 	}
 
-	tx := &Tx{
-		// extrinsic:   types.NewExtrinsic(call),
-		meta:        txInput.Meta,
-		extrinsic:   extrinsic.NewDynamicExtrinsic(&call),
-		sender:      sender,
-		nonce:       txInput.Nonce,
-		genesisHash: txInput.GenesisHash,
-		curHash:     txInput.CurHash,
-		rv:          txInput.Rv,
-		tip:         tip,
-		era:         uint16(txInput.CurNum%MORTAL_PERIOD<<4) + uint16(math.Log2(MORTAL_PERIOD)-1),
-	}
-	err = tx.build()
-	return tx, err
+	return NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
 }

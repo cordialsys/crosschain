@@ -34,14 +34,13 @@ var _ xclient.FullClient = &Client{}
 // TxInput for Substrate
 type TxInput struct {
 	xc.TxInputEnvelope
-	Meta Metadata `json:"meta,omitempty"`
-	// MetaData2   types.Metadata       `json:"meta2"`
-	GenesisHash types.Hash           `json:"genesis_hash,omitempty"`
-	CurHash     types.Hash           `json:"current_hash,omitempty"`
-	Rv          types.RuntimeVersion `json:"runtime_version,omitempty"`
-	CurNum      uint64               `json:"current_num,omitempty"`
-	Tip         uint64               `json:"tip,omitempty"`
-	Nonce       uint64               `json:"nonce,omitempty"`
+	Meta          Metadata             `json:"meta,omitempty"`
+	GenesisHash   types.Hash           `json:"genesis_hash,omitempty"`
+	CurHash       types.Hash           `json:"current_hash,omitempty"`
+	Rv            types.RuntimeVersion `json:"runtime_version,omitempty"`
+	CurrentHeight uint64               `json:"current_height,omitempty"`
+	Tip           uint64               `json:"tip,omitempty"`
+	Nonce         uint64               `json:"account_nonce,omitempty"`
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
@@ -153,8 +152,8 @@ func (client *Client) FetchTxInputChain() (*types.Metadata, *TxInput, error) {
 	if err != nil {
 		return meta, &TxInput{}, err
 	}
-	txInput.CurNum = uint64(header.Number)
-	txInput.CurHash, err = rpc.Chain.GetBlockHash(txInput.CurNum)
+	txInput.CurrentHeight = uint64(header.Number)
+	txInput.CurHash, err = rpc.Chain.GetBlockHash(txInput.CurrentHeight)
 	if err != nil {
 		return meta, &TxInput{}, err
 	}
@@ -352,7 +351,19 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	return client.ParseTxInfo(body)
+	tx, err := client.ParseTxInfo(body)
+	if err != nil {
+		return tx, err
+	}
+	if client.DotClient != nil {
+		// calculate confirmations
+		header, err := client.DotClient.RPC.Chain.GetHeaderLatest()
+		if err != nil {
+			return tx, err
+		}
+		tx.Confirmations = int64(header.Number) - tx.BlockIndex
+	}
+	return tx, nil
 }
 
 func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
