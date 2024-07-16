@@ -41,14 +41,14 @@ func (tx Tx) Hash() xc.TxHash {
 	}
 	ext, err := tlb.ToCell(tx.ExternalMessage)
 	if err != nil {
-		panic(err)
+		return ""
 	}
 
 	// Only way to calculate the correct hash is to reserialize it
 	bz := ext.ToBOC()
 	parsed, err := cell.FromBOC(bz)
 	if err != nil {
-		panic(err)
+		return ""
 	}
 	hash := parsed.Hash()
 
