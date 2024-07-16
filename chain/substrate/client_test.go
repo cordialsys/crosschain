@@ -79,27 +79,49 @@ func accountInfo(nonce, balance uint64) *types.AccountInfo {
 func (s *CrosschainTestSuite) TestBalance() {
 	require := s.Require()
 
-	// Note that these RPC calls do have IDs, which the client library increments per call but doesn't care if they
-	// don't match up. The test json files all use ID 1.
+	type testcase struct {
+		responses   []string
+		expectedBal uint64
+	}
+	var testcases = []testcase{
+		{
+			responses: []string{
+				RPC_META_RESPONSE, RPC_META_RESPONSE, asScaleRpcResult(accountInfo(1, 132919986950891)),
+			},
+			expectedBal: 132919986950891,
+		},
+		{
+			// bittensor's account storage response
+			responses: []string{
+				RPC_META_RESPONSE,
+				RPC_META_RESPONSE,
+				`{"jsonrpc":"2.0", "result":"0x06000000000000000100000000000000424a5127000000000000000000000000000000000000000000000000000000000000000000000080","id":1}`,
+			},
+			expectedBal: 659638850,
+		},
+	}
 
-	rpc, rpcClose := testtypes.MockJSONRPC(s.T(), []string{RPC_META_RESPONSE, RPC_META_RESPONSE, asScaleRpcResult(accountInfo(1, 132919986950891))})
-	defer rpcClose()
+	for i, tc := range testcases {
+		rpc, rpcClose := testtypes.MockJSONRPC(s.T(), tc.responses)
+		defer rpcClose()
 
-	client, err := substrate.NewClient(&xc.ChainConfig{
-		Chain:      "DOT",
-		Driver:     "substrate",
-		URL:        rpc.URL,
-		IndexerUrl: "subscan",
-		AuthSecret: "aaa",
-		Decimals:   10,
-		ChainID:    0,
-	})
-	require.NoError(err)
-	require.NotNil(client.DotClient)
+		client, err := substrate.NewClient(&xc.ChainConfig{
+			Chain:      "DOT",
+			Driver:     "substrate",
+			URL:        rpc.URL,
+			IndexerUrl: "subscan",
+			AuthSecret: "aaa",
+			Decimals:   10,
+			ChainID:    0,
+		})
+		require.NoError(err)
+		require.NotNil(client.DotClient)
 
-	res, err := client.FetchBalance(s.Ctx, "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
-	require.NoError(err)
-	require.Equal(uint64(132919986950891), res.Uint64())
+		res, err := client.FetchBalance(s.Ctx, "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
+		fmt.Println("testcase ", i)
+		require.NoError(err)
+		require.EqualValues(tc.expectedBal, res.Uint64())
+	}
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
