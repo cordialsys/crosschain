@@ -53,6 +53,7 @@ const (
 	SOL    = NativeAsset("SOL")    // Solana
 	SUI    = NativeAsset("SUI")    // SUI
 	XPLA   = NativeAsset("XPLA")   // XPLA
+	TAO    = NativeAsset("TAO")    // Bittensor
 	TIA    = NativeAsset("TIA")    // celestia
 	TON    = NativeAsset("TON")    // TON
 	TRX    = NativeAsset("TRX")    // TRON
@@ -93,6 +94,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SOL,
 	SUI,
 	XPLA,
+	TAO,
 	TIA,
 	TON,
 	TRX,
@@ -161,7 +163,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSui
 	case SOL:
 		return DriverSolana
-	case DOT:
+	case DOT, TAO:
 		return DriverSubstrate
 	case TRX:
 		return DriverTron
