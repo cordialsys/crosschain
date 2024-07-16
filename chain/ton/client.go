@@ -353,6 +353,7 @@ func (client *Client) DetectJettonMovements(tx *api.Transaction) ([]*xc.LegacyTx
 func (client *Client) FetchTonTxByHash(ctx context.Context, txHash xc.TxHash) (api.Transaction, error) {
 	transactions := &api.TransactionsData{}
 
+	// Filter by 'in' direction as this matches messages submitted by the user vs "bounced" transactions created by the chain.
 	err := client.get(fmt.Sprintf("api/v3/transactionsByMessage?direction=in&msg_hash=%s", url.QueryEscape(string(txHash))), transactions)
 	if err != nil {
 		return api.Transaction{}, err

@@ -8,18 +8,15 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-// Signer for Solana
 type Signer struct {
 }
 
 var _ xc.Signer = Signer{}
 
-// NewSigner creates a new Solana Signer
 func NewSigner(cfgI xc.ITask) (xc.Signer, error) {
 	return Signer{}, nil
 }
 
-// ImportPrivateKey imports a Solana private key
 func (signer Signer) ImportPrivateKey(privateKey string) (xc.PrivateKey, error) {
 	// try hex first
 	bz, err := hex.DecodeString(privateKey)
@@ -33,7 +30,6 @@ func (signer Signer) ImportPrivateKey(privateKey string) (xc.PrivateKey, error) 
 	return xc.PrivateKey(key), nil
 }
 
-// Sign a Solana tx
 func (signer Signer) Sign(privateKey xc.PrivateKey, data xc.TxDataToSign) (xc.TxSignature, error) {
 	signatureRaw := ed25519.Sign(ed25519.PrivateKey(privateKey), []byte(data))
 	return xc.TxSignature(signatureRaw), nil
