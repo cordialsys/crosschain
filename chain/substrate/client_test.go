@@ -308,6 +308,34 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				Nonce:         22,
 			},
 		},
+		{
+			responses: []string{
+				// meta
+				RPC_META_RESPONSE,
+				RPC_META_RESPONSE,
+				// get genesis block hash
+				asRpcResult(types.NewHash(make([]byte, 32))),
+				// get runtime version
+				asRpcResult(types.NewRuntimeVersion()),
+				// header
+				asRpcResult(&types.Header{Number: 16097420}),
+				// get current block hash
+				asRpcResult(types.NewHash(make([]byte, 32))),
+				// bittensor account info
+				`{"jsonrpc":"2.0", "result":"0x06000000000000000100000000000000424a5127000000000000000000000000000000000000000000000000000000000000000000000080","id":1}`,
+				// get latest block info
+				`{"block":{"extrinsics": [` + mustMarshalScaleJson(ext50) + `]}}`,
+			},
+			expectedInput: substrate.TxInput{
+				TxInputEnvelope: substrate.NewTxInput().TxInputEnvelope,
+				Meta:            expectedMeta,
+				Rv: types.RuntimeVersion{
+					APIs: []types.RuntimeVersionAPI{},
+				},
+				CurrentHeight: 16097420,
+				Nonce:         6,
+			},
+		},
 	}
 
 	for i, tc := range testcases {

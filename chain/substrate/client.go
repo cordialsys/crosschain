@@ -169,7 +169,7 @@ func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (u
 	if err != nil {
 		return 0, err
 	}
-	var accountInfo types.AccountInfo
+	var accountInfo api.AccountInfoMinimal
 	ok, err := client.DotClient.RPC.State.GetStorageLatest(storageKey, &accountInfo)
 	if err != nil || !ok {
 		return 0, err
@@ -378,18 +378,6 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 
 // FetchNativeBalance fetches account balance for a Substrate address
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	// AccountInfo contains a subset of what a parachain may return in order to maximize decoding iteroperability.
-	// To see other fields, see types.AccountInfo
-	type AccountInfoMinimal struct {
-		Nonce       types.U32
-		Consumers   types.U32
-		Providers   types.U32
-		Sufficients types.U32
-		Data        struct {
-			Free types.U128
-			// skip fields after this point as we don't need them
-		}
-	}
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	meta, err := client.DotClient.RPC.State.GetMetadataLatest()
 	if err != nil {
@@ -401,7 +389,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 		return zero, err
 	}
 
-	var acctInfo AccountInfoMinimal
+	var acctInfo api.AccountInfoMinimal
 	// var acctInfo types.AccountInfo
 	ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &acctInfo)
 	if err != nil || !ok {
