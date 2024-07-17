@@ -49,19 +49,25 @@ func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []b
 	}, err
 }
 
-func ParseAddress(addr xc.Address) (*address.Address, error) {
+func ParseAddress(addr xc.Address, net string) (*address.Address, error) {
 	addrS := string(addr)
 	if len(strings.Split(addrS, ":")) == 2 {
-		return address.ParseRawAddr(addrS)
+		addr, err := address.ParseRawAddr(addrS)
+		if err == nil {
+			if net == "testnet" {
+				addr.SetTestnetOnly(true)
+			}
+		}
+		return addr, err
 	}
 
 	return address.ParseAddr(addrS)
 }
 
-func Normalize(address string) (string, error) {
-	addr, err := ParseAddress(xc.Address(address))
+func Normalize(addressS string) (string, error) {
+	addr, err := address.ParseAddr(addressS)
 	if err != nil {
-		return address, err
+		return addressS, err
 	}
 	return addr.String(), nil
 }

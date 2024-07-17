@@ -30,22 +30,25 @@ func TestParseAddress(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, xc.Address("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2"), derivedAddr)
 
-	addr, err := address.ParseAddress("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2")
+	addr, err := address.ParseAddress("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", "testnet")
 	require.NoError(t, err)
 	require.Equal(t, "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", addr.String())
 
-	addr, err = address.ParseAddress("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2")
+	addr, err = address.ParseAddress("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", "testnet")
 	require.NoError(t, err)
 	require.Equal(t, "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", addr.String())
 
-	addr, err = address.ParseAddress("0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5")
+	addr, err = address.ParseAddress("0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5", "testnet")
 	require.NoError(t, err)
 	require.Equal(t, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5", addr.String())
 
 	// use alternative address format
-	addr, err = address.ParseAddress("0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A")
+	addr, err = address.ParseAddress("0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A", "mainnet")
 	require.NoError(t, err)
 	require.Equal(t, "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2", addr.String())
+	// addr, err = address.ParseAddress("0:337339704B339026E9485A854FED6D412E4EA0508758F92FEC9730593DAE32E7", "testnet")
+	// require.NoError(t, err)
+	// require.Equal(t, "UQAzczlwSzOQJulIWoVP7W1BLk6gUIdY-S_slzBZPa4y5wn-", addr.String())
 }
 
 func TestParseTestnetAddress(t *testing.T) {
