@@ -215,6 +215,13 @@ chains:
     decimals: 18
     indexer_type: rpc
     polling_period: 15m
+  KSM:
+    chain: KSM
+    driver: substrate
+    decimals: 12
+    chain_name: Kusama
+    chain_prefix: "2"
+    indexer_url: "https://kusama.api.subscan.io"
   LTC:
     chain: LTC
     driver: bitcoin-legacy
