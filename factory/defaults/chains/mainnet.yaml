@@ -386,7 +386,7 @@ chains:
   TAO:
     chain: TAO
     driver: substrate
-    decimals: 10
+    decimals: 9
     chain_name: Bittensor
     chain_prefix: "42"
     indexer_url: "https://polkadot.api.subscan.io"

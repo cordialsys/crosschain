@@ -83,6 +83,12 @@ func NewCall(m *Metadata, call string, args ...interface{}) (types.Call, error) 
 	return types.Call{CallIndex: c, Args: a}, nil
 }
 
+var LocalPayloadMutatorFns = map[extensions.SignedExtensionName]extrinsic.PayloadMutatorFn{
+	// do nothing
+	"SubtensorSignedExtension":   func(payload *extrinsic.Payload) {},
+	"CommitmentsSignedExtension": func(payload *extrinsic.Payload) {},
+}
+
 // Replaces "github.com/centrifuge/go-substrate-rpc-client/v4/extrinsic".createPayload
 func createPayload(meta *Metadata, encodedCall []byte) (*extrinsic.Payload, error) {
 	payload := &extrinsic.Payload{
@@ -92,7 +98,13 @@ func createPayload(meta *Metadata, encodedCall []byte) (*extrinsic.Payload, erro
 	for _, signedExtension := range meta.SignedExtensions {
 		payloadMutatorFn, ok := extrinsic.PayloadMutatorFns[signedExtension]
 		if !ok {
-			return nil, fmt.Errorf("signed extension '%s' is not supported", signedExtension)
+			payloadMutatorFn, ok = LocalPayloadMutatorFns[signedExtension]
+			if !ok {
+				logrus.WithFields(logrus.Fields{
+					"extension": signedExtension,
+				}).Warn("signed extension is not supported, transaction may not be accepted")
+				continue
+			}
 		}
 		payloadMutatorFn(payload)
 	}
