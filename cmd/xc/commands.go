@@ -135,6 +135,10 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			timeout, err := cmd.Flags().GetDuration("timeout")
+			if err != nil {
+				return err
+			}
 			if decimalsStr == "" && contract != "" {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
@@ -238,7 +242,8 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
 			logrus.WithField("hash", tx.Hash()).Info("submitted tx")
-			for i := 0; i < 10; i++ {
+			start := time.Now()
+			for time.Since(start) < timeout {
 				time.Sleep(5 * time.Second)
 				info, err := cli.FetchTxInfo(context.Background(), tx.Hash())
 				if err != nil {
@@ -256,6 +261,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
 	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "set a memo for the transfer.")
+	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	return cmd
 }
 

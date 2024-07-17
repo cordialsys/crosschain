@@ -389,7 +389,8 @@ chains:
     decimals: 9
     chain_name: Bittensor
     chain_prefix: "42"
-    indexer_url: "https://polkadot.api.subscan.io"
+    indexer_url: "https://api.subquery.network/sq/TaoStats/bittensor-dictionary"
+    indexer_type: subquery
   TON:
     chain: TON
     driver: ton

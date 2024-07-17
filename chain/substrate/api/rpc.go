@@ -24,3 +24,21 @@ type AccountInfoMinimal struct {
 		// skip fields after this point as we don't need them
 	}
 }
+
+// // Redefine the block without having to parse all of the extrinsics.
+// // This is useful if all we care about is computing the extrinsic hash.
+// type SignedRawBlock struct {
+// 	Block         RawBlock            `json:"block"`
+// 	Justification types.Justification `json:"justification"`
+// }
+
+// // Block without parsing the extrinsics (leaving them as hex-encoded-scale)
+// type RawBlock struct {
+// 	Header     types.Header
+// 	Extrinsics []string
+// }
+
+// // May need to add to this list
+// type EventRecords struct {
+// 	types.EventRecords
+// }
