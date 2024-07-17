@@ -26,6 +26,11 @@ chains:
     decimals: 18
     indexer_url: https://api.covalenthq.com/v1
     indexer_type: covalent
+  BERA:
+    chain: BERA
+    driver: evm
+    chain_name: Berachain
+    decimals: 18
   BCH:
     chain: BCH
     driver: bitcoin-cash

@@ -26,6 +26,7 @@ const (
 	ATOM   = NativeAsset("ATOM")   // Cosmos
 	AurETH = NativeAsset("AurETH") // Aurora
 	AVAX   = NativeAsset("AVAX")   // Avalanche
+	BERA   = NativeAsset("BERA")   // Berachain
 	BCH    = NativeAsset("BCH")    // Bitcoin Cash
 	BNB    = NativeAsset("BNB")    // Binance Coin
 	BTC    = NativeAsset("BTC")    // Bitcoin
@@ -72,6 +73,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ATOM,
 	AurETH,
 	AVAX,
+	BERA,
 	BNB,
 	CELO,
 	CHZ,
@@ -153,7 +155,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH:
+	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA:
 		return DriverEVM
 	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

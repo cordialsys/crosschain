@@ -60,6 +60,12 @@ chains:
     decimals: 18
     indexer_type: rpc
     polling_period: 15m
+  BERA:
+    # not yet released
+    chain: BERA
+    driver: evm
+    chain_name: Berachain
+    decimals: 18
   BCH:
     chain: BCH
     driver: bitcoin-cash
