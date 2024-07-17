@@ -50,12 +50,13 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 			return nil, err
 		}
 	}
+	net := txBuilder.Asset.GetChain().Net
 
-	toAddr, err := tonaddress.ParseAddress(to)
+	toAddr, err := tonaddress.ParseAddress(to, net)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON destination %s: %v", to, err)
 	}
-	fromAddr, err := tonaddress.ParseAddress(from)
+	fromAddr, err := tonaddress.ParseAddress(from, net)
 	if err != nil {
 		return nil, fmt.Errorf("invalid TON address %s: %v", to, err)
 	}
@@ -68,7 +69,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	msgs := []*wallet.Message{}
 	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok || txBuilder.Asset.GetContract() != "" {
 		// Token transfer
-		tokenAddr, err := tonaddress.ParseAddress(txInput.TokenWallet)
+		tokenAddr, err := tonaddress.ParseAddress(txInput.TokenWallet, net)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TON token address %s: %v", txInput.TokenWallet, err)
 		}

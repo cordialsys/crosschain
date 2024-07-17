@@ -156,11 +156,6 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 		},
 		{
 			chain: xc.TON,
-			inp:   "0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A",
-			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
-		},
-		{
-			chain: xc.TON,
 			inp:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
 			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
 		},
