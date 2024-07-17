@@ -23,11 +23,13 @@ import (
 
 // Client for Substrate
 type Client struct {
-	DotClient    *gsrpc.SubstrateAPI
-	Asset        xc.ITask
-	substrateUrl string
-	apiKey       string
+	DotClient  *gsrpc.SubstrateAPI
+	Asset      xc.ITask
+	indexerUrl string
+	apiKey     string
 }
+
+const IndexerSubQuery = "subquery"
 
 var _ xclient.FullClient = &Client{}
 
@@ -86,10 +88,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 	client, err := gsrpc.NewSubstrateAPI(rpcurl)
 	return &Client{
-		DotClient:    client,
-		Asset:        cfgI,
-		substrateUrl: txInfoClient.substrateUrl,
-		apiKey:       txInfoClient.apiKey,
+		DotClient:  client,
+		Asset:      cfgI,
+		indexerUrl: txInfoClient.indexerUrl,
+		apiKey:     txInfoClient.apiKey,
 	}, err
 }
 
@@ -109,14 +111,18 @@ func NewTxInfoClient(cfgI xc.ITask) (TxInfoClient, error) {
 	if indexerUrl == "" {
 		return nil, fmt.Errorf(`must set .indexer_url\n` + help)
 	}
-	if apiKey == "" {
-		return nil, fmt.Errorf(`must set .api-key\n` + help)
+	if cfgI.GetChain().IndexerType == IndexerSubQuery {
+		// do not require api key
+	} else {
+		if apiKey == "" {
+			return nil, fmt.Errorf(`must set .api-key\n` + help)
+		}
 	}
 	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
 	return &Client{
-		Asset:        cfgI,
-		substrateUrl: indexerUrl,
-		apiKey:       apiKey,
+		Asset:      cfgI,
+		indexerUrl: indexerUrl,
+		apiKey:     apiKey,
 	}, nil
 }
 
@@ -243,119 +249,132 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return nil
 }
 
-func (client *Client) ParseTxInfo(body []byte) (xc.LegacyTxInfo, error) {
-	var txInfoResp api.SubscanExtrinsicResponse
-	err := json.Unmarshal(body, &txInfoResp)
+func (client *Client) post(ctx context.Context, url string, inputJson []byte, outputData any) error {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(inputJson))
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return err
 	}
-	if len(txInfoResp.Data.BlockHash) == 0 {
-		return xc.LegacyTxInfo{}, errors.New("not found")
-	}
-
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	destinations := []*xc.LegacyTxInfoEndpoint{}
-	addressBuilder, err := NewAddressBuilder(client.Asset)
-	if err != nil {
-		return xc.LegacyTxInfo{}, err
-	}
-	chain := client.Asset.GetChain().Chain
-
-	// parse known events
-	for _, ev := range txInfoResp.Data.Event {
-		handle := ev.ModuleID + "." + ev.EventID
-		switch handle {
-		case "balances.Transfer":
-			_, err := ev.ParseParams()
-			if err != nil {
-				return xc.LegacyTxInfo{}, err
-			}
-			fromId, err := api.GetParamAccountId(&ev, "from")
-			if err != nil {
-				return xc.LegacyTxInfo{}, err
-			}
-			toId, err := api.GetParamAccountId(&ev, "to")
-			if err != nil {
-				return xc.LegacyTxInfo{}, err
-			}
-			amount, err := api.GetParamInt(&ev, "amount")
-			if err != nil {
-				return xc.LegacyTxInfo{}, err
-			}
-
-			from, _ := addressBuilder.GetAddressFromPublicKey(fromId)
-			to, _ := addressBuilder.GetAddressFromPublicKey(toId)
-
-			sources = append(sources, &xc.LegacyTxInfoEndpoint{
-				Address:     from,
-				NativeAsset: chain,
-				Amount:      amount,
-			})
-			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
-				Address:     to,
-				NativeAsset: chain,
-				Amount:      amount,
-			})
-		}
-
-	}
-	amount := xc.NewAmountBlockchainFromUint64(0)
-	from := xc.Address("")
-	to := xc.Address("")
-	if len(sources) > 0 {
-		from = sources[0].Address
-	}
-	if len(destinations) > 0 {
-		amount = destinations[0].Amount
-		to = destinations[0].Address
-	}
-
-	return xc.LegacyTxInfo{
-		BlockHash:    txInfoResp.Data.BlockHash,
-		TxID:         txInfoResp.Data.ExtrinsicHash,
-		From:         from,
-		To:           to,
-		Amount:       amount,
-		Fee:          xc.NewAmountBlockchainFromStr(txInfoResp.Data.Fee),
-		BlockIndex:   int64(txInfoResp.Data.BlockNum),
-		BlockTime:    int64(txInfoResp.Data.BlockTimestamp),
-		Sources:      sources,
-		Destinations: destinations,
-	}, nil
-}
-
-// FetchLegacyTxInfo returns tx info for a Substrate tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	if !strings.HasPrefix(string(txHash), "0x") {
-		txHash = "0x" + txHash
-	}
-	var reqBody = []byte(`{"hash": "` + txHash + `"}`)
-
-	req, err := http.NewRequest("POST", client.substrateUrl+"/api/scan/extrinsic", bytes.NewBuffer(reqBody))
 	req.Header.Add("Content-Type", "application/json")
+
 	if client.apiKey != "" {
 		req.Header.Add("X-API-Key", client.apiKey)
-	}
-	if err != nil {
-		return xc.LegacyTxInfo{}, err
 	}
 
 	explorerClient := &http.Client{}
 	resp, err := explorerClient.Do(req)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		return err
+	}
+	logrus.WithField("body", string(body)).WithField("url", url).WithField("status", resp.StatusCode).Debug("post")
+	if resp.StatusCode != 200 {
+		rpcErr := &RpcError{}
+		err2 := json.Unmarshal(body, rpcErr)
+		if err2 != nil || rpcErr.Message == "" {
+			return fmt.Errorf("respones failed (%d)", resp.StatusCode)
+		}
+		return fmt.Errorf("%s (%d)", rpcErr.Message, resp.StatusCode)
+	}
+	err = json.Unmarshal(body, &outputData)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+// FetchLegacyTxInfo returns tx info for a Substrate tx
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	var tx xc.LegacyTxInfo
+
+	addressBuilder, err := NewAddressBuilder(client.Asset)
+	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	tx, err := client.ParseTxInfo(body)
-	if err != nil {
-		return tx, err
+	chain := client.Asset.GetChain().Chain
+	var eventsI = []EventI{}
+
+	if client.Asset.GetChain().IndexerType == IndexerSubQuery {
+		extrinsicQuery := fmt.Sprintf(
+			`{"query":"query { extrinsics(first: 1, offset: 0, filter: { or: [{txHash: {equalTo:\"%s\"}}, { id: {equalTo:\"%s\"} }]} , orderBy: ID_DESC) {nodes {id txHash tip}} }"}`,
+			txHash, txHash,
+		)
+		var response api.SubqueryExtrinsicResponse
+		err := client.post(ctx, client.indexerUrl, []byte(extrinsicQuery), &response)
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+
+		if len(response.Data.Extrinsics.Nodes) == 0 {
+			return xc.LegacyTxInfo{}, fmt.Errorf("no transaction found by hash %s", txHash)
+		}
+		ext := response.Data.Extrinsics.Nodes[0]
+		height, offset, err := ext.ID.Parse()
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+		eventsQuery := fmt.Sprintf(
+			`{"query":"query {      events(first: 100, offset: 0, filter: {blockHeight:{equalTo:\"%d\"} extrinsicId:{equalTo: %d}}, orderBy: ID_DESC) { nodes { module event data } } blocks(first: 1, offset: 0, filter: {height:{equalTo:\"%d\"} }, orderBy: ID_DESC) { nodes { timestamp hash } } } "}`,
+			height, offset, height,
+		)
+		var eventsResponse api.SubqueryEventResponse
+		err = client.post(ctx, client.indexerUrl, []byte(eventsQuery), &eventsResponse)
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+		if len(eventsResponse.Data.Blocks.Nodes) == 0 {
+			return xc.LegacyTxInfo{}, fmt.Errorf("no block found at height %d", height)
+		}
+		block := eventsResponse.Data.Blocks.Nodes[0]
+		for _, ev := range eventsResponse.Data.Events.Nodes {
+			_, err := ev.ParseParams()
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+			eventsI = append(eventsI, ev)
+		}
+		tx.BlockHash = block.Hash
+		tx.TxID = ext.TxHash
+		tx.Fee = xc.NewAmountBlockchainFromStr(ext.Tip)
+		tx.BlockIndex = int64(height)
+		tx.BlockTime = block.Timestamp.Unix()
+	} else {
+		// support querying by either hash and extrinsic ID
+		var reqBody string
+		if _, _, err = api.BlockAndOffset(txHash).Parse(); err == nil {
+			reqBody = `{"extrinsic_index": "` + string(txHash) + `"}`
+		} else {
+			if !strings.HasPrefix(string(txHash), "0x") {
+				txHash = "0x" + txHash
+			}
+			reqBody = `{"hash": "` + string(txHash) + `"}`
+		}
+
+		fmt.Println(txHash, string(reqBody))
+		var txInfoResp api.SubscanExtrinsicResponse
+		client.post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp)
+		if len(txInfoResp.Data.BlockHash) == 0 {
+			return xc.LegacyTxInfo{}, errors.New("not found")
+		}
+
+		for _, ev := range txInfoResp.Data.Event {
+			_, err := ev.ParseParams()
+			if err != nil {
+				return xc.LegacyTxInfo{}, err
+			}
+			eventsI = append(eventsI, ev)
+		}
+		tx.BlockHash = txInfoResp.Data.BlockHash
+		tx.TxID = txInfoResp.Data.ExtrinsicHash
+		tx.Fee = xc.NewAmountBlockchainFromStr(txInfoResp.Data.Fee)
+		tx.BlockIndex = int64(txInfoResp.Data.BlockNum)
+		tx.BlockTime = int64(txInfoResp.Data.BlockTimestamp)
 	}
-	if client.DotClient != nil {
+	if client.DotClient != nil && tx.Confirmations == 0 {
 		// calculate confirmations
 		header, err := client.DotClient.RPC.Chain.GetHeaderLatest()
 		if err != nil {
@@ -363,6 +382,20 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		tx.Confirmations = int64(header.Number) - tx.BlockIndex
 	}
+
+	tx.Sources, tx.Destinations, err = ParseEvents(addressBuilder, chain, eventsI)
+	if err != nil {
+		return xc.LegacyTxInfo{}, err
+	}
+
+	if len(tx.Sources) > 0 {
+		tx.From = tx.Sources[0].Address
+	}
+	if len(tx.Destinations) > 0 {
+		tx.Amount = tx.Destinations[0].Amount
+		tx.To = tx.Destinations[0].Address
+	}
+
 	return tx, nil
 }
 

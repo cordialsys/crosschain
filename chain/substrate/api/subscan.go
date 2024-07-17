@@ -28,7 +28,7 @@ type SubscanExtrinsicData struct {
 	Success            bool           `json:"success"`
 	Params             []Param        `json:"params"`
 	Transfer           interface{}    `json:"transfer"` // Assuming it can be null
-	Event              []Event        `json:"event"`
+	Event              []*Event       `json:"event"`
 	EventCount         int            `json:"event_count"`
 	Fee                string         `json:"fee"`
 	FeeUsed            string         `json:"fee_used"`
@@ -74,6 +74,21 @@ func (ev *Event) ParseParams() ([]*Param, error) {
 
 type AccountDisplay struct {
 	Address string `json:"address"`
+}
+
+func (ev *Event) GetEvent() string {
+	return ev.EventID
+}
+func (ev *Event) GetModule() string {
+	return ev.ModuleID
+}
+func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
+	for _, p := range ev.parsedParams {
+		if p.Name == name {
+			return p.Value, true
+		}
+	}
+	return nil, false
 }
 
 func GetParam[T any](ev *Event, name string) (T, error) {

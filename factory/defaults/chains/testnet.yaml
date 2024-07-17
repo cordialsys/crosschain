@@ -234,6 +234,13 @@ chains:
     chain_max_gas_price: 125000.0
     indexer_type: cosmos
     polling_period: 5m
+  TAO:
+    chain: TAO
+    driver: substrate
+    decimals: 9
+    chain_name: Bittensor
+    chain_prefix: "42"
+    disabled: true
   TRX:
     chain: TRX
     driver: tron
