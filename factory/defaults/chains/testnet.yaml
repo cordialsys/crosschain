@@ -145,6 +145,13 @@ chains:
     # KLAY wants fixed gas prices (no change/multiplier)
     chain_gas_multiplier: 1
     decimals: 18
+  KSM:
+    chain: KSM
+    driver: substrate
+    decimals: 9
+    chain_name: Bittensor
+    chain_prefix: "42"
+    disabled: true
   INJ:
     chain: INJ
     driver: evmos

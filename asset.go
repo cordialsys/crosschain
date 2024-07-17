@@ -45,6 +45,7 @@ const (
 	LUNC   = NativeAsset("LUNC")   // Terra Classic
 	KAR    = NativeAsset("KAR")    // Karura
 	KLAY   = NativeAsset("KLAY")   // Klaytn
+	KSM    = NativeAsset("KSM")    // Kusama
 	XDC    = NativeAsset("XDC")    // XinFin
 	MATIC  = NativeAsset("MATIC")  // Polygon
 	OAS    = NativeAsset("OAS")    // Oasys (not Oasis!)
@@ -86,6 +87,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	LUNC,
 	KAR,
 	KLAY,
+	KSM,
 	XDC,
 	MATIC,
 	OAS,
@@ -163,7 +165,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSui
 	case SOL:
 		return DriverSolana
-	case DOT, TAO:
+	case DOT, TAO, KSM:
 		return DriverSubstrate
 	case TRX:
 		return DriverTron
