@@ -136,3 +136,11 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 	}
 	return mock, func() { mock.Close() }
 }
+
+// reserialize will drop internal fields set by constructors
+func Reserialize[T any](val *T) *T {
+	var newVal T
+	bz, _ := json.Marshal(val)
+	json.Unmarshal(bz, &newVal)
+	return &newVal
+}

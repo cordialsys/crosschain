@@ -143,6 +143,16 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 }
 
+type StakingVariant string
+
+const (
+	StakingVariantEvmKiln = StakingVariant("drivers/evm/staking/kiln")
+)
+
+var SupportedStakingVariants = []StakingVariant{
+	StakingVariantEvmKiln,
+}
+
 func (native NativeAsset) IsValid() bool {
 	return NativeAsset(native).Driver() != ""
 }

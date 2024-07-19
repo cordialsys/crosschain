@@ -1,15 +1,15 @@
 package tx_input
 
 import (
+	"strings"
+
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/utils"
 	"github.com/shopspring/decimal"
 )
 
 // TxInput for EVM
 type TxInput struct {
 	xc.TxInputEnvelope
-	utils.TxPriceInput
 	Nonce    uint64 `json:"nonce,omitempty"`
 	GasLimit uint64 `json:"gas_limit,omitempty"`
 	// DynamicFeeTx
@@ -23,10 +23,12 @@ type TxInput struct {
 	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 
 	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
+
+	// legacy only
+	Prices []*Price `json:"prices,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPricing = &TxInput{}
 
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -73,4 +75,43 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	}
 	// sequence all same - we're safe
 	return true
+}
+
+// Pricing methods are no longer used, except for a prior wormhole-bridging experiment.
+type Price struct {
+	Contract string                 `json:"contract"`
+	Chain    xc.NativeAsset         `json:"chain"`
+	PriceUsd xc.AmountHumanReadable `json:"price_usd"`
+}
+
+func (input *TxInput) SetUsdPrice(chain xc.NativeAsset, contract string, priceUsd xc.AmountHumanReadable) {
+	// normalize the contract
+	contract = strings.ToLower(contract)
+	// remove any existing
+	input.removeUsdPrice(chain, contract)
+	// add new
+	input.Prices = append(input.Prices, &Price{
+		Contract: contract,
+		Chain:    chain,
+		PriceUsd: priceUsd,
+	})
+}
+
+func (input *TxInput) GetUsdPrice(chain xc.NativeAsset, contract string) (xc.AmountHumanReadable, bool) {
+	contract = strings.ToLower(contract)
+	for _, price := range input.Prices {
+		if price.Chain == chain && price.Contract == contract {
+			return price.PriceUsd, true
+		}
+	}
+	return xc.AmountHumanReadable{}, false
+}
+
+func (input *TxInput) removeUsdPrice(chain xc.NativeAsset, contract string) {
+	for i, price := range input.Prices {
+		if price.Chain == chain && price.Contract == contract {
+			input.Prices = append(input.Prices[:i], input.Prices[i+1:]...)
+			return
+		}
+	}
 }

@@ -18,9 +18,8 @@ import (
 
 // Client for Sui
 type Client struct {
-	Asset           xc.ITask
-	SuiClient       *client.Client
-	EstimateGasFunc xclient.EstimateGasFunc
+	Asset     xc.ITask
+	SuiClient *client.Client
 }
 
 // NewClient returns a new Sui Client

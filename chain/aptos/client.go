@@ -16,9 +16,8 @@ import (
 
 // Client for Aptos
 type Client struct {
-	Asset           xc.ITask
-	AptosClient     *aptosclient.RestClient
-	EstimateGasFunc xclient.EstimateGasFunc
+	Asset       xc.ITask
+	AptosClient *aptosclient.RestClient
 }
 
 var _ xclient.FullClient = &Client{}
@@ -52,7 +51,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 	if err != nil {
 		return &TxInput{}, err
 	}
-	gas_price, err := client.EstimateGas(ctx)
+	gas_price, err := client.EstimateGas(ctx, ledger)
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -323,28 +322,11 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.AmountBlockchain(*balance), nil
 }
 
-func (client *Client) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = estimateGas
-}
+func (client *Client) EstimateGas(ctx context.Context, ledgerInfo *aptostypes.LedgerInfo) (xc.AmountBlockchain, error) {
 
-func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	// invoke EstimateGasFunc callback, if registered
-	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.GetChain().Chain
-		res, err := client.EstimateGasFunc(xc.NativeAsset(nativeAsset))
-		if err != nil {
-			// continue with default implementation as fallback
-		} else {
-			return res, err
-		}
-	}
 	// estimate using last 1 blocks
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	res, err := client.AptosClient.LedgerInfo()
-	if err != nil {
-		return zero, err
-	}
-	height := res.BlockHeight
+	height := ledgerInfo.BlockHeight
 	if height < 500 {
 		return zero, errors.New("the chain is too young")
 	}

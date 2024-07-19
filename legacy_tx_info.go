@@ -38,6 +38,10 @@ type LegacyTxInfo struct {
 	Error string `json:"error,omitempty"`
 	// to support new TxInfo model, we can't drop "change" btc movements
 	droppedBtcDestinations []*LegacyTxInfoEndpoint
+	stakeEvents            []StakeEvent
+}
+type StakeEvent interface {
+	GetValidator() string
 }
 
 func (info *LegacyTxInfo) AddDroppedDestination(dest *LegacyTxInfoEndpoint) {
@@ -45,4 +49,11 @@ func (info *LegacyTxInfo) AddDroppedDestination(dest *LegacyTxInfoEndpoint) {
 }
 func (info *LegacyTxInfo) GetDroppedBtcDestinations() []*LegacyTxInfoEndpoint {
 	return info.droppedBtcDestinations
+}
+
+func (info *LegacyTxInfo) AddStakeEvent(ev StakeEvent) {
+	info.stakeEvents = append(info.stakeEvents, ev)
+}
+func (info *LegacyTxInfo) GetStakeEvents() []StakeEvent {
+	return info.stakeEvents
 }

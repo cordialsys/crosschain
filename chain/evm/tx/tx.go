@@ -91,7 +91,6 @@ func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset)
 	for _, log := range receipt.Logs {
 		event, _ := ERC20.EventByID(log.Topics[0])
 		if event != nil {
-
 			fmt.Println("PARSE LOG", event.RawName)
 		}
 		if event != nil && event.RawName == "Transfer" {
@@ -119,31 +118,7 @@ func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset)
 		Sources:      loggedSources,
 		Destinations: loggedDestinations,
 	}
-	// // 2. try parsing using the logs
-	// infoLogs := tx.parseReceipt(receipt, nativeAsset)
-	// if len(infoLogs.Destinations) > 0 {
-	// 	return infoLogs
-	// }
-
-	// // 3. use to/from/amount from the tf
-	// amount := tx.Amount()
-	// return SourcesAndDests{
-	// 	Sources: []*xc.TxInfoEndpoint{{
-	// 		Address:     tx.From(),
-	// 		NativeAsset: nativeAsset,
-	// 		Amount:      amount,
-	// 	}},
-	// 	Destinations: []*xc.TxInfoEndpoint{{
-	// 		Address:     tx.To(),
-	// 		NativeAsset: nativeAsset,
-	// 		Amount:      amount,
-	// 	}},
-	// }
 }
-
-// func (tx *Tx) parseReceipt(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
-
-// }
 
 // IsContract returns whether a tx is a contract or native transfer
 func (tx Tx) IsContract() bool {
