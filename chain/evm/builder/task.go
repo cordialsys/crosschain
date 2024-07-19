@@ -1,4 +1,4 @@
-package evm
+package builder
 
 import (
 	"encoding/binary"
@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/sha3"
@@ -23,7 +25,7 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 	return txBuilder.BuildTaskTx(from, to, amount, input)
 }
 
-func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, input *TxInput) (string, xc.AmountBlockchain, []byte, error) {
+func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, input *tx_input.TxInput) (string, xc.AmountBlockchain, []byte, error) {
 	// srcAsset := txBuilder.Asset.GetAssetConfig()
 	task, ok := txBuilder.Asset.(*xc.TaskConfig)
 	if !ok {
@@ -193,7 +195,7 @@ func (txBuilder TxBuilder) BuildTaskPayload(taskFrom xc.Address, taskTo xc.Addre
 }
 
 func (txBuilder TxBuilder) BuildTaskTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	native := txBuilder.Asset.GetChain()
 	// .GetAssetConfig()
 
@@ -219,7 +221,7 @@ func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.
 	hash.Write(transferFnSignature)
 	methodID := hash.Sum(nil)[:4]
 
-	toAddress, err := HexToAddress(to)
+	toAddress, err := address.FromHex(to)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +237,7 @@ func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.
 		hash.Write(transferFnSignature)
 		methodID = hash.Sum(nil)[:4]
 
-		contractAddress, err := HexToAddress(xc.Address(contract))
+		contractAddress, err := address.FromHex(xc.Address(contract))
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +254,7 @@ func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.
 	return data, nil
 }
 
-func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, txInput *TxInput) (string, xc.AmountBlockchain, []byte, error) {
+func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, txInput *tx_input.TxInput) (string, xc.AmountBlockchain, []byte, error) {
 	task, ok := txBuilder.Asset.(*xc.TaskConfig)
 	if !ok {
 		return "", xc.AmountBlockchain{}, nil, fmt.Errorf("not a *TaskConfig: %T", txBuilder.Asset)
@@ -298,7 +300,7 @@ func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.A
 }
 
 func (txBuilder TxBuilder) BuildWormholeTransferTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	native := txBuilder.Asset.GetChain()
 
 	txInput.GasLimit = 800_000

@@ -1,4 +1,4 @@
-package factory
+package factory_test
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/config/constants"
+	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
@@ -19,13 +20,13 @@ import (
 
 type CrosschainTestSuite struct {
 	suite.Suite
-	Factory          *Factory
+	Factory          *factory.Factory
 	TestNativeAssets []xc.NativeAsset
 	TestAssetConfigs []xc.ITask
 }
 
 func (s *CrosschainTestSuite) SetupTest() {
-	s.Factory = NewDefaultFactory()
+	s.Factory = factory.NewDefaultFactory()
 	// count := 0
 	// s.Factory.AllAssets.Range(func(key, value any) bool {
 	// 	count++
@@ -469,7 +470,7 @@ func (s *CrosschainTestSuite) TestConfigDefaults() {
 	// change dir to somewhere that config files are not present
 	os.Setenv(constants.ConfigEnv, tmpConfigFile)
 	defer os.Unsetenv(constants.ConfigEnv)
-	f := NewDefaultFactory()
+	f := factory.NewDefaultFactory()
 	cfg := f.GetConfig()
 	require.NotNil(cfg)
 
@@ -479,7 +480,7 @@ func (s *CrosschainTestSuite) TestConfigDefaults() {
 	// now if we set XC_TESTNET, it should be testnet defaults
 	os.Setenv("XC_TESTNET", "1")
 	defer os.Unsetenv("XC_TESTNET")
-	f = NewDefaultFactory()
+	f = factory.NewDefaultFactory()
 	cfg = f.GetConfig()
 	require.EqualValues("testnet", cfg.Network)
 

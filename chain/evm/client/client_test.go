@@ -1,22 +1,26 @@
-package evm
+package client_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewClient() {
-	require := s.Require()
-	client, err := NewClient(&xc.ChainConfig{})
-	require.NoError(err)
-	require.NotNil(client)
+func TestNewClient(t *testing.T) {
+
+	client, err := client.NewClient(&xc.ChainConfig{})
+	require.NoError(t, err)
+	require.NotNil(t, client)
 }
 
-func (s *CrosschainTestSuite) TestAccountBalance() {
-	require := s.Require()
+func TestAccountBalance(t *testing.T) {
 
 	vectors := []struct {
 		resp interface{}
@@ -46,26 +50,26 @@ func (s *CrosschainTestSuite) TestAccountBalance() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
 		from := xc.Address("0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B")
-		balance, err := client.FetchBalance(s.Ctx, from)
+		balance, err := client.FetchBalance(context.Background(), from)
 
 		if v.err != "" {
-			require.Equal("0", balance.String())
-			require.ErrorContains(err, v.err)
+			require.Equal(t, "0", balance.String())
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(balance)
-			require.Equal(v.val, balance.String())
+			require.NoError(t, err)
+			require.NotNil(t, balance)
+			require.Equal(t, v.val, balance.String())
 		}
 	}
 }
 
-// func (s *CrosschainTestSuite) TestFetchTxInput() {
-// 	require := s.Require()
+// func  TestFetchTxInput(t *testing.T) {
+//
 // 	client, _ := NewClient(xc.AssetConfig{})
 // 	from := xc.Address("from")
 // 	input, err := client.FetchTxInput(s.Ctx, from, "")
@@ -73,14 +77,14 @@ func (s *CrosschainTestSuite) TestAccountBalance() {
 // 	require.EqualError(err, "not implemented")
 // }
 
-func (s *CrosschainTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
+
 	fromAddr := "0x1ed29c10e661e5721dfe162845f72548f090d8e7"
 
 	vectors := []struct {
 		name       string
 		resp       interface{}
-		val        *TxInput
+		val        *tx_input.TxInput
 		err        string
 		multiplier float64
 		legacy     bool
@@ -102,7 +106,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// eth_estimateGas
 				`"0x52e4"`,
 			},
-			val: &TxInput{
+			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
 				GasLimit:        21220,
@@ -131,7 +135,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// eth_estimateGas
 				`"0x52e4"`,
 			},
-			val: &TxInput{
+			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
 				GasLimit:        21220,
@@ -169,7 +173,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// eth_estimateGas
 				`"0x52e4"`,
 			},
-			val: &TxInput{
+			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
 				GasLimit:        21220,
@@ -183,26 +187,25 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
-		client, err := NewClient(asset)
-		require.NoError(err)
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(fromAddr), xc.Address(""))
-		require.NoError(err)
+		client, err := client.NewClient(asset)
+		require.NoError(t, err)
+		input, err := client.FetchTxInput(context.Background(), xc.Address(fromAddr), xc.Address(""))
+		require.NoError(t, err)
 		if v.err != "" {
-			require.Equal(TxInput{}, input)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, tx_input.TxInput{}, input)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(input)
-			require.Equal(v.val, input)
+			require.NoError(t, err)
+			require.NotNil(t, input)
+			require.Equal(t, v.val, input)
 		}
 	}
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInfo() {
-	require := s.Require()
+func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
 		name   string
@@ -490,17 +493,17 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
 
 		asset.URL = server.URL
-		client, _ := NewClient(asset)
-		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.txHash))
+		client, _ := client.NewClient(asset)
+		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.txHash))
 
 		if v.err != "" {
-			require.Equal(xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+			require.ErrorContains(t, err, v.err)
 		} else {
 			for _, movement := range txInfo.Sources {
 				fmt.Println("FROM: ", movement.Address, movement.ContractAddress, movement.Amount.String())
@@ -508,9 +511,9 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			for _, movement := range txInfo.Destinations {
 				fmt.Println("  TO: ", movement.Address, movement.ContractAddress, movement.Amount.String())
 			}
-			require.Nil(err)
-			require.NotNil(txInfo)
-			require.Equal(v.val, txInfo)
+			require.NoError(t, err)
+			require.NotNil(t, txInfo)
+			require.Equal(t, v.val, txInfo)
 		}
 	}
 }

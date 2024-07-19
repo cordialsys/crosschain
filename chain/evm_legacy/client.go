@@ -5,17 +5,18 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm"
+	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
 
 type Client struct {
-	EvmClient *evm.Client
+	EvmClient *evmclient.Client
 }
 
 var _ xclient.FullClient = &Client{}
 
-type TxInput = evm.TxInput
+type TxInput = evminput.TxInput
 
 var _ xc.TxInput = &TxInput{}
 
@@ -28,7 +29,7 @@ func NewTxInput() *TxInput {
 }
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	evmClient, err := evm.NewClient(cfgI)
+	evmClient, err := evmclient.NewClient(cfgI)
 	if err != nil {
 		return nil, err
 	}

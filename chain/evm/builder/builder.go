@@ -1,10 +1,13 @@
-package evm
+package builder
 
 import (
 	"fmt"
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
+	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -31,6 +34,10 @@ type TxBuilder struct {
 }
 
 var _ xc.TxBuilder = &TxBuilder{}
+
+func NewEvmTxBuilder() *EvmTxBuilder {
+	return &EvmTxBuilder{}
+}
 
 // NewTxBuilder creates a new EVM TxBuilder
 func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
@@ -105,7 +112,7 @@ func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error
 	methodID := hash.Sum(nil)[:4]
 	// fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
 
-	toAddress, err := HexToAddress(to)
+	toAddress, err := address.FromHex(to)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +131,12 @@ func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error
 }
 
 func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
-	address, err := HexToAddress(to)
+	address, err := address.FromHex(to)
 	if err != nil {
 		return nil, err
 	}
 
-	input := inputRaw.(*TxInput)
+	input := inputRaw.(*tx_input.TxInput)
 	var chainId *big.Int = input.ChainId.Int()
 	if input.ChainId.Uint64() == 0 {
 		chainId = new(big.Int).SetInt64(chain.ChainID)
@@ -148,7 +155,7 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 		gasTipCap = maxTipWei
 	}
 
-	return &Tx{
+	return &tx.Tx{
 		EthTx: types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainId,
 			Nonce:     input.Nonce,
@@ -161,4 +168,15 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 		}),
 		Signer: types.LatestSignerForChainID(chainId),
 	}, nil
+}
+
+func GweiToWei(gwei uint64) xc.AmountBlockchain {
+	bigGwei := big.NewInt(int64(gwei))
+
+	ten := big.NewInt(10)
+	nine := big.NewInt(9)
+	factor := big.NewInt(0).Exp(ten, nine, nil)
+
+	bigGwei.Mul(bigGwei, factor)
+	return xc.AmountBlockchain(*bigGwei)
 }

@@ -1,8 +1,9 @@
-package evm
+package address
 
 import (
 	"crypto/ecdsa"
 	"errors"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,11 +50,17 @@ func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []b
 	}, err
 }
 
-// HexToAddress returns a go-ethereum Address decoded Crosschain address (hex string).
-func HexToAddress(address xc.Address) (common.Address, error) {
+// FromHex returns a go-ethereum Address decoded Crosschain address (hex string).
+func FromHex(address xc.Address) (common.Address, error) {
 	str := TrimPrefixes(string(address))
 
 	// HexToAddress from go-ethereum doesn't handle any error case
 	// We wrap it just in case we need to handle some errors in the future
 	return common.HexToAddress(str), nil
+}
+
+func TrimPrefixes(addressOrTxHash string) string {
+	str := strings.TrimPrefix(addressOrTxHash, "0x")
+	str = strings.TrimPrefix(str, "xdc")
+	return str
 }

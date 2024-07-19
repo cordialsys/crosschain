@@ -10,6 +10,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/evm"
+	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
+	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
+	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
@@ -23,7 +26,7 @@ import (
 func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	switch driver {
 	case DriverEVM:
-		return evm.NewClient(cfg)
+		return evmclient.NewClient(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
@@ -51,7 +54,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
-		return evm.NewTxBuilder(cfg)
+		return evmbuilder.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewTxBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
@@ -107,7 +110,7 @@ func NewSigner(cfg ITask) (Signer, error) {
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
-		return evm.NewAddressBuilder(cfg)
+		return evmaddress.NewAddressBuilder(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewAddressBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:

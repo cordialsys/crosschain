@@ -7,7 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
-	"github.com/cordialsys/crosschain/chain/evm"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -43,7 +43,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
-	txInput := evm.NewTxInput()
+	txInput := evminput.NewTxInput()
 	txInput.Nonce = 1234567
 	txInputBz, _ := json.Marshal(txInput)
 	resObj := types.TxInputRes{
