@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"math/big"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/normalize"
+	"github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
 
@@ -104,6 +106,30 @@ type Block struct {
 	Time time.Time `json:"time"`
 }
 
+type Stake struct {
+	Amount             xc.AmountBlockchain `json:"amount"`
+	Validator          string              `json:"validator"`
+	WithdrawCredential string              `json:"withdraw_credential"`
+}
+type Unstake struct {
+	Amount    xc.AmountBlockchain `json:"amount"`
+	Validator string              `json:"validator"`
+}
+
+type StakeEvent interface {
+	GetValidator() string
+}
+
+var _ StakeEvent = &Stake{}
+var _ StakeEvent = &Unstake{}
+
+func (s *Stake) GetValidator() string {
+	return s.Validator
+}
+func (s *Unstake) GetValidator() string {
+	return s.Validator
+}
+
 // This should roughly match stoplight
 type TxInfo struct {
 	Name TransactionName `json:"name"`
@@ -120,6 +146,10 @@ type TxInfo struct {
 
 	// output-only: calculate via .CalcuateFees() method
 	Fees []*Balance `json:"fees"`
+
+	// Native staking events
+	Stakes   []*Stake   `json:"stakes,omitempty"`
+	Unstakes []*Unstake `json:"unstakes,omitempty"`
 
 	// required: set the confirmations at time of querying the info
 	Confirmations uint64 `json:"confirmations"`
@@ -155,6 +185,8 @@ func NewBalanceChange(chain xc.NativeAsset, contract xc.ContractAddress, address
 func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations uint64, err *string) *TxInfo {
 	transfers := []*Transfer{}
 	fees := []*Balance{}
+	var stakes []*Stake = nil
+	var unstakes []*Unstake = nil
 	name := NewTransactionName(chain, hash)
 	return &TxInfo{
 		name,
@@ -163,6 +195,8 @@ func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations ui
 		block,
 		transfers,
 		fees,
+		stakes,
+		unstakes,
 		confirmations,
 		err,
 	}
@@ -285,5 +319,16 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 	}
 
 	txInfo.Fees = txInfo.CalculateFees()
+
+	for _, ev := range legacyTx.GetStakeEvents() {
+		switch ev := ev.(type) {
+		case *Stake:
+			txInfo.Stakes = append(txInfo.Stakes, ev)
+		case *Unstake:
+			txInfo.Unstakes = append(txInfo.Unstakes, ev)
+		default:
+			logrus.Warn("unknown stake event type: " + fmt.Sprintf("%T", ev))
+		}
+	}
 	return *txInfo
 }

@@ -254,6 +254,12 @@ func (txBuilder TxBuilder) BuildProxyPayload(contract xc.ContractAddress, to xc.
 	return data, nil
 }
 
+// Legacy
+type TxInputWithPricing interface {
+	SetUsdPrice(nativeAsset xc.NativeAsset, contract string, priceUsd xc.AmountHumanReadable)
+	GetUsdPrice(nativeAsset xc.NativeAsset, contract string) (xc.AmountHumanReadable, bool)
+}
+
 func (txBuilder TxBuilder) BuildWormholePayload(taskFrom xc.Address, taskTo xc.Address, taskAmount xc.AmountBlockchain, txInput *tx_input.TxInput) (string, xc.AmountBlockchain, []byte, error) {
 	task, ok := txBuilder.Asset.(*xc.TaskConfig)
 	if !ok {

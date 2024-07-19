@@ -66,12 +66,6 @@ func SameTxInputTypes[T TxInput](as T, inputs ...TxInput) bool {
 	return true
 }
 
-// Legacy
-type TxInputWithPricing interface {
-	SetUsdPrice(nativeAsset NativeAsset, contract string, priceUsd AmountHumanReadable)
-	GetUsdPrice(nativeAsset NativeAsset, contract string) (AmountHumanReadable, bool)
-}
-
 type TxInputEnvelope struct {
 	Type Driver `json:"type"`
 }
@@ -79,6 +73,19 @@ type TxInputEnvelope struct {
 func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 	return &TxInputEnvelope{
 		Type: envType,
+	}
+}
+
+type StakingInput interface {
+}
+
+type StakingInputEnvelope struct {
+	Variant StakingVariant `json:"variant"`
+}
+
+func NewStakingInputEnvelope(variant StakingVariant) *StakingInputEnvelope {
+	return &StakingInputEnvelope{
+		Variant: variant,
 	}
 }
 

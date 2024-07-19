@@ -2,6 +2,7 @@ package crosschain_test
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/cordialsys/crosschain"
 )
@@ -22,6 +23,38 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 	require.Equal(DriverCosmos, NativeAsset(ATOM).Driver())
 	require.Equal(DriverSubstrate, NativeAsset(DOT).Driver())
 	require.Equal(DriverTron, NativeAsset(TRX).Driver())
+	require.Equal(DriverTon, NativeAsset(TON).Driver())
+
+	drivers := map[Driver]bool{}
+	for _, driver := range SupportedDrivers {
+		if _, ok := drivers[driver]; ok {
+			require.Fail("duplicate driver %s", driver)
+		}
+		drivers[driver] = true
+		// test driver is valid
+		require.NotEmpty(driver.SignatureAlgorithm(), "driver is not valid")
+	}
+}
+
+func (s *CrosschainTestSuite) TestStakingVariants() {
+	require := s.Require()
+
+	variants := map[StakingVariant]bool{}
+	for _, variant := range SupportedStakingVariants {
+		parts := strings.Split(string(variant), "/")
+		require.Len(parts, 4, "variant must be in format drivers/:driver/staking/:id")
+		require.Equal("drivers", parts[0])
+		require.Equal("staking", parts[2])
+		// test driver is valid
+		require.NotEmpty(Driver(parts[1]).SignatureAlgorithm(), "driver is not valid")
+		require.NotEmpty(parts[3], "missing ID")
+
+		if _, ok := variants[variant]; ok {
+			require.Fail("duplicate staking variant %s", variant)
+		}
+		variants[variant] = true
+
+	}
 }
 
 func (s *CrosschainTestSuite) TestChainType() {

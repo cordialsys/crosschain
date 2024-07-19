@@ -67,11 +67,10 @@ type ClientOptions struct {
 
 // Client for Bitcoin
 type NativeClient struct {
-	opts            ClientOptions
-	httpClient      http.Client
-	Asset           xc.ITask
-	EstimateGasFunc xclient.EstimateGasFunc
-	addressDecoder  address.AddressDecoder
+	opts           ClientOptions
+	httpClient     http.Client
+	Asset          xc.ITask
+	addressDecoder address.AddressDecoder
 }
 
 var _ xclient.Client = &NativeClient{}
@@ -451,11 +450,6 @@ func (client *NativeClient) Output(ctx context.Context, outpoint tx_input.Outpoi
 		PubKeyScript: pubKeyScript,
 	}
 	return output, resp.Confirmations, nil
-}
-
-// EstimateGas(ctx context.Context) (AmountBlockchain, error)
-func (client *NativeClient) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = estimateGas
 }
 
 func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {

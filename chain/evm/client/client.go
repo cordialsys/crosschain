@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,6 +11,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
+	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
+	"github.com/cordialsys/crosschain/chain/evm/abi/stake_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
@@ -42,13 +45,15 @@ func init() {
 
 // Client for EVM
 type Client struct {
-	Asset       xc.ITask
-	EthClient   *ethclient.Client
-	ChainId     *big.Int
-	Interceptor *utils.HttpInterceptor
+	Asset        xc.ITask
+	EthClient    *ethclient.Client
+	ChainId      *big.Int
+	Interceptor  *utils.HttpInterceptor
+	stakingInput xc.StakingInput
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.StakingClient = &Client{}
 
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetChain()
@@ -115,14 +120,10 @@ func NewClient(asset xc.ITask) (*Client, error) {
 	}, nil
 }
 
-// ChainID returns the ChainID
-// func (client *Client) ChainID() (*big.Int, error) {
-// 	var err error
-// 	if client.ChainId == nil {
-// 		client.ChainId, err = client.EthClient.ChainID(context.Background())
-// 	}
-// 	return client.ChainId, err
-// }
+func (client *Client) SetStakingInput(input xc.StakingInput) {
+	// TODO check variant driver prefix is correct?
+	client.stakingInput = input
+}
 
 func (client *Client) DefaultMaxGasLimit() uint64 {
 	// Set absolute gas limits for safety
@@ -151,6 +152,24 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 	if err != nil {
 		return 0, fmt.Errorf("could not build simulated tx: %v", err)
 	}
+	if client.stakingInput != nil {
+		switch input := client.stakingInput.(type) {
+		case tx_input.KilnStakingInput:
+			txBuilder := builder.NewEvmTxBuilder()
+			data, err := stake_batch_deposit.Serialize(input.Amount, input.PublicKeys, input.Credentials, input.Signatures)
+			if err != nil {
+				return 0, fmt.Errorf("invalid input for %T: %v", input, err)
+			}
+			tx, err := txBuilder.BuildTxWithPayload(client.Asset.GetChain(), xc.Address(to), input.Amount, data, txInput)
+			if err != nil {
+				return 0, fmt.Errorf("could not build estimated tx for %T: %v", input, err)
+			}
+			trans = tx
+		default:
+			return 0, fmt.Errorf("unsupported staking staking variant: %T", input)
+		}
+	}
+
 	ethTx := trans.(*tx.Tx).EthTx
 	msg := ethereum.CallMsg{
 		From: fromAddr,
@@ -444,6 +463,24 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	result.Fee = confirmedTx.Fee(baseFee, gasUsed)
 	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
+
+	for _, log := range receipt.Logs {
+		ev, _ := stake_deposit.EventByID(log.Topics[0])
+		if ev != nil {
+			// fmt.Println("found staking event")
+			dep, err := stake_deposit.ParseDeposit(*log)
+			if err != nil {
+				logrus.WithError(err).Error("could not parse stake deposit log")
+				continue
+			}
+			// fmt.Println("stake event: ", dep.Amount, hex.EncodeToString(dep.Pubkey), hex.EncodeToString(dep.WithdrawalCredentials))
+			result.AddStakeEvent(&xclient.Stake{
+				Amount:             dep.Amount,
+				Validator:          hex.EncodeToString(dep.Pubkey),
+				WithdrawCredential: hex.EncodeToString(dep.WithdrawalCredentials),
+			})
+		}
+	}
 
 	return result, nil
 }

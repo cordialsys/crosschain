@@ -11,6 +11,8 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
+	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/spf13/cobra"
@@ -92,6 +94,15 @@ func CmdCompute() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			stakingInput := evminput.KilnStakingInput{
+				StakingInputEnvelope: evminput.NewKilnStakingInput().StakingInputEnvelope,
+				PublicKeys:           [][]byte{pubkey},
+				Credentials:          [][]byte{cred},
+				Signatures:           [][]byte{sig},
+				Amount:               balance,
+			}
+			rpcCli.(xcclient.StakingClient).SetStakingInput(stakingInput)
+
 			input, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
 			if err != nil {
 				return err
@@ -103,6 +114,39 @@ func CmdCompute() *cobra.Command {
 				return err
 			}
 			fmt.Println("built tx", tx)
+
+			sighashes, err := tx.Sighashes()
+			if err != nil {
+				return fmt.Errorf("could not create payloads to sign: %v", err)
+			}
+
+			// sign
+			signatures := []xc.TxSignature{}
+			for _, sighash := range sighashes {
+				// sign the tx sighash(es)
+				signature, err := signer.Sign(fromPrivateKey, sighash)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+			}
+
+			err = tx.AddSignatures(signatures...)
+			if err != nil {
+				return fmt.Errorf("could not add signature(s): %v", err)
+			}
+
+			bz, err := tx.Serialize()
+			if err != nil {
+				return err
+			}
+			fmt.Println(hex.EncodeToString(bz))
+
+			err = rpcCli.SubmitTx(context.Background(), tx)
+			if err != nil {
+				return fmt.Errorf("could not broadcast: %v", err)
+			}
+			fmt.Println("submitted tx", tx.Hash())
 
 			return nil
 		},

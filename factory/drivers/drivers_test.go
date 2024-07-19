@@ -61,7 +61,7 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestAllNewInput() {
+func (s *CrosschainTestSuite) TestAllNewTxInput() {
 	require := s.Require()
 	_, err := NewTxInput("randomthing")
 	require.Error(err)
@@ -80,6 +80,28 @@ func (s *CrosschainTestSuite) TestAllNewInput() {
 		require.NoError(err)
 
 		input2, err := UnmarshalTxInput(bz)
+		require.NoError(err)
+
+		// ensure same concrete type back
+		require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
+	}
+}
+
+func (s *CrosschainTestSuite) TestAllNewStakingInput() {
+	require := s.Require()
+	_, err := NewStakingInput("randomthing")
+	require.Error(err)
+
+	for _, variant := range xc.SupportedStakingVariants {
+		input, err := NewStakingInput(variant)
+		require.NoError(err, "Missing TxInput for variant : "+variant)
+		require.NotNil(input)
+
+		// marshals
+		bz, err := MarshalStakingInput(input)
+		require.NoError(err)
+
+		input2, err := UnmarshalStakingInput(bz)
 		require.NoError(err)
 
 		// ensure same concrete type back

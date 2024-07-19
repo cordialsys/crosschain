@@ -64,3 +64,34 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	}
 	return input, nil
 }
+
+func MarshalStakingInput(txInput xc.StakingInput) ([]byte, error) {
+	return json.Marshal(txInput)
+}
+
+func NewStakingInput(variant xc.StakingVariant) (xc.StakingInput, error) {
+	switch variant {
+	case xc.StakingVariantEvmKiln:
+		return evminput.NewKilnStakingInput(), nil
+
+	}
+	return nil, fmt.Errorf("no staking-input mapped for %s", variant)
+}
+
+func UnmarshalStakingInput(data []byte) (xc.StakingInput, error) {
+	var env xc.StakingInputEnvelope
+	buf := []byte(data)
+	err := json.Unmarshal(buf, &env)
+	if err != nil {
+		return nil, err
+	}
+	input, err := NewStakingInput(env.Variant)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(buf, input)
+	if err != nil {
+		return nil, err
+	}
+	return input, nil
+}

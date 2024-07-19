@@ -24,7 +24,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 
 	vectors := []struct {
 		asset xc.ITask
-		resp  interface{}
+		resp  []string
 		from  string
 		input *TxInput
 		err   string
@@ -42,7 +42,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
 				GasLimit:        2000,
-				GasPrice:        10,
+				GasPrice:        100,
 				Timestamp:       1683057860656414,
 				ChainId:         58,
 			},
@@ -65,15 +65,16 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 	for _, v := range vectors {
 
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 
+		// satisfy the gas estimate to go with default value
+		blockNotFound := `{"message":"block not found","error_code":"block_not_found","vm_error_code":null}`
+		for i := 0; i < 20; i++ {
+			v.resp = append(v.resp, blockNotFound)
+		}
+		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 		asset := v.asset.GetChain()
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
-		// cut out the gas estimation
-		client.EstimateGasFunc = func(native xc.NativeAsset) (xc.AmountBlockchain, error) {
-			return xc.NewAmountBlockchainFromUint64(10), nil
-		}
 		if v.err != "" {
 			// errors should return 400 status code.
 			server.StatusCodes = []int{200, 200, 400}
