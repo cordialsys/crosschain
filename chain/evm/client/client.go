@@ -53,7 +53,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
-var _ xclient.StakingClient = &Client{}
+var _ xclient.SetStakingInput = &Client{}
 
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetChain()

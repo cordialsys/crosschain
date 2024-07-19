@@ -11,10 +11,13 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
+	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +39,86 @@ func mustLen(data []byte, l int) {
 	if len(data) != l {
 		panic("wrong length")
 	}
+}
+
+type Client struct {
+	rpcClient  *evmclient.Client
+	kilnClient *api.Client
+	chain      *xc.ChainConfig
+}
+
+var _ staking.StakingClient = &Client{}
+
+func (cli *Client) FetchStakeAccount(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*staking.Balance, error) {
+	// On evm stakes are identified solely by validator, so we can map to either validator or account ID
+	if validator == "" && stakeAccount != "" {
+		validator = string(stakeAccount)
+	}
+	bal, _ := xc.NewAmountHumanReadableFromStr("32")
+	amount := bal.ToBlockchain(18)
+	status := staking.Activating
+	val, err := cli.rpcClient.FetchValidator(ctx, validator)
+	if err != nil {
+		logrus.WithError(err).Debug("could not locate validator")
+	} else {
+		// infer from beacon chain
+		_ = val
+		// fmt.Println("it's on the beacon chain!")
+		// jsonprint(val)
+		gwei, _ := xc.NewAmountHumanReadableFromStr(val.Data.Validator.EffectiveBalance)
+		amount = gwei.ToBlockchain(9)
+		switch val.Data.Status {
+		case "pending_initialized":
+			status = staking.Activating
+		case "active_ongoing":
+			status = staking.Activated
+		case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
+			status = staking.Inactive
+		case "active_exiting", "pending_queued":
+			status = staking.Deactivating
+		default:
+			logrus.Warn("unknown beacon validator state", status)
+		}
+		return []*staking.Balance{
+			{
+				State:  status,
+				Amount: amount,
+			},
+		}, nil
+	}
+
+	res, err := cli.kilnClient.GetStakes(validator)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Data) == 0 {
+		return nil, nil
+	}
+	switch res.Data[0].State {
+	case "deposit_in_progress":
+		status = staking.Activating
+	default:
+		logrus.Warn("unknown kiln state", status)
+	}
+	return []*staking.Balance{
+		{
+			State:  status,
+			Amount: amount,
+		},
+	}, nil
+
+}
+
+func NewClient(chain *xc.ChainConfig, variant xc.StakingVariant, url string, apiKey string) (staking.StakingClient, error) {
+	rpcClient, err := evmclient.NewClient(chain)
+	if err != nil {
+		return nil, err
+	}
+	kilnClient, err := api.NewClient(string(chain.Chain), url, apiKey)
+	if err != nil {
+		return nil, err
+	}
+	return &Client{rpcClient, kilnClient, chain}, nil
 }
 
 func CmdCompute() *cobra.Command {
@@ -101,7 +184,7 @@ func CmdCompute() *cobra.Command {
 				Signatures:           [][]byte{sig},
 				Amount:               balance,
 			}
-			rpcCli.(xcclient.StakingClient).SetStakingInput(stakingInput)
+			rpcCli.(xcclient.SetStakingInput).SetStakingInput(stakingInput)
 
 			input, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
 			if err != nil {
@@ -153,6 +236,56 @@ func CmdCompute() *cobra.Command {
 	}
 	return cmd
 }
+
+func CmdGetStake() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-stake",
+		Short: "Lookup balance states of a stake account.",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
+			staking := setup.UnwrapStakingArgs(cmd.Context())
+
+			owner, err := cmd.Flags().GetString("owner")
+			if err != nil {
+				return err
+			}
+			validator, err := cmd.Flags().GetString("validator")
+			if err != nil {
+				return err
+			}
+			stake, err := cmd.Flags().GetString("stake")
+			if err != nil {
+				return err
+			}
+			if owner == "" && validator == "" && stake == "" {
+				return fmt.Errorf("must provide at least one of --owner, --validator, or --stake")
+			}
+			// rpcArgs := setup.UnwrapArgs(cmd.Context())
+			_ = xcFactory
+			_ = chain
+
+			cli, err := NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			if err != nil {
+				return err
+			}
+
+			bal, err := cli.FetchStakeAccount(cmd.Context(), xc.Address(owner), validator, xc.Address(stake))
+			if err != nil {
+				return err
+			}
+			jsonprint(bal)
+
+			return nil
+		},
+	}
+	cmd.Flags().String("owner", "", "address owning the stake account")
+	cmd.Flags().String("validator", "", "the validator address delegated to")
+	cmd.Flags().String("stake", "", "the address of the stake account")
+	return cmd
+}
+
 func CmdKiln() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kiln",
