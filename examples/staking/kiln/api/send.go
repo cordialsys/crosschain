@@ -168,3 +168,9 @@ func (cli *Client) GenerateStakeTransaction(accountId string, address string, am
 	}, &res)
 	return &res, err
 }
+
+func (cli *Client) GetStakes(validator string) (*GetStakesResponse, error) {
+	var res GetStakesResponse
+	err := cli.Get(fmt.Sprintf("v1/eth/stakes?validators=%s", validator), &res)
+	return &res, err
+}

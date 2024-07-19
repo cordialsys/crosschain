@@ -27,7 +27,7 @@ type Client interface {
 	FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
 }
 
-type StakingClient interface {
+type SetStakingInput interface {
 	// Provider inputs for staking transactions
 	SetStakingInput(stakingInput xc.StakingInput)
 }

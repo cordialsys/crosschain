@@ -85,3 +85,29 @@ type GenerateTransactionRequest struct {
 	Wallet    string `json:"wallet"`
 	AmountWei string `json:"amount_wei"`
 }
+
+type GetStakesResponse struct {
+	Data       []StakeAccount `json:"data"`
+	Pagination Pagination     `json:"pagination"`
+}
+
+type StakeAccount struct {
+	ValidatorAddress      string    `json:"validator_address"`
+	State                 string    `json:"state"`
+	DelegatedBlock        int       `json:"delegated_block"`
+	DelegatedAt           time.Time `json:"delegated_at"`
+	ConsensusRewards      string    `json:"consensus_rewards"`
+	ExecutionRewards      string    `json:"execution_rewards"`
+	Rewards               string    `json:"rewards"`
+	DepositTxSender       string    `json:"deposit_tx_sender"`
+	WithdrawalCredentials string    `json:"withdrawal_credentials"`
+	IsKiln                bool      `json:"is_kiln"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+type Pagination struct {
+	CurrentPage  int `json:"current_page"`
+	PageSize     int `json:"page_size"`
+	TotalPages   int `json:"total_pages"`
+	TotalEntries int `json:"total_entries"`
+}
