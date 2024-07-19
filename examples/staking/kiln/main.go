@@ -1,16 +1,15 @@
 package main
 
 import (
-	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-func CmdXc() *cobra.Command {
+func CmdStaking() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "xc",
-		Short:        "Manually interact with blockchains",
+		Use:          "staking",
+		Short:        "Manually interact with staking on blockchains",
 		Args:         cobra.ExactArgs(0),
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
@@ -19,7 +18,6 @@ func CmdXc() *cobra.Command {
 				return err
 			}
 			setup.ConfigureLogger(args)
-
 			xcFactory, err := setup.LoadFactory(args)
 			if err != nil {
 				return err
@@ -30,7 +28,14 @@ func CmdXc() *cobra.Command {
 			}
 			setup.OverrideChainSettings(chainConfig, args)
 
+			staking, err := setup.StakingArgsFromCmd(cmd)
+			if err != nil {
+				return err
+			}
+			setup.OverrideStakingArgs(staking, xcFactory)
+
 			ctx := setup.CreateContext(xcFactory, chainConfig)
+			ctx = setup.WrapStakingArgs(ctx, staking)
 
 			logrus.WithFields(logrus.Fields{
 				"rpc":     chainConfig.GetAllClients()[0].URL,
@@ -42,32 +47,15 @@ func CmdXc() *cobra.Command {
 		},
 	}
 	setup.AddRpcArgs(cmd)
+	setup.AddStakingArgs(cmd)
+	cmd.Flags().String("kiln-api", "", "Override base URL for Kiln API.")
 
-	cmd.AddCommand(CmdRpcBalance())
-	cmd.AddCommand(CmdTxInput())
-	cmd.AddCommand(CmdTxInfo())
-	cmd.AddCommand(CmdTxTransfer())
-	cmd.AddCommand(CmdAddress())
-	cmd.AddCommand(CmdChains())
-
+	cmd.AddCommand(CmdKiln())
+	cmd.AddCommand(CmdCompute())
 	return cmd
 }
 
-func assetConfig(chain *xc.ChainConfig, contractMaybe string, decimals int32) xc.ITask {
-	if contractMaybe != "" {
-		token := xc.TokenAssetConfig{
-			Contract:    contractMaybe,
-			Chain:       chain.Chain,
-			ChainConfig: chain,
-			Decimals:    decimals,
-		}
-		return &token
-	} else {
-		return chain
-	}
-}
-
 func main() {
-	rootCmd := CmdXc()
+	rootCmd := CmdStaking()
 	_ = rootCmd.Execute()
 }
