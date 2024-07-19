@@ -1,4 +1,4 @@
-package evm
+package client
 
 import (
 	"context"
@@ -9,7 +9,11 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/erc20"
+	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
+	"github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/builder"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
+	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum"
@@ -20,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,75 +49,6 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
-
-// TxInput for EVM
-type TxInput struct {
-	xc.TxInputEnvelope
-	utils.TxPriceInput
-	Nonce    uint64 `json:"nonce,omitempty"`
-	GasLimit uint64 `json:"gas_limit,omitempty"`
-	// DynamicFeeTx
-	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
-	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
-	// GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
-	// Task params
-	Params []string `json:"params,omitempty"`
-
-	// For legacy implementation only
-	GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
-
-	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
-}
-
-var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPricing = &TxInput{}
-
-func NewTxInput() *TxInput {
-	return &TxInput{
-		TxInputEnvelope: xc.TxInputEnvelope{
-			Type: xc.DriverEVM,
-		},
-	}
-}
-
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	multipliedTipCap := multiplier.Mul(decimal.NewFromBigInt(input.GasTipCap.Int(), 0)).BigInt()
-	input.GasTipCap = xc.AmountBlockchain(*multipliedTipCap)
-
-	if input.GasFeeCap.Cmp(&input.GasTipCap) < 0 {
-		// increase max fee cap to accomodate tip if needed
-		input.GasFeeCap = input.GasTipCap
-	}
-
-	// multiply the legacy gas price too
-	multipliedLegacyGasPrice := multiplier.Mul(decimal.NewFromBigInt(input.GasPrice.Int(), 0)).BigInt()
-	input.GasPrice = xc.AmountBlockchain(*multipliedLegacyGasPrice)
-	return nil
-}
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// different sequence means independence
-	if evmOther, ok := other.(*TxInput); ok {
-		return evmOther.Nonce != input.Nonce
-	}
-	return
-}
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
-		return false
-	}
-	// all same sequence means no double send
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
-	}
-	// sequence all same - we're safe
-	return true
-}
 
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetChain()
@@ -208,16 +142,16 @@ func (client *Client) DefaultMaxGasLimit() uint64 {
 // Simulate a transaction to get the estimated gas limit
 func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxBuilder, from xc.Address, to xc.Address, txInput xc.TxInput) (uint64, error) {
 	zero := big.NewInt(0)
-	fromAddr, _ := HexToAddress(from)
+	fromAddr, _ := address.FromHex(from)
 
 	// TODO it may be more accurate to use the actual amount for the transfer,
 	// but that will require changing the interface to pass amount.
 	// For now we'll use the smallest amount (1).
-	tx, err := txBuilder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
+	trans, err := txBuilder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
 	if err != nil {
 		return 0, fmt.Errorf("could not build simulated tx: %v", err)
 	}
-	ethTx := tx.(*Tx).EthTx
+	ethTx := trans.(*tx.Tx).EthTx
 	msg := ethereum.CallMsg{
 		From: fromAddr,
 		To:   ethTx.To(),
@@ -269,7 +203,7 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, error) {
 	var fromAddr common.Address
 	var err error
-	fromAddr, err = HexToAddress(from)
+	fromAddr, err = address.FromHex(from)
 	if err != nil {
 		return 0, fmt.Errorf("bad to address '%v': %v", from, err)
 	}
@@ -285,7 +219,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	nativeAsset := client.Asset.GetChain()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	result := NewTxInput()
+	result := tx_input.NewTxInput()
 
 	// Gas tip (priority fee) calculation
 	result.GasTipCap = xc.NewAmountBlockchainFromUint64(DEFAULT_GAS_TIP)
@@ -325,7 +259,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 			result.GasFeeCap = result.GasTipCap
 		}
 
-		fromAddr, _ := HexToAddress(from)
+		fromAddr, _ := address.FromHex(from)
 		pendingTxInfo, err := client.TxPoolContentFrom(ctx, fromAddr)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could not see pending tx pool")
@@ -356,7 +290,7 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 		result.GasTipCap = zero
 	}
 
-	builder, err := NewTxBuilder(client.Asset)
+	builder, err := builder.NewTxBuilder(client.Asset)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}
@@ -371,9 +305,9 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 }
 
 // SubmitTx submits a EVM tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	switch tx := tx.(type) {
-	case *Tx:
+func (client *Client) SubmitTx(ctx context.Context, trans xc.Tx) error {
+	switch tx := trans.(type) {
+	case *tx.Tx:
 		err := client.EthClient.SendTransaction(ctx, tx.EthTx)
 		if err != nil {
 			return fmt.Errorf(fmt.Sprintf("sending transaction '%v': %v", tx.Hash(), err))
@@ -391,7 +325,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 // FetchLegacyTxInfo returns tx info for a EVM tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.LegacyTxInfo, error) {
 	nativeAsset := client.Asset.GetChain()
-	txHashHex := TrimPrefixes(string(txHashStr))
+	txHashHex := address.TrimPrefixes(string(txHashStr))
 	txHash := common.HexToHash(txHashHex)
 
 	result := xc.LegacyTxInfo{
@@ -399,11 +333,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		ExplorerURL: nativeAsset.ExplorerURL + "/tx/0x" + txHashHex,
 	}
 
-	tx, pending, err := client.EthClient.TransactionByHash(ctx, txHash)
+	trans, pending, err := client.EthClient.TransactionByHash(ctx, txHash)
 	if err != nil {
 		// TODO retry only for KLAY
 		client.Interceptor.Enable()
-		tx, pending, err = client.EthClient.TransactionByHash(ctx, txHash)
+		trans, pending, err = client.EthClient.TransactionByHash(ctx, txHash)
 		client.Interceptor.Disable()
 		if err != nil {
 			return result, fmt.Errorf(fmt.Sprintf("fetching tx by hash '%s': %v", txHashStr, err))
@@ -469,8 +403,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	result.Confirmations = latestHeader.Number.Int64() - receipt.BlockNumber.Int64()
 
 	// // tx confirmed
-	confirmedTx := Tx{
-		EthTx:  tx,
+	confirmedTx := tx.Tx{
+		EthTx:  trans,
 		Signer: types.LatestSignerForChainID(chainID),
 	}
 
@@ -485,10 +419,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 			"error":   err,
 		}).Warn("could not trace ETH tx")
 		// set default eth movements
-		amount := tx.Value()
+		amount := trans.Value()
 		zero := big.NewInt(0)
 		if amount.Cmp(zero) > 0 {
-			ethMovements = SourcesAndDests{
+			ethMovements = tx.SourcesAndDests{
 				Sources: []*xc.LegacyTxInfoEndpoint{{
 					Address:     confirmedTx.From(),
 					NativeAsset: nativeAsset.Chain,
@@ -526,37 +460,37 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 }
 
 // Fetch the balance of the native asset that this client is configured for
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	targetAddr, err := HexToAddress(address)
+	targetAddr, err := address.FromHex(addr)
 	if err != nil {
-		return zero, fmt.Errorf("bad to address '%v': %v", address, err)
+		return zero, fmt.Errorf("bad to address '%v': %v", addr, err)
 	}
 	balance, err := client.EthClient.BalanceAt(ctx, targetAddr, nil)
 	if err != nil {
-		return zero, fmt.Errorf("failed to get balance for '%v': %v", address, err)
+		return zero, fmt.Errorf("failed to get balance for '%v': %v", addr, err)
 	}
 
 	return xc.AmountBlockchain(*balance), nil
 }
 
 // Fetch the balance of the asset that this client is configured for
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalance(ctx context.Context, addr xc.Address) (xc.AmountBlockchain, error) {
 	// native
 	if _, ok := client.Asset.(*xc.ChainConfig); ok {
-		return client.FetchNativeBalance(ctx, address)
+		return client.FetchNativeBalance(ctx, addr)
 	}
 
 	// token
 	contract := client.Asset.GetContract()
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	tokenAddress, _ := HexToAddress(xc.Address(contract))
+	tokenAddress, _ := address.FromHex(xc.Address(contract))
 	instance, err := erc20.NewErc20(tokenAddress, client.EthClient)
 	if err != nil {
 		return zero, err
 	}
 
-	dstAddress, _ := HexToAddress(address)
+	dstAddress, _ := address.FromHex(addr)
 	balance, err := instance.BalanceOf(&bind.CallOpts{}, dstAddress)
 	if err != nil {
 		return zero, err

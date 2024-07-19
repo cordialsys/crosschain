@@ -1,15 +1,16 @@
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/stake_batch_deposit"
+	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
+	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/spf13/cobra"
@@ -21,6 +22,7 @@ func jsonprint(a any) {
 }
 
 func mustHex(s string) []byte {
+	s = strings.TrimPrefix(s, "0x")
 	bz, err := hex.DecodeString(s)
 	if err != nil {
 		panic(err)
@@ -28,24 +30,6 @@ func mustHex(s string) []byte {
 	return bz
 }
 
-func sum256(datas ...[]byte) []byte {
-	h := sha256.New()
-	// h := sha3.NewLegacyKeccak256()
-	for _, d := range datas {
-		_, _ = h.Write(d)
-	}
-	digest := []byte{}
-	return h.Sum(digest)
-}
-func wei2gwei(amount string) uint64 {
-	b := xc.NewAmountBlockchainFromStr(amount)
-	// divide by 10**9
-	gwei := b.ToHuman(9).ToBlockchain(0).Uint64()
-	if gwei == 0 {
-		panic("too small amount")
-	}
-	return gwei
-}
 func mustLen(data []byte, l int) {
 	if len(data) != l {
 		panic("wrong length")
@@ -58,34 +42,67 @@ func CmdCompute() *cobra.Command {
 		Short: "compute a transaction",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 			myabi := stake_batch_deposit.NewAbi()
 			_ = myabi
-			pubkey := mustHex("8c226ab28b514ec37ff069ea7c7b4dab0b359ef7992204d8dfadca230591be181eb3f3450058b8df79aef6bbae1ec5aa")
-			cred := mustHex("010000000000000000000000273b437645ba723299d07b1bdffcf508be64771f")
-			sig := mustHex("a8bd69560369e1aaac1ed51406eaf79747dcdd8b75fd2d4c17cb054cb07da42cd87ab9c2de2d4909c6bc9c287573df4709b86281565f7bdff2b630b1b7dbadde91704f478c93097e6ba2393c7a4b068095add898527a5c75884c8e440e9cb8d5")
-			expected := "615048dff044f1969659b5a197a1979a3b0ed3487a8d30996a9f2bdcfc178f0f"
-			amount := wei2gwei("32000000000000000000")
+			pubkey := mustHex("0x850f24e0a4b2b5568340891fcaecc2d08a788f03f13d2295419e6860545499a24975f2e4154992ebc401925e93a80b3c")
+			cred := mustHex("0x010000000000000000000000273b437645ba723299d07b1bdffcf508be64771f")
+			sig := mustHex("0xaa040d894ed815d515737c9da0d6bac20f27fcbb159d11ef14bd6557059a432f92e34f739dd0be8fb37efc6be9cb13880ecbb36dcc599c289cdb89bd69f705bb2616e8c62421c9b019c6307743fe437eccaa09dd377dcc33e457b0b3c4c7aa4b")
+			expected := "6dff1e04a432e06035343935ad7dacecd938a66e7a6800f548162c19fc72622c"
+			balance := xc.NewAmountBlockchainFromStr("32000000000000000000")
+			depositDataHash, err := stake_batch_deposit.CalculateDepositDataRoot(balance, pubkey, cred, sig)
+			if err != nil {
+				return err
+			}
 
-			mustLen(pubkey, 48)
-			mustLen(cred, 32)
-			mustLen(sig, 96)
-
-			amountBz := make([]byte, 8)
-			binary.LittleEndian.PutUint64(amountBz, amount)
-			fmt.Println("amount: ", binary.LittleEndian.Uint64(amountBz))
-
-			pubkeyRoot := sum256(pubkey, make([]byte, 16))
-			signaureRoot := sum256(
-				sum256(sig[:64]),
-				sum256(sig[64:], make([]byte, 32)),
-			)
-			node := sum256(
-				sum256(pubkeyRoot, cred),
-				sum256(amountBz, make([]byte, 24), signaureRoot),
-			)
+			data, err := stake_batch_deposit.Serialize(balance, [][]byte{pubkey}, [][]byte{cred}, [][]byte{sig})
+			if err != nil {
+				return err
+			}
 
 			fmt.Println("expected = ", expected)
-			fmt.Println("recieved = ", hex.EncodeToString(node))
+			fmt.Println("recieved = ", hex.EncodeToString(depositDataHash))
+
+			fmt.Println("data =", hex.EncodeToString(data))
+
+			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			if privateKeyInput == "" {
+				return fmt.Errorf("must set env PRIVATE_KEY")
+			}
+			addressBuilder, err := xcFactory.NewAddressBuilder(chain)
+			if err != nil {
+				return fmt.Errorf("could not create address builder: %v", err)
+			}
+			signer, _ := xcFactory.NewSigner(chain)
+			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
+			publicKey, err := signer.PublicKey(fromPrivateKey)
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+
+			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+			if err != nil {
+				return fmt.Errorf("could not derive address: %v", err)
+			}
+			fmt.Println(from)
+			to := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+
+			rpcCli, err := xcFactory.NewClient(chain)
+			if err != nil {
+				return err
+			}
+			input, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
+			if err != nil {
+				return err
+			}
+
+			txBuilder := evmbuilder.NewEvmTxBuilder()
+			tx, err := txBuilder.BuildTxWithPayload(chain, xc.Address(to), balance, data, input)
+			if err != nil {
+				return err
+			}
+			fmt.Println("built tx", tx)
 
 			return nil
 		},

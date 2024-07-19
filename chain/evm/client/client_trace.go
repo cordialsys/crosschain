@@ -1,4 +1,4 @@
-package evm
+package client
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -52,14 +53,14 @@ func (client *Client) TraceTransaction(ctx context.Context, txHash common.Hash) 
 	return &result, err
 }
 
-func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash) (SourcesAndDests, error) {
+func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash) (tx.SourcesAndDests, error) {
 
 	result, err := client.TraceTransaction(ctx, txHash)
 	if err != nil {
-		return SourcesAndDests{}, err
+		return tx.SourcesAndDests{}, err
 	}
 	traces := FlattenTraceResult(result, []*TraceTransactionResult{})
-	sourcesAndDests := SourcesAndDests{}
+	sourcesAndDests := tx.SourcesAndDests{}
 	zero := big.NewInt(0)
 	native := client.Asset.GetChain().Chain
 

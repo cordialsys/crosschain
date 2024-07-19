@@ -1,4 +1,4 @@
-package evm
+package tx
 
 import (
 	"encoding/hex"
@@ -8,10 +8,21 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/erc20"
+	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
+
+var ERC20 abi.ABI
+
+func init() {
+	var err error
+	ERC20, err = abi.JSON(strings.NewReader(erc20.Erc20ABI))
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Tx for EVM
 type Tx struct {
