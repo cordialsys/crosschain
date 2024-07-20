@@ -27,5 +27,12 @@ type StakingClient interface {
 	// A staking account can be identified using the following two names:
 	// - chains/ETH/addresses/1234
 	// - validators/x/accounts/y
-	FetchStakeAccount(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*Balance, error)
+	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*Balance, error)
+
+	// defintiely need:
+	// - address (wallet)
+	// - validator
+	// - stakeAccount - do we need this???
+	// - amount
+	FetchStakeInput(ctx context.Context, address xc.Address, validator string, amount xc.AmountBlockchain) (xc.StakingInput, error)
 }

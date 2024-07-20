@@ -73,7 +73,7 @@ func CalculateDepositDataRoot(amount xc.AmountBlockchain, publicKey []byte, cred
 	return depositDataHash, nil
 }
 
-func Serialize(amount xc.AmountBlockchain, publicKeys [][]byte, creds [][]byte, sigs [][]byte) ([]byte, error) {
+func Serialize(chainCfg *xc.ChainConfig, publicKeys [][]byte, creds [][]byte, sigs [][]byte) ([]byte, error) {
 	dataHashes := make([][32]byte, len(publicKeys))
 	publicKeysBz := make([]byte, len(publicKeys)*PublicKeyLen)
 	credentialsBz := make([]byte, len(creds)*CredentialLen)
@@ -81,6 +81,11 @@ func Serialize(amount xc.AmountBlockchain, publicKeys [][]byte, creds [][]byte, 
 
 	if len(publicKeys) != len(creds) || len(creds) != len(sigs) || len(publicKeys) != len(sigs) {
 		return nil, fmt.Errorf("not all public keys, credentials, and signatures have the same length")
+	}
+	amountH, _ := xc.NewAmountHumanReadableFromStr("32")
+	amount := amountH.ToBlockchain(18)
+	if chainCfg.Decimals > 0 {
+		amount = amountH.ToBlockchain(chainCfg.Decimals)
 	}
 
 	for i := range dataHashes {

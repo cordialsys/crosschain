@@ -129,7 +129,7 @@ func (cli *Client) ResolveAccount(accountIdMaybe string) (*Account, error) {
 	return &accRes.Data[0], nil
 }
 
-func (cli *Client) CreateValidatorKeys(accountId string, address string, count int) (any, error) {
+func (cli *Client) CreateValidatorKeys(accountId string, address string, count int) (*CreateValidatorKeysResponse, error) {
 	// not clear which response format kiln is switching to, so we try both.
 	var res1 CreateValidatorKeysResponse1
 	var res2 CreateValidatorKeysResponse2
@@ -153,10 +153,14 @@ func (cli *Client) CreateValidatorKeys(accountId string, address string, count i
 
 			return nil, err
 		}
-		return &res2, nil
+		return &CreateValidatorKeysResponse{
+			Response2: &res2,
+		}, nil
 	}
 
-	return &res1, nil
+	return &CreateValidatorKeysResponse{
+		Response1: &res1,
+	}, nil
 }
 
 func (cli *Client) GenerateStakeTransaction(accountId string, address string, amount xc.AmountBlockchain) (*GenerateTransactionResponse, error) {
