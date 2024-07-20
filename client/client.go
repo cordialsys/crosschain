@@ -27,8 +27,18 @@ type Client interface {
 	FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
 }
 
+type StakingArguments struct {
+	// - from/signing address
+	// - amount
+	// - contract address, if relevant
+	// - validator address, if relevant
+	From   string
+	Amount xc.AmountBlockchain
+}
+
 type SetStakingInput interface {
 	// Provider inputs for staking transactions
+	// SetStakingArguments(stakingInput xc.StakingInput)
 	SetStakingInput(stakingInput xc.StakingInput)
 }
 

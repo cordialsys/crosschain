@@ -280,9 +280,14 @@ var Account LegacyTxInfoMappingType = "account"
 
 func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
 	var errMsg *string
+	if legacyTx.Status == xc.TxStatusFailure {
+		msg := "transaction failed"
+		errMsg = &msg
+	}
 	if legacyTx.Error != "" {
 		errMsg = &legacyTx.Error
 	}
+
 	txInfo := NewTxInfo(
 		NewBlock(uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
 		chain,

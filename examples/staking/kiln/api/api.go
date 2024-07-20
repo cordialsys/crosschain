@@ -25,6 +25,11 @@ type CreateValidatorKeysResponse2 struct {
 	Data BatchValidatorKeys `json:"data"`
 }
 
+type CreateValidatorKeysResponse struct {
+	Response1 *CreateValidatorKeysResponse1
+	Response2 *CreateValidatorKeysResponse2
+}
+
 // DepositData structure to hold individual deposit information
 type ValidatorKey struct {
 	Format                string `json:"format"`

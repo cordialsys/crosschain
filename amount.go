@@ -83,6 +83,12 @@ func (amount *AmountBlockchain) Abs() AmountBlockchain {
 	return AmountBlockchain(*abs.Int().Abs(abs.Int()))
 }
 
+var zero = big.NewInt(0)
+
+func (amount *AmountBlockchain) IsZero() bool {
+	return amount.Int().Cmp(zero) == 0
+}
+
 func (amount *AmountBlockchain) ToHuman(decimals int32) AmountHumanReadable {
 	dec := decimal.NewFromBigInt(amount.Int(), -decimals)
 	return AmountHumanReadable(dec)

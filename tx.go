@@ -77,6 +77,7 @@ func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 }
 
 type StakingInput interface {
+	SetStakingParams
 }
 
 type StakingInputEnvelope struct {
@@ -87,6 +88,15 @@ func NewStakingInputEnvelope(variant StakingVariant) *StakingInputEnvelope {
 	return &StakingInputEnvelope{
 		Variant: variant,
 	}
+}
+
+type SetStakingParams interface {
+	// // Sets the amount to be staked or unstaked
+	// SetAmount(amount AmountBlockchain) error
+	// Sets the owning address (or 'withdrawal credential', 'authority')
+	SetOwner(addr Address) error
+	// Sets the contract address used for deposit
+	SetContract(contrac ContractAddress) error
 }
 
 // TxStatus is the status of a tx on chain, currently success or failure.

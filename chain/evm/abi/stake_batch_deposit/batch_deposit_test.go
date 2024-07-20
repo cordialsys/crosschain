@@ -32,7 +32,7 @@ func TestCalculateDepositDataHash(t *testing.T) {
 func TestSerializeBatchDeposit(t *testing.T) {
 	// Single 32ETH deposit
 	data, err := stake_batch_deposit.Serialize(
-		xc.NewAmountBlockchainFromStr("32000000000000000000"),
+		&xc.ChainConfig{Decimals: 18},
 		[][]byte{
 			mustHex("850f24e0a4b2b5568340891fcaecc2d08a788f03f13d2295419e6860545499a24975f2e4154992ebc401925e93a80b3c"),
 		},
@@ -49,7 +49,7 @@ func TestSerializeBatchDeposit(t *testing.T) {
 
 	// Multiple deposits
 	data, err = stake_batch_deposit.Serialize(
-		xc.NewAmountBlockchainFromStr("32000000000000000000"),
+		&xc.ChainConfig{Decimals: 18},
 		[][]byte{
 			mustHex("b081bce6613633fe02ab339717291e0954361aca5ca05c5020172a8c03fdb53681d5034321682ea7f48b150435885ea9"),
 			mustHex("ad56838379f47d0f22e0567a243734a17ad2ff2f3aa9099dd08848d28eed9d353e4dc9d091eb395cd31e454a55d46b56"),

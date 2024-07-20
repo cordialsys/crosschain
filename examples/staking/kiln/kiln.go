@@ -11,13 +11,10 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
-	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -33,92 +30,6 @@ func mustHex(s string) []byte {
 		panic(err)
 	}
 	return bz
-}
-
-func mustLen(data []byte, l int) {
-	if len(data) != l {
-		panic("wrong length")
-	}
-}
-
-type Client struct {
-	rpcClient  *evmclient.Client
-	kilnClient *api.Client
-	chain      *xc.ChainConfig
-}
-
-var _ staking.StakingClient = &Client{}
-
-func (cli *Client) FetchStakeAccount(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*staking.Balance, error) {
-	// On evm stakes are identified solely by validator, so we can map to either validator or account ID
-	if validator == "" && stakeAccount != "" {
-		validator = string(stakeAccount)
-	}
-	bal, _ := xc.NewAmountHumanReadableFromStr("32")
-	amount := bal.ToBlockchain(18)
-	status := staking.Activating
-	val, err := cli.rpcClient.FetchValidator(ctx, validator)
-	if err != nil {
-		logrus.WithError(err).Debug("could not locate validator")
-	} else {
-		// infer from beacon chain
-		_ = val
-		// fmt.Println("it's on the beacon chain!")
-		// jsonprint(val)
-		gwei, _ := xc.NewAmountHumanReadableFromStr(val.Data.Validator.EffectiveBalance)
-		amount = gwei.ToBlockchain(9)
-		switch val.Data.Status {
-		case "pending_initialized":
-			status = staking.Activating
-		case "active_ongoing":
-			status = staking.Activated
-		case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
-			status = staking.Inactive
-		case "active_exiting", "pending_queued":
-			status = staking.Deactivating
-		default:
-			logrus.Warn("unknown beacon validator state", status)
-		}
-		return []*staking.Balance{
-			{
-				State:  status,
-				Amount: amount,
-			},
-		}, nil
-	}
-
-	res, err := cli.kilnClient.GetStakes(validator)
-	if err != nil {
-		return nil, err
-	}
-	if len(res.Data) == 0 {
-		return nil, nil
-	}
-	switch res.Data[0].State {
-	case "deposit_in_progress":
-		status = staking.Activating
-	default:
-		logrus.Warn("unknown kiln state", status)
-	}
-	return []*staking.Balance{
-		{
-			State:  status,
-			Amount: amount,
-		},
-	}, nil
-
-}
-
-func NewClient(chain *xc.ChainConfig, variant xc.StakingVariant, url string, apiKey string) (staking.StakingClient, error) {
-	rpcClient, err := evmclient.NewClient(chain)
-	if err != nil {
-		return nil, err
-	}
-	kilnClient, err := api.NewClient(string(chain.Chain), url, apiKey)
-	if err != nil {
-		return nil, err
-	}
-	return &Client{rpcClient, kilnClient, chain}, nil
 }
 
 func CmdCompute() *cobra.Command {
@@ -141,7 +52,7 @@ func CmdCompute() *cobra.Command {
 				return err
 			}
 
-			data, err := stake_batch_deposit.Serialize(balance, [][]byte{pubkey}, [][]byte{cred}, [][]byte{sig})
+			data, err := stake_batch_deposit.Serialize(chain, [][]byte{pubkey}, [][]byte{cred}, [][]byte{sig})
 			if err != nil {
 				return err
 			}
@@ -184,7 +95,7 @@ func CmdCompute() *cobra.Command {
 				Signatures:           [][]byte{sig},
 				Amount:               balance,
 			}
-			rpcCli.(xcclient.SetStakingInput).SetStakingInput(stakingInput)
+			rpcCli.(xcclient.SetStakingInput).SetStakingInput(&stakingInput)
 
 			input, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
 			if err != nil {
@@ -271,7 +182,7 @@ func CmdGetStake() *cobra.Command {
 				return err
 			}
 
-			bal, err := cli.FetchStakeAccount(cmd.Context(), xc.Address(owner), validator, xc.Address(stake))
+			bal, err := cli.FetchStakeBalance(cmd.Context(), xc.Address(owner), validator, xc.Address(stake))
 			if err != nil {
 				return err
 			}
@@ -283,6 +194,128 @@ func CmdGetStake() *cobra.Command {
 	cmd.Flags().String("owner", "", "address owning the stake account")
 	cmd.Flags().String("validator", "", "the validator address delegated to")
 	cmd.Flags().String("stake", "", "the address of the stake account")
+	return cmd
+}
+
+func CmdStake() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "stake <amount>",
+		Short: "Stake an asset.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
+			staking := setup.UnwrapStakingArgs(cmd.Context())
+
+			validator, err := cmd.Flags().GetString("validator")
+			if err != nil {
+				return err
+			}
+
+			amountHuman, err := xc.NewAmountHumanReadableFromStr(args[0])
+			if err != nil {
+				return fmt.Errorf("invalid amount: %v", err)
+			}
+			amount := amountHuman.ToBlockchain(chain.Decimals)
+
+			cli, err := NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			if err != nil {
+				return err
+			}
+
+			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			if privateKeyInput == "" {
+				return fmt.Errorf("must set env PRIVATE_KEY")
+			}
+			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
+			signer, _ := xcFactory.NewSigner(chain)
+			publicKey, err := signer.PublicKey(fromPrivateKey)
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+
+			addressBuilder, err := xcFactory.NewAddressBuilder(chain)
+			if err != nil {
+				return fmt.Errorf("could not create address builder: %v", err)
+			}
+
+			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+			if err != nil {
+				return fmt.Errorf("could not derive address: %v", err)
+			}
+			fmt.Println(from)
+
+			stakingInput, err := cli.FetchStakeInput(cmd.Context(), from, validator, amount)
+			if err != nil {
+				return err
+			}
+			to := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+			stakingInput.SetOwner(from)
+			stakingInput.SetContract(xc.ContractAddress(to))
+			jsonprint(stakingInput)
+
+			rpcCli, err := xcFactory.NewClient(chain)
+			if err != nil {
+				return err
+			}
+			rpcCli.(xcclient.SetStakingInput).SetStakingInput(stakingInput)
+
+			txInput, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
+			if err != nil {
+				return err
+			}
+			jsonprint(txInput)
+
+			evmStakingInput := stakingInput.(*evminput.KilnStakingInput)
+			data, err := stake_batch_deposit.Serialize(chain, evmStakingInput.PublicKeys, evmStakingInput.Credentials, evmStakingInput.Signatures)
+			if err != nil {
+				return err
+			}
+
+			txBuilder := evmbuilder.NewEvmTxBuilder()
+			tx, err := txBuilder.BuildTxWithPayload(chain, xc.Address(to), amount, data, txInput)
+			if err != nil {
+				return err
+			}
+			fmt.Println("built tx", tx)
+
+			sighashes, err := tx.Sighashes()
+			if err != nil {
+				return fmt.Errorf("could not create payloads to sign: %v", err)
+			}
+
+			// sign
+			signatures := []xc.TxSignature{}
+			for _, sighash := range sighashes {
+				// sign the tx sighash(es)
+				signature, err := signer.Sign(fromPrivateKey, sighash)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+			}
+
+			err = tx.AddSignatures(signatures...)
+			if err != nil {
+				return fmt.Errorf("could not add signature(s): %v", err)
+			}
+
+			bz, err := tx.Serialize()
+			if err != nil {
+				return err
+			}
+			fmt.Println(hex.EncodeToString(bz))
+
+			err = rpcCli.SubmitTx(context.Background(), tx)
+			if err != nil {
+				return fmt.Errorf("could not broadcast: %v", err)
+			}
+			fmt.Println("submitted tx", tx.Hash())
+
+			return nil
+		},
+	}
+	cmd.Flags().String("validator", "", "the validator address to delegated to, if relevant")
 	return cmd
 }
 

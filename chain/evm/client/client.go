@@ -125,7 +125,7 @@ func (client *Client) SetStakingInput(input xc.StakingInput) {
 	client.stakingInput = input
 }
 
-func (client *Client) DefaultMaxGasLimit() uint64 {
+func (client *Client) DefaultGasLimit() uint64 {
 	// Set absolute gas limits for safety
 	gasLimit := uint64(90_000)
 	native := client.Asset.GetChain()
@@ -154,9 +154,9 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 	}
 	if client.stakingInput != nil {
 		switch input := client.stakingInput.(type) {
-		case tx_input.KilnStakingInput:
+		case *tx_input.KilnStakingInput:
 			txBuilder := builder.NewEvmTxBuilder()
-			data, err := stake_batch_deposit.Serialize(input.Amount, input.PublicKeys, input.Credentials, input.Signatures)
+			data, err := stake_batch_deposit.Serialize(client.Asset.GetChain(), input.PublicKeys, input.Credentials, input.Signatures)
 			if err != nil {
 				return 0, fmt.Errorf("invalid input for %T: %v", input, err)
 			}
@@ -184,22 +184,25 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 		AccessList: types.AccessList{},
 	}
 	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
+	if err != nil {
+		logrus.WithError(err).Debug("could not estimate gas fully")
+	}
 	if err != nil && strings.Contains(err.Error(), "insufficient funds") {
 		// try getting gas estimate without sending funds
 		msg.Value = zero
 		gasLimit, err = client.EthClient.EstimateGas(ctx, msg)
 	} else if err != nil && strings.Contains(err.Error(), "less than the block's baseFeePerGas") {
 		// this estimate does not work with hardhat -> use defaults
-		return client.DefaultMaxGasLimit(), nil
+		return client.DefaultGasLimit(), nil
 	}
 	if err != nil {
 		return 0, fmt.Errorf("could not simulate tx: %v", err)
 	}
 
-	// heuristic: Sometimes tokens can have inconsistent gas spends. Where the gas spent is _sometimes_ higher than what we see in simulation.
+	// heuristic: Sometimes contracts can have inconsistent gas spends. Where the gas spent is _sometimes_ higher than what we see in simulation.
 	// To avoid this, we can opportunistically increase the gas budget if there is Enough native asset present.  We don't want to increase the gas budget if we can't
 	// afford it, as this can also be a source of failure.
-	if client.Asset.GetContract() != "" {
+	if len(msg.Data) > 0 {
 		// always add 1k gas extra
 		gasLimit += 1_000
 		amountEth, err := client.FetchNativeBalance(ctx, from)
@@ -212,9 +215,8 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, txBuilder xc.TxB
 		}
 	}
 
-	defaultMax := client.DefaultMaxGasLimit()
-	if gasLimit == 0 || gasLimit > defaultMax {
-		gasLimit = defaultMax
+	if gasLimit == 0 {
+		gasLimit = client.DefaultGasLimit()
 	}
 	return gasLimit, nil
 }
@@ -386,12 +388,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		return result, nil
 	}
 
-	// reverted tx
 	result.BlockIndex = receipt.BlockNumber.Int64()
 	result.BlockHash = receipt.BlockHash.Hex()
 	gasUsed := receipt.GasUsed
 	if receipt.Status == 0 {
 		result.Status = xc.TxStatusFailure
+		result.Error = "transaction reverted"
 	}
 
 	// tx confirmed
