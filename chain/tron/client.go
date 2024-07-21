@@ -123,7 +123,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := new(TxInput)
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal

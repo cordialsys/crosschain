@@ -47,7 +47,7 @@ func main() {
 	// (network needed)
 	client, _ := xc.NewClient(asset)
 
-	input, err := client.FetchTxInput(ctx, from, to)
+	input, err := client.FetchLegacyTxInput(ctx, from, to)
 	if err != nil {
 		panic(err)
 	}

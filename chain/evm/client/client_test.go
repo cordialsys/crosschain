@@ -194,7 +194,7 @@ func TestFetchTxInput(t *testing.T) {
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := client.NewClient(asset)
 		require.NoError(t, err)
-		input, err := client.FetchTxInput(context.Background(), xc.Address(fromAddr), xc.Address(""))
+		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(fromAddr), xc.Address(""))
 		require.NoError(t, err)
 		if v.err != "" {
 			require.Equal(t, tx_input.TxInput{}, input)

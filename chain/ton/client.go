@@ -181,8 +181,8 @@ func (client *Client) EstimateMaxFee(ctx context.Context, from xc.Address, to xc
 	return 0, nil
 }
 
-// FetchTxInput returns tx input for a Template tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input for a Template tx
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	var err error
 	acc := &api.GetAccountResponse{}
 	err = client.get(fmt.Sprintf("/api/v3/account?address=%s", from), acc)

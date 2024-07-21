@@ -294,7 +294,7 @@ func (client *BlockbookClient) FetchNativeBalance(ctx context.Context, address x
 	return client.FetchBalance(ctx, address)
 }
 
-func (client *BlockbookClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, xc.Address(from))
 	if err != nil {

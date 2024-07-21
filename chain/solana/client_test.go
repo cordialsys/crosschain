@@ -263,7 +263,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 		client, _ := NewClient(v.asset)
 		from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 		to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		input, err := client.FetchTxInput(s.Ctx, from, to)
+		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 
 		if v.err != "" {
 			require.Nil(input)

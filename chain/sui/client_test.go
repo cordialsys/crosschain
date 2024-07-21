@@ -678,7 +678,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		}
 		client, err := NewClient(asset)
 		require.NoError(err)
-		input, err := client.FetchTxInput(context.Background(), xc.Address(from), xc.Address(to))
+		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(from), xc.Address(to))
 		require.NoError(err)
 		local_input := input.(*TxInput)
 		local_input.SetPublicKeyFromStr(from_pk)

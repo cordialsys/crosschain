@@ -80,7 +80,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 			server.StatusCodes = []int{200, 200, 400}
 		}
 		server.Response = v.resp
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(v.from), "")
+		input, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(v.from), "")
 
 		if v.err != "" {
 			require.ErrorContains(err, v.err)

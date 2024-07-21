@@ -5,6 +5,8 @@ import (
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
@@ -34,13 +36,15 @@ type TxBuilder struct {
 }
 
 var _ xc.TxBuilder = &TxBuilder{}
+var _ xcbuilder.Transfer = &TxBuilder{}
+var _ xcbuilder.Staking = &TxBuilder{}
 
 func NewEvmTxBuilder() *EvmTxBuilder {
 	return &EvmTxBuilder{}
 }
 
 // NewTxBuilder creates a new EVM TxBuilder
-func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(asset xc.ITask) (xcbuilder.FullBuilder, error) {
 	return TxBuilder{
 		Asset:         asset,
 		gethTxBuilder: &EvmTxBuilder{},
@@ -61,6 +65,9 @@ func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) xc.TxBuilder {
 // }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.TaskConfig:
@@ -179,4 +186,50 @@ func GweiToWei(gwei uint64) xc.AmountBlockchain {
 
 	bigGwei.Mul(bigGwei, factor)
 	return xc.AmountBlockchain(*bigGwei)
+}
+
+func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
+	// txBuilder := NewEvmTxBuilder()
+	switch input := input.(type) {
+	case *tx_input.KilnStakingInput:
+		evmBuilder := NewEvmTxBuilder()
+
+		owner, ok := stakeArgs.GetOwner()
+		if !ok {
+			owner = stakeArgs.GetFrom()
+		}
+		ownerAddr, err := address.FromHex(owner)
+		if err != nil {
+			return nil, err
+		}
+		ownerBz := ownerAddr.Bytes()
+		withdrawCred := [32]byte{}
+		copy(withdrawCred[32-len(ownerBz):], ownerBz)
+		// set the credential type
+		withdrawCred[0] = 1
+		credentials := make([][]byte, len(input.PublicKeys))
+		for i := range credentials {
+			credentials[i] = withdrawCred[:]
+		}
+
+		data, err := stake_batch_deposit.Serialize(txBuilder.Asset.GetChain(), input.PublicKeys, credentials, input.Signatures)
+		if err != nil {
+			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
+		}
+		// TODO put this in testnet/mainnet config
+		testnetContract := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(testnetContract), stakeArgs.GetAmount(), data, &input.TxInput)
+		if err != nil {
+			return nil, fmt.Errorf("could not build estimated tx for %T: %v", input, err)
+		}
+		return tx, nil
+	default:
+		return nil, fmt.Errorf("unsupported staking type %T", input)
+	}
+}
+func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
+	switch input := input.(type) {
+	default:
+		return nil, fmt.Errorf("unsupported unstaking type %T", input)
+	}
 }

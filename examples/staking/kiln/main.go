@@ -51,7 +51,6 @@ func CmdStaking() *cobra.Command {
 	cmd.Flags().String("kiln-api", "", "Override base URL for Kiln API.")
 
 	cmd.AddCommand(CmdKiln())
-	cmd.AddCommand(CmdCompute())
 	cmd.AddCommand(CmdGetStake())
 	cmd.AddCommand(CmdStake())
 	return cmd

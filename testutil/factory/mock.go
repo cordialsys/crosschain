@@ -15,8 +15,8 @@ type MockedClient struct {
 
 var _ xclient.FullClient = &MockedClient{}
 
-// FetchTxInput fetches tx input, mocked
-func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput fetches tx input, mocked
+func (m *MockedClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	args := m.Called(ctx, from, to)
 	return args.Get(0).(xc.TxInput), args.Error(1)
 }
