@@ -66,7 +66,7 @@ func CmdTxInput() *cobra.Command {
 
 			from := xcFactory.MustAddress(chain, addressRaw)
 			to := xcFactory.MustAddress(chain, addressTo)
-			input, err := cli.FetchTxInput(context.Background(), from, to)
+			input, err := cli.FetchLegacyTxInput(context.Background(), from, to)
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction inputs: %v", err)
 			}
@@ -181,7 +181,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not load client: %v", err)
 			}
 
-			input, err := cli.FetchTxInput(context.Background(), from, xc.Address(to))
+			input, err := cli.FetchLegacyTxInput(context.Background(), from, xc.Address(to))
 			if err != nil {
 				return fmt.Errorf("could not fetch transfer input: %v", err)
 			}

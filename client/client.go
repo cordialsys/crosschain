@@ -4,12 +4,13 @@ import (
 	"context"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 )
 
 // Client is a client that can fetch data and submit tx to a public blockchain
 type Client interface {
 	// Fetch the basic transaction input for any new transaction
-	FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error)
+	FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error)
 
 	// Broadcast a signed transaction to the chain
 	SubmitTx(ctx context.Context, tx xc.Tx) error
@@ -26,20 +27,9 @@ type Client interface {
 	// Fetch the native balance for the chain on an address
 	FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
 }
-
-type StakingArguments struct {
-	// - from/signing address
-	// - amount
-	// - contract address, if relevant
-	// - validator address, if relevant
-	From   string
-	Amount xc.AmountBlockchain
-}
-
-type SetStakingInput interface {
-	// Provider inputs for staking transactions
-	// SetStakingArguments(stakingInput xc.StakingInput)
-	SetStakingInput(stakingInput xc.StakingInput)
+type ClientV2 interface {
+	// Improved signature replacement of `FetchLegacyTxInput`
+	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
 }
 
 type FullClient interface {

@@ -100,8 +100,8 @@ func (txBuilder *NativeClient) WithAddressDecoder(decoder address.AddressDecoder
 	return txBuilder
 }
 
-// FetchTxInput returns tx input for a Bitcoin tx
-func (client *NativeClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input for a Bitcoin tx
+func (client *NativeClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
 	if err != nil {

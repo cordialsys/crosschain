@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -38,7 +39,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	nativeAsset := client.EvmClient.Asset.GetChain()
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	result := NewTxInput()
@@ -65,7 +66,11 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
-	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, builder, from, to, result)
+	tf, err := builder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), result)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
+	}
+	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, from, tf.(*tx.Tx))
 	if err != nil {
 		return nil, err
 	}

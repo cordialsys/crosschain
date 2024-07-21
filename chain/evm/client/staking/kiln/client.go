@@ -1,12 +1,15 @@
-package main
+package kiln
 
 import (
 	"context"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
@@ -105,8 +108,39 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	}, nil
 }
 
-func (cli *Client) FetchStakeInput(ctx context.Context, addr xc.Address, validator string, amount xc.AmountBlockchain) (xc.StakingInput, error) {
-	count, err := tx_input.DivideAmount(cli.chain, amount)
+func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakingInput, error) {
+	stakingInput, err := cli.FetchKilnInput(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+	stakingInput.TxInput = *partialTxInput
+
+	builder, err := builder.NewTxBuilder(cli.chain)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+
+	exampleTf, err := builder.Stake(args, stakingInput)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+
+	gasLimit, err := cli.rpcClient.SimulateGasWithLimit(ctx, args.GetFrom(), exampleTf.(*tx.Tx))
+	if err != nil {
+		return nil, err
+	}
+	stakingInput.GasLimit = gasLimit
+
+	return stakingInput, nil
+}
+
+func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.KilnStakingInput, error) {
+	count, err := tx_input.DivideAmount(cli.chain, args.GetAmount())
 	if err != nil {
 		return nil, err
 	}
@@ -115,19 +149,13 @@ func (cli *Client) FetchStakeInput(ctx context.Context, addr xc.Address, validat
 		return nil, err
 	}
 
-	keys, err := cli.kilnClient.CreateValidatorKeys(acc.ID, string(addr), int(count))
+	keys, err := cli.kilnClient.CreateValidatorKeys(acc.ID, string(args.GetFrom()), int(count))
 	if err != nil {
 		return nil, fmt.Errorf("could not create validator keys: %v", err)
 	}
 
 	input := &tx_input.KilnStakingInput{
 		StakingInputEnvelope: tx_input.NewKilnStakingInput().StakingInputEnvelope,
-		// trusted input, to be set later
-		ContractAddress: "",
-		// trusted input, to be set later
-		Credentials: nil,
-		// TODO shouldn't need to set this here
-		Amount: amount,
 	}
 	pubkeys := []string{}
 	sigs := []string{}

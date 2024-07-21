@@ -9,10 +9,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
-	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
-	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
-	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/spf13/cobra"
@@ -30,122 +28,6 @@ func mustHex(s string) []byte {
 		panic(err)
 	}
 	return bz
-}
-
-func CmdCompute() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "compute",
-		Short: "compute a transaction",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := setup.UnwrapXc(cmd.Context())
-			chain := setup.UnwrapChain(cmd.Context())
-			myabi := stake_batch_deposit.NewAbi()
-			_ = myabi
-			pubkey := mustHex("0x850f24e0a4b2b5568340891fcaecc2d08a788f03f13d2295419e6860545499a24975f2e4154992ebc401925e93a80b3c")
-			cred := mustHex("0x010000000000000000000000273b437645ba723299d07b1bdffcf508be64771f")
-			sig := mustHex("0xaa040d894ed815d515737c9da0d6bac20f27fcbb159d11ef14bd6557059a432f92e34f739dd0be8fb37efc6be9cb13880ecbb36dcc599c289cdb89bd69f705bb2616e8c62421c9b019c6307743fe437eccaa09dd377dcc33e457b0b3c4c7aa4b")
-			expected := "6dff1e04a432e06035343935ad7dacecd938a66e7a6800f548162c19fc72622c"
-			balance := xc.NewAmountBlockchainFromStr("32000000000000000000")
-			depositDataHash, err := stake_batch_deposit.CalculateDepositDataRoot(balance, pubkey, cred, sig)
-			if err != nil {
-				return err
-			}
-
-			data, err := stake_batch_deposit.Serialize(chain, [][]byte{pubkey}, [][]byte{cred}, [][]byte{sig})
-			if err != nil {
-				return err
-			}
-
-			fmt.Println("expected = ", expected)
-			fmt.Println("recieved = ", hex.EncodeToString(depositDataHash))
-
-			fmt.Println("data =", hex.EncodeToString(data))
-
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
-			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
-			}
-			addressBuilder, err := xcFactory.NewAddressBuilder(chain)
-			if err != nil {
-				return fmt.Errorf("could not create address builder: %v", err)
-			}
-			signer, _ := xcFactory.NewSigner(chain)
-			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
-			publicKey, err := signer.PublicKey(fromPrivateKey)
-			if err != nil {
-				return fmt.Errorf("could not create public key: %v", err)
-			}
-
-			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
-			if err != nil {
-				return fmt.Errorf("could not derive address: %v", err)
-			}
-			fmt.Println(from)
-			to := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
-
-			rpcCli, err := xcFactory.NewClient(chain)
-			if err != nil {
-				return err
-			}
-			stakingInput := evminput.KilnStakingInput{
-				StakingInputEnvelope: evminput.NewKilnStakingInput().StakingInputEnvelope,
-				PublicKeys:           [][]byte{pubkey},
-				Credentials:          [][]byte{cred},
-				Signatures:           [][]byte{sig},
-				Amount:               balance,
-			}
-			rpcCli.(xcclient.SetStakingInput).SetStakingInput(&stakingInput)
-
-			input, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
-			if err != nil {
-				return err
-			}
-
-			txBuilder := evmbuilder.NewEvmTxBuilder()
-			tx, err := txBuilder.BuildTxWithPayload(chain, xc.Address(to), balance, data, input)
-			if err != nil {
-				return err
-			}
-			fmt.Println("built tx", tx)
-
-			sighashes, err := tx.Sighashes()
-			if err != nil {
-				return fmt.Errorf("could not create payloads to sign: %v", err)
-			}
-
-			// sign
-			signatures := []xc.TxSignature{}
-			for _, sighash := range sighashes {
-				// sign the tx sighash(es)
-				signature, err := signer.Sign(fromPrivateKey, sighash)
-				if err != nil {
-					panic(err)
-				}
-				signatures = append(signatures, signature)
-			}
-
-			err = tx.AddSignatures(signatures...)
-			if err != nil {
-				return fmt.Errorf("could not add signature(s): %v", err)
-			}
-
-			bz, err := tx.Serialize()
-			if err != nil {
-				return err
-			}
-			fmt.Println(hex.EncodeToString(bz))
-
-			err = rpcCli.SubmitTx(context.Background(), tx)
-			if err != nil {
-				return fmt.Errorf("could not broadcast: %v", err)
-			}
-			fmt.Println("submitted tx", tx.Hash())
-
-			return nil
-		},
-	}
-	return cmd
 }
 
 func CmdGetStake() *cobra.Command {
@@ -177,7 +59,7 @@ func CmdGetStake() *cobra.Command {
 			_ = xcFactory
 			_ = chain
 
-			cli, err := NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			cli, err := kiln.NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
 			if err != nil {
 				return err
 			}
@@ -218,7 +100,20 @@ func CmdStake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			cli, err := NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			txBuilder, err := xcFactory.NewTxBuilder(chain)
+			if err != nil {
+				return err
+			}
+			stakingBuilder, ok := txBuilder.(builder.Staking)
+			if !ok {
+				return fmt.Errorf("crosschain currently does not support crafting staking transactions for %s", chain.Chain)
+			}
+			rpcCli, err := xcFactory.NewClient(chain)
+			if err != nil {
+				return err
+			}
+
+			cli, err := kiln.NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
 			if err != nil {
 				return err
 			}
@@ -244,36 +139,17 @@ func CmdStake() *cobra.Command {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
 			fmt.Println(from)
-
-			stakingInput, err := cli.FetchStakeInput(cmd.Context(), from, validator, amount)
-			if err != nil {
-				return err
-			}
-			to := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
-			stakingInput.SetOwner(from)
-			stakingInput.SetContract(xc.ContractAddress(to))
-			jsonprint(stakingInput)
-
-			rpcCli, err := xcFactory.NewClient(chain)
-			if err != nil {
-				return err
-			}
-			rpcCli.(xcclient.SetStakingInput).SetStakingInput(stakingInput)
-
-			txInput, err := rpcCli.FetchTxInput(context.Background(), from, xc.Address(to))
-			if err != nil {
-				return err
-			}
-			jsonprint(txInput)
-
-			evmStakingInput := stakingInput.(*evminput.KilnStakingInput)
-			data, err := stake_batch_deposit.Serialize(chain, evmStakingInput.PublicKeys, evmStakingInput.Credentials, evmStakingInput.Signatures)
+			stakingArgs, err := builder.NewStakeArgs(from, amount, builder.StakeOptionValidator(validator))
 			if err != nil {
 				return err
 			}
 
-			txBuilder := evmbuilder.NewEvmTxBuilder()
-			tx, err := txBuilder.BuildTxWithPayload(chain, xc.Address(to), amount, data, txInput)
+			stakingInput, err := cli.FetchStakingInput(cmd.Context(), stakingArgs)
+			if err != nil {
+				return err
+			}
+
+			tx, err := stakingBuilder.Stake(stakingArgs, stakingInput)
 			if err != nil {
 				return err
 			}

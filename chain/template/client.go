@@ -19,8 +19,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	return &Client{}, errors.New("not implemented")
 }
 
-// FetchTxInput returns tx input for a Template tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input for a Template tx
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	return &TxInput{}, errors.New("not implemented")
 }
 

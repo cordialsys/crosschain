@@ -4,6 +4,7 @@ import (
 	"context"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 )
 
 type State string
@@ -19,6 +20,7 @@ type Balance struct {
 }
 
 type StakingClient interface {
+
 	// What do we want to know about the stake account?
 	// - state
 	// - balance
@@ -34,5 +36,8 @@ type StakingClient interface {
 	// - validator
 	// - stakeAccount - do we need this???
 	// - amount
-	FetchStakeInput(ctx context.Context, address xc.Address, validator string, amount xc.AmountBlockchain) (xc.StakingInput, error)
+	// FetchStakeInput(ctx context.Context, address xc.Address, validator string, amount xc.AmountBlockchain) (xc.StakingInput, error)
+
+	// Fetch inputs needs for a staking transaction
+	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakingInput, error)
 }

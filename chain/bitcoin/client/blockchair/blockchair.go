@@ -157,8 +157,8 @@ func (client *BlockchairClient) EstimateGasFee(ctx context.Context, numBlocks in
 	return float64(stats.Data.SuggestedFee), nil
 }
 
-// FetchTxInput returns tx input for a Bitcoin tx
-func (client *BlockchairClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input for a Bitcoin tx
+func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, xc.Address(from))
 	if err != nil {

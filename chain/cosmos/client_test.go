@@ -201,7 +201,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		client, _ := NewClient(&v.asset)
 		from := xc.Address(v.from)
 		to := xc.Address(v.to)
-		input, err := client.FetchTxInput(s.Ctx, from, to)
+		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 
 		if v.err != "" {
 			require.Equal(v.txInput, input)

@@ -125,8 +125,8 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 	return bz, nil
 }
 
-// FetchTxInput returns tx input from a Crosschain endpoint
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input from a Crosschain endpoint
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	res, err := client.apiCall(ctx, "/input", &types.TxInputReq{
 		AssetReq: client.apiAsset(),
 		From:     string(from),
