@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
@@ -217,7 +218,7 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.Staking
 		contract := txBuilder.Asset.GetChain().Staking.BatchDepositContract
 		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
 		if err != nil {
-			return nil, fmt.Errorf("could not build estimated tx for %T: %v", input, err)
+			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
 		}
 		return tx, nil
 	default:
@@ -226,6 +227,29 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.Staking
 }
 func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
 	switch input := input.(type) {
+	case *tx_input.MultiDepositInput:
+		evmBuilder := NewEvmTxBuilder()
+
+		count, err := tx_input.DivideAmount(txBuilder.Asset.GetChain(), stakeArgs.GetAmount())
+		if err != nil {
+			return nil, err
+		}
+		if int(count) > len(input.PublicKeys) {
+			return nil, fmt.Errorf("need at least %d validators to unstake target amount, but there are only %d", count, len(input.PublicKeys))
+		}
+
+		data, err := exit_request.Serialize(input.PublicKeys[:count])
+		if err != nil {
+			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
+		}
+		// TODO move to holesky config
+		contract := "0x75838e6FC51fa2dFE22be1d5f3817AEf90306Be6"
+		zero := xc.NewAmountBlockchainFromUint64(0)
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), zero, data, &input.TxInput)
+		if err != nil {
+			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
+		}
+		return tx, nil
 	default:
 		return nil, fmt.Errorf("unsupported unstaking type %T", input)
 	}

@@ -21,6 +21,13 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+func ensure0x(val string) string {
+	if !strings.HasPrefix(val, "0x") {
+		return "0x" + val
+	}
+	return val
+}
+
 func NewClient(chain, url, apiKey string) (*Client, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("api-key required")
@@ -173,8 +180,41 @@ func (cli *Client) GenerateStakeTransaction(accountId string, address string, am
 	return &res, err
 }
 
-func (cli *Client) GetStakes(validator string) (*GetStakesResponse, error) {
+func (cli *Client) GetStakesByValidator(validator string) (*GetStakesResponse, error) {
 	var res GetStakesResponse
-	err := cli.Get(fmt.Sprintf("v1/eth/stakes?validators=%s", validator), &res)
+	err := cli.Get(fmt.Sprintf("v1/eth/stakes?validators=%s", ensure0x(validator)), &res)
+	return &res, err
+}
+
+func (cli *Client) GetStakesByOwner(address string) (*GetStakesResponse, error) {
+	var res GetStakesResponse
+	err := cli.Get(fmt.Sprintf("v1/eth/stakes?wallets=%s", ensure0x(address)), &res)
+	return &res, err
+}
+
+func (cli *Client) GetAllStakesByOwner(address string) ([]StakeAccount, error) {
+	stakes := []StakeAccount{}
+	pageSize := 50
+	currentPage := 0
+	totalPages := 1
+	for currentPage < totalPages {
+		var res GetStakesResponse
+		err := cli.Get(fmt.Sprintf("v1/eth/stakes?wallets=%s&current_page=%d&page_size=%d", ensure0x(address), (currentPage+1), pageSize), &res)
+		if err != nil {
+			return nil, err
+		}
+		if len(res.Data) == 0 {
+			break
+		}
+		stakes = append(stakes, res.Data...)
+		currentPage += 1
+		totalPages = res.Pagination.TotalPages
+	}
+	return stakes, nil
+}
+
+func (cli *Client) OperationsByOwner(address string) (*OperationsResponse, error) {
+	var res OperationsResponse
+	err := cli.Get(fmt.Sprintf("v1/eth/operations?wallets=%s", ensure0x(address)), &res)
 	return &res, err
 }

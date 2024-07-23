@@ -116,3 +116,30 @@ type Pagination struct {
 	TotalPages   int `json:"total_pages"`
 	TotalEntries int `json:"total_entries"`
 }
+
+type OperationType string
+
+const DepositOperation OperationType = "deposit"
+const WithdrawalOperation OperationType = "consensus_withdrawal"
+
+type Operation struct {
+	Type                  OperationType `json:"type"`
+	Time                  time.Time     `json:"time"`
+	ValidatorAddress      string        `json:"validator_address"`
+	ValidatorIndex        int           `json:"validator_index"`
+	TxHash                string        `json:"tx_hash"`
+	TxGasUsed             string        `json:"tx_gas_used"`
+	TxEffectiveGasPrice   string        `json:"tx_effective_gas_price"`
+	TxSender              string        `json:"tx_sender"`
+	Proxies               []string      `json:"proxies"`
+	Slot                  int           `json:"slot"`
+	Block                 int           `json:"block"`
+	BlockBaseFee          string        `json:"block_base_fee"`
+	WithdrawalCredentials string        `json:"withdrawal_credentials"`
+	Amount                string        `json:"amount"`
+	FeeRecipient          string        `json:"fee_recipient,omitempty"` // Optional field for consensus_withdrawal
+}
+
+type OperationsResponse struct {
+	Data []Operation `json:"data"`
+}
