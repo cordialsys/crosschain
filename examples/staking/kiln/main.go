@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,14 +29,23 @@ func CmdStaking() *cobra.Command {
 			}
 			setup.OverrideChainSettings(chainConfig, args)
 
-			staking, err := setup.StakingArgsFromCmd(cmd)
+			stakingArgs, err := setup.StakingArgsFromCmd(cmd)
 			if err != nil {
 				return err
 			}
-			setup.OverrideStakingArgs(staking, xcFactory)
 
+			var stakingCfg *staking.StakingConfig
+			if stakingArgs.ConfigPath != "" {
+				stakingCfg, err = staking.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
+			} else {
+				stakingCfg, err = staking.LoadConfig(xcFactory.GetNetworkSelector())
+			}
+			if err != nil {
+				return err
+			}
 			ctx := setup.CreateContext(xcFactory, chainConfig)
-			ctx = setup.WrapStakingArgs(ctx, staking)
+			ctx = setup.WrapStakingArgs(ctx, stakingArgs)
+			ctx = setup.WrapStakingConfig(ctx, stakingCfg)
 
 			logrus.WithFields(logrus.Fields{
 				"rpc":     chainConfig.GetAllClients()[0].URL,
@@ -53,6 +63,7 @@ func CmdStaking() *cobra.Command {
 	cmd.AddCommand(CmdKiln())
 	cmd.AddCommand(CmdGetStake())
 	cmd.AddCommand(CmdStake())
+	cmd.AddCommand(CmdConfig())
 	return cmd
 }
 

@@ -52,7 +52,7 @@ func TestTransferSetsMaxTipCap(t *testing.T) {
 }
 
 func TestStakingTxUsesCredential(t *testing.T) {
-	input := tx_input.NewKilnStakingInput()
+	input := tx_input.NewMultidepositStakingInput()
 	input.PublicKeys = [][]byte{
 		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839a"),
 		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839b"),

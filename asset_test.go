@@ -49,6 +49,10 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 		require.NotEmpty(Driver(parts[1]).SignatureAlgorithm(), "driver is not valid")
 		require.NotEmpty(parts[3], "missing ID")
 
+		require.NotEmpty(variant.Driver())
+		require.NotEmpty(variant.Driver().SignatureAlgorithm(), "driver is not valid")
+		require.NotEmpty(variant.Id(), "variant does not have an id")
+
 		if _, ok := variants[variant]; ok {
 			require.Fail("duplicate staking variant %s", variant)
 		}

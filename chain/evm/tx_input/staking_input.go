@@ -7,26 +7,22 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type KilnStakingInput struct {
+type MultiDepositInput struct {
 	xc.StakingInputEnvelope
 	TxInput
-	// ContractAddress xc.ContractAddress `json:"contract_address"`
 	PublicKeys [][]byte `json:"public_keys"`
-	// Credentials     [][]byte           `json:"credentials"`
 	Signatures [][]byte `json:"signatures"`
-	// TODO this should be a 'argument-input'
-	// Amount xc.AmountBlockchain `json:"amount"`
 }
 
-var _ xc.StakingInput = &KilnStakingInput{}
+var _ xc.StakingInput = &MultiDepositInput{}
 
-func NewKilnStakingInput() *KilnStakingInput {
-	return &KilnStakingInput{
-		StakingInputEnvelope: *xc.NewStakingInputEnvelope(xc.StakingVariantEvmKiln),
+func NewMultidepositStakingInput() *MultiDepositInput {
+	return &MultiDepositInput{
+		StakingInputEnvelope: *xc.NewStakingInputEnvelope(xc.EvmMultiDeposit),
 	}
 }
 
-func (stakingInput *KilnStakingInput) GetVariant() xc.StakingVariant {
+func (stakingInput *MultiDepositInput) GetVariant() xc.StakingVariant {
 	return stakingInput.Variant
 }
 

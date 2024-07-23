@@ -146,11 +146,24 @@ var SupportedDrivers = []Driver{
 type StakingVariant string
 
 const (
-	StakingVariantEvmKiln = StakingVariant("drivers/evm/staking/kiln")
+
+	//
+
+	KilnMultiDeposit      = StakingVariant("drivers/evm/staking/kiln-multi-deposit")
+	TwinstakeMultiDeposit = StakingVariant("drivers/evm/staking/twinstake-multi-deposit")
+	EvmMultiDeposit       = StakingVariant("drivers/evm/staking/multi-deposit")
 )
 
 var SupportedStakingVariants = []StakingVariant{
-	StakingVariantEvmKiln,
+	KilnMultiDeposit,
+	TwinstakeMultiDeposit,
+}
+
+func (variant StakingVariant) Driver() Driver {
+	return Driver(strings.Split(string(variant), "/")[1])
+}
+func (variant StakingVariant) Id() string {
+	return strings.Split(string(variant), "/")[3]
 }
 
 func (native NativeAsset) IsValid() bool {
@@ -187,16 +200,32 @@ func (native NativeAsset) Driver() Driver {
 	return ""
 }
 
+func (native NativeAsset) StakingVariants() []StakingVariant {
+	switch native {
+	case ETH:
+		return []StakingVariant{KilnMultiDeposit, TwinstakeMultiDeposit}
+	}
+	return []StakingVariant{}
+}
+
+func (native NativeAsset) Supports(variant StakingVariant) bool {
+	variants := native.StakingVariants()
+	for _, v := range variants {
+		if v == variant {
+			return true
+		}
+	}
+	return false
+}
+
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Ed255
-	case DriverSubstrate:
-		return Schnorr
 	}
 	return ""
 }
@@ -224,6 +253,11 @@ type ExplorerUrls struct {
 	Tx      string `yaml:"tx"`
 	Address string `yaml:"address"`
 	Token   string `yaml:"token"`
+}
+
+type StakingConfig struct {
+	// EVM contract for making batch deposits
+	BatchDepositContract string `yaml:"batch_deposit_contract"`
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
@@ -261,6 +295,8 @@ type ChainConfig struct {
 	ExplorerUrls         ExplorerUrls    `yaml:"explorer_urls"`
 
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
+
+	Staking StakingConfig `yaml:"staking"`
 
 	// Internal
 	// dereferenced api token if used

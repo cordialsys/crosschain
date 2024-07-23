@@ -51,6 +51,10 @@ func getViper() *viper.Viper {
 // 4. If defaults are provided, an error will _not_ be returned if no config is found.
 func RequireConfig(section string, unmarshalDst interface{}, defaults interface{}) error {
 	v := getViper()
+	return RequireConfigWithViper(v, section, unmarshalDst, defaults)
+}
+
+func RequireConfigWithViper(v *viper.Viper, section string, unmarshalDst interface{}, defaults interface{}) error {
 	// config is where we store default values
 	// panic if not available
 	err := v.ReadInConfig()
@@ -86,6 +90,12 @@ func RequireConfig(section string, unmarshalDst interface{}, defaults interface{
 	} else {
 		return nil
 	}
+}
+
+type Secret string
+
+func (s Secret) Load() (string, error) {
+	return GetSecret(string(s))
 }
 
 func newVaultClient(cfg *vault.Config) (VaultLoader, error) {
@@ -227,6 +237,8 @@ func GetSecret(uri string) (string, error) {
 			}
 		}
 		return "", fmt.Errorf("could not find a gsm secret by name %s", name)
+	case "raw":
+		return strings.Join(splits[1:], ":"), nil
 	}
 	return "", errors.New("invalid secret source for: ***")
 }
