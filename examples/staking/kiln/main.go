@@ -63,6 +63,7 @@ func CmdStaking() *cobra.Command {
 	cmd.AddCommand(CmdKiln())
 	cmd.AddCommand(CmdGetStake())
 	cmd.AddCommand(CmdStake())
+	cmd.AddCommand(CmdUnstake())
 	cmd.AddCommand(CmdConfig())
 	return cmd
 }
