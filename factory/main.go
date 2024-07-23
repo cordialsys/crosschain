@@ -9,6 +9,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/normalize"
@@ -353,6 +354,16 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 		}
 	}
 	return nil, fmt.Errorf("no clients possible for %s", nativeAsset.Chain)
+}
+
+func (f *Factory) NewStakingClient(cfg ITask, stakingCfg *staking.StakingConfig, variant StakingVariant) (staking.StakingClient, error) {
+	chain := cfg.GetChain()
+	if !chain.Chain.Supports(variant) {
+		return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())
+	}
+
+	// TODO crosschain client for staking...
+	return drivers.NewStakingClient(cfg, stakingCfg, variant)
 }
 
 // NewTxBuilder creates a new TxBuilder

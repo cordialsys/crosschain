@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"errors"
+	"fmt"
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos"
@@ -13,6 +14,7 @@ import (
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/substrate"
@@ -21,6 +23,7 @@ import (
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/staking"
 )
 
 func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
@@ -49,6 +52,18 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return ton.NewClient(cfg)
 	}
 	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
+}
+
+func NewStakingClient(cfg ITask, stakingConfig *staking.StakingConfig, variant StakingVariant) (staking.StakingClient, error) {
+	switch variant {
+	case KilnMultiDeposit:
+		rpcClient, err := evmclient.NewClient(cfg)
+		if err != nil {
+			return nil, err
+		}
+		return kiln.NewClient(rpcClient, cfg.GetChain(), stakingConfig)
+	}
+	return nil, fmt.Errorf("no staking client defined for %s", variant)
 }
 
 func NewTxBuilder(cfg ITask) (TxBuilder, error) {

@@ -189,9 +189,8 @@ func GweiToWei(gwei uint64) xc.AmountBlockchain {
 }
 
 func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
-	// txBuilder := NewEvmTxBuilder()
 	switch input := input.(type) {
-	case *tx_input.KilnStakingInput:
+	case *tx_input.MultiDepositInput:
 		evmBuilder := NewEvmTxBuilder()
 
 		owner, ok := stakeArgs.GetOwner()
@@ -211,14 +210,12 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.Staking
 		for i := range credentials {
 			credentials[i] = withdrawCred[:]
 		}
-
 		data, err := stake_batch_deposit.Serialize(txBuilder.Asset.GetChain(), input.PublicKeys, credentials, input.Signatures)
 		if err != nil {
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
-		// TODO put this in testnet/mainnet config
-		testnetContract := "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
-		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(testnetContract), stakeArgs.GetAmount(), data, &input.TxInput)
+		contract := txBuilder.Asset.GetChain().Staking.BatchDepositContract
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("could not build estimated tx for %T: %v", input, err)
 		}

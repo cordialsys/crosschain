@@ -162,14 +162,15 @@ chains:
   ETH:
     chain: ETH
     driver: evm
-    # auth: env:CORDIAL_INFURA_API_TOKEN
-    # provider: infura
     chain_id: 1
     chain_name: Ethereum
     explorer_url: https://etherscan.io
     decimals: 18
     indexer_type: covalent
     polling_period: 3m
+    staking:
+      # KILN Batch deposit contract
+      batch_deposit_contract: "0x576834cB068e677db4aFF6ca245c7bde16C3867e"
   ETHW:
     chain: ETHW
     driver: evm

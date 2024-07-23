@@ -71,8 +71,9 @@ func MarshalStakingInput(txInput xc.StakingInput) ([]byte, error) {
 
 func NewStakingInput(variant xc.StakingVariant) (xc.StakingInput, error) {
 	switch variant {
-	case xc.StakingVariantEvmKiln:
-		return evminput.NewKilnStakingInput(), nil
+	// Kiln, Twinstake all alias to EvmMultiDeposit
+	case xc.KilnMultiDeposit, xc.TwinstakeMultiDeposit, xc.EvmMultiDeposit:
+		return evminput.NewMultidepositStakingInput(), nil
 
 	}
 	return nil, fmt.Errorf("no staking-input mapped for %s", variant)

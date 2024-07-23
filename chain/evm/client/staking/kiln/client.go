@@ -17,12 +17,12 @@ import (
 )
 
 type ClientParams struct {
-	accountId string
+	// accountId string
 }
 
-func (params *ClientParams) SetAccountID(id string) {
-	params.accountId = id
-}
+// func (params *ClientParams) SetAccountID(id string) {
+// 	params.accountId = id
+// }
 
 type Client struct {
 	ClientParams
@@ -33,12 +33,16 @@ type Client struct {
 
 var _ staking.StakingClient = &Client{}
 
-func NewClient(chain *xc.ChainConfig, variant xc.StakingVariant, url string, apiKey string) (staking.StakingClient, error) {
-	rpcClient, err := evmclient.NewClient(chain)
+func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *staking.StakingConfig) (staking.StakingClient, error) {
+	// rpcClient, err := evmclient.NewClient(chain)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	apiToken, err := stakingCfg.Kiln.ApiToken.Load()
 	if err != nil {
 		return nil, err
 	}
-	kilnClient, err := api.NewClient(string(chain.Chain), url, apiKey)
+	kilnClient, err := api.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiToken)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +143,13 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 	return stakingInput, nil
 }
 
-func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.KilnStakingInput, error) {
+func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.MultiDepositInput, error) {
 	count, err := tx_input.DivideAmount(cli.chain, args.GetAmount())
 	if err != nil {
 		return nil, err
 	}
-	acc, err := cli.kilnClient.ResolveAccount(cli.accountId)
+	accountId, _ := args.GetAccountId()
+	acc, err := cli.kilnClient.ResolveAccount(accountId)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +159,8 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 		return nil, fmt.Errorf("could not create validator keys: %v", err)
 	}
 
-	input := &tx_input.KilnStakingInput{
-		StakingInputEnvelope: tx_input.NewKilnStakingInput().StakingInputEnvelope,
+	input := &tx_input.MultiDepositInput{
+		StakingInputEnvelope: tx_input.NewMultidepositStakingInput().StakingInputEnvelope,
 	}
 	pubkeys := []string{}
 	sigs := []string{}

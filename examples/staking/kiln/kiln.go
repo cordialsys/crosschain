@@ -10,9 +10,11 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
+	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
+	"github.com/pelletier/go-toml/v2"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +32,23 @@ func mustHex(s string) []byte {
 	return bz
 }
 
+var _ = mustHex
+
+func getVariant(chain *xc.ChainConfig, variantId string) (xc.StakingVariant, error) {
+	if variantId == "" && len(chain.Chain.StakingVariants()) == 1 {
+		return chain.Chain.StakingVariants()[0], nil
+	}
+	if variantId == "" {
+		return "", fmt.Errorf("must set --variant")
+	}
+	for _, v := range chain.Chain.StakingVariants() {
+		if v == xc.StakingVariant(variantId) || v.Id() == variantId {
+			return v, nil
+		}
+	}
+	return "", fmt.Errorf("chain %s does not support %s staking, try one of %v", chain.Chain, variantId, chain.Chain.StakingVariants())
+}
+
 func CmdGetStake() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get-stake",
@@ -38,7 +57,12 @@ func CmdGetStake() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
-			staking := setup.UnwrapStakingArgs(cmd.Context())
+			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
+			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
+			variant, err := getVariant(chain, moreArgs.VariantId)
+			if err != nil {
+				return err
+			}
 
 			owner, err := cmd.Flags().GetString("owner")
 			if err != nil {
@@ -59,7 +83,7 @@ func CmdGetStake() *cobra.Command {
 			_ = xcFactory
 			_ = chain
 
-			cli, err := kiln.NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
 			if err != nil {
 				return err
 			}
@@ -81,22 +105,31 @@ func CmdGetStake() *cobra.Command {
 
 func CmdStake() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "stake <amount>",
+		Use:   "stake",
 		Short: "Stake an asset.",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
-			staking := setup.UnwrapStakingArgs(cmd.Context())
+			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
+			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
+			variant, err := getVariant(chain, moreArgs.VariantId)
+			if err != nil {
+				return err
+			}
+
+			offline, err := cmd.Flags().GetBool("offline")
+			if err != nil {
+				return err
+			}
 
 			validator, err := cmd.Flags().GetString("validator")
 			if err != nil {
 				return err
 			}
-
-			amountHuman, err := xc.NewAmountHumanReadableFromStr(args[0])
-			if err != nil {
-				return fmt.Errorf("invalid amount: %v", err)
+			amountHuman := moreArgs.Amount
+			if amountHuman.String() == "0" {
+				return fmt.Errorf("must pass --amount to stake")
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
@@ -112,8 +145,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			cli, err := kiln.NewClient(chain, xc.StakingVariantEvmKiln, staking.KilnApi, staking.ApiKey)
+			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
 			if err != nil {
 				return err
 			}
@@ -138,8 +170,15 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
-			fmt.Println(from)
-			stakingArgs, err := builder.NewStakeArgs(from, amount, builder.StakeOptionValidator(validator))
+			logrus.WithField("from", from).Debug("sending from")
+			options := []builder.StakeOption{}
+			if validator != "" {
+				options = append(options, builder.StakeOptionValidator(validator))
+			}
+			if moreArgs.AccountId != "" {
+				options = append(options, builder.StakeOptionAccountId(moreArgs.AccountId))
+			}
+			stakingArgs, err := builder.NewStakeArgs(from, amount, options...)
 			if err != nil {
 				return err
 			}
@@ -153,7 +192,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println("built tx", tx)
+			logrus.WithField("tx", tx).Debug("built tx")
 
 			sighashes, err := tx.Sighashes()
 			if err != nil {
@@ -181,6 +220,9 @@ func CmdStake() *cobra.Command {
 				return err
 			}
 			fmt.Println(hex.EncodeToString(bz))
+			if offline {
+				return nil
+			}
 
 			err = rpcCli.SubmitTx(context.Background(), tx)
 			if err != nil {
@@ -192,6 +234,7 @@ func CmdStake() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("validator", "", "the validator address to delegated to, if relevant")
+	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
 	return cmd
 }
 
@@ -203,17 +246,22 @@ func CmdKiln() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
-			staking := setup.UnwrapStakingArgs(cmd.Context())
+			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
+			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
 			// rpcArgs := setup.UnwrapArgs(cmd.Context())
 			_ = xcFactory
 			_ = chain
-			bal := staking.Amount.ToBlockchain(chain.Decimals)
-
-			cli, err := api.NewClient(string(chain.Chain), staking.KilnApi, staking.ApiKey)
+			bal := moreArgs.Amount.ToBlockchain(chain.Decimals)
+			apiKey, err := stakingCfg.Kiln.ApiToken.Load()
 			if err != nil {
 				return err
 			}
-			acc, err := cli.ResolveAccount(staking.AccountId)
+
+			cli, err := api.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiKey)
+			if err != nil {
+				return err
+			}
+			acc, err := cli.ResolveAccount(moreArgs.AccountId)
 			if err != nil {
 				return err
 			}
@@ -251,6 +299,32 @@ func CmdKiln() *cobra.Command {
 				return fmt.Errorf("could not generate transaction: %v", err)
 			}
 			jsonprint(trans)
+
+			return nil
+		},
+	}
+	return cmd
+}
+
+func CmdConfig() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "config",
+		Short: "Show staking configuration",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			// chain := setup.UnwrapChain(cmd.Context())
+			// staking := setup.UnwrapStakingArgs(cmd.Context())
+
+			stakingConfig, err := staking.LoadConfig(xcFactory.GetNetworkSelector())
+			if err != nil {
+				return err
+			}
+			bz, err := toml.Marshal(stakingConfig)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(bz))
 
 			return nil
 		},
