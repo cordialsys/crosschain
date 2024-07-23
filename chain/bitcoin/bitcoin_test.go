@@ -250,33 +250,6 @@ func (s *CrosschainTestSuite) TestNewTransfer_Token() {
 	require.ErrorContains(err, "not implemented")
 }
 
-// Client
-
-// Signer
-
-func (s *CrosschainTestSuite) TestNewSigner() {
-	require := s.Require()
-	signer, err := NewSigner(&xc.ChainConfig{})
-	require.NotNil(signer)
-	require.NoError(err)
-}
-
-func (s *CrosschainTestSuite) TestImportPrivateKeyAndSign() {
-	require := s.Require()
-	signer, _ := NewSigner(&xc.ChainConfig{})
-	keyBz := []byte{}
-	for i := 0; i < 32; i++ {
-		keyBz = append(keyBz, byte(i))
-	}
-	key, err := signer.ImportPrivateKey(hex.EncodeToString(keyBz))
-	require.NotNil(key)
-	require.NoError(err)
-
-	sig, err := signer.Sign(key, keyBz)
-	require.NotNil(sig)
-	require.NoError(err)
-}
-
 // Tx
 
 func (s *CrosschainTestSuite) TestTxHash() {
@@ -322,7 +295,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 			Value: xc.NewAmountBlockchainFromUint64(1000),
 		}},
 	}
-	err := input.SetPublicKey(xc.PublicKey{})
+	err := input.SetPublicKey([]byte{})
 	require.NoError(err)
 	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)

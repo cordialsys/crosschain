@@ -150,7 +150,7 @@ func (tx Tx) Serialize() ([]byte, error) {
 	return data, err
 }
 
-func (input *TxInput) SetPublicKey(pubkey xc.PublicKey) error {
+func (input *TxInput) SetPublicKey(pubkey []byte) error {
 	input.Pubkey = pubkey
 	return nil
 }

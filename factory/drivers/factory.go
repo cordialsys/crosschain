@@ -24,6 +24,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/factory/signer"
 )
 
 func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
@@ -94,32 +95,9 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	return nil, errors.New("no tx-builder defined for: " + string(cfg.ID()))
 }
 
-func NewSigner(cfg ITask) (Signer, error) {
-	switch Driver(cfg.GetChain().Driver) {
-	case DriverEVM:
-		return evm.NewSigner(cfg)
-	case DriverEVMLegacy:
-		return evm_legacy.NewSigner(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewSigner(cfg)
-	case DriverSolana:
-		return solana.NewSigner(cfg)
-	case DriverAptos:
-		return aptos.NewSigner(cfg)
-	case DriverBitcoin, DriverBitcoinLegacy:
-		return bitcoin.NewSigner(cfg)
-	case DriverBitcoinCash:
-		return bitcoin_cash.NewSigner(cfg)
-	case DriverSui:
-		return sui.NewSigner(cfg)
-	case DriverSubstrate:
-		return substrate.NewSigner(cfg)
-	case DriverTron:
-		return tron.NewSigner(cfg)
-	case DriverTon:
-		return ton.NewSigner(cfg)
-	}
-	return nil, errors.New("no signer defined for: " + string(cfg.ID()))
+func NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
+	chain := cfg.GetChain()
+	return signer.New(chain.Driver, secret, chain)
 }
 
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {

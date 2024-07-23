@@ -230,6 +230,26 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 	return ""
 }
 
+type PublicKeyFormat string
+
+var Raw PublicKeyFormat = "raw"
+var Compressed PublicKeyFormat = "compressed"
+var Uncompressed PublicKeyFormat = "uncompressed"
+
+func (driver Driver) PublicKeyFormat() PublicKeyFormat {
+	switch driver {
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+		return Compressed
+	case DriverCosmos, DriverCosmosEvmos:
+		return Compressed
+	case DriverEVM, DriverEVMLegacy, DriverTron:
+		return Uncompressed
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+		return Raw
+	}
+	return ""
+}
+
 // AssetID is an internal identifier for each asset (legacy/deprecated)
 // Examples: ETH, USDC, USDC.SOL - see tests for details
 type AssetID string

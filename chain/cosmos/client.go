@@ -81,7 +81,7 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	// sequence all same - we're safe
 	return true
 }
-func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
+func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
 	txInput.FromPublicKey = publicKeyBytes
 	return nil
 }

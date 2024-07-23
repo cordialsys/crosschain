@@ -127,31 +127,6 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require.EqualError(err, "not implemented")
 }
 
-// Signer
-
-func (s *CrosschainTestSuite) TestNewSigner() {
-	require := s.Require()
-	signer, err := NewSigner(&xc.ChainConfig{})
-	require.NotNil(signer)
-	require.EqualError(err, "not implemented")
-}
-
-func (s *CrosschainTestSuite) TestImportPrivateKey() {
-	require := s.Require()
-	signer, _ := NewSigner(&xc.ChainConfig{})
-	key, err := signer.ImportPrivateKey("key")
-	require.NotNil(key)
-	require.EqualError(err, "not implemented")
-}
-
-func (s *CrosschainTestSuite) TestSign() {
-	require := s.Require()
-	signer, _ := NewSigner(&xc.ChainConfig{})
-	sig, err := signer.Sign(xc.PrivateKey{}, xc.TxDataToSign{})
-	require.NotNil(sig)
-	require.EqualError(err, "not implemented")
-}
-
 // Tx
 
 func (s *CrosschainTestSuite) TestTxHash() {

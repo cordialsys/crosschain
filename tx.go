@@ -13,7 +13,7 @@ type TxInput interface {
 // TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
 type TxInputWithPublicKey interface {
 	TxInput
-	SetPublicKey(PublicKey) error
+	SetPublicKey([]byte) error
 	SetPublicKeyFromStr(string) error
 }
 

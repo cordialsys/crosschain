@@ -111,13 +111,15 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 func (s *CrosschainTestSuite) TestNewSigner() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		signer, _ := s.Factory.NewSigner(asset)
+		pri := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
+		signer, err := s.Factory.NewSigner(asset.GetChain(), pri)
+		require.NoError(err)
 		require.NotNil(signer)
 	}
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST"})
-	_, err := s.Factory.NewSigner(asset)
-	require.ErrorContains(err, "no signer defined for")
+	_, err := s.Factory.NewSigner(asset.GetChain(), "")
+	require.ErrorContains(err, "unsupported signing alg")
 }
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
@@ -183,18 +185,6 @@ func (s *CrosschainTestSuite) TestMustAddress() {
 		asset := asset.GetChain()
 		address := s.Factory.MustAddress(asset, "myaddress") // trivial impl
 		require.Equal(xc.Address("myaddress"), address, "Error on: "+asset.Chain)
-	}
-}
-
-func (s *CrosschainTestSuite) TestMustPrivateKey() {
-	require := s.Require()
-	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetChain()
-		if xc.NativeAsset(asset.Chain) != xc.SOL {
-			continue
-		}
-		privateKey := s.Factory.MustPrivateKey(asset, "944DC4CEE6BC73FE606E4CC9056691045CC48697A11D323CADC54F650F95207C")
-		require.NotNil(privateKey, "Error on: "+asset.Chain)
 	}
 }
 

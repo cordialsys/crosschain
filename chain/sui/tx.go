@@ -100,7 +100,7 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	return true
 }
 
-func (input *TxInput) SetPublicKey(pubkey xc.PublicKey) error {
+func (input *TxInput) SetPublicKey(pubkey []byte) error {
 	input.Pubkey = pubkey
 	return nil
 }
