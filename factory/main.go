@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
 )
 
@@ -19,7 +20,7 @@ import (
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
 	NewTxBuilder(asset ITask) (TxBuilder, error)
-	NewSigner(asset ITask) (Signer, error)
+	NewSigner(asset ITask, secret string) (*signer.Signer, error)
 	NewAddressBuilder(asset ITask) (AddressBuilder, error)
 
 	MarshalTxInput(input TxInput) ([]byte, error)
@@ -30,7 +31,6 @@ type FactoryContext interface {
 
 	MustAmountBlockchain(asset ITask, humanAmountStr string) AmountBlockchain
 	MustAddress(asset ITask, addressStr string) Address
-	MustPrivateKey(asset ITask, privateKey string) PrivateKey
 
 	ConvertAmountToHuman(asset ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error)
 	ConvertAmountToBlockchain(asset ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error)
@@ -372,8 +372,8 @@ func (f *Factory) NewTxBuilder(cfg ITask) (TxBuilder, error) {
 }
 
 // NewSigner creates a new Signer
-func (f *Factory) NewSigner(cfg ITask) (Signer, error) {
-	return drivers.NewSigner(cfg)
+func (f *Factory) NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
+	return drivers.NewSigner(cfg, secret)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
@@ -507,19 +507,6 @@ func (f *Factory) MustAmountBlockchain(cfg ITask, humanAmountStr string) AmountB
 		panic(err)
 	}
 	return res
-}
-
-// MustPrivateKey coverts a string into PrivateKey, panic if error
-func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
-	signer, err := f.NewSigner(cfg)
-	if err != nil {
-		panic(err)
-	}
-	privateKey, err := signer.ImportPrivateKey(privateKeyStr)
-	if err != nil {
-		panic(err)
-	}
-	return privateKey
 }
 
 func (f *Factory) GetNetworkSelector() NetworkSelector {

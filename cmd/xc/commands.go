@@ -158,9 +158,11 @@ func CmdTxTransfer() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
-			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
-			signer, _ := xcFactory.NewSigner(chain)
-			publicKey, err := signer.PublicKey(fromPrivateKey)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+			publicKey, err := signer.PublicKey()
 			if err != nil {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
@@ -222,7 +224,7 @@ func CmdTxTransfer() *cobra.Command {
 			signatures := []xc.TxSignature{}
 			for _, sighash := range sighashes {
 				// sign the tx sighash(es)
-				signature, err := signer.Sign(fromPrivateKey, sighash)
+				signature, err := signer.Sign(sighash)
 				if err != nil {
 					panic(err)
 				}
@@ -279,9 +281,11 @@ func CmdAddress() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
-			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
-			signer, _ := xcFactory.NewSigner(chain)
-			publicKey, err := signer.PublicKey(fromPrivateKey)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+			publicKey, err := signer.PublicKey()
 			if err != nil {
 				return fmt.Errorf("could not create public key: %v", err)
 			}

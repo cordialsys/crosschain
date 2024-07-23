@@ -6,6 +6,7 @@ import (
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/config"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
+	"github.com/cordialsys/crosschain/factory/signer"
 )
 
 // TestFactory for unit tests
@@ -14,7 +15,7 @@ type TestFactory struct {
 
 	NewClientFunc               func(asset xc.ITask) (xclient.Client, error)
 	NewTxBuilderFunc            func(asset xc.ITask) (xc.TxBuilder, error)
-	NewSignerFunc               func(asset xc.ITask) (xc.Signer, error)
+	NewSignerFunc               func(asset xc.ITask) (*signer.Signer, error)
 	NewAddressBuilderFunc       func(asset xc.ITask) (xc.AddressBuilder, error)
 	GetAddressFromPublicKeyFunc func(asset xc.ITask, publicKey []byte) (xc.Address, error)
 }
@@ -38,11 +39,11 @@ func (f *TestFactory) NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 }
 
 // NewSigner creates a new Signer
-func (f *TestFactory) NewSigner(asset xc.ITask) (xc.Signer, error) {
+func (f *TestFactory) NewSigner(asset xc.ITask, secret string) (*signer.Signer, error) {
 	if f.NewSignerFunc != nil {
 		return f.NewSignerFunc(asset)
 	}
-	return f.DefaultFactory.NewSigner(asset)
+	return f.DefaultFactory.NewSigner(asset.GetChain(), secret)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
@@ -169,11 +170,6 @@ func (f *TestFactory) MustAddress(asset xc.ITask, addressStr string) xc.Address 
 func (f *TestFactory) MustAmountBlockchain(asset xc.ITask, humanAmountStr string) xc.AmountBlockchain {
 	return f.DefaultFactory.MustAmountBlockchain(asset, humanAmountStr)
 
-}
-
-// MustPrivateKey coverts a string into PrivateKey, panic if error
-func (f *TestFactory) MustPrivateKey(asset xc.ITask, privateKeyStr string) xc.PrivateKey {
-	return f.DefaultFactory.MustPrivateKey(asset, privateKeyStr)
 }
 
 func (f *TestFactory) GetAllAssets() []xc.ITask {

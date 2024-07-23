@@ -90,7 +90,7 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {
 	return txInput.GasPricePerByte
 }
-func (txInput *TxInput) SetPublicKey(publicKeyBytes xc.PublicKey) error {
+func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
 	txInput.FromPublicKey = publicKeyBytes
 	return nil
 }

@@ -123,19 +123,6 @@ func (s *CrosschainTestSuite) TestAllNewTxBuilder() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestAllNewSigner() {
-	require := s.Require()
-
-	for _, driver := range xc.SupportedDrivers {
-		fakeAsset := &xc.ChainConfig{
-			Driver: driver,
-		}
-		res, err := NewSigner(fakeAsset)
-		require.NoError(err, "Missing driver for NewSigner: "+driver)
-		require.NotNil(res)
-	}
-}
-
 func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 	require := s.Require()
 

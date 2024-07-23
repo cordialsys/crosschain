@@ -113,7 +113,7 @@ func isEVMOS(asset *xc.ChainConfig) bool {
 	return xc.Driver(asset.Driver) == xc.DriverCosmosEvmos
 }
 
-func getPublicKey(asset *xc.ChainConfig, publicKeyBytes xc.PublicKey) cryptotypes.PubKey {
+func getPublicKey(asset *xc.ChainConfig, publicKeyBytes []byte) cryptotypes.PubKey {
 	if asset.Chain == xc.INJ {
 		// injective has their own ethsecp256k1 type..
 		return &injethsecp256k1.PubKey{Key: publicKeyBytes}
