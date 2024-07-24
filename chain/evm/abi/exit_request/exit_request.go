@@ -4,9 +4,9 @@ import (
 	_ "embed"
 	"strings"
 
-	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/x/evm/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 //go:embed abi.json
@@ -37,8 +37,8 @@ func Serialize(publicKeys [][]byte) ([]byte, error) {
 }
 
 type ExistRequest struct {
-	Address common.Address
-	Pubkey  []byte
+	Caller common.Address
+	Pubkey []byte
 }
 
 func ParseExistRequest(log types.Log) (*ExistRequest, error) {
