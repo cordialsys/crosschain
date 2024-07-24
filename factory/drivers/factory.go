@@ -23,7 +23,7 @@ import (
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
@@ -55,7 +55,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
-func NewVariantClient(cfg ITask, servicesConfig *staking.ServicesConfig, variant TxVariant) (staking.StakingClient, error) {
+func NewVariantClient(cfg ITask, servicesConfig *services.ServicesConfig, variant TxVariant) (xclient.StakingClient, error) {
 	switch variant {
 	case KilnBatchDeposit, KilnRequestExit:
 		rpcClient, err := evmclient.NewClient(cfg)

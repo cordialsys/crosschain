@@ -19,6 +19,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -100,10 +101,10 @@ func (txBuilder *NativeClient) WithAddressDecoder(decoder address.AddressDecoder
 	return txBuilder
 }
 
-// FetchLegacyTxInput returns tx input for a Bitcoin tx
-func (client *NativeClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchTransferInput returns tx input for a Bitcoin tx
+func (client *NativeClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, xc.Address(from))
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, args.GetFrom())
 	if err != nil {
 		return input, err
 	}
@@ -128,6 +129,11 @@ func (client *NativeClient) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 		return fmt.Errorf("bad \"sendrawtransaction\": %v", err)
 	}
 	return nil
+}
+func (client *NativeClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // FetchLegacyTxInfo returns tx info for a Bitcoin tx

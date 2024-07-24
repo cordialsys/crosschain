@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -105,6 +106,7 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 		return nil, err
 	}
 
+	// TODO try filtering using confirmed UTXO only for target amount, using heuristic as fallback.
 	data = tx_input.FilterUnconfirmedHeuristic(data)
 	btcAddr, err := client.decoder.Decode(addr, client.Chaincfg)
 	if err != nil {
@@ -293,10 +295,9 @@ func (client *BlockbookClient) FetchBalance(ctx context.Context, address xc.Addr
 func (client *BlockbookClient) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	return client.FetchBalance(ctx, address)
 }
-
-func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, xc.Address(from))
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, args.GetFrom())
 	if err != nil {
 		return input, err
 	}
@@ -308,6 +309,12 @@ func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.A
 	}
 
 	return input, nil
+}
+
+func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *BlockbookClient) get(ctx context.Context, path string, resp interface{}) error {

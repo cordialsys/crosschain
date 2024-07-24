@@ -11,7 +11,8 @@ import (
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
-	"github.com/cordialsys/crosschain/client/staking"
+	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/sirupsen/logrus"
 )
@@ -22,25 +23,25 @@ type Client struct {
 	chain      *xc.ChainConfig
 }
 
-var _ staking.StakingClient = &Client{}
+var _ xcclient.StakingClient = &Client{}
 
-func toStakingState(status string) (staking.State, bool) {
-	var state staking.State = ""
+func toStakingState(status string) (xcclient.State, bool) {
+	var state xcclient.State = ""
 	switch status {
 	case "pending_initialized", "deposit_in_progress":
-		state = staking.Activating
+		state = xcclient.Activating
 	case "active_ongoing":
-		state = staking.Activated
+		state = xcclient.Activated
 	case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
-		state = staking.Inactive
+		state = xcclient.Inactive
 	case "active_exiting", "pending_queued":
-		state = staking.Deactivating
+		state = xcclient.Deactivating
 	default:
 	}
 	return state, state != ""
 }
 
-func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *staking.ServicesConfig) (staking.StakingClient, error) {
+func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *services.ServicesConfig) (xcclient.StakingClient, error) {
 	// rpcClient, err := evmclient.NewClient(chain)
 	// if err != nil {
 	// 	return nil, err
@@ -56,7 +57,7 @@ func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *s
 	return &Client{rpcClient, kilnClient, chain}, nil
 }
 
-func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*staking.Balance, error) {
+func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*xcclient.LockedBalance, error) {
 	// On evm stakes are identified solely by validator, so we can map to either validator or account ID
 	if validator == "" && stakeAccount != "" {
 		validator = string(stakeAccount)
@@ -65,7 +66,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	bal, _ := xc.NewAmountHumanReadableFromStr("32")
 	amount := bal.ToBlockchain(18)
 
-	status := staking.Activating
+	status := xcclient.Activating
 	// RPC is the most reliable place to get information on the stake
 	val, err := cli.rpcClient.FetchValidator(ctx, validator)
 	if err != nil {
@@ -76,10 +77,10 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 		var ok bool
 		status, ok = toStakingState(val.Data.Status)
 		if !ok {
-			status = staking.Activating
+			status = xcclient.Activating
 			logrus.Warn("unknown beacon validator state", status)
 		}
-		return []*staking.Balance{
+		return []*xcclient.LockedBalance{
 			{
 				State:  status,
 				Amount: amount,
@@ -99,10 +100,10 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	var ok bool
 	status, ok = toStakingState(val.Data.Status)
 	if !ok {
-		status = staking.Activating
+		status = xcclient.Activating
 		logrus.Warn("unknown validator state", status)
 	}
-	return []*staking.Balance{
+	return []*xcclient.LockedBalance{
 		{
 			State:  status,
 			Amount: amount,
@@ -239,7 +240,7 @@ func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.Sta
 			status = validator.Data.Status
 			state, _ := toStakingState(status)
 
-			if state != staking.Deactivating && state != staking.Inactive {
+			if state != xcclient.Deactivating && state != xcclient.Inactive {
 				pubkeys = append(pubkeys, stake.ValidatorAddress)
 			}
 		}

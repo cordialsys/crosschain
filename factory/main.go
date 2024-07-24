@@ -9,7 +9,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -356,7 +356,7 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	return nil, fmt.Errorf("no clients possible for %s", nativeAsset.Chain)
 }
 
-func (f *Factory) NewStakingClient(cfg ITask, stakingCfg *staking.ServicesConfig, variant TxVariant) (staking.StakingClient, error) {
+func (f *Factory) NewStakingClient(cfg ITask, stakingCfg *services.ServicesConfig, variant TxVariant) (xclient.StakingClient, error) {
 	chain := cfg.GetChain()
 	if !chain.Chain.Supports(variant) {
 		return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())

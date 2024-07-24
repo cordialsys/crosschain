@@ -10,6 +10,7 @@ import (
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 )
@@ -41,13 +42,12 @@ func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
 	}
 }
 
-// FetchLegacyTxInput returns tx input for a Aptos tx
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
 		return &TxInput{}, err
 	}
-	acc, err := client.AptosClient.GetAccount(string(from))
+	acc, err := client.AptosClient.GetAccount(string(args.GetFrom()))
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -66,6 +66,13 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, _
 		Timestamp:      ledger.LedgerTimestamp,
 		GasPrice:       gas_price.Uint64(),
 	}, nil
+}
+
+// FetchLegacyTxInput returns tx input for a Aptos tx
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Aptos tx

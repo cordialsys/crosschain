@@ -6,7 +6,7 @@ import (
 	"github.com/cordialsys/crosschain/client"
 )
 
-func NewClient(cfgI xc.ITask) (client.Client, error) {
+func NewClient(cfgI xc.ITask) (client.FullClient, error) {
 	cli, err := bitcoin.NewBitcoinClient(cfgI)
 	if err != nil {
 		return cli, err

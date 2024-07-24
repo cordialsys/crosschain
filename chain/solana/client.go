@@ -12,6 +12,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
@@ -132,7 +133,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 // FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := NewTxInput()
 	asset := client.Asset
 
@@ -171,7 +172,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	txInput.TokenProgram = mintInfo.Value.Owner
 
 	// get account info - check if to is an owner or ata
-	accountTo, err := solana.PublicKeyFromBase58(string(to))
+	accountTo, err := solana.PublicKeyFromBase58(string(args.GetTo()))
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +189,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	// for tokens, get ata account info
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := FindAssociatedTokenAddress(string(to), contract, mintInfo.Value.Owner)
+		ataToStr, err := FindAssociatedTokenAddress(string(args.GetTo()), contract, mintInfo.Value.Owner)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +203,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 	// Fetch all token accounts as if they are utxo
 	if contract != "" {
-		tokenAccounts, err := client.GetTokenAccountsByOwner(ctx, string(from), contract)
+		tokenAccounts, err := client.GetTokenAccountsByOwner(ctx, string(args.GetFrom()), contract)
 		if err != nil {
 			return nil, err
 		}
@@ -261,6 +262,12 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain())
 
 	return txInput, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
