@@ -51,11 +51,14 @@ func ParseDeposit(log types.Log) (*Deposit, error) {
 	if err := depositAbi.UnpackIntoInterface(event, "DepositEvent", log.Data); err != nil {
 		return nil, err
 	}
+	// multiply by 10**9 to convert gwei to wei
+	gwei := xc.NewAmountBlockchainFromUint64(binary.LittleEndian.Uint64(event.Amount))
+	amount := gwei.ToHuman(0).ToBlockchain(9)
 
 	return &Deposit{
 		Pubkey:                event.Pubkey,
 		WithdrawalCredentials: event.WithdrawalCredentials,
-		Amount:                xc.NewAmountBlockchainFromUint64(binary.LittleEndian.Uint64(event.Amount)),
+		Amount:                amount,
 		Signature:             event.Signature,
 		Index:                 event.Index,
 	}, nil

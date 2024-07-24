@@ -107,13 +107,14 @@ type Block struct {
 }
 
 type Stake struct {
-	Amount             xc.AmountBlockchain `json:"amount"`
-	Validator          string              `json:"validator"`
-	WithdrawCredential string              `json:"withdraw_credential"`
+	Amount    xc.AmountBlockchain `json:"amount"`
+	Validator string              `json:"validator"`
+	Address   string              `json:"address"`
 }
 type Unstake struct {
 	Amount    xc.AmountBlockchain `json:"amount"`
 	Validator string              `json:"validator"`
+	Address   string              `json:"address"`
 }
 
 type StakeEvent interface {

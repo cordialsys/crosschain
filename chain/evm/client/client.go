@@ -11,10 +11,12 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
+	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/normalize"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -256,6 +258,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 
+	// Look for stake/unstake events
 	for _, log := range receipt.Logs {
 		ev, _ := stake_deposit.EventByID(log.Topics[0])
 		if ev != nil {
@@ -265,11 +268,32 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 				logrus.WithError(err).Error("could not parse stake deposit log")
 				continue
 			}
-			// fmt.Println("stake event: ", dep.Amount, hex.EncodeToString(dep.Pubkey), hex.EncodeToString(dep.WithdrawalCredentials))
+			address := hex.EncodeToString(dep.WithdrawalCredentials)
+			switch dep.WithdrawalCredentials[0] {
+			case 1:
+				// withdraw credential is an address
+				address = hex.EncodeToString(dep.WithdrawalCredentials[len(dep.WithdrawalCredentials)-common.AddressLength:])
+			}
+
 			result.AddStakeEvent(&xclient.Stake{
-				Amount:             dep.Amount,
-				Validator:          hex.EncodeToString(dep.Pubkey),
-				WithdrawCredential: hex.EncodeToString(dep.WithdrawalCredentials),
+				Amount:    dep.Amount,
+				Validator: normalize.NormalizeAddressString(hex.EncodeToString(dep.Pubkey), nativeAsset.Chain),
+				Address:   normalize.NormalizeAddressString(address, nativeAsset.Chain),
+			})
+		}
+		ev, _ = exit_request.EventByID(log.Topics[0])
+		if ev != nil {
+			exitLog, err := exit_request.ParseExistRequest(*log)
+			if err != nil {
+				logrus.WithError(err).Error("could not parse stake exit log")
+				continue
+			}
+			// assume 32 ether
+			inc, _ := xc.NewAmountHumanReadableFromStr("32")
+			result.AddStakeEvent(&xclient.Unstake{
+				Amount:    inc.ToBlockchain(client.Asset.GetChain().Decimals),
+				Validator: normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Pubkey), nativeAsset.Chain),
+				Address:   normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Caller[:]), nativeAsset.Chain),
 			})
 		}
 	}
