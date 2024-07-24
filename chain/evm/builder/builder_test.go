@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
@@ -52,7 +53,7 @@ func TestTransferSetsMaxTipCap(t *testing.T) {
 }
 
 func TestStakingTxUsesCredential(t *testing.T) {
-	input := tx_input.NewMultidepositStakingInput()
+	input := tx_input.NewBatchDepositInput()
 	input.PublicKeys = [][]byte{
 		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839a"),
 		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839b"),
@@ -77,6 +78,30 @@ func TestStakingTxUsesCredential(t *testing.T) {
 
 	data := trans.(*tx.Tx).EthTx.Data()
 	expected, err := stake_batch_deposit.Serialize(&xc.ChainConfig{}, input.PublicKeys, credentials, input.Signatures)
+	require.NoError(t, err)
+
+	require.Equal(t, hex.EncodeToString(expected), hex.EncodeToString(data))
+}
+
+func TestUnstakingTx(t *testing.T) {
+	input := tx_input.NewExitRequestInput()
+	input.PublicKeys = [][]byte{
+		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839a"),
+		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839b"),
+	}
+
+	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	owner := xc.Address("0x273b437645Ba723299d07B1BdFFcf508bE64771f")
+	human, _ := xc.NewAmountHumanReadableFromStr("64")
+
+	args, _ := xcbuilder.NewStakeArgs(owner, human.ToBlockchain(18))
+	trans, err := txBuilder.Unstake(args, input)
+	require.NoError(t, err)
+
+	require.EqualValues(t, 0, trans.(*tx.Tx).EthTx.Value().Uint64(), "unstake should not send any eth")
+
+	data := trans.(*tx.Tx).EthTx.Data()
+	expected, err := exit_request.Serialize(input.PublicKeys)
 	require.NoError(t, err)
 
 	require.Equal(t, hex.EncodeToString(expected), hex.EncodeToString(data))

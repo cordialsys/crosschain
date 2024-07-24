@@ -10,7 +10,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	"github.com/cordialsys/crosschain/client/staking"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
@@ -35,7 +34,7 @@ func mustHex(s string) []byte {
 
 var _ = mustHex
 
-func getVariant(chain *xc.ChainConfig, variantId string) (xc.StakingVariant, error) {
+func getVariant(chain *xc.ChainConfig, variantId string) (xc.TxVariant, error) {
 	if variantId == "" && len(chain.Chain.StakingVariants()) == 1 {
 		return chain.Chain.StakingVariants()[0], nil
 	}
@@ -43,7 +42,7 @@ func getVariant(chain *xc.ChainConfig, variantId string) (xc.StakingVariant, err
 		return "", fmt.Errorf("must set --variant")
 	}
 	for _, v := range chain.Chain.StakingVariants() {
-		if v == xc.StakingVariant(variantId) || v.Id() == variantId {
+		if v == xc.TxVariant(variantId) || v.Id() == variantId {
 			return v, nil
 		}
 	}
@@ -323,7 +322,7 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingInput, err := cli.(*kiln.Client).FetchUnstakingInput(cmd.Context(), stakingArgs)
+			stakingInput, err := cli.FetchUnstakingInput(cmd.Context(), stakingArgs)
 			if err != nil {
 				return err
 			}

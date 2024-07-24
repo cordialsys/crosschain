@@ -55,14 +55,14 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
-func NewStakingClient(cfg ITask, stakingConfig *staking.StakingConfig, variant StakingVariant) (staking.StakingClient, error) {
+func NewVariantClient(cfg ITask, servicesConfig *staking.ServicesConfig, variant TxVariant) (staking.StakingClient, error) {
 	switch variant {
-	case KilnMultiDeposit:
+	case KilnBatchDeposit, KilnRequestExit:
 		rpcClient, err := evmclient.NewClient(cfg)
 		if err != nil {
 			return nil, err
 		}
-		return kiln.NewClient(rpcClient, cfg.GetChain(), stakingConfig)
+		return kiln.NewClient(rpcClient, cfg.GetChain(), servicesConfig)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s", variant)
 }

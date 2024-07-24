@@ -39,7 +39,7 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 func (s *CrosschainTestSuite) TestStakingVariants() {
 	require := s.Require()
 
-	variants := map[StakingVariant]bool{}
+	variants := map[TxVariant]bool{}
 	for _, variant := range SupportedStakingVariants {
 		parts := strings.Split(string(variant), "/")
 		require.Len(parts, 4, "variant must be in format drivers/:driver/staking/:id")
@@ -52,6 +52,9 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 		require.NotEmpty(variant.Driver())
 		require.NotEmpty(variant.Driver().SignatureAlgorithm(), "driver is not valid")
 		require.NotEmpty(variant.Id(), "variant does not have an id")
+
+		require.NotEmpty(variant.TxType(), "tx type should be set")
+		require.Contains([]string{"staking", "unstaking"}, variant.TxType(), "not using a valid tx type")
 
 		if _, ok := variants[variant]; ok {
 			require.Fail("duplicate staking variant %s", variant)

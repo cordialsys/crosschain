@@ -29,7 +29,7 @@ func WrapStakingArgs(ctx context.Context, args *StakingArgs) context.Context {
 	ctx = context.WithValue(ctx, ContextStakingArgs, args)
 	return ctx
 }
-func WrapStakingConfig(ctx context.Context, args *staking.StakingConfig) context.Context {
+func WrapStakingConfig(ctx context.Context, args *staking.ServicesConfig) context.Context {
 	ctx = context.WithValue(ctx, ContextStakingConfig, args)
 	return ctx
 }
@@ -44,8 +44,8 @@ func UnwrapXc(ctx context.Context) *factory.Factory {
 func UnwrapStakingArgs(ctx context.Context) *StakingArgs {
 	return ctx.Value(ContextStakingArgs).(*StakingArgs)
 }
-func UnwrapStakingConfig(ctx context.Context) *staking.StakingConfig {
-	return ctx.Value(ContextStakingConfig).(*staking.StakingConfig)
+func UnwrapStakingConfig(ctx context.Context) *staking.ServicesConfig {
+	return ctx.Value(ContextStakingConfig).(*staking.ServicesConfig)
 }
 
 func UnwrapChain(ctx context.Context) *xc.ChainConfig {

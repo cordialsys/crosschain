@@ -189,9 +189,9 @@ func GweiToWei(gwei uint64) xc.AmountBlockchain {
 	return xc.AmountBlockchain(*bigGwei)
 }
 
-func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	switch input := input.(type) {
-	case *tx_input.MultiDepositInput:
+	case *tx_input.BatchDepositInput:
 		evmBuilder := NewEvmTxBuilder()
 
 		owner, ok := stakeArgs.GetOwner()
@@ -225,12 +225,12 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.Staking
 		return nil, fmt.Errorf("unsupported staking type %T", input)
 	}
 }
-func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.StakingInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
 	switch input := input.(type) {
-	case *tx_input.MultiDepositInput:
+	case *tx_input.ExitRequestInput:
 		evmBuilder := NewEvmTxBuilder()
 
-		count, err := tx_input.DivideAmount(txBuilder.Asset.GetChain(), stakeArgs.GetAmount())
+		count, err := tx_input.Count32EthChunks(txBuilder.Asset.GetChain(), stakeArgs.GetAmount())
 		if err != nil {
 			return nil, err
 		}

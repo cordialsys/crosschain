@@ -16,16 +16,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type ClientParams struct {
-	// accountId string
-}
-
-// func (params *ClientParams) SetAccountID(id string) {
-// 	params.accountId = id
-// }
-
 type Client struct {
-	ClientParams
 	rpcClient  *evmclient.Client
 	kilnClient *api.Client
 	chain      *xc.ChainConfig
@@ -49,7 +40,7 @@ func toStakingState(status string) (staking.State, bool) {
 	return state, state != ""
 }
 
-func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *staking.StakingConfig) (staking.StakingClient, error) {
+func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *staking.ServicesConfig) (staking.StakingClient, error) {
 	// rpcClient, err := evmclient.NewClient(chain)
 	// if err != nil {
 	// 	return nil, err
@@ -62,8 +53,7 @@ func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *s
 	if err != nil {
 		return nil, err
 	}
-	params := ClientParams{}
-	return &Client{params, rpcClient, kilnClient, chain}, nil
+	return &Client{rpcClient, kilnClient, chain}, nil
 }
 
 func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*staking.Balance, error) {
@@ -120,7 +110,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	}, nil
 }
 
-func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakingInput, error) {
+func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	stakingInput, err := cli.FetchKilnInput(ctx, args)
 	if err != nil {
 		return nil, err
@@ -151,8 +141,8 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 	return stakingInput, nil
 }
 
-func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.MultiDepositInput, error) {
-	count, err := tx_input.DivideAmount(cli.chain, args.GetAmount())
+func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.BatchDepositInput, error) {
+	count, err := tx_input.Count32EthChunks(cli.chain, args.GetAmount())
 	if err != nil {
 		return nil, err
 	}
@@ -167,9 +157,7 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 		return nil, fmt.Errorf("could not create validator keys: %v", err)
 	}
 
-	input := &tx_input.MultiDepositInput{
-		StakingInputEnvelope: tx_input.NewMultidepositStakingInput().StakingInputEnvelope,
-	}
+	input := tx_input.NewBatchDepositInput()
 	pubkeys := []string{}
 	sigs := []string{}
 
@@ -200,7 +188,7 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 	return input, nil
 }
 
-func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakingInput, error) {
+func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
 	stakingInput, err := cli.FetchKilnUnstakeInput(ctx, args)
 	if err != nil {
 		return nil, err
@@ -231,15 +219,13 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 	return stakingInput, nil
 }
 
-func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.MultiDepositInput, error) {
+func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.ExitRequestInput, error) {
 	stakes, err := cli.kilnClient.GetAllStakesByOwner(string(args.GetFrom()))
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch validators: %v", err)
 	}
 
-	input := &tx_input.MultiDepositInput{
-		StakingInputEnvelope: tx_input.NewMultidepositStakingInput().StakingInputEnvelope,
-	}
+	input := tx_input.NewExitRequestInput()
 	pubkeys := []string{}
 
 	for _, stake := range stakes {

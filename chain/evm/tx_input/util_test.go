@@ -19,22 +19,22 @@ func mustToBlockchain(human string) xc.AmountBlockchain {
 func TestStakingAmount(t *testing.T) {
 	chain := &xc.ChainConfig{Decimals: 18}
 
-	div, err := tx_input.DivideAmount(chain, mustToBlockchain("32"))
+	div, err := tx_input.Count32EthChunks(chain, mustToBlockchain("32"))
 	require.NoError(t, err)
 	require.EqualValues(t, 1, div)
-	div, err = tx_input.DivideAmount(chain, mustToBlockchain("96"))
+	div, err = tx_input.Count32EthChunks(chain, mustToBlockchain("96"))
 	require.NoError(t, err)
 	require.EqualValues(t, 3, div)
 
-	_, err = tx_input.DivideAmount(chain, mustToBlockchain("48"))
+	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("48"))
 	require.Error(t, err)
 
-	_, err = tx_input.DivideAmount(chain, mustToBlockchain("32.00001"))
+	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("32.00001"))
 	require.Error(t, err)
 
-	_, err = tx_input.DivideAmount(chain, mustToBlockchain("31"))
+	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("31"))
 	require.Error(t, err)
 
-	_, err = tx_input.DivideAmount(chain, mustToBlockchain("0"))
+	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("0"))
 	require.Error(t, err)
 }
