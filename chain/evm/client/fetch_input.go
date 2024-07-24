@@ -39,34 +39,6 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 	// trans.EthTx
 	fromAddr, _ := address.FromHex(from)
 
-	// toAddr, _ := address.FromHex(to)
-
-	// // TODO it may be more accurate to use the actual amount for the transfer,
-	// // but that will require changing the interface to pass amount.
-	// // For now we'll use the smallest amount (1).
-	// trans, err := txBuilder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
-	// if err != nil {
-	// 	return 0, fmt.Errorf("could not build simulated tx: %v", err)
-	// }
-	// if client.stakingInput != nil {
-	// 	switch input := client.stakingInput.(type) {
-	// 	case *tx_input.KilnStakingInput:
-	// 		txBuilder := builder.NewEvmTxBuilder()
-	// 		data, err := stake_batch_deposit.Serialize(client.Asset.GetChain(), input.PublicKeys, input.Credentials, input.Signatures)
-	// 		if err != nil {
-	// 			return 0, fmt.Errorf("invalid input for %T: %v", input, err)
-	// 		}
-	// 		tx, err := txBuilder.BuildTxWithPayload(client.Asset.GetChain(), xc.Address(to), input.Amount, data, txInput)
-	// 		if err != nil {
-	// 			return 0, fmt.Errorf("could not build estimated tx for %T: %v", input, err)
-	// 		}
-	// 		trans = tx
-	// 	default:
-	// 		return 0, fmt.Errorf("unsupported staking staking variant: %T", input)
-	// 	}
-	// }
-	// address.FromHex(from)
-
 	// ethTx := trans.(*tx.Tx).EthTx
 	msg := ethereum.CallMsg{
 		From: fromAddr,
@@ -155,25 +127,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	txInput, err := client.FetchUnsimulatedInput(ctx, from)
-	if err != nil {
-		return txInput, err
-	}
-	builder, err := builder.NewTxBuilder(client.Asset)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
-	}
-	exampleTf, err := builder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), txInput)
-	if err != nil {
-		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
-	}
-
-	gasLimit, err := client.SimulateGasWithLimit(ctx, from, exampleTf.(*tx.Tx))
-	if err != nil {
-		return nil, err
-	}
-	txInput.GasLimit = gasLimit
-	return txInput, nil
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // FetchLegacyTxInput returns tx input for a EVM tx

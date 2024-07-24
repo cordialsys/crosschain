@@ -14,6 +14,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	tontx "github.com/cordialsys/crosschain/chain/ton/tx"
@@ -181,11 +182,10 @@ func (client *Client) EstimateMaxFee(ctx context.Context, from xc.Address, to xc
 	return 0, nil
 }
 
-// FetchLegacyTxInput returns tx input for a Template tx
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	var err error
 	acc := &api.GetAccountResponse{}
-	err = client.get(fmt.Sprintf("/api/v3/account?address=%s", from), acc)
+	err = client.get(fmt.Sprintf("/api/v3/account?address=%s", args.GetFrom()), acc)
 	if err != nil {
 		return nil, fmt.Errorf("could not get address info: %v", err)
 	}
@@ -193,7 +193,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	getSeqResponse := &api.GetMethodResponse{}
 
 	err = client.post("api/v3/runGetMethod", &api.GetMethodRequest{
-		Address: string(from),
+		Address: string(args.GetFrom()),
 		Method:  api.GetSequenceMethod,
 		Stack:   []api.StackItem{},
 	}, getSeqResponse)
@@ -218,11 +218,11 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	}
 
 	if client.Asset.GetContract() != "" {
-		input.TokenWallet, err = client.GetTokenWallet(ctx, from, xc.ContractAddress(client.Asset.GetContract()))
+		input.TokenWallet, err = client.GetTokenWallet(ctx, args.GetFrom(), xc.ContractAddress(client.Asset.GetContract()))
 		if err != nil {
 			return input, err
 		}
-		maxFee, err := client.EstimateMaxFee(ctx, input.TokenWallet, to, client.Asset.GetContract())
+		maxFee, err := client.EstimateMaxFee(ctx, input.TokenWallet, args.GetTo(), client.Asset.GetContract())
 		if err != nil {
 			return input, err
 		}
@@ -231,7 +231,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 	getAddrResponse := &api.GetMethodResponse{}
 	err = client.post("api/v3/runGetMethod", &api.GetMethodRequest{
-		Address: string(from),
+		Address: string(args.GetFrom()),
 		Method:  api.GetPublicKeyMethod,
 		Stack:   []api.StackItem{},
 	}, getAddrResponse)
@@ -248,6 +248,11 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	}
 
 	return input, nil
+}
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Template tx

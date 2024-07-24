@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -157,10 +158,9 @@ func (client *BlockchairClient) EstimateGasFee(ctx context.Context, numBlocks in
 	return float64(stats.Data.SuggestedFee), nil
 }
 
-// FetchLegacyTxInput returns tx input for a Bitcoin tx
-func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, xc.Address(from))
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, args.GetFrom())
 	if err != nil {
 		return input, err
 	}
@@ -172,6 +172,12 @@ func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.
 	}
 
 	return input, nil
+}
+
+func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *BlockchairClient) send(ctx context.Context, resp interface{}, method string, params ...string) (*BlockchairContext, error) {

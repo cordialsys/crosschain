@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -185,13 +187,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-// FetchLegacyTxInput returns tx input for a Cosmos tx
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := NewTxInput()
 
-	account, err := client.GetAccount(ctx, from)
+	account, err := client.GetAccount(ctx, args.GetFrom())
 	if err != nil || account == nil {
-		return txInput, fmt.Errorf("failed to get account data for %v: %v", from, err)
+		return txInput, fmt.Errorf("failed to get account data for %v: %v", args.GetFrom(), err)
 	}
 	txInput.AccountNumber = account.GetAccountNumber()
 	txInput.Sequence = account.GetSequence()
@@ -222,13 +223,19 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, _
 		txInput.GasPrice = gasPrice
 	}
 
-	_, assetType, err := client.fetchBalanceAndType(ctx, from)
+	_, assetType, err := client.fetchBalanceAndType(ctx, args.GetFrom())
 	if err != nil {
 		return txInput, err
 	}
 	txInput.AssetType = assetType
 
 	return txInput, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Cosmos tx

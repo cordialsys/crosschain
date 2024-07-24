@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
@@ -39,14 +40,14 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	nativeAsset := client.EvmClient.Asset.GetChain()
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	result := NewTxInput()
 	result.GasPrice = zero
 
 	// Nonce
-	nonce, err := client.EvmClient.GetNonce(ctx, from)
+	nonce, err := client.EvmClient.GetNonce(ctx, args.GetFrom())
 	if err != nil {
 		return result, err
 	}
@@ -66,17 +67,23 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
-	tf, err := builder.NewTransfer(from, to, xc.NewAmountBlockchainFromUint64(1), result)
+	tf, err := builder.NewTransfer(args.GetFrom(), args.GetTo(), xc.NewAmountBlockchainFromUint64(1), result)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
-	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, from, tf.(*tx.Tx))
+	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, args.GetFrom(), tf.(*tx.Tx))
 	if err != nil {
 		return nil, err
 	}
 	result.GasLimit = gasLimit
 
 	return result, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {

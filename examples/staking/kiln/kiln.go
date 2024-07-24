@@ -10,7 +10,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/pelletier/go-toml/v2"
@@ -464,7 +464,7 @@ func CmdConfig() *cobra.Command {
 			// chain := setup.UnwrapChain(cmd.Context())
 			// staking := setup.UnwrapStakingArgs(cmd.Context())
 
-			stakingConfig, err := staking.LoadConfig(xcFactory.GetNetworkSelector())
+			stakingConfig, err := services.LoadConfig(xcFactory.GetNetworkSelector())
 			if err != nil {
 				return err
 			}

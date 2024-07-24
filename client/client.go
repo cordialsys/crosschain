@@ -34,6 +34,18 @@ type ClientV2 interface {
 
 type FullClient interface {
 	Client
+	ClientV2
+}
+
+type StakingClient interface {
+	// Fetch staked balances accross different possible states
+	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*LockedBalance, error)
+
+	// Fetch inputs required for a staking transaction
+	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error)
+
+	// Fetch inputs required for a unstaking transaction
+	FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error)
 }
 
 type ClientError string
@@ -58,3 +70,15 @@ const NetworkError ClientError = "NetworkError"
 
 // No outcome for this error known
 const UnknownError ClientError = "UnknownError"
+
+type State string
+
+var Activating State = "activating"
+var Activated State = "activated"
+var Deactivating State = "deactivating"
+var Inactive State = "inactive"
+
+type LockedBalance struct {
+	State  State               `json:"state"`
+	Amount xc.AmountBlockchain `json:"amount"`
+}

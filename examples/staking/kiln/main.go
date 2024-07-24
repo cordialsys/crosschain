@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -34,11 +34,11 @@ func CmdStaking() *cobra.Command {
 				return err
 			}
 
-			var stakingCfg *staking.ServicesConfig
+			var stakingCfg *services.ServicesConfig
 			if stakingArgs.ConfigPath != "" {
-				stakingCfg, err = staking.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
+				stakingCfg, err = services.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
 			} else {
-				stakingCfg, err = staking.LoadConfig(xcFactory.GetNetworkSelector())
+				stakingCfg, err = services.LoadConfig(xcFactory.GetNetworkSelector())
 			}
 			if err != nil {
 				return err

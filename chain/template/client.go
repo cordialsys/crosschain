@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 )
 
@@ -19,9 +20,16 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	return &Client{}, errors.New("not implemented")
 }
 
-// FetchLegacyTxInput returns tx input for a Template tx
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchTransferInput returns tx input for a Template tx
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	return &TxInput{}, errors.New("not implemented")
+}
+
+// Deprecated method - use FetchTransferInput
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Template tx

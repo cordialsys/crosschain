@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/client/staking"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -29,7 +29,7 @@ func WrapStakingArgs(ctx context.Context, args *StakingArgs) context.Context {
 	ctx = context.WithValue(ctx, ContextStakingArgs, args)
 	return ctx
 }
-func WrapStakingConfig(ctx context.Context, args *staking.ServicesConfig) context.Context {
+func WrapStakingConfig(ctx context.Context, args *services.ServicesConfig) context.Context {
 	ctx = context.WithValue(ctx, ContextStakingConfig, args)
 	return ctx
 }
@@ -44,8 +44,8 @@ func UnwrapXc(ctx context.Context) *factory.Factory {
 func UnwrapStakingArgs(ctx context.Context) *StakingArgs {
 	return ctx.Value(ContextStakingArgs).(*StakingArgs)
 }
-func UnwrapStakingConfig(ctx context.Context) *staking.ServicesConfig {
-	return ctx.Value(ContextStakingConfig).(*staking.ServicesConfig)
+func UnwrapStakingConfig(ctx context.Context) *services.ServicesConfig {
+	return ctx.Value(ContextStakingConfig).(*services.ServicesConfig)
 }
 
 func UnwrapChain(ctx context.Context) *xc.ChainConfig {
@@ -195,7 +195,7 @@ type StakingArgs struct {
 }
 
 func AddStakingArgs(cmd *cobra.Command) {
-	cmd.PersistentFlags().String("config", "", fmt.Sprintf("Staking client configuration to use (may set %s).", staking.ConfigFileEnv))
+	cmd.PersistentFlags().String("config", "", fmt.Sprintf("Staking client configuration to use (may set %s).", services.ConfigFileEnv))
 
 	cmd.PersistentFlags().String("account", "", "Account ID to stake into, if applicable.")
 	cmd.PersistentFlags().String("amount", "", "Decimal amount to stake or unstake.")

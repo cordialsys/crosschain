@@ -15,6 +15,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/substrate/api"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/shopspring/decimal"
@@ -184,12 +185,12 @@ func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (u
 }
 
 // FetchLegacyTxInput returns tx input for a Substrate tx
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	meta, txInput, err := client.FetchTxInputChain()
 	if err != nil {
 		return &TxInput{}, err
 	}
-	txInput.Nonce, err = client.FetchAccountNonce(*meta, from)
+	txInput.Nonce, err = client.FetchAccountNonce(*meta, args.GetFrom())
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -203,6 +204,11 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	txInput.Tip = amt
 
 	return txInput, nil
+}
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 type RpcError struct {
