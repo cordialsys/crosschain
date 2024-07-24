@@ -11,8 +11,8 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/client/services"
+	"github.com/cordialsys/crosschain/client/services/kiln"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
-	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -79,9 +79,6 @@ func CmdGetStake() *cobra.Command {
 			if owner == "" && validator == "" && stake == "" {
 				return fmt.Errorf("must provide at least one of --owner, --validator, or --stake")
 			}
-			// rpcArgs := setup.UnwrapArgs(cmd.Context())
-			_ = xcFactory
-			_ = chain
 
 			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
 			if err != nil {
@@ -397,7 +394,7 @@ func CmdKiln() *cobra.Command {
 				return err
 			}
 
-			cli, err := api.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiKey)
+			cli, err := kiln.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiKey)
 			if err != nil {
 				return err
 			}

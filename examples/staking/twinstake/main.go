@@ -9,7 +9,8 @@ import (
 
 func CmdStaking() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:          "kiln",
+		Use:          "twinstake",
+		Aliases:      []string{"ts"},
 		Short:        "Manually interact with staking on blockchains",
 		Args:         cobra.ExactArgs(0),
 		SilenceUsage: true,
@@ -59,11 +60,8 @@ func CmdStaking() *cobra.Command {
 	setup.AddRpcArgs(cmd)
 	setup.AddStakingArgs(cmd)
 
-	cmd.AddCommand(CmdKiln())
-	cmd.AddCommand(CmdGetStake())
-	cmd.AddCommand(CmdStake())
-	cmd.AddCommand(CmdUnstake())
-	cmd.AddCommand(CmdConfig())
+	cmd.AddCommand(CmdTwinstake())
+
 	return cmd
 }
 

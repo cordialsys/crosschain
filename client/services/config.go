@@ -19,6 +19,7 @@ type TwinstakeConfig struct {
 	Username string        `mapstructure:"username" json:"username" yaml:"username" toml:"username"`
 	Password config.Secret `mapstructure:"password,omitempty" json:"password,omitempty" yaml:"password,omitempty" toml:"password,omitempty"`
 	ClientId string        `mapstructure:"client_id" json:"client_id" yaml:"client_id" toml:"client_id"`
+	Region   string        `mapstructure:"region" json:"region" yaml:"region" toml:"region"`
 }
 
 type ServicesConfig struct {
@@ -34,9 +35,10 @@ func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
 		},
 		Twinstake: TwinstakeConfig{
 			BaseUrl:  "https://api.twinstake.io",
-			Username: "env:TWINSTAKE_USERNAME",
-			Password: "env:TWINSTAKE_PASSWORD",
-			ClientId: "env:TWINSTAKE_CLIENT_ID",
+			Username: config.Secret("env:TWINSTAKE_USERNAME").LoadOrBlank(),
+			Password: config.Secret("env:TWINSTAKE_PASSWORD"),
+			ClientId: config.Secret("env:TWINSTAKE_CLIENT_ID").LoadOrBlank(),
+			Region:   "eu-west-3", // reported default on twinstakes website
 		},
 	}
 	if network == xc.NotMainnets {
