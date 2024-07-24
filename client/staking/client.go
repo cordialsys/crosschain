@@ -21,23 +21,12 @@ type Balance struct {
 
 type StakingClient interface {
 
-	// What do we want to know about the stake account?
-	// - state
-	// - balance
-	// - validator? credentials?
-	// - illiquid balances?
-	// A staking account can be identified using the following two names:
-	// - chains/ETH/addresses/1234
-	// - validators/x/accounts/y
+	// Fetch staked balances accross different possible states
 	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*Balance, error)
 
-	// defintiely need:
-	// - address (wallet)
-	// - validator
-	// - stakeAccount - do we need this???
-	// - amount
-	// FetchStakeInput(ctx context.Context, address xc.Address, validator string, amount xc.AmountBlockchain) (xc.StakingInput, error)
+	// Fetch inputs required for a staking transaction
+	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error)
 
-	// Fetch inputs needs for a staking transaction
-	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakingInput, error)
+	// Fetch inputs required for a unstaking transaction
+	FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error)
 }

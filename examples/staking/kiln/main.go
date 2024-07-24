@@ -34,7 +34,7 @@ func CmdStaking() *cobra.Command {
 				return err
 			}
 
-			var stakingCfg *staking.StakingConfig
+			var stakingCfg *staking.ServicesConfig
 			if stakingArgs.ConfigPath != "" {
 				stakingCfg, err = staking.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
 			} else {

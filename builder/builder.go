@@ -13,6 +13,6 @@ type Transfer interface {
 }
 
 type Staking interface {
-	Stake(stakingArgs StakeArgs, input xc.StakingInput) (xc.Tx, error)
-	Unstake(stakingArgs StakeArgs, input xc.StakingInput) (xc.Tx, error)
+	Stake(stakingArgs StakeArgs, input xc.StakeTxInput) (xc.Tx, error)
+	Unstake(stakingArgs StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error)
 }

@@ -89,23 +89,54 @@ func (s *CrosschainTestSuite) TestAllNewTxInput() {
 
 func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 	require := s.Require()
-	_, err := NewStakingInput("randomthing")
+	_, err := NewVariantInput("randomthing")
 	require.Error(err)
 
-	for _, variant := range xc.SupportedStakingVariants {
-		input, err := NewStakingInput(variant)
-		require.NoError(err, "Missing TxInput for variant : "+variant)
-		require.NotNil(input)
+	type testcase struct {
+		variants []xc.TxVariant
+		txType   string
+	}
+	testcases := []testcase{
+		{
+			variants: xc.SupportedStakingVariants,
+			txType:   "staking",
+		},
+		{
+			variants: xc.SupportedUnstakingVariants,
+			txType:   "unstaking",
+		},
+	}
 
-		// marshals
-		bz, err := MarshalStakingInput(input)
-		require.NoError(err)
+	for _, v := range testcases {
+		for _, variant := range v.variants {
 
-		input2, err := UnmarshalStakingInput(bz)
-		require.NoError(err)
+			require.Equal(v.txType, variant.TxType())
 
-		// ensure same concrete type back
-		require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
+			input, err := NewVariantInput(variant)
+			require.NoError(err, "Missing TxInput for variant : "+variant)
+			require.NotNil(input)
+
+			// marshals
+			bz, err := MarshalVariantInput(input)
+			require.NoError(err)
+
+			input2, err := UnmarshalVariantInput(bz)
+			require.NoError(err)
+
+			// ensure same concrete type back
+			require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
+
+			switch v.txType {
+			case "staking":
+				_, err := UnmarshalStakingInput(bz)
+				require.NoError(err)
+			case "unstaking":
+				_, err := UnmarshalUnstakingInput(bz)
+				require.NoError(err)
+			default:
+				require.Fail("unexpected txType ", v.txType)
+			}
+		}
 	}
 }
 

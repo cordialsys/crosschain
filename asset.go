@@ -143,26 +143,32 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 }
 
-type StakingVariant string
+type TxVariant string
 
 const (
+	KilnBatchDeposit      = TxVariant("drivers/evm/staking/kiln-batch-deposit")
+	TwinstakeBatchDeposit = TxVariant("drivers/evm/staking/twinstake-batch-deposit")
+	EvmBatchDeposit       = TxVariant("drivers/evm/staking/batch-deposit")
 
-	//
-
-	KilnMultiDeposit      = StakingVariant("drivers/evm/staking/kiln-multi-deposit")
-	TwinstakeMultiDeposit = StakingVariant("drivers/evm/staking/twinstake-multi-deposit")
-	EvmMultiDeposit       = StakingVariant("drivers/evm/staking/multi-deposit")
+	KilnRequestExit       = TxVariant("drivers/evm/unstaking/kiln-request-exit")
+	EvmRequestExitDeposit = TxVariant("drivers/evm/unstaking/request-exit")
 )
 
-var SupportedStakingVariants = []StakingVariant{
-	KilnMultiDeposit,
-	TwinstakeMultiDeposit,
+var SupportedStakingVariants = []TxVariant{
+	KilnBatchDeposit,
+	TwinstakeBatchDeposit,
+}
+var SupportedUnstakingVariants = []TxVariant{
+	EvmRequestExitDeposit,
 }
 
-func (variant StakingVariant) Driver() Driver {
+func (variant TxVariant) Driver() Driver {
 	return Driver(strings.Split(string(variant), "/")[1])
 }
-func (variant StakingVariant) Id() string {
+func (variant TxVariant) TxType() string {
+	return strings.Split(string(variant), "/")[2]
+}
+func (variant TxVariant) Id() string {
 	return strings.Split(string(variant), "/")[3]
 }
 
@@ -200,15 +206,15 @@ func (native NativeAsset) Driver() Driver {
 	return ""
 }
 
-func (native NativeAsset) StakingVariants() []StakingVariant {
+func (native NativeAsset) StakingVariants() []TxVariant {
 	switch native {
 	case ETH:
-		return []StakingVariant{KilnMultiDeposit, TwinstakeMultiDeposit}
+		return []TxVariant{KilnBatchDeposit, TwinstakeBatchDeposit}
 	}
-	return []StakingVariant{}
+	return []TxVariant{}
 }
 
-func (native NativeAsset) Supports(variant StakingVariant) bool {
+func (native NativeAsset) Supports(variant TxVariant) bool {
 	variants := native.StakingVariants()
 	for _, v := range variants {
 		if v == variant {

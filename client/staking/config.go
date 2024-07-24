@@ -21,13 +21,13 @@ type TwinstakeConfig struct {
 	ClientId string        `mapstructure:"client_id" json:"client_id" yaml:"client_id" toml:"client_id"`
 }
 
-type StakingConfig struct {
+type ServicesConfig struct {
 	Kiln      KilnConfig      `mapstructure:"kiln" json:"kiln" yaml:"kiln" toml:"kiln"`
 	Twinstake TwinstakeConfig `mapstructure:"twinstake" json:"twinstake" yaml:"twinstake" toml:"twinstake"`
 }
 
-func DefaultConfig(network xc.NetworkSelector) *StakingConfig {
-	cfg := &StakingConfig{
+func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
+	cfg := &ServicesConfig{
 		Kiln: KilnConfig{
 			BaseUrl:  "https://api.kiln.fi",
 			ApiToken: "env:KILN_API_TOKEN",
@@ -46,9 +46,9 @@ func DefaultConfig(network xc.NetworkSelector) *StakingConfig {
 	return cfg
 }
 
-func LoadConfig(network xc.NetworkSelector) (*StakingConfig, error) {
+func LoadConfig(network xc.NetworkSelector) (*ServicesConfig, error) {
 	v := getViper()
-	cfg := &StakingConfig{}
+	cfg := &ServicesConfig{}
 	defaultCfg := DefaultConfig(network)
 	err := config.RequireConfigWithViper(v, "", cfg, defaultCfg)
 	if err != nil {
@@ -57,11 +57,11 @@ func LoadConfig(network xc.NetworkSelector) (*StakingConfig, error) {
 	return cfg, nil
 }
 
-func LoadConfigFromFile(network xc.NetworkSelector, file string) (*StakingConfig, error) {
+func LoadConfigFromFile(network xc.NetworkSelector, file string) (*ServicesConfig, error) {
 	v := viper.New()
 	v.SetConfigType("toml")
 	v.SetConfigFile(file)
-	cfg := &StakingConfig{}
+	cfg := &ServicesConfig{}
 	defaultCfg := DefaultConfig(network)
 	err := config.RequireConfigWithViper(v, "", cfg, defaultCfg)
 	if err != nil {

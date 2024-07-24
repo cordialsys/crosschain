@@ -76,15 +76,23 @@ func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 	}
 }
 
-type StakingInput interface {
-	GetVariant() StakingVariant
+type VariantTxInput interface {
+	GetVariant() TxVariant
+}
+
+// Markers for each type of Variant Tx
+type StakeTxInput interface {
+	Staking()
+}
+type UnstakeTxInput interface {
+	Unstaking()
 }
 
 type StakingInputEnvelope struct {
-	Variant StakingVariant `json:"variant"`
+	Variant TxVariant `json:"variant"`
 }
 
-func NewStakingInputEnvelope(variant StakingVariant) *StakingInputEnvelope {
+func NewStakingInputEnvelope(variant TxVariant) *StakingInputEnvelope {
 	return &StakingInputEnvelope{
 		Variant: variant,
 	}

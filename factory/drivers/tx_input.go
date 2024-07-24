@@ -65,28 +65,29 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	return input, nil
 }
 
-func MarshalStakingInput(txInput xc.StakingInput) ([]byte, error) {
+func MarshalVariantInput(txInput xc.VariantTxInput) ([]byte, error) {
 	return json.Marshal(txInput)
 }
 
-func NewStakingInput(variant xc.StakingVariant) (xc.StakingInput, error) {
+func NewVariantInput(variant xc.TxVariant) (xc.VariantTxInput, error) {
 	switch variant {
 	// Kiln, Twinstake all alias to EvmMultiDeposit
-	case xc.KilnMultiDeposit, xc.TwinstakeMultiDeposit, xc.EvmMultiDeposit:
-		return evminput.NewMultidepositStakingInput(), nil
-
+	case xc.KilnBatchDeposit, xc.TwinstakeBatchDeposit, xc.EvmBatchDeposit:
+		return evminput.NewBatchDepositInput(), nil
+	case xc.KilnRequestExit, xc.EvmRequestExitDeposit:
+		return evminput.NewExitRequestInput(), nil
 	}
 	return nil, fmt.Errorf("no staking-input mapped for %s", variant)
 }
 
-func UnmarshalStakingInput(data []byte) (xc.StakingInput, error) {
+func UnmarshalVariantInput(data []byte) (xc.VariantTxInput, error) {
 	var env xc.StakingInputEnvelope
 	buf := []byte(data)
 	err := json.Unmarshal(buf, &env)
 	if err != nil {
 		return nil, err
 	}
-	input, err := NewStakingInput(env.Variant)
+	input, err := NewVariantInput(env.Variant)
 	if err != nil {
 		return nil, err
 	}
@@ -95,4 +96,28 @@ func UnmarshalStakingInput(data []byte) (xc.StakingInput, error) {
 		return nil, err
 	}
 	return input, nil
+}
+
+func UnmarshalStakingInput(data []byte) (xc.StakeTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	staking, ok := inp.(xc.StakeTxInput)
+	if !ok {
+		return staking, fmt.Errorf("not a staking input: %T", inp)
+	}
+	return staking, nil
+}
+
+func UnmarshalUnstakingInput(data []byte) (xc.UnstakeTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	staking, ok := inp.(xc.UnstakeTxInput)
+	if !ok {
+		return staking, fmt.Errorf("not an unstaking input: %T", inp)
+	}
+	return staking, nil
 }
