@@ -88,7 +88,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			`{"result": "0.00007998"}`,
 		}, 200)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook)}
+		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook), ChainMinGasPrice: 15}
 		client, _ := bitcoin.NewClient(asset)
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -112,7 +112,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 		require.NotZero(btcInput.UnspentOutputs[0].Index)
 		// string should be reversed
 		require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
-		require.LessOrEqual(uint64(10), btcInput.GasPricePerByte.Uint64())
+		require.LessOrEqual(uint64(15), btcInput.GasPricePerByte.Uint64())
 		require.GreaterOrEqual(uint64(30), btcInput.GasPricePerByte.Uint64())
 
 		// should be sorted with the largest utxo used first

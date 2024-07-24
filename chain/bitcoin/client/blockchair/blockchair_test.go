@@ -91,7 +91,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			`{"data":{"blocks":2428756,"transactions":65332308,"outputs":173266703,"circulation":2099211173546005,"blocks_24h":125,"transactions_24h":9376,"difficulty":104649090.3851,"volume_24h":9305170450343,"mempool_transactions":91,"mempool_size":25369,"mempool_tps":0.21666666666666667,"mempool_total_fee_usd":0,"best_block_height":2428755,"best_block_hash":"00000000000000171993c83855edbbdb4b596a80d7979b9906199a152c02e602","best_block_time":"2023-04-13 15:55:31","blockchain_size":28727851118,"average_transaction_fee_24h":5919,"inflation_24h":305175750,"median_transaction_fee_24h":208,"cdd_24h":10812.844745459975,"mempool_outputs":308,"largest_transaction_24h":{"hash":"bb7fb631e27a18b8802ead03f3ee14b69ae71edb845697f98e0f072b845b0be4","value_usd":0},"hashrate_24h":"650455020414125","inflation_usd_24h":0,"average_transaction_fee_usd_24h":0,"median_transaction_fee_usd_24h":0,"market_price_usd":0,"market_price_btc":0,"market_price_usd_change_24h_percentage":0,"market_cap_usd":0,"market_dominance_percentage":0,"next_retarget_time_estimate":"2023-04-17 02:55:52","next_difficulty_estimate":107945581,"suggested_transaction_fee_per_byte_sat":1,"hodling_addresses":10010301},"context":{"code":200,"source":"A","state":2428755,"market_price_usd":30467,"cache":{"live":false,"duration":"Ignore","since":"2023-04-13 16:03:49","until":"2023-04-13 16:05:00","time":2.86102294921875e-6},"api":{"version":"2.0.95-ie","last_major_update":"2022-11-07 02:00:00","next_major_update":null,"documentation":"https:\/\/blockchair.com\/api\/docs","notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"},"servers":"API4,TBTC0","time":1.8575801849365234,"render_time":0.007244110107421875,"full_time":0.007246971130371094,"request_cost":1}}`,
 		}, 200)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", AuthSecret: "1234", Provider: string(bitcoin.Blockchair)}
+		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", AuthSecret: "1234", Provider: string(bitcoin.Blockchair), ChainMinGasPrice: 12}
 		client, _ := bitcoin.NewClient(asset)
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -115,7 +115,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 		require.NotZero(btcInput.UnspentOutputs[0].Index)
 		// string should be reversed
 		require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
-		require.LessOrEqual(uint64(10), btcInput.GasPricePerByte.Uint64())
+		require.LessOrEqual(uint64(12), btcInput.GasPricePerByte.Uint64())
 		require.GreaterOrEqual(uint64(30), btcInput.GasPricePerByte.Uint64())
 
 		// should be sorted with the largest utxo used first
