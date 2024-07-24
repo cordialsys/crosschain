@@ -13,13 +13,13 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
-	"github.com/cordialsys/crosschain/examples/staking/kiln/api"
+	"github.com/cordialsys/crosschain/client/services/kiln"
 	"github.com/sirupsen/logrus"
 )
 
 type Client struct {
 	rpcClient  *evmclient.Client
-	kilnClient *api.Client
+	kilnClient *kiln.Client
 	chain      *xc.ChainConfig
 }
 
@@ -50,7 +50,7 @@ func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *s
 	if err != nil {
 		return nil, err
 	}
-	kilnClient, err := api.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiToken)
+	kilnClient, err := kiln.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiToken)
 	if err != nil {
 		return nil, err
 	}
