@@ -363,7 +363,7 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
 
-	satsPerByte := tx_input.LegacyFeeFilter(uint64(satsPerByteFloat), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
+	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), uint64(satsPerByteFloat), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
 }

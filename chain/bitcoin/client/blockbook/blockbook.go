@@ -138,7 +138,7 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockc
 	// convert to sats/byte
 	satsPerB := xc.AmountHumanReadable(BtcPerB).ToBlockchain(client.Asset.GetDecimals())
 
-	satsPerByte := tx_input.LegacyFeeFilter(satsPerB.Uint64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
+	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerB.Uint64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
 }
