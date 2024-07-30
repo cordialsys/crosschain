@@ -34,19 +34,14 @@ func mustHex(s string) []byte {
 
 var _ = mustHex
 
-func getVariant(chain *xc.ChainConfig, variantId string) (xc.TxVariant, error) {
-	if variantId == "" && len(chain.Chain.StakingVariants()) == 1 {
-		return chain.Chain.StakingVariants()[0], nil
-	}
-	if variantId == "" {
-		return "", fmt.Errorf("must set --variant")
-	}
-	for _, v := range chain.Chain.StakingVariants() {
-		if v == xc.TxVariant(variantId) || v.Id() == variantId {
-			return v, nil
+func getProvider(chain *xc.ChainConfig, providerId string) (xc.StakingProvider, error) {
+	for _, provider := range chain.Staking.Providers {
+		if strings.EqualFold(providerId, string(provider)) {
+			return provider, nil
 		}
 	}
-	return "", fmt.Errorf("chain %s does not support %s staking, try one of %v", chain.Chain, variantId, chain.Chain.StakingVariants())
+	return "", fmt.Errorf("unsupported provider %s on chain %s; options: %v", providerId, chain.Chain, chain.Staking.Providers)
+
 }
 
 func CmdGetStake() *cobra.Command {
@@ -59,7 +54,7 @@ func CmdGetStake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			variant, err := getVariant(chain, moreArgs.VariantId)
+			provider, err := getProvider(chain, moreArgs.VariantId)
 			if err != nil {
 				return err
 			}
@@ -80,7 +75,7 @@ func CmdGetStake() *cobra.Command {
 				return fmt.Errorf("must provide at least one of --owner, --validator, or --stake")
 			}
 
-			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
+			cli, err := xcFactory.NewStakingClient(stakingCfg, chain, provider)
 			if err != nil {
 				return err
 			}
@@ -110,7 +105,7 @@ func CmdStake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			variant, err := getVariant(chain, moreArgs.VariantId)
+			provider, err := getProvider(chain, moreArgs.VariantId)
 			if err != nil {
 				return err
 			}
@@ -142,7 +137,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
+			cli, err := xcFactory.NewStakingClient(stakingCfg, chain, provider)
 			if err != nil {
 				return err
 			}
@@ -247,7 +242,7 @@ func CmdUnstake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			variant, err := getVariant(chain, moreArgs.VariantId)
+			provider, err := getProvider(chain, moreArgs.VariantId)
 			if err != nil {
 				return err
 			}
@@ -279,7 +274,7 @@ func CmdUnstake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cli, err := xcFactory.NewStakingClient(chain, stakingCfg, variant)
+			cli, err := xcFactory.NewStakingClient(stakingCfg, chain, provider)
 			if err != nil {
 				return err
 			}

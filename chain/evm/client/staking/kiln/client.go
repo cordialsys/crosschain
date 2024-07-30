@@ -27,8 +27,9 @@ var _ xcclient.StakingClient = &Client{}
 
 func toStakingState(status string) (xcclient.State, bool) {
 	var state xcclient.State = ""
+	// ethereum validator states
 	switch status {
-	case "pending_initialized", "deposit_in_progress":
+	case "pending_initialized":
 		state = xcclient.Activating
 	case "active_ongoing":
 		state = xcclient.Activated
@@ -38,6 +39,16 @@ func toStakingState(status string) (xcclient.State, bool) {
 		state = xcclient.Deactivating
 	default:
 	}
+	// kiln-specific states
+	switch status {
+	case "deposit_in_progress":
+		state = xcclient.Activating
+	case "active_ongoing":
+		state = xcclient.Activated
+	case "unstaked":
+		// this means the eth has been returned
+	}
+
 	return state, state != ""
 }
 
@@ -66,8 +77,8 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	bal, _ := xc.NewAmountHumanReadableFromStr("32")
 	amount := bal.ToBlockchain(18)
 
-	status := xcclient.Activating
 	// RPC is the most reliable place to get information on the stake
+	var status xcclient.State
 	val, err := cli.rpcClient.FetchValidator(ctx, validator)
 	if err != nil {
 		logrus.WithError(err).Debug("could not locate validator")
@@ -77,6 +88,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 		var ok bool
 		status, ok = toStakingState(val.Data.Status)
 		if !ok {
+			// assume it's still activating
 			status = xcclient.Activating
 			logrus.Warn("unknown beacon validator state", status)
 		}
@@ -97,11 +109,16 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	if len(res.Data) == 0 {
 		return nil, nil
 	}
+	if res.Data[0].State == "unstaked" {
+		// this means the eth has been sent back, so no balance is in a staking state.
+		return []*xcclient.LockedBalance{}, nil
+	}
 	var ok bool
-	status, ok = toStakingState(val.Data.Status)
+	status, ok = toStakingState(res.Data[0].State)
 	if !ok {
+		// assume it's still activating
 		status = xcclient.Activating
-		logrus.Warn("unknown validator state", status)
+		logrus.WithField("kiln-state", res.Data[0].State).Warn("unknown validator state")
 	}
 	return []*xcclient.LockedBalance{
 		{

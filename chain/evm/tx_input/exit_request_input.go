@@ -5,22 +5,19 @@ import (
 )
 
 type ExitRequestInput struct {
-	xc.StakingInputEnvelope
 	TxInput
 	PublicKeys [][]byte `json:"public_keys"`
 }
 
-var _ xc.VariantTxInput = &ExitRequestInput{}
+var _ xc.TxVariantInput = &ExitRequestInput{}
 var _ xc.UnstakeTxInput = &ExitRequestInput{}
 
 func NewExitRequestInput() *ExitRequestInput {
-	return &ExitRequestInput{
-		StakingInputEnvelope: *xc.NewStakingInputEnvelope(xc.EvmRequestExitDeposit),
-	}
+	return &ExitRequestInput{}
 }
 
-func (stakingInput *ExitRequestInput) GetVariant() xc.TxVariant {
-	return stakingInput.Variant
+func (*ExitRequestInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewUnstakingInputType(xc.DriverEVM, "exit-request")
 }
 
 // Mark as valid for un-staking transactions

@@ -143,33 +143,58 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 }
 
-type TxVariant string
+type StakingProvider string
 
-const (
-	KilnBatchDeposit      = TxVariant("drivers/evm/staking/kiln-batch-deposit")
-	TwinstakeBatchDeposit = TxVariant("drivers/evm/staking/twinstake-batch-deposit")
-	EvmBatchDeposit       = TxVariant("drivers/evm/staking/batch-deposit")
+const Kiln StakingProvider = "kiln"
+const Twinstake StakingProvider = "twinstake"
 
-	KilnRequestExit       = TxVariant("drivers/evm/unstaking/kiln-request-exit")
-	EvmRequestExitDeposit = TxVariant("drivers/evm/unstaking/request-exit")
-)
-
-var SupportedStakingVariants = []TxVariant{
-	KilnBatchDeposit,
-	TwinstakeBatchDeposit,
-}
-var SupportedUnstakingVariants = []TxVariant{
-	EvmRequestExitDeposit,
+func (stakingProvider StakingProvider) Valid() bool {
+	switch stakingProvider {
+	case Kiln, Twinstake:
+		return true
+	}
+	return false
 }
 
-func (variant TxVariant) Driver() Driver {
+type TxVariantInputType string
+
+func NewStakingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/staking-inputs/%s", driver, variant))
+}
+
+func NewUnstakingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/unstaking-inputs/%s", driver, variant))
+}
+
+// const (
+// 	KilnBatchDeposit      = TxVariant("drivers/evm/staking/kiln-batch-deposit")
+// 	TwinstakeBatchDeposit = TxVariant("drivers/evm/staking/twinstake-batch-deposit")
+// 	EvmBatchDeposit       = TxVariant("drivers/evm/staking/batch-deposit")
+
+// 	KilnRequestExit       = TxVariant("drivers/evm/unstaking/kiln-request-exit")
+// 	EvmRequestExitDeposit = TxVariant("drivers/evm/unstaking/request-exit")
+// )
+
+// var SupportedStakingVariants = []TxVariant{
+// 	KilnBatchDeposit,
+// 	TwinstakeBatchDeposit,
+// }
+// var SupportedUnstakingVariants = []TxVariant{
+// 	EvmRequestExitDeposit,
+// }
+
+func (variant TxVariantInputType) Driver() Driver {
 	return Driver(strings.Split(string(variant), "/")[1])
 }
-func (variant TxVariant) TxType() string {
-	return strings.Split(string(variant), "/")[2]
+func (variant TxVariantInputType) Variant() string {
+	return (strings.Split(string(variant), "/")[3])
 }
-func (variant TxVariant) Id() string {
-	return strings.Split(string(variant), "/")[3]
+
+func (variant TxVariantInputType) Validate() error {
+	if len(strings.Split(string(variant), "/")) != 4 {
+		return fmt.Errorf("invalid input variant type: %s", variant)
+	}
+	return nil
 }
 
 func (native NativeAsset) IsValid() bool {
@@ -206,23 +231,23 @@ func (native NativeAsset) Driver() Driver {
 	return ""
 }
 
-func (native NativeAsset) StakingVariants() []TxVariant {
-	switch native {
-	case ETH:
-		return []TxVariant{KilnBatchDeposit, TwinstakeBatchDeposit}
-	}
-	return []TxVariant{}
-}
+// func (native NativeAsset) StakingVariants() []TxVariant {
+// 	switch native {
+// 	case ETH:
+// 		return []TxVariant{KilnBatchDeposit, TwinstakeBatchDeposit}
+// 	}
+// 	return []TxVariant{}
+// }
 
-func (native NativeAsset) Supports(variant TxVariant) bool {
-	variants := native.StakingVariants()
-	for _, v := range variants {
-		if v == variant {
-			return true
-		}
-	}
-	return false
-}
+// func (native NativeAsset) Supports(variant TxVariant) bool {
+// 	variants := native.StakingVariants()
+// 	for _, v := range variants {
+// 		if v == variant {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
@@ -282,8 +307,16 @@ type ExplorerUrls struct {
 }
 
 type StakingConfig struct {
-	// EVM contract for making batch deposits
-	BatchDepositContract string `yaml:"batch_deposit_contract"`
+	// the contract used for staking, if relevant
+	StakeContract string `yaml:"stake_contract,omitempty"`
+	// the contract used for unstaking, if relevant
+	UnstakeContract string `yaml:"unstake_contract,omitempty"`
+	// Compatible providers for staking
+	Providers []StakingProvider `yaml:"providers,omitempty"`
+}
+
+func (staking *StakingConfig) Enabled() bool {
+	return len(staking.Providers) > 0
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
@@ -322,7 +355,7 @@ type ChainConfig struct {
 
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
-	Staking StakingConfig `yaml:"staking"`
+	Staking StakingConfig `yaml:"staking,omitempty"`
 
 	// Internal
 	// dereferenced api token if used

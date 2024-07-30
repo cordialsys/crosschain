@@ -76,8 +76,8 @@ func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 	}
 }
 
-type VariantTxInput interface {
-	GetVariant() TxVariant
+type TxVariantInput interface {
+	GetVariant() TxVariantInputType
 }
 
 // Markers for each type of Variant Tx
@@ -86,16 +86,6 @@ type StakeTxInput interface {
 }
 type UnstakeTxInput interface {
 	Unstaking()
-}
-
-type StakingInputEnvelope struct {
-	Variant TxVariant `json:"variant"`
-}
-
-func NewStakingInputEnvelope(variant TxVariant) *StakingInputEnvelope {
-	return &StakingInputEnvelope{
-		Variant: variant,
-	}
 }
 
 // TxStatus is the status of a tx on chain, currently success or failure.

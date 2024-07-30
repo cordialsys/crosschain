@@ -119,7 +119,10 @@ chains:
     decimals: 18
     staking:
       # KILN Batch deposit contract
-      batch_deposit_contract: "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+      stake_contract: "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+      # KILN exit contract
+      unstake_contract: "0x75838e6FC51fa2dFE22be1d5f3817AEf90306Be6"
+      providers: ["kiln", "twinstake"]
   FTM:
     chain: FTM
     driver: evm-legacy

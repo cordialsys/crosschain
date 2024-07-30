@@ -5,23 +5,25 @@ import (
 )
 
 type BatchDepositInput struct {
-	xc.StakingInputEnvelope
 	TxInput
 	PublicKeys [][]byte `json:"public_keys"`
 	Signatures [][]byte `json:"signatures"`
 }
 
-var _ xc.VariantTxInput = &BatchDepositInput{}
+var _ xc.TxVariantInput = &BatchDepositInput{}
 var _ xc.StakeTxInput = &BatchDepositInput{}
 
 func NewBatchDepositInput() *BatchDepositInput {
-	return &BatchDepositInput{
-		StakingInputEnvelope: *xc.NewStakingInputEnvelope(xc.EvmBatchDeposit),
-	}
+	return &BatchDepositInput{}
 }
-func (stakingInput *BatchDepositInput) GetVariant() xc.TxVariant {
-	return stakingInput.Variant
-}
+
+// func (stakingInput *BatchDepositInput) GetVariant() xc.TxVariant {
+// 	return stakingInput.Variant
+// }
 
 // Mark as valid for staking transactions
 func (*BatchDepositInput) Staking() {}
+
+func (*BatchDepositInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewStakingInputType(xc.DriverEVM, "batch-deposit")
+}

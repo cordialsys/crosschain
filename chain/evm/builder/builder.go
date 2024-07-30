@@ -215,7 +215,7 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTx
 		if err != nil {
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
-		contract := txBuilder.Asset.GetChain().Staking.BatchDepositContract
+		contract := txBuilder.Asset.GetChain().Staking.StakeContract
 		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
