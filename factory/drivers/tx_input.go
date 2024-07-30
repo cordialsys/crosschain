@@ -17,6 +17,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/tron"
 )
 
+const SerializedInputTypeKey = "type"
+
 func MarshalTxInput(txInput xc.TxInput) ([]byte, error) {
 	return json.Marshal(txInput)
 }
@@ -65,29 +67,53 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	return input, nil
 }
 
-func MarshalVariantInput(txInput xc.VariantTxInput) ([]byte, error) {
-	return json.Marshal(txInput)
+var SupportedVariantTx = []xc.TxVariantInput{
+	&evminput.BatchDepositInput{},
+	&evminput.ExitRequestInput{},
 }
 
-func NewVariantInput(variant xc.TxVariant) (xc.VariantTxInput, error) {
-	switch variant {
-	// Kiln, Twinstake all alias to EvmMultiDeposit
-	case xc.KilnBatchDeposit, xc.TwinstakeBatchDeposit, xc.EvmBatchDeposit:
-		return evminput.NewBatchDepositInput(), nil
-	case xc.KilnRequestExit, xc.EvmRequestExitDeposit:
-		return evminput.NewExitRequestInput(), nil
+func MarshalVariantInput(methodInput xc.TxVariantInput) ([]byte, error) {
+	data := map[string]interface{}{}
+	methodBz, err := json.Marshal(methodInput)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("no staking-input mapped for %s", variant)
+	_ = json.Unmarshal(methodBz, &data)
+	// force union with method type envelope
+	data[SerializedInputTypeKey] = methodInput.GetVariant()
+
+	bz, _ := json.Marshal(data)
+	return bz, nil
 }
 
-func UnmarshalVariantInput(data []byte) (xc.VariantTxInput, error) {
-	var env xc.StakingInputEnvelope
+func NewVariantInput(variantType xc.TxVariantInputType) (xc.TxVariantInput, error) {
+	if err := variantType.Validate(); err != nil {
+		return nil, err
+	}
+
+	for _, variant := range []xc.TxVariantInput{
+		&evminput.BatchDepositInput{},
+		&evminput.ExitRequestInput{},
+	} {
+		if variant.GetVariant() == variantType {
+			return variant, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no staking-input mapped for %s", variantType)
+}
+
+func UnmarshalVariantInput(data []byte) (xc.TxVariantInput, error) {
+	type variantInputEnvelope struct {
+		Type xc.TxVariantInputType `json:"type"`
+	}
+	var env variantInputEnvelope
 	buf := []byte(data)
 	err := json.Unmarshal(buf, &env)
 	if err != nil {
 		return nil, err
 	}
-	input, err := NewVariantInput(env.Variant)
+	input, err := NewVariantInput(env.Type)
 	if err != nil {
 		return nil, err
 	}

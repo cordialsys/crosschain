@@ -200,11 +200,11 @@ func AddStakingArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("account", "", "Account ID to stake into, if applicable.")
 	cmd.PersistentFlags().String("amount", "", "Decimal amount to stake or unstake.")
 
-	options := []string{}
-	for _, v := range xc.SupportedStakingVariants {
-		options = append(options, v.Id())
-	}
-	cmd.PersistentFlags().String("variant", "", fmt.Sprintf("Staking variant to use with chain %v.", options))
+	// options := []string{}
+	// for _, v := range xc.SupportedStakingVariants {
+	// 	options = append(options, v.Id())
+	// }
+	cmd.PersistentFlags().String("variant", "", fmt.Sprintf("Staking variant to use with chain."))
 }
 
 func StakingArgsFromCmd(cmd *cobra.Command) (*StakingArgs, error) {

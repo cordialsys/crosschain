@@ -21,7 +21,8 @@ func FromTimeStamp(ts string) time.Time {
 	if err != nil {
 		panic(err)
 	}
-	return t
+	// drop any timezone information
+	return time.Unix(t.Unix(), 0)
 }
 
 func HumanToBlockchain(amount string, decimals int) xc.AmountBlockchain {

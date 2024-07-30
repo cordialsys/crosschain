@@ -43,6 +43,7 @@ func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
 	}
 	if network == xc.NotMainnets {
 		cfg.Kiln.BaseUrl = "https://api.testnet.kiln.fi"
+		cfg.Twinstake.BaseUrl = "https://testnet.api.twinstake.io"
 	}
 
 	return cfg

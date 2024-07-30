@@ -356,14 +356,14 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	return nil, fmt.Errorf("no clients possible for %s", nativeAsset.Chain)
 }
 
-func (f *Factory) NewStakingClient(cfg ITask, stakingCfg *services.ServicesConfig, variant TxVariant) (xclient.StakingClient, error) {
-	chain := cfg.GetChain()
-	if !chain.Chain.Supports(variant) {
-		return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())
-	}
+func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+	// chain := cfg.GetChain()
+	// if !chain.Chain.Supports(variant) {
+	// 	return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())
+	// }
 
 	// TODO crosschain client for staking...
-	return drivers.NewVariantClient(cfg, stakingCfg, variant)
+	return drivers.NewVariantClient(stakingCfg, cfg, provider)
 }
 
 // NewTxBuilder creates a new TxBuilder
