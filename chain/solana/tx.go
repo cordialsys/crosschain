@@ -21,7 +21,7 @@ type Tx struct {
 	inputSignatures []xc.TxSignature
 }
 
-var _ xc.Tx = Tx{}
+var _ xc.Tx = &Tx{}
 
 // Hash returns the tx hash or id, for Solana it's signature
 func (tx Tx) Hash() xc.TxHash {
@@ -45,7 +45,7 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 }
 
 // AddSignatures adds a signature to Tx
-func (tx Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	if tx.SolTx == nil {
 		return errors.New("transaction not initialized")
 	}

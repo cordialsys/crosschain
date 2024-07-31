@@ -147,6 +147,7 @@ type StakingProvider string
 
 const Kiln StakingProvider = "kiln"
 const Twinstake StakingProvider = "twinstake"
+const Native StakingProvider = "native"
 
 func (stakingProvider StakingProvider) Valid() bool {
 	switch stakingProvider {
@@ -165,23 +166,6 @@ func NewStakingInputType(driver Driver, variant string) TxVariantInputType {
 func NewUnstakingInputType(driver Driver, variant string) TxVariantInputType {
 	return TxVariantInputType(fmt.Sprintf("drivers/%s/unstaking-inputs/%s", driver, variant))
 }
-
-// const (
-// 	KilnBatchDeposit      = TxVariant("drivers/evm/staking/kiln-batch-deposit")
-// 	TwinstakeBatchDeposit = TxVariant("drivers/evm/staking/twinstake-batch-deposit")
-// 	EvmBatchDeposit       = TxVariant("drivers/evm/staking/batch-deposit")
-
-// 	KilnRequestExit       = TxVariant("drivers/evm/unstaking/kiln-request-exit")
-// 	EvmRequestExitDeposit = TxVariant("drivers/evm/unstaking/request-exit")
-// )
-
-// var SupportedStakingVariants = []TxVariant{
-// 	KilnBatchDeposit,
-// 	TwinstakeBatchDeposit,
-// }
-// var SupportedUnstakingVariants = []TxVariant{
-// 	EvmRequestExitDeposit,
-// }
 
 func (variant TxVariantInputType) Driver() Driver {
 	return Driver(strings.Split(string(variant), "/")[1])

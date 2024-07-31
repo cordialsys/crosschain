@@ -363,7 +363,7 @@ func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITas
 	// }
 
 	// TODO crosschain client for staking...
-	return drivers.NewVariantClient(stakingCfg, cfg, provider)
+	return drivers.NewStakingClient(stakingCfg, cfg, provider)
 }
 
 // NewTxBuilder creates a new TxBuilder

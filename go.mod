@@ -243,5 +243,6 @@ replace (
 	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
 	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
 	github.com/vedhavyas/go-subkey/v2 => github.com/cordialsys/go-subkey/v2 v2.0.0-20240716000827-4d411d29070a
+	github.com/gagliardetto/solana-go => ../solana-go
 // ac5c009efec5513624b97ed67024
 )

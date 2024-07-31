@@ -55,15 +55,24 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
-func NewVariantClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
 	driver := cfg.GetChain().Driver
 	switch driver {
 	case DriverEVM:
-		rpcClient, err := evmclient.NewClient(cfg)
-		if err != nil {
-			return nil, err
+		switch provider {
+		case Kiln:
+			rpcClient, err := evmclient.NewClient(cfg)
+			if err != nil {
+				return nil, err
+			}
+			return kiln.NewClient(rpcClient, cfg.GetChain(), servicesConfig)
+		case Twinstake:
+			return nil, fmt.Errorf("not implemented")
+		case Native:
+			return nil, fmt.Errorf("EVM does not support native staking")
 		}
-		return kiln.NewClient(rpcClient, cfg.GetChain(), servicesConfig)
+	case DriverSolana:
+		return solana.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }
