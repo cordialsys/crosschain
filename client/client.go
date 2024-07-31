@@ -74,11 +74,47 @@ const UnknownError ClientError = "UnknownError"
 type State string
 
 var Activating State = "activating"
-var Activated State = "activated"
+var Active State = "active"
 var Deactivating State = "deactivating"
 var Inactive State = "inactive"
 
 type LockedBalance struct {
 	State  State               `json:"state"`
 	Amount xc.AmountBlockchain `json:"amount"`
+}
+
+type LockedBalances struct {
+	Active       xc.AmountBlockchain `json:"active,omitempty"`
+	Activating   xc.AmountBlockchain `json:"activating,omitempty"`
+	Deactivating xc.AmountBlockchain `json:"deactivating,omitempty"`
+	Inactive     xc.AmountBlockchain `json:"inactive,omitempty"`
+}
+
+func NewLockedBalances(balances *LockedBalances) []*LockedBalance {
+	balancesList := []*LockedBalance{}
+	if !balances.Activating.IsZero() {
+		balancesList = append(balancesList, &LockedBalance{
+			State:  Activating,
+			Amount: balances.Activating,
+		})
+	}
+	if !balances.Active.IsZero() {
+		balancesList = append(balancesList, &LockedBalance{
+			State:  Active,
+			Amount: balances.Active,
+		})
+	}
+	if !balances.Deactivating.IsZero() {
+		balancesList = append(balancesList, &LockedBalance{
+			State:  Deactivating,
+			Amount: balances.Deactivating,
+		})
+	}
+	if !balances.Inactive.IsZero() {
+		balancesList = append(balancesList, &LockedBalance{
+			State:  Inactive,
+			Amount: balances.Inactive,
+		})
+	}
+	return balancesList
 }

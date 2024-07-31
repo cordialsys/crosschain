@@ -32,7 +32,7 @@ func toStakingState(status string) (xcclient.State, bool) {
 	case "pending_initialized":
 		state = xcclient.Activating
 	case "active_ongoing":
-		state = xcclient.Activated
+		state = xcclient.Active
 	case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
 		state = xcclient.Inactive
 	case "active_exiting", "pending_queued":
@@ -44,7 +44,7 @@ func toStakingState(status string) (xcclient.State, bool) {
 	case "deposit_in_progress":
 		state = xcclient.Activating
 	case "active_ongoing":
-		state = xcclient.Activated
+		state = xcclient.Active
 	case "unstaked":
 		// this means the eth has been returned
 	}

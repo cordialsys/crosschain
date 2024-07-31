@@ -1,4 +1,4 @@
-package main
+package twinstake
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ func jsonprint(a any) {
 	bz, _ := json.MarshalIndent(a, "", "  ")
 	fmt.Println(string(bz))
 }
-func CmdTwinstake() *cobra.Command {
+func CmdTwinstakeTest() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "twinstake",
 		Aliases: []string{"ts"},

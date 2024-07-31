@@ -1,4 +1,4 @@
-package main
+package kiln
 
 import (
 	"context"
@@ -369,9 +369,9 @@ func CmdUnstake() *cobra.Command {
 	return cmd
 }
 
-func CmdKiln() *cobra.Command {
+func CmdKilnTest() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kiln",
+		Use:   "test",
 		Short: "Using kiln provider.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {

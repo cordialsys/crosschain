@@ -17,10 +17,6 @@ func NewBatchDepositInput() *BatchDepositInput {
 	return &BatchDepositInput{}
 }
 
-// func (stakingInput *BatchDepositInput) GetVariant() xc.TxVariant {
-// 	return stakingInput.Variant
-// }
-
 // Mark as valid for staking transactions
 func (*BatchDepositInput) Staking() {}
 
