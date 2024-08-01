@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -41,10 +40,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-// FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
-	asset := client.Asset
 
 	// get recent block hash (i.e. nonce)
 	// GetRecentBlockhash will be deprecated - GetLatestBlockhash already tested, just switch
@@ -57,6 +54,18 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, errors.New("error fetching blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
+
+	return txInput, nil
+}
+
+// FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+
+	asset := client.Asset
 	contract := asset.GetContract()
 	if contract == "" {
 		if _, ok := asset.(*xc.ChainConfig); !ok {
@@ -68,6 +77,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		// native transfer
 		return txInput, nil
 	}
+
 	mint, err := solana.PublicKeyFromBase58(contract)
 	if err != nil {
 		return nil, fmt.Errorf("invalid mint address: %s: %v", contract, err)
@@ -406,74 +416,4 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	}
 
 	return totalBal, nil
-}
-
-func (client *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccountAddress xc.Address) ([]*xclient.LockedBalance, error) {
-	client.SolClient.GetVoteAccounts(ctx, &rpc.GetVoteAccountsOpts{
-		Commitment: rpc.CommitmentFinalized,
-	})
-	stakeAuthority, err := solana.PublicKeyFromBase58(string(address))
-	if err != nil {
-		return nil, err
-	}
-	res, err := client.SolClient.GetProgramAccountsWithOpts(ctx, solana.StakeProgramID, &rpc.GetProgramAccountsOpts{
-		Commitment: rpc.CommitmentFinalized,
-		Encoding:   "jsonParsed",
-		Filters: []rpc.RPCFilter{
-			{
-				Memcmp: &rpc.RPCFilterMemcmp{
-					Offset: 12,
-					Bytes:  stakeAuthority[:],
-				},
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	var stakeAccounts []*types.StakeAccount
-	for _, acc := range res {
-		var stakeAccount types.StakeAccount
-		err := json.Unmarshal(acc.Account.Data.GetRawJSON(), &stakeAccount)
-		if err != nil {
-			return nil, err
-		}
-		stakeAccounts = append(stakeAccounts, &stakeAccount)
-		fmt.Println(string(acc.Account.Data.GetRawJSON()))
-	}
-
-	active := uint64(0)
-	inactive := uint64(0)
-	epochInfo, err := client.SolClient.GetEpochInfo(ctx, rpc.CommitmentFinalized)
-	if err != nil {
-		return nil, err
-	}
-	activating := uint64(0)
-	deactivating := uint64(0)
-	for _, stake := range stakeAccounts {
-		activatedEpoch := xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
-		if activatedEpoch == epochInfo.Epoch {
-			// must wait an epoch before it's active
-			activating += xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		} else {
-			active += xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		}
-		inactive += xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Meta.RentExemptReserve).Uint64()
-		// TODO deactivating
-		_ = deactivating
-	}
-
-	return xclient.NewLockedBalances(&xclient.LockedBalances{
-		Activating:   xc.NewAmountBlockchainFromUint64(activating),
-		Active:       xc.NewAmountBlockchainFromUint64(active),
-		Deactivating: xc.NewAmountBlockchainFromUint64(deactivating),
-		Inactive:     xc.NewAmountBlockchainFromUint64(inactive),
-	}), nil
-}
-
-func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
-	return nil, errors.New("not implemented")
-}
-func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
-	return nil, errors.New("not implemented")
 }

@@ -39,7 +39,7 @@ type FullClient interface {
 
 type StakingClient interface {
 	// Fetch staked balances accross different possible states
-	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*LockedBalance, error)
+	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*StakedBalance, error)
 
 	// Fetch inputs required for a staking transaction
 	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error)
@@ -78,42 +78,48 @@ var Active State = "active"
 var Deactivating State = "deactivating"
 var Inactive State = "inactive"
 
-type LockedBalance struct {
+type StakedBalance struct {
 	State  State               `json:"state"`
 	Amount xc.AmountBlockchain `json:"amount"`
+	// the validator that the stake is delegated to
+	Validator string `json:"validator,omitempty"`
 }
 
-type LockedBalances struct {
+type StakedBalances struct {
 	Active       xc.AmountBlockchain `json:"active,omitempty"`
 	Activating   xc.AmountBlockchain `json:"activating,omitempty"`
 	Deactivating xc.AmountBlockchain `json:"deactivating,omitempty"`
 	Inactive     xc.AmountBlockchain `json:"inactive,omitempty"`
 }
 
-func NewLockedBalances(balances *LockedBalances) []*LockedBalance {
-	balancesList := []*LockedBalance{}
+func NewStakedBalances(validator string, balances *StakedBalances) []*StakedBalance {
+	balancesList := []*StakedBalance{}
 	if !balances.Activating.IsZero() {
-		balancesList = append(balancesList, &LockedBalance{
-			State:  Activating,
-			Amount: balances.Activating,
+		balancesList = append(balancesList, &StakedBalance{
+			State:     Activating,
+			Amount:    balances.Activating,
+			Validator: validator,
 		})
 	}
 	if !balances.Active.IsZero() {
-		balancesList = append(balancesList, &LockedBalance{
-			State:  Active,
-			Amount: balances.Active,
+		balancesList = append(balancesList, &StakedBalance{
+			State:     Active,
+			Amount:    balances.Active,
+			Validator: validator,
 		})
 	}
 	if !balances.Deactivating.IsZero() {
-		balancesList = append(balancesList, &LockedBalance{
-			State:  Deactivating,
-			Amount: balances.Deactivating,
+		balancesList = append(balancesList, &StakedBalance{
+			State:     Deactivating,
+			Amount:    balances.Deactivating,
+			Validator: validator,
 		})
 	}
 	if !balances.Inactive.IsZero() {
-		balancesList = append(balancesList, &LockedBalance{
-			State:  Inactive,
-			Amount: balances.Inactive,
+		balancesList = append(balancesList, &StakedBalance{
+			State:     Inactive,
+			Amount:    balances.Inactive,
+			Validator: validator,
 		})
 	}
 	return balancesList

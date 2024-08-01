@@ -68,7 +68,7 @@ func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *s
 	return &Client{rpcClient, kilnClient, chain}, nil
 }
 
-func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*xcclient.LockedBalance, error) {
+func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*xcclient.StakedBalance, error) {
 	// On evm stakes are identified solely by validator, so we can map to either validator or account ID
 	if validator == "" && stakeAccount != "" {
 		validator = string(stakeAccount)
@@ -92,7 +92,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 			status = xcclient.Activating
 			logrus.Warn("unknown beacon validator state", status)
 		}
-		return []*xcclient.LockedBalance{
+		return []*xcclient.StakedBalance{
 			{
 				State:  status,
 				Amount: amount,
@@ -111,7 +111,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 	}
 	if res.Data[0].State == "unstaked" {
 		// this means the eth has been sent back, so no balance is in a staking state.
-		return []*xcclient.LockedBalance{}, nil
+		return []*xcclient.StakedBalance{}, nil
 	}
 	var ok bool
 	status, ok = toStakingState(res.Data[0].State)
@@ -120,7 +120,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, address xc.Address, va
 		status = xcclient.Activating
 		logrus.WithField("kiln-state", res.Data[0].State).Warn("unknown validator state")
 	}
-	return []*xcclient.LockedBalance{
+	return []*xcclient.StakedBalance{
 		{
 			State:  status,
 			Amount: amount,
