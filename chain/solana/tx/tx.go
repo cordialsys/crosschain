@@ -15,10 +15,11 @@ import (
 
 // Tx for Solana, encapsulating a solana.Transaction and other info
 type Tx struct {
-	SolTx           *solana.Transaction
-	ParsedSolTx     *rpc.ParsedTransaction // similar, but different type
-	parsedTransfer  interface{}
-	inputSignatures []xc.TxSignature
+	SolTx            *solana.Transaction
+	ParsedSolTx      *rpc.ParsedTransaction // similar, but different type
+	parsedTransfer   interface{}
+	inputSignatures  []xc.TxSignature
+	transientSigners []solana.PrivateKey
 }
 
 var _ xc.Tx = &Tx{}
@@ -44,6 +45,13 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	return []xc.TxDataToSign{messageContent}, nil
 }
 
+// Some instructions on solana require new accounts to sign the transaction
+// in addition to the funding account.  These are transient signers are not
+// sensitive and the key material only needs to live long enough to sign the transaction.
+func (tx *Tx) AddTransientSigner(transientSigner solana.PrivateKey) {
+	tx.transientSigners = append(tx.transientSigners, transientSigner)
+}
+
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	if tx.SolTx == nil {
@@ -58,6 +66,17 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	}
 	tx.SolTx.Signatures = solSignatures
 	tx.inputSignatures = signatures
+
+	// add transient signers
+	for _, transient := range tx.transientSigners {
+		bz, _ := tx.SolTx.Message.MarshalBinary()
+		sig, err := transient.Sign(bz)
+		if err != nil {
+			return fmt.Errorf("unable to sign with transient signer: %v", err)
+		}
+		tx.SolTx.Signatures = append(tx.SolTx.Signatures, sig)
+		tx.inputSignatures = append(tx.inputSignatures, sig[:])
+	}
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/examples/staking/kiln"
 	"github.com/cordialsys/crosschain/examples/staking/solana"
+	"github.com/cordialsys/crosschain/examples/staking/staking"
 	"github.com/cordialsys/crosschain/examples/staking/twinstake"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -67,6 +68,7 @@ func CmdStaking() *cobra.Command {
 	cmd.AddCommand(twinstake.CmdTwinstake())
 	cmd.AddCommand(kiln.CmdKiln())
 	cmd.AddCommand(solana.CmdSolana())
+	cmd.AddCommand(staking.CmdStaking())
 
 	return cmd
 }

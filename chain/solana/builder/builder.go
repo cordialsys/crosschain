@@ -241,7 +241,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
 }
 
-func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, accountFrom solana.PublicKey, txInput *TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, accountFrom solana.PublicKey, txInput *TxInput) (*tx.Tx, error) {
 	tx1, err := solana.NewTransaction(
 		instructions,
 		txInput.RecentBlockHash,
@@ -329,10 +329,4 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 	}
 
 	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
-}
-func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
-	return nil, fmt.Errorf("unimplemented")
-}
-func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
-	return nil, fmt.Errorf("unimplemented")
 }
