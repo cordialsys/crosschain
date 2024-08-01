@@ -10,7 +10,7 @@ import (
 	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
-	"github.com/cordialsys/crosschain/chain/solana"
+	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/config/constants"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -481,7 +481,7 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require := s.Require()
 
 	// Solana
-	inputSolana := solana.NewTxInput()
+	inputSolana := solanatxinput.NewTxInput()
 	inputSolana.RecentBlockHash = [32]byte{1, 2, 3}
 	inputSolana.ToIsATA = true
 	inputSolana.ShouldCreateATA = true
@@ -490,7 +490,7 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 
 	deser, err := s.Factory.UnmarshalTxInput(ser)
 	require.NoError(err)
-	typedSolana := deser.(*solana.TxInput)
+	typedSolana := deser.(*solanatxinput.TxInput)
 	require.NotNil(typedSolana)
 	require.Equal(inputSolana, typedSolana)
 

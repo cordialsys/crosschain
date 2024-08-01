@@ -1,15 +1,17 @@
-package solana
+package tx_test
 
 import (
 	"encoding/hex"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/solana/tx"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
+	"github.com/test-go/testify/require"
 )
 
-func (s *SolanaTestSuite) TestTx() {
-	require := s.Require()
+func TestTx(t *testing.T) {
 	vectors := []struct {
 		hash            string
 		bin             string
@@ -97,103 +99,95 @@ func (s *SolanaTestSuite) TestTx() {
 	for _, v := range vectors {
 		bytes, _ := hex.DecodeString(v.bin)
 		solTx, _ := solana.TransactionFromDecoder(bin.NewBinDecoder(bytes))
-		tx := &Tx{
+		tx := &tx.Tx{
 			SolTx: solTx,
 		}
 		tx.ParseTransfer()
 
 		// basic info
-		require.Equal(v.hash, string(tx.Hash()))
-		require.Equal(v.from, string(tx.From()))
-		require.Equal(v.to, string(tx.ToOwnerAccount()))
-		require.Equal(v.amount, tx.Amount().String())
-		require.Equal(v.contract, string(tx.ContractAddress()))
-		require.Equal(v.recentBlockhash, string(tx.RecentBlockhash()))
+		require.Equal(t, v.hash, string(tx.Hash()))
+		require.Equal(t, v.from, string(tx.From()))
+		require.Equal(t, v.to, string(tx.ToOwnerAccount()))
+		require.Equal(t, v.amount, tx.Amount().String())
+		require.Equal(t, v.contract, string(tx.ContractAddress()))
+		require.Equal(t, v.recentBlockhash, string(tx.RecentBlockhash()))
 
 		// sighashes
 		sighashes, err := tx.Sighashes()
 		if v.hash == "" {
-			require.EqualError(err, "transaction not initialized")
-			require.Nil(tx.SolTx)
+			require.EqualError(t, err, "transaction not initialized")
+			require.Nil(t, tx.SolTx)
 		} else {
-			require.Nil(err)
-			require.Equal(v.sighash, hex.EncodeToString(sighashes[0]))
+			require.NoError(t, err)
+			require.Equal(t, v.sighash, hex.EncodeToString(sighashes[0]))
 
 			// remove signature
-			require.Equal(1, len(tx.SolTx.Signatures))
+			require.Equal(t, 1, len(tx.SolTx.Signatures))
 			sig := tx.SolTx.Signatures[0][:]
 			tx.SolTx.Signatures = tx.SolTx.Signatures[:0]
-			require.Equal(0, len(tx.SolTx.Signatures))
-			require.Equal("", string(tx.Hash()))
+			require.Equal(t, 0, len(tx.SolTx.Signatures))
+			require.Equal(t, "", string(tx.Hash()))
 
 			// readd signature
 			err = tx.AddSignatures(sig)
-			require.Nil(err)
-			require.Equal(v.hash, string(tx.Hash()))
+			require.NoError(t, err)
+			require.Equal(t, v.hash, string(tx.Hash()))
 
 			// serialize
 			serialized, err := tx.Serialize()
-			require.Nil(err)
-			require.Equal(v.bin, hex.EncodeToString(serialized))
+			require.NoError(t, err)
+			require.Equal(t, v.bin, hex.EncodeToString(serialized))
 		}
 	}
 }
 
-func (s *SolanaTestSuite) TestTxHashErr() {
-	require := s.Require()
-
-	tx := Tx{}
+func TestTxHashErr(t *testing.T) {
+	tx := tx.Tx{}
 	hash := tx.Hash()
-	require.Equal("", string(hash))
+	require.Equal(t, "", string(hash))
 }
 
-func (s *SolanaTestSuite) TestTxSighashesErr() {
-	require := s.Require()
-
-	tx := Tx{}
+func TestTxSighashesErr(t *testing.T) {
+	tx := tx.Tx{}
 	sighashes, err := tx.Sighashes()
-	require.EqualError(err, "transaction not initialized")
-	require.Nil(sighashes)
+	require.EqualError(t, err, "transaction not initialized")
+	require.Nil(t, sighashes)
 }
 
-func (s *SolanaTestSuite) TestTxAddSignatureErr() {
-	require := s.Require()
+func TestTxAddSignatureErr(t *testing.T) {
+	tx1 := tx.Tx{}
+	err := tx1.AddSignatures([]xc.TxSignature{}...)
+	require.EqualError(t, err, "transaction not initialized")
 
-	tx := Tx{}
-	err := tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(err, "transaction not initialized")
-
-	err = tx.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
-	require.EqualError(err, "transaction not initialized")
+	err = tx1.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
+	require.EqualError(t, err, "transaction not initialized")
 
 	bytes := make([]byte, 64)
-	err = tx.AddSignatures([]xc.TxSignature{bytes}...)
-	require.EqualError(err, "transaction not initialized")
+	err = tx1.AddSignatures([]xc.TxSignature{bytes}...)
+	require.EqualError(t, err, "transaction not initialized")
 
-	tx = Tx{SolTx: &solana.Transaction{}}
-	err = tx.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
-	require.EqualError(err, "invalid signature (3): 010203")
+	tx1 = tx.Tx{SolTx: &solana.Transaction{}}
+	err = tx1.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
+	require.EqualError(t, err, "invalid signature (3): 010203")
 
 	bytes = make([]byte, 64)
-	err = tx.AddSignatures([]xc.TxSignature{bytes}...)
-	require.Nil(err)
-	require.Equal(1, len(tx.SolTx.Signatures))
+	err = tx1.AddSignatures([]xc.TxSignature{bytes}...)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(tx1.SolTx.Signatures))
 
-	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.Nil(err)
-	require.Equal(0, len(tx.SolTx.Signatures))
+	err = tx1.AddSignatures([]xc.TxSignature{}...)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(tx1.SolTx.Signatures))
 }
 
-func (s *SolanaTestSuite) TestTxSerialize() {
-	require := s.Require()
+func TestTxSerialize(t *testing.T) {
+	tx1 := tx.Tx{}
+	serialized, err := tx1.Serialize()
+	require.EqualError(t, err, "transaction not initialized")
+	require.Equal(t, serialized, []byte{})
 
-	tx := Tx{}
-	serialized, err := tx.Serialize()
-	require.EqualError(err, "transaction not initialized")
-	require.Equal(serialized, []byte{})
-
-	tx = Tx{SolTx: &solana.Transaction{}}
-	serialized, err = tx.Serialize()
-	require.Nil(err)
-	require.Equal(serialized, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
+	tx1 = tx.Tx{SolTx: &solana.Transaction{}}
+	serialized, err = tx1.Serialize()
+	require.NoError(t, err)
+	require.Equal(t, serialized, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0})
 }

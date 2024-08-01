@@ -22,7 +22,7 @@ import (
 
 	"github.com/cordialsys/crosschain"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
-	xcsolana "github.com/cordialsys/crosschain/chain/solana"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/gagliardetto/solana-go"
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
@@ -176,7 +176,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			recentHash := input.(*xcsolana.TxInput).RecentBlockHash
+			recentHash := input.(*tx_input.TxInput).RecentBlockHash
 
 			tx, err := buildSolanaTx(instructions, fromPub, recentHash)
 			if err != nil {

@@ -1,4 +1,4 @@
-package solana
+package tx_input
 
 import (
 	xc "github.com/cordialsys/crosschain"

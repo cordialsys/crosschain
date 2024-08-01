@@ -17,6 +17,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
+	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
+	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
+	solanaclient "github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
@@ -36,7 +39,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewClient(cfg)
 	case DriverSolana:
-		return solana.NewClient(cfg)
+		return solanaclient.NewClient(cfg)
 	case DriverAptos:
 		return aptos.NewClient(cfg)
 	case DriverSui:
@@ -72,7 +75,7 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 			return nil, fmt.Errorf("EVM does not support native staking")
 		}
 	case DriverSolana:
-		return solana.NewClient(cfg)
+		return solanaclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }
@@ -86,7 +89,7 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewTxBuilder(cfg)
 	case DriverSolana:
-		return solana.NewTxBuilder(cfg)
+		return solanabuilder.NewTxBuilder(cfg)
 	case DriverAptos:
 		return aptos.NewTxBuilder(cfg)
 	case DriverSui:
@@ -119,7 +122,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.NewAddressBuilder(cfg)
 	case DriverSolana:
-		return solana.NewAddressBuilder(cfg)
+		return solanaaddress.NewAddressBuilder(cfg)
 	case DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
 	case DriverBitcoin, DriverBitcoinLegacy:
