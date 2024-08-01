@@ -1,4 +1,4 @@
-package solana
+package client
 
 import (
 	"context"
@@ -11,19 +11,16 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/sirupsen/logrus"
 
-	"github.com/cordialsys/crosschain/builder"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/solana/builder"
+	"github.com/cordialsys/crosschain/chain/solana/tx"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 )
-
-type TokenAccount struct {
-	Account solana.PublicKey    `json:"account,omitempty"`
-	Balance xc.AmountBlockchain `json:"balance,omitempty"`
-}
 
 // Client for Solana
 type Client struct {
@@ -46,7 +43,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	txInput := NewTxInput()
+	txInput := tx_input.NewTxInput()
 	asset := client.Asset
 
 	// get recent block hash (i.e. nonce)
@@ -101,7 +98,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// for tokens, get ata account info
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := FindAssociatedTokenAddress(string(args.GetTo()), contract, mintInfo.Value.Owner)
+		ataToStr, err := types.FindAssociatedTokenAddress(string(args.GetTo()), contract, mintInfo.Value.Owner)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +120,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		for _, acc := range tokenAccounts {
 			amount := xc.NewAmountBlockchainFromStr(acc.Info.Parsed.Info.TokenAmount.Amount)
 			if amount.Cmp(&zero) > 0 {
-				txInput.SourceTokenAccounts = append(txInput.SourceTokenAccounts, &TokenAccount{
+				txInput.SourceTokenAccounts = append(txInput.SourceTokenAccounts, &tx_input.TokenAccount{
 					Account: acc.Account.Pubkey,
 					Balance: amount,
 				})
@@ -134,8 +131,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		sort.Slice(txInput.SourceTokenAccounts, func(i, j int) bool {
 			return txInput.SourceTokenAccounts[i].Balance.Cmp(&txInput.SourceTokenAccounts[j].Balance) > 0
 		})
-		if len(txInput.SourceTokenAccounts) > MaxTokenTransfers {
-			txInput.SourceTokenAccounts = txInput.SourceTokenAccounts[:MaxTokenTransfers]
+		if len(txInput.SourceTokenAccounts) > builder.MaxTokenTransfers {
+			txInput.SourceTokenAccounts = txInput.SourceTokenAccounts[:builder.MaxTokenTransfers]
 		}
 
 		if len(tokenAccounts) == 0 {
@@ -229,7 +226,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return result, err
 	}
-	tx := NewTxFrom(solTx)
+	tx := tx.NewTxFrom(solTx)
 	meta := res.Meta
 	if res.BlockTime != nil {
 		result.BlockTime = res.BlockTime.Time().Unix()
@@ -287,52 +284,25 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Account), nil
 }
 
-func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (TokenAccountInfo, error) {
-	var accountInfo TokenAccountInfo
+func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (types.TokenAccountInfo, error) {
+	var accountInfo types.TokenAccountInfo
 	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, tokenAccount, &rpc.GetAccountInfoOpts{
 		Commitment: rpc.CommitmentFinalized,
 		Encoding:   "jsonParsed",
 	})
 	if err != nil {
-		return TokenAccountInfo{}, err
+		return types.TokenAccountInfo{}, err
 	}
-	accountInfo, err = ParseRpcData(info.Value.Data)
+	accountInfo, err = types.ParseRpcData(info.Value.Data)
 	if err != nil {
-		return TokenAccountInfo{}, err
+		return types.TokenAccountInfo{}, err
 	}
 	return accountInfo, nil
 }
 
-// FindAssociatedTokenAddress returns the associated token account (ATA) for a given account and token
-func FindAssociatedTokenAddress(addr string, contract string, tokenProgram solana.PublicKey) (string, error) {
-	address, err := solana.PublicKeyFromBase58(addr)
-	if err != nil {
-		return "", err
-	}
-	mint, err := solana.PublicKeyFromBase58(contract)
-	if err != nil {
-		return "", err
-	}
-	if len(tokenProgram) == 0 || tokenProgram.IsZero() {
-		tokenProgram = solana.TokenProgramID
-	}
-	associatedAddr, _, err := solana.FindProgramAddress(
-		[][]byte{
-			address[:],
-			tokenProgram[:],
-			mint[:],
-		},
-		solana.SPLAssociatedTokenAccountProgramID,
-	)
-	if err != nil {
-		return "", err
-	}
-	return associatedAddr.String(), nil
-}
-
 type TokenAccountWithInfo struct {
 	// We need to manually parse TokenAccountInfo
-	Info *TokenAccountInfo
+	Info *types.TokenAccountInfo
 	// Account is what's returned by solana client
 	Account *rpc.TokenAccount
 }
@@ -362,8 +332,8 @@ func (client *Client) GetTokenAccountsByOwner(ctx context.Context, addr string, 
 	}
 	tokenAccounts := []*TokenAccountWithInfo{}
 	for _, acc := range out.Value {
-		var accountInfo TokenAccountInfo
-		accountInfo, err = ParseRpcData(acc.Account.Data)
+		var accountInfo types.TokenAccountInfo
+		accountInfo, err = types.ParseRpcData(acc.Account.Data)
 		if err != nil {
 			return nil, err
 		}
@@ -501,9 +471,9 @@ func (client *Client) FetchStakeBalance(ctx context.Context, address xc.Address,
 	}), nil
 }
 
-func (client *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error) {
+func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	return nil, errors.New("not implemented")
 }
-func (client *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error) {
+func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
 	return nil, errors.New("not implemented")
 }

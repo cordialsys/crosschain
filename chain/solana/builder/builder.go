@@ -1,10 +1,14 @@
-package solana
+package builder
 
 import (
 	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/solana/tx"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
+	"github.com/cordialsys/crosschain/chain/solana/types"
 	"github.com/gagliardetto/solana-go"
 	ata "github.com/gagliardetto/solana-go/programs/associated-token-account"
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
@@ -17,6 +21,10 @@ import (
 type TxBuilder struct {
 	Asset xc.ITask
 }
+
+var _ xcbuilder.FullBuilder = &TxBuilder{}
+
+type TxInput = tx_input.TxInput
 
 // Max number of token transfers we can fit in a solana transaction,
 // when there's also a create ATA included.
@@ -53,6 +61,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		}
 	}
 }
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput xc.TxInput) (xc.Tx, error) {
@@ -87,7 +98,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		)
 	}
 
-	tx, err := solana.NewTransaction(
+	tx1, err := solana.NewTransaction(
 		instructions,
 		input.RecentBlockHash,
 		solana.TransactionPayer(accountFrom),
@@ -95,8 +106,8 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{
-		SolTx: tx,
+	return &tx.Tx{
+		SolTx: tx1,
 	}, nil
 }
 
@@ -126,7 +137,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, err
 	}
 
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), solana.PublicKey(txInput.TokenProgram))
+	ataFromStr, err := types.FindAssociatedTokenAddress(string(from), string(contract), solana.PublicKey(txInput.TokenProgram))
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +148,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := FindAssociatedTokenAddress(string(to), string(contract), solana.PublicKey(txInput.TokenProgram))
+		ataToStr, err := types.FindAssociatedTokenAddress(string(to), string(contract), solana.PublicKey(txInput.TokenProgram))
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +242,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 }
 
 func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, accountFrom solana.PublicKey, txInput *TxInput) (xc.Tx, error) {
-	tx, err := solana.NewTransaction(
+	tx1, err := solana.NewTransaction(
 		instructions,
 		txInput.RecentBlockHash,
 		solana.TransactionPayer(accountFrom),
@@ -239,8 +250,8 @@ func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, acco
 	if err != nil {
 		return nil, err
 	}
-	return &Tx{
-		SolTx: tx,
+	return &tx.Tx{
+		SolTx: tx1,
 	}, nil
 }
 
@@ -253,7 +264,7 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 	case "UnwrapEverythingTx":
 		return txBuilder.BuildUnwrapEverythingTx(from, to, amount, txInput)
 	}
-	return &Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())
+	return &tx.Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())
 }
 
 func (txBuilder TxBuilder) BuildWrapTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput *TxInput) (xc.Tx, error) {
@@ -272,7 +283,7 @@ func (txBuilder TxBuilder) BuildWrapTx(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
+	ataFromStr, err := types.FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +316,7 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 	}
 
 	contract := asset.GetContract()
-	ataFromStr, err := FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
+	ataFromStr, err := types.FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
 	if err != nil {
 		return nil, err
 	}
@@ -318,4 +329,10 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 	}
 
 	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
+}
+func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
+	return nil, fmt.Errorf("unimplemented")
+}
+func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
+	return nil, fmt.Errorf("unimplemented")
 }

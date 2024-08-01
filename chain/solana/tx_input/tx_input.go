@@ -1,4 +1,4 @@
-package solana
+package tx_input
 
 import (
 	"time"
@@ -7,11 +7,6 @@ import (
 	"github.com/gagliardetto/solana-go"
 	"github.com/shopspring/decimal"
 )
-
-// type TokenType string
-
-// var TokenSpl TokenType = "spl"
-// var Token2022 TokenType = "token2022"
 
 // TxInput for Solana
 type TxInput struct {
@@ -23,6 +18,11 @@ type TxInput struct {
 	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
 	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
 	Timestamp           int64               `json:"timestamp,omitempty"`
+}
+
+type TokenAccount struct {
+	Account solana.PublicKey    `json:"account,omitempty"`
+	Balance xc.AmountBlockchain `json:"balance,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}

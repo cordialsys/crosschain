@@ -10,7 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
-	"github.com/cordialsys/crosschain/chain/solana"
+	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
@@ -34,7 +34,7 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 	case xc.DriverEVMLegacy:
 		return evm_legacy.NewTxInput(), nil
 	case xc.DriverSolana:
-		return solana.NewTxInput(), nil
+		return solanatxinput.NewTxInput(), nil
 	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
 		return bitcointxinput.NewTxInput(), nil
 	case xc.DriverSui:

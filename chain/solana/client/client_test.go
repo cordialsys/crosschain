@@ -1,53 +1,60 @@
-package solana
+package client_test
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcsolana "github.com/cordialsys/crosschain/chain/solana"
+	"github.com/cordialsys/crosschain/chain/solana/client"
+	"github.com/cordialsys/crosschain/chain/solana/tx"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
+	"github.com/cordialsys/crosschain/chain/solana/types"
 	xcclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *SolanaTestSuite) TestNewClient() {
-	require := s.Require()
-	client, err := NewClient(&xc.ChainConfig{})
-	require.NotNil(client)
-	require.Nil(err)
+type TxInput = tx_input.TxInput
+
+func TestNewClient(t *testing.T) {
+	client, err := client.NewClient(&xc.ChainConfig{})
+	require.NotNil(t, client)
+	require.NoError(t, err)
 }
 
-func (s *SolanaTestSuite) TestFindAssociatedTokenAddress() {
-	require := s.Require()
+func TestFindAssociatedTokenAddress(t *testing.T) {
 
-	ata, err := FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
-	require.NoError(err)
-	require.Equal("DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
+	ata, err := types.FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
+	require.NoError(t, err)
+	require.Equal(t, "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
 
 	// backwards compat with no token owner being used
-	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.PublicKey{})
-	require.NoError(err)
-	require.Equal("DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
+	ata, err = types.FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.PublicKey{})
+	require.NoError(t, err)
+	require.Equal(t, "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ata)
 
-	ata, err = FindAssociatedTokenAddress("CMNyyCXkAQ5cfFS2zQEg6YPzd8fpHvMFbbbmUfjoPp1s", "BRfq2tdBXycyPA9PWeGFPA61327VNQMkZBE7rTAcvYDr", solana.Token2022ProgramID)
-	require.NoError(err)
-	require.Equal("5LJSMaVdHFzaDG6wPtRSL1RULtKWgrRubXcbeARsLLru", ata)
+	ata, err = types.FindAssociatedTokenAddress("CMNyyCXkAQ5cfFS2zQEg6YPzd8fpHvMFbbbmUfjoPp1s", "BRfq2tdBXycyPA9PWeGFPA61327VNQMkZBE7rTAcvYDr", solana.Token2022ProgramID)
+	require.NoError(t, err)
+	require.Equal(t, "5LJSMaVdHFzaDG6wPtRSL1RULtKWgrRubXcbeARsLLru", ata)
 
-	ata, err = FindAssociatedTokenAddress("", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
-	require.ErrorContains(err, "zero length string")
-	require.Equal("", ata)
+	ata, err = types.FindAssociatedTokenAddress("", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
+	require.ErrorContains(t, err, "zero length string")
+	require.Equal(t, "", ata)
 
-	ata, err = FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx", solana.TokenProgramID)
-	require.ErrorContains(err, "invalid length")
-	require.Equal("", ata)
+	ata, err = types.FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx", solana.TokenProgramID)
+	require.ErrorContains(t, err, "invalid length")
+	require.Equal(t, "", ata)
 }
 
-func (s *SolanaTestSuite) TestErrors() {
-	require := s.Require()
-	require.Equal(xcclient.TransactionTimedOut, CheckError(errors.New("Transaction simulation failed: Blockhash not found")))
+func TestErrors(t *testing.T) {
+	require.Equal(t, xcclient.TransactionTimedOut, xcsolana.CheckError(errors.New("Transaction simulation failed: Blockhash not found")))
 }
 
 /*
@@ -64,8 +71,7 @@ curl https://api.devnet.solana.com -X POST -H "Content-Type: application/json" -
 
 '
 */
-func (s *SolanaTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
 		asset             xc.ITask
@@ -248,7 +254,7 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 
 	for i, v := range vectors {
 		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 		fmt.Println("ASSET", v.asset)
 		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
@@ -260,68 +266,64 @@ func (s *SolanaTestSuite) TestFetchTxInput() {
 			v.asset.(*xc.ChainConfig).URL = server.URL
 		}
 
-		client, _ := NewClient(v.asset)
+		client, _ := client.NewClient(v.asset)
 		from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 		to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
+		input, err := client.FetchLegacyTxInput(context.Background(), from, to)
 
 		if v.err != "" {
-			require.Nil(input)
-			require.ErrorContains(err, v.err)
+			require.Nil(t, input)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.NoError(err)
-			require.NotNil(input)
-			require.Equal(v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
-			require.Equal(v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
-			require.Equal(v.blockHash, input.(*TxInput).RecentBlockHash.String())
+			require.NoError(t, err)
+			require.NotNil(t, input)
+			require.Equal(t, v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
+			require.Equal(t, v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
+			require.Equal(t, v.blockHash, input.(*TxInput).RecentBlockHash.String())
 			if v.tokenAccountCount > 0 {
-				require.Len(input.(*TxInput).SourceTokenAccounts, v.tokenAccountCount)
+				require.Len(t, input.(*TxInput).SourceTokenAccounts, v.tokenAccountCount)
 				// token accounts must be sorted descending
 				for i := 1; i < v.tokenAccountCount; i++ {
 					prior := input.(*TxInput).SourceTokenAccounts[i-1].Balance.Uint64()
 					current := input.(*TxInput).SourceTokenAccounts[i].Balance.Uint64()
-					require.LessOrEqual(current, prior)
+					require.LessOrEqual(t, current, prior)
 				}
 			}
 		}
 	}
 }
 
-func (s *SolanaTestSuite) TestSubmitTxSuccess() {
-	require := s.Require()
+func TestSubmitTxSuccess(t *testing.T) {
 	txbin := "01df5ff457c2cdd23242ab26edd0b308d78499f28c6d43e185149cacdb88b35db171f1779e48ce2224cc80b9b9ce46dd80758319068b08eae34b14dc2cd070ab000100010379726da52d99d60b07ead73b2f6f0bf6083cc85c77a94e34d691d78f8bcafec9fc880863219008406235fa4c8fbb2a86d3da7b6762eac39323b2a1d8c404a4140000000000000000000000000000000000000000000000000000000000000000932bbef1569d58f4a116f41028f766439b2ba52c68c3308bbbea2b21e4716f6701020200010c0200000000ca9a3b00000000"
 	bytes, _ := hex.DecodeString(txbin)
 	solTx, _ := solana.TransactionFromDecoder(bin.NewBinDecoder(bytes))
-	tx := &Tx{
+	tx := &tx.Tx{
 		SolTx: solTx,
 	}
 	serialized_tx, err := tx.Serialize()
-	require.NoError(err)
+	require.NoError(t, err)
 
-	server, close := testtypes.MockJSONRPC(s.T(), fmt.Sprintf("\"%s\"", tx.Hash()))
+	server, close := testtypes.MockJSONRPC(t, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
-	client, _ := NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
-	err = client.SubmitTx(s.Ctx, &testtypes.MockXcTx{
+	client, _ := client.NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
+	err = client.SubmitTx(context.Background(), &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 		Signatures:         []xc.TxSignature{{1, 2, 3, 4}},
 	})
-	require.NoError(err)
+	require.NoError(t, err)
 }
-func (s *SolanaTestSuite) TestSubmitTxErr() {
-	require := s.Require()
+func TestSubmitTxErr(t *testing.T) {
 
-	client, _ := NewClient(&xc.ChainConfig{})
-	tx := &Tx{
-		SolTx:          &solana.Transaction{},
-		ParsedSolTx:    &rpc.ParsedTransaction{},
-		parsedTransfer: nil,
+	client, _ := client.NewClient(&xc.ChainConfig{})
+	tx := &tx.Tx{
+		SolTx:       &solana.Transaction{},
+		ParsedSolTx: &rpc.ParsedTransaction{},
 	}
-	err := client.SubmitTx(s.Ctx, tx)
-	require.ErrorContains(err, "unsupported protocol scheme")
+	err := client.SubmitTx(context.Background(), tx)
+	require.ErrorContains(t, err, "unsupported protocol scheme")
 }
 
-func (s *SolanaTestSuite) TestAccountBalance() {
-	require := s.Require()
+func TestAccountBalance(t *testing.T) {
 
 	vectors := []struct {
 		resp interface{}
@@ -351,26 +353,25 @@ func (s *SolanaTestSuite) TestAccountBalance() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		balance, err := client.FetchNativeBalance(s.Ctx, from)
+		balance, err := client.FetchNativeBalance(context.Background(), from)
 
 		if v.err != "" {
-			require.Equal("0", balance.String())
-			require.ErrorContains(err, v.err)
+			require.Equal(t, "0", balance.String())
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(balance)
-			require.Equal(v.val, balance.String())
+			require.Nil(t, err)
+			require.NotNil(t, balance)
+			require.Equal(t, v.val, balance.String())
 		}
 	}
 }
 
-func (s *SolanaTestSuite) TestTokenBalance() {
-	require := s.Require()
+func TestTokenBalance(t *testing.T) {
 
 	vectors := []struct {
 		resp interface{}
@@ -403,31 +404,30 @@ func (s *SolanaTestSuite) TestTokenBalance() {
 
 	for i, v := range vectors {
 		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.TokenAssetConfig{
+		client, _ := client.NewClient(&xc.TokenAssetConfig{
 			ChainConfig: &xc.ChainConfig{
 				URL: server.URL,
 			},
 			Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 		})
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		balance, err := client.FetchBalance(s.Ctx, from)
+		balance, err := client.FetchBalance(context.Background(), from)
 
 		if v.err != "" {
-			require.Equal("0", balance.String())
-			require.ErrorContains(err, v.err)
+			require.Equal(t, "0", balance.String())
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(balance)
-			require.Equal(v.val, balance.String())
+			require.Nil(t, err)
+			require.NotNil(t, balance)
+			require.Equal(t, v.val, balance.String())
 		}
 	}
 }
 
-func (s *SolanaTestSuite) TestFetchTxInfo() {
-	require := s.Require()
+func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
 		tx   string
@@ -592,19 +592,19 @@ func (s *SolanaTestSuite) TestFetchTxInfo() {
 
 	for i, v := range vectors {
 		fmt.Println("test case ", i)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := NewClient(&xc.ChainConfig{URL: server.URL})
-		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.tx))
+		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
+		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 		if v.err != "" {
-			require.Equal(xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(txInfo)
-			require.Equal(v.val, txInfo)
+			require.Nil(t, err)
+			require.NotNil(t, txInfo)
+			require.Equal(t, v.val, txInfo)
 		}
 	}
 }

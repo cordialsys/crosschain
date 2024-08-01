@@ -1,16 +1,17 @@
-package solana
+package tx_input
 
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/gagliardetto/solana-go"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *SolanaTestSuite) TestTxInputConflicts() {
-	require := s.Require()
+func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
 		newInput xc.TxInput
 		oldInput xc.TxInput
@@ -85,11 +86,13 @@ func (s *SolanaTestSuite) TestTxInputConflicts() {
 		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
 		fmt.Println()
 		require.Equal(
+			t,
 			v.newInput.IndependentOf(v.oldInput),
 			v.independent,
 			"IndependentOf",
 		)
 		require.Equal(
+			t,
 			v.newInput.SafeFromDoubleSend(v.oldInput),
 			v.doubleSpendSafe,
 			"SafeFromDoubleSend",
