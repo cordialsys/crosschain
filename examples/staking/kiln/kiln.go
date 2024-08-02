@@ -44,57 +44,6 @@ func getProvider(chain *xc.ChainConfig, providerId string) (xc.StakingProvider, 
 
 }
 
-func CmdGetStake() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "get-stake",
-		Short: "Lookup balance states of a stake account.",
-		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := setup.UnwrapXc(cmd.Context())
-			chain := setup.UnwrapChain(cmd.Context())
-			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
-			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			provider, err := getProvider(chain, moreArgs.VariantId)
-			if err != nil {
-				return err
-			}
-
-			owner, err := cmd.Flags().GetString("owner")
-			if err != nil {
-				return err
-			}
-			validator, err := cmd.Flags().GetString("validator")
-			if err != nil {
-				return err
-			}
-			stake, err := cmd.Flags().GetString("stake")
-			if err != nil {
-				return err
-			}
-			if owner == "" && validator == "" && stake == "" {
-				return fmt.Errorf("must provide at least one of --owner, --validator, or --stake")
-			}
-
-			cli, err := xcFactory.NewStakingClient(stakingCfg, chain, provider)
-			if err != nil {
-				return err
-			}
-
-			bal, err := cli.FetchStakeBalance(cmd.Context(), xc.Address(owner), validator, xc.Address(stake))
-			if err != nil {
-				return err
-			}
-			jsonprint(bal)
-
-			return nil
-		},
-	}
-	cmd.Flags().String("owner", "", "address owning the stake account")
-	cmd.Flags().String("validator", "", "the validator address delegated to")
-	cmd.Flags().String("stake", "", "the address of the stake account")
-	return cmd
-}
-
 func CmdStake() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stake",
