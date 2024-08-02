@@ -30,6 +30,7 @@ require (
 	github.com/novifinancial/serde-reflection/serde-generate/runtime/golang v0.0.0-20220519162058-e5cd3c3b3f3a
 	github.com/okx/go-wallet-sdk/coins/tron v0.0.0-20240115052846-46f0a371aa74
 	github.com/okx/go-wallet-sdk/crypto v0.0.1
+	github.com/pelletier/go-toml/v2 v2.0.8
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.7.0
@@ -37,6 +38,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/test-go/testify v1.1.4
 	github.com/tidwall/btree v1.6.0
+	github.com/vedhavyas/go-subkey/v2 v2.0.0
 	github.com/xssnick/tonutils-go v1.9.8
 	golang.org/x/crypto v0.24.0
 	google.golang.org/api v0.126.0
@@ -180,7 +182,6 @@ require (
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220328075252-7dd334e3daae // indirect
 	github.com/okx/go-wallet-sdk/util v0.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/petermattis/goid v0.0.0-20230317030725-371a4b8eda08 // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -210,7 +211,6 @@ require (
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
-	github.com/vedhavyas/go-subkey/v2 v2.0.0 // indirect
 	github.com/zondax/hid v0.9.1 // indirect
 	github.com/zondax/ledger-go v0.14.1 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
@@ -241,8 +241,8 @@ require (
 replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
+	// Includes stake program instructions - PR is on upstream, should be able to remove this once merged
+	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20240802214023-42f8fcd192fb
 	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
 	github.com/vedhavyas/go-subkey/v2 => github.com/cordialsys/go-subkey/v2 v2.0.0-20240716000827-4d411d29070a
-	github.com/gagliardetto/solana-go => ../solana-go
-// ac5c009efec5513624b97ed67024
 )

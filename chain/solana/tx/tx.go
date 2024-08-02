@@ -299,6 +299,51 @@ func (tx Tx) GetTokenTransfers() []*token.Transfer {
 	return results
 }
 
+type CreateAccountLikeInstruction struct {
+	NewAccount solana.PublicKey
+	Lamports   uint64
+}
+
+func (tx Tx) GetCreateAccounts() []*CreateAccountLikeInstruction {
+	results := []*CreateAccountLikeInstruction{}
+	if tx.SolTx != nil {
+		message := tx.SolTx.Message
+		for _, instruction := range message.Instructions {
+			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
+			if err != nil {
+				continue
+			}
+			if !program.Equals(solana.SystemProgramID) {
+				continue
+			}
+			accs, err := instruction.ResolveInstructionAccounts(&message)
+			if err != nil {
+				continue
+			}
+			inst, err := system.DecodeInstruction(accs, instruction.Data)
+			if err != nil {
+				continue
+			}
+			switch inst := inst.Impl.(type) {
+			case *system.CreateAccount:
+				results = append(results, &CreateAccountLikeInstruction{
+					NewAccount: inst.GetNewAccount().PublicKey,
+					Lamports:   *inst.Lamports,
+				})
+			case *system.CreateAccountWithSeed:
+				results = append(results, &CreateAccountLikeInstruction{
+					NewAccount: inst.GetCreatedAccount().PublicKey,
+					Lamports:   *inst.Lamports,
+				})
+			default:
+				continue
+			}
+
+		}
+	}
+	return results
+}
+
 func (tx Tx) GetDelegateStake() []*stake.DelegateStake {
 	results := []*stake.DelegateStake{}
 	if tx.SolTx != nil {

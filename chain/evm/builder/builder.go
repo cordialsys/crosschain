@@ -254,3 +254,7 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 		return nil, fmt.Errorf("unsupported unstaking type %T", input)
 	}
 }
+
+func (txBuilder TxBuilder) Withdraw(stakeArgs xcbuilder.StakeArgs, input xc.ClaimTxInput) (xc.Tx, error) {
+	return nil, fmt.Errorf("ethereum stakes are claimed automatically")
+}

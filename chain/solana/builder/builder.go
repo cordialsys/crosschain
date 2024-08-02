@@ -29,6 +29,8 @@ type TxInput = tx_input.TxInput
 // Max number of token transfers we can fit in a solana transaction,
 // when there's also a create ATA included.
 const MaxTokenTransfers = 20
+const MaxAccountUnstakes = 20
+const MaxAccountWithdraws = 20
 
 // NewTxBuilder creates a new Solana TxBuilder
 func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
@@ -217,12 +219,12 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 				).Build(),
 			)
 			remainingBalanceToSend = remainingBalanceToSend.Sub(&amountToSend)
-			if len(instructions) > MaxTokenTransfers {
-				return nil, errors.New("cannot send total amount in single tx, try sending smaller amount")
-			}
 			if remainingBalanceToSend.Cmp(&zero) <= 0 {
 				// we've spent enough from source accounts to meet target balance
 				break
+			}
+			if len(instructions) > MaxTokenTransfers {
+				return nil, errors.New("cannot send total amount in single tx, try sending smaller amount")
 			}
 		}
 		if remainingBalanceToSend.Cmp(&zero) > 0 {

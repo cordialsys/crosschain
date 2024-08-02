@@ -22,8 +22,10 @@ func CmdStaking() *cobra.Command {
 
 	cmd.AddCommand(CmdStake())
 	cmd.AddCommand(CmdUnstake())
+	cmd.AddCommand(CmdWithdraw())
 	cmd.AddCommand(CmdStakedBalances())
 	cmd.AddCommand(CmdFetchStakeInput())
 	cmd.AddCommand(CmdFetchUnStakeInput())
+	cmd.AddCommand(CmdFetchWithdrawInput())
 	return cmd
 }

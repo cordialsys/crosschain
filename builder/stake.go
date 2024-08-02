@@ -8,7 +8,7 @@ type StakeArgs struct {
 	amount    xc.AmountBlockchain
 	validator *string
 	owner     *xc.Address
-	accoundId *string
+	account   *string
 }
 type StakeOption func(opts *StakeArgs) error
 
@@ -16,7 +16,7 @@ func (opts *StakeArgs) GetFrom() xc.Address            { return opts.from }
 func (opts *StakeArgs) GetAmount() xc.AmountBlockchain { return opts.amount }
 func (opts *StakeArgs) GetValidator() (string, bool)   { return get(opts.validator) }
 func (opts *StakeArgs) GetOwner() (xc.Address, bool)   { return get(opts.owner) }
-func (opts *StakeArgs) GetAccountId() (string, bool)   { return get(opts.accoundId) }
+func (opts *StakeArgs) GetAccount() (string, bool)     { return get(opts.account) }
 
 func NewStakeArgs(from xc.Address, amount xc.AmountBlockchain, options ...StakeOption) (StakeArgs, error) {
 	common := TxCommonOptions{}
@@ -43,6 +43,12 @@ func NewStakeArgs(from xc.Address, amount xc.AmountBlockchain, options ...StakeO
 func StakeOptionValidator(validator string) StakeOption {
 	return func(opts *StakeArgs) error {
 		opts.validator = &validator
+		return nil
+	}
+}
+func StakeOptionAccount(account string) StakeOption {
+	return func(opts *StakeArgs) error {
+		opts.account = &account
 		return nil
 	}
 }
@@ -75,13 +81,6 @@ func StakeOptionPublicKey(publicKey []byte) StakeOption {
 func StakeOptionOwner(owner xc.Address) StakeOption {
 	return func(opts *StakeArgs) error {
 		opts.owner = &owner
-		return nil
-	}
-}
-
-func StakeOptionAccountId(accountId string) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.accoundId = &accountId
 		return nil
 	}
 }

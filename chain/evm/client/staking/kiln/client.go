@@ -158,7 +158,7 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 	if err != nil {
 		return nil, err
 	}
-	accountId, _ := args.GetAccountId()
+	accountId, _ := args.GetAccount()
 	acc, err := cli.kilnClient.ResolveAccount(accountId)
 	if err != nil {
 		return nil, err
@@ -271,4 +271,8 @@ func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.Sta
 	}
 
 	return input, nil
+}
+
+func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.ClaimTxInput, error) {
+	return nil, fmt.Errorf("ethereum stakes are claimed automatically")
 }

@@ -87,6 +87,9 @@ type StakeTxInput interface {
 type UnstakeTxInput interface {
 	Unstaking()
 }
+type ClaimTxInput interface {
+	Claiming()
+}
 
 // TxStatus is the status of a tx on chain, currently success or failure.
 type TxStatus uint8

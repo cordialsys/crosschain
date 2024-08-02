@@ -1,10 +1,38 @@
 package types
 
+import (
+	xc "github.com/cordialsys/crosschain"
+	xcclient "github.com/cordialsys/crosschain/client"
+)
+
 // StakeAccount represents the entire structure of the JSON response
 type StakeAccount struct {
 	Parsed  Parsed `json:"parsed"`
 	Program string `json:"program"`
 	Space   int    `json:"space"`
+}
+
+func (stake *StakeAccount) GetState(currentEpoch uint64) xcclient.State {
+	activationEpoch := xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
+	deactivationEpoch := xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64()
+	if activationEpoch == deactivationEpoch {
+		// accounts may be deactivated instantly if in the same epoch as activation
+		return xcclient.Inactive
+	}
+
+	if deactivationEpoch == currentEpoch {
+		// deactivation is occuring
+		return xcclient.Deactivating
+	} else if deactivationEpoch < currentEpoch {
+		// deactivation occured
+		return xcclient.Inactive
+	} else if activationEpoch < currentEpoch {
+		// activation occured
+		return xcclient.Active
+	} else {
+		// must be activating
+		return xcclient.Activating
+	}
 }
 
 // Parsed represents the parsed data section
