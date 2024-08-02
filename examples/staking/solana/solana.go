@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cordialsys/crosschain"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -58,45 +57,9 @@ func CmdSolana() *cobra.Command {
 	}
 
 	cmd.AddCommand(CmdStake())
-	cmd.AddCommand(CmdGetStakeBalance())
 	return cmd
 }
 
-func CmdGetStakeBalance() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "balance <address>",
-		Short: "Lookup staked balance.",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := setup.UnwrapXc(cmd.Context())
-			chain := setup.UnwrapChain(cmd.Context())
-			// moreArgs := setup.UnwrapStakingArgs(cmd.Context())
-			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-
-			from := args[0]
-			validator := cmd.Flag("validator").Value.String()
-
-			_ = stakingCfg
-			// _ = amount
-
-			client, err := xcFactory.NewStakingClient(stakingCfg, chain, crosschain.Native)
-			if err != nil {
-				return err
-			}
-
-			balances, err := client.FetchStakeBalance(context.Background(), crosschain.Address(from), validator, "")
-			if err != nil {
-				return err
-			}
-
-			jsonprint(balances)
-
-			return nil
-		},
-	}
-	cmd.Flags().String("validator", "", "the validator address to delegated to, if relevant")
-	return cmd
-}
 func CmdStake() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stake",

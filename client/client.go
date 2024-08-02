@@ -39,7 +39,7 @@ type FullClient interface {
 
 type StakingClient interface {
 	// Fetch staked balances accross different possible states
-	FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccount xc.Address) ([]*StakedBalance, error)
+	FetchStakeBalance(ctx context.Context, args StakedBalanceArgs) ([]*StakedBalance, error)
 
 	// Fetch inputs required for a staking transaction
 	FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error)
@@ -78,49 +78,45 @@ var Active State = "active"
 var Deactivating State = "deactivating"
 var Inactive State = "inactive"
 
-type StakedBalance struct {
-	State  State               `json:"state"`
-	Amount xc.AmountBlockchain `json:"amount"`
-	// the validator that the stake is delegated to
-	Validator string `json:"validator,omitempty"`
-}
-
-type StakedBalances struct {
+type StakedBalanceState struct {
 	Active       xc.AmountBlockchain `json:"active,omitempty"`
 	Activating   xc.AmountBlockchain `json:"activating,omitempty"`
 	Deactivating xc.AmountBlockchain `json:"deactivating,omitempty"`
 	Inactive     xc.AmountBlockchain `json:"inactive,omitempty"`
 }
 
-func NewStakedBalances(validator string, balances *StakedBalances) []*StakedBalance {
-	balancesList := []*StakedBalance{}
-	if !balances.Activating.IsZero() {
-		balancesList = append(balancesList, &StakedBalance{
-			State:     Activating,
-			Amount:    balances.Activating,
-			Validator: validator,
-		})
+type StakedBalance struct {
+	// the validator that the stake is delegated to
+	Validator string `json:"validator"`
+	// Optional; the account that the stake is associated with
+	Account string `json:"account,omitempty"`
+	// The states balance of the balance in the validator [+account]
+	Balance StakedBalanceState `json:"balance"`
+}
+
+func NewStakedBalances(balances StakedBalanceState, validator, account string) *StakedBalance {
+	return &StakedBalance{
+		Validator: validator,
+		Account:   account,
+		Balance:   balances,
 	}
-	if !balances.Active.IsZero() {
-		balancesList = append(balancesList, &StakedBalance{
-			State:     Active,
-			Amount:    balances.Active,
-			Validator: validator,
-		})
+}
+
+func NewStakedBalance(balance xc.AmountBlockchain, state State, validator, account string) *StakedBalance {
+	balances := StakedBalanceState{}
+	switch state {
+	case Activating:
+		balances.Activating = balance
+	case Active:
+		balances.Active = balance
+	case Deactivating:
+		balances.Deactivating = balance
+	case Inactive:
+		balances.Inactive = balance
 	}
-	if !balances.Deactivating.IsZero() {
-		balancesList = append(balancesList, &StakedBalance{
-			State:     Deactivating,
-			Amount:    balances.Deactivating,
-			Validator: validator,
-		})
+	return &StakedBalance{
+		Validator: validator,
+		Account:   account,
+		Balance:   balances,
 	}
-	if !balances.Inactive.IsZero() {
-		balancesList = append(balancesList, &StakedBalance{
-			State:     Inactive,
-			Amount:    balances.Inactive,
-			Validator: validator,
-		})
-	}
-	return balancesList
 }

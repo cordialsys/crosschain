@@ -56,8 +56,8 @@ func (client *Client) GetStakeAccounts(ctx context.Context, address xc.Address) 
 	return stakeAccounts, nil
 
 }
-func (client *Client) FetchStakeBalance(ctx context.Context, address xc.Address, validator string, stakeAccountAddress xc.Address) ([]*xclient.StakedBalance, error) {
-	stakeAccounts, err := client.GetStakeAccounts(ctx, address)
+func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalanceArgs) ([]*xclient.StakedBalance, error) {
+	stakeAccounts, err := client.GetStakeAccounts(ctx, args.GetFrom())
 	if err != nil {
 		return nil, err
 	}
@@ -68,46 +68,55 @@ func (client *Client) FetchStakeBalance(ctx context.Context, address xc.Address,
 	}
 
 	stakedBalances := []*xclient.StakedBalance{}
-	// group together balances by validator
-	validators := map[string]bool{}
+
 	for _, stake := range stakeAccounts {
-		validators[stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter] = true
-	}
-	for validator := range validators {
 		active := uint64(0)
 		inactive := uint64(0)
 		activating := uint64(0)
 		deactivating := uint64(0)
-		for _, stake := range stakeAccounts {
-			if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter == validator {
-				activationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
-				deactivationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64()
+		validator := stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter
+		account := stake.Account.Pubkey.String()
 
-				if deactivationEpoch == epochInfo.Epoch {
-					// deactivation is occuring
-					deactivating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-				} else if deactivationEpoch < epochInfo.Epoch {
-					// deactivation occured
-					inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-				} else if activationEpoch < epochInfo.Epoch {
-					// activation occured
-					active += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-				} else {
-					// must be activating
-					activating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-				}
-
-				// The rent-exempt reserve is added to the inactive balance
-				inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve).Uint64()
+		inputValidator, ok := args.GetValidator()
+		if ok {
+			if inputValidator != validator {
+				continue
 			}
 		}
-		stakedBalances = append(stakedBalances, xclient.NewStakedBalances(validator, &xclient.StakedBalances{
+		inputAccount, ok := args.GetAccount()
+		if ok {
+			if inputAccount != account {
+				continue
+			}
+		}
+
+		// if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter == validator {
+		activationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
+		deactivationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64()
+
+		if deactivationEpoch == epochInfo.Epoch {
+			// deactivation is occuring
+			deactivating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
+		} else if deactivationEpoch < epochInfo.Epoch {
+			// deactivation occured
+			inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
+		} else if activationEpoch < epochInfo.Epoch {
+			// activation occured
+			active += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
+		} else {
+			// must be activating
+			activating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
+		}
+
+		// The rent-exempt reserve is added to the inactive balance
+		inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve).Uint64()
+		// }
+		stakedBalances = append(stakedBalances, xclient.NewStakedBalances(xclient.StakedBalanceState{
 			Activating:   xc.NewAmountBlockchainFromUint64(activating),
 			Active:       xc.NewAmountBlockchainFromUint64(active),
 			Deactivating: xc.NewAmountBlockchainFromUint64(deactivating),
 			Inactive:     xc.NewAmountBlockchainFromUint64(inactive),
-		})...)
-
+		}, validator, account))
 	}
 
 	return stakedBalances, nil

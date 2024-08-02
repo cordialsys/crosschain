@@ -13,7 +13,6 @@ func CmdKiln() *cobra.Command {
 	}
 
 	cmd.AddCommand(CmdKilnTest())
-	cmd.AddCommand(CmdGetStake())
 	cmd.AddCommand(CmdStake())
 	cmd.AddCommand(CmdUnstake())
 	cmd.AddCommand(CmdConfig())
