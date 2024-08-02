@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/sirupsen/logrus"
@@ -146,7 +148,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
 	cmd.PersistentFlags().String("api-key", "", "Api key to use for RPC client (may set API_KEY).")
-	cmd.PersistentFlags().String("provider", "", "Provider to use for RPC client.  Only valid for BTC chains.")
+	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for BTC chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
 	cmd.PersistentFlags().Bool("not-mainnet", false, "Do not use mainnets, instead use a test or dev network.")
 }
@@ -161,7 +163,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	}
 	count, _ := cmd.Flags().GetCount("verbose")
 	notmainnet, _ := cmd.Flags().GetBool("not-mainnet")
-	provider, _ := cmd.Flags().GetString("provider")
+	rpcProvider, _ := cmd.Flags().GetString("rpc-provider")
 	apikey, _ := cmd.Flags().GetString("api-key")
 	if apikey == "" {
 		apikey = os.Getenv("CORDIAL_API_KEY")
@@ -180,7 +182,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 		Rpc:            rpc,
 		VerbosityCount: count,
 		NotMainnet:     notmainnet,
-		Provider:       provider,
+		Provider:       rpcProvider,
 		ApiKey:         apikey,
 		// ConfigPath:     config,
 		Overrides: map[string]*ChainOverride{},
@@ -191,20 +193,43 @@ type StakingArgs struct {
 	ConfigPath string
 	AccountId  string
 	Amount     xc.AmountHumanReadable
-	VariantId  string
+	Validator  string
+	Provider   xc.StakingProvider
+}
+
+func (args *StakingArgs) ToBuilderOptions() []builder.StakeOption {
+	options := []builder.StakeOption{}
+	if args.Validator != "" {
+		options = append(options, builder.StakeOptionValidator(args.Validator))
+	}
+	if args.AccountId != "" {
+		options = append(options, builder.StakeOptionAccount(args.AccountId))
+	}
+	return options
+}
+func (args *StakingArgs) ToBalanceOptions() []client.StakedBalanceOption {
+	options := []client.StakedBalanceOption{}
+	if args.Validator != "" {
+		options = append(options, client.StakeBalanceOptionValidator(args.Validator))
+	}
+	if args.AccountId != "" {
+		options = append(options, client.StakeBalanceOptionAccount(args.AccountId))
+	}
+	return options
 }
 
 func AddStakingArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("config", "", fmt.Sprintf("Staking client configuration to use (may set %s).", services.ConfigFileEnv))
 
-	cmd.PersistentFlags().String("account", "", "Account ID to stake into, if applicable.")
+	cmd.PersistentFlags().String("validator", "", "Validator address, if applicable.")
+	cmd.PersistentFlags().String("account", "", "Account address or ID, if applicable.")
 	cmd.PersistentFlags().String("amount", "", "Decimal amount to stake or unstake.")
 
-	// options := []string{}
-	// for _, v := range xc.SupportedStakingVariants {
-	// 	options = append(options, v.Id())
-	// }
-	cmd.PersistentFlags().String("variant", "", fmt.Sprintf("Staking variant to use with chain."))
+	options := []string{}
+	for _, v := range xc.SupportedStakingProviders {
+		options = append(options, string(v))
+	}
+	cmd.PersistentFlags().String("provider", "native", fmt.Sprintf("Staking provider to use, if supported by the target chain (options: %v).", options))
 }
 
 func StakingArgsFromCmd(cmd *cobra.Command) (*StakingArgs, error) {
@@ -213,10 +238,24 @@ func StakingArgsFromCmd(cmd *cobra.Command) (*StakingArgs, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	variantId, err := cmd.Flags().GetString("variant")
+	validator, err := cmd.Flags().GetString("validator")
 	if err != nil {
 		return nil, err
+	}
+
+	providerInput, err := cmd.Flags().GetString("provider")
+	if err != nil {
+		return nil, err
+	}
+	var provider xc.StakingProvider
+	for _, validProvider := range xc.SupportedStakingProviders {
+		if strings.EqualFold(string(validProvider), providerInput) {
+			provider = validProvider
+			break
+		}
+	}
+	if provider == "" {
+		return nil, fmt.Errorf("invalid provider: %s", providerInput)
 	}
 
 	amount, err := cmd.Flags().GetString("amount")
@@ -241,6 +280,7 @@ func StakingArgsFromCmd(cmd *cobra.Command) (*StakingArgs, error) {
 		ConfigPath: configPath,
 		AccountId:  accountId,
 		Amount:     dec,
-		VariantId:  variantId,
+		Validator:  validator,
+		Provider:   provider,
 	}, nil
 }
