@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -259,27 +260,147 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	result.TxID = string(txHash)
 	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetChain().Net
-	result.ContractAddress = tx.ContractAddress()
 
-	toAddr := tx.ToOwnerAccount()
-	// If no clear destination, try looking up owner behind a token account
-	if toAddr == "" {
-		// check ATA
-		tokenAccount, ok := tx.ToTokenAccount()
-		if ok {
-			tokenAccountInfo, err := client.LookupTokenAccount(ctx, tokenAccount)
-			if err != nil {
-				// pass
-			} else {
-				toAddr = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-				result.ContractAddress = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
-			}
+	sources := []*xc.LegacyTxInfoEndpoint{}
+	dests := []*xc.LegacyTxInfoEndpoint{}
+
+	for _, instr := range tx.GetSystemTransfers() {
+		from := instr.GetFundingAccount().PublicKey.String()
+		to := instr.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(from),
+			Amount:  amount,
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(to),
+			Amount:  amount,
+		})
+	}
+	for _, instr := range tx.GetVoteWithdraws() {
+		from := instr.GetWithdrawAuthorityAccount().PublicKey.String()
+		to := instr.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(from),
+			Amount:  amount,
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(to),
+			Amount:  amount,
+		})
+	}
+	for _, instr := range tx.GetStakeWithdraws() {
+		from := instr.GetStakeAccount().PublicKey.String()
+		to := instr.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(from),
+			Amount:  amount,
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(to),
+			Amount:  amount,
+		})
+	}
+	for _, instr := range tx.GetTokenTransferCheckeds() {
+		from := instr.GetOwnerAccount().PublicKey.String()
+		toTokenAccount := instr.GetDestinationAccount().PublicKey
+		contract := xc.ContractAddress(instr.GetMintAccount().PublicKey.String())
+		to := xc.Address(toTokenAccount.String())
+		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
+		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to lookup token account")
+		} else {
+			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
 		}
+
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(from),
+			Amount:          amount,
+			ContractAddress: contract,
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(to),
+			Amount:          amount,
+			ContractAddress: contract,
+		})
+	}
+	for _, instr := range tx.GetTokenTransfers() {
+		from := instr.GetOwnerAccount().PublicKey.String()
+		toTokenAccount := instr.GetDestinationAccount().PublicKey
+		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
+
+		to := xc.Address(toTokenAccount.String())
+		contract := xc.ContractAddress("")
+		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
+		if err != nil {
+			logrus.WithError(err).Warn("failed to lookup token account")
+		} else {
+			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
+			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
+		}
+
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(from),
+			Amount:          amount,
+			ContractAddress: contract,
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(to),
+			Amount:          amount,
+			ContractAddress: contract,
+		})
+	}
+	for _, instr := range tx.GetDelegateStake() {
+		xcStake := &xclient.Stake{
+			Account:   instr.GetStakeAccount().PublicKey.String(),
+			Validator: instr.GetVoteAccount().PublicKey.String(),
+			Address:   instr.GetStakeAuthority().PublicKey.String(),
+			// Needs to be looked up
+			Amount: xc.AmountBlockchain{},
+		}
+		stakeAccountInfo, err := client.LookupStakeAccount(ctx, instr.GetStakeAccount().PublicKey)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to lookup stake account")
+		} else {
+			xcStake.Amount = xc.NewAmountBlockchainFromStr(stakeAccountInfo.Parsed.Info.Stake.Delegation.Stake)
+		}
+		result.AddStakeEvent(xcStake)
+	}
+	for _, instr := range tx.GetDeactivateStakes() {
+		xcStake := &xclient.Unstake{
+			Account: instr.GetStakeAccount().PublicKey.String(),
+			Address: instr.GetStakeAuthority().PublicKey.String(),
+
+			// Needs to be looked up
+			Amount:    xc.AmountBlockchain{},
+			Validator: "",
+		}
+		stakeAccountInfo, err := client.LookupStakeAccount(ctx, instr.GetStakeAccount().PublicKey)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to lookup stake account")
+		} else {
+			xcStake.Validator = stakeAccountInfo.Parsed.Info.Stake.Delegation.Voter
+			xcStake.Amount = xc.NewAmountBlockchainFromStr(stakeAccountInfo.Parsed.Info.Stake.Delegation.Stake)
+		}
+		result.AddStakeEvent(xcStake)
 	}
 
-	result.From = tx.From()
-	result.To = toAddr
-	result.Amount = tx.Amount()
+	if len(sources) > 0 {
+		result.From = sources[0].Address
+	}
+	if len(dests) > 0 {
+		result.To = dests[0].Address
+		result.Amount = dests[0].Amount
+		result.ContractAddress = dests[0].ContractAddress
+	}
+
+	result.Sources = sources
+	result.Destinations = dests
 
 	return result, nil
 }
@@ -308,6 +429,22 @@ func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solan
 		return types.TokenAccountInfo{}, err
 	}
 	return accountInfo, nil
+}
+
+func (client *Client) LookupStakeAccount(ctx context.Context, stakeAccount solana.PublicKey) (types.StakeAccount, error) {
+	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, stakeAccount, &rpc.GetAccountInfoOpts{
+		Commitment: rpc.CommitmentFinalized,
+		Encoding:   "jsonParsed",
+	})
+	if err != nil {
+		return types.StakeAccount{}, err
+	}
+	var stakeAccountInfo types.StakeAccount
+	err = json.Unmarshal(info.Value.Data.GetRawJSON(), &stakeAccountInfo)
+	if err != nil {
+		return types.StakeAccount{}, err
+	}
+	return stakeAccountInfo, nil
 }
 
 type TokenAccountWithInfo struct {
