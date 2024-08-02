@@ -22,21 +22,21 @@ func (*StakingInput) GetVariant() xc.TxVariantInputType {
 }
 
 type ExistingStake struct {
-	ActivationEpoch      uint64              `json:"activation_epoch"`
-	DeactivationEpoch    uint64              `json:"deactivation_epoch"`
-	Amount               xc.AmountBlockchain `json:"amount"`
+	ActivationEpoch   uint64 `json:"activation_epoch"`
+	DeactivationEpoch uint64 `json:"deactivation_epoch"`
+	// The total activating-or-activated amount
+	AmountActive xc.AmountBlockchain `json:"amount_staked"`
+	// unlocked/inactive amount
+	AmountInactive       xc.AmountBlockchain `json:"amount_inactive"`
 	ValidatorVoteAccount string              `json:"validator_vote_account"`
-	StakeAccount         string              `json:"stake_account"`
+	StakeAccount         solana.PublicKey    `json:"stake_account"`
 }
 type UnstakingInput struct {
 	TxInput
 
-	// TODO do we need this?
 	// The new staking account to create in the event of a split occuring
-	StakingKey solana.PrivateKey `json:"staking_key"`
-
-	CurrentEpoch   uint64           `json:"current_epoch"`
-	ExistingStakes []*ExistingStake `json:"existing_stakes"`
+	StakingKey     solana.PrivateKey `json:"staking_key"`
+	EligibleStakes []*ExistingStake  `json:"eligible_stakes"`
 }
 
 var _ xc.TxVariantInput = &UnstakingInput{}
@@ -45,5 +45,19 @@ var _ xc.UnstakeTxInput = &UnstakingInput{}
 func (*UnstakingInput) Unstaking() {}
 
 func (*UnstakingInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewStakingInputType(xc.DriverSolana, "native")
+}
+
+type WithdrawInput struct {
+	TxInput
+	EligibleStakes []*ExistingStake `json:"eligible_stakes"`
+}
+
+var _ xc.TxVariantInput = &WithdrawInput{}
+var _ xc.ClaimTxInput = &WithdrawInput{}
+
+func (*WithdrawInput) Claiming() {}
+
+func (*WithdrawInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewStakingInputType(xc.DriverSolana, "native")
 }

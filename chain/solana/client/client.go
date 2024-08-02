@@ -360,15 +360,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Account:   instr.GetStakeAccount().PublicKey.String(),
 			Validator: instr.GetVoteAccount().PublicKey.String(),
 			Address:   instr.GetStakeAuthority().PublicKey.String(),
-			// Needs to be looked up
+			// Needs to be looked up from separate instruction
 			Amount: xc.AmountBlockchain{},
 		}
-		stakeAccountInfo, err := client.LookupStakeAccount(ctx, instr.GetStakeAccount().PublicKey)
-		if err != nil {
-			logrus.WithError(err).Warn("failed to lookup stake account")
-		} else {
-			xcStake.Amount = xc.NewAmountBlockchainFromStr(stakeAccountInfo.Parsed.Info.Stake.Delegation.Stake)
+		for _, createAccount := range tx.GetCreateAccounts() {
+			if createAccount.NewAccount.Equals(instr.GetStakeAccount().PublicKey) {
+				xcStake.Amount = xc.NewAmountBlockchainFromUint64(createAccount.Lamports)
+			}
 		}
+
 		result.AddStakeEvent(xcStake)
 	}
 	for _, instr := range tx.GetDeactivateStakes() {

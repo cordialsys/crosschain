@@ -46,6 +46,9 @@ type StakingClient interface {
 
 	// Fetch inputs required for a unstaking transaction
 	FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error)
+
+	// Fetch input for a withdraw transaction -- not all chains use this as they combine it with unstake
+	FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) (xc.ClaimTxInput, error)
 }
 
 type ClientError string

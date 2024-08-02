@@ -119,7 +119,7 @@ func CmdStake() *cobra.Command {
 				options = append(options, builder.StakeOptionValidator(validator))
 			}
 			if moreArgs.AccountId != "" {
-				options = append(options, builder.StakeOptionAccountId(moreArgs.AccountId))
+				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
 			}
 			stakingArgs, err := builder.NewStakeArgs(from, amount, options...)
 			if err != nil {
@@ -256,7 +256,7 @@ func CmdUnstake() *cobra.Command {
 				options = append(options, builder.StakeOptionValidator(validator))
 			}
 			if moreArgs.AccountId != "" {
-				options = append(options, builder.StakeOptionAccountId(moreArgs.AccountId))
+				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
 			}
 			stakingArgs, err := builder.NewStakeArgs(from, amount, options...)
 			if err != nil {

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/solana/builder"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -70,10 +72,6 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 	stakedBalances := []*xclient.StakedBalance{}
 
 	for _, stake := range stakeAccounts {
-		active := uint64(0)
-		inactive := uint64(0)
-		activating := uint64(0)
-		deactivating := uint64(0)
 		validator := stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter
 		account := stake.Account.Pubkey.String()
 
@@ -90,33 +88,20 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 			}
 		}
 
-		// if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter == validator {
-		activationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
-		deactivationEpoch := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64()
-
-		if deactivationEpoch == epochInfo.Epoch {
-			// deactivation is occuring
-			deactivating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		} else if deactivationEpoch < epochInfo.Epoch {
-			// deactivation occured
-			inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		} else if activationEpoch < epochInfo.Epoch {
-			// activation occured
-			active += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		} else {
-			// must be activating
-			activating += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake).Uint64()
-		}
-
+		state := stake.StakeAccount.GetState(epochInfo.Epoch)
+		stakedBalance := xclient.NewStakedBalance(
+			xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake),
+			state,
+			validator,
+			account,
+		)
+		rentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
 		// The rent-exempt reserve is added to the inactive balance
-		inactive += xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve).Uint64()
-		// }
-		stakedBalances = append(stakedBalances, xclient.NewStakedBalances(xclient.StakedBalanceState{
-			Activating:   xc.NewAmountBlockchainFromUint64(activating),
-			Active:       xc.NewAmountBlockchainFromUint64(active),
-			Deactivating: xc.NewAmountBlockchainFromUint64(deactivating),
-			Inactive:     xc.NewAmountBlockchainFromUint64(inactive),
-		}, validator, account))
+		stakedBalance.Balance.Inactive = stakedBalance.Balance.Inactive.Add(
+			&rentReserve,
+		)
+
+		stakedBalances = append(stakedBalances, stakedBalance)
 	}
 
 	return stakedBalances, nil
@@ -190,6 +175,10 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	if err != nil {
 		return nil, fmt.Errorf("invalid base58 for validator address: %v", err)
 	}
+	amount := args.GetAmount().Uint64()
+	if amount < builder.RentExemptLamportsThreshold {
+		return nil, fmt.Errorf("amount to unstake is below the rent exempt threshold (%s SOL)", builder.RentExemptLamportsThresholdHuman)
+	}
 
 	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
 	if err != nil {
@@ -201,23 +190,108 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	if err != nil {
 		return nil, err
 	}
+	epochInfo, err := client.SolClient.GetEpochInfo(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return nil, err
+	}
 
 	matchingStakeAccounts := []*tx_input.ExistingStake{}
 	for _, stake := range stakeAccounts {
+		inputAccount, ok := args.GetAccount()
+		if ok {
+			if stake.Account.Pubkey.String() != inputAccount {
+				continue
+			}
+		}
+		state := stake.StakeAccount.GetState(epochInfo.Epoch)
+		if state == xclient.Deactivating || state == xclient.Inactive {
+			// Skip unstaking for inactive or deactivating stakes
+			continue
+		}
+
 		if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter == validator {
+			amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
+			amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
+
 			matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
 				ActivationEpoch:      xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64(),
 				DeactivationEpoch:    xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
-				Amount:               xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake),
+				AmountActive:         amountStake,
+				AmountInactive:       amountRentReserve,
 				ValidatorVoteAccount: stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter,
-				StakeAccount:         stake.Account.Pubkey.String(),
+				StakeAccount:         stake.Account.Pubkey,
 			})
 		}
+	}
+	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
+		// Sort in order by activation epoch, so that activated stakes are unstaked first
+		return matchingStakeAccounts[i].ActivationEpoch < matchingStakeAccounts[j].ActivationEpoch
+	})
+	if len(matchingStakeAccounts) == 0 {
+		return nil, fmt.Errorf("no activating or active stake accounts found for validator: %s", validator)
 	}
 	unstakeInput := tx_input.UnstakingInput{
 		TxInput:        *txInput,
 		StakingKey:     privKey,
-		ExistingStakes: matchingStakeAccounts,
+		EligibleStakes: matchingStakeAccounts,
 	}
 	return &unstakeInput, nil
+}
+
+func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.ClaimTxInput, error) {
+	stakeAccounts, err := client.GetStakeAccounts(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+	// Set default fee for now
+	txInput.PrioritizationFee = xc.NewAmountBlockchainFromUint64(100000)
+	epochInfo, err := client.SolClient.GetEpochInfo(ctx, rpc.CommitmentFinalized)
+	if err != nil {
+		return nil, err
+	}
+
+	matchingStakeAccounts := []*tx_input.ExistingStake{}
+	for _, stake := range stakeAccounts {
+		inputValidator, ok := args.GetValidator()
+		if ok {
+			if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter != inputValidator {
+				continue
+			}
+		}
+		inputAccount, ok := args.GetAccount()
+		if ok {
+			if stake.Account.Pubkey.String() != inputAccount {
+				continue
+			}
+		}
+		state := stake.StakeAccount.GetState(epochInfo.Epoch)
+		if state != xclient.Inactive {
+			// only able to withdraw inactive balances
+			continue
+		}
+
+		amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
+		amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
+		matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
+			ActivationEpoch:      xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64(),
+			DeactivationEpoch:    xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
+			AmountActive:         xc.NewAmountBlockchainFromUint64(0),
+			AmountInactive:       amountStake.Add(&amountRentReserve),
+			ValidatorVoteAccount: stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter,
+			StakeAccount:         stake.Account.Pubkey,
+		})
+	}
+	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
+		// Sort in order by activation epoch, so that activated stakes are withdrawn first
+		return matchingStakeAccounts[i].ActivationEpoch < matchingStakeAccounts[j].ActivationEpoch
+	})
+	withdrawInput := tx_input.WithdrawInput{
+		TxInput:        *txInput,
+		EligibleStakes: matchingStakeAccounts,
+	}
+	return &withdrawInput, nil
 }
