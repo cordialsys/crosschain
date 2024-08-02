@@ -149,6 +149,12 @@ const Kiln StakingProvider = "kiln"
 const Twinstake StakingProvider = "twinstake"
 const Native StakingProvider = "native"
 
+var SupportedStakingProviders = []StakingProvider{
+	Native,
+	Kiln,
+	Twinstake,
+}
+
 func (stakingProvider StakingProvider) Valid() bool {
 	switch stakingProvider {
 	case Kiln, Twinstake:

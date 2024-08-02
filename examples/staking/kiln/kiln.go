@@ -54,7 +54,7 @@ func CmdStake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			provider, err := getProvider(chain, moreArgs.VariantId)
+			provider, err := getProvider(chain, string(moreArgs.Provider))
 			if err != nil {
 				return err
 			}
@@ -191,7 +191,7 @@ func CmdUnstake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			provider, err := getProvider(chain, moreArgs.VariantId)
+			provider, err := getProvider(chain, string(moreArgs.Provider))
 			if err != nil {
 				return err
 			}

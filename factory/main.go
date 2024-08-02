@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
@@ -369,6 +370,18 @@ func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITas
 // NewTxBuilder creates a new TxBuilder
 func (f *Factory) NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	return drivers.NewTxBuilder(cfg)
+}
+
+func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
+	txBuilder, err := f.NewTxBuilder(cfg)
+	if err != nil {
+		return nil, err
+	}
+	stakingBuilder, ok := txBuilder.(builder.Staking)
+	if !ok {
+		return nil, fmt.Errorf("currently staking transactions for %s is not supported", cfg.GetChain().Driver)
+	}
+	return stakingBuilder, nil
 }
 
 // NewSigner creates a new Signer

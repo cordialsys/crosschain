@@ -118,6 +118,26 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		return nil, fmt.Errorf("unsupported signing alg for driver: %v", s.driver)
 	}
 }
+
+func (s *Signer) SignAll(data []xc.TxDataToSign) ([]xc.TxSignature, error) {
+	signatures := make([]xc.TxSignature, len(data))
+	for i, d := range data {
+		sig, err := s.Sign(d)
+		if err != nil {
+			return nil, err
+		}
+		signatures[i] = sig
+	}
+	return signatures, nil
+}
+func (s *Signer) MustSignAll(data []xc.TxDataToSign) []xc.TxSignature {
+	signatures, err := s.SignAll(data)
+	if err != nil {
+		panic(err)
+	}
+	return signatures
+
+}
 func (s *Signer) PublicKey() (PublicKey, error) {
 	switch s.driver.SignatureAlgorithm() {
 	case xc.Ed255:
