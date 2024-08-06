@@ -14,6 +14,7 @@ import (
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/client/staking/figment"
 	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
@@ -68,7 +69,13 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 			if err != nil {
 				return nil, err
 			}
-			return kiln.NewClient(rpcClient, cfg.GetChain(), servicesConfig)
+			return kiln.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Kiln)
+		case Figment:
+			rpcClient, err := evmclient.NewClient(cfg)
+			if err != nil {
+				return nil, err
+			}
+			return figment.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Figment)
 		case Twinstake:
 			return nil, fmt.Errorf("not implemented")
 		case Native:

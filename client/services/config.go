@@ -13,6 +13,11 @@ type KilnConfig struct {
 	BaseUrl  string        `mapstructure:"base_url,omitempty" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
 	ApiToken config.Secret `mapstructure:"api_token,omitempty" json:"api_token,omitempty" yaml:"api_token,omitempty" toml:"api_token,omitempty"`
 }
+type FigmentConfig struct {
+	BaseUrl  string        `mapstructure:"base_url,omitempty" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
+	ApiToken config.Secret `mapstructure:"api_token,omitempty" json:"api_token,omitempty" yaml:"api_token,omitempty" toml:"api_token,omitempty"`
+	Network  string        `mapstructure:"network,omitempty" json:"network,omitempty" yaml:"network,omitempty" toml:"network,omitempty"`
+}
 type TwinstakeConfig struct {
 	BaseUrl string `mapstructure:"base_url,omitempty" json:"base_url,omitempty" yaml:"base_url,omitempty" toml:"base_url,omitempty"`
 
@@ -25,6 +30,7 @@ type TwinstakeConfig struct {
 type ServicesConfig struct {
 	Kiln      KilnConfig      `mapstructure:"kiln" json:"kiln" yaml:"kiln" toml:"kiln"`
 	Twinstake TwinstakeConfig `mapstructure:"twinstake" json:"twinstake" yaml:"twinstake" toml:"twinstake"`
+	Figment   FigmentConfig   `mapstructure:"figment" json:"figment" yaml:"figment" toml:"figment"`
 }
 
 func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
@@ -40,10 +46,16 @@ func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
 			ClientId: config.Secret("env:TWINSTAKE_CLIENT_ID").LoadOrBlank(),
 			Region:   "eu-west-3", // reported default on twinstakes website
 		},
+		Figment: FigmentConfig{
+			BaseUrl:  "https://api.figment.io",
+			ApiToken: "env:FIGMENT_API_TOKEN",
+			Network:  "mainnet",
+		},
 	}
 	if network == xc.NotMainnets {
 		cfg.Kiln.BaseUrl = "https://api.testnet.kiln.fi"
 		cfg.Twinstake.BaseUrl = "https://testnet.api.twinstake.io"
+		cfg.Figment.Network = "holesky"
 	}
 
 	return cfg

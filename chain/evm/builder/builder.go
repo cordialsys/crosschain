@@ -255,6 +255,6 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 	}
 }
 
-func (txBuilder TxBuilder) Withdraw(stakeArgs xcbuilder.StakeArgs, input xc.ClaimTxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) Withdraw(stakeArgs xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	return nil, fmt.Errorf("ethereum stakes are claimed automatically")
 }

@@ -87,8 +87,8 @@ type StakeTxInput interface {
 type UnstakeTxInput interface {
 	Unstaking()
 }
-type ClaimTxInput interface {
-	Claiming()
+type WithdrawTxInput interface {
+	Withdrawing()
 }
 
 // TxStatus is the status of a tx on chain, currently success or failure.

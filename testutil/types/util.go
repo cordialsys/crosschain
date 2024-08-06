@@ -2,6 +2,8 @@ package testutil
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,4 +33,9 @@ func HumanToBlockchain(amount string, decimals int) xc.AmountBlockchain {
 		panic(err)
 	}
 	return h.ToBlockchain(int32(decimals))
+}
+
+func JsonPrint(a any) {
+	bz, _ := json.MarshalIndent(a, "", "  ")
+	fmt.Println(string(bz))
 }

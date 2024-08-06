@@ -54,9 +54,9 @@ type WithdrawInput struct {
 }
 
 var _ xc.TxVariantInput = &WithdrawInput{}
-var _ xc.ClaimTxInput = &WithdrawInput{}
+var _ xc.WithdrawTxInput = &WithdrawInput{}
 
-func (*WithdrawInput) Claiming() {}
+func (*WithdrawInput) Withdrawing() {}
 
 func (*WithdrawInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewStakingInputType(xc.DriverSolana, "native")

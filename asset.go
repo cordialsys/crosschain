@@ -146,18 +146,20 @@ var SupportedDrivers = []Driver{
 type StakingProvider string
 
 const Kiln StakingProvider = "kiln"
+const Figment StakingProvider = "figment"
 const Twinstake StakingProvider = "twinstake"
 const Native StakingProvider = "native"
 
 var SupportedStakingProviders = []StakingProvider{
 	Native,
 	Kiln,
+	Figment,
 	Twinstake,
 }
 
 func (stakingProvider StakingProvider) Valid() bool {
 	switch stakingProvider {
-	case Kiln, Twinstake:
+	case Kiln, Twinstake, Figment:
 		return true
 	}
 	return false
