@@ -194,14 +194,16 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.ClaimTxIn
 			// only withdraw the amount needed
 			amountToWithdraw -= (total - amount)
 		}
+		n := stake.NewWithdrawInstruction(
+			amountToWithdraw,
+			stakeAccount.StakeAccount,
+			stakingAuth,
+			stakingAuth,
+		)
+		fmt.Println("amountToWithdraw", *n.Lamports)
 		instructions = append(instructions,
 			// withdraw from stake account
-			stake.NewWithdrawInstruction(
-				amountToWithdraw,
-				stakeAccount.StakeAccount,
-				stakingAuth,
-				stakingAuth,
-			).Build(),
+			n.Build(),
 		)
 		if total >= amount {
 			break

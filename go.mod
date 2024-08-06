@@ -242,7 +242,7 @@ replace (
 	github.com/ChainSafe/go-schnorrkel => github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d
 	github.com/cosmos/cosmos-proto => github.com/cosmos/cosmos-proto v1.0.0-beta.2
 	// Includes stake program instructions - PR is on upstream, should be able to remove this once merged
-	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20240802214023-42f8fcd192fb
+	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20240806201447-1fef7fb8882b
 	github.com/vedhavyas/go-subkey => github.com/vedhavyas/go-subkey v1.0.2
 	github.com/vedhavyas/go-subkey/v2 => github.com/cordialsys/go-subkey/v2 v2.0.0-20240716000827-4d411d29070a
 )

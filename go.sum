@@ -391,8 +391,8 @@ github.com/containerd/continuity v0.3.0 h1:nisirsYROK15TAMVukJOUyGJjz4BNQJBVsNvA
 github.com/containerd/continuity v0.3.0/go.mod h1:wJEAIwKOm/pBZuBd0JmeTvnLquTB1Ag8espWhkykbPM=
 github.com/cordialsys/go-subkey/v2 v2.0.0-20240716000827-4d411d29070a h1:CPVaevlYIh03/46gEtvtZApDtmw8sJFzXSb9jK2aNws=
 github.com/cordialsys/go-subkey/v2 v2.0.0-20240716000827-4d411d29070a/go.mod h1:ex1eVPg2F5UPXhv/Gnul/V0EMKkSPPcE7tTlVCKLv2w=
-github.com/cordialsys/solana-go v0.0.0-20240802214023-42f8fcd192fb h1:axxLTvYazoHhTDy59Its1vMBr9JGKbAjH5NajcNNSsw=
-github.com/cordialsys/solana-go v0.0.0-20240802214023-42f8fcd192fb/go.mod h1:afBEcIRrDLJst3lvAahTr63m6W2Ns6dajZxe2irF7Jg=
+github.com/cordialsys/solana-go v0.0.0-20240806201447-1fef7fb8882b h1:hDUSxIlEIfxAFBOVyn1+Ph3nN5CgOdAwH7ddMRMvD6s=
+github.com/cordialsys/solana-go v0.0.0-20240806201447-1fef7fb8882b/go.mod h1:afBEcIRrDLJst3lvAahTr63m6W2Ns6dajZxe2irF7Jg=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/go-etcd v2.0.0+incompatible/go.mod h1:Jez6KQU2B/sWsbdaef3ED8NzMklzPG4d5KIOhIy30Tk=
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
