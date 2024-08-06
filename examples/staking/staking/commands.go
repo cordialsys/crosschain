@@ -16,13 +16,23 @@ func CmdStakedBalances() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "balance <address>",
 		Short: "Lookup staked balances.",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.RangeArgs(0, 1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			from := args[0]
+			from := ""
+			if len(args) > 0 {
+				from = args[0]
+			} else {
+				// try loading from private-key env
+				fromWallet, _, err := LoadPrivateKey(xcFactory, chain)
+				if err != nil {
+					return fmt.Errorf("must provider an address or private key env (%v)", err)
+				}
+				from = string(fromWallet)
+			}
 
 			stakingClient, err := xcFactory.NewStakingClient(stakingCfg, chain, moreArgs.Provider)
 			if err != nil {

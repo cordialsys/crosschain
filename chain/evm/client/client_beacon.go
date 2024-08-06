@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
+	xcclient "github.com/cordialsys/crosschain/client"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -21,8 +24,27 @@ type GetValidatorResponse struct {
 type Validator struct {
 	Index     string           `json:"index"`
 	Balance   string           `json:"balance"`
-	Status    string           `json:"status"`
+	Status    ValidatorStatus  `json:"status"`
 	Validator ValidatorDetails `json:"validator"`
+}
+
+type ValidatorStatus string
+
+func (s ValidatorStatus) ToState() (xcclient.State, bool) {
+	var state xcclient.State = ""
+	// ethereum validator states
+	switch s {
+	case "pending_initialized":
+		state = xcclient.Activating
+	case "active_ongoing":
+		state = xcclient.Active
+	case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
+		state = xcclient.Inactive
+	case "active_exiting", "pending_queued":
+		state = xcclient.Deactivating
+	default:
+	}
+	return state, state != ""
 }
 
 type ValidatorDetails struct {
@@ -51,6 +73,23 @@ func (client *Client) FetchValidator(ctx context.Context, validator string) (*Ge
 	return &info, err
 }
 
+func (client *Client) FetchValidatorBalance(ctx context.Context, validator string) (*xcclient.StakedBalance, error) {
+	val, err := client.FetchValidator(ctx, validator)
+	if err != nil {
+		return nil, err
+	}
+	gwei, _ := xc.NewAmountHumanReadableFromStr(val.Data.Validator.EffectiveBalance)
+	amount := gwei.ToBlockchain(9)
+	var ok bool
+	status, ok := val.Data.Status.ToState()
+	if !ok {
+		// assume it's still activating
+		status = xcclient.Activating
+		logrus.Warn("unknown beacon validator state", status)
+	}
+	return xcclient.NewStakedBalance(amount, status, validator, ""), nil
+}
+
 func (cli *Client) Get(path string, response any) error {
 	return cli.Send("GET", path, nil, response)
 }
@@ -68,7 +107,7 @@ func (cli *Client) Post(path string, requestBody any, response any) error {
 func (cli *Client) Send(method string, path string, requestBody any, response any) error {
 	path = strings.TrimPrefix(path, "/")
 	baseUrl := cli.Asset.GetChain().URL
-	baseUrl = strings.TrimPrefix(baseUrl, "/")
+	baseUrl = strings.TrimSuffix(baseUrl, "/")
 
 	url := fmt.Sprintf("%s/%s", baseUrl, path)
 	var request *http.Request

@@ -68,3 +68,10 @@ func TrimPrefixes(addressOrTxHash string) string {
 func DecodeHex(hexS string) ([]byte, error) {
 	return hex.DecodeString(TrimPrefixes(hexS))
 }
+
+func Ensure0x(val string) string {
+	if !strings.HasPrefix(val, "0x") {
+		return "0x" + val
+	}
+	return val
+}

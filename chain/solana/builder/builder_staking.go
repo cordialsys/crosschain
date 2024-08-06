@@ -166,7 +166,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	return tx, nil
 }
 
-func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.ClaimTxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	withdrawInput, ok := input.(*tx_input.WithdrawInput)
 	if !ok {
 		return nil, fmt.Errorf("invalid input %T, expected %T", input, withdrawInput)

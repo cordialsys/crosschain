@@ -26,18 +26,10 @@ type Client struct {
 var _ xcclient.StakingClient = &Client{}
 
 func toStakingState(status string) (xcclient.State, bool) {
-	var state xcclient.State = ""
 	// ethereum validator states
-	switch status {
-	case "pending_initialized":
-		state = xcclient.Activating
-	case "active_ongoing":
-		state = xcclient.Active
-	case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
-		state = xcclient.Inactive
-	case "active_exiting", "pending_queued":
-		state = xcclient.Deactivating
-	default:
+	state, ok := evmclient.ValidatorStatus(status).ToState()
+	if ok {
+		return state, true
 	}
 	// kiln-specific states
 	switch status {
@@ -52,16 +44,16 @@ func toStakingState(status string) (xcclient.State, bool) {
 	return state, state != ""
 }
 
-func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, stakingCfg *services.ServicesConfig) (xcclient.StakingClient, error) {
+func NewClient(rpcClient *evmclient.Client, chain *xc.ChainConfig, kilnCfg *services.KilnConfig) (xcclient.StakingClient, error) {
 	// rpcClient, err := evmclient.NewClient(chain)
 	// if err != nil {
 	// 	return nil, err
 	// }
-	apiToken, err := stakingCfg.Kiln.ApiToken.Load()
+	apiToken, err := kilnCfg.ApiToken.Load()
 	if err != nil {
 		return nil, err
 	}
-	kilnClient, err := kiln.NewClient(string(chain.Chain), stakingCfg.Kiln.BaseUrl, apiToken)
+	kilnClient, err := kiln.NewClient(string(chain.Chain), kilnCfg.BaseUrl, apiToken)
 	if err != nil {
 		return nil, err
 	}
@@ -74,28 +66,13 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBa
 	if !ok {
 		return nil, fmt.Errorf("must provider a validator to lookup balance for")
 	}
-	// Assume it's always 32 ETH until we can read the stake from RPC
-	bal, _ := xc.NewAmountHumanReadableFromStr("32")
-	amount := bal.ToBlockchain(18)
 
 	// RPC is the most reliable place to get information on the stake
-	var status xcclient.State
-	val, err := cli.rpcClient.FetchValidator(ctx, validator)
+	validatorBal, err := cli.rpcClient.FetchValidatorBalance(ctx, validator)
 	if err != nil {
 		logrus.WithError(err).Debug("could not locate validator")
 	} else {
-		gwei, _ := xc.NewAmountHumanReadableFromStr(val.Data.Validator.EffectiveBalance)
-		amount = gwei.ToBlockchain(9)
-		var ok bool
-		status, ok = toStakingState(val.Data.Status)
-		if !ok {
-			// assume it's still activating
-			status = xcclient.Activating
-			logrus.Warn("unknown beacon validator state", status)
-		}
-		return []*xcclient.StakedBalance{
-			xcclient.NewStakedBalance(amount, status, validator, ""),
-		}, nil
+		return []*xcclient.StakedBalance{validatorBal}, nil
 	}
 
 	// However, it's not available via RPC during the first 'activating' period,
@@ -111,7 +88,10 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBa
 		// this means the eth has been sent back, so no balance is in a staking state.
 		return []*xcclient.StakedBalance{}, nil
 	}
-	status, ok = toStakingState(res.Data[0].State)
+	// Assume it's always 32 ETH until we can read the stake from RPC
+	bal, _ := xc.NewAmountHumanReadableFromStr("32")
+	amount := bal.ToBlockchain(18)
+	status, ok := toStakingState(res.Data[0].State)
 	if !ok {
 		// assume it's still activating
 		status = xcclient.Activating
@@ -248,8 +228,7 @@ func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.Sta
 			if err != nil {
 				return nil, fmt.Errorf("could not lookup validator: %v", err)
 			}
-			status = validator.Data.Status
-			state, _ := toStakingState(status)
+			state, _ := validator.Data.Status.ToState()
 
 			if state != xcclient.Deactivating && state != xcclient.Inactive {
 				pubkeys = append(pubkeys, stake.ValidatorAddress)
@@ -273,6 +252,6 @@ func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.Sta
 	return input, nil
 }
 
-func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.ClaimTxInput, error) {
-	return nil, fmt.Errorf("ethereum stakes are claimed automatically")
+func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
+	return nil, fmt.Errorf("ethereum stakes are withdrawn automatically")
 }

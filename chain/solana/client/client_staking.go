@@ -242,7 +242,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	return &unstakeInput, nil
 }
 
-func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.ClaimTxInput, error) {
+func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	stakeAccounts, err := client.GetStakeAccounts(ctx, args.GetFrom())
 	if err != nil {
 		return nil, err
