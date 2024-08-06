@@ -612,7 +612,7 @@ func TestFetchTxInfo(t *testing.T) {
 			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.NotNil(t, txInfo)
 			require.Equal(t, v.val, txInfo)
 		}

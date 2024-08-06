@@ -25,11 +25,11 @@ type ExistingStake struct {
 	ActivationEpoch   uint64 `json:"activation_epoch"`
 	DeactivationEpoch uint64 `json:"deactivation_epoch"`
 	// The total activating-or-activated amount
-	AmountActive xc.AmountBlockchain `json:"amount_staked"`
+	AmountActive xc.AmountBlockchain `json:"amount_active"`
 	// unlocked/inactive amount
-	AmountInactive       xc.AmountBlockchain `json:"amount_inactive"`
-	ValidatorVoteAccount string              `json:"validator_vote_account"`
-	StakeAccount         solana.PublicKey    `json:"stake_account"`
+	AmountInactive xc.AmountBlockchain `json:"amount_inactive"`
+	// ValidatorVoteAccount solana.PublicKey    `json:"validator_vote_account"`
+	StakeAccount solana.PublicKey `json:"stake_account"`
 }
 type UnstakingInput struct {
 	TxInput

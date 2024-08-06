@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 
+	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/stake"
 	"github.com/gagliardetto/solana-go/programs/system"
@@ -92,80 +93,46 @@ func NewTxFrom(solTx *solana.Transaction) *Tx {
 	return tx
 }
 
-// // From is the sender of a transfer
-// func (tx Tx) From() xc.Address {
-// 	switch tf := tx.parsedTransfer.(type) {
-// 	case *system.Transfer:
-// 		from := tf.GetFundingAccount().PublicKey.String()
-// 		return xc.Address(from)
-// 	case *token.TransferChecked:
-// 		from := tf.GetOwnerAccount().PublicKey.String()
-// 		return xc.Address(from)
-// 	case *token.Transfer:
-// 		from := tf.GetOwnerAccount().PublicKey.String()
-// 		return xc.Address(from)
-// 	case *vote.Withdraw:
-// 		// https://docs.rs/solana-vote-program/latest/solana_vote_program/vote_instruction/enum.VoteInstruction.html#variant.Withdraw
-// 		from := tf.GetAccounts()[2].PublicKey.String()
-// 		return xc.Address(from)
-// 	}
-// 	return xc.Address("")
-// }
+type SolanaInstruction interface {
+	Obtain(def *bin.VariantDefinition) (typeID bin.TypeID, typeName string, impl interface{})
+}
 
-// // To is the owner account receiving a transfer
-// func (tx Tx) ToOwnerAccount() xc.Address {
-// 	switch tf := tx.parsedTransfer.(type) {
-// 	case *system.Transfer:
-// 		to := tf.GetRecipientAccount().PublicKey.String()
-// 		return xc.Address(to)
-// 	case *vote.Withdraw:
-// 		// https://docs.rs/solana-vote-program/latest/solana_vote_program/vote_instruction/enum.VoteInstruction.html#variant.Withdraw
-// 		to := tf.GetAccounts()[1].PublicKey.String()
-// 		return xc.Address(to)
-// 	}
+func getall[T any, Y SolanaInstruction](
+	decoder func(accounts []*solana.AccountMeta, data []byte) (Y, error),
+	solanaProgram solana.PublicKey,
+	solTx *solana.Transaction,
+) []T {
+	results := []T{}
+	if solTx == nil {
+		return []T{}
+	}
+	message := solTx.Message
 
-// 	return xc.Address("")
-// }
-
-// // returns an alternative recipient, for Solana the Associated Token Account (ATA),
-// // or an auxiliary token account.
-// func (tx Tx) ToTokenAccount() (solana.PublicKey, bool) {
-// 	// only for tokens
-// 	switch tf := tx.parsedTransfer.(type) {
-// 	case *token.TransferChecked:
-// 		return tf.GetDestinationAccount().PublicKey, true
-// 	case *token.Transfer:
-// 		return tf.GetDestinationAccount().PublicKey, true
-// 	}
-// 	return solana.PublicKey{}, false
-// }
-
-// // Amount returns the tx amount
-// func (tx Tx) Amount() xc.AmountBlockchain {
-// 	switch tf := tx.parsedTransfer.(type) {
-// 	case *system.Transfer:
-// 		return xc.NewAmountBlockchainFromUint64(*tf.Lamports)
-// 	case *token.TransferChecked:
-// 		return xc.NewAmountBlockchainFromUint64(*tf.Amount)
-// 	case *token.Transfer:
-// 		return xc.NewAmountBlockchainFromUint64(*tf.Amount)
-// 	case *vote.Withdraw:
-// 		return xc.NewAmountBlockchainFromUint64(*tf.Lamports)
-// 	}
-// 	return xc.NewAmountBlockchainFromUint64(0)
-// }
-
-// // ContractAddress returns the contract address for a token transfer
-// func (tx Tx) ContractAddress() xc.ContractAddress {
-// 	// only TransferChecked contains mint addr - Transfer does not
-// 	switch tf := tx.parsedTransfer.(type) {
-// 	case *token.TransferChecked:
-// 		contract := tf.GetMintAccount().PublicKey.String()
-// 		return xc.ContractAddress(contract)
-// 	}
-
-// 	return xc.ContractAddress("")
-// }
+	for _, instruction := range message.Instructions {
+		program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
+		if err != nil {
+			continue
+		}
+		if !program.Equals(solanaProgram) {
+			continue
+		}
+		accs, err := instruction.ResolveInstructionAccounts(&message)
+		if err != nil {
+			continue
+		}
+		inst, err := decoder(accs, instruction.Data)
+		if err != nil {
+			continue
+		}
+		_, _, impl := inst.Obtain(bin.NewVariantDefinition(bin.Uint32TypeIDEncoding, nil))
+		castedInst, ok := impl.(T)
+		if !ok {
+			continue
+		}
+		results = append(results, castedInst)
+	}
+	return results
+}
 
 // RecentBlockhash returns the recent block hash used as a nonce for a Solana tx
 func (tx Tx) RecentBlockhash() string {
@@ -179,124 +146,25 @@ func (tx Tx) RecentBlockhash() string {
 }
 
 func (tx Tx) GetVoteWithdraws() []*vote.Withdraw {
-	results := []*vote.Withdraw{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.VoteProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := vote.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*vote.Withdraw)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return getall[*vote.Withdraw](vote.DecodeInstruction, solana.VoteProgramID, tx.SolTx)
 }
 
 func (tx Tx) GetSystemTransfers() []*system.Transfer {
-	results := []*system.Transfer{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.SystemProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := system.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*system.Transfer)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-
-	return results
+	return getall[*system.Transfer](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
 }
 
 func (tx Tx) GetTokenTransferCheckeds() []*token.TransferChecked {
-	results := []*token.TransferChecked{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.TokenProgramID) && !program.Equals(solana.Token2022ProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := token.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*token.TransferChecked)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return append(
+		getall[*token.TransferChecked](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
+		getall[*token.TransferChecked](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
+	)
 }
 
 func (tx Tx) GetTokenTransfers() []*token.Transfer {
-	results := []*token.Transfer{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.TokenProgramID) && !program.Equals(solana.Token2022ProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := token.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*token.Transfer)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return append(
+		getall[*token.Transfer](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
+		getall[*token.Transfer](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
+	)
 }
 
 type CreateAccountLikeInstruction struct {
@@ -306,132 +174,37 @@ type CreateAccountLikeInstruction struct {
 
 func (tx Tx) GetCreateAccounts() []*CreateAccountLikeInstruction {
 	results := []*CreateAccountLikeInstruction{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.SystemProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := system.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			switch inst := inst.Impl.(type) {
-			case *system.CreateAccount:
-				results = append(results, &CreateAccountLikeInstruction{
-					NewAccount: inst.GetNewAccount().PublicKey,
-					Lamports:   *inst.Lamports,
-				})
-			case *system.CreateAccountWithSeed:
-				results = append(results, &CreateAccountLikeInstruction{
-					NewAccount: inst.GetCreatedAccount().PublicKey,
-					Lamports:   *inst.Lamports,
-				})
-			default:
-				continue
-			}
-
-		}
+	creates := getall[*system.CreateAccount](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
+	seeds := getall[*system.CreateAccountWithSeed](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
+	for _, acc := range creates {
+		results = append(results, &CreateAccountLikeInstruction{
+			NewAccount: acc.GetNewAccount().PublicKey,
+			Lamports:   *acc.Lamports,
+		})
+	}
+	for _, acc := range seeds {
+		results = append(results, &CreateAccountLikeInstruction{
+			NewAccount: acc.GetCreatedAccount().PublicKey,
+			Lamports:   *acc.Lamports,
+		})
 	}
 	return results
 }
 
 func (tx Tx) GetDelegateStake() []*stake.DelegateStake {
-	results := []*stake.DelegateStake{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.StakeProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := stake.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*stake.DelegateStake)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return getall[*stake.DelegateStake](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
 func (tx Tx) GetDeactivateStakes() []*stake.Deactivate {
-	results := []*stake.Deactivate{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.StakeProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := stake.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*stake.Deactivate)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return getall[*stake.Deactivate](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
+}
+
+func (tx Tx) GetSplitStakes() []*stake.Split {
+	return getall[*stake.Split](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
 func (tx Tx) GetStakeWithdraws() []*stake.Withdraw {
-	results := []*stake.Withdraw{}
-	if tx.SolTx != nil {
-		message := tx.SolTx.Message
-		for _, instruction := range message.Instructions {
-			program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-			if err != nil {
-				continue
-			}
-			if !program.Equals(solana.StakeProgramID) {
-				continue
-			}
-			accs, err := instruction.ResolveInstructionAccounts(&message)
-			if err != nil {
-				continue
-			}
-			inst, err := stake.DecodeInstruction(accs, instruction.Data)
-			if err != nil {
-				continue
-			}
-			castedInst, ok := inst.Impl.(*stake.Withdraw)
-			if !ok {
-				continue
-			}
-			results = append(results, castedInst)
-		}
-	}
-	return results
+	return getall[*stake.Withdraw](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
 // Serialize returns the serialized tx
