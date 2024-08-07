@@ -7,11 +7,37 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	aptostxinput "github.com/cordialsys/crosschain/chain/aptos/tx_input"
+	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
+	evmtxinput "github.com/cordialsys/crosschain/chain/evm/tx_input"
+	"github.com/cordialsys/crosschain/chain/evm_legacy"
+	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
+	"github.com/cordialsys/crosschain/chain/substrate"
+	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/ton"
+	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 
 	"github.com/stretchr/testify/suite"
 )
+
+// We must reference all the tx-inputs here to ensure they register their tx-inputs,
+// otherwise the tests may skip compiling & loading them
+var LoadedTxInputs = []xc.TxInput{
+	&aptostxinput.TxInput{},
+	&bitcointxinput.TxInput{},
+	&cosmostxinput.TxInput{},
+	&evmtxinput.TxInput{},
+	&evm_legacy.TxInput{},
+	&solanatxinput.TxInput{},
+	&substrate.TxInput{},
+	&sui.TxInput{},
+	&ton.TxInput{},
+	&tron.TxInput{},
+}
 
 type CrosschainTestSuite struct {
 	suite.Suite
@@ -68,9 +94,12 @@ func (s *CrosschainTestSuite) TestAllNewTxInput() {
 	_, err := drivers.NewTxInput("randomthing")
 	require.Error(err)
 
+	require.GreaterOrEqual(len(registry.GetSupportedBaseTxInputs()), 1, "no registered base variants")
+
 	for _, driver := range xc.SupportedDrivers {
+		fmt.Println("driver: ", driver)
 		input, err := drivers.NewTxInput(driver)
-		require.NoError(err, "Missing driver for NewClient: "+driver)
+		require.NoError(err, "Missing tx-input definition: "+driver)
 		require.NotNil(input)
 
 		// no panics
@@ -94,19 +123,15 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 	_, err := drivers.NewVariantInput("randomthing")
 	require.Error(err)
 
+	fmt.Println("test")
+	require.GreaterOrEqual(len(registry.GetSupportedTxVariants()), 1, "no registered staking variants")
+
 	type testcase struct {
-		// variants []factory.SupportedVariantTx
 		variants []xc.TxVariantInput
-		// inputType string
 	}
 	testcases := []testcase{
 		{
-			variants: drivers.SupportedVariantTx,
-			// inputType: "staking-inputs",
-		},
-		{
-			variants: drivers.SupportedVariantTx,
-			// inputType: "unstaking-inputs",
+			variants: registry.GetSupportedTxVariants(),
 		},
 	}
 
@@ -131,14 +156,16 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 			require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
 
 			inputType := strings.Split(string(variant.GetVariant()), "/")[2]
-			// require.Equal(v.inputType, inputType, "unexpected input type")
 
 			switch inputType {
-			case "staking-inputs":
+			case "staking":
 				_, err := drivers.UnmarshalStakingInput(bz)
 				require.NoError(err)
-			case "unstaking-inputs":
+			case "unstaking":
 				_, err := drivers.UnmarshalUnstakingInput(bz)
+				require.NoError(err)
+			case "withdrawing":
+				_, err := drivers.UnmarshalWithdrawingInput(bz)
 				require.NoError(err)
 			default:
 				require.Fail("unexpected txType ", inputType)
@@ -150,10 +177,10 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 	require := s.Require()
 
 	variants := map[xc.TxVariantInputType]bool{}
-	for _, variant := range drivers.SupportedVariantTx {
+	for _, variant := range registry.GetSupportedTxVariants() {
 		variantType := variant.GetVariant()
 		parts := strings.Split(string(variantType), "/")
-		inputColumns := []string{"staking-inputs", "unstaking-inputs"}
+		inputColumns := []string{"staking", "unstaking", "withdrawing"}
 		require.Len(parts, 4, "variant must be in format drivers/:driver/[ "+strings.Join(inputColumns, "|")+" ]/:id")
 		require.Equal("drivers", parts[0])
 		require.Contains(inputColumns, parts[2], "input type column must be one of: "+strings.Join(inputColumns, ", "))
@@ -208,6 +235,8 @@ func (s *CrosschainTestSuite) TestAllCheckError() {
 
 func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 	require := s.Require()
+	require.GreaterOrEqual(len(registry.GetSupportedBaseTxInputs()), 1, "no registered base variants")
+
 	for _, driver := range xc.SupportedDrivers {
 		var input xc.TxInput
 		input, err := drivers.NewTxInput(driver)
@@ -215,9 +244,7 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 		bz, err := drivers.MarshalTxInput(input)
 		require.NoError(err)
 		_, err = drivers.UnmarshalTxInput(bz)
-		// output, err := UnmarshalTxInput(bz)
 		require.NoError(err)
-		// require.Equal(input, output)
 	}
 }
 

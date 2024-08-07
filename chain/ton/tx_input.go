@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/ton/api"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 )
 
@@ -30,6 +31,10 @@ var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 var _ xc.TxInputWithMemo = &TxInput{}
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
@@ -37,6 +42,11 @@ func NewTxInput() *TxInput {
 		},
 	}
 }
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverTon
+}
+
 func (input *TxInput) SetPublicKey(pk []byte) error {
 	if len(pk) != ed25519.PublicKeySize {
 		return fmt.Errorf("invalid ed25519 public key size: %d", len(pk))

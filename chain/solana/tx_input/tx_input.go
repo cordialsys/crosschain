@@ -4,6 +4,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/gagliardetto/solana-go"
 	"github.com/shopspring/decimal"
 )
@@ -27,6 +28,17 @@ type TokenAccount struct {
 
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverSolana
+}
 
 // Solana recent-block-hash timeout margin
 const SafetyTimeoutMargin = (5 * time.Minute)

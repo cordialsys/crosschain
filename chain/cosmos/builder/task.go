@@ -1,4 +1,4 @@
-package cosmos
+package builder
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -13,7 +15,7 @@ import (
 var _ xc.TxXTransferBuilder = &TxBuilder{}
 
 func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	task := txBuilder.Asset.(*xc.TaskConfig)
 	amountInt := big.Int(amount)
 	amountCoin := types.Coin{
@@ -24,7 +26,7 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 	if strings.HasPrefix(task.Code, "CosmosUndelegateOperator") {
 		validatorAddress, ok := task.DefaultParams["validator_address"]
 		if !ok {
-			return &Tx{}, fmt.Errorf("must provide validator_address in task '%s'", txBuilder.Asset.ID())
+			return &tx.Tx{}, fmt.Errorf("must provide validator_address in task '%s'", txBuilder.Asset.ID())
 		}
 		msgUndelegate := &stakingtypes.MsgUndelegate{
 			DelegatorAddress: string(from),
@@ -35,5 +37,5 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 		return txBuilder.createTxWithMsg(from, to, amount, txInput, msgUndelegate)
 	}
 
-	return &Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())
+	return &tx.Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())
 }

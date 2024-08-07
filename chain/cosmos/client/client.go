@@ -1,8 +1,7 @@
-package cosmos
+package client
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -10,13 +9,16 @@ import (
 	"strings"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
+	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/shopspring/decimal"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
@@ -28,90 +30,6 @@ import (
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 )
-
-type CosmoAssetType string
-
-// Cosmos assets can be managed by completely different modules (e.g. cosmwasm cw20, x/bank, etc)
-var CW20 CosmoAssetType = "cw20"
-var BANK CosmoAssetType = "bank"
-
-// TxInput for Cosmos
-type TxInput struct {
-	xc.TxInputEnvelope
-	AccountNumber uint64  `json:"account_number,omitempty"`
-	Sequence      uint64  `json:"sequence,omitempty"`
-	GasLimit      uint64  `json:"gas_limit,omitempty"`
-	GasPrice      float64 `json:"gas_price,omitempty"`
-	Memo          string  `json:"memo,omitempty"`
-	FromPublicKey []byte  `json:"from_pubkey,omitempty"`
-
-	AssetType CosmoAssetType `json:"asset_type,omitempty"`
-	ChainId   string         `json:"chain_id,omitempty"`
-}
-
-var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
-var _ xc.TxInputWithMemo = &TxInput{}
-
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	input.GasPrice, _ = multiplier.Mul(decimal.NewFromFloat(input.GasPrice)).Float64()
-	return nil
-}
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// different sequence means independence
-	if cosmosOther, ok := other.(*TxInput); ok {
-		// cosmos address could own multiple accounts too which each have independent sequence.
-		return cosmosOther.AccountNumber != input.AccountNumber ||
-			cosmosOther.Sequence != input.Sequence
-	}
-	return
-}
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
-		return false
-	}
-	// all same sequence means no double send
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
-	}
-	// sequence all same - we're safe
-	return true
-}
-func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
-	txInput.FromPublicKey = publicKeyBytes
-	return nil
-}
-
-func (txInput *TxInput) SetMemo(memo string) {
-	txInput.Memo = memo
-}
-
-func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
-	var publicKeyBytes []byte
-	var err error
-	if strings.HasPrefix(publicKeyStr, "0x") {
-		publicKeyBytes, err = hex.DecodeString(publicKeyStr)
-	} else {
-		publicKeyBytes, err = base64.StdEncoding.DecodeString(publicKeyStr)
-	}
-	if err != nil {
-		return fmt.Errorf("invalid public key %v: %v", publicKeyStr, err)
-	}
-	return txInput.SetPublicKey(publicKeyBytes)
-}
-
-// NewTxInput returns a new Cosmos TxInput
-func NewTxInput() *TxInput {
-	return &TxInput{
-		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverCosmos),
-	}
-}
 
 // Client for Cosmos
 type Client struct {
@@ -170,7 +88,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		panic(err)
 	}
 	_ = httpClient
-	cosmosCfg := MakeCosmosConfig()
+	cosmosCfg := localcodectypes.MakeCosmosConfig()
 	cliCtx := client.Context{}.
 		WithClient(httpClient).
 		WithCodec(cosmosCfg.Marshaler).
@@ -188,7 +106,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	txInput := NewTxInput()
+	txInput := tx_input.NewTxInput()
 
 	account, err := client.GetAccount(ctx, args.GetFrom())
 	if err != nil || account == nil {
@@ -198,12 +116,12 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.Sequence = account.GetSequence()
 	switch client.Asset.(type) {
 	case *xc.ChainConfig:
-		txInput.GasLimit = NativeTransferGasLimit
+		txInput.GasLimit = gas.NativeTransferGasLimit
 		if client.Asset.GetChain().Chain == xc.HASH {
 			txInput.GasLimit = 200_000
 		}
 	default:
-		txInput.GasLimit = TokenTransferGasLimit
+		txInput.GasLimit = gas.TokenTransferGasLimit
 	}
 
 	status, err := client.Ctx.Client.Status(context.Background())
@@ -239,8 +157,8 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Cosmos tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	txBytes, _ := tx.Serialize()
+func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
+	txBytes, _ := tx1.Serialize()
 
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
@@ -248,7 +166,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	}
 
 	if res.Code != 0 {
-		txID := tmHash(txBytes)
+		txID := tx.TmHash(txBytes)
 		return fmt.Errorf("tx %v failed code: %v, log: %v", txID, res.Code, res.RawLog)
 	}
 
@@ -293,7 +211,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		return result, err
 	}
 
-	tx := &Tx{
+	tx := &tx.Tx{
 		CosmosTx:        decodedTx,
 		CosmosTxEncoder: client.Ctx.TxConfig.TxEncoder(),
 	}
@@ -368,7 +286,7 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 	return bal, err
 }
 
-func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address) (xc.AmountBlockchain, CosmoAssetType, error) {
+func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address) (xc.AmountBlockchain, tx_input.CosmoAssetType, error) {
 	// attempt getting the x/bank module balance first.
 	bal, bankErr := client.fetchBankModuleBalance(ctx, address, client.Asset)
 	if bankErr == nil {
@@ -377,16 +295,16 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 			// so if there's 0 bal, we double check if there's an cw20 balance.
 			bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
 			if cw20Err == nil && bal.Uint64() > 0 {
-				return bal, CW20, nil
+				return bal, tx_input.CW20, nil
 			}
 		}
-		return bal, BANK, nil
+		return bal, tx_input.BANK, nil
 	}
 
 	// attempt getting the cw20 balance.
 	bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
 	if cw20Err == nil {
-		return bal, CW20, nil
+		return bal, tx_input.CW20, nil
 	}
 
 	return bal, "", fmt.Errorf("could not determine balance for bank (%v) or cw20 (%v)", bankErr, cw20Err)

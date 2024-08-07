@@ -11,6 +11,7 @@ import (
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 )
@@ -45,18 +46,18 @@ func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 	acc, err := client.AptosClient.GetAccount(string(args.GetFrom()))
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 	gas_price, err := client.EstimateGas(ctx, ledger)
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 
-	return &TxInput{
+	return &tx_input.TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverAptos,
 		},

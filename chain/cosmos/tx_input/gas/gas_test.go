@@ -1,15 +1,17 @@
-package cosmos
+package gas_test
 
 import (
 	"fmt"
+	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestParseMinGasErr() {
-	require := s.Require()
+func TestParseMinGasErr(t *testing.T) {
 
 	type testcase struct {
 		RawLog        string
@@ -64,14 +66,14 @@ func (s *CrosschainTestSuite) TestParseMinGasErr() {
 		},
 	} {
 		fmt.Println("test case ", i, tc.RawLog)
-		coin, err := ParseMinGasError(&types.TxResponse{
+		coin, err := gas.ParseMinGasError(&types.TxResponse{
 			RawLog: tc.RawLog,
 		}, tc.Denoms)
 		if tc.Err != "" {
-			require.ErrorContains(err, tc.Err)
+			require.ErrorContains(t, err, tc.Err)
 		} else {
-			require.NoError(err)
-			require.Equal(sdk.Coin{
+			require.NoError(t, err)
+			require.Equal(t, sdk.Coin{
 				Denom:  tc.ExpectedDenom,
 				Amount: sdkmath.NewInt(int64(tc.Amount)),
 			}, coin)
@@ -79,9 +81,8 @@ func (s *CrosschainTestSuite) TestParseMinGasErr() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestTotalFeeToFeePerGas() {
-	require := s.Require()
-	require.Equal(0.1, TotalFeeToFeePerGas("100", 1000))
-	require.Equal(float64(10000000000)/1000, TotalFeeToFeePerGas("10000000000", 1000))
-	require.Equal(float64(100)/1000000000000, TotalFeeToFeePerGas("100", 1000000000000))
+func TestTotalFeeToFeePerGas(t *testing.T) {
+	require.Equal(t, 0.1, gas.TotalFeeToFeePerGas("100", 1000))
+	require.Equal(t, float64(10000000000)/1000, gas.TotalFeeToFeePerGas("10000000000", 1000))
+	require.Equal(t, float64(100)/1000000000000, gas.TotalFeeToFeePerGas("100", 1000000000000))
 }

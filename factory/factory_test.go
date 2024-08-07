@@ -8,7 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	"github.com/cordialsys/crosschain/chain/cosmos"
+	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/config/constants"
@@ -495,7 +495,7 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require.Equal(inputSolana, typedSolana)
 
 	// Cosmos
-	inputCosmos := cosmos.NewTxInput()
+	inputCosmos := cosmostxinput.NewTxInput()
 	inputCosmos.FromPublicKey = []byte{1, 2, 3}
 	inputCosmos.AccountNumber = 1
 	inputCosmos.Sequence = 2
@@ -507,7 +507,7 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 
 	deser, err = s.Factory.UnmarshalTxInput(ser)
 	require.NoError(err)
-	typedCosmos := deser.(*cosmos.TxInput)
+	typedCosmos := deser.(*cosmostxinput.TxInput)
 	require.NotNil(typedCosmos)
 	expected := inputCosmos
 	require.Equal(expected, typedCosmos)

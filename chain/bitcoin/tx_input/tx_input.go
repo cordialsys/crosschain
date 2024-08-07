@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,6 +37,10 @@ type TxInput struct {
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 }
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithAmount = &TxInput{}
@@ -45,6 +50,10 @@ func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverBitcoin),
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverBitcoin
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {

@@ -1,25 +1,30 @@
-package cosmos
+package builder_test
 
 import (
 
 	// "github.com/cosmos/cosmos-sdk/types/tx"
 
+	"testing"
+
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	"github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestTaxRate() {
-	require := s.Require()
+func TestTaxRate(t *testing.T) {
 	amount := xc.NewAmountBlockchainFromUint64(100)
 	tax := 0.05
-	require.Equal(xc.NewAmountBlockchainFromUint64(5), GetTaxFrom(amount, tax))
+	require.Equal(t, xc.NewAmountBlockchainFromUint64(5), builder.GetTaxFrom(amount, tax))
 
 	tax = 0.000000001
-	require.Equal(xc.NewAmountBlockchainFromUint64(0), GetTaxFrom(amount, tax))
+	require.Equal(t, xc.NewAmountBlockchainFromUint64(0), builder.GetTaxFrom(amount, tax))
 }
 
-func (s *CrosschainTestSuite) TestTransferWithTax() {
-	require := s.Require()
+func TestTransferWithTax(t *testing.T) {
 	type testcase struct {
 		Amount  uint64
 		TaxRate float64
@@ -52,44 +57,43 @@ func (s *CrosschainTestSuite) TestTransferWithTax() {
 
 		amount := xc.NewAmountBlockchainFromUint64(tc.Amount)
 
-		builder, err := NewTxBuilder(asset)
-		require.NoError(err)
+		builder, err := builder.NewTxBuilder(asset)
+		require.NoError(t, err)
 
 		addr1 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
 		addr2 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
-		input := NewTxInput()
-		input.AssetType = BANK
+		input := tx_input.NewTxInput()
+		input.AssetType = tx_input.BANK
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
-		require.NoError(err)
-		cosmosTx := xcTx.(*Tx).CosmosTx.(types.FeeTx)
+		require.NoError(t, err)
+		cosmosTx := xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
 		fee := cosmosTx.GetFee()
 		// should only be one fee (tax and normal fee should be added)
-		require.Len(fee, 1)
+		require.Len(t, fee, 1)
 		// 5% of 100 is 5
-		require.EqualValues(tc.Tax, fee.AmountOf("axpla").Uint64())
+		require.EqualValues(t, tc.Tax, fee.AmountOf("axpla").Uint64())
 
 		// change the gas coin
 		asset.GasCoin = "uusd"
 		xcTx, err = builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
-		require.NoError(err)
-		cosmosTx = xcTx.(*Tx).CosmosTx.(types.FeeTx)
+		require.NoError(t, err)
+		cosmosTx = xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
 		fee = cosmosTx.GetFee()
 		// should now be two fees: 1 normal fee in gas goin, 1 tax fee in transfer coin
 		if tc.Tax > 0 {
-			require.Len(fee, 2)
+			require.Len(t, fee, 2)
 			// must be sorted
-			require.Equal("axpla", fee[0].Denom)
-			require.Equal("uusd", fee[1].Denom)
+			require.Equal(t, "axpla", fee[0].Denom)
+			require.Equal(t, "uusd", fee[1].Denom)
 		}
 		// 5% of 100 is 5
-		require.EqualValues(tc.Tax, fee.AmountOf("axpla").Uint64())
+		require.EqualValues(t, tc.Tax, fee.AmountOf("axpla").Uint64())
 
 	}
 }
 
-func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
-	require := s.Require()
+func TestTransferWithMaxGasPrice(t *testing.T) {
 	type testcase struct {
 		max        float64
 		inputPrice float64
@@ -99,18 +103,18 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 		{
 			max:        10,
 			inputPrice: 100,
-			totalFee:   NativeTransferGasLimit * 10,
+			totalFee:   gas.NativeTransferGasLimit * 10,
 		},
 		{
 			max:        10,
 			inputPrice: 5,
-			totalFee:   NativeTransferGasLimit * 5,
+			totalFee:   gas.NativeTransferGasLimit * 5,
 		},
 		{
 			max:        0,
 			inputPrice: 10000,
 			// 2 "human units" is the default max
-			totalFee: DefaultMaxTotalFeeHuman.ToBlockchain(6).Uint64(),
+			totalFee: builder.DefaultMaxTotalFeeHuman.ToBlockchain(6).Uint64(),
 		},
 	} {
 
@@ -124,21 +128,21 @@ func (s *CrosschainTestSuite) TestTransferWithMaxGasPrice() {
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
 
-		builder, err := NewTxBuilder(asset)
-		require.NoError(err)
+		builder, err := builder.NewTxBuilder(asset)
+		require.NoError(t, err)
 
 		addr1 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
 		addr2 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
-		input := NewTxInput()
+		input := tx_input.NewTxInput()
 		input.GasPrice = tc.inputPrice
-		input.AssetType = BANK
+		input.AssetType = tx_input.BANK
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
-		require.NoError(err)
-		cosmosTx := xcTx.(*Tx).CosmosTx.(types.FeeTx)
+		require.NoError(t, err)
+		cosmosTx := xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
 		fee := cosmosTx.GetFee()
-		require.Len(fee, 1)
-		require.EqualValues(tc.totalFee, fee.AmountOf("uluna").Uint64())
+		require.Len(t, fee, 1)
+		require.EqualValues(t, tc.totalFee, fee.AmountOf("uluna").Uint64())
 
 	}
 }

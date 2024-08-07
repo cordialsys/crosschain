@@ -12,6 +12,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
@@ -49,12 +50,20 @@ type TxInput struct {
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverTron,
 		},
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverTron
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {

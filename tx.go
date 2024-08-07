@@ -6,6 +6,7 @@ import (
 
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
 type TxInput interface {
+	GetDriver() Driver
 	TxInputConflicts
 	TxInputGasFeeMultiplier
 }

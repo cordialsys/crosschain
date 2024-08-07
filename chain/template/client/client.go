@@ -1,4 +1,4 @@
-package newchain
+package client
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/template/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
 
@@ -22,7 +23,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // FetchTransferInput returns tx input for a Template tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	return &TxInput{}, errors.New("not implemented")
+	return &tx_input.TxInput{}, errors.New("not implemented")
 }
 
 // Deprecated method - use FetchTransferInput

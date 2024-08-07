@@ -10,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
 type Client struct {
@@ -18,9 +19,13 @@ type Client struct {
 
 var _ xclient.FullClient = &Client{}
 
-type TxInput = evminput.TxInput
+type TxInput evminput.TxInput
 
 var _ xc.TxInput = &TxInput{}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
 
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -28,6 +33,20 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverEVMLegacy,
 		},
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverEVMLegacy
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	return ((*evminput.TxInput)(input)).SetGasFeePriority(other)
+}
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	return ((*evminput.TxInput)(input)).IndependentOf(other)
+}
+func (input *TxInput) SafeFromDoubleSend(other ...xc.TxInput) (independent bool) {
+	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other...)
 }
 
 func NewClient(cfgI xc.ITask) (*Client, error) {

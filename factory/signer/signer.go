@@ -9,7 +9,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/cosmos"
+	cosmostypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -33,7 +33,7 @@ func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, er
 		if len(privateKeyOrMnemonic) < 16 {
 			return nil, errors.New("invalid mnemonic")
 		}
-		codec := cosmos.MakeCosmosConfig().Marshaler
+		codec := cosmostypes.MakeCosmosConfig().Marshaler
 		kb := keyring.NewInMemory(codec)
 		// common path, will not be correct for all chains
 		hdPath := hd.CreateHDPath(hdPathNum, 0, 0).String()

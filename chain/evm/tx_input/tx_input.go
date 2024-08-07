@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 )
 
@@ -30,12 +31,22 @@ type TxInput struct {
 
 var _ xc.TxInput = &TxInput{}
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&BatchDepositInput{})
+	registry.RegisterTxVariantInput(&ExitRequestInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverEVM,
 		},
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverEVM
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
