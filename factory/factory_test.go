@@ -496,12 +496,12 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 
 	// Cosmos
 	inputCosmos := cosmostxinput.NewTxInput()
-	inputCosmos.FromPublicKey = []byte{1, 2, 3}
+	inputCosmos.LegacyFromPublicKey = []byte{1, 2, 3}
 	inputCosmos.AccountNumber = 1
 	inputCosmos.Sequence = 2
 	inputCosmos.GasLimit = 3
 	inputCosmos.GasPrice = 4.5
-	inputCosmos.Memo = "memo"
+	inputCosmos.LegacyMemo = "memo"
 	ser, err = s.Factory.MarshalTxInput(inputCosmos)
 	require.NoError(err)
 

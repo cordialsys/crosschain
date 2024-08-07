@@ -5,10 +5,6 @@ import (
 	"github.com/gagliardetto/solana-go"
 )
 
-func init() {
-
-}
-
 type StakingInput struct {
 	TxInput
 	ValidatorVoteAccount solana.PublicKey `json:"validator_vote_account"`
@@ -22,7 +18,7 @@ var _ xc.StakeTxInput = &StakingInput{}
 func (*StakingInput) Staking() {}
 
 func (*StakingInput) GetVariant() xc.TxVariantInputType {
-	return xc.NewStakingInputType(xc.DriverSolana, "native")
+	return xc.NewStakingInputType(xc.DriverSolana, string(xc.Native))
 }
 
 type ExistingStake struct {
@@ -49,7 +45,7 @@ var _ xc.UnstakeTxInput = &UnstakingInput{}
 func (*UnstakingInput) Unstaking() {}
 
 func (*UnstakingInput) GetVariant() xc.TxVariantInputType {
-	return xc.NewUnstakingInputType(xc.DriverSolana, "native")
+	return xc.NewUnstakingInputType(xc.DriverSolana, string(xc.Native))
 }
 
 type WithdrawInput struct {
@@ -63,5 +59,5 @@ var _ xc.WithdrawTxInput = &WithdrawInput{}
 func (*WithdrawInput) Withdrawing() {}
 
 func (*WithdrawInput) GetVariant() xc.TxVariantInputType {
-	return xc.NewWithdrawingInputType(xc.DriverSolana, "native")
+	return xc.NewWithdrawingInputType(xc.DriverSolana, string(xc.Native))
 }

@@ -34,7 +34,11 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 			ValidatorAddress: fmt.Sprintf("%s", validatorAddress),
 		}
 
-		return txBuilder.createTxWithMsg(from, to, amount, txInput, msgUndelegate)
+		fees := txBuilder.calculateFees(amount, txInput, false)
+		return txBuilder.createTxWithMsg(txInput, msgUndelegate, txArgs{
+			Memo:          txInput.LegacyMemo,
+			FromPublicKey: txInput.LegacyFromPublicKey,
+		}, fees)
 	}
 
 	return &tx.Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())

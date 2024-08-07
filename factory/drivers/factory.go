@@ -84,6 +84,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 		case Native:
 			return nil, fmt.Errorf("EVM does not support native staking")
 		}
+	case DriverCosmos, DriverCosmosEvmos:
+		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
 		return solanaclient.NewClient(cfg)
 	}

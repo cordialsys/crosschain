@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cometbft/cometbft/types/time"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/client"
@@ -207,6 +208,14 @@ func (args *StakingArgs) ToBuilderOptions() []builder.StakeOption {
 	}
 	return options
 }
+
+func (args *StakingArgs) BuilderOptionsWith(publicKey []byte) []builder.StakeOption {
+	options := args.ToBuilderOptions()
+	options = append(options, builder.StakeOptionPublicKey(publicKey))
+	options = append(options, builder.StakeOptionTimestamp(time.Now().Unix()))
+	return options
+}
+
 func (args *StakingArgs) ToBalanceOptions() []client.StakedBalanceOption {
 	options := []client.StakedBalanceOption{}
 	if args.Validator != "" {

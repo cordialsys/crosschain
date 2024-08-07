@@ -39,6 +39,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.StakingClient = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 	bodyStr := string(body)
@@ -106,11 +107,19 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+	return baseTxInput, nil
+}
+
+func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
-	account, err := client.GetAccount(ctx, args.GetFrom())
+	account, err := client.GetAccount(ctx, from)
 	if err != nil || account == nil {
-		return txInput, fmt.Errorf("failed to get account data for %v: %v", args.GetFrom(), err)
+		return txInput, fmt.Errorf("failed to get account data for %v: %v", from, err)
 	}
 	txInput.AccountNumber = account.GetAccountNumber()
 	txInput.Sequence = account.GetSequence()
@@ -141,7 +150,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		txInput.GasPrice = gasPrice
 	}
 
-	_, assetType, err := client.fetchBalanceAndType(ctx, args.GetFrom())
+	_, assetType, err := client.fetchBalanceAndType(ctx, from)
 	if err != nil {
 		return txInput, err
 	}

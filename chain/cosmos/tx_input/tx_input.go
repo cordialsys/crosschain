@@ -22,12 +22,12 @@ var BANK CosmoAssetType = "bank"
 // TxInput for Cosmos
 type TxInput struct {
 	xc.TxInputEnvelope
-	AccountNumber uint64  `json:"account_number,omitempty"`
-	Sequence      uint64  `json:"sequence,omitempty"`
-	GasLimit      uint64  `json:"gas_limit,omitempty"`
-	GasPrice      float64 `json:"gas_price,omitempty"`
-	Memo          string  `json:"memo,omitempty"`
-	FromPublicKey []byte  `json:"from_pubkey,omitempty"`
+	AccountNumber       uint64  `json:"account_number,omitempty"`
+	Sequence            uint64  `json:"sequence,omitempty"`
+	GasLimit            uint64  `json:"gas_limit,omitempty"`
+	GasPrice            float64 `json:"gas_price,omitempty"`
+	LegacyMemo          string  `json:"memo,omitempty"`
+	LegacyFromPublicKey []byte  `json:"from_pubkey,omitempty"`
 
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
 	ChainId   string         `json:"chain_id,omitempty"`
@@ -39,6 +39,9 @@ var _ xc.TxInputWithMemo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -76,12 +79,12 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	return true
 }
 func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
-	txInput.FromPublicKey = publicKeyBytes
+	txInput.LegacyFromPublicKey = publicKeyBytes
 	return nil
 }
 
 func (txInput *TxInput) SetMemo(memo string) {
-	txInput.Memo = memo
+	txInput.LegacyMemo = memo
 }
 
 func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
