@@ -75,6 +75,14 @@ Add `--rpc` to use your own RPC node or use a devnet or testnet network.
 xc transfer <destination-address> 0.1 -v --chain SOL --rpc "https://api.devnet.solana.com"
 ```
 
+### Stake an asset
+
+Stake 0.1 SOL on mainnet.
+
+```
+xc staking stake --amount 0.1 --chain SOL --rpc https://api.mainnet-beta.solana.com --validator he1iusunGwqrNtafDtLdhsUQDFvo13z9sUa36PauBtk
+```
+
 ### Download a transaction
 
 Transactions are represented in a universal format across different chains.
@@ -123,7 +131,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Aptos
 - [x] Bitcoin
 - [x] Bitcoin derived: Bitcoin Cash, Dogecoin
-- [ ] Bittensor
+- [x] Bittensor
 - [x] Cosmos
 - [x] Cosmos derived: Terra, Injective, XPLA, ...
 - [x] Ethereum
@@ -134,6 +142,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Sui
 - [x] TON
 - [x] Tron
+- [ ] XRP
 
 ### Assets
 
@@ -148,6 +157,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Transfers (native transfers, token transfers)
 - [x] Transaction reporting
 - [x] Wraps/unwraps: ETH, SOL, ...
+- [x] Staking/unstaking
 
 ### Devnet nodes
 

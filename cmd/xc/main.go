@@ -2,7 +2,9 @@ package main
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/cmd/xc/staking"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +32,23 @@ func CmdXc() *cobra.Command {
 			}
 			setup.OverrideChainSettings(chainConfig, args)
 
+			stakingArgs, err := setup.StakingArgsFromCmd(cmd)
+			if err != nil {
+				return err
+			}
+			var stakingCfg *services.ServicesConfig
+			if stakingArgs.ConfigPath != "" {
+				stakingCfg, err = services.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
+			} else {
+				stakingCfg, err = services.LoadConfig(xcFactory.GetNetworkSelector())
+			}
+			if err != nil {
+				return err
+			}
+
 			ctx := setup.CreateContext(xcFactory, chainConfig)
+			ctx = setup.WrapStakingArgs(ctx, stakingArgs)
+			ctx = setup.WrapStakingConfig(ctx, stakingCfg)
 
 			logrus.WithFields(logrus.Fields{
 				"rpc":     chainConfig.GetAllClients()[0].URL,
@@ -42,6 +60,7 @@ func CmdXc() *cobra.Command {
 		},
 	}
 	setup.AddRpcArgs(cmd)
+	setup.AddStakingArgs(cmd)
 
 	cmd.AddCommand(CmdRpcBalance())
 	cmd.AddCommand(CmdTxInput())
@@ -49,6 +68,7 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(CmdTxTransfer())
 	cmd.AddCommand(CmdAddress())
 	cmd.AddCommand(CmdChains())
+	cmd.AddCommand(staking.CmdStaking())
 
 	return cmd
 }
