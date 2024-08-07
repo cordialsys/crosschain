@@ -1,11 +1,14 @@
-package cosmos
+package tx
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/address"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -38,7 +41,7 @@ type Cw20Transfer struct {
 	Recipient string `json:"recipient,omitempty"`
 }
 
-func tmHash(bz []byte) xc.TxHash {
+func TmHash(bz []byte) xc.TxHash {
 	txID := tmhash.Sum(bz)
 	return xc.TxHash(hex.EncodeToString(txID))
 }
@@ -49,7 +52,7 @@ func (tx Tx) Hash() xc.TxHash {
 	if err != nil || serialized == nil || len(serialized) == 0 {
 		return ""
 	}
-	return tmHash(serialized)
+	return TmHash(serialized)
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
@@ -159,10 +162,11 @@ func (tx Tx) ContractAddress() xc.ContractAddress {
 		switch tf := parsedTransfer.(type) {
 		case *banktypes.MsgSend:
 			denom := tf.Amount[0].Denom
-			// remove native assets to be coherent with other chains
-			if len(denom) < LEN_NATIVE_ASSET {
-				denom = ""
-			}
+			// Previously, we used to null out the denom as contract address to be consistent with other chains,
+			// but this is inaccurate as the denom is a valid contract address.
+			// if len(denom) < LEN_NATIVE_ASSET {
+			// 	denom = ""
+			// }
 			return xc.ContractAddress(denom)
 		case *wasmtypes.MsgExecuteContract:
 			return xc.ContractAddress(tf.Contract)
@@ -257,4 +261,12 @@ func (tx Tx) Destinations() []*xc.LegacyTxInfoEndpoint {
 		}
 	}
 	return destinations
+}
+
+func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {
+	if address.IsEVMOS(asset) {
+		return crypto.Keccak256(sigData)
+	}
+	sighash := sha256.Sum256(sigData)
+	return sighash[:]
 }

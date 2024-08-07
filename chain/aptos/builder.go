@@ -5,6 +5,7 @@ import (
 
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 )
 
 // TxBuilder for Template
@@ -31,9 +32,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	var local_input *TxInput
+	var local_input *tx_input.TxInput
 	var ok bool
-	if local_input, ok = (input.(*TxInput)); !ok {
+	if local_input, ok = (input.(*tx_input.TxInput)); !ok {
 		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
 	}
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
@@ -72,10 +73,10 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 // NewTokenTransfer creates a new transfer for a token asset
 func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	var local_input *TxInput
+	var local_input *tx_input.TxInput
 	var ok bool
 	// Either ptr or full type is okay.
-	if local_input, ok = input.(*TxInput); !ok {
+	if local_input, ok = input.(*tx_input.TxInput); !ok {
 		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
 	}
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}

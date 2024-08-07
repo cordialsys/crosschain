@@ -1,17 +1,6 @@
-package cosmos
+package types
 
 import (
-	"crypto/sha256"
-
-	xc "github.com/cordialsys/crosschain"
-	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-
-	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
-	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
-	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/legacy"
@@ -34,10 +23,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 )
-
-const LEN_NATIVE_ASSET = 8
-
-var legacyCodecRegistered = false
 
 // EncodingConfig specifies the concrete encoding types to use for a given app.
 // This is provided for compatibility between protobuf and amino implementations.
@@ -82,6 +67,8 @@ func NewEncodingConfig() EncodingConfig {
 	}
 }
 
+var legacyCodecRegistered = false
+
 // MakeEncodingConfig creates an EncodingConfig for testing
 func MakeEncodingConfig() EncodingConfig {
 	encodingConfig := NewEncodingConfig()
@@ -104,30 +91,7 @@ func MakeEncodingConfig() EncodingConfig {
 func MakeCosmosConfig() EncodingConfig {
 	cosmosCfg := MakeEncodingConfig()
 	// Register types from other chains that use potentially incompatible cosmos-sdk versions
-	localcodectypes.RegisterExternalInterfaces(cosmosCfg.InterfaceRegistry)
-	localcodectypes.RegisterExternalLegacyAdmino(cosmosCfg.Amino)
+	RegisterExternalInterfaces(cosmosCfg.InterfaceRegistry)
+	RegisterExternalLegacyAdmino(cosmosCfg.Amino)
 	return cosmosCfg
-}
-
-func isEVMOS(asset *xc.ChainConfig) bool {
-	return xc.Driver(asset.Driver) == xc.DriverCosmosEvmos
-}
-
-func getPublicKey(asset *xc.ChainConfig, publicKeyBytes []byte) cryptotypes.PubKey {
-	if asset.Chain == xc.INJ {
-		// injective has their own ethsecp256k1 type..
-		return &injethsecp256k1.PubKey{Key: publicKeyBytes}
-	}
-	if isEVMOS(asset) {
-		return &ethsecp256k1.PubKey{Key: publicKeyBytes}
-	}
-	return &secp256k1.PubKey{Key: publicKeyBytes}
-}
-
-func getSighash(asset *xc.ChainConfig, sigData []byte) []byte {
-	if isEVMOS(asset) {
-		return crypto.Keccak256(sigData)
-	}
-	sighash := sha256.Sum256(sigData)
-	return sighash[:]
 }

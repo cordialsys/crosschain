@@ -1,4 +1,4 @@
-package cosmos
+package builder
 
 import (
 	"encoding/json"
@@ -8,6 +8,11 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/address"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
+	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
@@ -17,8 +22,6 @@ import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
-var NativeTransferGasLimit = uint64(400_000)
-var TokenTransferGasLimit = uint64(900_000)
 var DefaultMaxTotalFeeHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 
 // TxBuilder for Cosmos
@@ -31,7 +34,7 @@ type TxBuilder struct {
 
 // NewTxBuilder creates a new Cosmos TxBuilder
 func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
-	cosmosCfg := MakeCosmosConfig()
+	cosmosCfg := localcodectypes.MakeCosmosConfig()
 
 	return TxBuilder{
 		Asset:           asset,
@@ -43,12 +46,12 @@ func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
 func DefaultMaxGasPrice(nativeAsset *xc.ChainConfig) float64 {
 	// Don't spend more than e.g. 2 LUNA on a transaction
 	maxFee := DefaultMaxTotalFeeHuman.ToBlockchain(nativeAsset.Decimals)
-	return TotalFeeToFeePerGas(maxFee.String(), NativeTransferGasLimit)
+	return gas.TotalFeeToFeePerGas(maxFee.String(), gas.NativeTransferGasLimit)
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	native := txBuilder.Asset.GetChain()
 	max := native.ChainMaxGasPrice
 	if max <= 0 {
@@ -71,9 +74,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	// because cosmos assets can be transferred via a number of different modules, we have to rely on txInput
 	// to determine which cosmos module we should
 	switch txInput.AssetType {
-	case BANK:
+	case tx_input.BANK:
 		return txBuilder.NewBankTransfer(from, to, amount, input)
-	case CW20:
+	case tx_input.CW20:
 		return txBuilder.NewCW20Transfer(from, to, amount, input)
 	default:
 		return nil, errors.New("unknown cosmos asset type: " + string(txInput.AssetType))
@@ -92,11 +95,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 
 // x/bank MsgSend transfer
 func (txBuilder TxBuilder) NewBankTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	amountInt := big.Int(amount)
 
 	if txInput.GasLimit == 0 {
-		txInput.GasLimit = NativeTransferGasLimit
+		txInput.GasLimit = gas.NativeTransferGasLimit
 	}
 
 	denom := txBuilder.GetDenom()
@@ -115,11 +118,11 @@ func (txBuilder TxBuilder) NewBankTransfer(from xc.Address, to xc.Address, amoun
 }
 
 func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	asset := txBuilder.Asset
 
 	if txInput.GasLimit == 0 {
-		txInput.GasLimit = TokenTransferGasLimit
+		txInput.GasLimit = gas.TokenTransferGasLimit
 	}
 	contract := asset.GetContract()
 	contractTransferMsg := fmt.Sprintf(`{"transfer": {"amount": "%s", "recipient": "%s"}}`, amount.String(), to)
@@ -158,7 +161,7 @@ func GetTaxFrom(amount xc.AmountBlockchain, tax float64) xc.AmountBlockchain {
 }
 
 // createTxWithMsg creates a new Tx given Cosmos Msg
-func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *TxInput, msg types.Msg) (xc.Tx, error) {
+func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput, msg types.Msg) (xc.Tx, error) {
 	asset := txBuilder.Asset
 	cosmosTxConfig := txBuilder.CosmosTxConfig
 	cosmosBuilder := txBuilder.CosmosTxBuilder
@@ -209,7 +212,7 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
 	sigsV2 := []signingtypes.SignatureV2{
 		{
-			PubKey: getPublicKey(asset.GetChain(), input.FromPublicKey),
+			PubKey: address.GetPublicKey(asset.GetChain(), input.FromPublicKey),
 			Data: &signingtypes.SingleSignatureData{
 				SignMode:  sigMode,
 				Signature: nil,
@@ -236,8 +239,8 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 	if err != nil {
 		return nil, err
 	}
-	sighash := getSighash(asset.GetChain(), sighashData)
-	return &Tx{
+	sighash := tx.GetSighash(asset.GetChain(), sighashData)
+	return &tx.Tx{
 		CosmosTx:        cosmosBuilder.GetTx(),
 		ParsedTransfers: []types.Msg{msg},
 		CosmosTxBuilder: cosmosBuilder,

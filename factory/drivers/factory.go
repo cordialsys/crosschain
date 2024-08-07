@@ -10,6 +10,9 @@ import (
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
+	cosmosaddress "github.com/cordialsys/crosschain/chain/cosmos/address"
+	cosmosbuilder "github.com/cordialsys/crosschain/chain/cosmos/builder"
+	cosmosclient "github.com/cordialsys/crosschain/chain/cosmos/client"
 	"github.com/cordialsys/crosschain/chain/evm"
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
@@ -38,7 +41,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverEVMLegacy:
 		return evm_legacy.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewClient(cfg)
+		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
 		return solanaclient.NewClient(cfg)
 	case DriverAptos:
@@ -94,7 +97,7 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	case DriverEVMLegacy:
 		return evm_legacy.NewTxBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewTxBuilder(cfg)
+		return cosmosbuilder.NewTxBuilder(cfg)
 	case DriverSolana:
 		return solanabuilder.NewTxBuilder(cfg)
 	case DriverAptos:
@@ -127,7 +130,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverEVMLegacy:
 		return evm_legacy.NewAddressBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewAddressBuilder(cfg)
+		return cosmosaddress.NewAddressBuilder(cfg)
 	case DriverSolana:
 		return solanaaddress.NewAddressBuilder(cfg)
 	case DriverAptos:

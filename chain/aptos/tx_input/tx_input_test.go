@@ -1,14 +1,18 @@
-package cosmos
+package tx_input_test
 
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestTxInputConflicts() {
-	require := s.Require()
+type TxInput = tx_input.TxInput
+
+func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
 		newInput xc.TxInput
 		oldInput xc.TxInput
@@ -18,32 +22,25 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 	vectors := []testcase{
 		{
-			newInput:        &TxInput{Sequence: 10},
-			oldInput:        &TxInput{Sequence: 10},
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 10},
 			independent:     false,
 			doubleSpendSafe: true,
 		},
 		{
-			// may have different accounts
-			newInput:        &TxInput{Sequence: 10, AccountNumber: 10},
-			oldInput:        &TxInput{Sequence: 10, AccountNumber: 11},
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 11},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput:        &TxInput{Sequence: 10},
-			oldInput:        &TxInput{Sequence: 11},
+			newInput:        &TxInput{SequenceNumber: 10},
+			oldInput:        &TxInput{SequenceNumber: 9},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput:        &TxInput{Sequence: 10},
-			oldInput:        &TxInput{Sequence: 9},
-			independent:     true,
-			doubleSpendSafe: false,
-		},
-		{
-			newInput: &TxInput{Sequence: 10},
+			newInput: &TxInput{SequenceNumber: 10},
 			oldInput: nil,
 			// default false, not always independent
 			independent:     false,
@@ -56,11 +53,13 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
 		fmt.Println()
 		require.Equal(
+			t,
 			v.newInput.IndependentOf(v.oldInput),
 			v.independent,
 			"IndependentOf",
 		)
 		require.Equal(
+			t,
 			v.newInput.SafeFromDoubleSend(v.oldInput),
 			v.doubleSpendSafe,
 			"SafeFromDoubleSend",
@@ -68,8 +67,7 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 }
 
-func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
-	require := s.Require()
+func TestTxInputGasMultiplier(t *testing.T) {
 	type testcase struct {
 		input      *TxInput
 		multiplier string
@@ -78,17 +76,17 @@ func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
 	}
 	vectors := []testcase{
 		{
-			input:      &TxInput{GasPrice: 100.0},
+			input:      &TxInput{GasPrice: 100},
 			multiplier: "1.5",
 			result:     150,
 		},
 		{
-			input:      &TxInput{GasPrice: 100.0},
+			input:      &TxInput{GasPrice: 100},
 			multiplier: "1",
 			result:     100,
 		},
 		{
-			input:      &TxInput{GasPrice: 100.0},
+			input:      &TxInput{GasPrice: 100},
 			multiplier: "abc",
 			err:        true,
 		},
@@ -97,9 +95,9 @@ func (s *CrosschainTestSuite) TestTxInputGasMultiplier() {
 		desc := fmt.Sprintf("testcase %d: mult = %s", i, v.multiplier)
 		err := v.input.SetGasFeePriority(xc.GasFeePriority(v.multiplier))
 		if v.err {
-			require.Error(err, desc)
+			require.Error(t, err, desc)
 		} else {
-			require.Equal(v.result, uint64(v.input.GasPrice), desc)
+			require.Equal(t, v.result, v.input.GasPrice, desc)
 		}
 	}
 }

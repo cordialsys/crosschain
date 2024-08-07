@@ -1,15 +1,20 @@
-package cosmos
+package tx_test
 
 import (
 	"encoding/hex"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestTx() {
-	require := s.Require()
+type Tx = tx.Tx
+
+func TestTx(t *testing.T) {
 	vectors := []struct {
 		hash     string
 		bin      string
@@ -25,7 +30,7 @@ func (s *CrosschainTestSuite) TestTx() {
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 			"5000000",
-			"",
+			"uluna",
 		},
 		{
 			// send XPLA
@@ -34,7 +39,7 @@ func (s *CrosschainTestSuite) TestTx() {
 			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 			"5000000000000000",
-			"",
+			"axpla",
 		},
 		{
 			"",
@@ -49,7 +54,7 @@ func (s *CrosschainTestSuite) TestTx() {
 	for _, v := range vectors {
 		bytes, _ := hex.DecodeString(v.bin)
 
-		cosmosCfg := MakeCosmosConfig()
+		cosmosCfg := types.MakeCosmosConfig()
 		decoder := cosmosCfg.TxConfig.TxDecoder()
 		decodedTx, _ := decoder(bytes)
 
@@ -60,44 +65,41 @@ func (s *CrosschainTestSuite) TestTx() {
 		tx.ParseTransfer()
 
 		// basic info
-		require.Equal(v.hash, string(tx.Hash()))
-		require.Equal(v.from, string(tx.From()))
-		require.Equal(v.to, string(tx.To()))
-		require.Equal(v.amount, tx.Amount().String())
-		require.Equal(v.contract, string(tx.ContractAddress()))
+		require.Equal(t, v.hash, string(tx.Hash()))
+		require.Equal(t, v.from, string(tx.From()))
+		require.Equal(t, v.to, string(tx.To()))
+		require.Equal(t, v.amount, tx.Amount().String())
+		require.Equal(t, v.contract, string(tx.ContractAddress()))
 	}
 }
 
-func (s *CrosschainTestSuite) TestTxHashErr() {
-	require := s.Require()
+func TestTxHashErr(t *testing.T) {
 
 	tx := Tx{}
 	hash := tx.Hash()
-	require.Equal("", string(hash))
+	require.Equal(t, "", string(hash))
 }
 
-func (s *CrosschainTestSuite) TestTxSighashesErr() {
-	require := s.Require()
+func TestTxSighashesErr(t *testing.T) {
 
 	tx := Tx{}
 	sighashes, err := tx.Sighashes()
-	require.EqualError(err, "transaction not initialized")
-	require.Nil(sighashes)
+	require.EqualError(t, err, "transaction not initialized")
+	require.Nil(t, sighashes)
 }
 
-func (s *CrosschainTestSuite) TestTxAddSignaturesErr() {
-	require := s.Require()
-	cosmosCfg := MakeEncodingConfig()
+func TestTxAddSignaturesErr(t *testing.T) {
+	cosmosCfg := types.MakeEncodingConfig()
 
 	tx := Tx{}
 	err := tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(err, "transaction not initialized")
+	require.EqualError(t, err, "transaction not initialized")
 
 	tx = Tx{
 		SigsV2: []signing.SignatureV2{},
 	}
 	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(err, "transaction not initialized")
+	require.EqualError(t, err, "transaction not initialized")
 
 	tx = Tx{
 		SigsV2: []signing.SignatureV2{
@@ -106,7 +108,7 @@ func (s *CrosschainTestSuite) TestTxAddSignaturesErr() {
 		// missing Builder
 	}
 	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(err, "transaction not initialized")
+	require.EqualError(t, err, "transaction not initialized")
 
 	tx = Tx{
 		SigsV2: []signing.SignatureV2{
@@ -119,27 +121,36 @@ func (s *CrosschainTestSuite) TestTxAddSignaturesErr() {
 		CosmosTxBuilder: cosmosCfg.TxConfig.NewTxBuilder(),
 	}
 	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(err, "invalid signatures size")
+	require.EqualError(t, err, "invalid signatures size")
 
 	err = tx.AddSignatures(xc.TxSignature{1, 2, 3})
-	require.Nil(err)
+	require.NoError(t, err)
 
 	err = tx.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
-	require.Nil(err)
+	require.NoError(t, err)
 
 	bytes := make([]byte, 64)
 	err = tx.AddSignatures(xc.TxSignature(bytes))
-	require.Nil(err)
+	require.NoError(t, err)
 
 	err = tx.AddSignatures([]xc.TxSignature{bytes}...)
-	require.Nil(err)
+	require.NoError(t, err)
 }
 
-func (s *CrosschainTestSuite) TestTxSerialize() {
-	require := s.Require()
+func TestTxSerialize(t *testing.T) {
 
 	tx := Tx{}
 	serialized, err := tx.Serialize()
-	require.EqualError(err, "transaction not initialized")
-	require.Equal(serialized, []byte{})
+	require.EqualError(t, err, "transaction not initialized")
+	require.Equal(t, serialized, []byte{})
+}
+
+func TestGetSighash(t *testing.T) {
+
+	sighash := tx.GetSighash(&xc.ChainConfig{Driver: xc.DriverCosmos}, []byte{})
+	// echo -n '' | openssl dgst -sha256
+	require.Exactly(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", hex.EncodeToString(sighash))
+
+	sighash = tx.GetSighash(&xc.ChainConfig{Driver: xc.DriverCosmosEvmos}, []byte{})
+	require.Exactly(t, "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470", hex.EncodeToString(sighash))
 }

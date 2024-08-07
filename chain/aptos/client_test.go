@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
 
@@ -26,7 +27,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 		asset xc.ITask
 		resp  []string
 		from  string
-		input *TxInput
+		input *tx_input.TxInput
 		err   string
 	}{
 		{
@@ -38,7 +39,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"sequence_number":"2","authentication_key":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"}`,
 			},
 			from: "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
-			input: &TxInput{
+			input: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
 				GasLimit:        2000,
@@ -57,7 +58,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"message":"Account not found by Address(0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f681) and Ledger version(3545185)","error_code":"account_not_found","vm_error_code":null}`,
 			},
 			from:  "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f680",
-			input: &TxInput{},
+			input: &tx_input.TxInput{},
 			err:   "Account not found",
 		},
 	}
@@ -110,7 +111,7 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,
@@ -334,7 +335,7 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,
@@ -373,7 +374,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,

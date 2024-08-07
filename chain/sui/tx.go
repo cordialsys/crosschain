@@ -10,6 +10,7 @@ import (
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/blake2b"
 )
@@ -30,6 +31,14 @@ type TxInput struct {
 
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverSui
+}
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	multiplier, err := other.GetDefault()

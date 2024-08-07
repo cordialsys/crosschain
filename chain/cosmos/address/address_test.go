@@ -1,4 +1,4 @@
-package cosmos_test
+package address_test
 
 import (
 	"encoding/hex"
@@ -6,19 +6,21 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/cosmos"
+	"github.com/cordialsys/crosschain/chain/cosmos/address"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
 	"github.com/cordialsys/crosschain/factory/signer"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := cosmos.NewAddressBuilder(&xc.ChainConfig{})
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{})
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
-	builder, _ := cosmos.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
 	bytes, _ := hex.DecodeString("02FCF724C97DFFAC2021EFA1818C2FEF3BCBB753CA22913A8DB5E79EC4A3DEE0D1")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -26,7 +28,7 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 }
 
 func TestGetAddressFromPublicKeyEvmos(t *testing.T) {
-	builder, _ := cosmos.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
 	bytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -34,7 +36,7 @@ func TestGetAddressFromPublicKeyEvmos(t *testing.T) {
 }
 
 func TestGetAddressFromPublicKeyErr(t *testing.T) {
-	builder, _ := cosmos.NewAddressBuilder(&xc.ChainConfig{})
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
 
 	require.Panics(t, func() {
 		// cosmos-sdk panics with "length of pubkey is incorrect"
@@ -48,29 +50,29 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 
 	// AssetConfig.ChainPrefix is needed to bech32ify
 	pubKeyBytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
-	address, err := builder.GetAddressFromPublicKey(pubKeyBytes)
-	require.Equal(t, xc.Address(""), address)
+	derivedAddress, err := builder.GetAddressFromPublicKey(pubKeyBytes)
+	require.Equal(t, xc.Address(""), derivedAddress)
 	require.EqualError(t, err, "prefix cannot be empty")
 
 	// cosmos-sdk doesn't check if pubkey is on the curve
-	builder, _ = cosmos.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
+	builder, _ = address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
 	bytes, _ := hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
-	address, err = builder.GetAddressFromPublicKey(bytes)
+	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
-	require.Equal(t, xc.Address("terra1hw58t56mzszlnnkjak83ul8ff437ylrz57xj4v"), address)
+	require.Equal(t, xc.Address("terra1hw58t56mzszlnnkjak83ul8ff437ylrz57xj4v"), derivedAddress)
 
 	// ethermint doesn't check if pubkey is on the curve,
 	// but it attempts to decompress the point to generate the address
 	// therefore indirectly it catches the error
-	builder, _ = cosmos.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
+	builder, _ = address.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
 	bytes, _ = hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
-	address, err = builder.GetAddressFromPublicKey(bytes)
+	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
 	require.ErrorContains(t, err, "addresses cannot be empty")
-	require.Equal(t, xc.Address(""), address)
+	require.Equal(t, xc.Address(""), derivedAddress)
 }
 
 func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
-	builder, _ := cosmos.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
 	bytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -158,18 +160,18 @@ func TestKeyDerivation(t *testing.T) {
 		require.NoError(t, err)
 		pubkey, err := s.PublicKey()
 		require.NoError(t, err)
-		builder, err := cosmos.NewAddressBuilder(asset)
+		builder, err := address.NewAddressBuilder(asset)
 		require.NoError(t, err)
-		address, err := builder.GetAddressFromPublicKey(pubkey)
+		derivedAddress, err := builder.GetAddressFromPublicKey(pubkey)
 		require.NoError(t, err)
 
-		if tc.Address != string(address) {
+		if tc.Address != string(derivedAddress) {
 			// try to discover what the derivation path is
 			for i := 0; i < 512; i++ {
 				asset.ChainCoinHDPath = uint32(i)
 				s, _ = signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset)
 				pubkey, _ = s.PublicKey()
-				builder, _ = cosmos.NewAddressBuilder(asset)
+				builder, _ = address.NewAddressBuilder(asset)
 				otherAddress, _ := builder.GetAddressFromPublicKey(pubkey)
 				if tc.Address == string(otherAddress) {
 					fmt.Println("matching chain code: ", i, "produced expected address", otherAddress)
@@ -178,7 +180,32 @@ func TestKeyDerivation(t *testing.T) {
 			}
 		}
 
-		require.EqualValues(t, tc.Address, address)
+		require.EqualValues(t, tc.Address, derivedAddress)
 	}
 
+}
+
+func TestIsEVMOS(t *testing.T) {
+	is := address.IsEVMOS(&xc.ChainConfig{Chain: "ETH", Driver: xc.DriverEVM})
+	require.False(t, is)
+
+	is = address.IsEVMOS(&xc.ChainConfig{Chain: "ATOM", Driver: xc.DriverCosmos})
+	require.False(t, is)
+
+	is = address.IsEVMOS(&xc.ChainConfig{Chain: "LUNA", Driver: xc.DriverCosmos})
+	require.False(t, is)
+
+	is = address.IsEVMOS(&xc.ChainConfig{Chain: "XPLA", Driver: xc.DriverCosmos})
+	require.False(t, is)
+
+	is = address.IsEVMOS(&xc.ChainConfig{Chain: "XPLA", Driver: xc.DriverCosmosEvmos})
+	require.True(t, is)
+}
+
+func TestGetPublicKey(t *testing.T) {
+	pubKey := address.GetPublicKey(&xc.ChainConfig{Driver: xc.DriverCosmos}, []byte{})
+	require.Exactly(t, &secp256k1.PubKey{Key: []byte{}}, pubKey)
+
+	pubKey = address.GetPublicKey(&xc.ChainConfig{Driver: xc.DriverCosmosEvmos}, []byte{})
+	require.Exactly(t, &ethsecp256k1.PubKey{Key: []byte{}}, pubKey)
 }

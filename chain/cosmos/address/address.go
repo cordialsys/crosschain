@@ -1,4 +1,4 @@
-package cosmos
+package address
 
 import (
 	xc "github.com/cordialsys/crosschain"
@@ -19,7 +19,7 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	publicKey := getPublicKey(ab.Asset.GetChain(), publicKeyBytes)
+	publicKey := GetPublicKey(ab.Asset.GetChain(), publicKeyBytes)
 	rawAddress := publicKey.Address()
 
 	err := sdk.VerifyAddressFormat(rawAddress)

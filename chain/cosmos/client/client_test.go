@@ -1,26 +1,33 @@
-package cosmos
+package client_test
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cosmos/client"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewClient() {
-	require := s.Require()
-	client, err := NewClient(&xc.ChainConfig{})
-	require.NotNil(client)
-	require.Nil(err)
+type TxInput = tx_input.TxInput
+
+func TestNewClient(t *testing.T) {
+	client, err := client.NewClient(&xc.ChainConfig{})
+	require.NotNil(t, client)
+	require.NoError(t, err)
 }
 
 func ignoreError(val []byte, err error) []byte {
 	return val
 }
-func (s *CrosschainTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
 		asset     xc.ChainConfig
@@ -28,7 +35,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		pubKeyStr string
 		to        string
 		resp      interface{}
-		txInput   *TxInput
+		txInput   *tx_input.TxInput
 		err       string
 	}{
 		{
@@ -49,10 +56,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR")),
 				AccountNumber:   17241,
 				Sequence:        3,
-				GasLimit:        NativeTransferGasLimit,
+				GasLimit:        gas.NativeTransferGasLimit,
 				GasPrice:        0.015,
 				Memo:            "",
-				AssetType:       BANK,
+				AssetType:       tx_input.BANK,
 				ChainId:         "chainId",
 			},
 			"",
@@ -74,10 +81,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:   1442,
 				Sequence:        4,
-				GasLimit:        NativeTransferGasLimit,
+				GasLimit:        gas.NativeTransferGasLimit,
 				GasPrice:        850000,
 				Memo:            "",
-				AssetType:       BANK,
+				AssetType:       tx_input.BANK,
 				ChainId:         "chainId",
 			},
 			"",
@@ -102,10 +109,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				FromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:   1442,
 				Sequence:        4,
-				GasLimit:        NativeTransferGasLimit,
+				GasLimit:        gas.NativeTransferGasLimit,
 				GasPrice:        850000,
 				Memo:            "",
-				AssetType:       CW20,
+				AssetType:       tx_input.CW20,
 				ChainId:         "chainId",
 			},
 			"",
@@ -166,7 +173,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
 				Sequence:        3,
-				GasLimit:        NativeTransferGasLimit,
+				GasLimit:        gas.NativeTransferGasLimit,
 				ChainId:         "chainId",
 			},
 			"failed to estimate gas",
@@ -184,7 +191,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 			&TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
-				GasLimit:        NativeTransferGasLimit,
+				GasLimit:        gas.NativeTransferGasLimit,
 				Sequence:        3,
 				ChainId:         "chainId",
 			},
@@ -194,44 +201,42 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	for i, v := range vectors {
 		fmt.Println("test vector", i)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
 		v.asset.URL = server.URL
-		client, _ := NewClient(&v.asset)
+		client, _ := client.NewClient(&v.asset)
 		from := xc.Address(v.from)
 		to := xc.Address(v.to)
-		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
+		input, err := client.FetchLegacyTxInput(context.Background(), from, to)
 
 		if v.err != "" {
-			require.Equal(v.txInput, input)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, v.txInput, input)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.NoError(err)
-			require.NotNil(input)
+			require.NoError(t, err)
+			require.NotNil(t, input)
 
 			if v.pubKeyStr != "" {
 				input.(xc.TxInputWithPublicKey).SetPublicKeyFromStr(v.pubKeyStr)
 			}
 
-			require.Equal(v.txInput, input)
+			require.Equal(t, v.txInput, input)
 		}
 	}
 }
 
-func (s *CrosschainTestSuite) TestSubmitTxErr() {
-	require := s.Require()
+func TestSubmitTxErr(t *testing.T) {
 
-	client, _ := NewClient(&xc.ChainConfig{
+	client, _ := client.NewClient(&xc.ChainConfig{
 		URL: "",
 	})
-	tx := &Tx{}
-	err := client.SubmitTx(s.Ctx, tx)
-	require.ErrorContains(err, "no Host in request URL")
+	tx := &tx.Tx{}
+	err := client.SubmitTx(context.Background(), tx)
+	require.ErrorContains(t, err, "no Host in request URL")
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInfo() {
-	require := s.Require()
+func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
 		asset xc.ITask
@@ -258,7 +263,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				To:              "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 				ToAlt:           "",
-				ContractAddress: "",
+				ContractAddress: "uluna",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(1000000),
 				BlockIndex:      2754866,
@@ -267,7 +272,8 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				Status:          0,
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
-						Address: "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+						Address:         "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+						ContractAddress: "",
 					},
 				},
 				Destinations: []*xc.LegacyTxInfoEndpoint{
@@ -299,7 +305,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 				ToAlt:           "",
-				ContractAddress: "",
+				ContractAddress: "axpla",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(112200000000000000),
 				BlockIndex:      1359533,
@@ -446,27 +452,26 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}
 
 	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
 		asset := v.asset
 		asset.GetChain().URL = server.URL
-		client, _ := NewClient(asset)
-		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.tx))
+		client, _ := client.NewClient(asset)
+		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 		if v.err != "" {
-			require.Equal(xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(txInfo)
-			require.Equal(v.val, txInfo)
+			require.NoError(t, err)
+			require.NotNil(t, txInfo)
+			require.Equal(t, v.val, txInfo)
 		}
 	}
 }
 
-func (s *CrosschainTestSuite) TestFetchBalance() {
-	require := s.Require()
+func TestFetchBalance(t *testing.T) {
 
 	vectors := []struct {
 		asset   xc.ITask
@@ -563,22 +568,22 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 
 	for i, v := range vectors {
 		fmt.Println("==testcase", i)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
 		asset := v.asset
 		asset.GetChain().URL = server.URL
-		client, _ := NewClient(asset)
+		client, _ := client.NewClient(asset)
 		from := xc.Address(v.address)
-		balance, err := client.FetchBalance(s.Ctx, from)
+		balance, err := client.FetchBalance(context.Background(), from)
 
 		if v.err != "" {
-			require.Equal("0", balance.String())
-			require.ErrorContains(err, v.err)
+			require.Equal(t, "0", balance.String())
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.NoError(err)
-			require.NotNil(balance)
-			require.Equal(v.val, balance.String())
+			require.NoError(t, err)
+			require.NotNil(t, balance)
+			require.Equal(t, v.val, balance.String())
 		}
 	}
 }

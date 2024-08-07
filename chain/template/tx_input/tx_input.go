@@ -1,4 +1,4 @@
-package newchain
+package tx_input
 
 import (
 	xc "github.com/cordialsys/crosschain"
@@ -11,12 +11,21 @@ type TxInput struct {
 
 var _ xc.TxInput = &TxInput{}
 
+func init() {
+	// Uncomment this line to register the driver input for serialization/derserialization
+	// registry.RegisterTxBaseInput(&TxInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: "INPUT_DRIVER_HERE",
 		},
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return "DRIVER HERE"
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {

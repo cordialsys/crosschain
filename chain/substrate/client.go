@@ -18,6 +18,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/substrate/api"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
@@ -44,6 +45,14 @@ type TxInput struct {
 	CurrentHeight uint64               `json:"current_height,omitempty"`
 	Tip           uint64               `json:"tip,omitempty"`
 	Nonce         uint64               `json:"account_nonce,omitempty"`
+}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverSubstrate
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {

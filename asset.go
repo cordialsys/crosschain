@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -158,21 +159,21 @@ var SupportedStakingProviders = []StakingProvider{
 }
 
 func (stakingProvider StakingProvider) Valid() bool {
-	switch stakingProvider {
-	case Kiln, Twinstake, Figment:
-		return true
-	}
-	return false
+	return slices.Contains(SupportedStakingProviders, stakingProvider)
 }
 
 type TxVariantInputType string
 
 func NewStakingInputType(driver Driver, variant string) TxVariantInputType {
-	return TxVariantInputType(fmt.Sprintf("drivers/%s/staking-inputs/%s", driver, variant))
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/staking/%s", driver, variant))
 }
 
 func NewUnstakingInputType(driver Driver, variant string) TxVariantInputType {
-	return TxVariantInputType(fmt.Sprintf("drivers/%s/unstaking-inputs/%s", driver, variant))
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/unstaking/%s", driver, variant))
+}
+
+func NewWithdrawingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/withdrawing/%s", driver, variant))
 }
 
 func (variant TxVariantInputType) Driver() Driver {

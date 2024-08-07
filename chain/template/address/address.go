@@ -1,4 +1,4 @@
-package newchain
+package address
 
 import (
 	"errors"
