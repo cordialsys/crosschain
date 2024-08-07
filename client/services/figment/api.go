@@ -100,3 +100,9 @@ type CreateValidatorResponse struct {
 type GetValidatorResponse struct {
 	Data ValidatorData `json:"data"`
 }
+
+type ExitValidatorsRequest struct {
+	Network           string `json:"network"`
+	ValidatorsCount   int    `json:"validators_count"`
+	WithdrawalAddress string `json:"withdrawal_address"`
+}

@@ -51,6 +51,11 @@ type StakingClient interface {
 	FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) (xc.WithdrawTxInput, error)
 }
 
+// Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
+type ManualUnstakingClient interface {
+	InitiateManualUnstaking(ctx context.Context, args builder.StakeArgs) error
+}
+
 type ClientError string
 
 // A transaction terminally failed due to no balance

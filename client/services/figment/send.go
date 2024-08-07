@@ -19,8 +19,11 @@ type Client struct {
 	Network string
 }
 
-type Error struct {
+type ErrorInner struct {
 	Message string `json:"message"`
+}
+type Error struct {
+	Error ErrorInner `json:"error"`
 }
 
 func NewClient(chain, network, url, apiKey string) (*Client, error) {
@@ -96,8 +99,8 @@ func (cli *Client) Send(method string, path string, requestBody any, response an
 		if err := json.Unmarshal(body, &errorResponse); err != nil {
 			return fmt.Errorf("failed to unmarshal error response: %v", err)
 		}
-		if errorResponse.Message != "" {
-			return fmt.Errorf("%s", errorResponse.Message)
+		if errorResponse.Error.Message != "" {
+			return fmt.Errorf("%s", errorResponse.Error.Message)
 		}
 		logrus.WithField("body", string(body)).WithField("chain", cli.Chain).Warn("unknown kiln error")
 		return fmt.Errorf("unknown kiln error (%d)", resp.StatusCode)
@@ -117,5 +120,16 @@ func (cli *Client) CreateValidator(count int, withdrawalAddr string) (*CreateVal
 func (cli *Client) GetValidator(validator string) (*GetValidatorResponse, error) {
 	var res GetValidatorResponse
 	err := cli.Get(fmt.Sprintf("ethereum/validators/%s?network=%s", address.Ensure0x(validator), cli.Network), &res)
+	return &res, err
+}
+
+func (cli *Client) ExitValidators(withdrawDddress string, count int) (*GetValidatorResponse, error) {
+	var res GetValidatorResponse
+	var input = ExitValidatorsRequest{
+		Network:           cli.Network,
+		ValidatorsCount:   count,
+		WithdrawalAddress: address.Ensure0x(withdrawDddress),
+	}
+	err := cli.Post("ethereum/validators/exits", &input, &res)
 	return &res, err
 }
