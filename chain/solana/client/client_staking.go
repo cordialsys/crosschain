@@ -212,18 +212,13 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		if stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter == validator {
 			amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
 			amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
-			// voterAccount, err := solana.PublicKeyFromBase58(stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter)
-			// if err != nil {
-			// 	return nil, err
-			// }
 
 			matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
 				ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64(),
 				DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
 				AmountActive:      amountStake,
 				AmountInactive:    amountRentReserve,
-				// ValidatorVoteAccount: voterAccount,
-				StakeAccount: stake.Account.Pubkey,
+				StakeAccount:      stake.Account.Pubkey,
 			})
 		}
 	}
@@ -273,15 +268,10 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 			}
 		}
 		state := stake.StakeAccount.GetState(epochInfo.Epoch)
-		fmt.Println("state", state, stake.Account.Pubkey, epochInfo.Epoch)
 		if state != xclient.Inactive {
 			// only able to withdraw inactive balances
 			continue
 		}
-		// voterAccount, err := solana.PublicKeyFromBase58(stake.StakeAccount.Parsed.Info.Stake.Delegation.Voter)
-		// if err != nil {
-		// 	return nil, err
-		// }
 
 		amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
 		amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
@@ -290,8 +280,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 			DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
 			AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 			AmountInactive:    amountStake.Add(&amountRentReserve),
-			// ValidatorVoteAccount: voterAccount,
-			StakeAccount: stake.Account.Pubkey,
+			StakeAccount:      stake.Account.Pubkey,
 		})
 	}
 	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
