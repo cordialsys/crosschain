@@ -92,7 +92,7 @@ func CmdStake() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.ToBuilderOptions()...)
+			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}
@@ -151,7 +151,7 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.ToBuilderOptions()...)
+			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}
@@ -209,7 +209,7 @@ func CmdWithdraw() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.ToBuilderOptions()...)
+			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}

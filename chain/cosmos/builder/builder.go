@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/address"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -31,6 +32,8 @@ type TxBuilder struct {
 	CosmosTxConfig  client.TxConfig
 	CosmosTxBuilder client.TxBuilder
 }
+
+var _ xcbuilder.FullBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Cosmos TxBuilder
 func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
@@ -83,6 +86,10 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	}
 }
 
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
+
 // See NewTransfer
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	return txBuilder.NewTransfer(from, to, amount, input)
@@ -114,7 +121,11 @@ func (txBuilder TxBuilder) NewBankTransfer(from xc.Address, to xc.Address, amoun
 		},
 	}
 
-	return txBuilder.createTxWithMsg(from, to, amount, txInput, msgSend)
+	fees := txBuilder.calculateFees(amount, txInput, true)
+	return txBuilder.createTxWithMsg(txInput, msgSend, txArgs{
+		Memo:          txInput.LegacyMemo,
+		FromPublicKey: txInput.LegacyFromPublicKey,
+	}, fees)
 }
 
 func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
@@ -132,17 +143,26 @@ func (txBuilder TxBuilder) NewCW20Transfer(from xc.Address, to xc.Address, amoun
 		Msg:      wasmtypes.RawContractMessage(json.RawMessage(contractTransferMsg)),
 	}
 
-	return txBuilder.createTxWithMsg(from, to, amount, txInput, msgSend)
+	fees := txBuilder.calculateFees(amount, txInput, false)
+
+	return txBuilder.createTxWithMsg(txInput, msgSend, txArgs{
+		Memo:          txInput.LegacyMemo,
+		FromPublicKey: txInput.LegacyFromPublicKey,
+	}, fees)
 }
 
 func (txBuilder TxBuilder) GetDenom() string {
 	asset := txBuilder.Asset
 	denom := asset.GetChain().ChainCoin
+	if asset.GetContract() != "" {
+		denom = asset.GetContract()
+	}
 	if token, ok := asset.(*xc.TokenAssetConfig); ok {
 		if token.Contract != "" {
 			denom = token.Contract
 		}
 	}
+
 	return denom
 }
 
@@ -160,8 +180,54 @@ func GetTaxFrom(amount xc.AmountBlockchain, tax float64) xc.AmountBlockchain {
 	return xc.NewAmountBlockchainFromUint64(0)
 }
 
+func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, input *tx_input.TxInput, includeTax bool) types.Coins {
+	asset := txBuilder.Asset
+	gasDenom := asset.GetChain().GasCoin
+	if gasDenom == "" {
+		gasDenom = asset.GetChain().ChainCoin
+	}
+	feeCoins := types.Coins{
+		{
+			Denom:  gasDenom,
+			Amount: types.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
+		},
+	}
+	if includeTax {
+		taxRate := txBuilder.Asset.GetChain().ChainTransferTax
+		tax := GetTaxFrom(amount, taxRate)
+		if tax.Uint64() > 0 {
+			taxDenom := asset.GetChain().ChainCoin
+			if token, ok := asset.(*xc.TokenAssetConfig); ok && token.Contract != "" {
+				taxDenom = token.Contract
+			}
+			taxStr, _ := types.NewIntFromString(tax.String())
+			// cannot add two coins that are the same so must check
+			if feeCoins[0].Denom == taxDenom {
+				// add to existing
+				feeCoins[0].Amount = feeCoins[0].Amount.Add(taxStr)
+			} else {
+				// add new
+				feeCoins = append(feeCoins, types.Coin{
+					Denom:  taxDenom,
+					Amount: taxStr,
+				})
+			}
+		}
+	}
+	// Must be sorted or cosmos client panics
+	sort.Slice(feeCoins, func(i, j int) bool {
+		return feeCoins[i].Denom < feeCoins[j].Denom
+	})
+	return feeCoins
+}
+
+type txArgs struct {
+	Memo          string
+	FromPublicKey []byte
+}
+
 // createTxWithMsg creates a new Tx given Cosmos Msg
-func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput, msg types.Msg) (xc.Tx, error) {
+func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Msg, args txArgs, fees types.Coins) (xc.Tx, error) {
 	asset := txBuilder.Asset
 	cosmosTxConfig := txBuilder.CosmosTxConfig
 	cosmosBuilder := txBuilder.CosmosTxBuilder
@@ -171,48 +237,15 @@ func (txBuilder TxBuilder) createTxWithMsg(from xc.Address, to xc.Address, amoun
 		return nil, err
 	}
 
-	gasDenom := asset.GetChain().GasCoin
-	if gasDenom == "" {
-		gasDenom = asset.GetChain().ChainCoin
-	}
-	cosmosBuilder.SetMemo(input.Memo)
+	cosmosBuilder.SetMemo(args.Memo)
 	cosmosBuilder.SetGasLimit(input.GasLimit)
-	feeCoins := types.Coins{
-		{
-			Denom:  gasDenom,
-			Amount: types.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
-		},
-	}
-	taxRate := txBuilder.Asset.GetChain().ChainTransferTax
-	tax := GetTaxFrom(amount, taxRate)
-	if tax.Uint64() > 0 {
-		taxDenom := asset.GetChain().ChainCoin
-		if token, ok := asset.(*xc.TokenAssetConfig); ok && token.Contract != "" {
-			taxDenom = token.Contract
-		}
-		taxStr, _ := types.NewIntFromString(tax.String())
-		// cannot add two coins that are the same so must check
-		if feeCoins[0].Denom == taxDenom {
-			// add to existing
-			feeCoins[0].Amount = feeCoins[0].Amount.Add(taxStr)
-		} else {
-			// add new
-			feeCoins = append(feeCoins, types.Coin{
-				Denom:  taxDenom,
-				Amount: taxStr,
-			})
-		}
-	}
-	// Must be sorted or cosmos client panics
-	sort.Slice(feeCoins, func(i, j int) bool {
-		return feeCoins[i].Denom < feeCoins[j].Denom
-	})
-	cosmosBuilder.SetFeeAmount(feeCoins)
+
+	cosmosBuilder.SetFeeAmount(fees)
 
 	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
 	sigsV2 := []signingtypes.SignatureV2{
 		{
-			PubKey: address.GetPublicKey(asset.GetChain(), input.FromPublicKey),
+			PubKey: address.GetPublicKey(asset.GetChain(), args.FromPublicKey),
 			Data: &signingtypes.SingleSignatureData{
 				SignMode:  sigMode,
 				Signature: nil,

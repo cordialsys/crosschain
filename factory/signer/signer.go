@@ -161,3 +161,10 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 		return nil, fmt.Errorf("unsupported alg for driver: %v", s.driver)
 	}
 }
+func (s *Signer) MustPublicKey() PublicKey {
+	pub, err := s.PublicKey()
+	if err != nil {
+		panic(err)
+	}
+	return pub
+}
