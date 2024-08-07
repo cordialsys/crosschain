@@ -146,7 +146,7 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			client, err := xcFactory.NewStakingClient(stakingCfg, chain, moreArgs.Provider)
+			stakingClient, err := xcFactory.NewStakingClient(stakingCfg, chain, moreArgs.Provider)
 			if err != nil {
 				return err
 			}
@@ -156,7 +156,12 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingInput, err := client.FetchUnstakingInput(cmd.Context(), stakingArgs)
+			if manualClient, ok := stakingClient.(client.ManualUnstakingClient); ok {
+				logrus.Debug("chain does not support unstaking; using 3rd-party manual unstaking client")
+				return manualClient.InitiateManualUnstaking(context.Background(), stakingArgs)
+			}
+
+			stakingInput, err := stakingClient.FetchUnstakingInput(cmd.Context(), stakingArgs)
 			if err != nil {
 				return err
 			}

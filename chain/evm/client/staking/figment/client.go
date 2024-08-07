@@ -25,6 +25,7 @@ type Client struct {
 }
 
 var _ xcclient.StakingClient = &Client{}
+var _ xcclient.ManualUnstakingClient = &Client{}
 
 func toStakingState(status string) (xcclient.State, bool) {
 	// ethereum validator states
@@ -148,4 +149,13 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 
 func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	return nil, fmt.Errorf("ethereum stakes are withdrawn automatically by the protocol")
+}
+
+func (cli *Client) InitiateManualUnstaking(ctx context.Context, args xcbuilder.StakeArgs) error {
+	count, err := tx_input.Count32EthChunks(cli.chain, args.GetAmount())
+	if err != nil {
+		return err
+	}
+	_, err = cli.providerClient.ExitValidators(string(args.GetFrom()), int(count))
+	return err
 }
