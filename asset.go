@@ -224,24 +224,6 @@ func (native NativeAsset) Driver() Driver {
 	return ""
 }
 
-// func (native NativeAsset) StakingVariants() []TxVariant {
-// 	switch native {
-// 	case ETH:
-// 		return []TxVariant{KilnBatchDeposit, TwinstakeBatchDeposit}
-// 	}
-// 	return []TxVariant{}
-// }
-
-// func (native NativeAsset) Supports(variant TxVariant) bool {
-// 	variants := native.StakingVariants()
-// 	for _, v := range variants {
-// 		if v == variant {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:

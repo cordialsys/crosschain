@@ -272,7 +272,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-						ContractAddress: "",
+						ContractAddress: "uluna",
+						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 					},
 				},
 				Destinations: []*xc.LegacyTxInfoEndpoint{
@@ -313,7 +314,9 @@ func TestFetchTxInfo(t *testing.T) {
 				Status:          0,
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
-						Address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+						Address:         "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+						ContractAddress: "axpla",
+						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 					},
 				},
 				Destinations: []*xc.LegacyTxInfoEndpoint{
@@ -450,23 +453,25 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 	}
 
-	for _, v := range vectors {
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
+	for i, v := range vectors {
+		t.Run(fmt.Sprintf("case-%d", i), func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
 
-		asset := v.asset
-		asset.GetChain().URL = server.URL
-		client, _ := client.NewClient(asset)
-		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
+			asset := v.asset
+			asset.GetChain().URL = server.URL
+			client, _ := client.NewClient(asset)
+			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
-		if v.err != "" {
-			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, v.err)
-		} else {
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			require.Equal(t, v.val, txInfo)
-		}
+			if v.err != "" {
+				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+				require.Equal(t, v.val, txInfo)
+			}
+		})
 	}
 }
 

@@ -33,6 +33,7 @@ Available Commands:
   chains      List information on all supported chains.
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
+  staking     Staking commands
   transfer    Create and broadcast a new transaction transferring funds. The amount should be a decimal amount.
   tx-info     Check an existing transaction on chain.
   tx-input    Check inputs for a new transaction.
@@ -148,6 +149,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 
 - [x] Native assets
 - [x] Tokens
+- [x] Staked assets
 - [ ] NFTs
 - [ ] Liquidity pools
 
@@ -156,7 +158,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Balances (native asset, tokens)
 - [x] Transfers (native transfers, token transfers)
 - [x] Transaction reporting
-- [x] Wraps/unwraps: ETH, SOL, ...
+- [ ] Wraps/unwraps: ETH, SOL (partial support)
 - [x] Staking/unstaking
 
 ### Devnet nodes
