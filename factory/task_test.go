@@ -1,12 +1,16 @@
-package factory
+package factory_test
 
 import (
 	"encoding/hex"
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm"
+	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 )
+
+type TxInput = evminput.TxInput
+type Tx = evmtx.Tx
 
 func (s *CrosschainTestSuite) TestEthWrap() {
 	require := s.Require()
@@ -21,10 +25,10 @@ func (s *CrosschainTestSuite) TestEthWrap() {
 	require.Nil(err)
 	require.NotNil(txBuilder)
 
-	txInput := evm.TxInput{}
+	txInput := TxInput{}
 	tx, err := txBuilder.NewTransfer("from", "to", xc.NewAmountBlockchainFromUint64(123), &txInput)
 	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
+	evmTx := tx.(*Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
@@ -47,10 +51,10 @@ func (s *CrosschainTestSuite) TestEthWrapPassingWETH() {
 	require.Nil(err)
 	require.NotNil(txBuilder)
 
-	txInput := evm.TxInput{}
+	txInput := TxInput{}
 	tx, err := txBuilder.NewTransfer("from", "to", xc.NewAmountBlockchainFromUint64(123), &txInput)
 	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
+	evmTx := tx.(*Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
@@ -73,10 +77,10 @@ func (s *CrosschainTestSuite) TestEthUnwrap() {
 	require.Nil(err)
 	require.NotNil(txBuilder)
 
-	txInput := evm.TxInput{}
+	txInput := TxInput{}
 	tx, err := txBuilder.NewTransfer("from", "to", xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
+	evmTx := tx.(*Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
@@ -100,12 +104,12 @@ func (s *CrosschainTestSuite) TestERC20Transfer() {
 	require.Nil(err)
 	require.NotNil(txBuilder)
 
-	txInput := evm.TxInput{}
+	txInput := TxInput{}
 	from := "0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B"
 	to := "a0a5C02F0371cCc142ad5AD170C291c86c3E6379"
 	tx, err := txBuilder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.Nil(err)
-	evmTx := tx.(*evm.Tx).EthTx
+	evmTx := tx.(*Tx).EthTx
 	require.Equal(uint8(0x2), evmTx.Type())
 	require.Equal(uint64(800_000), evmTx.Gas())
 
@@ -123,7 +127,7 @@ func (s *CrosschainTestSuite) TestERC20Transfer() {
 
 	tx2, err := txBuilder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(0x123), &txInput)
 	require.Nil(err)
-	evmTx2 := tx2.(*evm.Tx).EthTx
+	evmTx2 := tx2.(*Tx).EthTx
 
 	require.Equal(evmTx.To().String(), evmTx2.To().String())
 	require.Equal(evmTx.Value(), evmTx2.Value())

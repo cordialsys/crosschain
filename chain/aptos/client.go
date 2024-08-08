@@ -10,15 +10,16 @@ import (
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 )
 
 // Client for Aptos
 type Client struct {
-	Asset           xc.ITask
-	AptosClient     *aptosclient.RestClient
-	EstimateGasFunc xclient.EstimateGasFunc
+	Asset       xc.ITask
+	AptosClient *aptosclient.RestClient
 }
 
 var _ xclient.FullClient = &Client{}
@@ -42,22 +43,21 @@ func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
 	}
 }
 
-// FetchTxInput returns tx input for a Aptos tx
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
-	acc, err := client.AptosClient.GetAccount(string(from))
+	acc, err := client.AptosClient.GetAccount(string(args.GetFrom()))
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
-	gas_price, err := client.EstimateGas(ctx)
+	gas_price, err := client.EstimateGas(ctx, ledger)
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 
-	return &TxInput{
+	return &tx_input.TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverAptos,
 		},
@@ -67,6 +67,13 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, _ xc.Ad
 		Timestamp:      ledger.LedgerTimestamp,
 		GasPrice:       gas_price.Uint64(),
 	}, nil
+}
+
+// FetchLegacyTxInput returns tx input for a Aptos tx
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Aptos tx
@@ -323,28 +330,11 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.AmountBlockchain(*balance), nil
 }
 
-func (client *Client) RegisterEstimateGasCallback(estimateGas xclient.EstimateGasFunc) {
-	client.EstimateGasFunc = estimateGas
-}
+func (client *Client) EstimateGas(ctx context.Context, ledgerInfo *aptostypes.LedgerInfo) (xc.AmountBlockchain, error) {
 
-func (client *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
-	// invoke EstimateGasFunc callback, if registered
-	if client.EstimateGasFunc != nil {
-		nativeAsset := client.Asset.GetChain().Chain
-		res, err := client.EstimateGasFunc(xc.NativeAsset(nativeAsset))
-		if err != nil {
-			// continue with default implementation as fallback
-		} else {
-			return res, err
-		}
-	}
 	// estimate using last 1 blocks
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	res, err := client.AptosClient.LedgerInfo()
-	if err != nil {
-		return zero, err
-	}
-	height := res.BlockHeight
+	height := ledgerInfo.BlockHeight
 	if height < 500 {
 		return zero, errors.New("the chain is too young")
 	}

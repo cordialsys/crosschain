@@ -7,7 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
-	"github.com/cordialsys/crosschain/chain/evm"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -43,7 +43,7 @@ func (s *CrosschainTestSuite) TestNewClient() {
 func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
-	txInput := evm.NewTxInput()
+	txInput := evminput.NewTxInput()
 	txInput.Nonce = 1234567
 	txInputBz, _ := json.Marshal(txInput)
 	resObj := types.TxInputRes{
@@ -60,7 +60,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	from := xc.Address("from")
 	to := xc.Address("to")
-	input, err := client.FetchTxInput(s.Ctx, from, to)
+	input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 	require.NoError(err)
 	require.IsType(txInput, input)
 	require.Equal(txInput, input)
@@ -77,7 +77,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 
 	from := xc.Address("from")
 	to := xc.Address("to")
-	_, err := client.FetchTxInput(s.Ctx, from, to)
+	_, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 	require.EqualError(err, "api-error")
 }
 

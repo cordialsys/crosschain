@@ -5,19 +5,27 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/tx"
+	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
 type Client struct {
-	EvmClient *evm.Client
+	EvmClient *evmclient.Client
 }
 
 var _ xclient.FullClient = &Client{}
 
-type TxInput = evm.TxInput
+type TxInput evminput.TxInput
 
 var _ xc.TxInput = &TxInput{}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
 
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -27,8 +35,22 @@ func NewTxInput() *TxInput {
 	}
 }
 
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverEVMLegacy
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	return ((*evminput.TxInput)(input)).SetGasFeePriority(other)
+}
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	return ((*evminput.TxInput)(input)).IndependentOf(other)
+}
+func (input *TxInput) SafeFromDoubleSend(other ...xc.TxInput) (independent bool) {
+	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other...)
+}
+
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	evmClient, err := evm.NewClient(cfgI)
+	evmClient, err := evmclient.NewClient(cfgI)
 	if err != nil {
 		return nil, err
 	}
@@ -37,14 +59,14 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	nativeAsset := client.EvmClient.Asset.GetChain()
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	result := NewTxInput()
 	result.GasPrice = zero
 
 	// Nonce
-	nonce, err := client.EvmClient.GetNonce(ctx, from)
+	nonce, err := client.EvmClient.GetNonce(ctx, args.GetFrom())
 	if err != nil {
 		return result, err
 	}
@@ -64,13 +86,23 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
-	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, builder, from, to, result)
+	tf, err := builder.NewTransfer(args.GetFrom(), args.GetTo(), xc.NewAmountBlockchainFromUint64(1), result)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
+	}
+	gasLimit, err := client.EvmClient.SimulateGasWithLimit(ctx, args.GetFrom(), tf.(*tx.Tx))
 	if err != nil {
 		return nil, err
 	}
 	result.GasLimit = gasLimit
 
 	return result, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {

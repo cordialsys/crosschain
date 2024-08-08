@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 )
 
@@ -24,9 +25,9 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 
 	vectors := []struct {
 		asset xc.ITask
-		resp  interface{}
+		resp  []string
 		from  string
-		input *TxInput
+		input *tx_input.TxInput
 		err   string
 	}{
 		{
@@ -38,11 +39,11 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"sequence_number":"2","authentication_key":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"}`,
 			},
 			from: "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
-			input: &TxInput{
+			input: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
 				GasLimit:        2000,
-				GasPrice:        10,
+				GasPrice:        100,
 				Timestamp:       1683057860656414,
 				ChainId:         58,
 			},
@@ -57,7 +58,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"message":"Account not found by Address(0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f681) and Ledger version(3545185)","error_code":"account_not_found","vm_error_code":null}`,
 			},
 			from:  "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f680",
-			input: &TxInput{},
+			input: &tx_input.TxInput{},
 			err:   "Account not found",
 		},
 	}
@@ -65,21 +66,22 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 	for _, v := range vectors {
 
 		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 
+		// satisfy the gas estimate to go with default value
+		blockNotFound := `{"message":"block not found","error_code":"block_not_found","vm_error_code":null}`
+		for i := 0; i < 20; i++ {
+			v.resp = append(v.resp, blockNotFound)
+		}
+		server, close := testtypes.MockHTTP(s.T(), resp, 200)
 		asset := v.asset.GetChain()
 		asset.URL = server.URL
 		client, _ := NewClient(asset)
-		// cut out the gas estimation
-		client.EstimateGasFunc = func(native xc.NativeAsset) (xc.AmountBlockchain, error) {
-			return xc.NewAmountBlockchainFromUint64(10), nil
-		}
 		if v.err != "" {
 			// errors should return 400 status code.
 			server.StatusCodes = []int{200, 200, 400}
 		}
 		server.Response = v.resp
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(v.from), "")
+		input, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(v.from), "")
 
 		if v.err != "" {
 			require.ErrorContains(err, v.err)
@@ -109,7 +111,7 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,
@@ -333,7 +335,7 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,
@@ -372,7 +374,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
 	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
-	input := &TxInput{
+	input := &tx_input.TxInput{
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 		SequenceNumber:  3,
 		GasLimit:        2000,

@@ -11,6 +11,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain"
+	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -21,8 +22,8 @@ func CmdRpcBalance() *cobra.Command {
 		Short: "Check balance of an asset.  Reported as big integer, not accounting for any decimals.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 			addressRaw := args[0]
 
 			contract, _ := cmd.Flags().GetString("contract")
@@ -52,8 +53,8 @@ func CmdTxInput() *cobra.Command {
 		Short:   "Check inputs for a new transaction.",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 			addressRaw := args[0]
 
 			addressTo, _ := cmd.Flags().GetString("to")
@@ -65,7 +66,7 @@ func CmdTxInput() *cobra.Command {
 
 			from := xcFactory.MustAddress(chain, addressRaw)
 			to := xcFactory.MustAddress(chain, addressTo)
-			input, err := cli.FetchTxInput(context.Background(), from, to)
+			input, err := cli.FetchLegacyTxInput(context.Background(), from, to)
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction inputs: %v", err)
 			}
@@ -87,8 +88,8 @@ func CmdTxInfo() *cobra.Command {
 		Short:   "Check an existing transaction on chain.",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 			hash := args[0]
 
 			cli, err := xcFactory.NewClient(assetConfig(chain, "", 0))
@@ -116,8 +117,8 @@ func CmdTxTransfer() *cobra.Command {
 		Short:   "Create and broadcast a new transaction transferring funds. The amount should be a decimal amount.",
 		Args:    cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 			to := args[0]
 			amountHuman, err := xc.NewAmountHumanReadableFromStr(args[1])
 			if err != nil {
@@ -157,9 +158,11 @@ func CmdTxTransfer() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
-			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
-			signer, _ := xcFactory.NewSigner(chain)
-			publicKey, err := signer.PublicKey(fromPrivateKey)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+			publicKey, err := signer.PublicKey()
 			if err != nil {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
@@ -180,7 +183,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not load client: %v", err)
 			}
 
-			input, err := cli.FetchTxInput(context.Background(), from, xc.Address(to))
+			input, err := cli.FetchLegacyTxInput(context.Background(), from, xc.Address(to))
 			if err != nil {
 				return fmt.Errorf("could not fetch transfer input: %v", err)
 			}
@@ -221,7 +224,7 @@ func CmdTxTransfer() *cobra.Command {
 			signatures := []xc.TxSignature{}
 			for _, sighash := range sighashes {
 				// sign the tx sighash(es)
-				signature, err := signer.Sign(fromPrivateKey, sighash)
+				signature, err := signer.Sign(sighash)
 				if err != nil {
 					panic(err)
 				}
@@ -271,16 +274,18 @@ func CmdAddress() *cobra.Command {
 		Short: "Derive an address from the PRIVATE_KEY environment variable.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 
 			privateKeyInput := os.Getenv("PRIVATE_KEY")
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
-			fromPrivateKey := xcFactory.MustPrivateKey(chain, privateKeyInput)
-			signer, _ := xcFactory.NewSigner(chain)
-			publicKey, err := signer.PublicKey(fromPrivateKey)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+			publicKey, err := signer.PublicKey()
 			if err != nil {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
@@ -307,8 +312,8 @@ func CmdChains() *cobra.Command {
 		Short: "List information on all supported chains.",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			xcFactory := unwrapXc(cmd.Context())
-			chain := unwrapChain(cmd.Context())
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chain := setup.UnwrapChain(cmd.Context())
 
 			cli, err := xcFactory.NewClient(assetConfig(chain, "", 0))
 			if err != nil {

@@ -1,4 +1,4 @@
-package factory
+package factory_test
 
 import (
 	"fmt"
@@ -8,10 +8,11 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	"github.com/cordialsys/crosschain/chain/cosmos"
+	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
-	"github.com/cordialsys/crosschain/chain/solana"
+	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/config/constants"
+	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/suite"
@@ -19,13 +20,13 @@ import (
 
 type CrosschainTestSuite struct {
 	suite.Suite
-	Factory          *Factory
+	Factory          *factory.Factory
 	TestNativeAssets []xc.NativeAsset
 	TestAssetConfigs []xc.ITask
 }
 
 func (s *CrosschainTestSuite) SetupTest() {
-	s.Factory = NewDefaultFactory()
+	s.Factory = factory.NewDefaultFactory()
 	// count := 0
 	// s.Factory.AllAssets.Range(func(key, value any) bool {
 	// 	count++
@@ -110,13 +111,15 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 func (s *CrosschainTestSuite) TestNewSigner() {
 	require := s.Require()
 	for _, asset := range s.TestAssetConfigs {
-		signer, _ := s.Factory.NewSigner(asset)
+		pri := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
+		signer, err := s.Factory.NewSigner(asset.GetChain(), pri)
+		require.NoError(err)
 		require.NotNil(signer)
 	}
 
 	asset, _ := s.Factory.PutAssetConfig(&xc.ChainConfig{Chain: "TEST"})
-	_, err := s.Factory.NewSigner(asset)
-	require.ErrorContains(err, "no signer defined for")
+	_, err := s.Factory.NewSigner(asset.GetChain(), "")
+	require.ErrorContains(err, "unsupported signing alg")
 }
 
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
@@ -182,18 +185,6 @@ func (s *CrosschainTestSuite) TestMustAddress() {
 		asset := asset.GetChain()
 		address := s.Factory.MustAddress(asset, "myaddress") // trivial impl
 		require.Equal(xc.Address("myaddress"), address, "Error on: "+asset.Chain)
-	}
-}
-
-func (s *CrosschainTestSuite) TestMustPrivateKey() {
-	require := s.Require()
-	for _, asset := range s.TestAssetConfigs {
-		asset := asset.GetChain()
-		if xc.NativeAsset(asset.Chain) != xc.SOL {
-			continue
-		}
-		privateKey := s.Factory.MustPrivateKey(asset, "944DC4CEE6BC73FE606E4CC9056691045CC48697A11D323CADC54F650F95207C")
-		require.NotNil(privateKey, "Error on: "+asset.Chain)
 	}
 }
 
@@ -469,7 +460,7 @@ func (s *CrosschainTestSuite) TestConfigDefaults() {
 	// change dir to somewhere that config files are not present
 	os.Setenv(constants.ConfigEnv, tmpConfigFile)
 	defer os.Unsetenv(constants.ConfigEnv)
-	f := NewDefaultFactory()
+	f := factory.NewDefaultFactory()
 	cfg := f.GetConfig()
 	require.NotNil(cfg)
 
@@ -479,7 +470,7 @@ func (s *CrosschainTestSuite) TestConfigDefaults() {
 	// now if we set XC_TESTNET, it should be testnet defaults
 	os.Setenv("XC_TESTNET", "1")
 	defer os.Unsetenv("XC_TESTNET")
-	f = NewDefaultFactory()
+	f = factory.NewDefaultFactory()
 	cfg = f.GetConfig()
 	require.EqualValues("testnet", cfg.Network)
 
@@ -490,7 +481,7 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 	require := s.Require()
 
 	// Solana
-	inputSolana := solana.NewTxInput()
+	inputSolana := solanatxinput.NewTxInput()
 	inputSolana.RecentBlockHash = [32]byte{1, 2, 3}
 	inputSolana.ToIsATA = true
 	inputSolana.ShouldCreateATA = true
@@ -499,24 +490,24 @@ func (s *CrosschainTestSuite) TestTxInputSerDeser() {
 
 	deser, err := s.Factory.UnmarshalTxInput(ser)
 	require.NoError(err)
-	typedSolana := deser.(*solana.TxInput)
+	typedSolana := deser.(*solanatxinput.TxInput)
 	require.NotNil(typedSolana)
 	require.Equal(inputSolana, typedSolana)
 
 	// Cosmos
-	inputCosmos := cosmos.NewTxInput()
-	inputCosmos.FromPublicKey = []byte{1, 2, 3}
+	inputCosmos := cosmostxinput.NewTxInput()
+	inputCosmos.LegacyFromPublicKey = []byte{1, 2, 3}
 	inputCosmos.AccountNumber = 1
 	inputCosmos.Sequence = 2
 	inputCosmos.GasLimit = 3
 	inputCosmos.GasPrice = 4.5
-	inputCosmos.Memo = "memo"
+	inputCosmos.LegacyMemo = "memo"
 	ser, err = s.Factory.MarshalTxInput(inputCosmos)
 	require.NoError(err)
 
 	deser, err = s.Factory.UnmarshalTxInput(ser)
 	require.NoError(err)
-	typedCosmos := deser.(*cosmos.TxInput)
+	typedCosmos := deser.(*cosmostxinput.TxInput)
 	require.NotNil(typedCosmos)
 	expected := inputCosmos
 	require.Equal(expected, typedCosmos)

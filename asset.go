@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -143,6 +144,52 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 }
 
+type StakingProvider string
+
+const Kiln StakingProvider = "kiln"
+const Figment StakingProvider = "figment"
+const Twinstake StakingProvider = "twinstake"
+const Native StakingProvider = "native"
+
+var SupportedStakingProviders = []StakingProvider{
+	Native,
+	Kiln,
+	Figment,
+	Twinstake,
+}
+
+func (stakingProvider StakingProvider) Valid() bool {
+	return slices.Contains(SupportedStakingProviders, stakingProvider)
+}
+
+type TxVariantInputType string
+
+func NewStakingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/staking/%s", driver, variant))
+}
+
+func NewUnstakingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/unstaking/%s", driver, variant))
+}
+
+func NewWithdrawingInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/withdrawing/%s", driver, variant))
+}
+
+func (variant TxVariantInputType) Driver() Driver {
+	return Driver(strings.Split(string(variant), "/")[1])
+}
+func (variant TxVariantInputType) Variant() string {
+	return (strings.Split(string(variant), "/")[3])
+}
+
+func (variant TxVariantInputType) Validate() error {
+	if len(strings.Split(string(variant), "/")) != 4 {
+		return fmt.Errorf("invalid input variant type: %s", variant)
+	}
+	return nil
+}
+
 func (native NativeAsset) IsValid() bool {
 	return NativeAsset(native).Driver() != ""
 }
@@ -183,10 +230,28 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Ed255
-	case DriverSubstrate:
-		return Schnorr
+	}
+	return ""
+}
+
+type PublicKeyFormat string
+
+var Raw PublicKeyFormat = "raw"
+var Compressed PublicKeyFormat = "compressed"
+var Uncompressed PublicKeyFormat = "uncompressed"
+
+func (driver Driver) PublicKeyFormat() PublicKeyFormat {
+	switch driver {
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+		return Compressed
+	case DriverCosmos, DriverCosmosEvmos:
+		return Compressed
+	case DriverEVM, DriverEVMLegacy, DriverTron:
+		return Uncompressed
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+		return Raw
 	}
 	return ""
 }
@@ -214,6 +279,19 @@ type ExplorerUrls struct {
 	Tx      string `yaml:"tx"`
 	Address string `yaml:"address"`
 	Token   string `yaml:"token"`
+}
+
+type StakingConfig struct {
+	// the contract used for staking, if relevant
+	StakeContract string `yaml:"stake_contract,omitempty"`
+	// the contract used for unstaking, if relevant
+	UnstakeContract string `yaml:"unstake_contract,omitempty"`
+	// Compatible providers for staking
+	Providers []StakingProvider `yaml:"providers,omitempty"`
+}
+
+func (staking *StakingConfig) Enabled() bool {
+	return len(staking.Providers) > 0
 }
 
 // AssetConfig is the model used to represent an asset read from config file or db
@@ -251,6 +329,8 @@ type ChainConfig struct {
 	ExplorerUrls         ExplorerUrls    `yaml:"explorer_urls"`
 
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
+
+	Staking StakingConfig `yaml:"staking,omitempty"`
 
 	// Internal
 	// dereferenced api token if used

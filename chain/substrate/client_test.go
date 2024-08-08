@@ -405,7 +405,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		require.NotNil(client)
 
 		addr := "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"
-		res, err := client.FetchTxInput(s.Ctx, xc.Address(addr), xc.Address(addr))
+		res, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(addr), xc.Address(addr))
 		require.NoError(err)
 
 		require.Equal(&tc.expectedInput, res)

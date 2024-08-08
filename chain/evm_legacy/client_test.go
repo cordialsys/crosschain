@@ -71,7 +71,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVMLegacy, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := NewClient(asset)
 		require.NoError(err)
-		input, err := client.FetchTxInput(s.Ctx, xc.Address(""), xc.Address(""))
+		input, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(""), xc.Address(""))
 		require.NoError(err)
 		if v.err != "" {
 			require.Equal(TxInput{}, input)

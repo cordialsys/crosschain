@@ -115,13 +115,14 @@ chains:
   ETH:
     chain: ETH
     driver: evm
-    # auth: env:CORDIAL_INFURA_API_TOKEN
-    # provider: infura
-    chain_id: 11155111
-    chain_name: Ethereum (Sepolia)
-    explorer_url: https://sepolia.etherscan.io
+    chain_name: Ethereum (Holesky)
     decimals: 18
-    indexer_type: rpc
+    staking:
+      # KILN Batch deposit contract
+      stake_contract: "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
+      # KILN exit contract
+      unstake_contract: "0x75838e6FC51fa2dFE22be1d5f3817AEf90306Be6"
+      providers: ["kiln", "twinstake"]
   FTM:
     chain: FTM
     driver: evm-legacy

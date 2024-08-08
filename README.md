@@ -33,6 +33,7 @@ Available Commands:
   chains      List information on all supported chains.
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
+  staking     Staking commands
   transfer    Create and broadcast a new transaction transferring funds. The amount should be a decimal amount.
   tx-info     Check an existing transaction on chain.
   tx-input    Check inputs for a new transaction.
@@ -73,6 +74,14 @@ Add `--rpc` to use your own RPC node or use a devnet or testnet network.
 
 ```bash
 xc transfer <destination-address> 0.1 -v --chain SOL --rpc "https://api.devnet.solana.com"
+```
+
+### Stake an asset
+
+Stake 0.1 SOL on mainnet.
+
+```
+xc staking stake --amount 0.1 --chain SOL --rpc https://api.mainnet-beta.solana.com --validator he1iusunGwqrNtafDtLdhsUQDFvo13z9sUa36PauBtk
 ```
 
 ### Download a transaction
@@ -123,7 +132,7 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Aptos
 - [x] Bitcoin
 - [x] Bitcoin derived: Bitcoin Cash, Dogecoin
-- [ ] Bittensor
+- [x] Bittensor
 - [x] Cosmos
 - [x] Cosmos derived: Terra, Injective, XPLA, ...
 - [x] Ethereum
@@ -134,11 +143,13 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Sui
 - [x] TON
 - [x] Tron
+- [ ] XRP
 
 ### Assets
 
 - [x] Native assets
 - [x] Tokens
+- [x] Staked assets
 - [ ] NFTs
 - [ ] Liquidity pools
 
@@ -147,7 +158,8 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 - [x] Balances (native asset, tokens)
 - [x] Transfers (native transfers, token transfers)
 - [x] Transaction reporting
-- [x] Wraps/unwraps: ETH, SOL, ...
+- [ ] Wraps/unwraps: ETH, SOL (partial support)
+- [x] Staking/unstaking
 
 ### Devnet nodes
 

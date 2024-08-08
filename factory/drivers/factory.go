@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"errors"
+	"fmt"
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos"
@@ -9,27 +10,40 @@ import (
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
+	cosmosaddress "github.com/cordialsys/crosschain/chain/cosmos/address"
+	cosmosbuilder "github.com/cordialsys/crosschain/chain/cosmos/builder"
+	cosmosclient "github.com/cordialsys/crosschain/chain/cosmos/client"
 	"github.com/cordialsys/crosschain/chain/evm"
+	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
+	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
+	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	"github.com/cordialsys/crosschain/chain/evm/client/staking/figment"
+	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/cordialsys/crosschain/chain/solana"
+	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
+	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
+	solanaclient "github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/services"
+	"github.com/cordialsys/crosschain/factory/signer"
 )
 
 func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	switch driver {
 	case DriverEVM:
-		return evm.NewClient(cfg)
+		return evmclient.NewClient(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewClient(cfg)
+		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
-		return solana.NewClient(cfg)
+		return solanaclient.NewClient(cfg)
 	case DriverAptos:
 		return aptos.NewClient(cfg)
 	case DriverSui:
@@ -48,16 +62,46 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
+func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+	driver := cfg.GetChain().Driver
+	switch driver {
+	case DriverEVM:
+		switch provider {
+		case Kiln:
+			rpcClient, err := evmclient.NewClient(cfg)
+			if err != nil {
+				return nil, err
+			}
+			return kiln.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Kiln)
+		case Figment:
+			rpcClient, err := evmclient.NewClient(cfg)
+			if err != nil {
+				return nil, err
+			}
+			return figment.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Figment)
+		case Twinstake:
+			return nil, fmt.Errorf("not implemented")
+		case Native:
+			return nil, fmt.Errorf("EVM does not support native staking")
+		}
+	case DriverCosmos, DriverCosmosEvmos:
+		return cosmosclient.NewClient(cfg)
+	case DriverSolana:
+		return solanaclient.NewClient(cfg)
+	}
+	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
+}
+
 func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
-		return evm.NewTxBuilder(cfg)
+		return evmbuilder.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewTxBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewTxBuilder(cfg)
+		return cosmosbuilder.NewTxBuilder(cfg)
 	case DriverSolana:
-		return solana.NewTxBuilder(cfg)
+		return solanabuilder.NewTxBuilder(cfg)
 	case DriverAptos:
 		return aptos.NewTxBuilder(cfg)
 	case DriverSui:
@@ -76,44 +120,21 @@ func NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	return nil, errors.New("no tx-builder defined for: " + string(cfg.ID()))
 }
 
-func NewSigner(cfg ITask) (Signer, error) {
-	switch Driver(cfg.GetChain().Driver) {
-	case DriverEVM:
-		return evm.NewSigner(cfg)
-	case DriverEVMLegacy:
-		return evm_legacy.NewSigner(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewSigner(cfg)
-	case DriverSolana:
-		return solana.NewSigner(cfg)
-	case DriverAptos:
-		return aptos.NewSigner(cfg)
-	case DriverBitcoin, DriverBitcoinLegacy:
-		return bitcoin.NewSigner(cfg)
-	case DriverBitcoinCash:
-		return bitcoin_cash.NewSigner(cfg)
-	case DriverSui:
-		return sui.NewSigner(cfg)
-	case DriverSubstrate:
-		return substrate.NewSigner(cfg)
-	case DriverTron:
-		return tron.NewSigner(cfg)
-	case DriverTon:
-		return ton.NewSigner(cfg)
-	}
-	return nil, errors.New("no signer defined for: " + string(cfg.ID()))
+func NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
+	chain := cfg.GetChain()
+	return signer.New(chain.Driver, secret, chain)
 }
 
 func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
-		return evm.NewAddressBuilder(cfg)
+		return evmaddress.NewAddressBuilder(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewAddressBuilder(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
-		return cosmos.NewAddressBuilder(cfg)
+		return cosmosaddress.NewAddressBuilder(cfg)
 	case DriverSolana:
-		return solana.NewAddressBuilder(cfg)
+		return solanaaddress.NewAddressBuilder(cfg)
 	case DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
 	case DriverBitcoin, DriverBitcoinLegacy:

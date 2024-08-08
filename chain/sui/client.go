@@ -12,15 +12,15 @@ import (
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 )
 
 // Client for Sui
 type Client struct {
-	Asset           xc.ITask
-	SuiClient       *client.Client
-	EstimateGasFunc xclient.EstimateGasFunc
+	Asset     xc.ITask
+	SuiClient *client.Client
 }
 
 // NewClient returns a new Sui Client
@@ -273,7 +273,8 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 
 }
 
-func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+
 	// native asset SUI
 	native := "0x2::sui::SUI"
 	contract := native
@@ -281,7 +282,7 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 		contract = NormalizeCoinContract(token.Contract)
 	}
 
-	all_coins, err := c.GetAllCoinsFor(ctx, from, contract)
+	all_coins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), contract)
 	if err != nil {
 		return &TxInput{}, err
 	}
@@ -309,7 +310,7 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 		}
 	} else {
 		// we need to fetch our sui objects
-		all_sui_coins, err := c.GetAllCoinsFor(ctx, from, native)
+		all_sui_coins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), native)
 		if err != nil {
 			return &TxInput{}, err
 		}
@@ -338,6 +339,11 @@ func (c *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Addres
 	input.ExcludeGasCoin()
 
 	return input, nil
+}
+func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return c.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Sui tx

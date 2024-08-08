@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -125,12 +126,12 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 	return bz, nil
 }
 
-// FetchTxInput returns tx input from a Crosschain endpoint
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchLegacyTxInput returns tx input from a Crosschain endpoint
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	res, err := client.apiCall(ctx, "/input", &types.TxInputReq{
 		AssetReq: client.apiAsset(),
-		From:     string(from),
-		To:       string(to),
+		From:     string(args.GetFrom()),
+		To:       string(args.GetTo()),
 	})
 	if err != nil {
 		return nil, err
@@ -147,6 +148,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	var r = &types.TxInputRes{}
 	_ = json.Unmarshal(res, r)
 	return drivers.UnmarshalTxInput(r.TxInput)
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits via a Crosschain endpoint

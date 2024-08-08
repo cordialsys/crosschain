@@ -9,8 +9,10 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
@@ -48,12 +50,20 @@ type TxInput struct {
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverTron,
 		},
 	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverTron
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
@@ -123,12 +133,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := new(TxInput)
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(string(from), string(to), 5)
+	dummyTx, err := client.client.CreateTransaction(string(args.GetFrom()), string(args.GetTo()), 5)
 	if err != nil {
 		return nil, err
 	}
@@ -140,6 +150,12 @@ func (client *Client) FetchTxInput(ctx context.Context, from xc.Address, to xc.A
 	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
 
 	return input, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Tron tx

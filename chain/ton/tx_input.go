@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/ton/api"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
 )
 
@@ -17,7 +18,7 @@ type TxInput struct {
 	// MasterChainInfo api.MasterChainInfo `json:"master_chain_info"`
 	AccountStatus   api.AccountStatus   `json:"account_status"`
 	Sequence        uint64              `json:"sequence"`
-	PublicKey       xc.PublicKey        `json:"public_key,omitempty"`
+	PublicKey       []byte              `json:"public_key,omitempty"`
 	Memo            string              `json:"memo,omitempty"`
 	Timestamp       int64               `json:"timestamp"`
 	TokenWallet     xc.Address          `json:"token_wallet"`
@@ -30,6 +31,10 @@ var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 var _ xc.TxInputWithMemo = &TxInput{}
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
@@ -37,7 +42,12 @@ func NewTxInput() *TxInput {
 		},
 	}
 }
-func (input *TxInput) SetPublicKey(pk xc.PublicKey) error {
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverTon
+}
+
+func (input *TxInput) SetPublicKey(pk []byte) error {
 	if len(pk) != ed25519.PublicKeySize {
 		return fmt.Errorf("invalid ed25519 public key size: %d", len(pk))
 	}

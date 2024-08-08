@@ -2,11 +2,11 @@ package evm_legacy
 
 import (
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm"
+	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 )
 
-type AddressBuilder = evm.AddressBuilder
+type AddressBuilder = evmaddress.AddressBuilder
 
-var NewAddressBuilder = evm.NewAddressBuilder
+var NewAddressBuilder = evmaddress.NewAddressBuilder
 
 var _ xc.AddressBuilder = AddressBuilder{}

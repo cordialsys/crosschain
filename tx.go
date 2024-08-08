@@ -6,6 +6,7 @@ import (
 
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
 type TxInput interface {
+	GetDriver() Driver
 	TxInputConflicts
 	TxInputGasFeeMultiplier
 }
@@ -13,7 +14,7 @@ type TxInput interface {
 // TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
 type TxInputWithPublicKey interface {
 	TxInput
-	SetPublicKey(PublicKey) error
+	SetPublicKey([]byte) error
 	SetPublicKeyFromStr(string) error
 }
 
@@ -66,12 +67,6 @@ func SameTxInputTypes[T TxInput](as T, inputs ...TxInput) bool {
 	return true
 }
 
-// Legacy
-type TxInputWithPricing interface {
-	SetUsdPrice(nativeAsset NativeAsset, contract string, priceUsd AmountHumanReadable)
-	GetUsdPrice(nativeAsset NativeAsset, contract string) (AmountHumanReadable, bool)
-}
-
 type TxInputEnvelope struct {
 	Type Driver `json:"type"`
 }
@@ -80,6 +75,21 @@ func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 	return &TxInputEnvelope{
 		Type: envType,
 	}
+}
+
+type TxVariantInput interface {
+	GetVariant() TxVariantInputType
+}
+
+// Markers for each type of Variant Tx
+type StakeTxInput interface {
+	Staking()
+}
+type UnstakeTxInput interface {
+	Unstaking()
+}
+type WithdrawTxInput interface {
+	Withdrawing()
 }
 
 // TxStatus is the status of a tx on chain, currently success or failure.

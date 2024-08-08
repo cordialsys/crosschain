@@ -96,7 +96,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 		to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-		input, err := client.FetchTxInput(s.Ctx, from, to)
+		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 		require.NotNil(input)
 		// optimize the utxo amounts
 		input.(xc.TxInputWithAmount).SetAmount(xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
@@ -152,7 +152,7 @@ func (s *ClientTestSuite) TestFetchTxInputUnconfirmedUtxo() {
 
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-	input, err := client.FetchTxInput(s.Ctx, from, to)
+	input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
 	require.NoError(err)
 	btcInput := input.(*tx_input.TxInput)
 	require.Len(btcInput.UnspentOutputs, 2)

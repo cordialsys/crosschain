@@ -4,6 +4,7 @@ import (
 	"context"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stretchr/testify/mock"
 )
@@ -15,8 +16,14 @@ type MockedClient struct {
 
 var _ xclient.FullClient = &MockedClient{}
 
-// FetchTxInput fetches tx input, mocked
-func (m *MockedClient) FetchTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+// FetchTransferInput fetches tx input, mocked
+func (m *MockedClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	margs := m.Called(ctx, args.GetFrom(), args.GetTo())
+	return margs.Get(0).(xc.TxInput), margs.Error(1)
+}
+
+// FetchLegacyTxInput fetches tx input, mocked
+func (m *MockedClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	args := m.Called(ctx, from, to)
 	return args.Get(0).(xc.TxInput), args.Error(1)
 }

@@ -7,10 +7,13 @@ import (
 	"sync"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
 )
 
@@ -18,7 +21,7 @@ import (
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
 	NewTxBuilder(asset ITask) (TxBuilder, error)
-	NewSigner(asset ITask) (Signer, error)
+	NewSigner(asset ITask, secret string) (*signer.Signer, error)
 	NewAddressBuilder(asset ITask) (AddressBuilder, error)
 
 	MarshalTxInput(input TxInput) ([]byte, error)
@@ -29,7 +32,6 @@ type FactoryContext interface {
 
 	MustAmountBlockchain(asset ITask, humanAmountStr string) AmountBlockchain
 	MustAddress(asset ITask, addressStr string) Address
-	MustPrivateKey(asset ITask, privateKey string) PrivateKey
 
 	ConvertAmountToHuman(asset ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error)
 	ConvertAmountToBlockchain(asset ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error)
@@ -355,14 +357,36 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	return nil, fmt.Errorf("no clients possible for %s", nativeAsset.Chain)
 }
 
+func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+	// chain := cfg.GetChain()
+	// if !chain.Chain.Supports(variant) {
+	// 	return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())
+	// }
+
+	// TODO crosschain client for staking...
+	return drivers.NewStakingClient(stakingCfg, cfg, provider)
+}
+
 // NewTxBuilder creates a new TxBuilder
 func (f *Factory) NewTxBuilder(cfg ITask) (TxBuilder, error) {
 	return drivers.NewTxBuilder(cfg)
 }
 
+func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
+	txBuilder, err := f.NewTxBuilder(cfg)
+	if err != nil {
+		return nil, err
+	}
+	stakingBuilder, ok := txBuilder.(builder.Staking)
+	if !ok {
+		return nil, fmt.Errorf("currently staking transactions for %s is not supported", cfg.GetChain().Driver)
+	}
+	return stakingBuilder, nil
+}
+
 // NewSigner creates a new Signer
-func (f *Factory) NewSigner(cfg ITask) (Signer, error) {
-	return drivers.NewSigner(cfg)
+func (f *Factory) NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
+	return drivers.NewSigner(cfg, secret)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
@@ -496,19 +520,6 @@ func (f *Factory) MustAmountBlockchain(cfg ITask, humanAmountStr string) AmountB
 		panic(err)
 	}
 	return res
-}
-
-// MustPrivateKey coverts a string into PrivateKey, panic if error
-func (f *Factory) MustPrivateKey(cfg ITask, privateKeyStr string) PrivateKey {
-	signer, err := f.NewSigner(cfg)
-	if err != nil {
-		panic(err)
-	}
-	privateKey, err := signer.ImportPrivateKey(privateKeyStr)
-	if err != nil {
-		panic(err)
-	}
-	return privateKey
 }
 
 func (f *Factory) GetNetworkSelector() NetworkSelector {

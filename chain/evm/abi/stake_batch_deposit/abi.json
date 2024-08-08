@@ -1,0 +1,117 @@
+[
+    {
+        "stateMutability": "nonpayable",
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "depositAdd",
+                "type": "address"
+            }
+        ],
+        "outputs": []
+    },
+    {
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "batchDeposit",
+        "inputs": [
+            {
+                "name": "publicKeys",
+                "type": "bytes"
+            },
+            {
+                "name": "withdrawalCreds",
+                "type": "bytes"
+            },
+            {
+                "name": "signatures",
+                "type": "bytes"
+            },
+            {
+                "name": "dataRoots",
+                "type": "bytes32[]"
+            }
+        ],
+        "outputs": []
+    },
+    {
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "batchDepositCustom",
+        "inputs": [
+            {
+                "name": "publicKeys",
+                "type": "bytes"
+            },
+            {
+                "name": "withdrawalCreds",
+                "type": "bytes"
+            },
+            {
+                "name": "signatures",
+                "type": "bytes"
+            },
+            {
+                "name": "dataRoots",
+                "type": "bytes32[]"
+            },
+            {
+                "name": "amountPerValidator",
+                "type": "uint256"
+            }
+        ],
+        "outputs": []
+    },
+    {
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "bigBatchDeposit",
+        "inputs": [
+            {
+                "name": "publicKeys",
+                "type": "bytes"
+            },
+            {
+                "name": "withdrawalCreds",
+                "type": "bytes"
+            },
+            {
+                "name": "signatures",
+                "type": "bytes"
+            },
+            {
+                "name": "dataRoots",
+                "type": "bytes32[]"
+            }
+        ],
+        "outputs": []
+    },
+    {
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "bigBatchDepositCustom",
+        "inputs": [
+            {
+                "name": "publicKeys",
+                "type": "bytes"
+            },
+            {
+                "name": "withdrawalCreds",
+                "type": "bytes"
+            },
+            {
+                "name": "signatures",
+                "type": "bytes"
+            },
+            {
+                "name": "dataRoots",
+                "type": "bytes32[]"
+            },
+            {
+                "name": "amountPerValidator",
+                "type": "uint256"
+            }
+        ],
+        "outputs": []
+    }
+]

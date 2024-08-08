@@ -3,47 +3,59 @@ package drivers
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/aptos"
-	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	"github.com/cordialsys/crosschain/chain/cosmos"
-	"github.com/cordialsys/crosschain/chain/evm"
-	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
-	"github.com/cordialsys/crosschain/chain/solana"
-	"github.com/cordialsys/crosschain/chain/substrate"
-	"github.com/cordialsys/crosschain/chain/sui"
-	"github.com/cordialsys/crosschain/chain/ton"
-	"github.com/cordialsys/crosschain/chain/tron"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
-func MarshalTxInput(txInput xc.TxInput) ([]byte, error) {
-	return json.Marshal(txInput)
+const SerializedInputTypeKey = "type"
+
+func MarshalTxInput(methodInput xc.TxInput) ([]byte, error) {
+	data := map[string]interface{}{}
+	methodBz, err := json.Marshal(methodInput)
+	if err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(methodBz, &data)
+	// force union with method type envelope
+	data[SerializedInputTypeKey] = methodInput.GetDriver()
+
+	bz, _ := json.Marshal(data)
+	return bz, nil
+}
+
+// Create a copy of a interface object, to avoid modifying the original
+// in the tx-input registry.
+func makeCopy[T any](input T) T {
+	srcVal := reflect.ValueOf(input)
+	if srcVal.Kind() == reflect.Ptr {
+		srcVal = srcVal.Elem()
+	}
+
+	newVal := reflect.New(srcVal.Type())
+
+	return newVal.Interface().(T)
 }
 
 func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
-	switch driver {
-	case xc.DriverAptos:
-		return aptos.NewTxInput(), nil
-	case xc.DriverCosmos, xc.DriverCosmosEvmos:
-		return cosmos.NewTxInput(), nil
-	case xc.DriverEVM:
-		return evm.NewTxInput(), nil
-	case xc.DriverEVMLegacy:
-		return evm_legacy.NewTxInput(), nil
-	case xc.DriverSolana:
-		return solana.NewTxInput(), nil
-	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
-		return bitcointxinput.NewTxInput(), nil
-	case xc.DriverSui:
-		return sui.NewTxInput(), nil
-	case xc.DriverSubstrate:
-		return substrate.NewTxInput(), nil
-	case xc.DriverTron:
-		return tron.NewTxInput(), nil
-	case xc.DriverTon:
-		return ton.NewTxInput(), nil
+	for _, txInput := range registry.GetSupportedBaseTxInputs() {
+		if txInput.GetDriver() == driver {
+			return makeCopy(txInput), nil
+		}
+		// aliases for fork chains
+		switch driver {
+		case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
+			if txInput.GetDriver() == xc.DriverBitcoin {
+				return makeCopy(txInput), nil
+			}
+		case xc.DriverCosmos, xc.DriverCosmosEvmos:
+			if txInput.GetDriver() == xc.DriverCosmos {
+				return makeCopy(txInput), nil
+			}
+		}
 	}
+
 	return nil, fmt.Errorf("no tx-input mapped for driver %s", driver)
 }
 
@@ -63,4 +75,89 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 		return nil, err
 	}
 	return input, nil
+}
+
+func MarshalVariantInput(methodInput xc.TxVariantInput) ([]byte, error) {
+	data := map[string]interface{}{}
+	methodBz, err := json.Marshal(methodInput)
+	if err != nil {
+		return nil, err
+	}
+	_ = json.Unmarshal(methodBz, &data)
+	// force union with method type envelope
+	data[SerializedInputTypeKey] = methodInput.GetVariant()
+
+	bz, _ := json.Marshal(data)
+	return bz, nil
+}
+
+func NewVariantInput(variantType xc.TxVariantInputType) (xc.TxVariantInput, error) {
+	if err := variantType.Validate(); err != nil {
+		return nil, err
+	}
+
+	for _, variant := range registry.GetSupportedTxVariants() {
+		if variant.GetVariant() == variantType {
+			return makeCopy(variant), nil
+		}
+	}
+
+	return nil, fmt.Errorf("no staking-input mapped for %s", variantType)
+}
+
+func UnmarshalVariantInput(data []byte) (xc.TxVariantInput, error) {
+	type variantInputEnvelope struct {
+		Type xc.TxVariantInputType `json:"type"`
+	}
+	var env variantInputEnvelope
+	buf := []byte(data)
+	err := json.Unmarshal(buf, &env)
+	if err != nil {
+		return nil, err
+	}
+	input, err := NewVariantInput(env.Type)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(buf, input)
+	if err != nil {
+		return nil, err
+	}
+	return input, nil
+}
+
+func UnmarshalStakingInput(data []byte) (xc.StakeTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	staking, ok := inp.(xc.StakeTxInput)
+	if !ok {
+		return staking, fmt.Errorf("not a staking input: %T", inp)
+	}
+	return staking, nil
+}
+
+func UnmarshalUnstakingInput(data []byte) (xc.UnstakeTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	staking, ok := inp.(xc.UnstakeTxInput)
+	if !ok {
+		return staking, fmt.Errorf("not an unstaking input: %T", inp)
+	}
+	return staking, nil
+}
+
+func UnmarshalWithdrawingInput(data []byte) (xc.WithdrawTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	staking, ok := inp.(xc.WithdrawTxInput)
+	if !ok {
+		return staking, fmt.Errorf("not an unstaking input: %T", inp)
+	}
+	return staking, nil
 }

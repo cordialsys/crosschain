@@ -22,6 +22,17 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 	require.Equal(DriverCosmos, NativeAsset(ATOM).Driver())
 	require.Equal(DriverSubstrate, NativeAsset(DOT).Driver())
 	require.Equal(DriverTron, NativeAsset(TRX).Driver())
+	require.Equal(DriverTon, NativeAsset(TON).Driver())
+
+	drivers := map[Driver]bool{}
+	for _, driver := range SupportedDrivers {
+		if _, ok := drivers[driver]; ok {
+			require.Fail("duplicate driver %s", driver)
+		}
+		drivers[driver] = true
+		// test driver is valid
+		require.NotEmpty(driver.SignatureAlgorithm(), "driver is not valid")
+	}
 }
 
 func (s *CrosschainTestSuite) TestChainType() {

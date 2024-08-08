@@ -175,7 +175,7 @@ func TestFetchTxInput(t *testing.T) {
 			require.NoError(t, err)
 			from := xc.Address("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2")
 			to := xc.Address("0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm")
-			input, err := client.FetchTxInput(context.Background(), from, to)
+			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
 
 			if v.err != "" {
 				require.ErrorContains(t, err, v.err)
