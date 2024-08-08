@@ -8,11 +8,29 @@ type CreateValidatorRequest struct {
 	WithdrawalAddress string `json:"withdrawal_address"`
 }
 
+type Status string
+
+const (
+	Provisioned           Status = "provisioned"
+	FundingRequested      Status = "funding_requested"
+	DepositedNotFinalized Status = "deposited_not_finalized"
+	Deposited             Status = "deposited"
+	PendingInitialized    Status = "pending_initialized"
+	PendingQueued         Status = "pending_queued"
+	ActiveExiting         Status = "active_exiting"
+	ActiveOngoing         Status = "active_ongoing"
+	ActiveSlashed         Status = "active_slashed"
+	ExitedSlashed         Status = "exited_slashed"
+	ExitedUnslashed       Status = "exited_unslashed"
+	WithdrawalDone        Status = "withdrawal_done"
+	WithdrawalPossible    Status = "withdrawal_possible"
+)
+
 // Define the struct to match the JSON structure
 type ValidatorData struct {
 	Network               string          `json:"network"`
 	Pubkey                string          `json:"pubkey"`
-	Status                string          `json:"status"`
+	Status                Status          `json:"status"`
 	WithdrawalAddress     string          `json:"withdrawal_address"`
 	WithdrawalCredentials string          `json:"withdrawal_credentials"`
 	NetFeePayoutAddress   string          `json:"net_fee_payout_address"`
@@ -101,8 +119,17 @@ type GetValidatorResponse struct {
 	Data ValidatorData `json:"data"`
 }
 
+type GetValidatorsResponse struct {
+	Data []ValidatorData `json:"data"`
+}
+
 type ExitValidatorsRequest struct {
 	Network           string `json:"network"`
 	ValidatorsCount   int    `json:"validators_count"`
 	WithdrawalAddress string `json:"withdrawal_address"`
+}
+
+type ExitValidatorsPubkeyRequest struct {
+	Network string   `json:"network"`
+	Pubkeys []string `json:"pubkeys"`
 }

@@ -235,15 +235,14 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 			return nil, err
 		}
 		if int(count) > len(input.PublicKeys) {
-			return nil, fmt.Errorf("need at least %d validators to unstake target amount, but there are only %d", count, len(input.PublicKeys))
+			return nil, fmt.Errorf("need at least %d validators to unstake target amount, but there are only %d in eligible state", count, len(input.PublicKeys))
 		}
 
 		data, err := exit_request.Serialize(input.PublicKeys[:count])
 		if err != nil {
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
-		// TODO move to holesky config
-		contract := "0x75838e6FC51fa2dFE22be1d5f3817AEf90306Be6"
+		contract := txBuilder.Asset.GetChain().Staking.UnstakeContract
 		zero := xc.NewAmountBlockchainFromUint64(0)
 		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), zero, data, &input.TxInput)
 		if err != nil {

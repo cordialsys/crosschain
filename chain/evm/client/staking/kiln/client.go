@@ -181,16 +181,35 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 }
 
 func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
-	stakingInput, err := cli.FetchKilnUnstakeInput(ctx, args)
-	if err != nil {
-		return nil, err
+
+	validatorInput, ok := args.GetValidator()
+	var activeValidators [][]byte
+	if ok {
+		stakes, err := cli.kilnClient.GetStakesByValidator(validatorInput)
+		if err != nil || len(stakes.Data) == 0 {
+			logrus.WithError(err).Debug("could not locate validator with kiln")
+		}
+		bz, err := address.DecodeHex(validatorInput)
+		if err != nil {
+			return nil, fmt.Errorf("invalid validator public key %s: %v", validatorInput, err)
+		}
+		activeValidators = [][]byte{bz}
+	} else {
+		var err error
+		activeValidators, err = cli.FetchActiveKilnValidators(ctx, args.GetFrom())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom())
 	if err != nil {
 		return nil, err
 	}
-	stakingInput.TxInput = *partialTxInput
+	stakingInput := &tx_input.ExitRequestInput{
+		TxInput:    *partialTxInput,
+		PublicKeys: activeValidators,
+	}
 
 	builder, err := builder.NewTxBuilder(cli.chain)
 	if err != nil {
@@ -211,14 +230,14 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 	return stakingInput, nil
 }
 
-func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.ExitRequestInput, error) {
-	stakes, err := cli.kilnClient.GetAllStakesByOwner(string(args.GetFrom()))
+func (cli *Client) FetchActiveKilnValidators(ctx context.Context, from xc.Address) ([][]byte, error) {
+	stakes, err := cli.kilnClient.GetAllStakesByOwner(string(from))
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch validators: %v", err)
 	}
 
-	input := tx_input.NewExitRequestInput()
 	pubkeys := []string{}
+	pubkeysBz := [][]byte{}
 
 	for _, stake := range stakes {
 		status := ""
@@ -246,10 +265,10 @@ func (cli *Client) FetchKilnUnstakeInput(ctx context.Context, args xcbuilder.Sta
 		if err != nil {
 			return nil, fmt.Errorf("kiln provided invalid validator public key %s: %v", pubkey, err)
 		}
-		input.PublicKeys = append(input.PublicKeys, pubkeyBz)
+		pubkeysBz = append(pubkeysBz, pubkeyBz)
 	}
 
-	return input, nil
+	return pubkeysBz, nil
 }
 
 func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {

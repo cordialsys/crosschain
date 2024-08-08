@@ -34,13 +34,13 @@ func (s ValidatorStatus) ToState() (xcclient.State, bool) {
 	var state xcclient.State = ""
 	// ethereum validator states
 	switch s {
-	case "pending_initialized":
+	case "pending_initialized", "pending_queued":
 		state = xcclient.Activating
 	case "active_ongoing":
 		state = xcclient.Active
 	case "withdrawal_possible", "withdrawal_done", "exited_unslashed", "exited_slashed":
 		state = xcclient.Inactive
-	case "active_exiting", "pending_queued":
+	case "active_exiting":
 		state = xcclient.Deactivating
 	default:
 	}
