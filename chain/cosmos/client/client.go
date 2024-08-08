@@ -227,17 +227,48 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	result.TxID = string(txHash)
 	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID
-	tx.ParseTransfer()
-
-	// parse tx info - this should happen after ATA is set
-	// (in most cases it works also in case or error)
-	result.From = tx.From()
-	result.To = tx.To()
-	result.ContractAddress = tx.ContractAddress()
-	result.Amount = tx.Amount()
 	result.Fee = tx.Fee()
-	result.Sources = tx.Sources()
-	result.Destinations = tx.Destinations()
+
+	events := ParseEvents(resultRaw.TxResult.Events)
+	for _, ev := range events.Transfers {
+		result.Sources = append(result.Sources, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(ev.Sender),
+			ContractAddress: xc.ContractAddress(ev.Contract),
+			Amount:          ev.Amount,
+		})
+		result.Destinations = append(result.Destinations, &xc.LegacyTxInfoEndpoint{
+			Address:         xc.Address(ev.Recipient),
+			ContractAddress: xc.ContractAddress(ev.Contract),
+			Amount:          ev.Amount,
+		})
+	}
+	for _, ev := range events.Delegates {
+		result.AddStakeEvent(&xclient.Stake{
+			Amount:    ev.Amount,
+			Validator: ev.Validator,
+			Account:   "",
+			Address:   ev.Delegator,
+		})
+	}
+	for _, ev := range events.Unbonds {
+		result.AddStakeEvent(&xclient.Unstake{
+			Amount:    ev.Amount,
+			Validator: ev.Validator,
+			Account:   "",
+			Address:   ev.Delegator,
+		})
+	}
+
+	if len(result.Sources) > 0 {
+		result.From = result.Sources[0].Address
+		result.Amount = result.Sources[0].Amount
+		result.ContractAddress = result.Sources[0].ContractAddress
+	}
+	if len(result.Destinations) > 0 {
+		result.To = result.Destinations[0].Address
+		result.Amount = result.Destinations[0].Amount
+		result.ContractAddress = result.Destinations[0].ContractAddress
+	}
 
 	// Set memo if set
 	if withMemo, ok := decodedTx.(types.TxWithMemo); ok {

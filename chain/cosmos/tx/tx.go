@@ -3,7 +3,6 @@ package tx
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
@@ -14,9 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 )
 
 // Tx for Cosmos
@@ -110,89 +106,6 @@ func (tx Tx) Serialize() ([]byte, error) {
 	return serialized, err
 }
 
-// ParseTransfer parses a Tx as a transfer
-// Currently only banktypes.MsgSend is implemented, i.e. only native tokens
-func (tx *Tx) ParseTransfer() {
-	for _, msg := range tx.CosmosTx.GetMsgs() {
-		switch msg := msg.(type) {
-		case *banktypes.MsgSend:
-			tx.ParsedTransfers = append(tx.ParsedTransfers, msg)
-		case *wasmtypes.MsgExecuteContract:
-			tx.ParsedTransfers = append(tx.ParsedTransfers, msg)
-		}
-	}
-}
-
-// From returns the from address of a Tx
-func (tx Tx) From() xc.Address {
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			from := tf.FromAddress
-			return xc.Address(from)
-		case *wasmtypes.MsgExecuteContract:
-			return xc.Address(tf.Sender)
-		}
-	}
-	return xc.Address("")
-}
-
-// To returns the to address of a Tx
-func (tx Tx) To() xc.Address {
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			to := tf.ToAddress
-			return xc.Address(to)
-		case *wasmtypes.MsgExecuteContract:
-			msg := Cw20MsgTransfer{}
-			_ = json.Unmarshal(tf.Msg, &msg)
-			if msg.Transfer != nil {
-				return xc.Address(msg.Transfer.Recipient)
-			}
-		}
-
-	}
-	return xc.Address("")
-}
-
-// ContractAddress returns the contract address of a Tx, if any
-func (tx Tx) ContractAddress() xc.ContractAddress {
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			denom := tf.Amount[0].Denom
-			// Previously, we used to null out the denom as contract address to be consistent with other chains,
-			// but this is inaccurate as the denom is a valid contract address.
-			// if len(denom) < LEN_NATIVE_ASSET {
-			// 	denom = ""
-			// }
-			return xc.ContractAddress(denom)
-		case *wasmtypes.MsgExecuteContract:
-			return xc.ContractAddress(tf.Contract)
-		}
-	}
-	return xc.ContractAddress("")
-}
-
-// Amount returns the amount of a Tx
-func (tx Tx) Amount() xc.AmountBlockchain {
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			amount := tf.Amount[0].Amount.BigInt()
-			return xc.AmountBlockchain(*amount)
-		case *wasmtypes.MsgExecuteContract:
-			msg := Cw20MsgTransfer{}
-			_ = json.Unmarshal(tf.Msg, &msg)
-			if msg.Transfer != nil {
-				return xc.NewAmountBlockchainFromStr(msg.Transfer.Amount)
-			}
-		}
-	}
-	return xc.NewAmountBlockchainFromUint64(0)
-}
-
 // Fee returns the fee of a Tx
 func (tx Tx) Fee() xc.AmountBlockchain {
 	switch tf := tx.CosmosTx.(type) {
@@ -201,66 +114,6 @@ func (tx Tx) Fee() xc.AmountBlockchain {
 		return xc.AmountBlockchain(*fee)
 	}
 	return xc.NewAmountBlockchainFromUint64(0)
-}
-
-// Sources returns the sources of a Tx
-func (tx Tx) Sources() []*xc.LegacyTxInfoEndpoint {
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			from := tf.FromAddress
-			sources = append(sources, &xc.LegacyTxInfoEndpoint{
-				Address: xc.Address(from),
-			})
-			// currently assume/support single-source transfers
-			return sources
-		case *wasmtypes.MsgExecuteContract:
-			msg := Cw20MsgTransfer{}
-			_ = json.Unmarshal(tf.Msg, &msg)
-			if msg.Transfer != nil {
-				sources = append(sources, &xc.LegacyTxInfoEndpoint{
-					Address:         xc.Address(tf.Sender),
-					ContractAddress: xc.ContractAddress(tf.Contract),
-					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),
-				})
-			}
-		default:
-			// fmt.Printf("unknown type: %T\n", tf)
-		}
-	}
-	return sources
-}
-
-// Destinations returns the destinations of a Tx
-func (tx Tx) Destinations() []*xc.LegacyTxInfoEndpoint {
-	destinations := []*xc.LegacyTxInfoEndpoint{}
-	for _, parsedTransfer := range tx.ParsedTransfers {
-		switch tf := parsedTransfer.(type) {
-		case *banktypes.MsgSend:
-			to := tf.ToAddress
-			denom := tf.Amount[0].Denom
-			amount := tf.Amount[0].Amount.BigInt()
-			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
-				Address:         xc.Address(to),
-				ContractAddress: xc.ContractAddress(denom),
-				Amount:          xc.AmountBlockchain(*amount),
-			})
-		case *wasmtypes.MsgExecuteContract:
-			msg := Cw20MsgTransfer{}
-			_ = json.Unmarshal(tf.Msg, &msg)
-			if msg.Transfer != nil {
-				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
-					Address:         xc.Address(msg.Transfer.Recipient),
-					ContractAddress: xc.ContractAddress(tf.Contract),
-					Amount:          xc.NewAmountBlockchainFromStr(msg.Transfer.Amount),
-				})
-			}
-		default:
-			// fmt.Printf("unknown type: %T\n", tf)
-		}
-	}
-	return destinations
 }
 
 func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {

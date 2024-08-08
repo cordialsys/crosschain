@@ -70,15 +70,6 @@ func TestAccountBalance(t *testing.T) {
 	}
 }
 
-// func  TestFetchTxInput(t *testing.T) {
-//
-// 	client, _ := NewClient(xc.AssetConfig{})
-// 	from := xc.Address("from")
-// 	input, err := client.FetchTxInput(s.Ctx, from, "")
-// 	require.NotNil(input)
-// 	require.EqualError(err, "not implemented")
-// }
-
 func TestFetchTxInput(t *testing.T) {
 
 	fromAddr := "0x1ed29c10e661e5721dfe162845f72548f090d8e7"
