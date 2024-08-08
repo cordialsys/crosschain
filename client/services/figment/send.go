@@ -85,7 +85,7 @@ func (cli *Client) Send(method string, path string, requestBody any, response an
 		"status": resp.StatusCode,
 	}).Debug("response")
 
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == 201 {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == 201 || resp.StatusCode == 202 {
 		if response != nil {
 			if err := json.Unmarshal(body, response); err != nil {
 				return fmt.Errorf("failed to unmarshal response: %v", err)
@@ -123,12 +123,23 @@ func (cli *Client) GetValidator(validator string) (*GetValidatorResponse, error)
 	return &res, err
 }
 
-func (cli *Client) ExitValidators(withdrawDddress string, count int) (*GetValidatorResponse, error) {
+func (cli *Client) GetValidatorsByWithdrawAddress(withdrawAddress string) (*GetValidatorsResponse, error) {
+	var res GetValidatorsResponse
+	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&size=100", cli.Network, address.Ensure0x(withdrawAddress)), &res)
+	return &res, err
+}
+
+func (cli *Client) GetValidatorsByWithdrawAddressAndStatus(withdrawAddress string, status Status) (*GetValidatorsResponse, error) {
+	var res GetValidatorsResponse
+	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&status=%s&size=100", cli.Network, address.Ensure0x(withdrawAddress), status), &res)
+	return &res, err
+}
+
+func (cli *Client) ExitValidators(pubkeys []string) (*GetValidatorResponse, error) {
 	var res GetValidatorResponse
-	var input = ExitValidatorsRequest{
-		Network:           cli.Network,
-		ValidatorsCount:   count,
-		WithdrawalAddress: address.Ensure0x(withdrawDddress),
+	var input = ExitValidatorsPubkeyRequest{
+		Network: cli.Network,
+		Pubkeys: pubkeys,
 	}
 	err := cli.Post("ethereum/validators/exits", &input, &res)
 	return &res, err

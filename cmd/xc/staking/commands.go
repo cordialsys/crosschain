@@ -108,7 +108,8 @@ func CmdStake() *cobra.Command {
 			}
 			logrus.WithField("tx", tx).Debug("built tx")
 
-			return SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			_, err = SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			return err
 		},
 	}
 	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
@@ -156,11 +157,6 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			if manualClient, ok := stakingClient.(client.ManualUnstakingClient); ok {
-				logrus.Debug("chain does not support unstaking; using 3rd-party manual unstaking client")
-				return manualClient.InitiateManualUnstaking(context.Background(), stakingArgs)
-			}
-
 			stakingInput, err := stakingClient.FetchUnstakingInput(cmd.Context(), stakingArgs)
 			if err != nil {
 				return err
@@ -172,7 +168,23 @@ func CmdUnstake() *cobra.Command {
 			}
 			logrus.WithField("tx", tx).Debug("built tx")
 
-			return SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			hash, err := SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			if err != nil {
+				return err
+			}
+
+			txInfo, err := WaitForTx(xcFactory, chain, hash, 1)
+			if err != nil {
+				return err
+			}
+			jsonprint(txInfo)
+			if manualClient, ok := stakingClient.(client.ManualUnstakingClient); ok {
+				logrus.Debug("chain does not support unstaking; using 3rd-party manual unstaking client")
+				return manualClient.CompleteManualUnstaking(context.Background(), txInfo.Unstakes)
+			} else {
+				logrus.Debug("chain supports unstaking; no need for manual completion")
+			}
+			return nil
 		},
 	}
 	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
@@ -230,7 +242,11 @@ func CmdWithdraw() *cobra.Command {
 			}
 			logrus.WithField("tx", tx).Debug("built tx")
 
-			return SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			_, err = SignAndMaybeBroadcast(xcFactory, chain, signer, tx, !offline)
+			if err != nil {
+				return err
+			}
+			return nil
 		},
 	}
 	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")

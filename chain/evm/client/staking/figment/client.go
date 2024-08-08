@@ -83,7 +83,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBa
 	bal, _ := xc.NewAmountHumanReadableFromStr("32")
 	amount := bal.ToBlockchain(18)
 
-	state, ok := toStakingState(res.Data.Status)
+	state, ok := toStakingState(string(res.Data.Status))
 	if !ok {
 		// assume it's still activating
 		state = xcclient.Activating
@@ -144,18 +144,92 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 }
 
 func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
-	return nil, fmt.Errorf("ethereum stakes by Figment are exited on demand using API or by manual request to Figment")
+	validatorInput, ok := args.GetValidator()
+	var activeValidators [][]byte
+	if ok {
+		_, err := cli.providerClient.GetValidator(validatorInput)
+		if err != nil {
+			logrus.WithError(err).Debug("could not locate validator with figment")
+		}
+		bz, err := address.DecodeHex(validatorInput)
+		if err != nil {
+			return nil, fmt.Errorf("invalid validator public key %s: %v", validatorInput, err)
+		}
+		activeValidators = [][]byte{bz}
+
+	} else {
+		var err error
+		activeValidators, err = cli.FetchActiveValidators(ctx, args.GetFrom())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom())
+	if err != nil {
+		return nil, err
+	}
+	stakingInput := &tx_input.ExitRequestInput{
+		TxInput:    *partialTxInput,
+		PublicKeys: activeValidators,
+	}
+
+	builder, err := builder.NewTxBuilder(cli.chain)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+	exampleTf, err := builder.Unstake(args, stakingInput)
+	if err != nil {
+		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
+	}
+
+	gasLimit, err := cli.rpcClient.SimulateGasWithLimit(ctx, args.GetFrom(), exampleTf.(*tx.Tx))
+	if err != nil {
+		return nil, err
+	}
+	stakingInput.GasLimit = gasLimit
+	return stakingInput, nil
+}
+
+func (cli *Client) FetchActiveValidators(ctx context.Context, from xc.Address) ([][]byte, error) {
+	stakesActive, err := cli.providerClient.GetValidatorsByWithdrawAddressAndStatus(string(from), figment.ActiveOngoing)
+	if err != nil {
+		return nil, err
+	}
+
+	var pubkeys [][]byte
+	for _, stakes := range []*figment.GetValidatorsResponse{stakesActive} {
+		for _, val := range stakes.Data {
+			pubkeyBz, err := address.DecodeHex(val.Pubkey)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode figment validator pubkey: %v", err)
+			}
+			pubkeys = append(pubkeys, pubkeyBz)
+		}
+	}
+	return pubkeys, nil
 }
 
 func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	return nil, fmt.Errorf("ethereum stakes are withdrawn automatically by the protocol")
 }
 
-func (cli *Client) InitiateManualUnstaking(ctx context.Context, args xcbuilder.StakeArgs) error {
-	count, err := tx_input.Count32EthChunks(cli.chain, args.GetAmount())
-	if err != nil {
-		return err
+// We only want to unstake from a predetermined list of validators, as opposed to asking the provider to unstake
+// N validators for us.  This is because we don't want to risk a double-unstake (unstaking double the amount we intended).
+// By only unstaking from a predetermined list, we can ensure this is safely idempotent.
+func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstakes []*xcclient.Unstake) error {
+	for _, unstake := range unstakes {
+		val, err := cli.providerClient.GetValidator(unstake.Validator)
+		if err != nil {
+			logrus.WithError(err).Warn("could not fetch validator info from figment, cannot request unstake")
+			continue
+		}
+		logrus.WithField("validator", val.Data.Pubkey).WithField("status", val.Data.Status).Info("requesting figment unstake")
+		// TODO check if the validator is already unstaked?
+		_, err = cli.providerClient.ExitValidators([]string{val.Data.Pubkey})
+		if err != nil {
+			logrus.WithError(err).Warn("could not request unstake from figment")
+		}
 	}
-	_, err = cli.providerClient.ExitValidators(string(args.GetFrom()), int(count))
-	return err
+	return nil
 }
