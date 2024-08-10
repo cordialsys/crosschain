@@ -56,6 +56,9 @@ type FactoryContext interface {
 	UnregisterGetAssetConfigCallback()
 	RegisterGetAssetConfigByContractCallback(callback func(contract string, nativeAsset NativeAsset) (ITask, error))
 	UnregisterGetAssetConfigByContractCallback()
+
+	GetNetworkSelector() NetworkSelector
+	NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error)
 }
 
 // Factory is the main Factory implementation, holding the config

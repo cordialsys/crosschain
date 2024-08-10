@@ -92,16 +92,6 @@ func RequireConfigWithViper(v *viper.Viper, section string, unmarshalDst interfa
 	}
 }
 
-type Secret string
-
-func (s Secret) Load() (string, error) {
-	return GetSecret(string(s))
-}
-func (s Secret) LoadOrBlank() string {
-	deref, _ := GetSecret(string(s))
-	return deref
-}
-
 func newVaultClient(cfg *vault.Config) (VaultLoader, error) {
 	cli, err := vault.NewClient(cfg)
 	if err != nil {

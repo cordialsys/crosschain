@@ -3,6 +3,7 @@ package testutil
 import (
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/config"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
@@ -178,6 +179,13 @@ func (f *TestFactory) GetAllAssets() []xc.ITask {
 
 func (f *TestFactory) GetAllTasks() []*xc.TaskConfig {
 	return f.DefaultFactory.GetAllTasks()
+}
+
+func (f *TestFactory) GetNetworkSelector() xc.NetworkSelector {
+	return f.DefaultFactory.GetNetworkSelector()
+}
+func (f *TestFactory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error) {
+	return f.DefaultFactory.NewStakingClient(stakingCfg, cfg, provider)
 }
 
 // NewDefaultFactory creates a new Factory

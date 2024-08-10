@@ -68,11 +68,11 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBa
 	}
 
 	// RPC is the most reliable place to get information on the stake
-	validatorBal, err := cli.rpcClient.FetchValidatorBalance(ctx, validator)
+	validatorBal, err := cli.rpcClient.FetchStakeBalance(ctx, args)
 	if err != nil {
 		logrus.WithError(err).Debug("could not locate validator")
 	} else {
-		return []*xcclient.StakedBalance{validatorBal}, nil
+		return validatorBal, nil
 	}
 
 	// However, it's not available via RPC during the first 'activating' period,
