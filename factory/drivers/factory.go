@@ -82,7 +82,11 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 		case Twinstake:
 			return nil, fmt.Errorf("not implemented")
 		case Native:
-			return nil, fmt.Errorf("EVM does not support native staking")
+			rpcClient, err := evmclient.NewClient(cfg)
+			if err != nil {
+				return nil, err
+			}
+			return rpcClient, nil
 		}
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmosclient.NewClient(cfg)

@@ -83,12 +83,15 @@ type TxVariantInput interface {
 
 // Markers for each type of Variant Tx
 type StakeTxInput interface {
+	TxVariantInput
 	Staking()
 }
 type UnstakeTxInput interface {
+	TxVariantInput
 	Unstaking()
 }
 type WithdrawTxInput interface {
+	TxVariantInput
 	Withdrawing()
 }
 

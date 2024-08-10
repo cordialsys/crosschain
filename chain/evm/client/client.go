@@ -52,6 +52,10 @@ type Client struct {
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientV2 = &Client{}
 
+// Ethereum does not support full delegated staking, so we can only report balance information.
+// A 3rd party 'staking provider' is required to do the rest.
+var _ xclient.StakingClient = &Client{}
+
 func configToEVMClientURL(cfgI xc.ITask) string {
 	cfg := cfgI.GetChain()
 	if cfg.Provider == "infura" {

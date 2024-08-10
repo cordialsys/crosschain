@@ -5,6 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/config/constants"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -65,7 +66,7 @@ func LoadConfig(network xc.NetworkSelector) (*ServicesConfig, error) {
 	v := getViper()
 	cfg := &ServicesConfig{}
 	defaultCfg := DefaultConfig(network)
-	err := config.RequireConfigWithViper(v, "", cfg, defaultCfg)
+	err := config.RequireConfigWithViper(v, "services", cfg, defaultCfg)
 	if err != nil {
 		return cfg, err
 	}
@@ -74,11 +75,10 @@ func LoadConfig(network xc.NetworkSelector) (*ServicesConfig, error) {
 
 func LoadConfigFromFile(network xc.NetworkSelector, file string) (*ServicesConfig, error) {
 	v := viper.New()
-	v.SetConfigType("toml")
 	v.SetConfigFile(file)
 	cfg := &ServicesConfig{}
 	defaultCfg := DefaultConfig(network)
-	err := config.RequireConfigWithViper(v, "", cfg, defaultCfg)
+	err := config.RequireConfigWithViper(v, "services", cfg, defaultCfg)
 	if err != nil {
 		return cfg, err
 	}
@@ -89,8 +89,14 @@ const ConfigFileEnv = "STAKING_CONFIG"
 
 func getViper() *viper.Viper {
 	v := viper.New()
-	v.SetConfigType("toml")
-	if os.Getenv(ConfigFileEnv) != "" {
+	// By default will work with (yaml|toml|json)
+
+	fileToLoad := os.Getenv(ConfigFileEnv)
+	if fileToLoad == "" {
+		fileToLoad = os.Getenv(constants.ConfigEnv)
+	}
+
+	if fileToLoad != "" {
 		logrus.WithField("config", os.Getenv(ConfigFileEnv)).Debug("loading staking configuration")
 		v.SetConfigFile(os.Getenv(ConfigFileEnv))
 	}
