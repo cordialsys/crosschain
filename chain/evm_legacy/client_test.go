@@ -1,26 +1,28 @@
-package evm_legacy
+package evm_legacy_test
 
 import (
+	"context"
 	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewClient() {
-	require := s.Require()
-	client, err := NewClient(&xc.ChainConfig{})
-	require.NoError(err)
-	require.NotNil(client)
+func TestNewClient(t *testing.T) {
+	client, err := evm_legacy.NewClient(&xc.ChainConfig{})
+	require.NoError(t, err)
+	require.NotNil(t, client)
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
 		name       string
 		resp       interface{}
-		val        *TxInput
+		val        *evm_legacy.TxInput
 		err        string
 		multiplier float64
 	}{
@@ -35,7 +37,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// eth_estimateGas
 				`"0x52e4"`,
 			},
-			val: &TxInput{
+			val: &evm_legacy.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVMLegacy),
 				Nonce:           6,
 				GasLimit:        21220,
@@ -54,7 +56,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// eth_estimateGas
 				`"0x52e4"`,
 			},
-			val: &TxInput{
+			val: &evm_legacy.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVMLegacy),
 				Nonce:           6,
 				GasLimit:        21220,
@@ -66,20 +68,20 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	}
 	for _, v := range vectors {
 		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
+		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVMLegacy, URL: server.URL, ChainGasMultiplier: v.multiplier}
-		client, err := NewClient(asset)
-		require.NoError(err)
-		input, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(""), xc.Address(""))
-		require.NoError(err)
+		client, err := evm_legacy.NewClient(asset)
+		require.NoError(t, err)
+		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(""), xc.Address(""))
+		require.NoError(t, err)
 		if v.err != "" {
-			require.Equal(TxInput{}, input)
-			require.ErrorContains(err, v.err)
+			require.Equal(t, evm_legacy.TxInput{}, input)
+			require.ErrorContains(t, err, v.err)
 		} else {
-			require.Nil(err)
-			require.NotNil(input)
-			require.Equal(v.val, input)
+			require.Nil(t, err)
+			require.NotNil(t, input)
+			require.Equal(t, v.val, input)
 		}
 	}
 }

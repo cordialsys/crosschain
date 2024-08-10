@@ -19,7 +19,7 @@ func TestNewTxBuilder(t *testing.T) {
 	b, err := builder.NewTxBuilder(&xc.TokenAssetConfig{Asset: "USDC", Contract: "1234"})
 	require.NoError(t, err)
 	require.NotNil(t, b)
-	require.Equal(t, "USDC", b.(builder.TxBuilder).Asset.(*xc.TokenAssetConfig).Asset)
+	require.Equal(t, "USDC", b.Asset.(*xc.TokenAssetConfig).Asset)
 }
 
 func TestTransferSetsMaxTipCap(t *testing.T) {

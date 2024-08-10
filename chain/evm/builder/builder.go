@@ -45,14 +45,14 @@ func NewEvmTxBuilder() *EvmTxBuilder {
 }
 
 // NewTxBuilder creates a new EVM TxBuilder
-func NewTxBuilder(asset xc.ITask) (xcbuilder.FullBuilder, error) {
+func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 	return TxBuilder{
 		Asset:         asset,
 		gethTxBuilder: &EvmTxBuilder{},
 	}, nil
 }
 
-func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) xc.TxBuilder {
+func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) TxBuilder {
 	txBuilder.gethTxBuilder = buider
 	return txBuilder
 }
