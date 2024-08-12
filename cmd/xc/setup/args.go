@@ -140,6 +140,7 @@ type RpcArgs struct {
 	Provider       string
 	ApiKey         string
 	// ConfigPath     string
+	UseLocalImplementation bool
 
 	Overrides map[string]*ChainOverride
 }
@@ -152,6 +153,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for BTC chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
 	cmd.PersistentFlags().Bool("not-mainnet", false, "Do not use mainnets, instead use a test or dev network.")
+	cmd.PersistentFlags().Bool("local", false, "Use local client implementation(s) instead of using remote connector.cordialapis.com.")
 }
 
 func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
@@ -163,6 +165,10 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 		return nil, fmt.Errorf("--chain required")
 	}
 	count, _ := cmd.Flags().GetCount("verbose")
+	local, err := cmd.Flags().GetBool("local")
+	if err != nil {
+		return nil, err
+	}
 	notmainnet, _ := cmd.Flags().GetBool("not-mainnet")
 	rpcProvider, _ := cmd.Flags().GetString("rpc-provider")
 	apikey, _ := cmd.Flags().GetString("api-key")
@@ -179,12 +185,13 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	}
 
 	return &RpcArgs{
-		Chain:          chain,
-		Rpc:            rpc,
-		VerbosityCount: count,
-		NotMainnet:     notmainnet,
-		Provider:       rpcProvider,
-		ApiKey:         apikey,
+		Chain:                  chain,
+		Rpc:                    rpc,
+		VerbosityCount:         count,
+		NotMainnet:             notmainnet,
+		Provider:               rpcProvider,
+		ApiKey:                 apikey,
+		UseLocalImplementation: local,
 		// ConfigPath:     config,
 		Overrides: map[string]*ChainOverride{},
 	}, nil

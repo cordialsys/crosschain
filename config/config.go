@@ -131,11 +131,11 @@ func GetSecret(uri string) (string, error) {
 
 	secretType := strings.ToLower(splits[0])
 	args := strings.Split(strings.Join(splits[1:], ":"), ",")
-	switch secretType {
-	case "env":
+	switch SecretType(secretType) {
+	case Env:
 		path := args[0]
 		return strings.TrimSpace(os.Getenv(path)), nil
-	case "file":
+	case File:
 		path := args[0]
 		if len(path) > 1 && path[0] == '~' {
 			path = strings.Replace(path, "~", os.Getenv("HOME"), 1)
@@ -154,7 +154,7 @@ func GetSecret(uri string) (string, error) {
 			return "", err
 		}
 		return strings.TrimSpace(string(result)), nil
-	case "vault":
+	case Vault:
 		if len(args) != 2 {
 			return "", errors.New("vault secret has 2 comma separated arguments (url,path)")
 		}
@@ -186,7 +186,7 @@ func GetSecret(uri string) (string, error) {
 		data, _ := secret.Data["data"].(map[string]interface{})
 		result, _ := data[vaultKey].(string)
 		return strings.TrimSpace(result), nil
-	case "gsm":
+	case GoogleSecretManager:
 		// google secret manager
 		if len(args) != 2 {
 			return "", errors.New("gsm secret has 2 comma separated arguments (project,secret_name)")
@@ -231,7 +231,7 @@ func GetSecret(uri string) (string, error) {
 			}
 		}
 		return "", fmt.Errorf("could not find a gsm secret by name %s", name)
-	case "raw":
+	case Raw:
 		return strings.Join(splits[1:], ":"), nil
 	}
 	return "", errors.New("invalid secret source for: ***")

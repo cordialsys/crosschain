@@ -3,59 +3,73 @@ package crosschain
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for Template
 type Client struct {
-	Asset   xc.ITask
-	URL     string
-	Http    *http.Client
-	Network xc.NetworkSelector
+	Asset           xc.ITask
+	URL             string
+	Http            *http.Client
+	Network         xc.NetworkSelector
+	StakingProvider xc.StakingProvider
+	ApiKey          string
+	ServiceApiKey   string
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.StakingClient = &Client{}
 
-// TxInput for Template
-type TxInput struct {
-}
+const ServiceApiKeyHeader = "x-service-api-key"
 
 // NewClient returns a new Crosschain Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI xc.ITask, apiKey string) (*Client, error) {
 	url := cfgI.GetChain().Clients[0].URL
+	url = strings.TrimSuffix(url, "/")
 	network := cfgI.GetChain().Clients[0].Network
-	// Determine API key, prioritizing value in client configuration
-	apiKey := cfgI.GetChain().Clients[0].Auth
-	if apiKey == "" {
-		apiKey = cfgI.GetChain().AuthSecret
+
+	if config.HasTypePrefix(apiKey) {
+		var err error
+		apiKey, err = config.GetSecret(apiKey)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to get connector api key")
+		}
 	}
-	_ = apiKey
 	return &Client{
 		Asset:   cfgI,
 		URL:     url,
 		Http:    &http.Client{},
 		Network: network,
+		ApiKey:  apiKey,
 	}, nil
 }
 
-// func (client *Client) nextClient() (xclient.FullClient, error) {
-// 	cfg := client.Asset
-// 	driver := cfg.GetChain().Driver
-// 	if driver == "" {
-// 		return nil, errors.New("crosschain client fallback is disabled")
-// 	}
-// 	return drivers.NewClient(cfg, xc.Driver(driver))
-// }
+func NewStakingClient(cfgI xc.ITask, apiKey string, serviceApiKey config.Secret, provider xc.StakingProvider) (*Client, error) {
+	client, err := NewClient(cfgI, apiKey)
+	if err != nil {
+		return nil, err
+	}
+	client.ServiceApiKey, err = serviceApiKey.Load()
+	if err != nil {
+		logrus.WithError(err).WithField("service", provider).Warn("failed to get service api key")
+	}
+	client.StakingProvider = provider
+	return client, nil
+}
 
 func (client *Client) apiAsset() *types.AssetReq {
 	native := client.Asset.GetChain()
@@ -71,7 +85,7 @@ func (client *Client) apiAsset() *types.AssetReq {
 	}
 }
 
-func (client *Client) apiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
+func (client *Client) legacyApiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
 	// Create HTTP POST request
 	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, path)
 	response, err := client.ApiCallWithUrl(ctx, "POST", apiURL, data)
@@ -80,6 +94,14 @@ func (client *Client) apiCall(ctx context.Context, path string, data interface{}
 	}
 
 	return response, nil
+}
+
+// Base64 encode if needed
+func encodeApiKeyUserPassword(userPwMaybe string) string {
+	if strings.Contains(userPwMaybe, ":") {
+		return base64.StdEncoding.EncodeToString([]byte(userPwMaybe))
+	}
+	return userPwMaybe
 }
 
 func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
@@ -100,6 +122,17 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 	if client.Network != "" {
 		req.Header.Add("network", string(client.Network))
 	}
+	if client.ApiKey != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Basic %s", encodeApiKeyUserPassword(client.ApiKey)))
+	}
+	if client.ServiceApiKey != "" {
+		req.Header.Set(ServiceApiKeyHeader, client.ServiceApiKey)
+	}
+	logrus.WithFields(logrus.Fields{
+		"method":  method,
+		"url":     url,
+		"network": client.Network,
+	}).Debug("connector request")
 
 	// Send the request
 	res, err := client.Http.Do(req)
@@ -107,20 +140,24 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 		return nil, err
 	}
 	defer res.Body.Close()
+	bz, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"body":   string(bz),
+		"status": res.StatusCode,
+	}).Debug("connector response")
 
 	// Return error if HTTP return error
 	if res.StatusCode != 200 {
 		var r types.Status
-		err = json.NewDecoder(res.Body).Decode(&r)
+		err = json.Unmarshal(bz, &r)
 		if err != nil {
 			return nil, err
 		}
 		return nil, fmt.Errorf("%s", r.Message)
-	}
-
-	bz, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
 	}
 
 	return bz, nil
@@ -128,7 +165,7 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 
 // FetchLegacyTxInput returns tx input from a Crosschain endpoint
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	res, err := client.apiCall(ctx, "/input", &types.TxInputReq{
+	res, err := client.legacyApiCall(ctx, "/input", &types.TxInputReq{
 		AssetReq: client.apiAsset(),
 		From:     string(args.GetFrom()),
 		To:       string(args.GetTo()),
@@ -136,16 +173,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return nil, err
-	// 	}
-	// 	log.Printf("crosschain client.FetchTxInput - fall back to node err=%s", err)
-	// 	return nextClient.FetchTxInput(ctx, from, to)
-	// }
-	var r = &types.TxInputRes{}
+
+	var r = &types.LegacyTxInputRes{}
 	_ = json.Unmarshal(res, r)
 	return drivers.UnmarshalTxInput(r.TxInput)
 }
@@ -169,7 +198,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 		signatures = append(signatures, sig)
 	}
 
-	res, err := client.apiCall(ctx, "/submit", &types.SubmitTxReq{
+	res, err := client.legacyApiCall(ctx, "/submit", &types.SubmitTxReq{
 		ChainReq:     &types.ChainReq{Chain: chain},
 		TxData:       data,
 		TxSignatures: signatures,
@@ -177,15 +206,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	if err != nil {
 		return err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return err
-	// 	}
-	// 	log.Printf("crosschain client.SubmitTx - fall back to node err=%s", err)
-	// 	return nextClient.SubmitTx(ctx, txInput)
-	// }
+
 	var r types.SubmitTxRes
 	err = json.Unmarshal(res, &r)
 	return err
@@ -193,22 +214,14 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 
 // FetchLegacyTxInfo returns tx info from a Crosschain endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	res, err := client.apiCall(ctx, "/info", &types.TxInfoReq{
+	res, err := client.legacyApiCall(ctx, "/info", &types.TxInfoReq{
 		AssetReq: client.apiAsset(),
 		TxHash:   string(txHash),
 	})
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return xc.LegacyTxInfo{}, err
-	// 	}
-	// 	log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
-	// 	return nextClient.FetchLegacyTxInfo(ctx, txHash)
-	// }
+
 	var r types.TxLegacyInfoRes
 	err = json.Unmarshal(res, &r)
 	return r.LegacyTxInfo, err
@@ -221,15 +234,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return xclient.TxInfo{}, err
-	// 	}
-	// 	log.Printf("crosschain client.FetchLegacyTxInfo - fall back to node err=%s", err)
-	// 	return nextClient.FetchTxInfo(ctx, txHashStr)
-	// }
+
 	r := types.TransactionInfoRes{}
 	err = json.Unmarshal(res, &r)
 	return r.TxInfo, err
@@ -238,30 +243,19 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 // FetchNativeBalance fetches account balance from a Crosschain endpoint
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	// res, err := client.apiCall(ctx, "/balance/native", &types.BalanceReq{
-	// 	AssetReq: client.apiAsset(),
-	// 	Address:  string(address),
-	// })
+
 	var assetReq = client.apiAsset()
 	assetReq.Asset = ""
 	assetReq.Contract = ""
 	assetReq.Decimals = ""
-	res, err := client.apiCall(ctx, "/balance", &types.BalanceReq{
+	res, err := client.legacyApiCall(ctx, "/balance", &types.BalanceReq{
 		AssetReq: assetReq,
 		Address:  string(address),
 	})
 	if err != nil {
 		return zero, err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return zero, err
-	// 	}
-	// 	log.Printf("crosschain client.FetchNativeBalance - fall back to node err=%s", err)
-	// 	return nextClient.FetchNativeBalance(ctx, address)
-	// }
+
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
 	return r.BalanceRaw, err
@@ -270,22 +264,14 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 // FetchBalance fetches token balance from a Crosschain endpoint
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	res, err := client.apiCall(ctx, "/balance", &types.BalanceReq{
+	res, err := client.legacyApiCall(ctx, "/balance", &types.BalanceReq{
 		AssetReq: client.apiAsset(),
 		Address:  string(address),
 	})
 	if err != nil {
 		return zero, err
 	}
-	// if err != nil {
-	// 	// Fallback to default client
-	// 	nextClient, err2 := client.nextClient()
-	// 	if err2 != nil {
-	// 		return zero, err
-	// 	}
-	// 	log.Printf("crosschain client.FetchBalance - fall back to node err=%s", err)
-	// 	return nextClient.FetchNativeBalance(ctx, address)
-	// }
+
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
 	return r.BalanceRaw, err

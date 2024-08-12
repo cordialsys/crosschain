@@ -36,13 +36,27 @@ type BalanceRes struct {
 
 type TxInputReq struct {
 	*AssetReq
-	From string `json:"from"`
-	To   string `json:"to"`
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Balance string `json:"balance"`
+}
+
+type StakingInputReq struct {
+	From      string             `json:"from"`
+	Balance   string             `json:"balance"`
+	Validator string             `json:"validator,omitempty"`
+	Account   string             `json:"account,omitempty"`
+	Provider  xc.StakingProvider `json:"provider,omitempty"`
+}
+
+type LegacyTxInputRes struct {
+	*TxInputReq
+	TxInput json.RawMessage `json:"input,omitempty"`
 }
 
 type TxInputRes struct {
 	*TxInputReq
-	TxInput json.RawMessage `json:"raw_tx_input,omitempty"`
+	TxInput string `json:"input,omitempty"`
 }
 
 type TxInfoReq struct {

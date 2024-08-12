@@ -352,7 +352,7 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	for _, client := range clients {
 		switch Driver(client.Driver) {
 		case DriverCrosschain:
-			return remoteclient.NewClient(cfg)
+			return remoteclient.NewClient(cfg, client.Auth)
 		default:
 			return drivers.NewClient(cfg, Driver(client.Driver))
 		}
@@ -361,12 +361,15 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 }
 
 func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
-	// chain := cfg.GetChain()
-	// if !chain.Chain.Supports(variant) {
-	// 	return nil, fmt.Errorf("%s chain currently does not support %s protocol, only %v", chain.Chain, variant, chain.Chain.StakingVariants())
-	// }
-
-	// TODO crosschain client for staking...
+	if !f.NoXcClients {
+		clients := cfg.GetChain().GetAllClients()
+		for _, client := range clients {
+			switch Driver(client.Driver) {
+			case DriverCrosschain:
+				return remoteclient.NewStakingClient(cfg, client.Auth, stakingCfg.GetApiSecret(provider), provider)
+			}
+		}
+	}
 	return drivers.NewStakingClient(stakingCfg, cfg, provider)
 }
 
