@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -26,6 +28,13 @@ func CmdXc() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if args.UseLocalImplementation {
+				xcFactory.NoXcClients = true
+			}
+			if args.Rpc == "" && args.UseLocalImplementation {
+				return fmt.Errorf("must pass --rpc when using --local")
+			}
+
 			chainConfig, err := setup.LoadChain(xcFactory, args.Chain)
 			if err != nil {
 				return err

@@ -34,6 +34,19 @@ type ServicesConfig struct {
 	Figment   FigmentConfig   `mapstructure:"figment" json:"figment" yaml:"figment" toml:"figment"`
 }
 
+func (c *ServicesConfig) GetApiSecret(provider xc.StakingProvider) config.Secret {
+	switch provider {
+	case xc.Kiln:
+		return c.Kiln.ApiToken
+	case xc.Figment:
+		return c.Figment.ApiToken
+	case xc.Twinstake:
+		// TODO, twinstake has a login process
+		return ""
+	}
+	return ""
+}
+
 func DefaultConfig(network xc.NetworkSelector) *ServicesConfig {
 	cfg := &ServicesConfig{
 		Kiln: KilnConfig{
