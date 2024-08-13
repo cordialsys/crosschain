@@ -84,6 +84,8 @@ type TxVariantInput interface {
 // Markers for each type of Variant Tx
 type StakeTxInput interface {
 	TxVariantInput
+	// Get the base transaction input so conflicts can be checked the same way
+	GetBaseTxInput() TxInput
 	Staking()
 }
 type UnstakeTxInput interface {

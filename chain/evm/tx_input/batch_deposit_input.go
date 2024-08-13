@@ -17,6 +17,8 @@ func NewBatchDepositInput() *BatchDepositInput {
 	return &BatchDepositInput{}
 }
 
+func (inp *BatchDepositInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
+
 // Mark as valid for staking transactions
 func (*BatchDepositInput) Staking() {}
 

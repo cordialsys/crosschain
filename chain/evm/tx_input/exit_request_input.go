@@ -16,6 +16,8 @@ func NewExitRequestInput() *ExitRequestInput {
 	return &ExitRequestInput{}
 }
 
+func (inp *ExitRequestInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
+
 func (*ExitRequestInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewUnstakingInputType(xc.DriverEVM, "exit-request")
 }
