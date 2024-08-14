@@ -36,10 +36,8 @@ func (client *Client) DefaultGasLimit() uint64 {
 // Simulate a transaction to get the estimated gas limit
 func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address, trans *tx.Tx) (uint64, error) {
 	zero := big.NewInt(0)
-	// trans.EthTx
 	fromAddr, _ := address.FromHex(from)
 
-	// ethTx := trans.(*tx.Tx).EthTx
 	msg := ethereum.CallMsg{
 		From: fromAddr,
 		To:   trans.EthTx.To(),
@@ -53,6 +51,11 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		AccessList: types.AccessList{},
 	}
 	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
+
+	if err != nil && strings.Contains(err.Error(), "gas limit is too high") {
+		msg.Gas = 1_000_000
+		gasLimit, err = client.EthClient.EstimateGas(ctx, msg)
+	}
 	if err != nil {
 		logrus.WithError(err).Debug("could not estimate gas fully")
 	}
