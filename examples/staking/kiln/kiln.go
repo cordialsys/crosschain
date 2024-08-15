@@ -121,7 +121,7 @@ func CmdStake() *cobra.Command {
 			if moreArgs.AccountId != "" {
 				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
 			}
-			stakingArgs, err := builder.NewStakeArgs(from, amount, options...)
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
 			if err != nil {
 				return err
 			}
@@ -258,7 +258,7 @@ func CmdUnstake() *cobra.Command {
 			if moreArgs.AccountId != "" {
 				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
 			}
-			stakingArgs, err := builder.NewStakeArgs(from, amount, options...)
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
 			if err != nil {
 				return err
 			}

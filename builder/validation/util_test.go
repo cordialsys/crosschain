@@ -1,10 +1,10 @@
-package tx_input_test
+package validation_test
 
 import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/tx_input"
+	"github.com/cordialsys/crosschain/builder/validation"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,24 +17,23 @@ func mustToBlockchain(human string) xc.AmountBlockchain {
 }
 
 func TestStakingAmount(t *testing.T) {
-	chain := &xc.ChainConfig{Decimals: 18}
 
-	div, err := tx_input.Count32EthChunks(chain, mustToBlockchain("32"))
+	div, err := validation.Count32EthChunks(mustToBlockchain("32"))
 	require.NoError(t, err)
 	require.EqualValues(t, 1, div)
-	div, err = tx_input.Count32EthChunks(chain, mustToBlockchain("96"))
+	div, err = validation.Count32EthChunks(mustToBlockchain("96"))
 	require.NoError(t, err)
 	require.EqualValues(t, 3, div)
 
-	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("48"))
+	_, err = validation.Count32EthChunks(mustToBlockchain("48"))
 	require.Error(t, err)
 
-	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("32.00001"))
+	_, err = validation.Count32EthChunks(mustToBlockchain("32.00001"))
 	require.Error(t, err)
 
-	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("31"))
+	_, err = validation.Count32EthChunks(mustToBlockchain("31"))
 	require.Error(t, err)
 
-	_, err = tx_input.Count32EthChunks(chain, mustToBlockchain("0"))
+	_, err = validation.Count32EthChunks(mustToBlockchain("0"))
 	require.Error(t, err)
 }

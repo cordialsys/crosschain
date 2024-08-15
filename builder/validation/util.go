@@ -1,4 +1,4 @@
-package tx_input
+package validation
 
 import (
 	"fmt"
@@ -7,12 +7,10 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func Count32EthChunks(chain *xc.ChainConfig, amount xc.AmountBlockchain) (uint64, error) {
+func Count32EthChunks(amount xc.AmountBlockchain) (uint64, error) {
 	ethInc, _ := xc.NewAmountHumanReadableFromStr("32")
 	decimals := int32(18)
-	if chain.Decimals != 0 {
-		decimals = chain.Decimals
-	}
+
 	weiInc := ethInc.ToBlockchain(decimals)
 
 	if amount.Cmp(&weiInc) < 0 {

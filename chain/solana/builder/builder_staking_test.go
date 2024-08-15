@@ -20,7 +20,7 @@ func TestNewStakingTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(100000000)
-	args, err := xcbuilder.NewStakeArgs(from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
 	require.NoError(t, err)
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
@@ -60,7 +60,7 @@ func TestNewUnstakeTransfer(t *testing.T) {
 	validator := "50_000_000_000"
 
 	amount := xc.NewAmountBlockchainFromUint64(85_000_000_000)
-	args, err := xcbuilder.NewStakeArgs(from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
 	require.NoError(t, err)
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
@@ -121,7 +121,7 @@ func TestNewWithdrawTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(10000000)
-	args, err := xcbuilder.NewStakeArgs(from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
 	require.NoError(t, err)
 
 	input := &tx_input.WithdrawInput{

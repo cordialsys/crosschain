@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/validation"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
@@ -134,7 +135,7 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 }
 
 func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.BatchDepositInput, error) {
-	count, err := tx_input.Count32EthChunks(cli.chain, args.GetAmount())
+	count, err := validation.Count32EthChunks(args.GetAmount())
 	if err != nil {
 		return nil, err
 	}

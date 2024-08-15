@@ -1,6 +1,11 @@
 package builder
 
-import xc "github.com/cordialsys/crosschain"
+import (
+	"fmt"
+
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/validation"
+)
 
 type StakeArgs struct {
 	TxCommonOptions
@@ -18,7 +23,7 @@ func (opts *StakeArgs) GetValidator() (string, bool)   { return get(opts.validat
 func (opts *StakeArgs) GetOwner() (xc.Address, bool)   { return get(opts.owner) }
 func (opts *StakeArgs) GetAccount() (string, bool)     { return get(opts.account) }
 
-func NewStakeArgs(from xc.Address, amount xc.AmountBlockchain, options ...StakeOption) (StakeArgs, error) {
+func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...StakeOption) (StakeArgs, error) {
 	common := TxCommonOptions{}
 	var validator *string
 	var owner *xc.Address
@@ -37,6 +42,21 @@ func NewStakeArgs(from xc.Address, amount xc.AmountBlockchain, options ...StakeO
 			return args, err
 		}
 	}
+
+	// Chain specific validation of arguments
+	switch chain.Driver() {
+	case xc.DriverEVM:
+		// Eth must stake or unstake in increments of 32
+		_, err := validation.Count32EthChunks(args.GetAmount())
+		if err != nil {
+			return args, err
+		}
+	case xc.DriverCosmos, xc.DriverSolana:
+		if _, ok := args.GetValidator(); !ok {
+			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
+		}
+	}
+
 	return args, nil
 }
 

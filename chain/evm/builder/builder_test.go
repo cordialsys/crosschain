@@ -72,7 +72,7 @@ func TestStakingTxUsesCredential(t *testing.T) {
 
 	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
 	owner := xc.Address("0x273b437645Ba723299d07B1BdFFcf508bE64771f")
-	args, _ := xcbuilder.NewStakeArgs(owner, xc.NewAmountBlockchainFromUint64(1))
+	args, _ := xcbuilder.NewStakeArgs(xc.ETH, owner, xc.NewAmountBlockchainFromUint64(1))
 	trans, err := txBuilder.Stake(args, input)
 	require.NoError(t, err)
 
@@ -94,7 +94,7 @@ func TestUnstakingTx(t *testing.T) {
 	owner := xc.Address("0x273b437645Ba723299d07B1BdFFcf508bE64771f")
 	human, _ := xc.NewAmountHumanReadableFromStr("64")
 
-	args, _ := xcbuilder.NewStakeArgs(owner, human.ToBlockchain(18))
+	args, _ := xcbuilder.NewStakeArgs(xc.ETH, owner, human.ToBlockchain(18))
 	trans, err := txBuilder.Unstake(args, input)
 	require.NoError(t, err)
 
