@@ -103,6 +103,7 @@ func TestFetchStakingInput(t *testing.T) {
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 			args, err := builder.NewStakeArgs(
+				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(1000),
 				builder.StakeOptionValidator(v.validator),
@@ -216,6 +217,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 			args, err := builder.NewStakeArgs(
+				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(100000000),
 				builder.StakeOptionValidator(v.validator),
@@ -311,6 +313,7 @@ func TestFetchWithdrawInput(t *testing.T) {
 			}
 
 			args, err := builder.NewStakeArgs(
+				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(100000000),
 				options...,

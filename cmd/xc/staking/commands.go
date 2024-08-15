@@ -92,7 +92,7 @@ func CmdStake() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}
@@ -152,7 +152,7 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}
@@ -226,7 +226,7 @@ func CmdWithdraw() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
 			if err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func CmdFetchStakeInput() *cobra.Command {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
 			if err != nil {
 				return err
 			}
@@ -317,7 +317,7 @@ func CmdFetchUnstakeInput() *cobra.Command {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
 			if err != nil {
 				return err
 			}
@@ -358,7 +358,7 @@ func CmdFetchWithdrawInput() *cobra.Command {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(xc.Address(from), amount, stakingArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, stakingArgs.ToBuilderOptions()...)
 			if err != nil {
 				return err
 			}

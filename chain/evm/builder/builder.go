@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/validation"
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
@@ -230,7 +231,7 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 	case *tx_input.ExitRequestInput:
 		evmBuilder := NewEvmTxBuilder()
 
-		count, err := tx_input.Count32EthChunks(txBuilder.Asset.GetChain(), stakeArgs.GetAmount())
+		count, err := validation.Count32EthChunks(stakeArgs.GetAmount())
 		if err != nil {
 			return nil, err
 		}
