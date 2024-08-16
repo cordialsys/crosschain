@@ -2,6 +2,7 @@ package bitcoin_cash
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 )
@@ -11,17 +12,22 @@ type TxBuilder struct {
 	bitcoin.TxBuilder
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 	txBuilder, err := bitcoin.NewTxBuilder(cfgI)
 	if err != nil {
-		return txBuilder, err
+		return TxBuilder{}, err
 	}
 	return TxBuilder{
-		TxBuilder: txBuilder.(bitcoin.TxBuilder).WithAddressDecoder(&BchAddressDecoder{}),
+		TxBuilder: txBuilder.WithAddressDecoder(&BchAddressDecoder{}),
 	}, nil
+}
+
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {

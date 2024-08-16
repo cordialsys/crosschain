@@ -383,7 +383,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 		ChainId:         1,
 		Pubkey:          pubkey,
 	}
-	tf, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tf, err := builder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(err)
 	require.NotNil(tf)
 	hash := tf.Hash()
@@ -405,6 +405,6 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	// use invalid contract address
 	bad_asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x112345", ChainConfig: native_asset}
 	builder, _ = NewTxBuilder(bad_asset)
-	_, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	_, err = builder.NewTokenTransfer(from, to, amount, input)
 	require.ErrorContains(err, "Invalid struct tag string literal")
 }

@@ -11,8 +11,7 @@ type StakingInput struct {
 var _ xc.TxVariantInput = &StakingInput{}
 var _ xc.StakeTxInput = &StakingInput{}
 
-func (inp *StakingInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
-func (*StakingInput) Staking()                       {}
+func (*StakingInput) Staking() {}
 
 func (*StakingInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewStakingInputType(xc.DriverCosmos, string(xc.Native))
@@ -25,8 +24,7 @@ type UnstakingInput struct {
 var _ xc.TxVariantInput = &UnstakingInput{}
 var _ xc.UnstakeTxInput = &UnstakingInput{}
 
-func (inp *UnstakingInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
-func (*UnstakingInput) Unstaking()                     {}
+func (*UnstakingInput) Unstaking() {}
 
 func (*UnstakingInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewUnstakingInputType(xc.DriverCosmos, string(xc.Native))
@@ -38,8 +36,6 @@ type WithdrawInput struct {
 
 var _ xc.TxVariantInput = &WithdrawInput{}
 var _ xc.WithdrawTxInput = &WithdrawInput{}
-
-func (inp *WithdrawInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
 
 func (*WithdrawInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewWithdrawingInputType(xc.DriverCosmos, string(xc.Native))

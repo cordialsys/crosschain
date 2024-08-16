@@ -106,7 +106,7 @@ func TestFetchStakingInput(t *testing.T) {
 				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(1000),
-				builder.StakeOptionValidator(v.validator),
+				builder.OptionValidator(v.validator),
 			)
 
 			require.NoError(t, err)
@@ -220,7 +220,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(100000000),
-				builder.StakeOptionValidator(v.validator),
+				builder.OptionValidator(v.validator),
 			)
 
 			require.NoError(t, err)
@@ -307,9 +307,9 @@ func TestFetchWithdrawInput(t *testing.T) {
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
-			options := []builder.StakeOption{}
+			options := []builder.BuilderOption{}
 			if v.validator != "" {
-				options = append(options, builder.StakeOptionValidator(v.validator))
+				options = append(options, builder.OptionValidator(v.validator))
 			}
 
 			args, err := builder.NewStakeArgs(

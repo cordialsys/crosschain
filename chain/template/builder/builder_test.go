@@ -25,7 +25,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.Nil(t, tf)
 	require.EqualError(t, err, "not implemented")
 }
@@ -37,7 +37,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tf, err := builder1.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tf, err := builder1.NewTokenTransfer(from, to, amount, input)
 	require.Nil(t, tf)
 	require.EqualError(t, err, "not implemented")
 }

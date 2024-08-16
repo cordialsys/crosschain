@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	. "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/aptos"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
@@ -96,7 +97,7 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }
 
-func NewTxBuilder(cfg ITask) (TxBuilder, error) {
+func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
 		return evmbuilder.NewTxBuilder(cfg)

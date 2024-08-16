@@ -15,8 +15,6 @@ type StakingInput struct {
 var _ xc.TxVariantInput = &StakingInput{}
 var _ xc.StakeTxInput = &StakingInput{}
 
-func (inp *StakingInput) GetBaseTxInput() xc.TxInput { return &inp.TxInput }
-
 func (*StakingInput) Staking() {}
 
 func (*StakingInput) GetVariant() xc.TxVariantInputType {

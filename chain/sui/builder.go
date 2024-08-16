@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 )
 
@@ -13,15 +14,22 @@ type TxBuilder struct {
 }
 
 var _ xc.TxTokenBuilder = &TxBuilder{}
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
 	}, nil
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
+
+// Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	var local_input *TxInput
 	var ok bool

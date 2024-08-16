@@ -17,7 +17,7 @@ var DefaultMaxTipCapGwei uint64 = 5
 // TxBuilder for EVM
 type TxBuilder evmbuilder.TxBuilder
 
-var _ xc.TxBuilder = &TxBuilder{}
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 var _ xc.TxTokenBuilder = &TxBuilder{}
 var _ xc.TxXTransferBuilder = &TxBuilder{}
 
@@ -76,6 +76,7 @@ func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Addre
 }
 
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
 	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {

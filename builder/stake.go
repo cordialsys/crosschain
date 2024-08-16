@@ -8,36 +8,37 @@ import (
 )
 
 type StakeArgs struct {
-	TxCommonOptions
-	from      xc.Address
-	amount    xc.AmountBlockchain
-	validator *string
-	owner     *xc.Address
-	account   *string
+	options builderOptions
+	from    xc.Address
+	amount  xc.AmountBlockchain
 }
-type StakeOption func(opts *StakeArgs) error
 
-func (opts *StakeArgs) GetFrom() xc.Address            { return opts.from }
-func (opts *StakeArgs) GetAmount() xc.AmountBlockchain { return opts.amount }
-func (opts *StakeArgs) GetValidator() (string, bool)   { return get(opts.validator) }
-func (opts *StakeArgs) GetOwner() (xc.Address, bool)   { return get(opts.owner) }
-func (opts *StakeArgs) GetAccount() (string, bool)     { return get(opts.account) }
+var _ TransactionOptions = &StakeArgs{}
 
-func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...StakeOption) (StakeArgs, error) {
-	common := TxCommonOptions{}
-	var validator *string
-	var owner *xc.Address
-	var accountId *string
+// Staking arguments
+func (args *StakeArgs) GetFrom() xc.Address            { return args.from }
+func (args *StakeArgs) GetAmount() xc.AmountBlockchain { return args.amount }
+
+// Exposed options
+func (args *StakeArgs) GetMemo() (string, bool)                { return args.options.GetMemo() }
+func (args *StakeArgs) GetTimestamp() (int64, bool)            { return args.options.GetTimestamp() }
+func (args *StakeArgs) GetPriority() (xc.GasFeePriority, bool) { return args.options.GetPriority() }
+func (args *StakeArgs) GetPublicKey() ([]byte, bool)           { return args.options.GetPublicKey() }
+
+// Staking options
+func (args *StakeArgs) GetValidator() (string, bool)      { return args.options.GetValidator() }
+func (args *StakeArgs) GetStakeOwner() (xc.Address, bool) { return args.options.GetStakeOwner() }
+func (args *StakeArgs) GetStakeAccount() (string, bool)   { return args.options.GetStakeAccount() }
+
+func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (StakeArgs, error) {
+	builderOptions := builderOptions{}
 	args := StakeArgs{
-		common,
+		builderOptions,
 		from,
 		amount,
-		validator,
-		owner,
-		accountId,
 	}
 	for _, opt := range options {
-		err := opt(&args)
+		err := opt(&args.options)
 		if err != nil {
 			return args, err
 		}
@@ -58,49 +59,4 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockch
 	}
 
 	return args, nil
-}
-
-func StakeOptionValidator(validator string) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.validator = &validator
-		return nil
-	}
-}
-func StakeOptionAccount(account string) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.account = &account
-		return nil
-	}
-}
-func StakeOptionMemo(memo string) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.memo = &memo
-		return nil
-	}
-}
-func StakeOptionTimestamp(ts int64) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.timestamp = &ts
-		return nil
-	}
-}
-func StakeOptionPriority(priority xc.GasFeePriority) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.gasFeePriority = &priority
-		return nil
-	}
-}
-func StakeOptionPublicKey(publicKey []byte) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.publicKey = &publicKey
-		return nil
-	}
-}
-
-// Set an alternative owner of the stake from the from address
-func StakeOptionOwner(owner xc.Address) StakeOption {
-	return func(opts *StakeArgs) error {
-		opts.owner = &owner
-		return nil
-	}
 }

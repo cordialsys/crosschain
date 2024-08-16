@@ -197,7 +197,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 
 	matchingStakeAccounts := []*tx_input.ExistingStake{}
 	for _, stake := range stakeAccounts {
-		inputAccount, ok := args.GetAccount()
+		inputAccount, ok := args.GetStakeAccount()
 		if ok {
 			if stake.Account.Pubkey.String() != inputAccount {
 				continue
@@ -261,7 +261,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 				continue
 			}
 		}
-		inputAccount, ok := args.GetAccount()
+		inputAccount, ok := args.GetStakeAccount()
 		if ok {
 			if stake.Account.Pubkey.String() != inputAccount {
 				continue

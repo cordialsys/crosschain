@@ -205,21 +205,21 @@ type StakingArgs struct {
 	Provider   xc.StakingProvider
 }
 
-func (args *StakingArgs) ToBuilderOptions() []builder.StakeOption {
-	options := []builder.StakeOption{}
+func (args *StakingArgs) ToBuilderOptions() []builder.BuilderOption {
+	options := []builder.BuilderOption{}
 	if args.Validator != "" {
-		options = append(options, builder.StakeOptionValidator(args.Validator))
+		options = append(options, builder.OptionValidator(args.Validator))
 	}
 	if args.AccountId != "" {
-		options = append(options, builder.StakeOptionAccount(args.AccountId))
+		options = append(options, builder.OptionStakeAccount(args.AccountId))
 	}
+	options = append(options, builder.OptionTimestamp(time.Now().Unix()))
 	return options
 }
 
-func (args *StakingArgs) BuilderOptionsWith(publicKey []byte) []builder.StakeOption {
+func (args *StakingArgs) BuilderOptionsWith(publicKey []byte) []builder.BuilderOption {
 	options := args.ToBuilderOptions()
-	options = append(options, builder.StakeOptionPublicKey(publicKey))
-	options = append(options, builder.StakeOptionTimestamp(time.Now().Unix()))
+	options = append(options, builder.OptionPublicKey(publicKey))
 	return options
 }
 

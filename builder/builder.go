@@ -2,10 +2,13 @@ package builder
 
 import xc "github.com/cordialsys/crosschain"
 
-type FullBuilder interface {
+type FullTransferBuilder interface {
 	Transfer
-	Staking
 	xc.TxBuilder
+}
+type FullBuilder interface {
+	FullTransferBuilder
+	Staking
 }
 
 type Transfer interface {

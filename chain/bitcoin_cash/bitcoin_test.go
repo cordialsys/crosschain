@@ -98,7 +98,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 				}},
 				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 			}
-			tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+			tf, err := builder.NewNativeTransfer(from, to, amount, input)
 			require.NoError(err)
 			require.NotNil(tf)
 			hash := tf.Hash()
@@ -111,7 +111,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 				}},
 				GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 			}
-			_, err = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input_small)
+			_, err = builder.NewNativeTransfer(from, to, amount, input_small)
 			require.Error(err)
 
 			// add signature
@@ -145,7 +145,7 @@ func (s *CrosschainTestSuite) TestTxHash() {
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 	}
-	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)
 
 	tx := tf.(*tx.Tx)

@@ -36,7 +36,7 @@ type TxBuilder struct {
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Cosmos TxBuilder
-func NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 	cosmosCfg := localcodectypes.MakeCosmosConfig()
 
 	return TxBuilder{
@@ -52,7 +52,7 @@ func DefaultMaxGasPrice(nativeAsset *xc.ChainConfig) float64 {
 	return gas.TotalFeeToFeePerGas(maxFee.String(), gas.NativeTransferGasLimit)
 }
 
-// NewTransfer creates a new transfer for an Asset, either native or token
+// Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*tx_input.TxInput)
 	native := txBuilder.Asset.GetChain()
@@ -86,7 +86,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	}
 }
 
+// NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
 	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
