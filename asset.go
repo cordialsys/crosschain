@@ -61,6 +61,7 @@ const (
 	TON    = NativeAsset("TON")    // TON
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
+	XRP    = NativeAsset("XRP")    // XRP
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -104,6 +105,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	TON,
 	TRX,
 	SEI,
+	XRP,
 }
 
 // Driver is the type of a chain
@@ -124,6 +126,7 @@ const (
 	DriverSui           = Driver("sui")
 	DriverTron          = Driver("tron")
 	DriverTon           = Driver("ton")
+	DriverXrp           = Driver("xrp")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -142,6 +145,7 @@ var SupportedDrivers = []Driver{
 	DriverSui,
 	DriverTron,
 	DriverTon,
+	DriverXrp,
 }
 
 type StakingProvider string
@@ -220,6 +224,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverTron
 	case TON:
 		return DriverTon
+	case XRP:
+		return DriverXrp
 	}
 	return ""
 }
@@ -230,7 +236,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXrp:
 		return Ed255
 	}
 	return ""

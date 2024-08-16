@@ -30,6 +30,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -154,6 +155,8 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return tron.NewAddressBuilder(cfg)
 	case DriverTon:
 		return tonaddress.NewAddressBuilder(cfg)
+	case DriverXrp:
+		return xrpaddress.NewAddressBuilder(cfg)
 	}
 	return nil, errors.New("no address builder defined for: " + string(cfg.ID()))
 }
