@@ -504,3 +504,11 @@ chains:
     coingecko_id: the-open-network
     coinmarketcap_id: 173
     dti: QBZLT5MT1
+  XRP:
+    chain: XRP
+    driver: xrp
+    chain_name: xrp
+    explorer_url: https://livenet.xrpl.org/
+    decimals: 9
+    indexer_type: ripple
+    polling_period: 3m
