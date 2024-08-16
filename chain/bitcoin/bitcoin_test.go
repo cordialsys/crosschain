@@ -169,7 +169,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 					}},
 					GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 				}
-				tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+				tf, err := builder.NewNativeTransfer(from, to, amount, input)
 				require.NoError(err)
 				require.NotNil(tf)
 				hash := tf.Hash()
@@ -182,7 +182,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 					}},
 					GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 				}
-				_, err = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input_small)
+				_, err = builder.NewNativeTransfer(from, to, amount, input_small)
 				require.Error(err)
 
 				// add signature
@@ -214,7 +214,7 @@ func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 	}
-	tf, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tf, err := builder.NewTokenTransfer(from, to, amount, input)
 	require.Nil(tf)
 	require.EqualError(err, "not implemented")
 }
@@ -266,7 +266,7 @@ func (s *CrosschainTestSuite) TestTxHash() {
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 	}
-	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)
 
 	tx := tf.(*tx.Tx)
@@ -297,7 +297,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	}
 	err := input.SetPublicKey([]byte{})
 	require.NoError(err)
-	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)
 
 	txObject := tf.(*tx.Tx)
@@ -321,7 +321,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	require.ErrorContains(err, "already signed")
 
 	// must have a signature for each input needed
-	tf, _ = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
 	err = tf.(*tx.Tx).AddSignatures([]xc.TxSignature{
 		sig, sig,
 	}...)
@@ -338,7 +338,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 			},
 		},
 	}
-	tf, _ = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
 	require.Len(tf.(*tx.Tx).Input.UnspentOutputs, 2)
 	err = tf.(*tx.Tx).AddSignatures([]xc.TxSignature{
 		sig, sig,

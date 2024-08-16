@@ -50,7 +50,7 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 		Provider: client.StakingProvider,
 	}
 	req.Validator, _ = args.GetValidator()
-	req.Account, _ = args.GetAccount()
+	req.Account, _ = args.GetStakeAccount()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/stakes", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
@@ -74,7 +74,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		Provider: client.StakingProvider,
 	}
 	req.Validator, _ = args.GetValidator()
-	req.Account, _ = args.GetAccount()
+	req.Account, _ = args.GetStakeAccount()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/unstakes", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
@@ -98,7 +98,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 		Provider: client.StakingProvider,
 	}
 	req.Validator, _ = args.GetValidator()
-	req.Account, _ = args.GetAccount()
+	req.Account, _ = args.GetStakeAccount()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/withdraws", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)

@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -26,8 +27,10 @@ type TxBuilder struct {
 	// isBch  bool
 }
 
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+
 // NewTxBuilder creates a new Bitcoin TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 	native := cfgI.GetChain()
 	params, err := params.GetParams(native)
 	if err != nil {
@@ -47,6 +50,12 @@ func (txBuilder TxBuilder) WithAddressDecoder(decoder address.AddressDecoder) Tx
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
+
+// Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.ChainConfig:

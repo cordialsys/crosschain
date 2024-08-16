@@ -139,7 +139,7 @@ func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs)
 	if err != nil {
 		return nil, err
 	}
-	accountId, _ := args.GetAccount()
+	accountId, _ := args.GetStakeAccount()
 	acc, err := cli.kilnClient.ResolveAccount(accountId)
 	if err != nil {
 		return nil, err

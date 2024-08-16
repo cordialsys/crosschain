@@ -10,6 +10,7 @@ import (
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 	"golang.org/x/crypto/sha3"
 
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	eABI "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -22,13 +23,19 @@ type TxBuilder struct {
 }
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
+func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
 	}, nil
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+}
+
+// Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	switch asset := txBuilder.Asset.(type) {
 	// case *xc.TaskConfig:

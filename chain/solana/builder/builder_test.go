@@ -22,7 +22,7 @@ func TestNewTxBuilder(t *testing.T) {
 	txBuilder, err := builder.NewTxBuilder(&xc.TokenAssetConfig{Asset: "USDC"})
 	require.NoError(t, err)
 	require.NotNil(t, txBuilder)
-	require.Equal(t, "USDC", txBuilder.(builder.TxBuilder).Asset.(*xc.TokenAssetConfig).Asset)
+	require.Equal(t, "USDC", txBuilder.Asset.(*xc.TokenAssetConfig).Asset)
 }
 
 func TestNewNativeTransfer(t *testing.T) {
@@ -32,7 +32,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
 	input := &tx_input.TxInput{}
-	tx, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx := tx.(*Tx).SolTx
@@ -49,13 +49,13 @@ func TestNewNativeTransferErr(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tx, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 3")
 
 	from = xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	// fails on parsing to
-	tx, err = builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	tx, err = builder.NewNativeTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 2")
 }
@@ -77,7 +77,7 @@ func TestNewTokenTransfer(t *testing.T) {
 
 	// transfer to existing ATA
 	input := &TxInput{}
-	tx, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err := builder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx := tx.(*Tx).SolTx
@@ -88,7 +88,7 @@ func TestNewTokenTransfer(t *testing.T) {
 
 	// transfer to non-existing ATA: create
 	input = &TxInput{ShouldCreateATA: true}
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = builder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx = tx.(*Tx).SolTx
@@ -101,7 +101,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	// transfer directly to ATA
 	to = xc.Address(ataToStr)
 	input = &TxInput{ToIsATA: true}
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = builder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx = tx.(*Tx).SolTx
@@ -113,7 +113,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	// invalid: direct to ATA, but ToIsATA: false
 	to = xc.Address(ataToStr)
 	input = &TxInput{ToIsATA: false}
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = builder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx = tx.(*Tx).SolTx
@@ -177,10 +177,10 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 			},
 		},
 	}
-	_, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountTooBig, input)
+	_, err = builder.NewTokenTransfer(from, to, amountTooBig, input)
 	require.ErrorContains(t, err, "cannot send")
 
-	tx, err := builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountExact, input)
+	tx, err := builder.NewTokenTransfer(from, to, amountExact, input)
 	require.NoError(t, err)
 	solTx := tx.(*Tx).SolTx
 
@@ -196,14 +196,14 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 	require.EqualValues(t, 100, getTokenTransferAmount(solTx, &solTx.Message.Instructions[2]))
 
 	// amountSmall1 should just have 1 instruction (fits 1 token balance exact)
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountSmall1, input)
+	tx, err = builder.NewTokenTransfer(from, to, amountSmall1, input)
 	require.NoError(t, err)
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 1, len(solTx.Message.Instructions))
 	require.EqualValues(t, 100, getTokenTransferAmount(solTx, &solTx.Message.Instructions[0]))
 
 	// amountSmall2 should just have 2 instruction (first 100, second 50)
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountSmall2, input)
+	tx, err = builder.NewTokenTransfer(from, to, amountSmall2, input)
 	require.NoError(t, err)
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 2, len(solTx.Message.Instructions))
@@ -211,7 +211,7 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 	require.EqualValues(t, 50, getTokenTransferAmount(solTx, &solTx.Message.Instructions[1]))
 
 	// amountSmall3 should just have 3 instruction (first 100, second 100)
-	tx, err = builder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amountSmall3, input)
+	tx, err = builder.NewTokenTransfer(from, to, amountSmall3, input)
 	require.NoError(t, err)
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 2, len(solTx.Message.Instructions))
@@ -228,7 +228,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tx, err := txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err := txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "asset does not have a contract")
 
@@ -241,12 +241,12 @@ func TestNewTokenTransferErr(t *testing.T) {
 	to = xc.Address("to")
 	amount = xc.AmountBlockchain{}
 	input = &TxInput{}
-	tx, err = txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 3")
 
 	from = xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-	tx, err = txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 2")
 
@@ -255,7 +255,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 		Contract: "contract",
 		Decimals: 6,
 	})
-	tx, err = txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tx, err = txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 6")
 }

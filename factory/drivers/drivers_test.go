@@ -138,7 +138,6 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 	for _, v := range testcases {
 		for _, variant := range v.variants {
 
-			// require.Equal(v.txType, variant.TxType())
 			require.NotEmpty(variant.GetVariant(), "must have a unique type defined")
 
 			input, err := drivers.NewVariantInput(variant.GetVariant())
@@ -152,8 +151,18 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 			input2, err := drivers.UnmarshalVariantInput(bz)
 			require.NoError(err)
 
+			// UnmarshalTxInput should support unmarshaling variant tx inputs as they embed the base tx input
+			input3, err := drivers.UnmarshalTxInput(bz)
+			require.NoError(err)
+
+			// Marshaling using the base tx input method should work
+			bz2, err := drivers.MarshalTxInput(input)
+			require.NoError(err)
+			require.Equal(string(bz), string(bz2))
+
 			// ensure same concrete type back
 			require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input2))
+			require.Equal(fmt.Sprintf("%T", input), fmt.Sprintf("%T", input3))
 
 			inputType := strings.Split(string(variant.GetVariant()), "/")[2]
 

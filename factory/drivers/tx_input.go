@@ -19,7 +19,11 @@ func MarshalTxInput(methodInput xc.TxInput) ([]byte, error) {
 	}
 	_ = json.Unmarshal(methodBz, &data)
 	// force union with method type envelope
-	data[SerializedInputTypeKey] = methodInput.GetDriver()
+	if variant, ok := methodInput.(xc.TxVariantInput); ok {
+		data[SerializedInputTypeKey] = variant.GetVariant()
+	} else {
+		data[SerializedInputTypeKey] = methodInput.GetDriver()
+	}
 
 	bz, _ := json.Marshal(data)
 	return bz, nil
@@ -68,7 +72,11 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	}
 	input, err := NewTxInput(env.Type)
 	if err != nil {
-		return nil, err
+		input2, err2 := NewVariantInput(xc.TxVariantInputType(env.Type))
+		if err2 != nil {
+			return nil, err
+		}
+		input = input2
 	}
 	err = json.Unmarshal(buf, input)
 	if err != nil {

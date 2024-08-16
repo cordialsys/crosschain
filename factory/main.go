@@ -20,7 +20,7 @@ import (
 // FactoryContext is the main Factory interface
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
-	NewTxBuilder(asset ITask) (TxBuilder, error)
+	NewTxBuilder(asset ITask) (builder.FullTransferBuilder, error)
 	NewSigner(asset ITask, secret string) (*signer.Signer, error)
 	NewAddressBuilder(asset ITask) (AddressBuilder, error)
 
@@ -374,7 +374,7 @@ func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITas
 }
 
 // NewTxBuilder creates a new TxBuilder
-func (f *Factory) NewTxBuilder(cfg ITask) (TxBuilder, error) {
+func (f *Factory) NewTxBuilder(cfg ITask) (builder.FullTransferBuilder, error) {
 	return drivers.NewTxBuilder(cfg)
 }
 

@@ -2,10 +2,10 @@ package testutil
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory"
-	"github.com/cordialsys/crosschain/factory/config"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
@@ -15,7 +15,7 @@ type TestFactory struct {
 	DefaultFactory factory.FactoryContext
 
 	NewClientFunc               func(asset xc.ITask) (xclient.Client, error)
-	NewTxBuilderFunc            func(asset xc.ITask) (xc.TxBuilder, error)
+	NewTxBuilderFunc            func(asset xc.ITask) (builder.FullTransferBuilder, error)
 	NewSignerFunc               func(asset xc.ITask) (*signer.Signer, error)
 	NewAddressBuilderFunc       func(asset xc.ITask) (xc.AddressBuilder, error)
 	GetAddressFromPublicKeyFunc func(asset xc.ITask, publicKey []byte) (xc.Address, error)
@@ -32,7 +32,7 @@ func (f *TestFactory) NewClient(asset xc.ITask) (xclient.Client, error) {
 }
 
 // NewTxBuilder creates a new TxBuilder
-func (f *TestFactory) NewTxBuilder(asset xc.ITask) (xc.TxBuilder, error) {
+func (f *TestFactory) NewTxBuilder(asset xc.ITask) (builder.FullTransferBuilder, error) {
 	if f.NewTxBuilderFunc != nil {
 		return f.NewTxBuilderFunc(asset)
 	}
@@ -158,7 +158,7 @@ func (f *TestFactory) PutAssetConfig(config xc.ITask) (xc.ITask, error) {
 }
 
 // Config returns the Config
-func (f *TestFactory) GetConfig() config.Config {
+func (f *TestFactory) GetConfig() factoryconfig.Config {
 	return f.DefaultFactory.GetConfig()
 }
 

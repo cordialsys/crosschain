@@ -20,7 +20,7 @@ func TestNewStakingTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(100000000)
-	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
 	require.NoError(t, err)
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
@@ -34,7 +34,7 @@ func TestNewStakingTransfer(t *testing.T) {
 		StakingKey:           stakeKey,
 	}
 
-	tx, err := txBuilder.(builder.TxBuilder).Stake(args, input)
+	tx, err := txBuilder.Stake(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 
@@ -60,7 +60,7 @@ func TestNewUnstakeTransfer(t *testing.T) {
 	validator := "50_000_000_000"
 
 	amount := xc.NewAmountBlockchainFromUint64(85_000_000_000)
-	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
 	require.NoError(t, err)
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
@@ -97,7 +97,7 @@ func TestNewUnstakeTransfer(t *testing.T) {
 		},
 	}
 
-	tx, err := txBuilder.(builder.TxBuilder).Unstake(args, input)
+	tx, err := txBuilder.Unstake(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 
@@ -121,7 +121,7 @@ func TestNewWithdrawTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(10000000)
-	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.StakeOptionValidator(validator))
+	args, err := xcbuilder.NewStakeArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
 	require.NoError(t, err)
 
 	input := &tx_input.WithdrawInput{
@@ -147,7 +147,7 @@ func TestNewWithdrawTransfer(t *testing.T) {
 		},
 	}
 
-	tx, err := txBuilder.(builder.TxBuilder).Withdraw(args, input)
+	tx, err := txBuilder.Withdraw(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 

@@ -5,56 +5,39 @@ import (
 )
 
 type TransferArgs struct {
-	TxCommonOptions
-	from   xc.Address
-	to     xc.Address
-	amount xc.AmountBlockchain
+	// TxCommonOptions
+	options builderOptions
+	from    xc.Address
+	to      xc.Address
+	amount  xc.AmountBlockchain
 }
 
-type TransferOption func(opts *TransferArgs) error
+var _ TransactionOptions = &TransferArgs{}
 
-func (opts *TransferArgs) GetFrom() xc.Address            { return opts.from }
-func (opts *TransferArgs) GetTo() xc.Address              { return opts.to }
-func (opts *TransferArgs) GetAmount() xc.AmountBlockchain { return opts.amount }
+// Transfer relevant arguments
+func (args *TransferArgs) GetFrom() xc.Address            { return args.from }
+func (args *TransferArgs) GetTo() xc.Address              { return args.to }
+func (args *TransferArgs) GetAmount() xc.AmountBlockchain { return args.amount }
 
-func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...TransferOption) (TransferArgs, error) {
-	common := TxCommonOptions{}
+// Exposed options
+func (args *TransferArgs) GetMemo() (string, bool)                { return args.options.GetMemo() }
+func (args *TransferArgs) GetTimestamp() (int64, bool)            { return args.options.GetTimestamp() }
+func (args *TransferArgs) GetPriority() (xc.GasFeePriority, bool) { return args.options.GetPriority() }
+func (args *TransferArgs) GetPublicKey() ([]byte, bool)           { return args.options.GetPublicKey() }
+
+func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
+	builderOptions := builderOptions{}
 	args := TransferArgs{
-		common,
+		builderOptions,
 		from,
 		to,
 		amount,
 	}
 	for _, opt := range options {
-		err := opt(&args)
+		err := opt(&args.options)
 		if err != nil {
 			return args, err
 		}
 	}
 	return args, nil
-}
-
-func TransferOptionMemo(memo string) TransferOption {
-	return func(opts *TransferArgs) error {
-		opts.memo = &memo
-		return nil
-	}
-}
-func TransferOptionTimestamp(ts int64) TransferOption {
-	return func(opts *TransferArgs) error {
-		opts.timestamp = &ts
-		return nil
-	}
-}
-func TransferOptionPriority(priority xc.GasFeePriority) TransferOption {
-	return func(opts *TransferArgs) error {
-		opts.gasFeePriority = &priority
-		return nil
-	}
-}
-func TransferOptionPublicKey(publicKey []byte) TransferOption {
-	return func(opts *TransferArgs) error {
-		opts.publicKey = &publicKey
-		return nil
-	}
 }

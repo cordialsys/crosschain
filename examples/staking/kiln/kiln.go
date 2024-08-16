@@ -114,12 +114,12 @@ func CmdStake() *cobra.Command {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
 			logrus.WithField("from", from).Debug("sending from")
-			options := []builder.StakeOption{}
+			options := []builder.BuilderOption{}
 			if validator != "" {
-				options = append(options, builder.StakeOptionValidator(validator))
+				options = append(options, builder.OptionValidator(validator))
 			}
 			if moreArgs.AccountId != "" {
-				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
+				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
 			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
 			if err != nil {
@@ -251,12 +251,12 @@ func CmdUnstake() *cobra.Command {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
 			logrus.WithField("from", from).Debug("sending from")
-			options := []builder.StakeOption{}
+			options := []builder.BuilderOption{}
 			if validator != "" {
-				options = append(options, builder.StakeOptionValidator(validator))
+				options = append(options, builder.OptionValidator(validator))
 			}
 			if moreArgs.AccountId != "" {
-				options = append(options, builder.StakeOptionAccount(moreArgs.AccountId))
+				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
 			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
 			if err != nil {

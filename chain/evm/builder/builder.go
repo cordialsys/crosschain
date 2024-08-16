@@ -38,7 +38,7 @@ type TxBuilder struct {
 }
 
 var _ xc.TxBuilder = &TxBuilder{}
-var _ xcbuilder.Transfer = &TxBuilder{}
+var _ xcbuilder.FullBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
 
 func NewEvmTxBuilder() *EvmTxBuilder {
@@ -68,6 +68,7 @@ func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) TxBuilder {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
 	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
@@ -195,7 +196,7 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTx
 	case *tx_input.BatchDepositInput:
 		evmBuilder := NewEvmTxBuilder()
 
-		owner, ok := stakeArgs.GetOwner()
+		owner, ok := stakeArgs.GetStakeOwner()
 		if !ok {
 			owner = stakeArgs.GetFrom()
 		}
