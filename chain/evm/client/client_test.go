@@ -574,7 +574,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Stakes: []*xcclient.Stake{
 					{
-						Amount:    testtypes.HumanToBlockchain("32", 18),
+						Balance:   testtypes.HumanToBlockchain("32", 18),
 						Validator: "0x850f24e0a4b2b5568340891fcaecc2d08a788f03f13d2295419e6860545499a24975f2e4154992ebc401925e93a80b3c",
 						Address:   "0x273b437645ba723299d07b1bdffcf508be64771f",
 					},
@@ -621,7 +621,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Unstakes: []*xcclient.Unstake{
 					{
-						Amount:    testtypes.HumanToBlockchain("32", 18),
+						Balance:   testtypes.HumanToBlockchain("32", 18),
 						Validator: "0xabe9c4a070f77e0da097306a9d7e63407f2f0099c3622aea9b1cf95b490a79cbc91878b40b69c96c36a2cf63be827a6c",
 						Address:   "0x273b437645ba723299d07b1bdffcf508be64771f",
 					},

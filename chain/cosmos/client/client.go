@@ -244,7 +244,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	for _, ev := range events.Delegates {
 		result.AddStakeEvent(&xclient.Stake{
-			Amount:    ev.Amount,
+			Balance:   ev.Amount,
 			Validator: ev.Validator,
 			Account:   "",
 			Address:   ev.Delegator,
@@ -252,7 +252,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	for _, ev := range events.Unbonds {
 		result.AddStakeEvent(&xclient.Unstake{
-			Amount:    ev.Amount,
+			Balance:   ev.Amount,
 			Validator: ev.Validator,
 			Account:   "",
 			Address:   ev.Delegator,

@@ -125,7 +125,7 @@ func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclien
 	var req = &types.StakingInputReq{
 		Provider:  cli.StakingProvider,
 		From:      unstake.Address,
-		Balance:   unstake.Amount.String(),
+		Balance:   unstake.Balance.String(),
 		Validator: unstake.Validator,
 		Account:   unstake.Account,
 	}
