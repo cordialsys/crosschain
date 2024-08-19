@@ -135,8 +135,8 @@ func (cli *Client) GetValidatorsByWithdrawAddressAndStatus(withdrawAddress strin
 	return &res, err
 }
 
-func (cli *Client) ExitValidators(pubkeys []string) (*GetValidatorResponse, error) {
-	var res GetValidatorResponse
+func (cli *Client) ExitValidators(pubkeys []string) (*GetValidatorsResponse, error) {
+	var res GetValidatorsResponse
 	var input = ExitValidatorsPubkeyRequest{
 		Network: cli.Network,
 		Pubkeys: pubkeys,

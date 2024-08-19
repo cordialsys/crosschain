@@ -13,6 +13,10 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers"
 )
 
+// Crosschain client assumes that all staking providers might need a post-unstake request-exit.
+// By doing this, it can defer to the remote to decide if this is needed for the given provider.
+var _ xcclient.ManualUnstakingClient = &Client{}
+
 func (client *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBalanceArgs) ([]*xcclient.StakedBalance, error) {
 	chain := client.Asset.GetChain().Chain
 
@@ -112,4 +116,25 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 		return nil, err
 	}
 	return drivers.UnmarshalWithdrawingInput([]byte(r.TxInput))
+}
+
+// func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
+func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclient.Unstake) error {
+	chain := cli.Asset.GetChain().Chain
+
+	var req = &types.StakingInputReq{
+		Provider:  cli.StakingProvider,
+		From:      unstake.Address,
+		Balance:   unstake.Amount.String(),
+		Validator: unstake.Validator,
+		Account:   unstake.Account,
+	}
+
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/request-exit", cli.URL, chain)
+	res, err := cli.ApiCallWithUrl(ctx, "POST", apiURL, req)
+	if err != nil {
+		return err
+	}
+	_ = res
+	return nil
 }

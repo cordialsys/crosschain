@@ -218,19 +218,16 @@ func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeA
 // We only want to unstake from a predetermined list of validators, as opposed to asking the provider to unstake
 // N validators for us.  This is because we don't want to risk a double-unstake (unstaking double the amount we intended).
 // By only unstaking from a predetermined list, we can ensure this is safely idempotent.
-func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstakes []*xcclient.Unstake) error {
-	for _, unstake := range unstakes {
-		val, err := cli.providerClient.GetValidator(unstake.Validator)
-		if err != nil {
-			logrus.WithError(err).Warn("could not fetch validator info from figment, cannot request unstake")
-			continue
-		}
-		logrus.WithField("validator", val.Data.Pubkey).WithField("status", val.Data.Status).Info("requesting figment unstake")
-		// TODO check if the validator is already unstaked?
-		_, err = cli.providerClient.ExitValidators([]string{val.Data.Pubkey})
-		if err != nil {
-			logrus.WithError(err).Warn("could not request unstake from figment")
-		}
+func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclient.Unstake) error {
+	val, err := cli.providerClient.GetValidator(unstake.Validator)
+	if err != nil {
+		return err
+	}
+	logrus.WithField("validator", val.Data.Pubkey).WithField("status", val.Data.Status).Info("requesting figment unstake")
+	// TODO check if the validator is already unstaked?
+	_, err = cli.providerClient.ExitValidators([]string{val.Data.Pubkey})
+	if err != nil {
+		return err
 	}
 	return nil
 }
