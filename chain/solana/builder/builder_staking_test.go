@@ -74,22 +74,22 @@ func TestNewUnstakeTransfer(t *testing.T) {
 		// 90 SOL total staked
 		EligibleStakes: []*tx_input.ExistingStake{
 			{
-				ActivationEpoch:   650,
-				DeactivationEpoch: 18446744073709551615,
+				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(50_000_000_000),
 				AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 				StakeAccount:      solana.MustPublicKeyFromBase58("CCTFhyxoUHGmdQvuUxFquyYMK4H5hdqwCCN7XAXtK9HC"),
 			},
 			{
-				ActivationEpoch:   650,
-				DeactivationEpoch: 18446744073709551615,
+				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(30_000_000_000),
 				AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 				StakeAccount:      solana.MustPublicKeyFromBase58("8zrSGLMdE6dK57Q7a8N8TDohmyft1MrsLYdRqhDvCerc"),
 			},
 			{
-				ActivationEpoch:   652,
-				DeactivationEpoch: 18446744073709551615,
+				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(652),
+				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(10_000_000_000),
 				AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 				StakeAccount:      solana.MustPublicKeyFromBase58("6LFjBX1yUwSr8SWsyZUc5okZiVo8ZdmVQ9keJAazRmnh"),
@@ -131,15 +131,15 @@ func TestNewWithdrawTransfer(t *testing.T) {
 		},
 		EligibleStakes: []*tx_input.ExistingStake{
 			{
-				ActivationEpoch:   649,
-				DeactivationEpoch: 650,
+				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(649),
+				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 				AmountInactive:    xc.NewAmountBlockchainFromUint64(3000280),
 				StakeAccount:      solana.MustPublicKeyFromBase58("8zrSGLMdE6dK57Q7a8N8TDohmyft1MrsLYdRqhDvCerc"),
 			},
 			{
-				ActivationEpoch:   650,
-				DeactivationEpoch: 650,
+				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 				AmountInactive:    xc.NewAmountBlockchainFromUint64(10000000),
 				StakeAccount:      solana.MustPublicKeyFromBase58("6LFjBX1yUwSr8SWsyZUc5okZiVo8ZdmVQ9keJAazRmnh"),

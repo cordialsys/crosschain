@@ -214,8 +214,8 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 			amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
 
 			matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
-				ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64(),
-				DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
+				ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch),
+				DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch),
 				AmountActive:      amountStake,
 				AmountInactive:    amountRentReserve,
 				StakeAccount:      stake.Account.Pubkey,
@@ -224,7 +224,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	}
 	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
 		// Sort in order by activation epoch, so that activated stakes are unstaked first
-		return matchingStakeAccounts[i].ActivationEpoch < matchingStakeAccounts[j].ActivationEpoch
+		return matchingStakeAccounts[i].ActivationEpoch.Uint64() < matchingStakeAccounts[j].ActivationEpoch.Uint64()
 	})
 	if len(matchingStakeAccounts) == 0 {
 		return nil, fmt.Errorf("no activating or active stake accounts found for validator: %s", validator)
@@ -276,8 +276,8 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 		amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
 		amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
 		matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
-			ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64(),
-			DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64(),
+			ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch),
+			DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch),
 			AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 			AmountInactive:    amountStake.Add(&amountRentReserve),
 			StakeAccount:      stake.Account.Pubkey,
@@ -285,7 +285,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 	}
 	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
 		// Sort in order by activation epoch, so that activated stakes are withdrawn first
-		return matchingStakeAccounts[i].ActivationEpoch < matchingStakeAccounts[j].ActivationEpoch
+		return matchingStakeAccounts[i].ActivationEpoch.Uint64() < matchingStakeAccounts[j].ActivationEpoch.Uint64()
 	})
 	withdrawInput := tx_input.WithdrawInput{
 		TxInput:        *txInput,

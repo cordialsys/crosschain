@@ -182,20 +182,20 @@ func TestFetchUnstakingInput(t *testing.T) {
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
-						ActivationEpoch:   650,
-						DeactivationEpoch: 18446744073709551615,
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(37731751),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 					},
 					{
-						ActivationEpoch:   650,
-						DeactivationEpoch: 18446744073709551615,
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(1717786),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 					},
 					{
-						ActivationEpoch:   652,
-						DeactivationEpoch: 18446744073709551615,
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(652),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(7717120),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
 					},
@@ -279,14 +279,14 @@ func TestFetchWithdrawInput(t *testing.T) {
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
-						ActivationEpoch:   649,
-						DeactivationEpoch: 650,
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(649),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(3000280),
 					},
 					{
-						ActivationEpoch:   650,
-						DeactivationEpoch: 650,
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(0),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(10000000),
 					},
