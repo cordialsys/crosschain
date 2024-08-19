@@ -22,8 +22,8 @@ func (*StakingInput) GetVariant() xc.TxVariantInputType {
 }
 
 type ExistingStake struct {
-	ActivationEpoch   uint64 `json:"activation_epoch"`
-	DeactivationEpoch uint64 `json:"deactivation_epoch"`
+	ActivationEpoch   xc.AmountBlockchain `json:"activation_epoch"`
+	DeactivationEpoch xc.AmountBlockchain `json:"deactivation_epoch"`
 	// The total activating-or-activated amount
 	AmountActive xc.AmountBlockchain `json:"amount_active"`
 	// unlocked/inactive amount
