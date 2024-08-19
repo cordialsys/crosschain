@@ -119,19 +119,20 @@ func (cli *Client) CreateValidator(count int, withdrawalAddr string) (*CreateVal
 
 func (cli *Client) GetValidator(validator string) (*GetValidatorResponse, error) {
 	var res GetValidatorResponse
-	err := cli.Get(fmt.Sprintf("ethereum/validators/%s?network=%s", address.Ensure0x(validator), cli.Network), &res)
+	// use include_fields=on_demand_exit so we can tell if exit has been requested already
+	err := cli.Get(fmt.Sprintf("ethereum/validators/%s?network=%s&include_fields=on_demand_exit", address.Ensure0x(validator), cli.Network), &res)
 	return &res, err
 }
 
 func (cli *Client) GetValidatorsByWithdrawAddress(withdrawAddress string) (*GetValidatorsResponse, error) {
 	var res GetValidatorsResponse
-	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&size=100", cli.Network, address.Ensure0x(withdrawAddress)), &res)
+	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&size=100&include_fields=on_demand_exit", cli.Network, address.Ensure0x(withdrawAddress)), &res)
 	return &res, err
 }
 
 func (cli *Client) GetValidatorsByWithdrawAddressAndStatus(withdrawAddress string, status Status) (*GetValidatorsResponse, error) {
 	var res GetValidatorsResponse
-	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&status=%s&size=100", cli.Network, address.Ensure0x(withdrawAddress), status), &res)
+	err := cli.Get(fmt.Sprintf("ethereum/validators?network=%s&withdrawal_address=%s&status=%s&size=100&include_fields=on_demand_exit", cli.Network, address.Ensure0x(withdrawAddress), status), &res)
 	return &res, err
 }
 
