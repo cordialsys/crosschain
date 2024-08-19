@@ -53,7 +53,7 @@ type StakingClient interface {
 
 // Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
 type ManualUnstakingClient interface {
-	CompleteManualUnstaking(ctx context.Context, unstakes []*Unstake) error
+	CompleteManualUnstaking(ctx context.Context, unstake *Unstake) error
 }
 
 type ClientError string

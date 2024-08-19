@@ -3,6 +3,7 @@ package staking
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
@@ -180,7 +181,16 @@ func CmdUnstake() *cobra.Command {
 			jsonprint(txInfo)
 			if manualClient, ok := stakingClient.(client.ManualUnstakingClient); ok {
 				logrus.Debug("chain does not support unstaking; using 3rd-party manual unstaking client")
-				return manualClient.CompleteManualUnstaking(context.Background(), txInfo.Unstakes)
+				for _, unstake := range txInfo.Unstakes {
+					if strings.EqualFold(string(from), unstake.Address) {
+						err = manualClient.CompleteManualUnstaking(context.Background(), unstake)
+						if err != nil {
+							logrus.WithError(err).Warn("could not request exit from staking provider")
+						}
+					} else {
+						logrus.WithField("address", unstake.Address).Debug("not our address")
+					}
+				}
 			} else {
 				logrus.Debug("chain supports unstaking; no need for manual completion")
 			}
