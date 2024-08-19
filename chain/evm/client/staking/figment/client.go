@@ -201,6 +201,10 @@ func (cli *Client) FetchActiveValidators(ctx context.Context, from xc.Address) (
 	var pubkeys [][]byte
 	for _, stakes := range []*figment.GetValidatorsResponse{stakesActive} {
 		for _, val := range stakes.Data {
+			if val.OnDemandExit.RequestID != nil && *val.OnDemandExit.RequestID != "" {
+				// already requested exit, skip
+				continue
+			}
 			pubkeyBz, err := address.DecodeHex(val.Pubkey)
 			if err != nil {
 				return nil, fmt.Errorf("failed to decode figment validator pubkey: %v", err)
@@ -223,8 +227,11 @@ func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclien
 	if err != nil {
 		return err
 	}
+	if val.Data.OnDemandExit.RequestID != nil && *val.Data.OnDemandExit.RequestID != "" {
+		// already requested exit, skip
+		return nil
+	}
 	logrus.WithField("validator", val.Data.Pubkey).WithField("status", val.Data.Status).Info("requesting figment unstake")
-	// TODO check if the validator is already unstaked?
 	_, err = cli.providerClient.ExitValidators([]string{val.Data.Pubkey})
 	if err != nil {
 		return err
