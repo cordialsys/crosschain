@@ -80,8 +80,6 @@ func NewTxInputEnvelope(envType Driver) *TxInputEnvelope {
 type TxVariantInput interface {
 	TxInput
 	GetVariant() TxVariantInputType
-	// Get the base transaction input so conflicts can be checked the same way
-	// GetBaseTxInput() TxInput
 }
 
 // Markers for each type of Variant Tx

@@ -280,7 +280,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 			}
 
 			result.AddStakeEvent(&xclient.Stake{
-				Amount:    dep.Amount,
+				Balance:   dep.Amount,
 				Validator: normalize.NormalizeAddressString(hex.EncodeToString(dep.Pubkey), nativeAsset.Chain),
 				Address:   normalize.NormalizeAddressString(address, nativeAsset.Chain),
 			})
@@ -295,7 +295,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 			// assume 32 ether
 			inc, _ := xc.NewAmountHumanReadableFromStr("32")
 			result.AddStakeEvent(&xclient.Unstake{
-				Amount:    inc.ToBlockchain(client.Asset.GetChain().Decimals),
+				Balance:   inc.ToBlockchain(client.Asset.GetChain().Decimals),
 				Validator: normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Pubkey), nativeAsset.Chain),
 				Address:   normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Caller[:]), nativeAsset.Chain),
 			})

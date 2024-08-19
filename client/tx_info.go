@@ -107,13 +107,13 @@ type Block struct {
 }
 
 type Stake struct {
-	Amount    xc.AmountBlockchain `json:"amount"`
+	Balance   xc.AmountBlockchain `json:"balance"`
 	Validator string              `json:"validator"`
 	Account   string              `json:"account"`
 	Address   string              `json:"address"`
 }
 type Unstake struct {
-	Amount    xc.AmountBlockchain `json:"amount"`
+	Balance   xc.AmountBlockchain `json:"balance"`
 	Validator string              `json:"validator"`
 	Account   string              `json:"account"`
 	Address   string              `json:"address"`
