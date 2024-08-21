@@ -95,7 +95,8 @@ func TestFetchTxInput(t *testing.T) {
 			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -116,7 +117,8 @@ func TestFetchTxInput(t *testing.T) {
 			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -137,7 +139,8 @@ func TestFetchTxInput(t *testing.T) {
 			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid ATA
@@ -159,7 +162,8 @@ func TestFetchTxInput(t *testing.T) {
 			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -180,7 +184,8 @@ func TestFetchTxInput(t *testing.T) {
 			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -207,13 +212,14 @@ func TestFetchTxInput(t *testing.T) {
 			blockHash:       "",
 			toIsATA:         false,
 			shouldCreateATA: false,
-			err:             "rpc.GetRecentBlockhashResult",
+			err:             "rpc.GetLatestBlockhashResult",
 		},
 		{
 			asset: &xc.TokenAssetConfig{Contract: "invalid-contract"},
 			resp: []string{
 				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account -> error getting token balance
@@ -232,7 +238,7 @@ func TestFetchTxInput(t *testing.T) {
 			blockHash:       "",
 			toIsATA:         false,
 			shouldCreateATA: false,
-			err:             "error fetching blockhash",
+			err:             "error fetching latest blockhash",
 		},
 		{
 			asset:           &xc.ChainConfig{},
@@ -240,7 +246,7 @@ func TestFetchTxInput(t *testing.T) {
 			blockHash:       "",
 			toIsATA:         false,
 			shouldCreateATA: false,
-			err:             "error fetching blockhash",
+			err:             "error fetching latest blockhash",
 		},
 		{
 			asset:           &xc.ChainConfig{},
