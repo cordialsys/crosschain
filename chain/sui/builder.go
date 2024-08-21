@@ -25,7 +25,6 @@ func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
 	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
