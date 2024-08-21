@@ -1,5 +1,9 @@
 package api
 
+import (
+	xc "github.com/cordialsys/crosschain"
+)
+
 type AccountStatus string
 
 var Active AccountStatus = "active"
@@ -7,13 +11,13 @@ var Uninit AccountStatus = "uninit"
 var Nonexist AccountStatus = "nonexist"
 
 type GetAccountResponse struct {
-	Balance             string        `json:"balance"`
-	Code                string        `json:"code"`
-	Data                string        `json:"data"`
-	LastTransactionLt   string        `json:"last_transaction_lt"`
-	LastTransactionHash string        `json:"last_transaction_hash"`
-	FrozenHash          string        `json:"frozen_hash"`
-	Status              AccountStatus `json:"status"`
+	Balance             string              `json:"balance"`
+	Code                string              `json:"code"`
+	Data                string              `json:"data"`
+	LastTransactionLt   xc.AmountBlockchain `json:"last_transaction_lt"`
+	LastTransactionHash string              `json:"last_transaction_hash"`
+	FrozenHash          string              `json:"frozen_hash"`
+	Status              AccountStatus       `json:"status"`
 }
 
 type Detail struct {
@@ -30,13 +34,13 @@ type ErrorResponse struct {
 }
 
 type JettonWallet struct {
-	Address           string `json:"address"`
-	Balance           string `json:"balance"`
-	Owner             string `json:"owner"`
-	Jetton            string `json:"jetton"`
-	LastTransactionLt string `json:"last_transaction_lt"`
-	CodeHash          string `json:"code_hash"`
-	DataHash          string `json:"data_hash"`
+	Address           string              `json:"address"`
+	Balance           string              `json:"balance"`
+	Owner             string              `json:"owner"`
+	Jetton            string              `json:"jetton"`
+	LastTransactionLt xc.AmountBlockchain `json:"last_transaction_lt"`
+	CodeHash          string              `json:"code_hash"`
+	DataHash          string              `json:"data_hash"`
 }
 
 type JettonWalletsResponse struct {
@@ -50,35 +54,35 @@ type BlockRef struct {
 }
 
 type Block struct {
-	Workchain              int        `json:"workchain"`
-	Shard                  string     `json:"shard"`
-	Seqno                  int64      `json:"seqno"`
-	RootHash               string     `json:"root_hash"`
-	FileHash               string     `json:"file_hash"`
-	GlobalID               int        `json:"global_id"`
-	Version                int        `json:"version"`
-	AfterMerge             bool       `json:"after_merge"`
-	BeforeSplit            bool       `json:"before_split"`
-	AfterSplit             bool       `json:"after_split"`
-	WantMerge              bool       `json:"want_merge"`
-	WantSplit              bool       `json:"want_split"`
-	KeyBlock               bool       `json:"key_block"`
-	VertSeqnoIncr          bool       `json:"vert_seqno_incr"`
-	Flags                  int        `json:"flags"`
-	GenUtime               string     `json:"gen_utime"`
-	StartLT                string     `json:"start_lt"`
-	EndLT                  string     `json:"end_lt"`
-	ValidatorListHashShort int        `json:"validator_list_hash_short"`
-	GenCatchainSeqno       int        `json:"gen_catchain_seqno"`
-	MinRefMcSeqno          int        `json:"min_ref_mc_seqno"`
-	PrevKeyBlockSeqno      int        `json:"prev_key_block_seqno"`
-	VertSeqno              int        `json:"vert_seqno"`
-	MasterRefSeqno         int        `json:"master_ref_seqno"`
-	RandSeed               string     `json:"rand_seed"`
-	CreatedBy              string     `json:"created_by"`
-	TxCount                int        `json:"tx_count"`
-	MasterchainBlockRef    BlockRef   `json:"masterchain_block_ref"`
-	PrevBlocks             []BlockRef `json:"prev_blocks"`
+	Workchain              int                 `json:"workchain"`
+	Shard                  string              `json:"shard"`
+	Seqno                  int64               `json:"seqno"`
+	RootHash               string              `json:"root_hash"`
+	FileHash               string              `json:"file_hash"`
+	GlobalID               int                 `json:"global_id"`
+	Version                int                 `json:"version"`
+	AfterMerge             bool                `json:"after_merge"`
+	BeforeSplit            bool                `json:"before_split"`
+	AfterSplit             bool                `json:"after_split"`
+	WantMerge              bool                `json:"want_merge"`
+	WantSplit              bool                `json:"want_split"`
+	KeyBlock               bool                `json:"key_block"`
+	VertSeqnoIncr          bool                `json:"vert_seqno_incr"`
+	Flags                  int                 `json:"flags"`
+	GenUtime               string              `json:"gen_utime"`
+	StartLT                xc.AmountBlockchain `json:"start_lt"`
+	EndLT                  xc.AmountBlockchain `json:"end_lt"`
+	ValidatorListHashShort int                 `json:"validator_list_hash_short"`
+	GenCatchainSeqno       int                 `json:"gen_catchain_seqno"`
+	MinRefMcSeqno          int                 `json:"min_ref_mc_seqno"`
+	PrevKeyBlockSeqno      int                 `json:"prev_key_block_seqno"`
+	VertSeqno              int                 `json:"vert_seqno"`
+	MasterRefSeqno         int                 `json:"master_ref_seqno"`
+	RandSeed               string              `json:"rand_seed"`
+	CreatedBy              string              `json:"created_by"`
+	TxCount                int                 `json:"tx_count"`
+	MasterchainBlockRef    BlockRef            `json:"masterchain_block_ref"`
+	PrevBlocks             []BlockRef          `json:"prev_blocks"`
 }
 
 type MasterChainInfo struct {
