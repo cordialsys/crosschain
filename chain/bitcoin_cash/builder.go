@@ -26,7 +26,6 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 }
 
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	xcbuilder.SetTxInputOptions(input, &args, args.GetAmount())
 	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
