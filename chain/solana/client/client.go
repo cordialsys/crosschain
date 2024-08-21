@@ -45,14 +45,12 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 	txInput := tx_input.NewTxInput()
 
 	// get recent block hash (i.e. nonce)
-	// GetRecentBlockhash will be deprecated - GetLatestBlockhash already tested, just switch
-	// recent, err := client.SolClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
-	recent, err := client.SolClient.GetRecentBlockhash(ctx, rpc.CommitmentFinalized)
+	recent, err := client.SolClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not get latest blockhash: %v", err)
 	}
 	if recent == nil || recent.Value == nil {
-		return nil, errors.New("error fetching blockhash")
+		return nil, errors.New("error fetching latest blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
 
@@ -249,9 +247,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			result.BlockTime = int64(*res.BlockTime)
 		}
 
-		recent, err := client.SolClient.GetRecentBlockhash(ctx, rpc.CommitmentFinalized)
+		recent, err := client.SolClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 		if err != nil {
 			// ignore
+			logrus.WithError(err).Warn("failed to get latest blockhash")
 		} else {
 			result.Confirmations = int64(recent.Context.Slot) - result.BlockIndex
 		}
