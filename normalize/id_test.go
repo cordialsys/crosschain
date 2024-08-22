@@ -2,7 +2,10 @@ package normalize_test
 
 import (
 	"strings"
+	"testing"
 	"unicode"
+
+	"github.com/stretchr/testify/require"
 )
 
 var punctuationReplacer = strings.NewReplacer(
@@ -34,14 +37,22 @@ func normalizeResourceId(id string) string {
 	// drop everything else that is not valid
 	var sb strings.Builder
 	for _, c := range id {
-		if c < unicode.MaxASCII {
-			if unicode.IsLetter(c) || unicode.IsDigit(c) || c == '-' || c == '_' {
-				sb.WriteRune(c)
-			} else {
-				// drop
-			}
+		if unicode.IsLetter(c) || unicode.IsDigit(c) || c == '-' || c == '_' {
+			sb.WriteRune(c)
+		} else {
+			// replace with -
+			sb.WriteRune('-')
 		}
 	}
 
 	return sb.String()
+}
+
+func TestNormalize(t *testing.T) {
+	require.Equal(t, "abc1234", normalizeResourceId("abc1234"))
+	require.Equal(t, "abc-1234", normalizeResourceId("abc.1234"))
+	require.Equal(t, "abc-1234", normalizeResourceId("abc/1234"))
+	require.Equal(t, "abc-1234", normalizeResourceId("abc🙊1234"))
+	require.Equal(t, "abc----1234", normalizeResourceId("abc/**/1234"))
+	require.Equal(t, "-_abc----1234", normalizeResourceId("    . abc/**/1234"))
 }
