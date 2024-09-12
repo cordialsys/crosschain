@@ -256,7 +256,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron:
 		return Uncompressed
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXrp:
 		return Raw
 	}
 	return ""
