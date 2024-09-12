@@ -31,6 +31,7 @@ import (
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
+	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -60,8 +61,10 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return tron.NewClient(cfg)
 	case DriverTon:
 		return ton.NewClient(cfg)
+	case DriverXrp:
+		return xrpclient.NewClient(cfg)
 	}
-	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
+	return nil, errors.New("no client defined for chains: " + string(cfg.ID()))
 }
 
 func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
@@ -185,6 +188,8 @@ func CheckError(driver Driver, err error) xclient.ClientError {
 		return tron.CheckError(err)
 	case DriverTon:
 		return ton.CheckError(err)
+		//case DriverXrp:
+		//	return xrp.CheckError(err)
 	}
 	return xclient.UnknownError
 }

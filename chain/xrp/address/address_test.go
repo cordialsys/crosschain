@@ -18,9 +18,9 @@ func TestNewAddressBuilder(t *testing.T) {
 func TestGetAddressFromPublicKey(t *testing.T) {
 	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
 	bytes, _ := hex.DecodeString("ed1ed5f392e6110d4fd534a67494d0d4e63cf808baadd3c9e66f9049a5775475b1")
-	address, err := builder.GetAddressFromPublicKey(bytes)
+	addressFromPubKey, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
-	require.Equal(t, xc.Address("rLETt614usCXtkc8YcQmrzachrCaDjACjP"), address)
+	require.Equal(t, xc.Address("rLETt614usCXtkc8YcQmrzachrCaDjACjP"), addressFromPubKey)
 }
 
 func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
