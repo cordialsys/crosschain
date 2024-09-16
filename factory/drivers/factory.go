@@ -30,7 +30,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
+	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
@@ -125,6 +127,8 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 		return tron.NewTxBuilder(cfg)
 	case DriverTon:
 		return ton.NewTxBuilder(cfg)
+	case DriverXrp:
+		return xrpbuilder.NewTxBuilder(cfg)
 	}
 	return nil, errors.New("no tx-builder defined for: " + string(cfg.ID()))
 }
@@ -188,8 +192,8 @@ func CheckError(driver Driver, err error) xclient.ClientError {
 		return tron.CheckError(err)
 	case DriverTon:
 		return ton.CheckError(err)
-		//case DriverXrp:
-		//	return xrp.CheckError(err)
+	case DriverXrp:
+		return xrp.CheckError(err)
 	}
 	return xclient.UnknownError
 }

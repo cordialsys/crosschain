@@ -35,20 +35,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-type RequestType string
-
-const AccountInfo RequestType = "account_info"
-const AccountLines RequestType = "account_lines"
-const Transaction RequestType = "tx"
-const Ledger RequestType = "ledger"
-
-type Request struct {
-	RequestType         RequestType
-	AccountInfoRequest  *AccountInfoRequest
-	AccountLinesRequest *AccountLinesRequest
-	TransactionRequest  *TransactionRequest
-	LedgerRequest       *LedgerRequest
-}
+const AccountInfo string = "account_info"
+const AccountLines string = "account_lines"
+const Transaction string = "tx"
+const Ledger string = "ledger"
 
 type AccountInfoRequest struct {
 	Method string                  `json:"method"`
@@ -91,13 +81,6 @@ type LedgerParamEntry struct {
 	Transactions bool   `json:"transactions"`
 	Expand       bool   `json:"expand"`
 	OwnerFunds   bool   `json:"owner_funds"`
-}
-
-type Response struct {
-	AccountInfoResponse  *AccountInfoResponse
-	AccountLinesResponse *AccountLinesResponse
-	TransactionResponse  *TransactionResponse
-	LedgerResponse       *LedgerResponse
 }
 
 type LedgerResponse struct {
@@ -250,42 +233,36 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 // FetchLegacyTxInfo Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 
-	txRequest := Request{
-		RequestType: Transaction,
-		TransactionRequest: &TransactionRequest{
-			Method: "tx",
-			Params: []TransactionParamEntry{
-				{
-					Transaction: txHash,
-					Binary:      false,
-				},
+	txRequest := &TransactionRequest{
+		Method: Transaction,
+		Params: []TransactionParamEntry{
+			{
+				Transaction: txHash,
+				Binary:      false,
 			},
 		},
 	}
 
-	response, err := client.ExecuteRequest(ctx, txRequest)
+	var txResponse TransactionResponse
+	err := client.Send("POST", txRequest, &txResponse)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	txResponse := response.TransactionResponse
 
-	ledgerRequest := Request{
-		RequestType: Ledger,
-		LedgerRequest: &LedgerRequest{
-			Method: "ledger",
-			Params: []LedgerParamEntry{
-				{
-					LedgerIndex: "current",
-				},
+	ledgerRequest := LedgerRequest{
+		Method: "ledger",
+		Params: []LedgerParamEntry{
+			{
+				LedgerIndex: "current",
 			},
 		},
 	}
 
-	response, err = client.ExecuteRequest(ctx, ledgerRequest)
+	var ledgerResponse LedgerResponse
+	err = client.Send("POST", ledgerRequest, &ledgerResponse)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
-	ledgerResponse := response.LedgerResponse
 
 	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
@@ -356,23 +333,20 @@ func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Addre
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
-	request := Request{
-		RequestType: AccountInfo,
-		AccountInfoRequest: &AccountInfoRequest{
-			Method: "account_info",
-			Params: []AccountInfoParamEntry{
-				{
-					Account: address,
-				},
+	request := AccountInfoRequest{
+		Method: AccountInfo,
+		Params: []AccountInfoParamEntry{
+			{
+				Account: address,
 			},
 		},
 	}
 
-	response, err := client.ExecuteRequest(ctx, request)
+	var accountInfoResponse AccountInfoResponse
+	err := client.Send("POST", request, &accountInfoResponse)
 	if err != nil {
 		return zero, err
 	}
-	accountInfoResponse := response.AccountInfoResponse
 
 	balance := accountInfoResponse.Result.AccountData.Balance
 	if balance == "" {
@@ -391,23 +365,20 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 		return zero, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
-	request := Request{
-		RequestType: AccountLines,
-		AccountLinesRequest: &AccountLinesRequest{
-			Method: "account_lines",
-			Params: []AccountLinesParamEntry{
-				{
-					Account: address,
-				},
+	request := AccountLinesRequest{
+		Method: AccountLines,
+		Params: []AccountLinesParamEntry{
+			{
+				Account: address,
 			},
 		},
 	}
 
-	response, err := client.ExecuteRequest(ctx, request)
+	var accountLinesResponse AccountLinesResponse
+	err = client.Send("POST", request, &accountLinesResponse)
 	if err != nil {
 		return zero, err
 	}
-	accountLinesResponse := response.AccountLinesResponse
 
 	var balance string
 	for _, line := range accountLinesResponse.Result.Lines {
@@ -420,69 +391,41 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 		return zero, fmt.Errorf("empty balance returned for account: %s", address)
 	}
 
-	bBalance := xc.NewAmountBlockchainFromStr(balance)
-	return bBalance, nil
+	humanReadbleBalance, err := xc.NewAmountHumanReadableFromStr(balance)
+	if err != nil {
+		return zero, fmt.Errorf("failed to parse balance for account: %s", address)
+	}
+	return humanReadbleBalance.ToBlockchain(15), nil
 }
 
-func (client *Client) ExecuteRequest(ctx context.Context, request Request) (*Response, error) {
-	var (
-		requestPayload interface{}
-		response       interface{}
-	)
+func (client *Client) Send(method string, requestBody any, response any) error {
 
-	switch request.RequestType {
-	case AccountInfo:
-		requestPayload = request.AccountInfoRequest
-		response = &AccountInfoResponse{}
-	case AccountLines:
-		requestPayload = request.AccountLinesRequest
-		response = &AccountLinesResponse{}
-	case Transaction:
-		requestPayload = request.TransactionRequest
-		response = &TransactionResponse{}
-	case Ledger:
-		requestPayload = request.LedgerRequest
-		response = &LedgerResponse{}
+	jsonPayload, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request payload: %w", err)
 	}
 
-	jsonPayload, err := json.Marshal(requestPayload)
+	request, err := http.NewRequest(method, client.Url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request payload: %w", err)
+		return fmt.Errorf("failed to create new HTTP request: %w", err)
 	}
+	request.Header.Set("Content-Type", "application/json")
 
-	req, err := http.NewRequestWithContext(ctx, "POST", client.Url, bytes.NewBuffer(jsonPayload))
+	resp, err := client.HttpClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new HTTP request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.HttpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
+		return fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
+		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response body: %w", err)
+		return fmt.Errorf("failed to decode response body: %w", err)
 	}
 
-	result := Response{}
-	switch request.RequestType {
-	case AccountInfo:
-		result.AccountInfoResponse = response.(*AccountInfoResponse)
-	case AccountLines:
-		result.AccountLinesResponse = response.(*AccountLinesResponse)
-	case Transaction:
-		result.TransactionResponse = response.(*TransactionResponse)
-	case Ledger:
-		result.LedgerResponse = response.(*LedgerResponse)
-	}
-
-	return &result, nil
+	return nil
 }
 
 // extractAssetAndContract parse assetContract and returns asset and contract
