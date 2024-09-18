@@ -12,7 +12,7 @@ Two steps of normalization are in play:
 
 The first step is chain-specific, `crosschain` defines and uses a single canonical format for each address on each chain. The intent of this document is to specify this canonical format, for all chains supported by `crosschain`.
 
-The second step is generic, we replace whitespace with underscore (`_`) and all other invalid characters with dashes (`-`). Since this is not reversible, an address resource will have a field `address` containing the original (canonical) address, and a (token) asset resource will have a field `contract` containing the original (canonical) address.
+The second step is generic, we replace whitespace with underscore (`_`) and all other invalid characters with dashes (`-`). Since this is not reversible, an address resource will have a field `address` containing the original (canonical) address, and a (token) asset resource will have a field `contract` containing the original (canonical) address. Note that this second step is not used in `crosschain` itself, although there is an implementation in the function `normalizeId` in [`normalize/id_test.go`](../normalize/id_test.go) for compatibility testing purposes.
 
 ## Specification
 
