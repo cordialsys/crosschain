@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	comettypes "github.com/cometbft/cometbft/rpc/core/types"
+	jsonrpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -33,9 +35,10 @@ import (
 
 // Client for Cosmos
 type Client struct {
-	Asset  xc.ITask
-	Ctx    client.Context
-	Prefix string
+	Asset     xc.ITask
+	Ctx       client.Context
+	rpcClient *jsonrpcclient.Client
+	Prefix    string
 }
 
 var _ xclient.FullClient = &Client{}
@@ -76,19 +79,30 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	host := cfg.URL
 	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableCosmosResponses)
 	interceptor.Enable()
+
+	rawHttpClient := &http.Client{
+		// Need to use custom transport because:
+		// - cosmos library does not parse URLs correctly
+		// - need to intercept responses to remove incompatible response fields for some chains
+		Transport: interceptor,
+	}
 	httpClient, err := rpchttp.NewWithClient(
 		host,
 		"websocket",
-		&http.Client{
-			// Need to use custom transport because:
-			// - cosmos library does not parse URLs correctly
-			// - need to intercept responses to remove incompatible response fields for some chains
-			Transport: interceptor,
-		})
+		rawHttpClient,
+	)
+
 	if err != nil {
 		panic(err)
 	}
 	_ = httpClient
+
+	// Instantiate also a raw RPC client as we need to re-implement some methods
+	// on behalf of special cosmos-sdk chains.
+	rawRpcClient, err := jsonrpcclient.NewWithHTTPClient(host, rawHttpClient)
+	if err != nil {
+		return nil, err
+	}
 	cosmosCfg := localcodectypes.MakeCosmosConfig()
 	cliCtx := client.Context{}.
 		WithClient(httpClient).
@@ -100,9 +114,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		WithChainID(string(cfg.ChainIDStr))
 
 	return &Client{
-		Asset:  asset,
-		Ctx:    cliCtx,
-		Prefix: cfg.ChainPrefix,
+		Asset:     asset,
+		Ctx:       cliCtx,
+		rpcClient: rawRpcClient,
+		Prefix:    cfg.ChainPrefix,
 	}, nil
 }
 
@@ -199,9 +214,21 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		return result, err
 	}
 
-	resultRaw, err := client.Ctx.Client.Tx(ctx, hash, false)
+	resultRaw := new(comettypes.ResultTx)
+
+	var hashFormatted interface{} = hash
+	switch client.Asset.GetChain().Chain {
+	case xc.SEI:
+		// Frustratingly, SEI expects the hash as a hex encoded string
+		hashFormatted = hex.EncodeToString(hash)
+	}
+
+	_, err = client.rpcClient.Call(ctx, "tx", map[string]interface{}{
+		"hash":  hashFormatted,
+		"prove": false,
+	}, resultRaw)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("could not download tx: %v", err)
 	}
 
 	blockResultRaw, err := client.Ctx.Client.Block(ctx, &resultRaw.Height)
