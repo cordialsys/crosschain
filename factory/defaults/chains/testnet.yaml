@@ -203,6 +203,28 @@ chains:
     chain_name: Oasis Emerald (Testnet)
     decimals: 18
     indexer_type: none
+  SEI:
+    chain: SEI
+    driver: cosmos
+    chain_id_str: atlantic-2
+    chain_name: Sei
+    chain_prefix: sei
+    chain_coin: usei
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    decimals: 6
+    indexer_type: cosmos
+  TIA:
+    chain: TIA
+    driver: cosmos
+    chain_name: Celestia
+    chain_prefix: celestia
+    chain_id_str: mocha-4
+    chain_coin: utia
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    decimals: 6
+    indexer_type: cosmos
   SOL:
     chain: SOL
     driver: solana

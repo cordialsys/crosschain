@@ -324,7 +324,6 @@ chains:
     decimals: 6
     indexer_type: cosmos
     polling_period: 15m
-    disabled: true
   SOL:
     chain: SOL
     driver: solana
@@ -355,13 +354,12 @@ chains:
     driver: cosmos
     chain_name: Celestia
     chain_prefix: celestia
+    chain_id_str: celestia
     chain_coin: utia
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
     indexer_type: cosmos
-    polling_period: 15m
-    disabled: true
   XDC:
     chain: XDC
     driver: evm-legacy
