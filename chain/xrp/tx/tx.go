@@ -46,7 +46,7 @@ type Tx struct {
 	XRPTx             *XRPTransaction
 	SignPubKey        *string
 	SerialisedXRPTx   *string
-	SerialisedForSign *string
+	SerialisedForSign []byte
 	InputSignature    []xc.TxSignature
 }
 
@@ -67,7 +67,7 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		return nil, errors.New("missing serialised XRP transaction")
 	}
 
-	hash := sha256.Sum256([]byte(*tx.SerialisedForSign))
+	hash := sha256.Sum256(tx.SerialisedForSign)
 
 	return []xc.TxDataToSign{hash[:]}, nil
 
