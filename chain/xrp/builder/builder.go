@@ -72,11 +72,17 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	}
 	fmt.Println("serializedForSigning:", serializedForSigning)
 
-	txInput.SerializeXRPTx = serializedForSigning
+	serializedBytes, err := hex.DecodeString(serializedForSigning)
+	if err != nil {
+		fmt.Println(err)
+	}
 
+	txInput.SerializeXRPTx = serializedBytes
+
+	// TODO: Remove full TX transaction from TxInput
 	return &tx.Tx{
 		XRPTx:             &txInput.XRPTx,
-		SerialisedForSign: &serializedForSigning,
+		SerialisedForSign: serializedBytes,
 		SignPubKey:        &signingPubKeyHex,
 	}, nil
 }

@@ -11,8 +11,8 @@ import (
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	XRPTx          tx.XRPTransaction
-	SerializeXRPTx string
+	XRPTx          tx.XRPTransaction // TODO: Remove XRPTx and add fields for only things taken from ledger.
+	SerializeXRPTx []byte
 	Pubkey         []byte
 }
 
