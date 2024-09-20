@@ -232,11 +232,11 @@ func (native NativeAsset) Driver() Driver {
 
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverXrp:
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXrp:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Ed255
 	}
 	return ""
@@ -252,11 +252,11 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
 		return Compressed
-	case DriverCosmos, DriverCosmosEvmos:
+	case DriverCosmos, DriverCosmosEvmos, DriverXrp:
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron:
 		return Uncompressed
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXrp:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Raw
 	}
 	return ""

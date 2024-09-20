@@ -9,7 +9,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
-	"github.com/cordialsys/crosschain/chain/xrp/tx"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,22 +19,22 @@ func TestNewClient(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestFetchTxInput(t *testing.T) {
-
-	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
-	from := xc.Address("from")
-	to := xc.Address("to")
-	input, err := client.FetchLegacyTxInput(context.Background(), from, to)
-	require.NotNil(t, input)
-	require.EqualError(t, err, "not implemented")
-}
-
-func TestSubmitTx(t *testing.T) {
-
-	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
-	err := client.SubmitTx(context.Background(), &tx.Tx{})
-	require.EqualError(t, err, "not implemented")
-}
+//func TestFetchTxInput(t *testing.T) {
+//
+//	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
+//	from := xc.Address("from")
+//	to := xc.Address("to")
+//	input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+//	require.NotNil(t, input)
+//	require.EqualError(t, err, "not implemented")
+//}
+//
+//func TestSubmitTx(t *testing.T) {
+//
+//	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
+//	err := client.SubmitTx(context.Background(), &tx.Tx{})
+//	require.EqualError(t, err, "not implemented")
+//}
 
 //func TestFetchTxInfo(t *testing.T) {
 //

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
+	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
+	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -35,10 +35,18 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
+const MethodPost string = "POST"
+
 const AccountInfo string = "account_info"
 const AccountLines string = "account_lines"
 const Transaction string = "tx"
 const Ledger string = "ledger"
+const Submit string = "submit"
+
+type LedgerIndex string
+
+const Validated LedgerIndex = "validated"
+const Current LedgerIndex = "current"
 
 type AccountInfoRequest struct {
 	Method string                  `json:"method"`
@@ -46,10 +54,8 @@ type AccountInfoRequest struct {
 }
 
 type AccountInfoParamEntry struct {
-	Account xc.Address `json:"account"`
-	//Strict      bool       `json:"strict"`
-	//LedgerIndex string     `json:"ledger_index"`
-	//Queue       bool       `json:"queue"`
+	Account     xc.Address  `json:"account"`
+	LedgerIndex LedgerIndex `json:"ledger_index"`
 }
 
 type AccountLinesRequest struct {
@@ -77,10 +83,22 @@ type LedgerRequest struct {
 }
 
 type LedgerParamEntry struct {
-	LedgerIndex  string `json:"ledger_index"`
-	Transactions bool   `json:"transactions"`
-	Expand       bool   `json:"expand"`
-	OwnerFunds   bool   `json:"owner_funds"`
+	LedgerIndex  LedgerIndex `json:"ledger_index"`
+	Transactions bool        `json:"transactions"`
+	Expand       bool        `json:"expand"`
+	OwnerFunds   bool        `json:"owner_funds"`
+}
+
+type SubmitRequest struct {
+	Method string             `json:"method"`
+	Params []SubmitParamEntry `json:"params"`
+}
+
+type SubmitParamEntry struct {
+	TxBlob string `json:"tx_blob"`
+}
+
+type SubmitResponse struct {
 }
 
 type LedgerResponse struct {
@@ -89,7 +107,7 @@ type LedgerResponse struct {
 
 type LedgerResult struct {
 	Ledger             LedgerInfo `json:"ledger"`
-	LedgerCurrentIndex int64      `json:"ledger_current_index"`
+	LedgerCurrentIndex int        `json:"ledger_current_index"`
 	Validated          bool       `json:"validated"`
 	Status             string     `json:"status"`
 }
@@ -111,7 +129,7 @@ type TransactionResult struct {
 	Fee                string          `json:"Fee"`
 	Flags              int64           `json:"Flags"`
 	LastLedgerSequence int64           `json:"LastLedgerSequence"`
-	Sequence           int64           `json:"Sequence"`
+	Sequence           int             `json:"Sequence"`
 	SigningPubKey      string          `json:"SigningPubKey"`
 	TransactionType    string          `json:"TransactionType"`
 	TxnSignature       string          `json:"TxnSignature"`
@@ -195,28 +213,92 @@ type AccountData struct {
 	Balance           string `json:"Balance"`
 	Flags             uint64 `json:"Flags"`
 	LedgerEntryType   string `json:"LedgerEntryType"`
-	OwnerCount        uint   `json:"OwnerCount"`
+	OwnerCount        int64  `json:"OwnerCount"`
 	PreviousTxnID     string `json:"PreviousTxnID"`
-	PreviousTxnLgrSeq uint   `json:"PreviousTxnLgrSeq"`
-	Sequence          uint   `json:"Sequence"`
+	PreviousTxnLgrSeq int64  `json:"PreviousTxnLgrSeq"`
+	Sequence          int    `json:"Sequence"`
 	Index             string `json:"Index"`
+}
+
+func (client *Client) FetchBaseInput(ctx context.Context, args xcbuilder.TransferArgs) (xrptxinput.TxInput, error) {
+	txInput := xrptxinput.NewTxInput()
+
+	XRPTransaction := txInput.XRPTx
+
+	XRPTransaction.Account = args.GetFrom()
+	XRPTransaction.Destination = args.GetTo()
+	XRPTransaction.Amount = args.GetAmount()
+	XRPTransaction.TransactionType = xrptx.PAYMENT
+	XRPTransaction.Fee = "12"
+	//XRPTransaction.Flags = 0
+
+	currentSequence, err := client.getNextValidSeqNumber(XRPTransaction.Account)
+	if err != nil {
+		return xrptxinput.TxInput{}, err
+	}
+	XRPTransaction.Sequence = *currentSequence
+
+	ledgerSequence, err := client.getLatestValidatedLedgerSequence()
+	if err != nil {
+		return xrptxinput.TxInput{}, err
+	}
+	ledgerSequencePtr := *ledgerSequence
+	ledgerOffset := 20
+	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
+	XRPTransaction.LastLedgerSequence = lastLedgerSequence
+
+	fmt.Println("SubmitTransaction2:", XRPTransaction)
+
+	txInput.XRPTx = XRPTransaction
+
+	return *txInput, nil
 }
 
 // FetchTransferInput returns tx input for a Template tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	return &tx_input.TxInput{}, errors.New("not implemented")
+	txInput, err := client.FetchBaseInput(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	return &txInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
 	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return client.FetchTransferInput(ctx, args)
+	txInput, err := client.FetchTransferInput(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	return txInput, nil
 }
 
 // SubmitTx submits a Template tx
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	return errors.New("not implemented")
+	serializedTxInput, err := txInput.Serialize()
+	if err != nil {
+		return err
+	}
+
+	submitRequest := &SubmitRequest{
+		Method: Submit,
+		Params: []SubmitParamEntry{
+			{
+				TxBlob: string(serializedTxInput),
+			},
+		},
+	}
+
+	var submitResponse SubmitResponse
+	err = client.Send(MethodPost, submitRequest, &submitResponse)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FetchTxInfo Returns transaction info - new endpoint
@@ -244,13 +326,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	var txResponse TransactionResponse
-	err := client.Send("POST", txRequest, &txResponse)
+	err := client.Send(MethodPost, txRequest, &txResponse)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
 
 	ledgerRequest := LedgerRequest{
-		Method: "ledger",
+		Method: Ledger,
 		Params: []LedgerParamEntry{
 			{
 				LedgerIndex: "current",
@@ -259,7 +341,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	var ledgerResponse LedgerResponse
-	err = client.Send("POST", ledgerRequest, &ledgerResponse)
+	err = client.Send(MethodPost, ledgerRequest, &ledgerResponse)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
@@ -297,7 +379,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Fee:           xc.NewAmountBlockchainFromStr(txResponse.Result.Fee),
 		BlockIndex:    txResponse.Result.LedgerIndex,
 		BlockTime:     txResponse.Result.Date,
-		Confirmations: confirmations,
+		Confirmations: int64(confirmations),
 		Status:        status,
 		Sources:       sources,
 		Destinations:  destinations,
@@ -337,13 +419,14 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 		Method: AccountInfo,
 		Params: []AccountInfoParamEntry{
 			{
-				Account: address,
+				Account:     address,
+				LedgerIndex: Validated,
 			},
 		},
 	}
 
 	var accountInfoResponse AccountInfoResponse
-	err := client.Send("POST", request, &accountInfoResponse)
+	err := client.Send(MethodPost, request, &accountInfoResponse)
 	if err != nil {
 		return zero, err
 	}
@@ -375,7 +458,7 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	}
 
 	var accountLinesResponse AccountLinesResponse
-	err = client.Send("POST", request, &accountLinesResponse)
+	err = client.Send(MethodPost, request, &accountLinesResponse)
 	if err != nil {
 		return zero, err
 	}
@@ -453,4 +536,45 @@ func extractAssetAndContract(assetContract string) (string, string, error) {
 	contract := parts[1]
 
 	return asset, contract, nil
+}
+
+func (client *Client) getNextValidSeqNumber(address xc.Address) (*int, error) {
+	request := AccountInfoRequest{
+		Method: AccountInfo,
+		Params: []AccountInfoParamEntry{
+			{
+				Account:     address,
+				LedgerIndex: Validated,
+			},
+		},
+	}
+
+	var accountInfoResponse AccountInfoResponse
+	err := client.Send(MethodPost, request, &accountInfoResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	sequence := accountInfoResponse.Result.AccountData.Sequence
+	return &sequence, nil
+}
+
+func (client *Client) getLatestValidatedLedgerSequence() (*int, error) {
+	ledgerRequest := LedgerRequest{
+		Method: Ledger,
+		Params: []LedgerParamEntry{
+			{
+				LedgerIndex: Current,
+			},
+		},
+	}
+
+	var ledgerResponse LedgerResponse
+	err := client.Send(MethodPost, ledgerRequest, &ledgerResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerCurrentIndex := ledgerResponse.Result.LedgerCurrentIndex
+	return &ledgerCurrentIndex, nil
 }
