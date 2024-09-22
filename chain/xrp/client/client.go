@@ -7,7 +7,6 @@ import (
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
@@ -223,33 +222,23 @@ type AccountData struct {
 func (client *Client) FetchBaseInput(ctx context.Context, args xcbuilder.TransferArgs) (xrptxinput.TxInput, error) {
 	txInput := xrptxinput.NewTxInput()
 
-	XRPTransaction := txInput.XRPTx
+	account := args.GetFrom()
 
-	XRPTransaction.Account = args.GetFrom()
-	XRPTransaction.Destination = args.GetTo()
-	XRPTransaction.Amount = args.GetAmount()
-	XRPTransaction.TransactionType = xrptx.PAYMENT
-	XRPTransaction.Fee = "12"
-	//XRPTransaction.Flags = 0
-
-	currentSequence, err := client.getNextValidSeqNumber(XRPTransaction.Account)
+	currentSequence, err := client.getNextValidSeqNumber(account)
 	if err != nil {
 		return xrptxinput.TxInput{}, err
 	}
-	XRPTransaction.Sequence = *currentSequence
+	currentSequencePtr := *currentSequence
+	txInput.Sequence = currentSequencePtr
 
 	ledgerSequence, err := client.getLatestValidatedLedgerSequence()
 	if err != nil {
 		return xrptxinput.TxInput{}, err
 	}
 	ledgerSequencePtr := *ledgerSequence
-	ledgerOffset := 20
+	ledgerOffset := 20 // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
-	XRPTransaction.LastLedgerSequence = lastLedgerSequence
-
-	fmt.Println("SubmitTransaction2:", XRPTransaction)
-
-	txInput.XRPTx = XRPTransaction
+	txInput.LastLedgerSequence = lastLedgerSequence
 
 	return *txInput, nil
 }

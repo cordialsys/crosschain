@@ -4,39 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/xrp/tx"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	XRPTx          tx.XRPTransaction // TODO: Remove XRPTx and add fields for only things taken from ledger.
-	SerializeXRPTx []byte
-	Pubkey         []byte
-}
-
-func (input *TxInput) SetPublicKey(pubkey []byte) error {
-	input.Pubkey = pubkey
-	return nil
-}
-
-func (input *TxInput) SetPublicKeyFromStr(pubkeyStr string) error {
-	var err error
-	var pubkey []byte
-	if len(pubkeyStr) == 128 || len(pubkeyStr) == 130 {
-		pubkey, err = hex.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	} else {
-		pubkey, err = base64.RawStdEncoding.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	}
-	input.Pubkey = pubkey
-	return nil
+	Sequence           int `json:"Sequence"`
+	LastLedgerSequence int `json:"LastLedgerSequence"`
+	PublicKey          []byte
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -44,6 +20,38 @@ var _ xc.TxInputWithPublicKey = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+}
+
+func (input *TxInput) SetPublicKey(publicKey []byte) error {
+	input.PublicKey = publicKey
+	return nil
+}
+
+func (input *TxInput) GetPublicKey() []byte {
+	return input.PublicKey
+}
+
+func (input *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
+	var (
+		publicKey []byte
+		err       error
+	)
+
+	if len(publicKeyStr) == 128 || len(publicKeyStr) == 130 {
+		publicKey, err = hex.DecodeString(publicKeyStr)
+		if err != nil {
+			return err
+		}
+	} else {
+		publicKey, err = base64.RawStdEncoding.DecodeString(publicKeyStr)
+		if err != nil {
+			return err
+		}
+	}
+
+	input.PublicKey = publicKey
+
+	return nil
 }
 
 func NewTxInput() *TxInput {
@@ -70,10 +78,24 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
+	if emvOther, ok := other.(*TxInput); ok {
+		return emvOther.Sequence != input.Sequence
+	}
+
 	return true
 }
 
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	// safe from double send ?
+	if !xc.SameTxInputTypes(input, others...) {
+		return false
+	}
+
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+
 	return true
 }

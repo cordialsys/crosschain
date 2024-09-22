@@ -2,7 +2,6 @@ package builder
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
@@ -39,51 +38,43 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
-	signingPubKeyHex := hex.EncodeToString(txInput.Pubkey)
-	//txInput.XRPTx.SigningPubKey = signingPubKeyHex
-	fmt.Println(txInput)
+	xrpTx := tx.XRPTransaction{
+		Account:     from,
+		Amount:      amount,
+		Destination: to,
+		Fee:         "12",
+		Flags:       0,
+		//LastLedgerSequence: txInput.LastLedgerSequence,
+		Sequence:        txInput.Sequence,
+		SigningPubKey:   hex.EncodeToString(txInput.PublicKey),
+		TransactionType: tx.PAYMENT,
+	}
 
-	jsonData, err := json.Marshal(txInput.XRPTx)
+	result := make(map[string]interface{})
+	result["Account"] = string(xrpTx.Account)
+	result["Amount"] = xrpTx.Amount.String()
+	result["Destination"] = string(xrpTx.Destination)
+	result["Fee"] = xrpTx.Fee
+	result["Flags"] = xrpTx.Flags
+	//result["LastLedgerSequence"] = xrpTx.LastLedgerSequence
+	result["Sequence"] = xrpTx.Sequence
+	result["SigningPubKey"] = xrpTx.SigningPubKey
+	result["TransactionType"] = string(xrpTx.TransactionType)
+
+	encodeForSigning, err := binarycodec.EncodeForSigning(result)
 	if err != nil {
-		return nil, errors.New("error marshalling struct")
+		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
 	}
 
-	var result map[string]interface{}
-	err = json.Unmarshal(jsonData, &result)
+	encodeForSigningBytes, err := hex.DecodeString(encodeForSigning)
 	if err != nil {
-		return nil, errors.New("error unmarshalling struct")
+		return nil, fmt.Errorf("failed to create byte object from hex serialized transaction %v", err)
 	}
 
-	if sequence, ok := result["Sequence"].(float64); ok {
-		result["Sequence"] = int(sequence)
-	}
-
-	if flags, ok := result["Flags"].(float64); ok {
-		result["Flags"] = int(flags)
-	}
-
-	if lastLedgerSequence, ok := result["LastLedgerSequence"].(float64); ok {
-		result["LastLedgerSequence"] = int(lastLedgerSequence)
-	}
-
-	serializedForSigning, err := binarycodec.EncodeForSigning(result)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("serializedForSigning:", serializedForSigning)
-
-	serializedBytes, err := hex.DecodeString(serializedForSigning)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	txInput.SerializeXRPTx = serializedBytes
-
-	// TODO: Remove full TX transaction from TxInput
 	return &tx.Tx{
-		XRPTx:             &txInput.XRPTx,
-		SerialisedForSign: serializedBytes,
-		SignPubKey:        &signingPubKeyHex,
+		XRPTx:            &xrpTx,
+		SignPubKey:       txInput.PublicKey,
+		EncodeForSigning: encodeForSigningBytes,
 	}, nil
 }
 
