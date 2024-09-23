@@ -327,6 +327,9 @@ type ChainConfig struct {
 	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
 	Disabled             *bool           `yaml:"disabled,omitempty"`
 	ExplorerUrls         ExplorerUrls    `yaml:"explorer_urls"`
+	CoinGeckoId          string          `yaml:"coingecko_id,omitempty"`
+	CoinMarketCapId      string          `yaml:"coinmarketcap_id,omitempty"`
+	Dti                  string          `yaml:"dti,omitempty"`
 
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
