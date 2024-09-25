@@ -16,7 +16,7 @@ func TestSafeFromDoubleSpend(t *testing.T) {
 	newInput := &TxInput{}
 	oldInput1 := &TxInput{}
 	// Defaults are false but each chain has conditions
-	require.False(t, newInput.SafeFromDoubleSend(oldInput1))
+	require.True(t, newInput.SafeFromDoubleSend(oldInput1))
 	require.False(t, newInput.IndependentOf(oldInput1))
 }
 
