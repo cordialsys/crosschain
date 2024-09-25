@@ -3,11 +3,10 @@ package tx_input_test
 import (
 	"encoding/json"
 	"fmt"
-	"testing"
-
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
+	"github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/test-go/testify/require"
+	"testing"
 )
 
 type TxInput = tx_input.TxInput
@@ -30,18 +29,43 @@ func TestTxInputConflicts(t *testing.T) {
 		independent     bool
 		doubleSpendSafe bool
 	}
+	//startTime := int64((100 * time.Hour).Seconds())
 	vectors := []testcase{
+		{
+			newInput: &TxInput{
+				Sequence:           22811103,
+				LastLedgerSequence: 90986722,
+			},
+			oldInput: &TxInput{
+				Sequence:           22811103,
+				LastLedgerSequence: 90986722,
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput: &TxInput{
+				Sequence:           22811103,
+				LastLedgerSequence: 90986722,
+			},
+			oldInput: &TxInput{
+				Sequence:           22811104,
+				LastLedgerSequence: 90986722,
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
 		{
 			newInput:        &TxInput{},
 			oldInput:        &TxInput{},
 			independent:     false,
-			doubleSpendSafe: false,
+			doubleSpendSafe: true,
 		},
 		{
 			newInput: &TxInput{},
 			// check no old input
 			oldInput:        nil,
-			independent:     false,
+			independent:     true,
 			doubleSpendSafe: false,
 		},
 	}
