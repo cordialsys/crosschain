@@ -10,8 +10,8 @@ import (
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Sequence           int `json:"Sequence"`
-	LastLedgerSequence int `json:"LastLedgerSequence"`
+	Sequence           int64 `json:"Sequence"`
+	LastLedgerSequence int64 `json:"LastLedgerSequence"`
 	PublicKey          []byte
 }
 
