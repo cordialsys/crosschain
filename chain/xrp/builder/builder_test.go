@@ -4,52 +4,136 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/template/builder"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
+	"github.com/cordialsys/crosschain/chain/xrp/builder"
+	"github.com/cordialsys/crosschain/chain/xrp/tx"
+	"github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/test-go/testify/require"
 )
 
 type TxInput = tx_input.TxInput
+type Tx = tx.Tx
 
 func TestNewTxBuilder(t *testing.T) {
 
-	builder1, err := builder.NewTxBuilder(&xc.ChainConfig{})
-	require.NotNil(t, builder1)
-	require.EqualError(t, err, "not implemented")
+	txBuilder, err := builder.NewTxBuilder(&xc.ChainConfig{Chain: "XRP"})
+	require.NotNil(t, txBuilder)
+	require.Nil(t, err)
 }
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	amount := xc.NewAmountBlockchainFromUint64(12)
+	input := &tx_input.TxInput{}
+	nt, err := txBuilder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	require.NoError(t, err)
+	require.NotNil(t, nt)
+	xrpTx := nt.(*Tx).XRPTx
+	require.Equal(t, string(xrpTx.Account), "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	require.Equal(t, xrpTx.Amount.StringValue, "12")
+}
+
+func TestNewNativeTransferErr(t *testing.T) {
+
+	// invalid from, to
+	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
-	input := &TxInput{}
-	tf, err := builder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
-	require.Nil(t, tf)
-	require.EqualError(t, err, "not implemented")
+	input := &tx_input.TxInput{}
+	nt, err := txBuilder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	require.Nil(t, nt)
+	require.EqualError(t, err, "failed to serialize transaction for signing `from` is an invalid classic address")
+
+	from = xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	nt, err = txBuilder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	require.Nil(t, nt)
+	require.EqualError(t, err, "failed to serialize transaction for signing `to` is an invalid classic address")
 }
 
 func TestNewTokenTransfer(t *testing.T) {
 
-	builder1, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
+	txBuilder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
+		Contract:    contract,
+		Decimals:    6,
+		ChainConfig: &xc.ChainConfig{},
+	})
+	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	amount := xc.NewAmountBlockchainFromUint64(12)
+	input := &TxInput{}
+	tt, err := txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	require.NoError(t, err)
+	require.NotNil(t, tt)
+	xrpTx := tt.(*Tx).XRPTx
+	require.Equal(t, xrpTx.Amount.AmountValue.Value, "12")
+	require.Equal(t, xrpTx.Amount.AmountValue.Currency, "FMT")
+	require.Equal(t, xrpTx.Amount.AmountValue.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
+}
+
+func TestNewTokenTransferErr(t *testing.T) {
+
+	// invalid asset
+	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tf, err := builder1.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
-	require.Nil(t, tf)
-	require.EqualError(t, err, "not implemented")
+	tt, err := txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	require.Nil(t, tt)
+	require.EqualError(t, err, "asset does not have a contract")
+
+	// invalid from, to
+	txBuilder, _ = builder.NewTxBuilder(&xc.TokenAssetConfig{
+		Contract: "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB",
+		Decimals: 6,
+	})
+	from = xc.Address("from")
+	to = xc.Address("to")
+	amount = xc.AmountBlockchain{}
+	input = &TxInput{}
+	tt, err = txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	require.Nil(t, tt)
+	require.EqualError(t, err, "failed to serialize transaction for signing `from` is an invalid classic address")
+
+	from = xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	tt, err = txBuilder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	require.Nil(t, tt)
+	require.EqualError(t, err, "failed to serialize transaction for signing `to` is an invalid classic address")
 }
 
 func TestNewTransfer(t *testing.T) {
 
 	builder1, _ := builder.NewTxBuilder(&xc.ChainConfig{})
-	from := xc.Address("from")
-	to := xc.Address("to")
-	amount := xc.AmountBlockchain{}
+	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &TxInput{}
-	tf, err := builder1.NewTransfer(from, to, amount, input)
-	require.Nil(t, tf)
-	require.EqualError(t, err, "not implemented")
+	tnt, err := builder1.NewTransfer(from, to, amount, input)
+	require.NoError(t, err)
+	require.NotNil(t, tnt)
+	xrpTx := tnt.(*Tx).XRPTx
+	require.Equal(t, string(xrpTx.Account), "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	require.Equal(t, xrpTx.Amount.StringValue, "12")
+
+	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
+	txBuilder2, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
+		Contract:    contract,
+		Decimals:    6,
+		ChainConfig: &xc.ChainConfig{},
+	})
+	tnt, err = txBuilder2.NewTransfer(from, to, amount, input)
+	require.NoError(t, err)
+	require.NotNil(t, tnt)
+	xrpTx = tnt.(*Tx).XRPTx
+	require.Equal(t, string(xrpTx.Account), "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	require.Equal(t, xrpTx.Amount.AmountValue.Currency, "FMT")
+	require.Equal(t, xrpTx.Amount.AmountValue.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
+	require.Equal(t, xrpTx.Amount.AmountValue.Value, "12")
 }
