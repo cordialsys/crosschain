@@ -7,11 +7,11 @@ import (
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	"strings"
 )
 
 // Client for XRP
@@ -98,6 +98,39 @@ type SubmitParamEntry struct {
 }
 
 type SubmitResponse struct {
+	Result SubmitResult `json:"result"`
+}
+
+type SubmitResult struct {
+	Accepted                 bool               `json:"accepted"`
+	AccountSequenceAvailable int64              `json:"account_sequence_available"`
+	AccountSequenceNext      int64              `json:"account_sequence_next"`
+	Applied                  bool               `json:"applied"`
+	Broadcast                bool               `json:"broadcast"`
+	EngineResult             string             `json:"engine_result"`
+	EngineResultCode         int64              `json:"engine_result_code"`
+	EngineResultMessage      string             `json:"engine_result_message"`
+	Kept                     bool               `json:"kept"`
+	OpenLedgerCost           string             `json:"open_ledger_cost"`
+	Queued                   bool               `json:"queued"`
+	TxBlob                   string             `json:"tx_blob"`
+	TxJson                   SubmitResultTxJson `json:"tx_json"`
+	ValidatedLedgerIndex     int64              `json:"validated_ledger_index"`
+	Status                   string             `json:"status"`
+}
+
+type SubmitResultTxJson struct {
+	Account            string `json:"Account"`
+	Amount             string `json:"Amount"`
+	Destination        string `json:"Destination"`
+	Fee                string `json:"Fee"`
+	Flags              int64  `json:"Flags"`
+	LastLedgerSequence int64  `json:"LastLedgerSequence"`
+	Sequence           int64  `json:"Sequence"`
+	SigningPubKey      string `json:"SigningPubKey"`
+	TransactionType    string `json:"TransactionType"`
+	TxnSignature       string `json:"TxnSignature"`
+	Hash               string `json:"hash"`
 }
 
 type LedgerResponse struct {
@@ -106,7 +139,7 @@ type LedgerResponse struct {
 
 type LedgerResult struct {
 	Ledger             LedgerInfo `json:"ledger"`
-	LedgerCurrentIndex int        `json:"ledger_current_index"`
+	LedgerCurrentIndex int64      `json:"ledger_current_index"`
 	Validated          bool       `json:"validated"`
 	Status             string     `json:"status"`
 }
@@ -123,18 +156,20 @@ type TransactionResponse struct {
 
 type TransactionResult struct {
 	Account            string          `json:"Account"`
-	Amount             string          `json:"Amount"`
-	Destination        string          `json:"Destination"`
+	Amount             string          `json:"Amount,omitempty"`
+	Destination        string          `json:"Destination,omitempty"`
 	Fee                string          `json:"Fee"`
 	Flags              int64           `json:"Flags"`
 	LastLedgerSequence int64           `json:"LastLedgerSequence"`
-	Sequence           int             `json:"Sequence"`
+	Sequence           int64           `json:"Sequence"`
 	SigningPubKey      string          `json:"SigningPubKey"`
 	TransactionType    string          `json:"TransactionType"`
 	TxnSignature       string          `json:"TxnSignature"`
 	Hash               string          `json:"hash"`
-	DeliverMax         string          `json:"DeliverMax"`
-	CtID               string          `json:"ctid"`
+	DeliverMax         string          `json:"DeliverMax,omitempty"`
+	TakerGets          TakerGets       `json:"TakerGets,omitempty"`
+	TakerPays          TakerPays       `json:"TakerPays,omitempty"`
+	CtID               string          `json:"ctid,omitempty"`
 	Meta               TransactionMeta `json:"meta"`
 	Validated          bool            `json:"validated"`
 	Date               int64           `json:"date"`
@@ -143,36 +178,177 @@ type TransactionResult struct {
 	Status             string          `json:"status"`
 }
 
+type TakerGets struct {
+	StringValue string  `json:"-"`
+	AmountValue *Amount `json:"-"`
+	IsString    bool    `json:"-"`
+}
+
+// UnmarshalJSON is the custom unmarshal method for TakerGets
+func (tg *TakerGets) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		tg.StringValue = str
+		tg.IsString = true
+		return nil
+	}
+
+	var amount Amount
+	if err := json.Unmarshal(data, &amount); err == nil {
+		tg.AmountValue = &amount
+		tg.IsString = false
+		return nil
+	}
+
+	return fmt.Errorf("TakerGets is neither a string nor an Amount")
+}
+
+type TakerPays struct {
+	StringValue string  `json:"-"`
+	AmountValue *Amount `json:"-"`
+	IsString    bool    `json:"-"`
+}
+
+// UnmarshalJSON is the custom unmarshal method for TakerPays
+func (tp *TakerPays) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		tp.StringValue = str
+		tp.IsString = true
+		return nil
+	}
+
+	var amount Amount
+	if err := json.Unmarshal(data, &amount); err == nil {
+		tp.AmountValue = &amount
+		tp.IsString = false
+		return nil
+	}
+
+	return fmt.Errorf("TakerGets is neither a string nor an Amount")
+}
+
 type TransactionMeta struct {
 	AffectedNodes     []AffectedNodes `json:"AffectedNodes"`
 	TransactionIndex  int64           `json:"TransactionIndex"`
 	TransactionResult string          `json:"TransactionResult"`
-	DeliveredAmount   string          `json:"delivered_amount"`
+	DeliveredAmount   string          `json:"delivered_amount,omitempty"`
 }
 
 type AffectedNodes struct {
-	ModifiedNode ModifiedNode `json:"ModifiedNode"`
+	CreatedNode  *CreatedNode  `json:"CreatedNode,omitempty"`
+	ModifiedNode *ModifiedNode `json:"ModifiedNode,omitempty"`
+}
+
+// UnmarshalJSON for AffectedNode
+func (an *AffectedNodes) UnmarshalJSON(data []byte) error {
+	var nodeMap map[string]json.RawMessage
+	if err := json.Unmarshal(data, &nodeMap); err != nil {
+		return err
+	}
+
+	if created, ok := nodeMap["CreatedNode"]; ok {
+		var createdNode CreatedNode
+		if err := json.Unmarshal(created, &createdNode); err != nil {
+			return err
+		}
+		an.CreatedNode = &createdNode
+		return nil
+	}
+
+	if modified, ok := nodeMap["ModifiedNode"]; ok {
+		var modifiedNode ModifiedNode
+		if err := json.Unmarshal(modified, &modifiedNode); err != nil {
+			return err
+		}
+		an.ModifiedNode = &modifiedNode
+		return nil
+	}
+
+	return fmt.Errorf("unknown node type in AffectedNode")
+}
+
+type CreatedNode struct {
+	LedgerEntryType string    `json:"LedgerEntryType"`
+	LedgerIndex     string    `json:"LedgerIndex"`
+	NewFields       NewFields `json:"NewFields"`
+}
+
+type NewFields struct {
+	Account   string   `json:"Account,omitempty"`
+	Balance   *Balance `json:"Balance,omitempty"`
+	Sequence  int64    `json:"Sequence,omitempty"`
+	Flags     int64    `json:"Flags,omitempty"`
+	HighLimit *Amount  `json:"HighLimit,omitempty"`
+	LowLimit  *Amount  `json:"LowLimit,omitempty"`
+	LowNode   string   `json:"LowNode,omitempty"`
+	Owner     string   `json:"Owner,omitempty"`
+	RootIndex string   `json:"RootIndex,omitempty"`
 }
 
 type ModifiedNode struct {
-	FinalFields       FinalFields    `json:"FinalFields"`
-	LedgerEntryType   string         `json:"LedgerEntryType"`
-	LedgerIndex       string         `json:"LedgerIndex"`
-	PreviousFields    PreviousFields `json:"PreviousFields"`
-	PreviousTxnID     string         `json:"PreviousTxnID"`
-	PreviousTxnLgrSeq int64          `json:"PreviousTxnLgrSeq"`
+	FinalFields       *FinalFields    `json:"FinalFields,omitempty"`
+	LedgerEntryType   string          `json:"LedgerEntryType"`
+	LedgerIndex       string          `json:"LedgerIndex"`
+	PreviousFields    *PreviousFields `json:"PreviousFields,omitempty"`
+	PreviousTxnID     string          `json:"PreviousTxnID"`
+	PreviousTxnLgrSeq int64           `json:"PreviousTxnLgrSeq"`
 }
 
 type FinalFields struct {
-	Account    string `json:"Account"`
-	Balance    string `json:"Balance"`
-	Flags      int64  `json:"Flags"`
-	OwnerCount int    `json:"OwnerCount"`
-	Sequence   int64  `json:"Sequence"`
+	Account       string  `json:"Account,omitempty"`
+	Balance       Balance `json:"Balance"`
+	Flags         int64   `json:"Flags"`
+	OwnerCount    int     `json:"OwnerCount,omitempty"`
+	Sequence      int64   `json:"Sequence,omitempty"`
+	IndexPrevious string  `json:"IndexPrevious,omitempty"`
+	Owner         string  `json:"Owner,omitempty"`
+	RootIndex     string  `json:"RootIndex,omitempty"`
+	HighLimit     *Amount `json:"HighLimit,omitempty"`
+	HighNode      string  `json:"HighNode,omitempty"`
+	LowLimit      *Amount `json:"LowLimit,omitempty"`
+	LowNode       string  `json:"LowNode,omitempty"`
+	AMMID         string  `json:"AMMID,omitempty"`
+}
+
+type Balance struct {
+	StringValue string  `json:"-"`
+	AmountValue *Amount `json:"-"`
+	IsString    bool    `json:"-"`
+}
+
+// UnmarshalJSON is the custom unmarshal method for Balance
+func (b *Balance) UnmarshalJSON(data []byte) error {
+	// Try to unmarshal the data as a string first
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		b.StringValue = str
+		b.IsString = true
+		return nil
+	}
+
+	// If not a string, try to unmarshal it as an Amount
+	var amount Amount
+	if err := json.Unmarshal(data, &amount); err == nil {
+		b.AmountValue = &amount
+		b.IsString = false
+		return nil
+	}
+
+	// If neither works, return an error
+	return fmt.Errorf("TakerGets is neither a string nor an Amount")
+}
+
+type Amount struct {
+	Currency string `json:"currency"`
+	Issuer   string `json:"issuer"`
+	Value    string `json:"value"`
 }
 
 type PreviousFields struct {
-	Balance string `json:"Balance"`
+	Balance    Balance `json:"Balance"`
+	OwnerCount int     `json:"OwnerCount,omitempty"`
+	Sequence   int64   `json:"Sequence,omitempty"`
 }
 
 type AccountLinesResponse struct {
@@ -181,7 +357,7 @@ type AccountLinesResponse struct {
 
 type AccountLinesResultDetails struct {
 	LedgerHash  string `json:"LedgerHash"`
-	LedgerIndex uint   `json:"LedgerIndex"`
+	LedgerIndex int64  `json:"LedgerIndex"`
 	Validated   bool   `json:"Validated"`
 	Status      string `json:"Status"`
 	Lines       []Line `json:"lines"`
@@ -193,8 +369,8 @@ type Line struct {
 	Currency     string `json:"currency"`
 	Limit        string `json:"limit"`
 	LimitPeer    string `json:"limit_peer"`
-	QualityIn    uint   `json:"quality_in"`
-	QualityOut   uint   `json:"quality_out"`
+	QualityIn    int    `json:"quality_in"`
+	QualityOut   int    `json:"quality_out"`
 	NoRipple     bool   `json:"no_ripple"`
 	NoRipplePeer bool   `json:"no_ripple_peer"`
 }
@@ -210,12 +386,12 @@ type AccountInfoResultDetails struct {
 type AccountData struct {
 	Account           string `json:"Account"`
 	Balance           string `json:"Balance"`
-	Flags             uint64 `json:"Flags"`
+	Flags             int64  `json:"Flags"`
 	LedgerEntryType   string `json:"LedgerEntryType"`
-	OwnerCount        int64  `json:"OwnerCount"`
+	OwnerCount        int    `json:"OwnerCount"`
 	PreviousTxnID     string `json:"PreviousTxnID"`
 	PreviousTxnLgrSeq int64  `json:"PreviousTxnLgrSeq"`
-	Sequence          int    `json:"Sequence"`
+	Sequence          int64  `json:"Sequence"`
 	Index             string `json:"Index"`
 }
 
@@ -236,7 +412,7 @@ func (client *Client) FetchBaseInput(ctx context.Context, args xcbuilder.Transfe
 		return xrptxinput.TxInput{}, err
 	}
 	ledgerSequencePtr := *ledgerSequence
-	ledgerOffset := 20 // Ledger offset
+	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
 	txInput.LastLedgerSequence = lastLedgerSequence
 
@@ -368,7 +544,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Fee:           xc.NewAmountBlockchainFromStr(txResponse.Result.Fee),
 		BlockIndex:    txResponse.Result.LedgerIndex,
 		BlockTime:     txResponse.Result.Date,
-		Confirmations: int64(confirmations),
+		Confirmations: confirmations,
 		Status:        status,
 		Sources:       sources,
 		Destinations:  destinations,
@@ -432,7 +608,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 func (client *Client) fetchContractBalance(ctx context.Context, address xc.Address, assetContract string) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
-	asset, contract, err := extractAssetAndContract(assetContract)
+	asset, contract, err := tx.ExtractAssetAndContract(assetContract)
 	if err != nil {
 		return zero, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
@@ -500,34 +676,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	return nil
 }
 
-// extractAssetAndContract parse assetContract and returns asset and contract
-func extractAssetAndContract(assetContract string) (string, string, error) {
-	var separator string
-
-	switch {
-	case strings.Contains(assetContract, "."):
-		separator = "."
-	case strings.Contains(assetContract, "-"):
-		separator = "-"
-	case strings.Contains(assetContract, "_"):
-		separator = "_"
-	default:
-		return "", "", fmt.Errorf("string must contain one of the following separators: '.', '-', '_'")
-	}
-
-	parts := strings.Split(assetContract, separator)
-
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format, string should contain exactly one separator")
-	}
-
-	asset := parts[0]
-	contract := parts[1]
-
-	return asset, contract, nil
-}
-
-func (client *Client) getNextValidSeqNumber(address xc.Address) (*int, error) {
+func (client *Client) getNextValidSeqNumber(address xc.Address) (*int64, error) {
 	request := AccountInfoRequest{
 		Method: AccountInfo,
 		Params: []AccountInfoParamEntry{
@@ -548,7 +697,7 @@ func (client *Client) getNextValidSeqNumber(address xc.Address) (*int, error) {
 	return &sequence, nil
 }
 
-func (client *Client) getLatestValidatedLedgerSequence() (*int, error) {
+func (client *Client) getLatestValidatedLedgerSequence() (*int64, error) {
 	ledgerRequest := LedgerRequest{
 		Method: Ledger,
 		Params: []LedgerParamEntry{
