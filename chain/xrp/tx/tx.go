@@ -5,11 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	xc "github.com/cordialsys/crosschain"
+	btctx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	binarycodec "github.com/xyield/xrpl-go/binary-codec"
-	"math/big"
 	"strings"
 )
 
@@ -103,7 +102,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	}
 
 	for _, rsvBytes := range signatures {
-		r, s, err := DecodeEcdsaSignature(rsvBytes)
+		r, s, err := btctx.DecodeEcdsaSignature(rsvBytes)
 		if err != nil {
 			return err
 		}
@@ -118,29 +117,6 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	return nil
 }
 
-func DecodeEcdsaSignature(signature xc.TxSignature) (btcec.ModNScalar, btcec.ModNScalar, error) {
-	var err error
-	var r btcec.ModNScalar
-	var s btcec.ModNScalar
-	rsv := [65]byte{}
-	if len(signature) != 65 && len(signature) != 64 {
-		return r, s, errors.New("signature must be 64 or 65 length serialized bytestring of r,s, and recovery byte")
-	}
-	copy(rsv[:], signature)
-
-	// Decode the signature and the pubkey script.
-	rInt := new(big.Int).SetBytes(rsv[:32])
-	sInt := new(big.Int).SetBytes(rsv[32:64])
-
-	rBz := r.Bytes()
-	sBz := s.Bytes()
-	rInt.FillBytes(rBz[:])
-	sInt.FillBytes(sBz[:])
-	r.SetBytes(&rBz)
-	s.SetBytes(&sBz)
-	return r, s, err
-}
-
 // GetSignatures returns back signatures, which may be used for signed-transaction broadcasting
 func (tx *Tx) GetSignatures() []xc.TxSignature {
 	return tx.TransactionSignature
@@ -148,6 +124,7 @@ func (tx *Tx) GetSignatures() []xc.TxSignature {
 
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
+
 	if tx.XRPTx == nil {
 		return []byte{}, errors.New("missing XRP transaction")
 	}
@@ -162,27 +139,16 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return []byte{}, errors.New("missing transaction signature")
 	}
 
-	amountLargeNumber := new(big.Int)
-	amountLargeNumber.SetString(xrpTx.Amount.StringValue, 10)
+	resultMapXRP := RenderToMap(*xrpTx)
+	resultMapWithAmount := make(map[string]interface{})
 
-	divisor := big.NewInt(1000)
+	if xrpTx.Amount.IsString {
+		resultMapWithAmount = WithTokenAmount(resultMapXRP, xrpTx.Amount.StringValue)
+	} else {
+		resultMapWithAmount = WithTokenAmount(resultMapXRP, xrpTx.Amount.AmountValue)
+	}
 
-	XRPAmount := new(big.Int)
-	XRPAmount.Div(amountLargeNumber, divisor)
-
-	result := make(map[string]interface{})
-	result["Account"] = string(xrpTx.Account)
-	result["Amount"] = XRPAmount.String()
-	result["Destination"] = string(xrpTx.Destination)
-	result["Fee"] = xrpTx.Fee
-	result["Flags"] = xrpTx.Flags
-	result["LastLedgerSequence"] = xrpTx.LastLedgerSequence
-	result["Sequence"] = xrpTx.Sequence
-	result["SigningPubKey"] = xrpTx.SigningPubKey
-	result["TransactionType"] = string(xrpTx.TransactionType)
-	result["TxnSignature"] = xrpTx.TxnSignature
-
-	encodeTx, err := binarycodec.Encode(result)
+	encodeTx, err := binarycodec.Encode(resultMapWithAmount)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to serialise serialised XRP transaction: %v", err)
 	}
@@ -200,8 +166,43 @@ func (tx Tx) Serialize() ([]byte, error) {
 	return []byte(encodeTx), nil
 }
 
+func RenderToMap(xrpTx XRPTransaction) map[string]interface{} {
+	result := make(map[string]interface{})
+	result["Account"] = string(xrpTx.Account)
+	result["Amount"] = xrpTx.Amount
+	result["Destination"] = string(xrpTx.Destination)
+	result["Fee"] = xrpTx.Fee
+	result["Flags"] = int(xrpTx.Flags)
+	result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
+	result["Sequence"] = int(xrpTx.Sequence)
+	result["SigningPubKey"] = xrpTx.SigningPubKey
+	result["TransactionType"] = string(xrpTx.TransactionType)
+	result["TxnSignature"] = xrpTx.TxnSignature
+
+	return result
+}
+
+func WithTokenAmount(fields map[string]interface{}, amount interface{}) map[string]interface{} {
+	switch v := amount.(type) {
+	case string:
+		fields["Amount"] = v
+	case *Amount:
+		fields["Amount"] = map[string]interface{}{
+			"currency": v.Currency,
+			"issuer":   v.Issuer,
+			"value":    v.Value,
+		}
+	case AmountBlockchain:
+		fields["Amount"] = map[string]interface{}{}
+	default:
+		fmt.Println("Invalid amount type")
+	}
+
+	return fields
+}
+
 // ExtractAssetAndContract parse assetContract and returns asset and contract
-func ExtractAssetAndContract(assetContract string) (string, string, error) {
+func ExtractAssetAndContract(assetContract string) (asset string, contract string, err error) {
 	var separator string
 
 	switch {
@@ -221,8 +222,8 @@ func ExtractAssetAndContract(assetContract string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid format, string should contain exactly one separator")
 	}
 
-	asset := parts[0]
-	contract := parts[1]
+	asset = parts[0]
+	contract = parts[1]
 
 	return asset, contract, nil
 }

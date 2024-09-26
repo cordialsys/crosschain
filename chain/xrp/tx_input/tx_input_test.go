@@ -65,7 +65,7 @@ func TestTxInputConflicts(t *testing.T) {
 			newInput: &TxInput{},
 			// check no old input
 			oldInput:        nil,
-			independent:     true,
+			independent:     false,
 			doubleSpendSafe: false,
 		},
 	}

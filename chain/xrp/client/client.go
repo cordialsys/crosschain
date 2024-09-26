@@ -120,17 +120,17 @@ type SubmitResult struct {
 }
 
 type SubmitResultTxJson struct {
-	Account            string `json:"Account"`
-	Amount             string `json:"Amount"`
-	Destination        string `json:"Destination"`
-	Fee                string `json:"Fee"`
-	Flags              int64  `json:"Flags"`
-	LastLedgerSequence int64  `json:"LastLedgerSequence"`
-	Sequence           int64  `json:"Sequence"`
-	SigningPubKey      string `json:"SigningPubKey"`
-	TransactionType    string `json:"TransactionType"`
-	TxnSignature       string `json:"TxnSignature"`
-	Hash               string `json:"hash"`
+	Account            string   `json:"Account"`
+	Amount             *Balance `json:"Amount"`
+	Destination        string   `json:"Destination"`
+	Fee                string   `json:"Fee"`
+	Flags              int64    `json:"Flags"`
+	LastLedgerSequence int64    `json:"LastLedgerSequence"`
+	Sequence           int64    `json:"Sequence"`
+	SigningPubKey      string   `json:"SigningPubKey"`
+	TransactionType    string   `json:"TransactionType"`
+	TxnSignature       string   `json:"TxnSignature"`
+	Hash               string   `json:"hash"`
 }
 
 type LedgerResponse struct {
