@@ -21,6 +21,21 @@ func TestNewClient(t *testing.T) {
 
 //func TestFetchTxInput(t *testing.T) {
 //
+//	vectors := []struct {
+//		asset             xc.ITask
+//		response          interface{}
+//		blockHash         string
+//		toIsATA           bool
+//		shouldCreateATA   bool
+//		tokenAccountCount int
+//		err               string
+//	}{
+//		{
+//			asset: &xc.ChainConfig{},
+//			response: `{"type": "xrp", "Sequence": 861800, "LastLedgerSequence": 1020484, "PublicKey": null}`,
+//		},
+//	}
+//
 //	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
 //	from := xc.Address("from")
 //	to := xc.Address("to")
@@ -28,7 +43,7 @@ func TestNewClient(t *testing.T) {
 //	require.NotNil(t, input)
 //	require.EqualError(t, err, "not implemented")
 //}
-//
+
 //func TestSubmitTx(t *testing.T) {
 //
 //	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
@@ -48,51 +63,51 @@ func TestNewClient(t *testing.T) {
 //		{
 //			tx: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 //			txResp: []string{`{"name": "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA", "hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-//  					   "chain": "XRP",
-//  "block": {
-//    "height": 94494,
-//    "hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-//    "time": "1994-08-23T18:49:52+03:00"
-//  },
-//  "transfers": [
-//    {
-//      "from": [
-//        {
-//          "asset": "chains/XRP/assets/XRP",
-//          "contract": "XRP",
-//          "balance": "10000000",
-//          "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
-//        }
-//      ],
-//      "to": [
-//        {
-//          "asset": "chains/XRP/assets/XRP",
-//          "contract": "XRP",
-//          "balance": "10000000",
-//          "address": "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP"
-//        }
-//      ]
-//    },
-//    {
-//      "from": [
-//        {
-//          "asset": "chains/XRP/assets/XRP",
-//          "contract": "XRP",
-//          "balance": "12",
-//          "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
-//        }
-//      ],
-//      "to": []
-//    }
-//  ],
-//  "fees": [
-//    {
-//      "asset": "chains/XRP/assets/XRP",
-//      "contract": "XRP",
-//      "balance": "12"
-//    }
-//  ],
-//  "confirmations": 587956
+// 					   "chain": "XRP",
+// "block": {
+//   "height": 94494,
+//   "hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+//   "time": "1994-08-23T18:49:52+03:00"
+// },
+// "transfers": [
+//   {
+//     "from": [
+//       {
+//         "asset": "chains/XRP/assets/XRP",
+//         "contract": "XRP",
+//         "balance": "10000000",
+//         "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
+//       }
+//     ],
+//     "to": [
+//       {
+//         "asset": "chains/XRP/assets/XRP",
+//         "contract": "XRP",
+//         "balance": "10000000",
+//         "address": "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP"
+//       }
+//     ]
+//   },
+//   {
+//     "from": [
+//       {
+//         "asset": "chains/XRP/assets/XRP",
+//         "contract": "XRP",
+//         "balance": "12",
+//         "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
+//       }
+//     ],
+//     "to": []
+//   }
+// ],
+// "fees": [
+//   {
+//     "asset": "chains/XRP/assets/XRP",
+//     "contract": "XRP",
+//     "balance": "12"
+//   }
+// ],
+// "confirmations": 587956
 //}`},
 //			ledgerResp: []string{`{}`},
 //			val:        xc.LegacyTxInfo{},

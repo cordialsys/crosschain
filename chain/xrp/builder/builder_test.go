@@ -1,6 +1,7 @@
 package builder_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -120,6 +121,8 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, string(xrpTx.Account), "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	require.Equal(t, xrpTx.Amount.StringValue, "12")
+	encodeForSigningNative := tnt.(*Tx).EncodeForSigning
+	require.Equal(t, hex.EncodeToString(encodeForSigningNative), "5354580012000022000000002400000000201b0000000061400000000000000c68400000000000000a73008114f667b0ca50cc7709a220b0561b85e53a48461fa88314e2afbd269d7da5e2b9931ccbd62fab5118a36618")
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
 	txBuilder2, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
@@ -136,4 +139,6 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, xrpTx.Amount.AmountValue.Currency, "FMT")
 	require.Equal(t, xrpTx.Amount.AmountValue.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
 	require.Equal(t, xrpTx.Amount.AmountValue.Value, "12")
+	encodeForSigningAsset := tnt.(*Tx).EncodeForSigning
+	require.Equal(t, hex.EncodeToString(encodeForSigningAsset), "5354580012000022000000002400000000201b0000000061d4c44364c5bb0000000000000000000000000000464d540000000000cc3e26d717bb8b8ff8c9af7fcc18e5b5b3f504d368400000000000000a73008114f667b0ca50cc7709a220b0561b85e53a48461fa88314e2afbd269d7da5e2b9931ccbd62fab5118a36618")
 }

@@ -82,7 +82,7 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 		return emvOther.Sequence != input.Sequence
 	}
 
-	return true
+	return false
 }
 
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {

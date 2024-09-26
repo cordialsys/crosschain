@@ -18,6 +18,7 @@ type TxBuilder struct {
 var _ xc.TxBuilder = &TxBuilder{}
 
 type TxInput = xrptxinput.TxInput
+type Tx = xrptx.Tx
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
@@ -52,16 +53,9 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
-	//amountBlockchain := new(big.Int)
-	//amountBlockchain.SetString(amount.String(), 10)
-	//
-	//divisor := big.NewInt(1000)
-	//
-	//XRPAmountBlockchain := new(big.Int)
-	//XRPAmountBlockchain.Div(amountBlockchain, divisor)
-
 	XRPAmount := xrptx.AmountBlockchain{
 		StringValue: amount.String(),
+		IsString:    true,
 	}
 
 	xrpTx := xrptx.XRPTransaction{
@@ -76,18 +70,10 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		TransactionType:    xrptx.PAYMENT,
 	}
 
-	result := make(map[string]interface{})
-	result["Account"] = string(xrpTx.Account)
-	result["Amount"] = xrpTx.Amount.StringValue
-	result["Destination"] = string(xrpTx.Destination)
-	result["Fee"] = xrpTx.Fee
-	result["Flags"] = int(xrpTx.Flags)
-	result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
-	result["Sequence"] = int(xrpTx.Sequence)
-	result["SigningPubKey"] = xrpTx.SigningPubKey
-	result["TransactionType"] = string(xrpTx.TransactionType)
+	resultMapXRP := xrptx.RenderToMap(xrpTx)
+	resultMapWithAmount := xrptx.WithTokenAmount(resultMapXRP, XRPAmount.StringValue)
 
-	encodeForSigningHex, err := binarycodec.EncodeForSigning(result)
+	encodeForSigningHex, err := binarycodec.EncodeForSigning(resultMapWithAmount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
 	}
@@ -127,10 +113,10 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		},
 	}
 
-	amountResult := make(map[string]interface{})
-	amountResult["currency"] = tokenAsset
-	amountResult["issuer"] = tokenContract
-	amountResult["value"] = amount.String()
+	//amountResult := make(map[string]interface{})
+	//amountResult["currency"] = tokenAsset
+	//amountResult["issuer"] = tokenContract
+	//amountResult["value"] = amount.String()
 
 	xrpTx := xrptx.XRPTransaction{
 		Account:            from,
@@ -144,18 +130,21 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		TransactionType:    xrptx.PAYMENT,
 	}
 
-	result := make(map[string]interface{})
-	result["Account"] = string(xrpTx.Account)
-	result["Amount"] = amountResult
-	result["Destination"] = string(xrpTx.Destination)
-	result["Fee"] = xrpTx.Fee
-	result["Flags"] = int(xrpTx.Flags)
-	result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
-	result["Sequence"] = int(xrpTx.Sequence)
-	result["SigningPubKey"] = xrpTx.SigningPubKey
-	result["TransactionType"] = string(xrpTx.TransactionType)
+	resultMapXRP := xrptx.RenderToMap(xrpTx)
+	resultMapWithAmount := xrptx.WithTokenAmount(resultMapXRP, XRPAmount.AmountValue)
 
-	encodeForSigningHex, err := binarycodec.EncodeForSigning(result)
+	//result := make(map[string]interface{})
+	//result["Account"] = string(xrpTx.Account)
+	//result["Amount"] = amountResult
+	//result["Destination"] = string(xrpTx.Destination)
+	//result["Fee"] = xrpTx.Fee
+	//result["Flags"] = int(xrpTx.Flags)
+	//result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
+	//result["Sequence"] = int(xrpTx.Sequence)
+	//result["SigningPubKey"] = xrpTx.SigningPubKey
+	//result["TransactionType"] = string(xrpTx.TransactionType)
+
+	encodeForSigningHex, err := binarycodec.EncodeForSigning(resultMapWithAmount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
 	}
