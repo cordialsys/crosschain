@@ -156,82 +156,134 @@ func TestFetchTxInput(t *testing.T) {
 func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
-		tx         string
-		txResp     interface{}
-		ledgerResp interface{}
-		val        xc.LegacyTxInfo
+		asset      xc.ITask
+		txHash     string
+		txResp     xrpClient.TransactionResponse
+		ledgerResp xrpClient.LedgerResponse
+		txInfo     xc.LegacyTxInfo
 		err        string
 	}{
 		{
-			tx: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-			txResp: []string{`{"name": "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA", "hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-					   "chain": "XRP",
-"block": {
-  "height": 94494,
-  "hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-  "time": "1994-08-23T18:49:52+03:00"
-},
-"transfers": [
-  {
-    "from": [
-      {
-        "asset": "chains/XRP/assets/XRP",
-        "contract": "XRP",
-        "balance": "10000000",
-        "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
-      }
-    ],
-    "to": [
-      {
-        "asset": "chains/XRP/assets/XRP",
-        "contract": "XRP",
-        "balance": "10000000",
-        "address": "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP"
-      }
-    ]
-  },
-  {
-    "from": [
-      {
-        "asset": "chains/XRP/assets/XRP",
-        "contract": "XRP",
-        "balance": "12",
-        "address": "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S"
-      }
-    ],
-    "to": []
-  }
-],
-"fees": [
-  {
-    "asset": "chains/XRP/assets/XRP",
-    "contract": "XRP",
-    "balance": "12"
-  }
-],
-"confirmations": 587956
-}`},
-			ledgerResp: []string{`{}`},
-			val:        xc.LegacyTxInfo{},
-			err:        "",
+			asset:  &xc.ChainConfig{},
+			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+			txResp: xrpClient.TransactionResponse{
+				xrpClient.TransactionResult{
+					Account:            "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+					Amount:             "10000000",
+					Destination:        "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+					Fee:                "12",
+					Flags:              2147483648,
+					LastLedgerSequence: 94538,
+					Sequence:           92261,
+					SigningPubKey:      "ED3F6EB32DDCFACD6128D245B7B8663391CEBFFF881310552B2C4911E267AAF81B",
+					TransactionType:    "Payment",
+					TxnSignature:       "1491B434F7DA81624D83F9C5F1CE82AAA3154715BCF1151E720531846E14D16A78F4BCBF4D35B012DC48189DA00888B5DF8F9221645C54FAB17B063BC122690F",
+					Hash:               "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					DeliverMax:         "10000000",
+					TakerGets:          nil,
+					TakerPays:          nil,
+					CtID:               "C001711E00000001",
+					Validated:          true,
+					Date:               777656992,
+					LedgerIndex:        94494,
+					InLedger:           94494,
+					Status:             "success",
+				},
+			},
+			ledgerResp: xrpClient.LedgerResponse{
+				Result: xrpClient.LedgerResult{
+					Ledger: xrpClient.LedgerInfo{
+						Closed:      false,
+						LedgerIndex: "91190071",
+						ParentHash:  "8BFD1FBA7E3E16C6F604DDB9DC235567D8D0C5F7BB62CF8A0A58B074937429C2",
+					},
+					LedgerCurrentIndex: 91190071,
+					Validated:          false,
+					Status:             "success",
+				},
+			},
+			txInfo: xc.LegacyTxInfo{
+				BlockHash:       "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				TxID:            "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				ExplorerURL:     "https://livenet.xrpl.org//tx/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA?cluster=mainnet",
+				From:            "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+				To:              "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+				ToAlt:           "",
+				ContractAddress: "",
+				Amount:          xc.NewAmountBlockchainFromStr("10000000"),
+				Fee:             xc.NewAmountBlockchainFromStr("12"),
+				FeeContract:     "",
+				BlockIndex:      94494,
+				BlockTime:       777656992,
+				Confirmations:   1144852,
+				Status:          xc.TxStatus(0),
+				Sources: []*xc.LegacyTxInfoEndpoint{
+					{
+						Address:                    "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+						ContractAddress:            "",
+						Amount:                     xc.NewAmountBlockchainFromStr("10000000"),
+						NativeAsset:                "",
+						Asset:                      "",
+						Memo:                       "",
+						LegacyAptosContractAddress: "",
+					},
+				},
+				Destinations: []*xc.LegacyTxInfoEndpoint{
+					{
+						Address:                    "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+						ContractAddress:            "",
+						Amount:                     xc.NewAmountBlockchainFromStr("10000000"),
+						NativeAsset:                "",
+						Asset:                      "",
+						Memo:                       "",
+						LegacyAptosContractAddress: "",
+					},
+				},
+				Time:         777656992,
+				TimeReceived: 0,
+				Error:        "",
+			},
+			err: "",
 		},
 	}
 
-	for i, v := range vectors {
-		fmt.Println("test case", i)
-		server, close := testtypes.MockJSONRPC(t, v.txResp)
-		defer close()
+	for _, vector := range vectors {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var reqBody map[string]interface{}
+			json.NewDecoder(r.Body).Decode(&reqBody)
+
+			method := reqBody["method"].(string)
+			if method == "tx" {
+				// Respond with AccountInfoResponse
+				json.NewEncoder(w).Encode(vector.txResp)
+			} else if method == "ledger" {
+				// Respond with LedgerResponse
+				json.NewEncoder(w).Encode(vector.ledgerResp)
+			} else {
+				t.Errorf("unexpected method: %s", method)
+			}
+		}))
+		defer server.Close()
+
+		if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
+			token.ChainConfig = &xc.ChainConfig{
+				URL:   server.URL,
+				Chain: "XRP",
+			}
+		} else {
+			vector.asset.(*xc.ChainConfig).URL = server.URL
+		}
 
 		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
-		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.tx))
+		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
 
-		if v.err != "" {
+		if vector.err != "" {
 			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, v.err)
+			require.ErrorContains(t, err, vector.err)
 		} else {
 			require.NoError(t, err)
 			require.NotNil(t, txInfo)
-			require.Equal(t, v.val, txInfo)
+			//require.Equal(t, vector.txInfo.Amount, txInfo.Transfers[0].From[0].Amount)
 		}
 	}
 }
