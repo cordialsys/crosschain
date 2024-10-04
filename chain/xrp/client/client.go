@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
@@ -12,6 +13,7 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 )
 
 // Client for XRP
@@ -35,12 +37,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 const MethodPost string = "POST"
-
-const AccountInfo string = "account_info"
-const AccountLines string = "account_lines"
-const Transaction string = "tx"
-const Ledger string = "ledger"
-const Submit string = "submit"
 
 type LedgerIndex string
 
@@ -167,8 +163,8 @@ type TransactionResult struct {
 	TxnSignature       string          `json:"TxnSignature"`
 	Hash               string          `json:"hash"`
 	DeliverMax         string          `json:"DeliverMax,omitempty"`
-	TakerGets          TakerGets       `json:"TakerGets,omitempty"`
-	TakerPays          TakerPays       `json:"TakerPays,omitempty"`
+	TakerGets          *TakeGetsOrPays `json:"TakerGets,omitempty"`
+	TakerPays          *TakeGetsOrPays `json:"TakerPays,omitempty"`
 	CtID               string          `json:"ctid,omitempty"`
 	Meta               TransactionMeta `json:"meta"`
 	Validated          bool            `json:"validated"`
@@ -178,50 +174,21 @@ type TransactionResult struct {
 	Status             string          `json:"status"`
 }
 
-type TakerGets struct {
-	StringValue string  `json:"-"`
-	AmountValue *Amount `json:"-"`
-	IsString    bool    `json:"-"`
+type TakeGetsOrPays struct {
+	XRPAmount   string  `json:"-"`
+	TokenAmount *Amount `json:"-"`
 }
 
-// UnmarshalJSON is the custom unmarshal method for TakerGets
-func (tg *TakerGets) UnmarshalJSON(data []byte) error {
+func (tg *TakeGetsOrPays) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err == nil {
-		tg.StringValue = str
-		tg.IsString = true
+		tg.XRPAmount = str
 		return nil
 	}
 
 	var amount Amount
 	if err := json.Unmarshal(data, &amount); err == nil {
-		tg.AmountValue = &amount
-		tg.IsString = false
-		return nil
-	}
-
-	return fmt.Errorf("TakerGets is neither a string nor an Amount")
-}
-
-type TakerPays struct {
-	StringValue string  `json:"-"`
-	AmountValue *Amount `json:"-"`
-	IsString    bool    `json:"-"`
-}
-
-// UnmarshalJSON is the custom unmarshal method for TakerPays
-func (tp *TakerPays) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err == nil {
-		tp.StringValue = str
-		tp.IsString = true
-		return nil
-	}
-
-	var amount Amount
-	if err := json.Unmarshal(data, &amount); err == nil {
-		tp.AmountValue = &amount
-		tp.IsString = false
+		tg.TokenAmount = &amount
 		return nil
 	}
 
@@ -296,25 +263,24 @@ type ModifiedNode struct {
 }
 
 type FinalFields struct {
-	Account       string  `json:"Account,omitempty"`
-	Balance       Balance `json:"Balance"`
-	Flags         int64   `json:"Flags"`
-	OwnerCount    int     `json:"OwnerCount,omitempty"`
-	Sequence      int64   `json:"Sequence,omitempty"`
-	IndexPrevious string  `json:"IndexPrevious,omitempty"`
-	Owner         string  `json:"Owner,omitempty"`
-	RootIndex     string  `json:"RootIndex,omitempty"`
-	HighLimit     *Amount `json:"HighLimit,omitempty"`
-	HighNode      string  `json:"HighNode,omitempty"`
-	LowLimit      *Amount `json:"LowLimit,omitempty"`
-	LowNode       string  `json:"LowNode,omitempty"`
-	AMMID         string  `json:"AMMID,omitempty"`
+	Account       string   `json:"Account,omitempty"`
+	Balance       *Balance `json:"Balance"`
+	Flags         int64    `json:"Flags"`
+	OwnerCount    int      `json:"OwnerCount,omitempty"`
+	Sequence      int64    `json:"Sequence,omitempty"`
+	IndexPrevious string   `json:"IndexPrevious,omitempty"`
+	Owner         string   `json:"Owner,omitempty"`
+	RootIndex     string   `json:"RootIndex,omitempty"`
+	HighLimit     *Amount  `json:"HighLimit,omitempty"`
+	HighNode      string   `json:"HighNode,omitempty"`
+	LowLimit      *Amount  `json:"LowLimit,omitempty"`
+	LowNode       string   `json:"LowNode,omitempty"`
+	AMMID         string   `json:"AMMID,omitempty"`
 }
 
 type Balance struct {
-	StringValue string  `json:"-"`
-	AmountValue *Amount `json:"-"`
-	IsString    bool    `json:"-"`
+	XRPAmount   string  `json:"-"`
+	TokenAmount *Amount `json:"-"`
 }
 
 // UnmarshalJSON is the custom unmarshal method for Balance
@@ -322,16 +288,14 @@ func (b *Balance) UnmarshalJSON(data []byte) error {
 	// Try to unmarshal the data as a string first
 	var str string
 	if err := json.Unmarshal(data, &str); err == nil {
-		b.StringValue = str
-		b.IsString = true
+		b.XRPAmount = str
 		return nil
 	}
 
 	// If not a string, try to unmarshal it as an Amount
 	var amount Amount
 	if err := json.Unmarshal(data, &amount); err == nil {
-		b.AmountValue = &amount
-		b.IsString = false
+		b.TokenAmount = &amount
 		return nil
 	}
 
@@ -443,16 +407,19 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Template tx
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	serializedTxInput, err := txInput.Serialize()
+	serializedTxInputBytes, err := txInput.Serialize()
 	if err != nil {
 		return err
 	}
 
+	serializedTxInputHex := hex.EncodeToString(serializedTxInputBytes)
+	serializedTxInputHexBytes := []byte(serializedTxInputHex)
+
 	submitRequest := &SubmitRequest{
-		Method: Submit,
+		Method: "submit",
 		Params: []SubmitParamEntry{
 			{
-				TxBlob: string(serializedTxInput),
+				TxBlob: string(serializedTxInputHexBytes),
 			},
 		},
 	}
@@ -481,7 +448,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 
 	txRequest := &TransactionRequest{
-		Method: Transaction,
+		Method: "tx",
 		Params: []TransactionParamEntry{
 			{
 				Transaction: txHash,
@@ -497,7 +464,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	ledgerRequest := LedgerRequest{
-		Method: Ledger,
+		Method: "ledger",
 		Params: []LedgerParamEntry{
 			{
 				LedgerIndex: "current",
@@ -516,16 +483,147 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	explorer := client.Asset.GetChain().ExplorerURL + "/tx/" + txResponse.Result.Hash + "?cluster=" + client.Asset.GetChain().Net
 
 	var sources []*xc.LegacyTxInfoEndpoint
-	sources = append(sources, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Account),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
-	})
-
 	var destinations []*xc.LegacyTxInfoEndpoint
-	destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Destination),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
-	})
+
+	if txResponse.Result.Destination != "" {
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(txResponse.Result.Account),
+			Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
+		})
+
+		destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(txResponse.Result.Destination),
+			Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
+		})
+	} else {
+		if txResponse.Result.TakerGets != nil {
+			if txResponse.Result.TakerGets.XRPAmount != "" {
+				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+					Address: xc.Address(txResponse.Result.Account),
+					Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerGets.XRPAmount),
+				})
+
+				for _, node := range txResponse.Result.Meta.AffectedNodes {
+					if node.ModifiedNode != nil {
+						if node.ModifiedNode.LedgerEntryType == "AccountRoot" {
+							var (
+								finalBalance, previousBalance int64
+								parseIntErr                   error
+							)
+
+							if node.ModifiedNode.FinalFields != nil {
+								finalBalance, parseIntErr = strconv.ParseInt(node.ModifiedNode.FinalFields.Balance.XRPAmount, 10, 64)
+								if parseIntErr != nil {
+									return xc.LegacyTxInfo{}, parseIntErr
+								}
+							} else {
+								break
+							}
+
+							if node.ModifiedNode.PreviousFields != nil {
+								previousBalance, parseIntErr = strconv.ParseInt(node.ModifiedNode.PreviousFields.Balance.XRPAmount, 10, 64)
+								if parseIntErr != nil {
+									return xc.LegacyTxInfo{}, parseIntErr
+								}
+							} else {
+								break
+							}
+
+							transactedAmount := finalBalance - previousBalance
+
+							soldAmount, parseIntErr := strconv.ParseInt(txResponse.Result.TakerGets.XRPAmount, 10, 64)
+							if parseIntErr != nil {
+								return xc.LegacyTxInfo{}, parseIntErr
+							}
+
+							if transactedAmount == soldAmount {
+								destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+									Address: xc.Address(node.ModifiedNode.FinalFields.Account),
+									Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerGets.XRPAmount),
+								})
+							}
+
+						}
+					}
+				}
+			} else {
+				amount, err := xc.NewAmountHumanReadableFromStr(txResponse.Result.TakerGets.TokenAmount.Value)
+				if err != nil {
+					return xc.LegacyTxInfo{}, err
+				}
+				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+					Address: xc.Address(txResponse.Result.Account),
+					Amount:  amount.ToBlockchain(15),
+					Asset:   txResponse.Result.TakerGets.TokenAmount.Currency,
+				})
+			}
+		}
+
+		if txResponse.Result.TakerPays != nil {
+			if txResponse.Result.TakerPays.XRPAmount != "" {
+				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+					Address: xc.Address(txResponse.Result.Account),
+					Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerPays.XRPAmount),
+				})
+			} else {
+				amount, err := xc.NewAmountHumanReadableFromStr(txResponse.Result.TakerPays.TokenAmount.Value)
+				if err != nil {
+					return xc.LegacyTxInfo{}, err
+				}
+
+				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+					Address: xc.Address(txResponse.Result.TakerPays.TokenAmount.Issuer),
+					Amount:  amount.ToBlockchain(15),
+					Asset:   txResponse.Result.TakerPays.TokenAmount.Currency,
+				})
+
+				for _, node := range txResponse.Result.Meta.AffectedNodes {
+					if node.ModifiedNode != nil {
+						if node.ModifiedNode.LedgerEntryType == "RippleState" {
+							var (
+								finalBalance, previousBalance, soldAmount float64
+								parseIntErr                               error
+							)
+
+							if node.ModifiedNode.FinalFields != nil {
+								finalBalance, parseIntErr = strconv.ParseFloat(node.ModifiedNode.FinalFields.Balance.TokenAmount.Value, 10)
+								if parseIntErr != nil {
+									return xc.LegacyTxInfo{}, parseIntErr
+								}
+							} else {
+								break
+							}
+
+							if node.ModifiedNode.PreviousFields != nil {
+								previousBalance, parseIntErr = strconv.ParseFloat(node.ModifiedNode.PreviousFields.Balance.TokenAmount.Value, 10)
+								if parseIntErr != nil {
+									return xc.LegacyTxInfo{}, parseIntErr
+								}
+							} else {
+								break
+							}
+
+							transactedAmount := finalBalance - previousBalance
+
+							soldAmount, parseIntErr = strconv.ParseFloat(txResponse.Result.TakerPays.TokenAmount.Value, 10)
+							if parseIntErr != nil {
+								return xc.LegacyTxInfo{}, parseIntErr
+							}
+
+							if transactedAmount == soldAmount {
+								destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+									Address: xc.Address(node.ModifiedNode.FinalFields.Account),
+									Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerGets.XRPAmount),
+								})
+							}
+
+						}
+					}
+				}
+
+			}
+		}
+	}
 
 	var status xc.TxStatus
 	if txResponse.Result.Status == "success" {
@@ -581,7 +679,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
 	request := AccountInfoRequest{
-		Method: AccountInfo,
+		Method: "account_info",
 		Params: []AccountInfoParamEntry{
 			{
 				Account:     address,
@@ -614,7 +712,7 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	}
 
 	request := AccountLinesRequest{
-		Method: AccountLines,
+		Method: "account_lines",
 		Params: []AccountLinesParamEntry{
 			{
 				Account: address,
@@ -678,7 +776,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 
 func (client *Client) getNextValidSeqNumber(address xc.Address) (*int64, error) {
 	request := AccountInfoRequest{
-		Method: AccountInfo,
+		Method: "account_info",
 		Params: []AccountInfoParamEntry{
 			{
 				Account:     address,
@@ -699,7 +797,7 @@ func (client *Client) getNextValidSeqNumber(address xc.Address) (*int64, error) 
 
 func (client *Client) getLatestValidatedLedgerSequence() (*int64, error) {
 	ledgerRequest := LedgerRequest{
-		Method: Ledger,
+		Method: "ledger",
 		Params: []LedgerParamEntry{
 			{
 				LedgerIndex: Current,

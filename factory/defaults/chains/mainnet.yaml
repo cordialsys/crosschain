@@ -509,6 +509,6 @@ chains:
     driver: xrp
     chain_name: xrp
     explorer_url: https://livenet.xrpl.org/
-    decimals: 9
+    decimals: 15
     indexer_type: ripple
     polling_period: 3m

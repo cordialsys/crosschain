@@ -7,7 +7,7 @@ import (
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/sirupsen/logrus"
-	binarycodec "github.com/xyield/xrpl-go/binary-codec"
+	"strconv"
 )
 
 // TxBuilder for Template
@@ -54,8 +54,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	txInput := input.(*TxInput)
 
 	XRPAmount := xrptx.AmountBlockchain{
-		StringValue: amount.String(),
-		IsString:    true,
+		XRPAmount: amount.String(),
 	}
 
 	xrpTx := xrptx.XRPTransaction{
@@ -70,23 +69,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		TransactionType:    xrptx.PAYMENT,
 	}
 
-	resultMapXRP := xrptx.RenderToMap(xrpTx)
-	resultMapWithAmount := xrptx.WithTokenAmount(resultMapXRP, XRPAmount.StringValue)
-
-	encodeForSigningHex, err := binarycodec.EncodeForSigning(resultMapWithAmount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
-	}
-
-	encodeForSigningBytes, err := hex.DecodeString(encodeForSigningHex)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create byte object from hex serialized transaction %v", err)
-	}
-
 	return &xrptx.Tx{
-		XRPTx:            &xrpTx,
-		SignPubKey:       txInput.PublicKey,
-		EncodeForSigning: encodeForSigningBytes,
+		XRPTx:      &xrpTx,
+		SignPubKey: txInput.PublicKey,
 	}, nil
 }
 
@@ -106,17 +91,21 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	XRPAmount := xrptx.AmountBlockchain{
-		AmountValue: &xrptx.Amount{
+		TokenAmount: &xrptx.Amount{
 			Currency: tokenAsset,
 			Issuer:   tokenContract,
 			Value:    amount.String(),
 		},
 	}
 
-	//amountResult := make(map[string]interface{})
-	//amountResult["currency"] = tokenAsset
-	//amountResult["issuer"] = tokenContract
-	//amountResult["value"] = amount.String()
+	var destinationTag int64
+	if txInput.LegacyMemo != "" {
+		destinationTag, err = strconv.ParseInt(txInput.LegacyMemo, 10, 64)
+		if err != nil {
+			fmt.Println("Error converting string to int64:", err)
+			return nil, fmt.Errorf("error converting destinationTag to int64: %v", err)
+		}
+	}
 
 	xrpTx := xrptx.XRPTransaction{
 		Account:            from,
@@ -128,35 +117,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		Sequence:           txInput.Sequence,
 		SigningPubKey:      hex.EncodeToString(txInput.PublicKey),
 		TransactionType:    xrptx.PAYMENT,
-	}
-
-	resultMapXRP := xrptx.RenderToMap(xrpTx)
-	resultMapWithAmount := xrptx.WithTokenAmount(resultMapXRP, XRPAmount.AmountValue)
-
-	//result := make(map[string]interface{})
-	//result["Account"] = string(xrpTx.Account)
-	//result["Amount"] = amountResult
-	//result["Destination"] = string(xrpTx.Destination)
-	//result["Fee"] = xrpTx.Fee
-	//result["Flags"] = int(xrpTx.Flags)
-	//result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
-	//result["Sequence"] = int(xrpTx.Sequence)
-	//result["SigningPubKey"] = xrpTx.SigningPubKey
-	//result["TransactionType"] = string(xrpTx.TransactionType)
-
-	encodeForSigningHex, err := binarycodec.EncodeForSigning(resultMapWithAmount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
-	}
-
-	encodeForSigningBytes, err := hex.DecodeString(encodeForSigningHex)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create byte object from hex serialized transaction %v", err)
+		DestinationTag:     destinationTag,
 	}
 
 	return &xrptx.Tx{
-		XRPTx:            &xrpTx,
-		SignPubKey:       txInput.PublicKey,
-		EncodeForSigning: encodeForSigningBytes,
+		XRPTx:      &xrpTx,
+		SignPubKey: txInput.PublicKey,
 	}, nil
 }
