@@ -10,16 +10,22 @@ import (
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Sequence           int64 `json:"Sequence"`
-	LastLedgerSequence int64 `json:"LastLedgerSequence"`
+	Sequence           int64  `json:"Sequence"`
+	LastLedgerSequence int64  `json:"LastLedgerSequence"`
+	LegacyMemo         string `json:"Memo,omitempty"`
 	PublicKey          []byte
 }
 
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithPublicKey = &TxInput{}
+var _ xc.TxInputWithMemo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+}
+
+func (input *TxInput) SetMemo(memo string) {
+	input.LegacyMemo = memo
 }
 
 func (input *TxInput) SetPublicKey(publicKey []byte) error {

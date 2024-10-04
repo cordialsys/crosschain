@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	xc "github.com/cordialsys/crosschain"
 	btctx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	"github.com/sirupsen/logrus"
 	binarycodec "github.com/xyield/xrpl-go/binary-codec"
 	"strings"
 )
@@ -23,6 +24,7 @@ type XRPTransaction struct {
 	Account            xc.Address       `json:"Account"`
 	Amount             AmountBlockchain `json:"Amount"`
 	Destination        xc.Address       `json:"Destination"`
+	DestinationTag     int64            `json:"DestinationTag"`
 	Fee                string           `json:"Fee"`
 	Flags              int64            `json:"Flags,omitempty"`
 	LastLedgerSequence int64            `json:"LastLedgerSequence"`
@@ -33,9 +35,8 @@ type XRPTransaction struct {
 }
 
 type AmountBlockchain struct {
-	StringValue string  `json:"-"`
-	AmountValue *Amount `json:"-"`
-	IsString    bool    `json:"-"`
+	XRPAmount   string  `json:"-"`
+	TokenAmount *Amount `json:"-"`
 }
 
 type Amount struct {
@@ -48,7 +49,6 @@ type Amount struct {
 type Tx struct {
 	XRPTx                *XRPTransaction
 	SignPubKey           []byte
-	EncodeForSigning     []byte
 	EncodeXRPTx          *string
 	TransactionSignature []xc.TxSignature
 }
@@ -57,12 +57,14 @@ var _ xc.Tx = &Tx{}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	serializedTxInput, err := tx.Serialize()
+	serializedTxInputBytes, err := tx.Serialize()
 	if err != nil {
 		return xc.TxHash("")
 	}
 
-	encodeTxWithPrefix := TRANSACTION_HASH_PREFIX + string(serializedTxInput)
+	serializedTxInputHex := hex.EncodeToString(serializedTxInputBytes)
+
+	encodeTxWithPrefix := TRANSACTION_HASH_PREFIX + string(serializedTxInputHex)
 
 	decodedBytes, err := hex.DecodeString(encodeTxWithPrefix)
 	if err != nil {
@@ -82,17 +84,27 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		return nil, errors.New("missing XRP transaction")
 	}
 
-	if tx.EncodeForSigning == nil {
-		return nil, errors.New("missing serialised XRP transaction")
+	resultMapXRP, renderErr := RenderToMap(*tx.XRPTx)
+	if renderErr != nil {
+		return nil, fmt.Errorf("error rendering transaction to map: %v", renderErr)
+	}
+
+	encodeForSigningHex, err := binarycodec.EncodeForSigning(resultMapXRP)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize transaction for signing %v", err)
+	}
+
+	encodeForSigningBytes, err := hex.DecodeString(encodeForSigningHex)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create byte object from hex serialized transaction %v", err)
 	}
 
 	// For k256 signing, XRP uses sha512[:32]
 	// https://github.com/XRPLF/xrpl-py/blob/17aad31f77452d30917b9e4544c9c87c274c0e3d/xrpl/core/keypairs/secp256k1.py#L95
-	digestSha512 := sha512.Sum512(tx.EncodeForSigning)
+	digestSha512 := sha512.Sum512(encodeForSigningBytes)
 	firstHalf := digestSha512[:32]
 
 	return []xc.TxDataToSign{firstHalf[:]}, nil
-
 }
 
 // AddSignatures adds a signature to Tx
@@ -139,38 +151,52 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return []byte{}, errors.New("missing transaction signature")
 	}
 
-	resultMapXRP := RenderToMap(*xrpTx)
-	resultMapWithAmount := make(map[string]interface{})
-
-	if xrpTx.Amount.IsString {
-		resultMapWithAmount = WithTokenAmount(resultMapXRP, xrpTx.Amount.StringValue)
-	} else {
-		resultMapWithAmount = WithTokenAmount(resultMapXRP, xrpTx.Amount.AmountValue)
+	resultMapXRP, renderErr := RenderToMap(*xrpTx)
+	if renderErr != nil {
+		return []byte{}, fmt.Errorf("failed to render XRP transaction: %w", renderErr)
 	}
 
-	encodeTx, err := binarycodec.Encode(resultMapWithAmount)
+	encodedTx, err := binarycodec.Encode(resultMapXRP)
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to serialise serialised XRP transaction: %v", err)
 	}
 
+	decodedBytes, err := hex.DecodeString(encodedTx)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to decode XRP transaction: %v", err)
+	}
+	serializedTxInputHex := hex.EncodeToString(decodedBytes)
+	fmt.Println(serializedTxInputHex)
+
+	hashHex, err := HashFromTx(encodedTx)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to generate transaction hash")
+	}
+	logrus.WithField("hash", hashHex).Debug("Transaction hash")
+
+	return decodedBytes, nil
+}
+
+func HashFromTx(encodeTx string) (string, error) {
 	encodeTxWithPrefix := TRANSACTION_HASH_PREFIX + string(encodeTx)
 
 	decodedBytes, err := hex.DecodeString(encodeTxWithPrefix)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode XRP transaction: %w", err)
+	}
 
 	hash := sha512.Sum512(decodedBytes)
-
 	firstHalf := hash[:32]
 	hashHex := hex.EncodeToString(firstHalf)
-	fmt.Println(hashHex)
 
-	return []byte(encodeTx), nil
+	return hashHex, nil
 }
 
-func RenderToMap(xrpTx XRPTransaction) map[string]interface{} {
+func RenderToMap(xrpTx XRPTransaction) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["Account"] = string(xrpTx.Account)
-	result["Amount"] = xrpTx.Amount
 	result["Destination"] = string(xrpTx.Destination)
+	result["DestinationTag"] = int(xrpTx.DestinationTag)
 	result["Fee"] = xrpTx.Fee
 	result["Flags"] = int(xrpTx.Flags)
 	result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
@@ -179,26 +205,30 @@ func RenderToMap(xrpTx XRPTransaction) map[string]interface{} {
 	result["TransactionType"] = string(xrpTx.TransactionType)
 	result["TxnSignature"] = xrpTx.TxnSignature
 
-	return result
-}
-
-func WithTokenAmount(fields map[string]interface{}, amount interface{}) map[string]interface{} {
-	switch v := amount.(type) {
-	case string:
-		fields["Amount"] = v
-	case *Amount:
-		fields["Amount"] = map[string]interface{}{
-			"currency": v.Currency,
-			"issuer":   v.Issuer,
-			"value":    v.Value,
+	if xrpTx.Amount.XRPAmount != "" {
+		amountRenderErr := RenderXrpAmount(result, xrpTx.Amount.XRPAmount)
+		if amountRenderErr != nil {
+			return nil, fmt.Errorf("failed to render XRP amount: %w", amountRenderErr)
 		}
-	case AmountBlockchain:
-		fields["Amount"] = map[string]interface{}{}
-	default:
-		fmt.Println("Invalid amount type")
+	} else {
+		RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
 	}
 
-	return fields
+	return result, nil
+}
+
+func RenderXrpAmount(fields map[string]interface{}, amount string) error {
+	fields["Amount"] = amount
+
+	return nil
+}
+
+func RenderTokenAmount(fields map[string]interface{}, amount *Amount) {
+	fields["Amount"] = map[string]interface{}{
+		"currency": amount.Currency,
+		"issuer":   amount.Issuer,
+		"value":    amount.Value,
+	}
 }
 
 // ExtractAssetAndContract parse assetContract and returns asset and contract

@@ -1,7 +1,6 @@
 package tx_test
 
 import (
-	"encoding/hex"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -11,107 +10,198 @@ import (
 
 func TestTxHash(t *testing.T) {
 
-	tx1 := tx.Tx{}
-	hash := tx1.Hash()
-	require.Equal(t, "", string(hash))
-}
-
-func TestTxSighashesErr(t *testing.T) {
-
-	tx1 := tx.Tx{}
-	sighashes1, err1 := tx1.Sighashes()
-	require.EqualError(t, err1, "missing XRP transaction")
-	require.Nil(t, sighashes1)
-
-	tx2 := tx.Tx{
-		XRPTx: &tx.XRPTransaction{},
+	type testcase struct {
+		tx           tx.Tx
+		expectedHash xc.TxHash
 	}
-	sighashes2, err2 := tx2.Sighashes()
-	require.EqualError(t, err2, "missing serialised XRP transaction")
-	require.Nil(t, sighashes2)
 
-	hexString := "5354580012000022000000002400070807201B000C44F96140000000014FB18068400000000000000A7321039543A0D3004CDA0904A09FB3710251C652D69EA338589279BC849D47A7B019A18114E2AFBD269D7DA5E2B9931CCBD62FAB5118A366188314BA4BEC4015A7CA2D99BE3319F488E0CA983D5506"
-	encodeForSigning, _ := hex.DecodeString(hexString)
-	tx3 := tx.Tx{
-		XRPTx:            &tx.XRPTransaction{},
-		EncodeForSigning: encodeForSigning,
+	vectors := []testcase{
+		{
+			// Missing XRP Transaction
+			tx:           tx.Tx{},
+			expectedHash: "",
+		},
+		{
+			// Missing LastLedgerSequence
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						XRPAmount: "10000000",
+					},
+					Destination:     "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:  0,
+					Fee:             "10",
+					Flags:           0,
+					Sequence:        861823,
+					SigningPubKey:   "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType: "Payment",
+					TxnSignature:    "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
+				},
+			},
+			expectedHash: "",
+		},
+		{
+			// Missing TxnSignature
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						XRPAmount: "10000000",
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					Flags:              0,
+					LastLedgerSequence: 1220981,
+					Sequence:           861823,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+				},
+			},
+			expectedHash: "",
+		},
+		{
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						XRPAmount: "10000000",
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					Flags:              0,
+					LastLedgerSequence: 1220981,
+					Sequence:           861823,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
+				},
+			},
+			expectedHash: "47f709b91e363cd6f316826a593b43b8aee80a596058361074ca73ff374cd8b6",
+		},
+		{
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						TokenAmount: &tx.Amount{
+							Currency: "USD",
+							Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+							Value:    "1.52",
+						},
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					Flags:              0,
+					LastLedgerSequence: 1220981,
+					Sequence:           861823,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
+				},
+			},
+			expectedHash: "187f1ac69f774346b220f92c9fb591c1bbb87a3877580d5caa16ea6bf7027595",
+		},
 	}
-	sighashes3, err3 := tx3.Sighashes()
-	require.Nil(t, err3)
-	require.NotNil(t, sighashes3)
+
+	for _, vector := range vectors {
+		actualHash := vector.tx.Hash()
+		require.Equal(t, vector.expectedHash, actualHash)
+	}
 }
 
 func TestTxSighashes(t *testing.T) {
 
 	type testcase struct {
-		XRPTx               *tx.XRPTransaction
-		EncodeForSigningHex string
-
-		SigHash []xc.TxDataToSign
+		tx              tx.Tx
+		expectedSigHash []xc.TxDataToSign
+		err             string
 	}
-	//startTime := int64((100 * time.Hour).Seconds())
+
 	vectors := []testcase{
 		{
-			XRPTx: &tx.XRPTransaction{
-				Account:            "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH",
-				Amount:             tx.AmountBlockchain{StringValue: "10"},
-				Destination:        "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
-				Fee:                "10",
-				Sequence:           460817,
-				Flags:              0,
-				LastLedgerSequence: 1011094,
-				SigningPubKey:      "039543A0D3004CDA0904A09FB3710251C652D69EA338589279BC849D47A7B019A1",
-				TransactionType:    "Payment",
-			},
-			EncodeForSigningHex: "5354580012000022000000002400070811201B000F6D9661400000000098968068400000000000000A7321039543A0D3004CDA0904A09FB3710251C652D69EA338589279BC849D47A7B019A18114E2AFBD269D7DA5E2B9931CCBD62FAB5118A366188314BA4BEC4015A7CA2D99BE3319F488E0CA983D5506",
-			SigHash: []xc.TxDataToSign{
-				{
-					0xa7, 0xb9, 0x3e, 0x26, 0x85, 0xed, 0x8d, 0x98,
-					0xb4, 0x31, 0x8e, 0x7e, 0xd8, 0xb9, 0xa9, 0xae,
-					0xb0, 0xa9, 0x3f, 0x7e, 0x37, 0x1c, 0x85, 0xca,
-					0x94, 0xc9, 0x5c, 0xb1, 0xa4, 0x47, 0xb7, 0xe4,
-				},
-			},
+			// Missing XRP Transaction
+			tx:              tx.Tx{},
+			expectedSigHash: nil,
+			err:             "missing XRP transaction",
 		},
 		{
-			XRPTx: &tx.XRPTransaction{
-				Account:            "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH",
-				Amount:             tx.AmountBlockchain{AmountValue: &tx.Amount{Currency: "USD", Issuer: "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq", Value: "0.02"}},
-				Destination:        "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
-				Fee:                "10",
-				Sequence:           460817,
-				Flags:              0,
-				LastLedgerSequence: 1011094,
-				SigningPubKey:      "039543A0D3004CDA0904A09FB3710251C652D69EA338589279BC849D47A7B019A1",
-				TransactionType:    "Payment",
-			},
-			EncodeForSigningHex: "5354580012000022000000002400070811201B000F6D9661D4071AFD498D000000000000000000000000000055534400000000002ADB0B3959D60A6E6991F729E1918B716392523068400000000000000A7321039543A0D3004CDA0904A09FB3710251C652D69EA338589279BC849D47A7B019A18114E2AFBD269D7DA5E2B9931CCBD62FAB5118A366188314BA4BEC4015A7CA2D99BE3319F488E0CA983D5506",
-			SigHash: []xc.TxDataToSign{
-				{
-					0xc0, 0x21, 0x67, 0xc1, 0x35, 0xa7, 0x04, 0xcd,
-					0xb4, 0x00, 0x8d, 0xeb, 0x5b, 0x7e, 0xcc, 0x5c,
-					0x06, 0x00, 0xe5, 0x7f, 0x8e, 0xda, 0x06, 0x16,
-					0x7e, 0xfc, 0x8e, 0x74, 0x62, 0x41, 0x7c, 0xc3,
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						XRPAmount: "10000000",
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					LastLedgerSequence: 1220981,
+					Flags:              0,
+					Sequence:           861823,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
 				},
 			},
+			expectedSigHash: []xc.TxDataToSign{
+				{
+					0x22, 0xd2, 0x62, 0x61, 0x39, 0x20, 0x92, 0x3e,
+					0x82, 0x51, 0xe9, 0xb1, 0x66, 0xb8, 0xc1, 0xe6,
+					0x4f, 0xf9, 0xc5, 0xb, 0xc3, 0x4c, 0xde, 0x13,
+					0xc3, 0x84, 0xf7, 0x30, 0xd3, 0x79, 0xf3, 0x62,
+				},
+			},
+			err: "",
+		},
+		{
+			tx: tx.Tx{
+				XRPTx: &tx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: tx.AmountBlockchain{
+						TokenAmount: &tx.Amount{
+							Currency: "USD",
+							Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+							Value:    "1.52",
+						},
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					LastLedgerSequence: 1220981,
+					Flags:              0,
+					Sequence:           861823,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
+				},
+			},
+			expectedSigHash: []xc.TxDataToSign{
+				{
+					0xee, 0xc2, 0x23, 0x3a, 0x7c, 0x3, 0x56, 0xf,
+					0x3d, 0xc6, 0x14, 0x3b, 0x0, 0xe1, 0x34, 0x94,
+					0xf3, 0x28, 0x37, 0xdf, 0x67, 0xab, 0xbb, 0x1e,
+					0xde, 0x9e, 0xf0, 0xa3, 0xfe, 0xfd, 0x23, 0xa7,
+				},
+			},
+			err: "",
 		},
 	}
-	for _, v := range vectors {
 
-		encodeForSigningBytes, _ := hex.DecodeString(v.EncodeForSigningHex)
-		tx3 := tx.Tx{
-			XRPTx:            &tx.XRPTransaction{},
-			EncodeForSigning: encodeForSigningBytes,
+	for _, vector := range vectors {
+		sigHash, err := vector.tx.Sighashes()
+		require.Equal(t, vector.expectedSigHash, sigHash)
+		if err != nil {
+			require.Error(t, err)
+		} else {
+			require.Nil(t, err)
 		}
-		sighashes, err := tx3.Sighashes()
-		require.Nil(t, err)
-		require.NotNil(t, sighashes)
-		require.Equal(t, sighashes[0], v.SigHash[0])
 	}
 }
 
 func TestTxAddSignature(t *testing.T) {
-
 	tx1 := tx.Tx{
 		TransactionSignature: []xc.TxSignature{},
 	}

@@ -295,5 +295,5 @@ chains:
     driver: xrp
     net: devnet
     chain_name: xrp (Devnet)
-    explorer_url: https://livenet.xrpl.org/
-    decimals: 9
+    explorer_url: https://testnet.xrpl.org/
+    decimals: 6

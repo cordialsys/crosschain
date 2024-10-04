@@ -29,7 +29,7 @@ func TestTxInputConflicts(t *testing.T) {
 		independent     bool
 		doubleSpendSafe bool
 	}
-	//startTime := int64((100 * time.Hour).Seconds())
+
 	vectors := []testcase{
 		{
 			newInput: &TxInput{
