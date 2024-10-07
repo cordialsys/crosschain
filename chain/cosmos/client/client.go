@@ -22,7 +22,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"

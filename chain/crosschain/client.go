@@ -176,7 +176,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	var r = &types.LegacyTxInputRes{}
 	_ = json.Unmarshal(res, r)
-	return drivers.UnmarshalTxInput(r.TxInput)
+	return drivers.UnmarshalTxInput(r.NewTxInput)
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {

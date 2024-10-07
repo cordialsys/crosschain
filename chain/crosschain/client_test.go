@@ -48,7 +48,8 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	txInputBz, _ := json.Marshal(txInput)
 	resObj := types.LegacyTxInputRes{
 		TxInputReq: &types.TxInputReq{},
-		TxInput:    txInputBz,
+		NewTxInput: txInputBz,
+		TxInput:    txInput,
 	}
 	res, _ := json.Marshal(resObj)
 

@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 
-	wasmd "github.com/CosmWasm/wasmd/x/wasm/types"
+	wasmd "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
 	injective "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/types"
 	terraclassic "github.com/cordialsys/crosschain/chain/cosmos/types/classic-terra/core/v2/x/vesting/types"
@@ -135,21 +135,25 @@ func registerInterfacesWasmd(registry codectypes.InterfaceRegistry) {
 	)
 	registry.RegisterImplementations(
 		(*sdk.Msg)(nil),
-		&wasmd.MsgStoreCode{},
-		&wasmd.MsgInstantiateContract{},
-		&wasmd.MsgInstantiateContract2{},
+		// If we need any of these types registered, we need to copy their
+		// interface definitions from https://github.com/CosmWasm/wasmd/blob/main/x/wasm/types
+		// to our local types/CosmWasm
+
+		// &wasmd.MsgStoreCode{},
+		// &wasmd.MsgInstantiateContract{},
+		// &wasmd.MsgInstantiateContract2{},
 		&wasmd.MsgExecuteContract{},
-		&wasmd.MsgMigrateContract{},
-		&wasmd.MsgUpdateAdmin{},
-		&wasmd.MsgClearAdmin{},
+		// &wasmd.MsgMigrateContract{},
+		// &wasmd.MsgUpdateAdmin{},
+		// &wasmd.MsgClearAdmin{},
 		// &wasmd.MsgIBCCloseChannel{},
 		// &wasmd.MsgIBCSend{},
-		&wasmd.MsgUpdateInstantiateConfig{},
-		&wasmd.MsgUpdateParams{},
-		&wasmd.MsgSudoContract{},
-		&wasmd.MsgPinCodes{},
-		&wasmd.MsgUnpinCodes{},
-		&wasmd.MsgStoreAndInstantiateContract{},
+		// &wasmd.MsgUpdateInstantiateConfig{},
+		// &wasmd.MsgUpdateParams{},
+		// &wasmd.MsgSudoContract{},
+		// &wasmd.MsgPinCodes{},
+		// &wasmd.MsgUnpinCodes{},
+		// &wasmd.MsgStoreAndInstantiateContract{},
 	)
 	// registry.RegisterImplementations(
 	// 	(*v1beta1.Content)(nil),
