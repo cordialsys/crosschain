@@ -49,7 +49,6 @@ type Amount struct {
 type Tx struct {
 	XRPTx                *XRPTransaction
 	SignPubKey           []byte
-	EncodeXRPTx          *string
 	TransactionSignature []xc.TxSignature
 }
 
