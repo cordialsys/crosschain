@@ -51,7 +51,8 @@ type StakingInputReq struct {
 
 type LegacyTxInputRes struct {
 	*TxInputReq
-	TxInput json.RawMessage `json:"input,omitempty"`
+	xc.TxInput `json:"raw_tx_input,omitempty"`
+	NewTxInput json.RawMessage `json:"input,omitempty"`
 }
 
 type TxInputRes struct {
