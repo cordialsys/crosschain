@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -146,12 +147,63 @@ func TestFetchTxInput(t *testing.T) {
 	}
 }
 
-//func TestSubmitTx(t *testing.T) {
-//
-//	client, _ := xrpClient.NewClient(&xc.ChainConfig{})
-//	err := client.SubmitTx(context.Background(), &tx.Tx{})
-//	require.EqualError(t, err, "not implemented")
-//}
+func TestSubmitTx(t *testing.T) {
+
+	vectors := []struct {
+		txInput    xc.Tx
+		submitResp xrpClient.SubmitResponse
+		asset      xc.ITask
+	}{
+		{
+			txInput: &xrptx.Tx{
+				XRPTx: &xrptx.XRPTransaction{
+					Account: "r92tsEZEjK82wra6xaDvjZocKnR78VqpEM",
+					Amount: xrptx.AmountBlockchain{
+						XRPAmount: "10000000",
+					},
+					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
+					DestinationTag:     0,
+					Fee:                "10",
+					Flags:              0,
+					LastLedgerSequence: 1314663,
+					Sequence:           861824,
+					SigningPubKey:      "0391e85c96feab1c71250308ef99375bb3fa9b846fc2c8b906976fa9ac4bed0857",
+					TransactionType:    "Payment",
+					TxnSignature:       "30450221009e7787de5b11bc17eaec2bd5841879434ce19fbe6f137eff0cd919ba435b236b02205f6afbcea8cc0f0cdda593a72f67aaeeb37b955ef4b523ed2967c2bade3c322b",
+				},
+			},
+			submitResp: xrpClient.SubmitResponse{
+				Result: xrpClient.SubmitResult{
+					Accepted:                 true,
+					AccountSequenceAvailable: 861827,
+					AccountSequenceNext:      861827,
+					Applied:                  true,
+					Broadcast:                true,
+					EngineResult:             "tesSUCCESS",
+					EngineResultCode:         0,
+					EngineResultMessage:      "The transaction was applied. Only final in a validated ledger.",
+					Kept:                     true,
+					OpenLedgerCost:           "10",
+					Queued:                   false,
+					TxBlob:                   "120000220000000024000D26822E00000000201B0014104261400000000098968068400000000000000A73210391E85C96FEAB1C71250308EF99375BB3FA9B846FC2C8B906976FA9AC4BED085774463044022047239A5473D9830F8D7379D931FCB869A40F1CAA7082901258274815D8F7B5E30220294C7CA1B3ADB4702CF3A43892C8AB8BBA6AF160492B0A595C396146A6D1CA1B81145E29568B3CD06772650182A436111F283A91A51F83141C5C7D6FFB375B5A656CC0E80E20F1C8CA2E68BB",
+					ValidatedLedgerIndex:     1314863,
+					Status:                   "success",
+				},
+			},
+		},
+	}
+
+	for testNo, vector := range vectors {
+		fmt.Println("testcase ", testNo)
+		server, close := testtypes.MockJSONRPC(t, vector.submitResp)
+		defer close()
+
+		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+
+		err := client.SubmitTx(context.Background(), vector.txInput)
+		require.NoError(t, err)
+	}
+}
 
 func TestFetchTxInfo(t *testing.T) {
 
@@ -160,7 +212,6 @@ func TestFetchTxInfo(t *testing.T) {
 		txHash     string
 		txResp     xrpClient.TransactionResponse
 		ledgerResp xrpClient.LedgerResponse
-		txInfo     xc.LegacyTxInfo
 		err        string
 	}{
 		{
@@ -202,52 +253,239 @@ func TestFetchTxInfo(t *testing.T) {
 					Status:             "success",
 				},
 			},
-			txInfo: xc.LegacyTxInfo{
-				BlockHash:       "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-				TxID:            "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-				ExplorerURL:     "https://livenet.xrpl.org//tx/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA?cluster=mainnet",
-				From:            "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
-				To:              "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
-				ToAlt:           "",
-				ContractAddress: "",
-				Amount:          xc.NewAmountBlockchainFromStr("10000000"),
-				Fee:             xc.NewAmountBlockchainFromStr("12"),
-				FeeContract:     "",
-				BlockIndex:      94494,
-				BlockTime:       777656992,
-				Confirmations:   1144852,
-				Status:          xc.TxStatus(0),
-				Sources: []*xc.LegacyTxInfoEndpoint{
-					{
-						Address:                    "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
-						ContractAddress:            "",
-						Amount:                     xc.NewAmountBlockchainFromStr("10000000"),
-						NativeAsset:                "",
-						Asset:                      "",
-						Memo:                       "",
-						LegacyAptosContractAddress: "",
+			err: "",
+		},
+		{
+			asset:  &xc.ChainConfig{},
+			txHash: "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+			txResp: xrpClient.TransactionResponse{
+				Result: xrpClient.TransactionResult{
+					Account:            "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+					Amount:             "",
+					Destination:        "",
+					Fee:                "12",
+					Flags:              786432,
+					LastLedgerSequence: 90659227,
+					Sequence:           90659082,
+					SigningPubKey:      "03096E30DF354C174D22ACD99C201FCE1CC6EE588D58F11CF858A45FDE4FCF0C6E",
+					TransactionType:    "OfferCreate",
+					TxnSignature:       "3045022100C77D56EF2F3B4995D9F021D78613490915A5BE8AC3F7BFEE8BEEED3C81B646E40220650629F4D40B3803D14A402926482F042841AA33DB617C6B8CA63DFC85E87188",
+					Hash:               "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+					DeliverMax:         "",
+					TakerGets: &xrpClient.TakeGetsOrPays{
+						XRPAmount: "4862466",
 					},
-				},
-				Destinations: []*xc.LegacyTxInfoEndpoint{
-					{
-						Address:                    "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
-						ContractAddress:            "",
-						Amount:                     xc.NewAmountBlockchainFromStr("10000000"),
-						NativeAsset:                "",
-						Asset:                      "",
-						Memo:                       "",
-						LegacyAptosContractAddress: "",
+					TakerPays: &xrpClient.TakeGetsOrPays{
+						TokenAmount: &xrpClient.Amount{
+							Currency: "USD",
+							Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+							Value:    "2.5",
+						},
 					},
+					Meta: xrpClient.TransactionMeta{
+						AffectedNodes: []xrpClient.AffectedNodes{
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Account: "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+										Balance: &xrpClient.Balance{
+											XRPAmount: "32008483",
+										},
+										Flags:      0,
+										OwnerCount: 1,
+										Sequence:   90659083,
+									},
+									LedgerEntryType: "AccountRoot",
+									LedgerIndex:     "2CD4DCB5BAE3A17AA69B12101056D4AB5A91269D5A1132DEF611019B9A3E1DC5",
+									PreviousFields: &xrpClient.PreviousFields{
+										Balance: xrpClient.Balance{
+											XRPAmount: "36870961",
+										},
+										Sequence: 90659082,
+									},
+									PreviousTxnID:     "D2D2B59405D5220E146CF695572D189BD81AEF3F7724B94FA827CC382DB11675",
+									PreviousTxnLgrSeq: 90659082,
+								},
+							},
+							{
+								CreatedNode: &xrpClient.CreatedNode{
+									LedgerEntryType: "RippleState",
+									LedgerIndex:     "43E6E4D1D3A83C5C663B687DE18C69B951E7B474942BB9C82904812DF136E4D8",
+									NewFields: xrpClient.NewFields{
+										Balance: &xrpClient.Balance{
+											TokenAmount: &xrpClient.Amount{
+												Currency: "USD",
+												Issuer:   "rrrrrrrrrrrrrrrrrrrrBZbvji",
+												Value:    "2.6247417128",
+											},
+										},
+										Flags: 1114112,
+										HighLimit: &xrpClient.Amount{
+											Currency: "USD",
+											Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+											Value:    "0",
+										},
+										HighNode: "2391",
+										LowLimit: &xrpClient.Amount{
+											Currency: "USD",
+											Issuer:   "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+											Value:    "0",
+										},
+									},
+								},
+							},
+							{
+								CreatedNode: &xrpClient.CreatedNode{
+									LedgerEntryType: "DirectoryNode",
+									LedgerIndex:     "58E80E7203517DCAB018C65EFC07C84159571D634BECED0A41385FC7490B8788",
+									NewFields: xrpClient.NewFields{
+										Owner:     "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+										RootIndex: "58E80E7203517DCAB018C65EFC07C84159571D634BECED0A41385FC7490B8788",
+									},
+								},
+							},
+							{
+								CreatedNode: &xrpClient.CreatedNode{
+									LedgerEntryType: "DirectoryNode",
+									LedgerIndex:     "658E15E434481B905B7E21515799D0D254A54E9BFA3B7B6837619181E3922FCA",
+									NewFields: xrpClient.NewFields{
+										IndexPrevious: "2390",
+										Owner:         "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+										RootIndex:     "D7AC7D74720E29A563100F2B494BADB198F8A9E9FA46F57AE07123151E0DFA7A",
+									},
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Flags:         0,
+										IndexNext:     "2391",
+										IndexPrevious: "238f",
+										Owner:         "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+										RootIndex:     "D7AC7D74720E29A563100F2B494BADB198F8A9E9FA46F57AE07123151E0DFA7A",
+									},
+									LedgerEntryType: "DirectoryNode",
+									LedgerIndex:     "91762DD13177F60DE0F96944972C4252717A0391C0604F2B6D8BFF89ED8D63D4",
+									PreviousFields: &xrpClient.PreviousFields{
+										IndexNext: "0",
+									},
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Balance: &xrpClient.Balance{
+											TokenAmount: &xrpClient.Amount{
+												Currency: "USD",
+												Issuer:   "rrrrrrrrrrrrrrrrrrrrBZbvji",
+												Value:    "26765.842495683",
+											},
+										},
+										Flags: 16842752,
+										HighLimit: &xrpClient.Amount{
+											Currency: "USD",
+											Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+											Value:    "0",
+										},
+										HighNode: "230c",
+										LowLimit: &xrpClient.Amount{
+											Currency: "USD",
+											Issuer:   "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+											Value:    "0",
+										},
+										LowNode: "0",
+									},
+									LedgerEntryType: "RippleState",
+									LedgerIndex:     "9AE3CEB5FBC465610CAD1D890BAAD70EB8489A76EE19B6990E7DC0004D7CFD1F",
+									PreviousFields: &xrpClient.PreviousFields{
+										Balance: xrpClient.Balance{
+											TokenAmount: &xrpClient.Amount{
+												Currency: "USD",
+												Issuer:   "rrrrrrrrrrrrrrrrrrrrBZbvji",
+												Value:    "26768.4672373958",
+											},
+										},
+									},
+									PreviousTxnID:     "FACEF612B2D8EA190AED5A576E9236C76FC19BC791139FC4CD99C1D7246167BF",
+									PreviousTxnLgrSeq: 90659175,
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										AMMID:   "630D4F2C7A2F80C4367BAC35219CE2C1274B59330694769A79B0C94A59789AAF",
+										Account: "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+										Balance: &xrpClient.Balance{
+											XRPAmount: "49407458473",
+										},
+										Flags:      26214400,
+										OwnerCount: 1,
+										Sequence:   86795329,
+									},
+									LedgerEntryType: "AccountRoot",
+									LedgerIndex:     "A88F25E5AD1D3945FB52291910763E286C55DBE1157E8F19D00F3CA964C6BC45",
+									PreviousFields: &xrpClient.PreviousFields{
+										Balance: xrpClient.Balance{
+											XRPAmount: "49402596007",
+										},
+									},
+									PreviousTxnID:     "FACEF612B2D8EA190AED5A576E9236C76FC19BC791139FC4CD99C1D7246167BF",
+									PreviousTxnLgrSeq: 90659175,
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									LedgerEntryType:   "AccountRoot",
+									LedgerIndex:       "BF1F2A23D614916E3C6ED2DCC389468CFA09045BEDB54C71A05C5E94EA6C6CFE",
+									PreviousTxnID:     "23132EB4C93F01A84AD3DD5132FFA0EB1BBD4F7F18C4651A38E1F75998B39D90",
+									PreviousTxnLgrSeq: 90658052,
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Flags:         0,
+										IndexNext:     "1",
+										IndexPrevious: "2391",
+										Owner:         "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+										RootIndex:     "D7AC7D74720E29A563100F2B494BADB198F8A9E9FA46F57AE07123151E0DFA7A",
+									},
+									LedgerEntryType: "DirectoryNode",
+									LedgerIndex:     "D7AC7D74720E29A563100F2B494BADB198F8A9E9FA46F57AE07123151E0DFA7A",
+									PreviousFields: &xrpClient.PreviousFields{
+										IndexPrevious: "2390",
+									},
+								},
+							},
+						},
+						TransactionIndex:  1,
+						TransactionResult: "tesSUCCESS",
+					},
+					CtID:        "C567599300010000",
+					Validated:   true,
+					Date:        779303540,
+					LedgerIndex: 90659219,
+					InLedger:    90659219,
+					Status:      "success",
 				},
-				Time:         777656992,
-				TimeReceived: 0,
-				Error:        "",
+			},
+			ledgerResp: xrpClient.LedgerResponse{
+				Result: xrpClient.LedgerResult{
+					Ledger: xrpClient.LedgerInfo{
+						Closed:      false,
+						LedgerIndex: "91225188",
+						ParentHash:  "3E54FF795235548F8B62078F9CE5B5427D7B86BB73571C5CBD9044E171842218",
+					},
+					LedgerCurrentIndex: 91225188,
+					Validated:          false,
+					Status:             "success",
+				},
 			},
 			err: "",
 		},
 	}
 
-	for _, vector := range vectors {
+	for testNo, vector := range vectors {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqBody map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&reqBody)
@@ -281,9 +519,39 @@ func TestFetchTxInfo(t *testing.T) {
 			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(t, err, vector.err)
 		} else {
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			//require.Equal(t, vector.txInfo.Amount, txInfo.Transfers[0].From[0].Amount)
+			if testNo == 0 {
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+
+				require.Equal(t, vector.txResp.Result.Hash, txInfo.Hash)
+
+				require.Contains(t, txInfo.Transfers[0].From[0].Address, vector.txResp.Result.Account)
+				require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), vector.txResp.Result.Amount)
+				require.Contains(t, txInfo.Transfers[0].To[0].Address, vector.txResp.Result.Destination)
+				require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), vector.txResp.Result.Amount)
+
+				require.Contains(t, txInfo.Transfers[1].From[0].Address, vector.txResp.Result.Account)
+				require.Equal(t, txInfo.Transfers[1].From[0].Balance.String(), vector.txResp.Result.Fee)
+				require.Empty(t, txInfo.Transfers[1].To)
+
+			} else if testNo == 1 {
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+
+				require.Equal(t, vector.txResp.Result.Hash, txInfo.Hash)
+
+				require.Contains(t, txInfo.Transfers[0].From[0].Address, vector.txResp.Result.Account)
+				//require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), vector.txResp.Result.Amount)
+				//require.Contains(t, txInfo.Transfers[0].To[0].Address, vector.txResp.Result.Destination)
+				//require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), vector.txResp.Result.Amount)
+
+				//require.Contains(t, txInfo.Transfers[1].From[0].Address, vector.txResp.Result.Account)
+				//require.Equal(t, txInfo.Transfers[1].From[0].Balance.String(), vector.txResp.Result.Fee)
+				//require.Empty(t, txInfo.Transfers[1].To)
+
+				require.Equal(t, txInfo.Fees[0].Balance.String(), vector.txResp.Result.Fee)
+			}
+
 		}
 	}
 }

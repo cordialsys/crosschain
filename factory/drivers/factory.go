@@ -66,7 +66,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverXrp:
 		return xrpclient.NewClient(cfg)
 	}
-	return nil, errors.New("no client defined for chains: " + string(cfg.ID()))
+	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
 }
 
 func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
