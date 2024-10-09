@@ -15,6 +15,8 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // Client for XRP
@@ -323,8 +325,8 @@ type FinalFields struct {
 }
 
 type Balance struct {
-	XRPAmount   string  `json:"-"`
-	TokenAmount *Amount `json:"-"`
+	XRPAmount   string  `json:"XRPAmount,omitempty"`
+	TokenAmount *Amount `json:"Amount,omitempty"`
 }
 
 // UnmarshalJSON is the custom unmarshal method for Balance
@@ -481,18 +483,19 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 
 // FetchTxInfo Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
-	legacyTxInfo, err := client.FetchLegacyTxInfo(ctx, txHash)
+	txInfo, err := client.GetTxInfo(ctx, txHash)
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
 
-	// Remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTxInfo, xclient.Account), nil
+	return txInfo, nil
 }
 
-// FetchLegacyTxInfo Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+	panic("implement me")
+}
 
+func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
 	txRequest := &TransactionRequest{
 		Method: "tx",
 		Params: []TransactionParamEntry{
@@ -506,7 +509,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	var txResponse TransactionResponse
 	err := client.Send(MethodPost, txRequest, &txResponse)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.TxInfo{}, err
 	}
 
 	ledgerRequest := LedgerRequest{
@@ -521,205 +524,295 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	var ledgerResponse LedgerResponse
 	err = client.Send(MethodPost, ledgerRequest, &ledgerResponse)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.TxInfo{}, err
 	}
+
+	name := xclient.TransactionName(string(client.Asset.GetChain().Chain) + txResponse.Result.Hash)
+
+	block := xclient.NewBlock(uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, time.Unix(txResponse.Result.Date, 0))
 
 	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
-	explorer := client.Asset.GetChain().ExplorerURL + "/tx/" + txResponse.Result.Hash + "?cluster=" + client.Asset.GetChain().Net
+	var errMsg *string
+	if txResponse.Result.Status == "error" {
+		msg := "transaction failed"
+		errMsg = &msg
+	}
 
-	var sources []*xc.LegacyTxInfoEndpoint
-	var destinations []*xc.LegacyTxInfoEndpoint
+	txInfo := xclient.TxInfo{
+		Name:          name,
+		Hash:          txResponse.Result.Hash,
+		Chain:         client.Asset.GetChain().Chain,
+		Block:         block,
+		Transfers:     []*xclient.Transfer{},
+		Fees:          []*xclient.Balance{},
+		Confirmations: uint64(confirmations),
+		Error:         errMsg,
+	}
 
-	if txResponse.Result.Destination != "" {
-		addSourceDestinationForPayment(txResponse, &sources, &destinations)
-	} else {
-		if txResponse.Result.TakerGets != nil {
-			handleTakerGets(txResponse, &sources, &destinations)
+	affectedNodes := txResponse.Result.Meta.AffectedNodes
+	tf := xclient.NewTransfer(client.Asset.GetChain().Chain)
+	for _, node := range affectedNodes {
+
+		if node.ModifiedNode != nil {
+			modifiedNode := node.ModifiedNode
+			if modifiedNode.LedgerEntryType == "AccountRoot" {
+
+				if node.ModifiedNode.FinalFields == nil {
+					continue
+				}
+
+				var (
+					contract     string
+					finalBalance float64
+					parseErr     error
+				)
+
+				if node.ModifiedNode.FinalFields.Balance.XRPAmount != "" {
+					contract = ""
+				} else {
+					finalBalance, parseErr = strconv.ParseFloat(node.ModifiedNode.FinalFields.Balance.TokenAmount.Value, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+					if finalBalance > 0 {
+						contract = node.ModifiedNode.FinalFields.HighLimit.Issuer
+					} else {
+						contract = node.ModifiedNode.FinalFields.LowLimit.Issuer
+					}
+				}
+
+				convertedTransactedAmount, conversionErr := extractModifiedNodeBalance(node.ModifiedNode)
+				if conversionErr != nil {
+					return xclient.TxInfo{}, conversionErr
+				}
+
+				if modifiedNode.FinalFields.Account != txResponse.Result.Account {
+					tf.AddDestination(
+						xc.Address(modifiedNode.FinalFields.Account),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount,
+						nil,
+					)
+				} else {
+					tf.AddSource(
+						xc.Address(modifiedNode.FinalFields.Account),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount,
+						nil,
+					)
+				}
+
+			} else if node.ModifiedNode.LedgerEntryType == "RippleState" {
+
+				if node.ModifiedNode.FinalFields == nil {
+					continue
+				}
+
+				var (
+					contract        string
+					finalBalance    float64
+					transactionType string
+					parseErr        error
+				)
+
+				if node.ModifiedNode.FinalFields.Balance.XRPAmount != "" {
+					contract = ""
+				} else {
+					finalBalance, parseErr = strconv.ParseFloat(node.ModifiedNode.FinalFields.Balance.TokenAmount.Value, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+					if finalBalance > 0 {
+						transactionType = "source"
+						contract = node.ModifiedNode.FinalFields.HighLimit.Issuer
+					} else {
+						transactionType = "destination"
+						contract = node.ModifiedNode.FinalFields.LowLimit.Issuer
+					}
+				}
+
+				convertedTransactedAmount, conversionErr := extractModifiedNodeBalance(node.ModifiedNode)
+				if conversionErr != nil {
+					return xclient.TxInfo{}, conversionErr
+				}
+
+				//if modifiedNode.FinalFields.Account != txResponse.Result.Account {
+				if transactionType == "destination" {
+					tf.AddDestination(
+						xc.Address(modifiedNode.FinalFields.LowLimit.Issuer),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount,
+						nil,
+					)
+				} else if transactionType == "source" {
+					tf.AddSource(
+						xc.Address(modifiedNode.FinalFields.HighLimit.Issuer),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount,
+						nil,
+					)
+				}
+			}
+
+		} else if node.CreatedNode != nil {
+
+			createdNode := node.CreatedNode
+			if createdNode.LedgerEntryType == "AccountRoot" {
+
+				var (
+					contract   string
+					newBalance float64
+					decimals   int32
+					//transactionType string
+					parseErr error
+				)
+
+				if node.CreatedNode.NewFields.Balance.XRPAmount != "" {
+					contract = ""
+					decimals = 0
+					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.XRPAmount, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+				} else {
+					decimals = 15
+					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.TokenAmount.Value, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+					if newBalance > 0 {
+						//transactionType = "source"
+						contract = node.CreatedNode.NewFields.HighLimit.Issuer
+					} else {
+						//transactionType = "destination"
+						contract = node.CreatedNode.NewFields.LowLimit.Issuer
+					}
+				}
+
+				var newBalanceString string
+				if decimals == 0 {
+					newBalanceString = fmt.Sprintf("%.6f", math.Abs(newBalance))
+				} else {
+					newBalanceString = fmt.Sprintf("%.15f", math.Abs(newBalance))
+				}
+
+				newBalanceString = strings.TrimRight(strings.TrimRight(newBalanceString, "0"), ".")
+
+				convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(newBalanceString)
+				if conversionErr != nil {
+					return xclient.TxInfo{}, conversionErr
+				}
+
+				//if transactionType == "destination" {
+				if createdNode.NewFields.Account != "" {
+					tf.AddDestination(
+						xc.Address(createdNode.NewFields.Account),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount.ToBlockchain(decimals),
+						nil,
+					)
+				} else {
+					tf.AddDestination(
+						xc.Address(createdNode.NewFields.LowLimit.Issuer),
+						xc.ContractAddress(contract),
+						convertedTransactedAmount.ToBlockchain(decimals),
+						nil,
+					)
+				}
+
+			} else if createdNode.LedgerEntryType == "RippleState" {
+
+				var (
+					contract        string
+					newBalance      float64
+					decimals        int32
+					transactionType string
+					address         xc.Address
+					parseErr        error
+				)
+
+				if node.CreatedNode.NewFields.Balance.XRPAmount != "" {
+					contract = ""
+					decimals = 0
+					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.XRPAmount, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+				} else {
+					decimals = 15
+					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.TokenAmount.Value, 10)
+					if parseErr != nil {
+						return xclient.TxInfo{}, parseErr
+					}
+
+					if newBalance > 0 {
+						transactionType = "destination"
+						contract = node.CreatedNode.NewFields.HighLimit.Issuer
+					} else {
+						transactionType = "source"
+						contract = node.CreatedNode.NewFields.LowLimit.Issuer
+					}
+				}
+
+				var newBalanceString string
+				if decimals == 0 {
+					newBalanceString = fmt.Sprintf("%.6f", math.Abs(newBalance))
+				} else {
+					newBalanceString = fmt.Sprintf("%.15f", math.Abs(newBalance))
+				}
+
+				newBalanceString = strings.TrimRight(strings.TrimRight(newBalanceString, "0"), ".")
+
+				convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(newBalanceString)
+				if conversionErr != nil {
+					return xclient.TxInfo{}, conversionErr
+				}
+
+				if transactionType == "destination" {
+					address = xc.Address(createdNode.NewFields.LowLimit.Issuer)
+				} else if transactionType == "source" {
+					address = xc.Address(createdNode.NewFields.HighLimit.Issuer)
+				}
+
+				tf.AddDestination(
+					address,
+					xc.ContractAddress(contract),
+					convertedTransactedAmount.ToBlockchain(decimals),
+					nil,
+				)
+			}
 		}
-
-		if txResponse.Result.TakerPays != nil {
-			handleTakerPays(txResponse, &sources, &destinations)
-		}
 	}
 
-	var status xc.TxStatus
-	if txResponse.Result.Status == "success" {
-		status = xc.TxStatusSuccess
-	} else if txResponse.Result.Status == "error" {
-		status = xc.TxStatusFailure
-	}
+	txInfo.AddTransfer(tf)
 
-	txInfo := xc.LegacyTxInfo{
-		BlockHash:     txResponse.Result.Hash,
-		TxID:          txResponse.Result.Hash,
-		ExplorerURL:   explorer,
-		From:          xc.Address(txResponse.Result.Account),
-		To:            xc.Address(txResponse.Result.Destination),
-		Amount:        xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
-		Fee:           xc.NewAmountBlockchainFromStr(txResponse.Result.Fee),
-		BlockIndex:    txResponse.Result.LedgerIndex,
-		BlockTime:     txResponse.Result.Date,
-		Confirmations: confirmations,
-		Status:        status,
-		Sources:       sources,
-		Destinations:  destinations,
-		Time:          txResponse.Result.Date,
-	}
+	txInfo.Fees = txInfo.CalculateFees()
 
 	return txInfo, nil
 }
 
-// Handle direct transactions (Payment)
-func addSourceDestinationForPayment(txResponse TransactionResponse, sources, destinations *[]*xc.LegacyTxInfoEndpoint) {
-	*sources = append(*sources, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Account),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
-	})
-
-	*destinations = append(*destinations, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Destination),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.Amount),
-	})
-}
-
-// Handle TakerGets logic ( what the account creating the offer wants to receive )
-func handleTakerGets(txResponse TransactionResponse, sources, destinations *[]*xc.LegacyTxInfoEndpoint) {
-	if txResponse.Result.TakerGets.XRPAmount != "" {
-		appendSourceForTakerGetsXRP(txResponse, sources)
-		appendDestinationsForAffectedNodes(txResponse, destinations, "AccountRoot", 6)
-	} else {
-		amount, err := xc.NewAmountHumanReadableFromStr(txResponse.Result.TakerGets.TokenAmount.Value)
-		if err == nil {
-			appendSourceForTakerGetsToken(txResponse, sources, amount)
-			appendDestinationsForAffectedNodes(txResponse, destinations, "RippleState", 15)
-		} else {
-			return
-		}
-	}
-}
-
-// Handle TakerPays logic
-func handleTakerPays(txResponse TransactionResponse, sources, destinations *[]*xc.LegacyTxInfoEndpoint) {
-	if txResponse.Result.TakerPays.XRPAmount != "" {
-		appendSourceForTakerPaysXRP(txResponse, destinations)
-		appendSourcesForAffectedNodes(txResponse, sources, destinations, "AccountRoot", 6)
-	} else {
-		amount, err := xc.NewAmountHumanReadableFromStr(txResponse.Result.TakerPays.TokenAmount.Value)
-		if err == nil {
-			appendDestinationForTakerPaysToken(txResponse, destinations, amount)
-			appendSourcesForAffectedNodes(txResponse, sources, destinations, "RippleState", 15)
-		}
-	}
-}
-
-// Append sources for TakerGets native transactions
-func appendSourceForTakerGetsXRP(txResponse TransactionResponse, sources *[]*xc.LegacyTxInfoEndpoint) {
-	*sources = append(*sources, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Account),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerGets.XRPAmount),
-	})
-}
-
-// Append destinations for TakerPays native transactions
-func appendSourceForTakerPaysXRP(txResponse TransactionResponse, destinations *[]*xc.LegacyTxInfoEndpoint) {
-	*destinations = append(*destinations, &xc.LegacyTxInfoEndpoint{
-		Address: xc.Address(txResponse.Result.Account),
-		Amount:  xc.NewAmountBlockchainFromStr(txResponse.Result.TakerPays.XRPAmount),
-	})
-}
-
-// Appending sources for TakerGets token transactions
-func appendSourceForTakerGetsToken(txResponse TransactionResponse, sources *[]*xc.LegacyTxInfoEndpoint, amount xc.AmountHumanReadable) {
-	*sources = append(*sources, &xc.LegacyTxInfoEndpoint{
-		Address:         xc.Address(txResponse.Result.TakerGets.TokenAmount.Issuer),
-		ContractAddress: xc.ContractAddress(txResponse.Result.TakerGets.TokenAmount.Issuer + "-" + txResponse.Result.TakerGets.TokenAmount.Currency),
-		Amount:          amount.ToBlockchain(15),
-		Asset:           txResponse.Result.TakerGets.TokenAmount.Currency,
-	})
-}
-
-// Appending destinations for TakerPays token transactions
-func appendDestinationForTakerPaysToken(txResponse TransactionResponse, destinations *[]*xc.LegacyTxInfoEndpoint, amount xc.AmountHumanReadable) {
-	*destinations = append(*destinations, &xc.LegacyTxInfoEndpoint{
-		Address:         xc.Address(txResponse.Result.Account),
-		ContractAddress: xc.ContractAddress(txResponse.Result.TakerPays.TokenAmount.Issuer + "-" + txResponse.Result.TakerPays.TokenAmount.Currency),
-		Amount:          amount.ToBlockchain(15),
-		Asset:           txResponse.Result.TakerPays.TokenAmount.Currency,
-	})
-}
-
-// Process affected nodes for destinations
-func appendDestinationsForAffectedNodes(txResponse TransactionResponse, destinations *[]*xc.LegacyTxInfoEndpoint, nodeType string, decimals int32) {
-	for _, node := range txResponse.Result.Meta.GetAffectedNodesByType(nodeType) {
-		if node.ModifiedNode != nil {
-			processModifiedNodeForDestination(txResponse, node, destinations, decimals)
-		}
-	}
-}
-
-// Process affected nodes for sources
-func appendSourcesForAffectedNodes(txResponse TransactionResponse, sources, destinations *[]*xc.LegacyTxInfoEndpoint, nodeType string, decimals int32) {
-	for _, node := range txResponse.Result.Meta.GetAffectedNodesByType(nodeType) {
-		if node.ModifiedNode != nil {
-			processModifiedNodeForSource(txResponse, node, sources, destinations, decimals)
-		}
-	}
-}
-
-// Process each ModifiedNode for source
-func processModifiedNodeForSource(txResponse TransactionResponse, node AffectedNodes, sources, destinations *[]*xc.LegacyTxInfoEndpoint, decimals int32) {
-	if node.ModifiedNode.FinalFields != nil && node.ModifiedNode.PreviousFields != nil {
-		if node.ModifiedNode.FinalFields.Account == txResponse.Result.Account {
-			return
-		}
-
-		convertedTransactedAmount, err := extractBalanceChange(node.ModifiedNode)
-		if err == nil {
-			*sources = append(*sources, &xc.LegacyTxInfoEndpoint{
-				Address: xc.Address(node.ModifiedNode.FinalFields.Account),
-				Amount:  convertedTransactedAmount.ToBlockchain(decimals),
-			})
-
-			// Check to see if TakerPays amount is the same as transacted amount
-			if (*destinations)[len(*destinations)-1].Amount.Uint64() != convertedTransactedAmount.ToBlockchain(15).Uint64() {
-				(*destinations)[len(*destinations)-1].Amount = convertedTransactedAmount.ToBlockchain(15)
-			}
-		}
-	}
-}
-
-// Process each ModifiedNode for destination
-func processModifiedNodeForDestination(txResponse TransactionResponse, node AffectedNodes, destinations *[]*xc.LegacyTxInfoEndpoint, decimals int32) {
-	if node.ModifiedNode.FinalFields != nil && node.ModifiedNode.PreviousFields != nil {
-		if node.ModifiedNode.FinalFields.Account == txResponse.Result.Account {
-			return
-		}
-
-		convertedTransactedAmount, err := extractBalanceChange(node.ModifiedNode)
-		if err == nil {
-			*destinations = append(*destinations, &xc.LegacyTxInfoEndpoint{
-				Address: xc.Address(node.ModifiedNode.FinalFields.Account),
-				Amount:  convertedTransactedAmount.ToBlockchain(decimals),
-			})
-		}
-	}
-}
-
-// Extract balance change logic
-func extractBalanceChange(node *ModifiedNode) (xc.AmountHumanReadable, error) {
+func extractModifiedNodeBalance(node *ModifiedNode) (xc.AmountBlockchain, error) {
 	var (
 		finalBalance, previousBalance float64
+		decimals                      int32
 		parseErr                      error
 	)
 
 	if node.FinalFields.Balance.XRPAmount != "" {
+		decimals = 0
 		finalBalance, parseErr = strconv.ParseFloat(node.FinalFields.Balance.XRPAmount, 10)
 	} else {
+		decimals = 15
 		finalBalance, parseErr = strconv.ParseFloat(node.FinalFields.Balance.TokenAmount.Value, 10)
 	}
 	if parseErr != nil {
-		return xc.AmountHumanReadable{}, parseErr
+		return xc.AmountBlockchain{}, parseErr
 	}
 
 	if node.PreviousFields.Balance.XRPAmount != "" {
@@ -728,18 +821,26 @@ func extractBalanceChange(node *ModifiedNode) (xc.AmountHumanReadable, error) {
 		previousBalance, parseErr = strconv.ParseFloat(node.PreviousFields.Balance.TokenAmount.Value, 10)
 	}
 	if parseErr != nil {
-		return xc.AmountHumanReadable{}, parseErr
+		return xc.AmountBlockchain{}, parseErr
 	}
 
 	transactedAmount := math.Abs(previousBalance - finalBalance)
-	transactedAmountString := fmt.Sprintf("%f", transactedAmount)
+
+	var transactedAmountString string
+	if decimals == 0 {
+		transactedAmountString = fmt.Sprintf("%.6f", transactedAmount)
+	} else {
+		transactedAmountString = fmt.Sprintf("%.15f", transactedAmount)
+	}
+
+	transactedAmountString = strings.TrimRight(strings.TrimRight(transactedAmountString, "0"), ".")
 
 	convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(transactedAmountString)
 	if conversionErr != nil {
-		return xc.AmountHumanReadable{}, conversionErr
+		return xc.AmountBlockchain{}, conversionErr
 	}
 
-	return convertedTransactedAmount, nil
+	return convertedTransactedAmount.ToBlockchain(decimals), nil
 }
 
 // FetchBalance fetches token balance for a XRP address

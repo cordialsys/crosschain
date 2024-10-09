@@ -3,6 +3,7 @@ package drivers
 import (
 	"errors"
 	"fmt"
+	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 
 	. "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -32,7 +33,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/tron"
 	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
-	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"

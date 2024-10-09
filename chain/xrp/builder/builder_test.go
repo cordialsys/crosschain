@@ -27,7 +27,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &tx_input.TxInput{}
-	nt, err := txBuilder.(xc.TxTokenBuilder).NewNativeTransfer(from, to, amount, input)
+	nt, err := txBuilder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
 	xrpTx := nt.(*Tx).XRPTx
@@ -48,7 +48,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &TxInput{}
-	tt, err := txBuilder.(xc.TxTokenBuilder).NewTokenTransfer(from, to, amount, input)
+	tt, err := txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tt)
 	xrpTx := tt.(*Tx).XRPTx

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/sirupsen/logrus"
@@ -16,15 +17,21 @@ type TxBuilder struct {
 }
 
 var _ xc.TxBuilder = &TxBuilder{}
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 type TxInput = xrptxinput.TxInput
 type Tx = xrptx.Tx
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (xc.TxBuilder, error) {
-	return TxBuilder{
-		Asset: cfgI,
+func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
+	return &TxBuilder{
+		Asset: asset,
 	}, nil
+}
+
+// NewTransfer creates a new transfer for an Asset, either native or token
+func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token
