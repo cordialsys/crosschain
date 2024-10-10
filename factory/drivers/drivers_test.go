@@ -17,6 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xrp "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -37,6 +38,7 @@ var LoadedTxInputs = []xc.TxInput{
 	&sui.TxInput{},
 	&ton.TxInput{},
 	&tron.TxInput{},
+	&xrp.TxInput{},
 }
 
 type CrosschainTestSuite struct {
@@ -242,6 +244,7 @@ func (s *CrosschainTestSuite) TestAllCheckError() {
 	}
 }
 
+// If this test is failing, make sure you've imported your TxInput implementation with the others at the top of this file.
 func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 	require := s.Require()
 	require.GreaterOrEqual(len(registry.GetSupportedBaseTxInputs()), 1, "no registered base variants")
