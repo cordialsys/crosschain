@@ -238,7 +238,56 @@ func TestFetchTxInfo(t *testing.T) {
 					Date:               777656992,
 					LedgerIndex:        94494,
 					InLedger:           94494,
-					Status:             "success",
+					Meta: xrpClient.TransactionMeta{
+						AffectedNodes: []xrpClient.AffectedNodes{
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Account: "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+										Balance: &xrpClient.Balance{
+											XRPAmount: "20000000",
+										},
+										Flags:      0,
+										OwnerCount: 0,
+										Sequence:   92557,
+									},
+									LedgerEntryType: "AccountRoot",
+									LedgerIndex:     "18F34B88295C6BBD378F0F94E600660C8B7CDEAC89A3C41236910B3334F352FE",
+									PreviousFields: &xrpClient.PreviousFields{
+										Balance: xrpClient.Balance{
+											XRPAmount: "10000000",
+										},
+									},
+									PreviousTxnID:     "364A0DB3EDF04CB1661C29F6120224FB8984FBED51F4DEC431E5D8BEE61BF00F",
+									PreviousTxnLgrSeq: 92557,
+								},
+							},
+							{
+								ModifiedNode: &xrpClient.ModifiedNode{
+									FinalFields: &xrpClient.FinalFields{
+										Account: "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+										Balance: &xrpClient.Balance{
+											XRPAmount: "79999976",
+										},
+										Flags:      0,
+										OwnerCount: 0,
+										Sequence:   92262,
+									},
+									LedgerEntryType: "AccountRoot",
+									LedgerIndex:     "373EBB701A602BFB0D5D1648D7361A3E5D40FD2FD3FA6D5FA9B5CD73E4AE7003",
+									PreviousFields: &xrpClient.PreviousFields{
+										Balance: xrpClient.Balance{
+											XRPAmount: "89999988",
+										},
+										Sequence: 92261,
+									},
+									PreviousTxnID:     "364A0DB3EDF04CB1661C29F6120224FB8984FBED51F4DEC431E5D8BEE61BF00F",
+									PreviousTxnLgrSeq: 92257,
+								},
+							},
+						},
+					},
+					Status: "success",
 				},
 			},
 			ledgerResp: xrpClient.LedgerResponse{
@@ -523,33 +572,37 @@ func TestFetchTxInfo(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
 
-				require.Equal(t, vector.txResp.Result.Hash, txInfo.Hash)
+				require.Equal(t, txInfo.Hash, "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA")
 
-				require.Contains(t, txInfo.Transfers[0].From[0].Address, vector.txResp.Result.Account)
-				require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), vector.txResp.Result.Amount)
-				require.Contains(t, txInfo.Transfers[0].To[0].Address, vector.txResp.Result.Destination)
-				require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), vector.txResp.Result.Amount)
+				require.Contains(t, txInfo.Transfers[0].From[0].Address, "chains/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S")
+				require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), "10000012")
+				require.Contains(t, txInfo.Transfers[0].To[0].Address, "chains/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP")
+				require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), "10000000")
 
-				require.Contains(t, txInfo.Transfers[1].From[0].Address, vector.txResp.Result.Account)
-				require.Equal(t, txInfo.Transfers[1].From[0].Balance.String(), vector.txResp.Result.Fee)
-				require.Empty(t, txInfo.Transfers[1].To)
+				require.Equal(t, txInfo.Fees[0].Balance.String(), "12")
 
 			} else if testNo == 1 {
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
 
-				require.Equal(t, vector.txResp.Result.Hash, txInfo.Hash)
+				require.Equal(t, txInfo.Hash, "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B")
 
-				require.Contains(t, txInfo.Transfers[0].From[0].Address, vector.txResp.Result.Account)
-				//require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), vector.txResp.Result.Amount)
-				//require.Contains(t, txInfo.Transfers[0].To[0].Address, vector.txResp.Result.Destination)
-				//require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), vector.txResp.Result.Amount)
+				require.Contains(t, txInfo.Transfers[0].From[0].Address, "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw")
+				require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), "4862478")
+				require.Contains(t, txInfo.Transfers[0].From[1].Address, "chains/addresses/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Contains(t, txInfo.Transfers[0].From[1].Asset, "chains/assets/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Contains(t, txInfo.Transfers[0].From[1].Contract, "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Equal(t, txInfo.Transfers[0].From[1].Balance.String(), "2624741712799732")
 
-				//require.Contains(t, txInfo.Transfers[1].From[0].Address, vector.txResp.Result.Account)
-				//require.Equal(t, txInfo.Transfers[1].From[0].Balance.String(), vector.txResp.Result.Fee)
-				//require.Empty(t, txInfo.Transfers[1].To)
+				require.Contains(t, txInfo.Transfers[0].To[0].Address, "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw")
+				require.Contains(t, txInfo.Transfers[0].To[0].Asset, "chains/assets/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Contains(t, txInfo.Transfers[0].To[0].Contract, "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Equal(t, txInfo.Transfers[0].To[0].Balance.String(), "2624741712800000")
+				require.Contains(t, txInfo.Transfers[0].To[1].Address, "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q")
+				require.Equal(t, txInfo.Transfers[0].To[1].Balance.String(), "4862466")
 
-				require.Equal(t, txInfo.Fees[0].Balance.String(), vector.txResp.Result.Fee)
+				require.Equal(t, txInfo.Fees[0].Balance.String(), "12")
+				require.Equal(t, txInfo.Fees[1].Balance.String(), "-268")
 			}
 
 		}

@@ -178,14 +178,28 @@ type TransactionResult struct {
 }
 
 type TakeGetsOrPays struct {
-	XRPAmount   string  `json:"XRPAmount"`
-	TokenAmount *Amount `json:"TokenAmount"`
+	XRPAmount   string  `json:"XRPAmount,omitempty"`
+	TokenAmount *Amount `json:"TokenAmount,omitempty"`
 }
 
 func (tg *TakeGetsOrPays) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err == nil {
-		tg.XRPAmount = str
+	var xrpAmount string
+	if err := json.Unmarshal(data, &xrpAmount); err == nil {
+		tg.XRPAmount = xrpAmount
+		return nil
+	}
+
+	var xrpAmountStruct struct {
+		XRPAmount   string  `json:"XRPAmount,omitempty"`
+		TokenAmount *Amount `json:"TokenAmount,omitempty"`
+	}
+	if err := json.Unmarshal(data, &xrpAmountStruct); err == nil {
+		if xrpAmountStruct.XRPAmount != "" {
+			tg.XRPAmount = xrpAmountStruct.XRPAmount
+		} else {
+			tg.TokenAmount = xrpAmountStruct.TokenAmount
+		}
+
 		return nil
 	}
 
@@ -200,21 +214,9 @@ func (tg *TakeGetsOrPays) UnmarshalJSON(data []byte) error {
 
 type TransactionMeta struct {
 	AffectedNodes     []AffectedNodes `json:"AffectedNodes"`
-	TransactionIndex  int64           `json:"TransactionIndex"`
-	TransactionResult string          `json:"TransactionResult"`
+	TransactionIndex  int64           `json:"TransactionIndex,omitempty"`
+	TransactionResult string          `json:"TransactionResult,omitempty"`
 	DeliveredAmount   string          `json:"delivered_amount,omitempty"`
-}
-
-func (tm *TransactionMeta) GetAffectedNodesByType(affectedNodeType string) []AffectedNodes {
-	var filteredNodes []AffectedNodes
-
-	for _, node := range tm.AffectedNodes {
-		if node.ModifiedNode != nil && node.ModifiedNode.LedgerEntryType == affectedNodeType {
-			filteredNodes = append(filteredNodes, node)
-		}
-	}
-
-	return filteredNodes
 }
 
 type AffectedNodes struct {
@@ -326,26 +328,37 @@ type FinalFields struct {
 
 type Balance struct {
 	XRPAmount   string  `json:"XRPAmount,omitempty"`
-	TokenAmount *Amount `json:"Amount,omitempty"`
+	TokenAmount *Amount `json:"TokenAmount,omitempty"`
 }
 
 // UnmarshalJSON is the custom unmarshal method for Balance
 func (b *Balance) UnmarshalJSON(data []byte) error {
-	// Try to unmarshal the data as a string first
-	var str string
-	if err := json.Unmarshal(data, &str); err == nil {
-		b.XRPAmount = str
+	var xrpAmount string
+	if err := json.Unmarshal(data, &xrpAmount); err == nil {
+		b.XRPAmount = xrpAmount
 		return nil
 	}
 
-	// If not a string, try to unmarshal it as an Amount
-	var amount Amount
-	if err := json.Unmarshal(data, &amount); err == nil {
-		b.TokenAmount = &amount
+	var xrpAmountStruct struct {
+		XRPAmount   string  `json:"XRPAmount,omitempty"`
+		TokenAmount *Amount `json:"TokenAmount,omitempty"`
+	}
+	if err := json.Unmarshal(data, &xrpAmountStruct); err == nil {
+		if xrpAmountStruct.XRPAmount != "" {
+			b.XRPAmount = xrpAmountStruct.XRPAmount
+		} else {
+			b.TokenAmount = xrpAmountStruct.TokenAmount
+		}
+
 		return nil
 	}
 
-	// If neither works, return an error
+	var tokenAmount Amount
+	if err := json.Unmarshal(data, &tokenAmount); err == nil {
+		b.TokenAmount = &tokenAmount
+		return nil
+	}
+
 	return fmt.Errorf("TakerGets is neither a string nor an Amount")
 }
 
