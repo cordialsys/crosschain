@@ -9,6 +9,7 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/sirupsen/logrus"
 	"strconv"
+	"strings"
 )
 
 // TxBuilder for Template
@@ -97,11 +98,16 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
+	tokenAmountValue, err := convertFromBlockchainToHumanFormat(amount.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse amount to float: %w", err)
+	}
+
 	XRPAmount := xrptx.AmountBlockchain{
 		TokenAmount: &xrptx.Amount{
 			Currency: tokenAsset,
 			Issuer:   tokenContract,
-			Value:    amount.String(),
+			Value:    tokenAmountValue,
 		},
 	}
 
@@ -131,4 +137,25 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		XRPTx:      &xrpTx,
 		SignPubKey: txInput.PublicKey,
 	}, nil
+}
+
+func convertFromBlockchainToHumanFormat(input string) (string, error) {
+	if len(input) > 16 {
+		return input, nil
+	}
+
+	intValue, err := strconv.ParseInt(input, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid input string: %v", err)
+	}
+
+	floatValue := float64(intValue) / 1e15
+
+	result := fmt.Sprintf("%.15f", floatValue)
+
+	if len(result) > 16 {
+		result = result[:16]
+	}
+
+	return strings.Replace(result, ",", "", -1), nil
 }

@@ -46,13 +46,13 @@ func TestNewTokenTransfer(t *testing.T) {
 	})
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
-	amount := xc.NewAmountBlockchainFromUint64(12)
+	amount := xc.NewAmountBlockchainFromUint64(12000000000000000)
 	input := &TxInput{}
 	tt, err := txBuilder.NewTokenTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tt)
 	xrpTx := tt.(*Tx).XRPTx
-	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12")
+	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12000000000000000")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Currency, "FMT")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
 }
@@ -73,12 +73,13 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, xrpTx.Amount.XRPAmount, "12")
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
+	amount2 := xc.NewAmountBlockchainFromUint64(12000000000000000)
 	txBuilder2, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
 		Contract:    contract,
-		Decimals:    6,
+		Decimals:    15,
 		ChainConfig: &xc.ChainConfig{},
 	})
-	tnt, err = txBuilder2.NewTransfer(from, to, amount, input)
+	tnt, err = txBuilder2.NewTransfer(from, to, amount2, input)
 	require.NoError(t, err)
 	require.NotNil(t, tnt)
 	xrpTx = tnt.(*Tx).XRPTx
@@ -86,5 +87,5 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Currency, "FMT")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
-	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12")
+	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12000000000000000")
 }

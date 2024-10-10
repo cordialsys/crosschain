@@ -155,7 +155,7 @@ type TransactionResponse struct {
 
 type TransactionResult struct {
 	Account            string          `json:"Account"`
-	Amount             string          `json:"Amount,omitempty"`
+	Amount             *Balance        `json:"Amount,omitempty"`
 	Destination        string          `json:"Destination,omitempty"`
 	Fee                string          `json:"Fee"`
 	Flags              int64           `json:"Flags"`
@@ -165,7 +165,7 @@ type TransactionResult struct {
 	TransactionType    string          `json:"TransactionType"`
 	TxnSignature       string          `json:"TxnSignature"`
 	Hash               string          `json:"hash"`
-	DeliverMax         string          `json:"DeliverMax,omitempty"`
+	DeliverMax         *Balance        `json:"DeliverMax,omitempty"`
 	TakerGets          *TakeGetsOrPays `json:"TakerGets,omitempty"`
 	TakerPays          *TakeGetsOrPays `json:"TakerPays,omitempty"`
 	CtID               string          `json:"ctid,omitempty"`
@@ -189,34 +189,20 @@ func (tg *TakeGetsOrPays) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	var xrpAmountStruct struct {
-		XRPAmount   string  `json:"XRPAmount,omitempty"`
-		TokenAmount *Amount `json:"TokenAmount,omitempty"`
-	}
-	if err := json.Unmarshal(data, &xrpAmountStruct); err == nil {
-		if xrpAmountStruct.XRPAmount != "" {
-			tg.XRPAmount = xrpAmountStruct.XRPAmount
-		} else {
-			tg.TokenAmount = xrpAmountStruct.TokenAmount
-		}
-
+	var tokenAmount Amount
+	if err := json.Unmarshal(data, &tokenAmount); err == nil {
+		tg.TokenAmount = &tokenAmount
 		return nil
 	}
 
-	var amount Amount
-	if err := json.Unmarshal(data, &amount); err == nil {
-		tg.TokenAmount = &amount
-		return nil
-	}
-
-	return fmt.Errorf("TakerGets is neither a string nor an Amount")
+	return fmt.Errorf("TakerGetsOrPays is neither a string nor an Amount")
 }
 
 type TransactionMeta struct {
 	AffectedNodes     []AffectedNodes `json:"AffectedNodes"`
 	TransactionIndex  int64           `json:"TransactionIndex,omitempty"`
 	TransactionResult string          `json:"TransactionResult,omitempty"`
-	DeliveredAmount   string          `json:"delivered_amount,omitempty"`
+	DeliveredAmount   *Balance        `json:"delivered_amount,omitempty"`
 }
 
 type AffectedNodes struct {
@@ -339,27 +325,13 @@ func (b *Balance) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	var xrpAmountStruct struct {
-		XRPAmount   string  `json:"XRPAmount,omitempty"`
-		TokenAmount *Amount `json:"TokenAmount,omitempty"`
-	}
-	if err := json.Unmarshal(data, &xrpAmountStruct); err == nil {
-		if xrpAmountStruct.XRPAmount != "" {
-			b.XRPAmount = xrpAmountStruct.XRPAmount
-		} else {
-			b.TokenAmount = xrpAmountStruct.TokenAmount
-		}
-
-		return nil
-	}
-
 	var tokenAmount Amount
 	if err := json.Unmarshal(data, &tokenAmount); err == nil {
 		b.TokenAmount = &tokenAmount
 		return nil
 	}
 
-	return fmt.Errorf("TakerGets is neither a string nor an Amount")
+	return fmt.Errorf("balance is neither a string nor an Amount")
 }
 
 type Amount struct {
