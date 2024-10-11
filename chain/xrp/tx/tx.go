@@ -5,12 +5,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 	xc "github.com/cordialsys/crosschain"
 	btctx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/sirupsen/logrus"
 	binarycodec "github.com/xyield/xrpl-go/binary-codec"
-	"strings"
 )
 
 const (
@@ -228,31 +228,4 @@ func RenderTokenAmount(fields map[string]interface{}, amount *Amount) {
 		"issuer":   amount.Issuer,
 		"value":    amount.Value,
 	}
-}
-
-// ExtractAssetAndContract parse assetContract and returns asset and contract
-func ExtractAssetAndContract(assetContract string) (asset string, contract string, err error) {
-	var separator string
-
-	switch {
-	case strings.Contains(assetContract, "."):
-		separator = "."
-	case strings.Contains(assetContract, "-"):
-		separator = "-"
-	case strings.Contains(assetContract, "_"):
-		separator = "_"
-	default:
-		return "", "", fmt.Errorf("string must contain one of the following separators: '.', '-', '_'")
-	}
-
-	parts := strings.Split(assetContract, separator)
-
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format, string should contain exactly one separator")
-	}
-
-	asset = parts[0]
-	contract = parts[1]
-
-	return asset, contract, nil
 }

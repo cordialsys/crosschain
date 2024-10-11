@@ -3,13 +3,15 @@ package builder
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
+
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/xrp/address/contract"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/sirupsen/logrus"
-	"strconv"
-	"strings"
 )
 
 // TxBuilder for Template
@@ -93,7 +95,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, fmt.Errorf("asset does not have a contract")
 	}
 
-	tokenAsset, tokenContract, err := xrptx.ExtractAssetAndContract(assetContract)
+	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetContract)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}

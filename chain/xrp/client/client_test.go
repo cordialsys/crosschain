@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/cordialsys/crosschain/chain/xrp/client/types"
+	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
+	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/stretchr/testify/assert"
 
 	xc "github.com/cordialsys/crosschain"
 	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
@@ -35,15 +37,15 @@ func TestFetchTxInput(t *testing.T) {
 	}{
 		{
 			asset: &xc.ChainConfig{},
-			accountInfoResp: xrpClient.AccountInfoResponse{
-				Result: xrpClient.AccountInfoResultDetails{
-					AccountData: xrpClient.AccountData{
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
 						Sequence: 861823,
 					},
 				},
 			},
-			ledgerResp: xrpClient.LedgerResponse{
-				Result: xrpClient.LedgerResult{
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{
 					LedgerCurrentIndex: 1221001,
 				},
 			},
@@ -59,13 +61,13 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			asset: &xc.ChainConfig{},
-			accountInfoResp: xrpClient.AccountInfoResponse{
-				Result: xrpClient.AccountInfoResultDetails{
-					AccountData: xrpClient.AccountData{},
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{},
 				},
 			},
-			ledgerResp: xrpClient.LedgerResponse{
-				Result: xrpClient.LedgerResult{
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{
 					LedgerCurrentIndex: 1221001,
 				},
 			},
@@ -81,15 +83,15 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			asset: &xc.ChainConfig{},
-			accountInfoResp: xrpClient.AccountInfoResponse{
-				Result: xrpClient.AccountInfoResultDetails{
-					AccountData: xrpClient.AccountData{
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
 						Sequence: 861823,
 					},
 				},
 			},
-			ledgerResp: xrpClient.LedgerResponse{
-				Result: xrpClient.LedgerResult{},
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{},
 			},
 			expectedTxInput: xrptxinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{
@@ -151,7 +153,7 @@ func TestSubmitTx(t *testing.T) {
 
 	vectors := []struct {
 		txInput    xc.Tx
-		submitResp xrpClient.SubmitResponse
+		submitResp types.SubmitResponse
 		asset      xc.ITask
 	}{
 		{
@@ -172,8 +174,8 @@ func TestSubmitTx(t *testing.T) {
 					TxnSignature:       "30450221009e7787de5b11bc17eaec2bd5841879434ce19fbe6f137eff0cd919ba435b236b02205f6afbcea8cc0f0cdda593a72f67aaeeb37b955ef4b523ed2967c2bade3c322b",
 				},
 			},
-			submitResp: xrpClient.SubmitResponse{
-				Result: xrpClient.SubmitResult{
+			submitResp: types.SubmitResponse{
+				Result: types.SubmitResult{
 					Accepted:                 true,
 					AccountSequenceAvailable: 861827,
 					AccountSequenceNext:      861827,
@@ -212,7 +214,7 @@ func TestFetchTxInfo(t *testing.T) {
 		txHash string
 		//txResp     xrpClient.TransactionResponse
 		txResp     string
-		ledgerResp xrpClient.LedgerResponse
+		ledgerResp types.LedgerResponse
 		err        string
 	}{
 		{
@@ -285,9 +287,9 @@ func TestFetchTxInfo(t *testing.T) {
 			  }
 			}
 			`,
-			ledgerResp: xrpClient.LedgerResponse{
-				Result: xrpClient.LedgerResult{
-					Ledger: xrpClient.LedgerInfo{
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{
+					Ledger: types.LedgerInfo{
 						Closed:      false,
 						LedgerIndex: "91190071",
 						ParentHash:  "8BFD1FBA7E3E16C6F604DDB9DC235567D8D0C5F7BB62CF8A0A58B074937429C2",
@@ -494,9 +496,9 @@ func TestFetchTxInfo(t *testing.T) {
 				"status": "success"
 			  }
 			}`,
-			ledgerResp: xrpClient.LedgerResponse{
-				Result: xrpClient.LedgerResult{
-					Ledger: xrpClient.LedgerInfo{
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{
+					Ledger: types.LedgerInfo{
 						Closed:      false,
 						LedgerIndex: "91225188",
 						ParentHash:  "3E54FF795235548F8B62078F9CE5B5427D7B86BB73571C5CBD9044E171842218",
@@ -593,9 +595,9 @@ func TestFetchNativeBalance(t *testing.T) {
 		err  string
 	}{
 		{
-			xrpClient.AccountInfoResponse{
-				Result: xrpClient.AccountInfoResultDetails{
-					AccountData: xrpClient.AccountData{
+			types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
 						Balance: "20000000",
 					},
 				},
@@ -604,7 +606,7 @@ func TestFetchNativeBalance(t *testing.T) {
 			"",
 		},
 		{
-			xrpClient.AccountInfoResponse{},
+			types.AccountInfoResponse{},
 			xc.NewAmountBlockchainFromUint64(0),
 			"empty balance returned for account: r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59",
 		},
@@ -639,9 +641,9 @@ func TestFetchCBalance(t *testing.T) {
 		err  string
 	}{
 		{
-			xrpClient.AccountLinesResponse{
-				Result: xrpClient.AccountLinesResultDetails{
-					Lines: []xrpClient.Line{
+			types.AccountLinesResponse{
+				Result: types.AccountLinesResultDetails{
+					Lines: []types.Line{
 						{
 							Account:  "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB",
 							Currency: "FMT",
@@ -654,7 +656,7 @@ func TestFetchCBalance(t *testing.T) {
 			"",
 		},
 		{
-			xrpClient.AccountLinesResponse{},
+			types.AccountLinesResponse{},
 			"0",
 			"empty balance returned for account: rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB",
 		},
