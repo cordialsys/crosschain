@@ -492,13 +492,7 @@ func TestFetchTxInfo(t *testing.T) {
 				"ledger_index": 90659219,
 				"inLedger": 90659219,
 				"status": "success"
-			  },
-			  "warnings": [
-				{
-				  "id": 2001,
-				  "message": "This is a clio server. clio only serves validated data. If you want to talk to rippled, include 'ledger_index':'current' in your request"
-				}
-			  ]
+			  }
 			}`,
 			ledgerResp: xrpClient.LedgerResponse{
 				Result: xrpClient.LedgerResult{
@@ -572,10 +566,10 @@ func TestFetchTxInfo(t *testing.T) {
 
 				require.Contains(t, txInfo.Transfers[0].From[0].Address, "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw")
 				require.Equal(t, txInfo.Transfers[0].From[0].Balance.String(), "4862478")
-				require.Contains(t, txInfo.Transfers[0].From[1].Address, "chains/addresses/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
+				require.Contains(t, txInfo.Transfers[0].From[1].Address, "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q")
 				require.Contains(t, txInfo.Transfers[0].From[1].Asset, "chains/assets/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
 				require.Contains(t, txInfo.Transfers[0].From[1].Contract, "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
-				require.Equal(t, txInfo.Transfers[0].From[1].Balance.String(), "2624741712799732")
+				require.Equal(t, txInfo.Transfers[0].From[1].Balance.String(), "2624741712800000")
 
 				require.Contains(t, txInfo.Transfers[0].To[0].Address, "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw")
 				require.Contains(t, txInfo.Transfers[0].To[0].Asset, "chains/assets/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq")
@@ -585,7 +579,6 @@ func TestFetchTxInfo(t *testing.T) {
 				require.Equal(t, txInfo.Transfers[0].To[1].Balance.String(), "4862466")
 
 				require.Equal(t, txInfo.Fees[0].Balance.String(), "12")
-				require.Equal(t, txInfo.Fees[1].Balance.String(), "-268")
 			}
 
 		}

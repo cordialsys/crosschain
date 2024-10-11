@@ -12,10 +12,7 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/sirupsen/logrus"
-	"math"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -38,6 +35,9 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Asset:      cfgI,
 	}, nil
 }
+
+const TRUSTLINE_DECIMALS = 15
+const XRP_NATIVE_DECIMALS = 0
 
 const MethodPost string = "POST"
 
@@ -205,6 +205,14 @@ type TransactionMeta struct {
 	DeliveredAmount   *Balance        `json:"delivered_amount,omitempty"`
 }
 
+type XRPNode interface {
+	IsValidMovement() bool
+	GetAddress(txResponse *TransactionResponse) (xc.Address, error)
+	GetContract(txResponse *TransactionResponse) (xc.ContractAddress, error)
+	GetAmount() (xc.AmountBlockchain, error)
+	IsSource(txResponse *TransactionResponse) (bool, error)
+}
+
 type AffectedNodes struct {
 	CreatedNode  *CreatedNode  `json:"CreatedNode,omitempty"`
 	ModifiedNode *ModifiedNode `json:"ModifiedNode,omitempty"`
@@ -254,10 +262,139 @@ type DeletedNode struct {
 	LedgerIndex     string       `json:"LedgerIndex,omitempty"`
 }
 
+type CreatedNodeWrapper struct {
+	node *CreatedNode
+}
+
+func (mnw *CreatedNodeWrapper) IsValidMovement() bool {
+	return mnw.node.LedgerEntryType == "AccountRoot" || mnw.node.LedgerEntryType == "RippleState"
+}
+
+func (mnw *CreatedNodeWrapper) GetAddress(txResponse *TransactionResponse) (xc.Address, error) {
+	if mnw.node.NewFields == nil {
+		return "", fmt.Errorf("empty NewFields in CreatedNode")
+	}
+
+	if mnw.node.LedgerEntryType == "AccountRoot" {
+		return xc.Address(mnw.node.NewFields.Account), nil
+
+	} else if mnw.node.LedgerEntryType == "RippleState" {
+		isSource, fetchIsSourceErr := mnw.IsSource(txResponse)
+		if fetchIsSourceErr != nil {
+			return "", fetchIsSourceErr
+		}
+
+		if isSource {
+			if mnw.node.NewFields.HighLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in NewFields")
+			}
+
+			return xc.Address(mnw.node.NewFields.HighLimit.Issuer), nil
+		} else {
+			if mnw.node.NewFields.LowLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in NewFields")
+			}
+
+			return xc.Address(mnw.node.NewFields.LowLimit.Issuer), nil
+		}
+	}
+
+	return "", fmt.Errorf("unknown node type in CreatedNode")
+}
+
+func (mnw *CreatedNodeWrapper) GetContract(txResponse *TransactionResponse) (xc.ContractAddress, error) {
+	var (
+		contract                  xc.ContractAddress
+		finalBalanceHumanReadable xc.AmountHumanReadable
+		err                       error
+	)
+
+	if mnw.node.NewFields == nil {
+		return "", fmt.Errorf("empty NewFields in CreatedNode")
+	}
+
+	if mnw.node.NewFields.Balance.XRPAmount != "" {
+		contract = ""
+	} else {
+		finalBalanceHumanReadable, err = xc.NewAmountHumanReadableFromStr(mnw.node.NewFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return "", err
+		}
+
+		finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
+		zero := xc.NewAmountBlockchainFromUint64(0)
+
+		if finalBalanceBlockchain.Cmp(&zero) > 0 {
+			if mnw.node.NewFields.HighLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in NewFields")
+			}
+
+			contract = xc.ContractAddress(mnw.node.NewFields.HighLimit.Issuer)
+		} else {
+			if mnw.node.NewFields.LowLimit == nil {
+				return "", fmt.Errorf("empty LowLimit in NewFields")
+			}
+
+			contract = xc.ContractAddress(mnw.node.NewFields.LowLimit.Issuer)
+		}
+	}
+
+	return contract, nil
+}
+
+func (mnw *CreatedNodeWrapper) GetAmount() (xc.AmountBlockchain, error) {
+
+	transactedAmount, conversionErr := extractCreatedNodeBalance(mnw.node)
+	if conversionErr != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch CreatedNode balance: %s", conversionErr.Error())
+	}
+
+	return transactedAmount, nil
+}
+
+func (mnw *CreatedNodeWrapper) IsSource(txResponse *TransactionResponse) (bool, error) {
+	if mnw.node.LedgerEntryType == "AccountRoot" {
+		if mnw.node.NewFields == nil {
+			return false, fmt.Errorf("empty NewFields in CreatedNode")
+		}
+
+		if mnw.node.NewFields.Account != txResponse.Result.Account {
+			return false, nil
+		} else {
+			return true, nil
+		}
+
+	} else if mnw.node.LedgerEntryType == "RippleState" {
+		finalBalanceHumanReadable, err := xc.NewAmountHumanReadableFromStr(mnw.node.NewFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return false, err
+		}
+
+		finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
+		zero := xc.NewAmountBlockchainFromUint64(0)
+
+		if finalBalanceBlockchain.Cmp(&zero) > 0 {
+			if mnw.node.NewFields.HighLimit == nil {
+				return false, fmt.Errorf("empty HighLimit in NewFields")
+			}
+
+			return false, nil
+		} else {
+			if mnw.node.NewFields.LowLimit == nil {
+				return false, fmt.Errorf("empty LowLimit in NewFields")
+			}
+
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 type CreatedNode struct {
-	LedgerEntryType string    `json:"LedgerEntryType"`
-	LedgerIndex     string    `json:"LedgerIndex"`
-	NewFields       NewFields `json:"NewFields"`
+	LedgerEntryType string     `json:"LedgerEntryType"`
+	LedgerIndex     string     `json:"LedgerIndex"`
+	NewFields       *NewFields `json:"NewFields"`
 }
 
 type NewFields struct {
@@ -272,6 +409,147 @@ type NewFields struct {
 	LowNode       string   `json:"LowNode,omitempty"`
 	Owner         string   `json:"Owner,omitempty"`
 	RootIndex     string   `json:"RootIndex,omitempty"`
+}
+
+type ModifiedNodeWrapper struct {
+	node *ModifiedNode
+}
+
+func (mnw *ModifiedNodeWrapper) IsValidMovement() bool {
+	if mnw.node.LedgerEntryType == "AccountRoot" {
+
+		if mnw.node.FinalFields == nil && mnw.node.PreviousFields == nil {
+			return false
+		}
+
+		return true
+	}
+
+	if mnw.node.LedgerEntryType == "RippleState" {
+		return true
+	}
+
+	return false
+}
+
+func (mnw *ModifiedNodeWrapper) GetAddress(txResponse *TransactionResponse) (xc.Address, error) {
+	if mnw.node.FinalFields == nil {
+		return "", fmt.Errorf("empty FinalFields in ModifiedNode")
+	}
+
+	if mnw.node.LedgerEntryType == "AccountRoot" {
+		return xc.Address(mnw.node.FinalFields.Account), nil
+
+	} else if mnw.node.LedgerEntryType == "RippleState" {
+		isSource, fetchIsSourceErr := mnw.IsSource(txResponse)
+		if fetchIsSourceErr != nil {
+			return "", fetchIsSourceErr
+		}
+
+		if isSource {
+			if mnw.node.FinalFields.LowLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in FinalFields")
+			}
+
+			return xc.Address(mnw.node.FinalFields.LowLimit.Issuer), nil
+		} else {
+			if mnw.node.FinalFields.HighLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in FinalFields")
+			}
+
+			return xc.Address(mnw.node.FinalFields.HighLimit.Issuer), nil
+		}
+	}
+
+	return "", fmt.Errorf("unknown node type in ModifiedNode")
+}
+
+func (mnw *ModifiedNodeWrapper) GetContract(txResponse *TransactionResponse) (xc.ContractAddress, error) {
+	var (
+		contract                  xc.ContractAddress
+		finalBalanceHumanReadable xc.AmountHumanReadable
+		err                       error
+	)
+
+	if mnw.node.FinalFields == nil {
+		return "", fmt.Errorf("empty FinalFields in ModifiedNode")
+	}
+
+	if mnw.node.FinalFields.Balance.XRPAmount != "" {
+		contract = ""
+	} else {
+		finalBalanceHumanReadable, err = xc.NewAmountHumanReadableFromStr(mnw.node.FinalFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return "", err
+		}
+
+		finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
+		zero := xc.NewAmountBlockchainFromUint64(0)
+
+		if finalBalanceBlockchain.Cmp(&zero) > 0 {
+			if mnw.node.FinalFields.HighLimit == nil {
+				return "", fmt.Errorf("empty HighLimit in FinalFields")
+			}
+
+			contract = xc.ContractAddress(mnw.node.FinalFields.HighLimit.Issuer)
+		} else {
+			if mnw.node.FinalFields.LowLimit == nil {
+				return "", fmt.Errorf("empty LowLimit in FinalFields")
+			}
+
+			contract = xc.ContractAddress(mnw.node.FinalFields.LowLimit.Issuer)
+		}
+	}
+
+	return contract, nil
+}
+
+func (mnw *ModifiedNodeWrapper) GetAmount() (xc.AmountBlockchain, error) {
+	transactedAmount, conversionErr := ExtractModifiedNodeBalance(mnw.node)
+	if conversionErr != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch ModifiedNode balance: %s", conversionErr.Error())
+	}
+
+	return transactedAmount, nil
+}
+
+func (mnw *ModifiedNodeWrapper) IsSource(txResponse *TransactionResponse) (bool, error) {
+	if mnw.node.LedgerEntryType == "AccountRoot" {
+		if mnw.node.FinalFields == nil {
+			return false, fmt.Errorf("empty FinalField in ModifiedNode")
+		}
+
+		if mnw.node.FinalFields.Account != txResponse.Result.Account {
+			return false, nil
+		} else {
+			return true, nil
+		}
+
+	} else if mnw.node.LedgerEntryType == "RippleState" {
+		finalBalanceHumanReadable, err := xc.NewAmountHumanReadableFromStr(mnw.node.FinalFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return false, err
+		}
+
+		finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
+		zero := xc.NewAmountBlockchainFromUint64(0)
+
+		if finalBalanceBlockchain.Cmp(&zero) > 0 {
+			if mnw.node.FinalFields.HighLimit == nil {
+				return false, fmt.Errorf("empty HighLimit in FinalFields")
+			}
+
+			return true, nil
+		} else {
+			if mnw.node.FinalFields.LowLimit == nil {
+				return false, fmt.Errorf("empty LowLimit in FinalFields")
+			}
+
+			return false, nil
+		}
+	}
+
+	return false, nil
 }
 
 type ModifiedNode struct {
@@ -538,241 +816,64 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	affectedNodes := txResponse.Result.Meta.AffectedNodes
 	tf := xclient.NewTransfer(client.Asset.GetChain().Chain)
 	for _, node := range affectedNodes {
+		var xrpNode XRPNode
 
 		if node.ModifiedNode != nil {
-			modifiedNode := node.ModifiedNode
-			if modifiedNode.LedgerEntryType == "AccountRoot" {
-
-				if node.ModifiedNode.FinalFields == nil {
-					continue
-				}
-
-				var (
-					contract     string
-					finalBalance float64
-					parseErr     error
-				)
-
-				if node.ModifiedNode.FinalFields.Balance.XRPAmount != "" {
-					contract = ""
-				} else {
-					finalBalance, parseErr = strconv.ParseFloat(node.ModifiedNode.FinalFields.Balance.TokenAmount.Value, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-					if finalBalance > 0 {
-						contract = node.ModifiedNode.FinalFields.HighLimit.Issuer
-					} else {
-						contract = node.ModifiedNode.FinalFields.LowLimit.Issuer
-					}
-				}
-
-				convertedTransactedAmount, conversionErr := extractModifiedNodeBalance(node.ModifiedNode)
-				if conversionErr != nil {
-					return xclient.TxInfo{}, conversionErr
-				}
-
-				if modifiedNode.FinalFields.Account != txResponse.Result.Account {
-					tf.AddDestination(
-						xc.Address(modifiedNode.FinalFields.Account),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount,
-						nil,
-					)
-				} else {
-					tf.AddSource(
-						xc.Address(modifiedNode.FinalFields.Account),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount,
-						nil,
-					)
-				}
-
-			} else if node.ModifiedNode.LedgerEntryType == "RippleState" {
-
-				if node.ModifiedNode.FinalFields == nil {
-					continue
-				}
-
-				var (
-					contract        string
-					finalBalance    float64
-					transactionType string
-					parseErr        error
-				)
-
-				if node.ModifiedNode.FinalFields.Balance.XRPAmount != "" {
-					contract = ""
-				} else {
-					finalBalance, parseErr = strconv.ParseFloat(node.ModifiedNode.FinalFields.Balance.TokenAmount.Value, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-					if finalBalance > 0 {
-						transactionType = "source"
-						contract = node.ModifiedNode.FinalFields.HighLimit.Issuer
-					} else {
-						transactionType = "destination"
-						contract = node.ModifiedNode.FinalFields.LowLimit.Issuer
-					}
-				}
-
-				convertedTransactedAmount, conversionErr := extractModifiedNodeBalance(node.ModifiedNode)
-				if conversionErr != nil {
-					return xclient.TxInfo{}, conversionErr
-				}
-
-				//if modifiedNode.FinalFields.Account != txResponse.Result.Account {
-				if transactionType == "destination" {
-					tf.AddDestination(
-						xc.Address(modifiedNode.FinalFields.LowLimit.Issuer),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount,
-						nil,
-					)
-				} else if transactionType == "source" {
-					tf.AddSource(
-						xc.Address(modifiedNode.FinalFields.HighLimit.Issuer),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount,
-						nil,
-					)
-				}
+			xrpNode = &ModifiedNodeWrapper{
+				node: node.ModifiedNode,
 			}
-
 		} else if node.CreatedNode != nil {
-
-			createdNode := node.CreatedNode
-			if createdNode.LedgerEntryType == "AccountRoot" {
-
-				var (
-					contract   string
-					newBalance float64
-					decimals   int32
-					//transactionType string
-					parseErr error
-				)
-
-				if node.CreatedNode.NewFields.Balance.XRPAmount != "" {
-					contract = ""
-					decimals = 0
-					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.XRPAmount, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-				} else {
-					decimals = 15
-					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.TokenAmount.Value, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-					if newBalance > 0 {
-						//transactionType = "source"
-						contract = node.CreatedNode.NewFields.HighLimit.Issuer
-					} else {
-						//transactionType = "destination"
-						contract = node.CreatedNode.NewFields.LowLimit.Issuer
-					}
-				}
-
-				var newBalanceString string
-				if decimals == 0 {
-					newBalanceString = fmt.Sprintf("%.6f", math.Abs(newBalance))
-				} else {
-					newBalanceString = fmt.Sprintf("%.15f", math.Abs(newBalance))
-				}
-
-				newBalanceString = strings.TrimRight(strings.TrimRight(newBalanceString, "0"), ".")
-
-				convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(newBalanceString)
-				if conversionErr != nil {
-					return xclient.TxInfo{}, conversionErr
-				}
-
-				//if transactionType == "destination" {
-				if createdNode.NewFields.Account != "" {
-					tf.AddDestination(
-						xc.Address(createdNode.NewFields.Account),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount.ToBlockchain(decimals),
-						nil,
-					)
-				} else {
-					tf.AddDestination(
-						xc.Address(createdNode.NewFields.LowLimit.Issuer),
-						xc.ContractAddress(contract),
-						convertedTransactedAmount.ToBlockchain(decimals),
-						nil,
-					)
-				}
-
-			} else if createdNode.LedgerEntryType == "RippleState" {
-
-				var (
-					contract        string
-					newBalance      float64
-					decimals        int32
-					transactionType string
-					address         xc.Address
-					parseErr        error
-				)
-
-				if node.CreatedNode.NewFields.Balance.XRPAmount != "" {
-					contract = ""
-					decimals = 0
-					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.XRPAmount, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-				} else {
-					decimals = 15
-					newBalance, parseErr = strconv.ParseFloat(node.CreatedNode.NewFields.Balance.TokenAmount.Value, 10)
-					if parseErr != nil {
-						return xclient.TxInfo{}, parseErr
-					}
-
-					if newBalance > 0 {
-						transactionType = "destination"
-						contract = node.CreatedNode.NewFields.HighLimit.Issuer
-					} else {
-						transactionType = "source"
-						contract = node.CreatedNode.NewFields.LowLimit.Issuer
-					}
-				}
-
-				var newBalanceString string
-				if decimals == 0 {
-					newBalanceString = fmt.Sprintf("%.6f", math.Abs(newBalance))
-				} else {
-					newBalanceString = fmt.Sprintf("%.15f", math.Abs(newBalance))
-				}
-
-				newBalanceString = strings.TrimRight(strings.TrimRight(newBalanceString, "0"), ".")
-
-				convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(newBalanceString)
-				if conversionErr != nil {
-					return xclient.TxInfo{}, conversionErr
-				}
-
-				if transactionType == "destination" {
-					address = xc.Address(createdNode.NewFields.LowLimit.Issuer)
-				} else if transactionType == "source" {
-					address = xc.Address(createdNode.NewFields.HighLimit.Issuer)
-				}
-
-				tf.AddDestination(
-					address,
-					xc.ContractAddress(contract),
-					convertedTransactedAmount.ToBlockchain(decimals),
-					nil,
-				)
+			xrpNode = &CreatedNodeWrapper{
+				node: node.CreatedNode,
 			}
 		}
+
+		if xrpNode == nil {
+			continue
+		}
+
+		// Check to see if node LedgerEntryType is of a valid type.
+		if !xrpNode.IsValidMovement() {
+			continue
+		}
+
+		// Fetch address, contract and amount
+		address, fetchAddressErr := xrpNode.GetAddress(&txResponse)
+		if fetchAddressErr != nil {
+			return xclient.TxInfo{}, fetchAddressErr
+		}
+
+		contract, fetchContractErr := xrpNode.GetContract(&txResponse)
+		if fetchContractErr != nil {
+			return xclient.TxInfo{}, fetchContractErr
+		}
+
+		amount, fetchAmountErr := xrpNode.GetAmount()
+		if fetchAmountErr != nil {
+			return xclient.TxInfo{}, fetchAmountErr
+		}
+
+		isSource, fetchIsSourceErr := xrpNode.IsSource(&txResponse)
+		if fetchIsSourceErr != nil {
+			return xclient.TxInfo{}, fetchIsSourceErr
+		}
+
+		if isSource {
+			tf.AddSource(
+				address,
+				contract,
+				amount,
+				nil,
+			)
+		} else {
+			tf.AddDestination(
+				address,
+				contract,
+				amount,
+				nil,
+			)
+		}
+
 	}
 
 	txInfo.AddTransfer(tf)
@@ -782,50 +883,74 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	return txInfo, nil
 }
 
-func extractModifiedNodeBalance(node *ModifiedNode) (xc.AmountBlockchain, error) {
+func extractCreatedNodeBalance(node *CreatedNode) (xc.AmountBlockchain, error) {
 	var (
-		finalBalance, previousBalance float64
-		decimals                      int32
-		parseErr                      error
+		newBalance xc.AmountHumanReadable
+		decimals   int32
+		err        error
 	)
 
-	if node.FinalFields.Balance.XRPAmount != "" {
-		decimals = 0
-		finalBalance, parseErr = strconv.ParseFloat(node.FinalFields.Balance.XRPAmount, 10)
+	if node.NewFields == nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("NewFields is empty")
+	}
+
+	if node.NewFields.Balance.XRPAmount != "" {
+		decimals = XRP_NATIVE_DECIMALS
+		newBalance, err = xc.NewAmountHumanReadableFromStr(node.NewFields.Balance.XRPAmount)
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
 	} else {
-		decimals = 15
-		finalBalance, parseErr = strconv.ParseFloat(node.FinalFields.Balance.TokenAmount.Value, 10)
+		decimals = TRUSTLINE_DECIMALS
+		newBalance, err = xc.NewAmountHumanReadableFromStr(node.NewFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
+	}
+
+	return newBalance.ToBlockchain(decimals), nil
+}
+
+func ExtractModifiedNodeBalance(node *ModifiedNode) (xc.AmountBlockchain, error) {
+	var (
+		finalBalanceHumanReadable, previousBalanceHumanReadable xc.AmountHumanReadable
+		finalFields, previousBalance                            xc.AmountBlockchain
+		decimals                                                int32
+		parseErr                                                error
+	)
+
+	if node.FinalFields == nil || node.PreviousFields == nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("FinalFields is empty")
+	}
+
+	if node.FinalFields.Balance.XRPAmount != "" {
+		decimals = XRP_NATIVE_DECIMALS
+		finalBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.XRPAmount)
+
+		finalFields = finalBalanceHumanReadable.ToBlockchain(decimals)
+	} else {
+		decimals = TRUSTLINE_DECIMALS
+		finalBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.TokenAmount.Value)
+		finalFields = finalBalanceHumanReadable.ToBlockchain(decimals)
 	}
 	if parseErr != nil {
 		return xc.AmountBlockchain{}, parseErr
 	}
 
 	if node.PreviousFields.Balance.XRPAmount != "" {
-		previousBalance, parseErr = strconv.ParseFloat(node.PreviousFields.Balance.XRPAmount, 10)
+		previousBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.XRPAmount)
+		previousBalance = previousBalanceHumanReadable.ToBlockchain(decimals)
 	} else {
-		previousBalance, parseErr = strconv.ParseFloat(node.PreviousFields.Balance.TokenAmount.Value, 10)
+		previousBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.TokenAmount.Value)
+		previousBalance = previousBalanceHumanReadable.ToBlockchain(decimals)
 	}
 	if parseErr != nil {
 		return xc.AmountBlockchain{}, parseErr
 	}
 
-	transactedAmount := math.Abs(previousBalance - finalBalance)
+	transactedAmount := previousBalance.Sub(&finalFields)
 
-	var transactedAmountString string
-	if decimals == 0 {
-		transactedAmountString = fmt.Sprintf("%.6f", transactedAmount)
-	} else {
-		transactedAmountString = fmt.Sprintf("%.15f", transactedAmount)
-	}
-
-	transactedAmountString = strings.TrimRight(strings.TrimRight(transactedAmountString, "0"), ".")
-
-	convertedTransactedAmount, conversionErr := xc.NewAmountHumanReadableFromStr(transactedAmountString)
-	if conversionErr != nil {
-		return xc.AmountBlockchain{}, conversionErr
-	}
-
-	return convertedTransactedAmount.ToBlockchain(decimals), nil
+	return transactedAmount.Abs(), nil
 }
 
 // FetchBalance fetches token balance for a XRP address
@@ -917,7 +1042,7 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	if err != nil {
 		return zero, fmt.Errorf("failed to parse balance for account: %s", address)
 	}
-	return humanReadbleBalance.ToBlockchain(15), nil
+	return humanReadbleBalance.ToBlockchain(TRUSTLINE_DECIMALS), nil
 }
 
 func (client *Client) Send(method string, requestBody any, response any) error {
