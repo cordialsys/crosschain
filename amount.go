@@ -148,6 +148,10 @@ func NewAmountHumanReadableFromStr(str string) (AmountHumanReadable, error) {
 	return AmountHumanReadable(decimal), err
 }
 
+func (amount AmountHumanReadable) Decimal() decimal.Decimal {
+	return decimal.Decimal(amount)
+}
+
 func (amount AmountHumanReadable) ToBlockchain(decimals int32) AmountBlockchain {
 	factor := decimal.NewFromInt32(10).Pow(decimal.NewFromInt32(decimals))
 	raised := ((decimal.Decimal)(amount)).Mul(factor)

@@ -100,10 +100,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
-	tokenAmountValue, err := convertFromBlockchainToHumanFormat(amount.String())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse amount to float: %w", err)
-	}
+	tokenAmountValue := amount.ToHuman(15).String()
 
 	XRPAmount := xrptx.AmountBlockchain{
 		TokenAmount: &xrptx.Amount{

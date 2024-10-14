@@ -52,7 +52,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tt)
 	xrpTx := tt.(*Tx).XRPTx
-	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12000000000000000")
+	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Currency, "FMT")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
 }
@@ -87,5 +87,5 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Currency, "FMT")
 	require.Equal(t, xrpTx.Amount.TokenAmount.Issuer, "rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
-	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12000000000000000")
+	require.Equal(t, xrpTx.Amount.TokenAmount.Value, "12")
 }
