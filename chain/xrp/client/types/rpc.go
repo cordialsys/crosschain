@@ -11,6 +11,10 @@ import (
 const TRUSTLINE_DECIMALS = 15
 const XRP_NATIVE_DECIMALS = 6
 
+// XRP timestamps are all relative to this unix timestamp.
+// https://xrpl.org/docs/references/protocol/data-types/basic-data-types#specifying-time
+const XRP_EPOCH = 946684800
+
 type LedgerIndex string
 
 const Validated LedgerIndex = "validated"

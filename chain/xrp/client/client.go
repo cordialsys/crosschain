@@ -163,7 +163,9 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 
 	name := xclient.TransactionName(string(client.Asset.GetChain().Chain) + txResponse.Result.Hash)
 
-	block := xclient.NewBlock(uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, time.Unix(txResponse.Result.Date, 0))
+	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
+
+	block := xclient.NewBlock(uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, blockTime)
 
 	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
