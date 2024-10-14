@@ -9,7 +9,7 @@ import (
 )
 
 const TRUSTLINE_DECIMALS = 15
-const XRP_NATIVE_DECIMALS = 0
+const XRP_NATIVE_DECIMALS = 6
 
 type LedgerIndex string
 

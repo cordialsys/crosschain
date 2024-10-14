@@ -2,9 +2,9 @@ package events
 
 import (
 	"fmt"
-
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
+	"github.com/shopspring/decimal"
 )
 
 type eventModifiedRippleState struct {
@@ -50,6 +50,12 @@ func (mnw *eventModifiedRippleState) GetAmount() (xc.AmountBlockchain, error) {
 
 func (mnw *eventModifiedRippleState) IsSource(txResponse *types.TransactionResponse) (bool, error) {
 
+	var (
+		accountAddress      string
+		modifiedNodeAddress string
+		balanceWentDown     bool
+	)
+
 	finalBalanceHuman, err := xc.NewAmountHumanReadableFromStr(mnw.node.FinalFields.Balance.TokenAmount.Value)
 	if err != nil {
 		return false, err
@@ -60,15 +66,30 @@ func (mnw *eventModifiedRippleState) IsSource(txResponse *types.TransactionRespo
 		return false, err
 	}
 
-	// use max precision just for the comparison
-	finalBalance := finalBalanceHuman.ToBlockchain(15)
-	previousBalance := previousBalanceHuamn.ToBlockchain(15)
+	finalBalanceDecimal := decimal.Decimal.Abs(finalBalanceHuman.Decimal())
+	previousBalanceDecimal := decimal.Decimal.Abs(previousBalanceHuamn.Decimal())
 
-	// If the balance goes down, this must be a source address.
-	balanceWentDown := previousBalance.Cmp(&finalBalance) > 0
+	balance := previousBalanceDecimal.Sub(finalBalanceDecimal)
 
-	// TODO this is not always correct.. I think we must also consider if the balance is for the account address
-	// or the destination address (not the account address).
+	balanceWentDown = previousBalanceDecimal.Cmp(finalBalanceDecimal) > 0
 
-	return !balanceWentDown, nil
+	accountAddress = txResponse.Result.Account
+	if balance.IsPositive() {
+		modifiedNodeAddress = mnw.node.FinalFields.HighLimit.Issuer
+	}
+
+	if balance.IsNegative() {
+		modifiedNodeAddress = mnw.node.FinalFields.LowLimit.Issuer
+	}
+
+	// Compare the modified address with the account (sender) address from the transaction
+	isSourceAccount := accountAddress == modifiedNodeAddress
+
+	if balanceWentDown && isSourceAccount {
+		return true, nil // It's the source
+	} else if !balanceWentDown && !isSourceAccount {
+		return false, nil // It's the destination
+	}
+
+	return balanceWentDown, nil
 }

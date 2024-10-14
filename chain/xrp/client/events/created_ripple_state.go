@@ -15,24 +15,27 @@ var _ Event = &eventCreatedRippleState{}
 
 func (mnw *eventCreatedRippleState) GetAddress(txResponse *types.TransactionResponse) (xc.Address, error) {
 
-	isSource, fetchIsSourceErr := mnw.IsSource(txResponse)
-	if fetchIsSourceErr != nil {
-		return "", fetchIsSourceErr
+	finalBalanceHumanReadable, err := xc.NewAmountHumanReadableFromStr(mnw.node.NewFields.Balance.TokenAmount.Value)
+	if err != nil {
+		return "", err
 	}
 
-	if isSource {
-		if mnw.node.NewFields.LowLimit == nil {
-			return "", fmt.Errorf("empty HighLimit in NewFields")
-		}
+	finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
+	zero := xc.NewAmountBlockchainFromUint64(0)
 
-		return xc.Address(mnw.node.NewFields.LowLimit.Issuer), nil
-	} else {
-
+	if finalBalanceBlockchain.Cmp(&zero) < 0 {
 		if mnw.node.NewFields.HighLimit == nil {
 			return "", fmt.Errorf("empty HighLimit in NewFields")
 		}
 
 		return xc.Address(mnw.node.NewFields.HighLimit.Issuer), nil
+	} else {
+
+		if mnw.node.NewFields.LowLimit == nil {
+			return "", fmt.Errorf("empty HighLimit in NewFields")
+		}
+
+		return xc.Address(mnw.node.NewFields.LowLimit.Issuer), nil
 	}
 
 }
@@ -53,26 +56,6 @@ func (mnw *eventCreatedRippleState) GetAmount() (xc.AmountBlockchain, error) {
 
 func (mnw *eventCreatedRippleState) IsSource(txResponse *types.TransactionResponse) (bool, error) {
 
-	finalBalanceHumanReadable, err := xc.NewAmountHumanReadableFromStr(mnw.node.NewFields.Balance.TokenAmount.Value)
-	if err != nil {
-		return false, err
-	}
-
-	finalBalanceBlockchain := finalBalanceHumanReadable.ToBlockchain(6)
-	zero := xc.NewAmountBlockchainFromUint64(0)
-
-	if finalBalanceBlockchain.Cmp(&zero) < 0 {
-		if mnw.node.NewFields.HighLimit == nil {
-			return false, fmt.Errorf("empty HighLimit in NewFields")
-		}
-
-		return false, nil
-	} else {
-		if mnw.node.NewFields.LowLimit == nil {
-			return false, fmt.Errorf("empty LowLimit in NewFields")
-		}
-
-		return true, nil
-	}
-
+	// Is always a destination.
+	return false, nil
 }
