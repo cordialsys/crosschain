@@ -3,14 +3,16 @@ package builder
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
+
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/xrp/address/contract"
+	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
-	"strconv"
 )
 
 // TxBuilder for Template
@@ -99,7 +101,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
-	tokenAmountValue := amount.ToHuman(15)
+	// XRP tokens are fixed decimals
+	tokenAmountValue := amount.ToHuman(types.TRUSTLINE_DECIMALS)
 
 	XRPAmount := xrptx.AmountBlockchain{
 		TokenAmount: &xrptx.Amount{
@@ -117,6 +120,9 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		}
 	}
 
+	// We permit spending an additional amount (10%) in order to send the target amount.
+	// This is needed because XRP tokens can have their own fees.
+	// https://xrpl.org/docs/concepts/payment-types/partial-payments#without-partial-payments
 	sendMaxFactor, err := decimal.NewFromString("1.1")
 	if err != nil {
 		return nil, fmt.Errorf("error converting sendMaxFactor to decimal: %v", err)

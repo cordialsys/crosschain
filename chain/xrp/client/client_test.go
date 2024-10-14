@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
 	xc "github.com/cordialsys/crosschain"
 	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
@@ -13,9 +18,6 @@ import (
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestNewClient(t *testing.T) {
@@ -305,6 +307,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 94494,
 					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					Time:   time.Unix(1724341792, 0),
 				},
 				Transfers: []*xclient.Transfer{
 					{
@@ -555,6 +558,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 90659219,
 					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+					Time:   time.Unix(1725988340, 0),
 				},
 				Transfers: []*xclient.Transfer{
 					{
@@ -604,58 +608,50 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 	}
 
-	for _, vector := range vectors {
+	for i, vector := range vectors {
+		t.Run(fmt.Sprintf("test-%d", i), func(t *testing.T) {
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			var reqBody map[string]interface{}
-			json.NewDecoder(r.Body).Decode(&reqBody)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var reqBody map[string]interface{}
+				json.NewDecoder(r.Body).Decode(&reqBody)
 
-			method := reqBody["method"].(string)
-			if method == "tx" {
-				// Respond with AccountInfoResponse
-				w.Write([]byte(vector.txResp))
-			} else if method == "ledger" {
-				// Respond with LedgerResponse
-				json.NewEncoder(w).Encode(vector.ledgerResp)
+				method := reqBody["method"].(string)
+				if method == "tx" {
+					// Respond with AccountInfoResponse
+					w.Write([]byte(vector.txResp))
+				} else if method == "ledger" {
+					// Respond with LedgerResponse
+					json.NewEncoder(w).Encode(vector.ledgerResp)
+				} else {
+					t.Errorf("unexpected method: %s", method)
+				}
+			}))
+			defer server.Close()
+
+			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
+				token.ChainConfig = &xc.ChainConfig{
+					URL:   server.URL,
+					Chain: "XRP",
+				}
 			} else {
-				t.Errorf("unexpected method: %s", method)
+				vector.asset.(*xc.ChainConfig).URL = server.URL
 			}
-		}))
-		defer server.Close()
 
-		if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-			token.ChainConfig = &xc.ChainConfig{
-				URL:   server.URL,
-				Chain: "XRP",
+			client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
+
+			if vector.err != "" {
+				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(t, err, vector.err)
+			} else {
+
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+				// redundantly test time so it's easier to see which unix second is expected
+				require.Equal(t, vector.expectedTxInfo.Block.Time.Unix(), txInfo.Block.Time.Unix())
+				require.Equal(t, vector.expectedTxInfo, txInfo)
 			}
-		} else {
-			vector.asset.(*xc.ChainConfig).URL = server.URL
-		}
-
-		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
-		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
-
-		if vector.err != "" {
-			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, vector.err)
-		} else {
-
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			require.Equal(t, vector.expectedTxInfo.Name, txInfo.Name)
-			require.Equal(t, vector.expectedTxInfo.Hash, txInfo.Hash)
-			require.Equal(t, vector.expectedTxInfo.Chain, txInfo.Chain)
-			require.Equal(t, vector.expectedTxInfo.Block.Hash, txInfo.Block.Hash)
-			require.Equal(t, vector.expectedTxInfo.Block.Height, txInfo.Block.Height)
-			for i := range vector.expectedTxInfo.Transfers {
-				require.Equal(t, *vector.expectedTxInfo.Transfers[i], *txInfo.Transfers[i])
-			}
-			for i := range vector.expectedTxInfo.Fees {
-				require.Equal(t, *vector.expectedTxInfo.Fees[i], *txInfo.Fees[i])
-			}
-			require.Equal(t, vector.expectedTxInfo.Confirmations, txInfo.Confirmations)
-			require.Equal(t, vector.expectedTxInfo.Error, txInfo.Error)
-		}
+		})
 	}
 }
 
