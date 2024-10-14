@@ -3,15 +3,14 @@ package builder
 import (
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"strings"
-
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/xrp/address/contract"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
+	"strconv"
 )
 
 // TxBuilder for Template
@@ -100,13 +99,13 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
-	tokenAmountValue := amount.ToHuman(15).String()
+	tokenAmountValue := amount.ToHuman(15)
 
 	XRPAmount := xrptx.AmountBlockchain{
 		TokenAmount: &xrptx.Amount{
 			Currency: tokenAsset,
 			Issuer:   tokenContract,
-			Value:    tokenAmountValue,
+			Value:    tokenAmountValue.String(),
 		},
 	}
 
@@ -114,14 +113,25 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	if txInput.LegacyMemo != "" {
 		destinationTag, err = strconv.ParseInt(txInput.LegacyMemo, 10, 64)
 		if err != nil {
-			fmt.Println("Error converting string to int64:", err)
 			return nil, fmt.Errorf("error converting destinationTag to int64: %v", err)
 		}
+	}
+
+	sendMaxFactor, err := decimal.NewFromString("1.1")
+	if err != nil {
+		return nil, fmt.Errorf("error converting sendMaxFactor to decimal: %v", err)
+	}
+
+	sendMax := xrptx.Amount{
+		Currency: tokenAsset,
+		Issuer:   tokenContract,
+		Value:    sendMaxFactor.Mul(tokenAmountValue.Decimal()).String(),
 	}
 
 	xrpTx := xrptx.XRPTransaction{
 		Account:            from,
 		Amount:             XRPAmount,
+		SendMax:            sendMax,
 		Destination:        to,
 		Fee:                "10",
 		Flags:              0,
@@ -136,25 +146,4 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		XRPTx:      &xrpTx,
 		SignPubKey: txInput.PublicKey,
 	}, nil
-}
-
-func convertFromBlockchainToHumanFormat(input string) (string, error) {
-	if len(input) > 16 {
-		return input, nil
-	}
-
-	intValue, err := strconv.ParseInt(input, 10, 64)
-	if err != nil {
-		return "", fmt.Errorf("invalid input string: %v", err)
-	}
-
-	floatValue := float64(intValue) / 1e15
-
-	result := fmt.Sprintf("%.15f", floatValue)
-
-	if len(result) > 16 {
-		result = result[:16]
-	}
-
-	return strings.Replace(result, ",", "", -1), nil
 }

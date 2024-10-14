@@ -92,6 +92,11 @@ func TestTxHash(t *testing.T) {
 							Value:    "1.52",
 						},
 					},
+					SendMax: tx.Amount{
+						Currency: "USD",
+						Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						Value:    "1.672",
+					},
 					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
 					DestinationTag:     0,
 					Fee:                "10",
@@ -103,7 +108,7 @@ func TestTxHash(t *testing.T) {
 					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
 				},
 			},
-			expectedHash: "187f1ac69f774346b220f92c9fb591c1bbb87a3877580d5caa16ea6bf7027595",
+			expectedHash: "aa26a7c2b7e7ec260a9bc921ed4a745b8eeb98d4620ada69f0f14796193dc77c",
 		},
 	}
 
@@ -167,6 +172,11 @@ func TestTxSighashes(t *testing.T) {
 							Value:    "1.52",
 						},
 					},
+					SendMax: tx.Amount{
+						Currency: "USD",
+						Issuer:   "rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						Value:    "1.672",
+					},
 					Destination:        "rs2x5gvFupB22myz86BUu7m5F4YuizsFna",
 					DestinationTag:     0,
 					Fee:                "10",
@@ -180,10 +190,10 @@ func TestTxSighashes(t *testing.T) {
 			},
 			expectedSigHash: []xc.TxDataToSign{
 				{
-					0xd, 0x2b, 0x87, 0x29, 0x94, 0x2d, 0x81, 0xd,
-					0xd1, 0x17, 0xb9, 0xa2, 0xc6, 0x9, 0x37, 0x8f,
-					0x72, 0x70, 0xe7, 0x8, 0x77, 0xbe, 0x2d, 0xe9,
-					0x54, 0x91, 0xf1, 0xde, 0xf8, 0xe2, 0x2, 0x6d,
+					0x30, 0x2, 0x9, 0xdf, 0x98, 0x89, 0x7e, 0xac,
+					0x1a, 0x90, 0xcd, 0x67, 0xb0, 0x1b, 0xe0, 0xd3,
+					0x5d, 0x62, 0x4f, 0x9d, 0xe9, 0x8b, 0xbd, 0xdf,
+					0xe0, 0x72, 0x49, 0x69, 0x34, 0x36, 0xca, 0x6b,
 				},
 			},
 			err: "",
