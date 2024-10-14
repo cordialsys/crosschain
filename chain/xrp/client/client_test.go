@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
-	"testing"
-
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
@@ -307,29 +307,37 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 94494,
 					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					Time:   time.Date(1994, time.August, 23, 18, 49, 52, 0, time.Local),
 				},
 				Transfers: []*xclient.Transfer{
 					{
 						From: []*xclient.BalanceChange{
 							{
-								Asset:   "chains/assets",
-								Balance: xc.NewAmountBlockchainFromStr("10000012000000"),
-								Address: "chains/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+								Asset:    "chains/assets",
+								Contract: "",
+								Balance:  xc.NewAmountBlockchainFromStr("10000012000000"),
+								Amount:   nil,
+								Address:  "chains/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Asset:   "chains/assets",
-								Balance: xc.NewAmountBlockchainFromStr("10000000000000"),
-								Address: "chains/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+								Asset:    "chains/assets",
+								Contract: "",
+								Balance:  xc.NewAmountBlockchainFromStr("10000000000000"),
+								Amount:   nil,
+								Address:  "chains/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
 							},
 						},
+						Memo: "",
 					},
 				},
 				Fees: []*xclient.Balance{
 					{
-						Asset:   "chains/assets",
-						Balance: xc.NewAmountBlockchainFromStr("12000000"),
+						Asset:    "chains/assets",
+						Contract: "",
+						Balance:  xc.NewAmountBlockchainFromStr("12000000"),
+						Amount:   nil,
 					},
 				},
 				Confirmations: 91097810,
@@ -550,20 +558,24 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 90659219,
 					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+					Time:   time.Date(1994, time.September, 11, 20, 12, 20, 0, time.Local),
 				},
 				Transfers: []*xclient.Transfer{
 					{
 						From: []*xclient.BalanceChange{
 							{
-								Asset:   "chains/assets",
-								Balance: xc.NewAmountBlockchainFromStr("4862478000000"),
-								Address: "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								Asset:    "chains/assets",
+								Contract: "",
+								Balance:  xc.NewAmountBlockchainFromStr("4862478000000"),
+								Amount:   nil,
+								Address:  "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
 							{
 								Asset:    "chains/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 								Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 								Balance:  xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Address:  "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								Amount:   nil,
+								Address:  "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 						To: []*xclient.BalanceChange{
@@ -571,12 +583,15 @@ func TestFetchTxInfo(t *testing.T) {
 								Asset:    "chains/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 								Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 								Balance:  xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Address:  "chains/addresses/rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+								Amount:   nil,
+								Address:  "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
 							{
-								Asset:   "chains/assets",
-								Balance: xc.NewAmountBlockchainFromStr("4862466000000"),
-								Address: "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								Asset:    "chains/assets",
+								Contract: "",
+								Balance:  xc.NewAmountBlockchainFromStr("4862466000000"),
+								Amount:   nil,
+								Address:  "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 					},
@@ -631,26 +646,18 @@ func TestFetchTxInfo(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, txInfo)
-
-			require.Equal(t, txInfo.Hash, vector.expectedTxInfo.Hash)
-
-			for idx, fromTransfer := range vector.expectedTxInfo.Transfers[0].From {
-				require.Equal(t, fromTransfer.Address, vector.expectedTxInfo.Transfers[0].From[idx].Address)
-				require.Equal(t, fromTransfer.Balance.String(), vector.expectedTxInfo.Transfers[0].From[idx].Balance.String())
-				if fromTransfer.Contract != "" {
-					require.Equal(t, fromTransfer.Contract, vector.expectedTxInfo.Transfers[0].From[idx].Contract)
-				}
+			require.Equal(t, vector.expectedTxInfo.Name, txInfo.Name)
+			require.Equal(t, vector.expectedTxInfo.Hash, txInfo.Hash)
+			require.Equal(t, vector.expectedTxInfo.Chain, txInfo.Chain)
+			require.Equal(t, *vector.expectedTxInfo.Block, *txInfo.Block)
+			for i := range vector.expectedTxInfo.Transfers {
+				require.Equal(t, *vector.expectedTxInfo.Transfers[i], *txInfo.Transfers[i])
 			}
-
-			for idx, toTransfer := range vector.expectedTxInfo.Transfers[0].To {
-				require.Equal(t, toTransfer.Address, vector.expectedTxInfo.Transfers[0].To[idx].Address)
-				require.Equal(t, toTransfer.Balance.String(), vector.expectedTxInfo.Transfers[0].To[idx].Balance.String())
-				if toTransfer.Contract != "" {
-					require.Equal(t, toTransfer.Contract, vector.expectedTxInfo.Transfers[0].To[idx].Contract)
-				}
+			for i := range vector.expectedTxInfo.Fees {
+				require.Equal(t, *vector.expectedTxInfo.Fees[i], *txInfo.Fees[i])
 			}
-
-			require.Equal(t, txInfo.Fees[0].Balance.String(), vector.expectedTxInfo.Fees[0].Balance.String())
+			require.Equal(t, vector.expectedTxInfo.Confirmations, txInfo.Confirmations)
+			require.Equal(t, vector.expectedTxInfo.Error, txInfo.Error)
 		}
 	}
 }

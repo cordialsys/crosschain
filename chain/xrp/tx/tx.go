@@ -23,6 +23,7 @@ type TransactionType string
 type XRPTransaction struct {
 	Account            xc.Address       `json:"Account"`
 	Amount             AmountBlockchain `json:"Amount"`
+	SendMax            Amount           `json:"SendMax"`
 	Destination        xc.Address       `json:"Destination"`
 	DestinationTag     int64            `json:"DestinationTag"`
 	Fee                string           `json:"Fee"`
@@ -211,6 +212,7 @@ func RenderToMap(xrpTx XRPTransaction) (map[string]interface{}, error) {
 		}
 	} else {
 		RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
+		RenderSendMax(result, &xrpTx.SendMax)
 	}
 
 	return result, nil
@@ -227,5 +229,13 @@ func RenderTokenAmount(fields map[string]interface{}, amount *Amount) {
 		"currency": amount.Currency,
 		"issuer":   amount.Issuer,
 		"value":    amount.Value,
+	}
+}
+
+func RenderSendMax(fields map[string]interface{}, sendMax *Amount) {
+	fields["SendMax"] = map[string]interface{}{
+		"currency": sendMax.Currency,
+		"issuer":   sendMax.Issuer,
+		"value":    sendMax.Value,
 	}
 }
