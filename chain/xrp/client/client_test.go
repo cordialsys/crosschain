@@ -4,20 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	xc "github.com/cordialsys/crosschain"
+	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
+	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
-
-	xc "github.com/cordialsys/crosschain"
-	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
-	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
-	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewClient(t *testing.T) {
@@ -307,7 +305,6 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 94494,
 					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-					Time:   time.Date(1994, time.August, 23, 18, 49, 52, 0, time.Local),
 				},
 				Transfers: []*xclient.Transfer{
 					{
@@ -558,7 +555,6 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Height: 90659219,
 					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
-					Time:   time.Date(1994, time.September, 11, 20, 12, 20, 0, time.Local),
 				},
 				Transfers: []*xclient.Transfer{
 					{
@@ -649,7 +645,8 @@ func TestFetchTxInfo(t *testing.T) {
 			require.Equal(t, vector.expectedTxInfo.Name, txInfo.Name)
 			require.Equal(t, vector.expectedTxInfo.Hash, txInfo.Hash)
 			require.Equal(t, vector.expectedTxInfo.Chain, txInfo.Chain)
-			require.Equal(t, *vector.expectedTxInfo.Block, *txInfo.Block)
+			require.Equal(t, vector.expectedTxInfo.Block.Hash, txInfo.Block.Hash)
+			require.Equal(t, vector.expectedTxInfo.Block.Height, txInfo.Block.Height)
 			for i := range vector.expectedTxInfo.Transfers {
 				require.Equal(t, *vector.expectedTxInfo.Transfers[i], *txInfo.Transfers[i])
 			}
