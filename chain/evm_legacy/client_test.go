@@ -32,6 +32,8 @@ func TestFetchTxInput(t *testing.T) {
 			resp: []string{
 				// eth_getTransactionCount
 				`"0x6"`,
+				// eth_chainId
+				`"0x1"`,
 				// eth_gasPrice
 				`"0xba43b7400"`,
 				// eth_estimateGas
@@ -42,6 +44,7 @@ func TestFetchTxInput(t *testing.T) {
 				Nonce:           6,
 				GasLimit:        21220,
 				GasPrice:        xc.NewAmountBlockchainFromUint64(50000000000),
+				ChainId:         xc.NewAmountBlockchainFromUint64(1),
 			},
 			err:        "",
 			multiplier: 1.0,
@@ -51,6 +54,8 @@ func TestFetchTxInput(t *testing.T) {
 			resp: []string{
 				// eth_getTransactionCount
 				`"0x6"`,
+				// eth_chainId
+				`"0x1"`,
 				// eth_gasPrice
 				`"0xba43b7400"`,
 				// eth_estimateGas
@@ -61,6 +66,7 @@ func TestFetchTxInput(t *testing.T) {
 				Nonce:           6,
 				GasLimit:        21220,
 				GasPrice:        xc.NewAmountBlockchainFromUint64(100000000000),
+				ChainId:         xc.NewAmountBlockchainFromUint64(1),
 			},
 			err:        "",
 			multiplier: 2.0,

@@ -59,6 +59,10 @@ func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Addre
 	if err != nil {
 		return nil, err
 	}
+	// use chainId from input if it's set
+	if !input.ChainId.IsZero() {
+		chainID = input.ChainId.Int()
+	}
 	// Protection from setting very high gas tip
 	// TODO
 

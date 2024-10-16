@@ -72,6 +72,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	result.Nonce = nonce
 
+	// chainId
+	chainId, err := client.EvmClient.EthClient.ChainID(ctx)
+	if err != nil {
+		return result, fmt.Errorf("could not lookup chain_id: %v", err)
+	}
+	result.ChainId = xc.AmountBlockchain(*chainId)
+
 	if nativeAsset.NoGasFees {
 		result.GasPrice = zero
 	} else {
