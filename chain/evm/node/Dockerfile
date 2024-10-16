@@ -15,6 +15,9 @@ RUN chmod +x start_node.sh
 
 COPY faucet.py /
 
+# default chain ID
+ENV CHAIN_ID 1000
+
 ENV RPC_PORT 10000
 ENV FAUCET_PORT 10001
 CMD ["bash", "-c", "(python3 /faucet.py &) ; /root/hardhat-boilerplate/start_node.sh"]

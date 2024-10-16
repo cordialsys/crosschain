@@ -1,6 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 
-var chainId = process.env.CHAIN_ID
+var chainId = parseInt(process.env.CHAIN_ID)
 chainId = chainId || "2"
 
 let port = process.env.RPC_PORT;
@@ -17,7 +17,7 @@ module.exports = {
       url: `http://127.0.0.1:${port}`,
     },
     hardhat: {
-      chainId: parseInt(chainId),
+      chainId: chainId,
       hardfork: 'shanghai',
       baseFeePerGas: "0",
       mining: {
