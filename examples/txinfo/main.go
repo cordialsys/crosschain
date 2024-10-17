@@ -26,7 +26,7 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.Nat
 	}
 
 	fmt.Printf("%+v\n", info)
-	for _, dst := range info.Transfers {
+	for _, dst := range info.Movements {
 		fmt.Printf("transfer: %+v\n", dst)
 	}
 }
