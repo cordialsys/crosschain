@@ -541,32 +541,32 @@ func TestFetchTxInfo(t *testing.T) {
 					Time:   time.Unix(1721411604, 0),
 				},
 				Confirmations: 649,
-				Transfers: []*xcclient.Transfer{
+				Movements: []*xcclient.Movement{
 					{
+						Asset:    "chains/ETH/assets/ETH",
+						Contract: "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/ETH/assets/ETH",
-								Contract: "ETH",
-								Balance:  xc.NewAmountBlockchainFromStr("32000000000000000000"),
-								Address:  "chains/ETH/addresses/ETH",
+
+								Balance: xc.NewAmountBlockchainFromStr("32000000000000000000"),
+								Address: "chains/ETH/addresses/ETH",
 							},
 						},
 						To: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/ETH/assets/ETH",
-								Contract: "ETH",
-								Balance:  xc.NewAmountBlockchainFromStr("32000000000000000000"),
-								Address:  "chains/ETH/addresses/0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
+
+								Balance: xc.NewAmountBlockchainFromStr("32000000000000000000"),
+								Address: "chains/ETH/addresses/0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
 							},
 						},
 					},
 					{
+						Asset:    "chains/ETH/assets/ETH",
+						Contract: "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/ETH/assets/ETH",
-								Contract: "ETH",
-								Balance:  xc.NewAmountBlockchainFromStr("2047469337720"),
-								Address:  "chains/ETH/addresses/ETH",
+								Balance: xc.NewAmountBlockchainFromStr("2047469337720"),
+								Address: "chains/ETH/addresses/ETH",
 							},
 						},
 						To: []*xcclient.BalanceChange{},
@@ -606,14 +606,14 @@ func TestFetchTxInfo(t *testing.T) {
 					Time:   testtypes.FromTimeStamp("2024-07-23T18:52:24-04:00"),
 				},
 				Confirmations: 5865,
-				Transfers: []*xcclient.Transfer{
+				Movements: []*xcclient.Movement{
 					{
+						Asset:    "chains/ETH/assets/ETH",
+						Contract: "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/ETH/assets/ETH",
-								Contract: "ETH",
-								Balance:  xc.NewAmountBlockchainFromStr("4757340142368"),
-								Address:  "chains/ETH/addresses/ETH",
+								Balance: xc.NewAmountBlockchainFromStr("4757340142368"),
+								Address: "chains/ETH/addresses/ETH",
 							},
 						},
 						To: []*xcclient.BalanceChange{},

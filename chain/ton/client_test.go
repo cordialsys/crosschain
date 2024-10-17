@@ -218,35 +218,36 @@ func TestFetchTxInfo(t *testing.T) {
 					Hash:   "2000000000000000",
 					Time:   time.Unix(1721063820, 0),
 				},
-				Transfers: []*xcclient.Transfer{
-					&xcclient.Transfer{
+				Movements: []*xcclient.Movement{
+					&xcclient.Movement{
+						Asset:    "chains/TON/assets/TON",
+						Contract: "TON",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(22000000),
-								Address:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(22000000),
+								Address: xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 							},
 						},
 						To: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(22000000),
-								Address:  xcclient.NewAddressName(xc.TON, "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(22000000),
+								Address: xcclient.NewAddressName(xc.TON, "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"),
 							},
 						},
 						Memo: "hii",
 					},
 					// fee
-					&xcclient.Transfer{
-						To: []*xcclient.BalanceChange{},
+					&xcclient.Movement{
+						Asset:    "chains/TON/assets/TON",
+						Contract: "TON",
+						To:       []*xcclient.BalanceChange{},
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(1960116),
-								Address:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(1960116),
+								Address: xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 							},
 						},
 					},
@@ -277,55 +278,54 @@ func TestFetchTxInfo(t *testing.T) {
 					Hash:   "2000000000000000",
 					Time:   time.Unix(1721068303, 0),
 				},
-				Transfers: []*xcclient.Transfer{
+				Movements: []*xcclient.Movement{
 					// input TON movement
-					&xcclient.Transfer{
+					&xcclient.Movement{
+						Asset:    "chains/TON/assets/TON",
+						Contract: "TON",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(200000000),
-								Address:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(200000000),
+								Address: xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 							},
 						},
 						To: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(200000000),
-								Address:  xcclient.NewAddressName(xc.TON, "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G"),
+								Balance: xc.NewAmountBlockchainFromUint64(200000000),
+								Address: xcclient.NewAddressName(xc.TON, "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G"),
 							},
 						},
 					},
 					// token movement
-					&xcclient.Transfer{
+					&xcclient.Movement{
+						Asset:    "chains/TON/assets/EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
+						Contract: "EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
-								Contract: "EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
-								Balance:  xc.NewAmountBlockchainFromUint64(22000000),
-								Address:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(22000000),
+								Address: xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 							},
 						},
 						To: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
-								Contract: "EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
-								Balance:  xc.NewAmountBlockchainFromUint64(22000000),
-								Address:  xcclient.NewAddressName(xc.TON, "EQChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc4yQp"),
+								Balance: xc.NewAmountBlockchainFromUint64(22000000),
+								Address: xcclient.NewAddressName(xc.TON, "EQChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc4yQp"),
 							},
 						},
 						Memo: "hii",
 					},
 					// fee
-					&xcclient.Transfer{
-						To: []*xcclient.BalanceChange{},
+					&xcclient.Movement{
+						Asset:    "chains/TON/assets/TON",
+						Contract: "TON",
+						To:       []*xcclient.BalanceChange{},
 						From: []*xcclient.BalanceChange{
 							{
-								Asset:    "chains/TON/assets/TON",
-								Contract: "TON",
-								Balance:  xc.NewAmountBlockchainFromUint64(2432322),
-								Address:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(2432322),
+								Address: xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 							},
 						},
 					},
