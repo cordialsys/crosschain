@@ -219,7 +219,7 @@ func TestFetchTxInfo(t *testing.T) {
 		err            string
 	}{
 		{
-			asset:  &xc.ChainConfig{},
+			asset:  &xc.ChainConfig{Chain: xc.XRP},
 			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 			txResp: `{
 			  "result": {
@@ -301,32 +301,31 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:  "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				Name:  "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 				Hash:  "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-				Chain: "",
+				Chain: "XRP",
 				Block: &xclient.Block{
 					Height: 94494,
 					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 					Time:   time.Unix(1724341792, 0),
 				},
-				Transfers: []*xclient.Transfer{
+				Movements: []*xclient.Movement{
 					{
+						Asset:    "chains/XRP/assets/XRP",
+						Contract: "XRP",
 						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/assets",
-								Contract: "",
-								Balance:  xc.NewAmountBlockchainFromStr("10000012000000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+								Balance: xc.NewAmountBlockchainFromStr("10000012000000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/assets",
-								Contract: "",
-								Balance:  xc.NewAmountBlockchainFromStr("10000000000000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+
+								Balance: xc.NewAmountBlockchainFromStr("10000000000000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
 							},
 						},
 						Memo: "",
@@ -334,8 +333,8 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Fees: []*xclient.Balance{
 					{
-						Asset:    "chains/assets",
-						Contract: "",
+						Asset:    "chains/XRP/assets/XRP",
+						Contract: "XRP",
 						Balance:  xc.NewAmountBlockchainFromStr("12000000"),
 						Amount:   nil,
 					},
@@ -345,7 +344,7 @@ func TestFetchTxInfo(t *testing.T) {
 			err: "",
 		},
 		{
-			asset:  &xc.ChainConfig{},
+			asset:  &xc.ChainConfig{Chain: xc.XRP},
 			txHash: "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 			txResp: `
 			{
@@ -552,54 +551,58 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:  "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+				Name:  "chains/XRP/transactions/9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 				Hash:  "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
-				Chain: "",
+				Chain: "XRP",
 				Block: &xclient.Block{
 					Height: 90659219,
 					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 					Time:   time.Unix(1725988340, 0),
 				},
-				Transfers: []*xclient.Transfer{
+				Movements: []*xclient.Movement{
 					{
+						Asset:    "chains/XRP/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/assets",
-								Contract: "",
-								Balance:  xc.NewAmountBlockchainFromStr("4862478000000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
-							},
-							{
-								Asset:    "chains/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-								Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-								Balance:  xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+
+								Balance: xc.NewAmountBlockchainFromStr("2624741712800000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-								Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-								Balance:  xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								Balance: xc.NewAmountBlockchainFromStr("2624741712800000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
+						},
+					},
+					{
+						Asset:    "chains/XRP/assets/XRP",
+						Contract: "XRP",
+						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/assets",
-								Contract: "",
-								Balance:  xc.NewAmountBlockchainFromStr("4862466000000"),
-								Amount:   nil,
-								Address:  "chains/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								Balance: xc.NewAmountBlockchainFromStr("4862478000000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+							},
+						},
+						To: []*xclient.BalanceChange{
+							{
+								Balance: xc.NewAmountBlockchainFromStr("4862466000000"),
+								Amount:  nil,
+								Address: "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 					},
 				},
 				Fees: []*xclient.Balance{
 					{
-						Asset:   "chains/assets",
-						Balance: xc.NewAmountBlockchainFromStr("12000000"),
+						Asset:    "chains/XRP/assets/XRP",
+						Contract: "XRP",
+						Balance:  xc.NewAmountBlockchainFromStr("12000000"),
 					},
 				},
 				Confirmations: 566106,
@@ -637,7 +640,7 @@ func TestFetchTxInfo(t *testing.T) {
 				vector.asset.(*xc.ChainConfig).URL = server.URL
 			}
 
-			client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+			client, _ := xrpClient.NewClient(vector.asset)
 			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
 
 			if vector.err != "" {
@@ -649,7 +652,10 @@ func TestFetchTxInfo(t *testing.T) {
 				require.NotNil(t, txInfo)
 				// redundantly test time so it's easier to see which unix second is expected
 				require.Equal(t, vector.expectedTxInfo.Block.Time.Unix(), txInfo.Block.Time.Unix())
-				require.Equal(t, vector.expectedTxInfo, txInfo)
+				require.Equal(t,
+					testtypes.Reserialize(&vector.expectedTxInfo),
+					testtypes.Reserialize(&txInfo),
+				)
 			}
 		})
 	}

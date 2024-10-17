@@ -154,34 +154,35 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 					Time:   time.Unix(1687547412, 0),
 				},
-				Transfers: []*xclient.Transfer{
+				Movements: []*xclient.Movement{
 					{
+						Asset:    "chains/DOT/assets/DOT",
+						Contract: "DOT",
 						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/DOT/assets/DOT",
-								Contract: "DOT",
-								Balance:  xc.NewAmountBlockchainFromUint64(872321233400),
-								Address:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(872321233400),
+								Address: xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/DOT/assets/DOT",
-								Contract: "DOT",
-								Balance:  xc.NewAmountBlockchainFromUint64(872321233400),
-								Address:  xclient.NewAddressName(xc.DOT, "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(872321233400),
+								Address: xclient.NewAddressName(xc.DOT, "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"),
 							},
 						},
 					},
 					// fee
 					{
-						To: []*xclient.BalanceChange{},
+						Asset:    "chains/DOT/assets/DOT",
+						Contract: "DOT",
+						To:       []*xclient.BalanceChange{},
 						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/DOT/assets/DOT",
-								Contract: "DOT",
-								Balance:  xc.NewAmountBlockchainFromUint64(157316518),
-								Address:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(157316518),
+								Address: xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
 							},
 						},
 					},
@@ -210,22 +211,21 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 					Hash:   "0x9d264b95980880a3ce28024e093af7f39c434bfc2dd0472fffdcbb924a369b25",
 					Time:   time.Unix(1721179044, 0),
 				},
-				Transfers: []*xclient.Transfer{
+				Movements: []*xclient.Movement{
 					{
+						Asset:    "chains/TAO/assets/TAO",
+						Contract: "TAO",
 						From: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/TAO/assets/TAO",
-								Contract: "TAO",
-								Balance:  xc.NewAmountBlockchainFromUint64(10000000),
-								Address:  xclient.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
+
+								Balance: xc.NewAmountBlockchainFromUint64(10000000),
+								Address: xclient.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Asset:    "chains/TAO/assets/TAO",
-								Contract: "TAO",
-								Balance:  xc.NewAmountBlockchainFromUint64(10000000),
-								Address:  xclient.NewAddressName(xc.TAO, "5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ"),
+								Balance: xc.NewAmountBlockchainFromUint64(10000000),
+								Address: xclient.NewAddressName(xc.TAO, "5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ"),
 							},
 						},
 					},
