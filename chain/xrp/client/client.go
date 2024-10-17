@@ -161,7 +161,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		return xclient.TxInfo{}, err
 	}
 
-	name := xclient.TransactionName(string(client.Asset.GetChain().Chain) + txResponse.Result.Hash)
+	name := xclient.NewTransactionName(client.Asset.GetChain().Chain, txResponse.Result.Hash)
 
 	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
 
@@ -180,14 +180,14 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		Hash:          txResponse.Result.Hash,
 		Chain:         client.Asset.GetChain().Chain,
 		Block:         block,
-		Transfers:     []*xclient.Transfer{},
+		Movements:     []*xclient.Movement{},
 		Fees:          []*xclient.Balance{},
 		Confirmations: uint64(confirmations),
 		Error:         errMsg,
 	}
 
 	affectedNodes := txResponse.Result.Meta.AffectedNodes
-	tf := xclient.NewTransfer(client.Asset.GetChain().Chain)
+
 	for _, node := range affectedNodes {
 		xrpNode, ok, err := events.NewEvent(node)
 		if !ok {
@@ -216,30 +216,31 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		// XRP sometimes reports balances as negative
 		amount = amount.Abs()
 
+		movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
 		isSource, err := xrpNode.IsSource(&txResponse)
 		if err != nil {
 			return xclient.TxInfo{}, err
 		}
 
 		if isSource {
-			tf.AddSource(
+			movement.AddSource(
 				address,
-				contract,
 				amount,
 				nil,
 			)
 		} else {
-			tf.AddDestination(
+			movement.AddDestination(
 				address,
-				contract,
 				amount,
 				nil,
 			)
 		}
-
+		txInfo.AddMovement(movement)
 	}
-
-	txInfo.AddTransfer(tf)
+	// We coalesce since the 'events' from XRP do not include both sender and recipient.
+	// So the raw transfers we added aren't very clear, and we can simplify by merging together
+	// based on asset.
+	txInfo.Coalesece()
 
 	txInfo.Fees = txInfo.CalculateFees()
 

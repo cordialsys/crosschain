@@ -30,9 +30,9 @@ func TestTxInfoFees(t *testing.T) {
 	}
 
 	// manually add a fee
-	tf := client.NewTransfer(tx.Chain)
-	tf.AddSource("feepayer", "", xc.NewAmountBlockchainFromUint64(55), nil)
-	tx.AddTransfer(tf)
+	tf := client.NewMovement(tx.Chain, "")
+	tf.AddSource("feepayer", xc.NewAmountBlockchainFromUint64(55), nil)
+	tx.AddMovement(tf)
 	require.Len(t, tx.CalculateFees(), 1)
 	require.Equal(t, "55", tx.CalculateFees()[0].Balance.String())
 
@@ -48,7 +48,7 @@ func TestTxInfoFees(t *testing.T) {
 	require.Equal(t, "120", tx.CalculateFees()[1].Balance.String())
 
 	tx.AddSimpleTransfer("a", "b", "", xc.NewAmountBlockchainFromUint64(0), nil, "memo")
-	require.Equal(t, "memo", tx.Transfers[len(tx.Transfers)-1].Memo)
+	require.Equal(t, "memo", tx.Movements[len(tx.Movements)-1].Memo)
 
 }
 
@@ -60,16 +60,50 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 		3,
 		nil,
 	)
-	tf := client.NewTransfer(tx.Chain)
+	tf := client.NewMovement(tx.Chain, "")
 	for i := 0; i < 10; i++ {
-		tf.AddSource("sender", "", xc.NewAmountBlockchainFromUint64(100), nil)
+		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 	}
 	for i := 0; i < 8; i++ {
-		tf.AddDestination("sender", "", xc.NewAmountBlockchainFromUint64(100), nil)
+		tf.AddDestination("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 	}
-	tx.AddTransfer(tf)
+	tx.AddMovement(tf)
 	require.Len(t, tx.CalculateFees(), 1)
 	// 1000 - 800
+	require.Equal(t, "200", tx.CalculateFees()[0].Balance.String())
+	require.EqualValues(t, "BTC", tx.CalculateFees()[0].Contract)
+}
+
+// This is like `TestTxInfoMultiLegFees`, but we add every balance change as an
+// independent transfer, and test we can coalesce them into 1 transfer again.
+func TestTxInfoMultiLegCoalesce(t *testing.T) {
+	tx := client.NewTxInfo(
+		client.NewBlock(1, "1234", time.Unix(1, 0)),
+		xc.BTC,
+		"0x1234",
+		3,
+		nil,
+	)
+	for i := 0; i < 10; i++ {
+		tf := client.NewMovement(tx.Chain, "")
+		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
+		tx.AddMovement(tf)
+	}
+	for i := 0; i < 8; i++ {
+		tf := client.NewMovement(tx.Chain, "")
+		tf.AddDestination("sender", xc.NewAmountBlockchainFromUint64(100), nil)
+		tx.AddMovement(tf)
+	}
+
+	// Fee calculation should work fine
+	require.Len(t, tx.CalculateFees(), 1)
+	require.Equal(t, "200", tx.CalculateFees()[0].Balance.String())
+	require.EqualValues(t, "BTC", tx.CalculateFees()[0].Contract)
+	require.Len(t, tx.Movements, 18)
+
+	// Coalesce should simplify into 1 transfer that's equivilent.
+	tx.Coalesece()
+	require.Len(t, tx.Movements, 1)
 	require.Equal(t, "200", tx.CalculateFees()[0].Balance.String())
 	require.EqualValues(t, "BTC", tx.CalculateFees()[0].Contract)
 }
