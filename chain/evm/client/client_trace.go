@@ -9,6 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/sirupsen/logrus"
 )
 
 type TraceTransactionType string
@@ -54,7 +55,6 @@ func (client *Client) TraceTransaction(ctx context.Context, txHash common.Hash) 
 }
 
 func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash) (tx.SourcesAndDests, error) {
-
 	result, err := client.TraceTransaction(ctx, txHash)
 	if err != nil {
 		return tx.SourcesAndDests{}, err
@@ -65,9 +65,16 @@ func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash)
 	native := client.Asset.GetChain().Chain
 
 	for _, trace := range traces {
-		if trace.Value.ToInt().Cmp(zero) > 0 {
+		amount := trace.Value.ToInt()
+		logrus.WithFields(logrus.Fields{
+			"from":   trace.From.String(),
+			"to":     trace.To.String(),
+			"amount": amount.String(),
+		}).Debug("trace")
+
+		if amount.Cmp(zero) > 0 {
 			amount := xc.AmountBlockchain(*trace.Value.ToInt())
-			sourcesAndDests.Sources = append(sourcesAndDests.Destinations, &xc.LegacyTxInfoEndpoint{
+			sourcesAndDests.Sources = append(sourcesAndDests.Sources, &xc.LegacyTxInfoEndpoint{
 				Address:     xc.Address(trace.From.String()),
 				Amount:      amount,
 				NativeAsset: native,
