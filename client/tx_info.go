@@ -359,12 +359,19 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 			if i < len(legacyTx.Sources) {
 				fromAddr = legacyTx.Sources[i].Address
 			}
-
 			txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil, dest.Memo)
 		}
 	}
 	zero := big.NewInt(0)
 	if legacyTx.Fee.Cmp((*xc.AmountBlockchain)(zero)) != 0 {
+		if legacyTx.From == "" {
+			// infer the from address from the sources
+			for _, source := range legacyTx.Sources {
+				if source.ContractAddress == legacyTx.ContractAddress || source.ContractAddress == xc.ContractAddress(chain) {
+					legacyTx.From = source.Address
+				}
+			}
+		}
 		txInfo.AddFee(legacyTx.From, legacyTx.FeeContract, legacyTx.Fee, nil)
 	}
 

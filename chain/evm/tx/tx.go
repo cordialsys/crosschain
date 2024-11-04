@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/sirupsen/logrus"
 )
 
 var ERC20 abi.ABI
@@ -140,8 +141,10 @@ func (tx Tx) From() xc.Address {
 
 	from, err := types.Sender(tx.Signer, tx.EthTx)
 	if err != nil {
+		logrus.WithError(err).Error("could not constructor evm sender")
 		return xc.Address("")
 	}
+	fmt.Println("sender : ", from.String())
 	return xc.Address(from.String())
 }
 

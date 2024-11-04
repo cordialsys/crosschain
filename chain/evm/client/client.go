@@ -109,7 +109,7 @@ func NewClient(asset xc.ITask) (*Client, error) {
 	}
 	c, err := rpc.DialHTTPWithClient(url, httpClient)
 	if err != nil {
-		return nil, fmt.Errorf(fmt.Sprintf("dialing url: %v", nativeAsset.URL))
+		return nil, fmt.Errorf("dialing url: %v", nativeAsset.URL)
 	}
 
 	client := ethclient.NewClient(c)
@@ -127,7 +127,7 @@ func (client *Client) SubmitTx(ctx context.Context, trans xc.Tx) error {
 	case *tx.Tx:
 		err := client.EthClient.SendTransaction(ctx, tx.EthTx)
 		if err != nil {
-			return fmt.Errorf(fmt.Sprintf("sending transaction '%v': %v", tx.Hash(), err))
+			return fmt.Errorf("sending transaction '%v': %v", tx.Hash(), err)
 		}
 		return nil
 	default:
@@ -157,11 +157,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		trans, pending, err = client.EthClient.TransactionByHash(ctx, txHash)
 		client.Interceptor.Disable()
 		if err != nil {
-			return result, fmt.Errorf(fmt.Sprintf("fetching tx by hash '%s': %v", txHashStr, err))
+			return result, fmt.Errorf("fetching tx by hash '%s': %v", txHashStr, err)
 		}
 	}
-
-	chainID := new(big.Int).SetInt64(nativeAsset.ChainID)
 
 	// If the transaction is still pending, return an empty txInfo.
 	if pending {
@@ -222,7 +220,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	// // tx confirmed
 	confirmedTx := tx.Tx{
 		EthTx:  trans,
-		Signer: types.LatestSignerForChainID(chainID),
+		Signer: types.LatestSignerForChainID(trans.ChainId()),
 	}
 
 	tokenMovements := confirmedTx.ParseTokenLogs(receipt, xc.NativeAsset(nativeAsset.Chain))

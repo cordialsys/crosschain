@@ -396,7 +396,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				BlockHash:   "0x17d3a092ad1855a468fd1cbfeb03245ab09367272daf2433aa93ebb41e570f2d",
 				TxID:        "b3dcb32a7bb4856845898033522c676c1d2d50e0b07e5ec36880cd2d8b2a6b0f",
 				ExplorerURL: "/tx/0xb3dcb32a7bb4856845898033522c676c1d2d50e0b07e5ec36880cd2d8b2a6b0f",
-				From:        "",
+				From:        "0x32b6BfaC2c1e398ff3f30863B5A1D68A1239f475",
 				// to is now the contract address of contract making multiple transfers
 				To:              "0xA9D1e08C7793af67e9d92fe308d5697FB81d3E43",
 				BlockIndex:      8983855,
@@ -405,12 +405,12 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				ContractAddress: "0xA9D1e08C7793af67e9d92fe308d5697FB81d3E43",
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
-						Address:     "0x805fE47D1FE7d86496753bB4B36206953c1ae660",
+						Address:     "0x489A3AA83C1F204f0647C67C9FBF3e7Ee1463Bc5",
 						Amount:      xc.NewAmountBlockchainFromStr("30000000000000000"),
 						NativeAsset: "ETH",
 					},
 					{
-						Address:     "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+						Address:     "0x805fE47D1FE7d86496753bB4B36206953c1ae660",
 						Amount:      xc.NewAmountBlockchainFromStr("30000000000000000"),
 						NativeAsset: "ETH",
 					},
@@ -483,29 +483,35 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 	}
 
 	for _, v := range vectors {
-		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
-		asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
+		t.Run(v.name, func(t *testing.T) {
+			fmt.Println("testing ", v.name)
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
 
-		asset.URL = server.URL
-		client, _ := client.NewClient(asset)
-		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.txHash))
+			asset.URL = server.URL
+			client, _ := client.NewClient(asset)
+			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.txHash))
 
-		if v.err != "" {
-			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, v.err)
-		} else {
-			for _, movement := range txInfo.Sources {
-				fmt.Println("FROM: ", movement.Address, movement.ContractAddress, movement.Amount.String())
+			if v.err != "" {
+				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				for _, movement := range txInfo.Sources {
+					fmt.Println("FROM: ", movement.Address, movement.ContractAddress, movement.Amount.String())
+				}
+				for _, movement := range txInfo.Destinations {
+					fmt.Println("  TO: ", movement.Address, movement.ContractAddress, movement.Amount.String())
+				}
+				fmt.Println("expected")
+				testtypes.JsonPrint(v.val)
+				fmt.Println("got")
+				testtypes.JsonPrint(txInfo)
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+				require.Equal(t, v.val, txInfo)
 			}
-			for _, movement := range txInfo.Destinations {
-				fmt.Println("  TO: ", movement.Address, movement.ContractAddress, movement.Amount.String())
-			}
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			require.Equal(t, v.val, txInfo)
-		}
+		})
 	}
 }
 
@@ -547,9 +553,8 @@ func TestFetchTxInfo(t *testing.T) {
 						Contract: "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-
 								Balance: xc.NewAmountBlockchainFromStr("32000000000000000000"),
-								Address: "chains/ETH/addresses/ETH",
+								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{
@@ -566,7 +571,7 @@ func TestFetchTxInfo(t *testing.T) {
 						From: []*xcclient.BalanceChange{
 							{
 								Balance: xc.NewAmountBlockchainFromStr("2047469337720"),
-								Address: "chains/ETH/addresses/ETH",
+								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{},
@@ -613,7 +618,7 @@ func TestFetchTxInfo(t *testing.T) {
 						From: []*xcclient.BalanceChange{
 							{
 								Balance: xc.NewAmountBlockchainFromStr("4757340142368"),
-								Address: "chains/ETH/addresses/ETH",
+								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{},
