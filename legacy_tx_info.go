@@ -8,10 +8,9 @@ type LegacyTxInfoEndpoint struct {
 	NativeAsset     NativeAsset      `json:"chain"`
 	Asset           string           `json:"asset,omitempty"`
 	Memo            string           `json:"memo,omitempty"`
-	// AssetConfig     *AssetConfig     `json:"asset_config,omitempty"`
 
-	// legacy behavior around reporting aptos contract as ""
-	LegacyAptosContractAddress string `json:"-"`
+	// Set only when there's a contract ID for native asset (and conflicts with our chosen identifier)
+	ContractId ContractAddress `json:"contract_id,omitempty"`
 }
 
 // LegacyTxInfo is a unified view of common tx info across multiple blockchains. Use it as an example to build your own.

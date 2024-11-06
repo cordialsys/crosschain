@@ -267,7 +267,7 @@ func (client *BlockbookClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxH
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	chain := client.Asset.GetChain().Chain
+	chain := client.Asset.GetChain()
 
 	// delete the fee to avoid double counting.
 	// the new model will calculate fees from the difference of inflows/outflows

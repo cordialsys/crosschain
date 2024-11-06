@@ -301,31 +301,35 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:  "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-				Hash:  "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
-				Chain: "XRP",
+				Name:   "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				XChain: "XRP",
 				Block: &xclient.Block{
+					Chain:  "XRP",
 					Height: 94494,
 					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 					Time:   time.Unix(1724341792, 0),
 				},
 				Movements: []*xclient.Movement{
 					{
-						Asset:    "chains/XRP/assets/XRP",
-						Contract: "XRP",
+						XAsset:    "chains/XRP/assets/XRP",
+						XContract: "XRP",
+						AssetId:   "XRP",
 						From: []*xclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("10000012000000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+								Balance:   xc.NewAmountBlockchainFromStr("10000012000000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+								AddressId: "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
 
-								Balance: xc.NewAmountBlockchainFromStr("10000000000000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+								Balance:   xc.NewAmountBlockchainFromStr("10000000000000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+								AddressId: "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
 							},
 						},
 						Memo: "",
@@ -551,49 +555,56 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:  "chains/XRP/transactions/9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
-				Hash:  "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
-				Chain: "XRP",
+				Name:   "chains/XRP/transactions/9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+				Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+				XChain: "XRP",
 				Block: &xclient.Block{
+					Chain:  "XRP",
 					Height: 90659219,
 					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 					Time:   time.Unix(1725988340, 0),
 				},
 				Movements: []*xclient.Movement{
 					{
-						Asset:    "chains/XRP/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-						Contract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						XAsset:    "chains/XRP/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						XContract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
+						AssetId:   "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 						From: []*xclient.BalanceChange{
 							{
 
-								Balance: xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								Balance:   xc.NewAmountBlockchainFromStr("2624741712800000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								AddressId: "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("2624741712800000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								Balance:   xc.NewAmountBlockchainFromStr("2624741712800000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								AddressId: "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
 						},
 					},
 					{
-						Asset:    "chains/XRP/assets/XRP",
-						Contract: "XRP",
+						XAsset:    "chains/XRP/assets/XRP",
+						XContract: "XRP",
+						AssetId:   "XRP",
 						From: []*xclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("4862478000000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								Balance:   xc.NewAmountBlockchainFromStr("4862478000000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
+								AddressId: "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("4862466000000"),
-								Amount:  nil,
-								Address: "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								Balance:   xc.NewAmountBlockchainFromStr("4862466000000"),
+								Amount:    nil,
+								XAddress:  "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
+								AddressId: "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
 					},

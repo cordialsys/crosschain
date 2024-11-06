@@ -235,7 +235,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	// Sui, like btc, counts fee as difference between total sent and recv, which is already automatically counted.
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Utxo), nil
+	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Utxo), nil
 }
 
 func (c *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {

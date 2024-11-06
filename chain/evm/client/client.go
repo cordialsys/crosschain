@@ -308,7 +308,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	chain := client.Asset.GetChain().Chain
+	chain := client.Asset.GetChain()
 
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil

@@ -15,6 +15,7 @@ chains:
     driver: aptos
     chain_id: 1
     chain_name: Aptos
+    chain_coin: "0x1::aptos_coin::AptosCoin"
     explorer_url: https://explorer.aptoslabs.com/
     decimals: 8
     indexer_url: https://indexer.mainnet.aptoslabs.com

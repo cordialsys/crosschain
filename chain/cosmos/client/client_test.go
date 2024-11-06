@@ -262,7 +262,7 @@ func TestFetchTxInfo(t *testing.T) {
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				To:              "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 				ToAlt:           "",
-				ContractAddress: "uluna",
+				ContractAddress: "LUNA",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(1000000),
 				BlockIndex:      2754866,
@@ -272,14 +272,16 @@ func TestFetchTxInfo(t *testing.T) {
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-						ContractAddress: "uluna",
+						ContractAddress: "LUNA",
+						ContractId:      "uluna",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 					},
 				},
 				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-						ContractAddress: "uluna",
+						ContractAddress: "LUNA",
+						ContractId:      "uluna",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 						Memo:            "faucet",
 					},
@@ -305,7 +307,7 @@ func TestFetchTxInfo(t *testing.T) {
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 				ToAlt:           "",
-				ContractAddress: "axpla",
+				ContractAddress: "XPLA",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(112200000000000000),
 				BlockIndex:      1359533,
@@ -315,14 +317,16 @@ func TestFetchTxInfo(t *testing.T) {
 				Sources: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-						ContractAddress: "axpla",
+						ContractAddress: "XPLA",
+						ContractId:      "axpla",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 					},
 				},
 				Destinations: []*xc.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
-						ContractAddress: "axpla",
+						ContractAddress: "XPLA",
+						ContractId:      "axpla",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 					},
 				},

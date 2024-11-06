@@ -3,6 +3,7 @@ chains:
   APTOS:
     chain: APTOS
     driver: aptos
+    chain_coin: "0x1::aptos_coin::AptosCoin"
     net: devnet
     chain_name: Aptos (Devnet)
     explorer_url: https://explorer.devnet.aptos.dev
