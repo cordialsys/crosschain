@@ -251,21 +251,32 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		CosmosTx:        decodedTx,
 		CosmosTxEncoder: client.Ctx.TxConfig.TxEncoder(),
 	}
-
+	chainCfg := client.Asset.GetChain()
 	result.TxID = string(txHash)
-	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID
+	result.ExplorerURL = chainCfg.ExplorerURL + "/tx/" + result.TxID
 	result.Fee = tx.Fee()
 
 	events := ParseEvents(resultRaw.TxResult.Events)
 	for _, ev := range events.Transfers {
+		contract := ev.Contract
+		// Assets on cosmos chains techically always have a contract value ("denom") that is not
+		// empty.  This conflicts with our assignment of "chains/<CHAIN>/assets/<CHAIN>" ID.
+		// To provide a consistent output, we catch the right "denom" and convert it to our ID.
+		altContractId := ""
+		if contract == chainCfg.ChainCoin {
+			altContractId = contract
+			contract = string(chainCfg.Chain)
+		}
 		result.Sources = append(result.Sources, &xc.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Sender),
-			ContractAddress: xc.ContractAddress(ev.Contract),
+			ContractAddress: xc.ContractAddress(contract),
+			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
 		})
 		result.Destinations = append(result.Destinations, &xc.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Recipient),
-			ContractAddress: xc.ContractAddress(ev.Contract),
+			ContractAddress: xc.ContractAddress(contract),
+			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
 		})
 	}
@@ -321,7 +332,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	chain := client.Asset.GetChain().Chain
+	chain := client.Asset.GetChain()
 
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil

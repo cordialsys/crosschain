@@ -29,7 +29,7 @@ type Client struct {
 
 	contract         xc.ContractAddress
 	blockExplorerURL string
-	chain            xc.NativeAsset
+	chain            *xc.ChainConfig
 }
 
 // TxInput for Template
@@ -129,7 +129,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		client,
 		xc.ContractAddress(cfgI.GetContract()),
 		cfgI.GetChain().ExplorerURL,
-		cfg.Chain,
+		cfg,
 	}, nil
 }
 
@@ -201,14 +201,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		source := new(xc.LegacyTxInfoEndpoint)
 		source.Address = from
 		source.Amount = amount
-		source.Asset = string(client.chain)
-		source.NativeAsset = client.chain
+		source.Asset = string(client.chain.Chain)
+		source.NativeAsset = client.chain.Chain
 
 		destination := new(xc.LegacyTxInfoEndpoint)
 		destination.Address = to
 		destination.Amount = amount
-		destination.Asset = string(client.chain)
-		destination.NativeAsset = client.chain
+		destination.Asset = string(client.chain.Chain)
+		destination.NativeAsset = client.chain.Chain
 
 		sources = append(sources, source)
 		destinations = append(destinations, destination)

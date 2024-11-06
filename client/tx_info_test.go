@@ -13,7 +13,7 @@ import (
 func TestTxInfoFees(t *testing.T) {
 
 	tx := client.NewTxInfo(
-		client.NewBlock(1, "1234", time.Unix(1, 0)),
+		client.NewBlock(xc.ETH, 1, "1234", time.Unix(1, 0)),
 		xc.ETH,
 		"0x1234",
 		3,
@@ -30,7 +30,7 @@ func TestTxInfoFees(t *testing.T) {
 	}
 
 	// manually add a fee
-	tf := client.NewMovement(tx.Chain, "")
+	tf := client.NewMovement(tx.XChain, "")
 	tf.AddSource("feepayer", xc.NewAmountBlockchainFromUint64(55), nil)
 	tx.AddMovement(tf)
 	require.Len(t, tx.CalculateFees(), 1)
@@ -44,8 +44,8 @@ func TestTxInfoFees(t *testing.T) {
 	// add a fee of new asset via helper
 	tx.AddFee("feepayer", "USDC", xc.NewAmountBlockchainFromUint64(65), nil)
 	require.Len(t, tx.CalculateFees(), 2)
-	require.Equal(t, "65", tx.CalculateFees()[0].Balance.String())
-	require.Equal(t, "120", tx.CalculateFees()[1].Balance.String())
+	require.Equal(t, "120", tx.CalculateFees()[0].Balance.String())
+	require.Equal(t, "65", tx.CalculateFees()[1].Balance.String())
 
 	tx.AddSimpleTransfer("a", "b", "", xc.NewAmountBlockchainFromUint64(0), nil, "memo")
 	require.Equal(t, "memo", tx.Movements[len(tx.Movements)-1].Memo)
@@ -54,13 +54,13 @@ func TestTxInfoFees(t *testing.T) {
 
 func TestTxInfoMultiLegFees(t *testing.T) {
 	tx := client.NewTxInfo(
-		client.NewBlock(1, "1234", time.Unix(1, 0)),
+		client.NewBlock(xc.BTC, 1, "1234", time.Unix(1, 0)),
 		xc.BTC,
 		"0x1234",
 		3,
 		nil,
 	)
-	tf := client.NewMovement(tx.Chain, "")
+	tf := client.NewMovement(tx.XChain, "")
 	for i := 0; i < 10; i++ {
 		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 	}
@@ -78,19 +78,19 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 // independent transfer, and test we can coalesce them into 1 transfer again.
 func TestTxInfoMultiLegCoalesce(t *testing.T) {
 	tx := client.NewTxInfo(
-		client.NewBlock(1, "1234", time.Unix(1, 0)),
+		client.NewBlock(xc.BTC, 1, "1234", time.Unix(1, 0)),
 		xc.BTC,
 		"0x1234",
 		3,
 		nil,
 	)
 	for i := 0; i < 10; i++ {
-		tf := client.NewMovement(tx.Chain, "")
+		tf := client.NewMovement(tx.XChain, "")
 		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 		tx.AddMovement(tf)
 	}
 	for i := 0; i < 8; i++ {
-		tf := client.NewMovement(tx.Chain, "")
+		tf := client.NewMovement(tx.XChain, "")
 		tf.AddDestination("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 		tx.AddMovement(tf)
 	}

@@ -538,10 +538,11 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"baseFeePerGas":"0x8","blobGasUsed":"0x20000","difficulty":"0x0","excessBlobGas":"0x0","extraData":"0xd883010d0b846765746888676f312e32312e36856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0x3ce0d8","hash":"0x260e687044ff9c5ca8cc579e1bad21ee3f295cdefa80c15fafadf757061bd503","logsBloom":"0x26810080002280d00108001400808000040d810004581008000a000040801422020208004080400660000000058004046000b802060485a00020003600a4000004113900002042c8888c002a000000001040080444860053c10000021c0a00010c300150021850400804018110018800200040004080120000100018055080000084020d4801002029120004008804135000b80002ae0988000803406403802008080143030a4204a10041a2010022003208031812808842102270080401500041101c8281280110040000110100401002900080c000080860000100400a60982000020400a8c00008100000242100000206800008a20400a10800801cb80000","miner":"0xbcff060f601684a0dbf5b0ea48d8dcc112f4ff2f","mixHash":"0xd37a9dc759cfb108a6d1c979906c1a0fd5d936858d85e643213a86113d46b1e4","nonce":"0x0000000000000000","number":"0x1decc2","parentBeaconBlockRoot":"0x4bf94a7a2913c3fb8312edd4ac35a4f6360206a7cfa0739bcb5c95a3bf0ebcfc","parentHash":"0x1fb39b27d7411e049a3bdf829d6dab4831e561b98daa13a4c0779b0038dce437","receiptsRoot":"0x5e3ea7489d9f892727d82f108fdbcf06233cc9b8d642749796e9002100f57a5f","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xa5fc","stateRoot":"0xf311e89a321b3b0417f51e198a0fe65badaacd776bbadae32ae7e526e4eef439","timestamp":"0x669ac980","totalDifficulty":"0x1","transactions":["0xcf5bb6ab11621efdab87029351e16b91d0e585ecb6b4081866d4737b13656d50","0xcf527b32ed6f445fe8cf2cc83f888d42a77db51de6e17588fb063f6e07d1d75b","0x45ede5541c8db657887e3a1077849a66ba9c0b3f9a71f6103993f9c5ab30801e","0xd1a023345df0e5c7190e98ac9e5aff98bfd4a33c2b536dd5e33437f0cfbf7458","0x3d78aba4e6a6ebfb6660e2519d133b91b1f7d0ed467e114476a96b753bae5342","0xfda82bf6e88bf5dfd2213261b59393f20d3c53a785b83c14118a64a6d5556636","0xe8b802239bae75165cdd80945b097c47b540f1550099438ce88dfccafa03d78c","0xded6775ec607d82f2582be35ca843ca4d7093dd71bbe0cf54b0ee96d8436f509","0xd0f0ec209fb3e95a6e587db5decd52747f6e13688a89585ade6e6b4fdcfbb8dc","0x4d306f2a2e3b1e0f0e58916b1bb828f176373b7cca3eca6c7000cb74a6ed523c","0x498092e9a2dfb9bbf3ddae343943e96081c1c204bef053456ef8e172e5689db0","0x9f66053103d2a315cf8376a982eb8d42d1bce1bf266b9abe0eaa6f705e1c68ed","0x91c92899ae82f4ed283aa3f5b2c6627c6d3787660cc72ac44258a99a44037035","0xe266424020b68192e164c58c1a83b8c329eb04fbf3ef6253263329c1c725291f","0x728aa316a3bc92831996dca5214e3a044cccfa5b32d9c9383505df0c1c38ba33","0x36753fb363e9d3f3d3e81ce29cd2831dcf4f4f6db9d0e2f725306aa5e3866ab5","0xc54bc3f4064a9d54dd5797aae145436013049589e0030ff3b0b9362a590b9cf0","0x552530592d6031ccffa988a878945b44ff44e4d1eadbe7a3f4a299e7bb206119","0xfe5da35bca364d5f59c8e5d4c2cd04c7f8d11a200fa7877487ef8b7d09a09aca","0x3166fa77050e18879c40f2e7047b20455c438f5480895f02b288dce137ef4e63","0xe0b94c1b9ac46ab4c57d7d95f3e9f61579908f485cccf208ab8ef25ae73ba8a3","0xb8f6e85651b9481fe88722fa4fa04ca7392841e5506407055c3e7093cd9acc98"],"transactionsRoot":"0x7c06ad31fc7bca0dfbfefd10c6b57f2ed79619f14fe8a174b175ec6f450fac27","uncles":[],"withdrawals":[{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x709564","index":"0x1dc1d4e","validatorIndex":"0x181dd0"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x717fc8","index":"0x1dc1d4f","validatorIndex":"0x181dd1"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x71a66b","index":"0x1dc1d50","validatorIndex":"0x181dd2"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6f9be4","index":"0x1dc1d51","validatorIndex":"0x181dd3"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x7191e0","index":"0x1dc1d52","validatorIndex":"0x181dd4"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x707c9e","index":"0x1dc1d53","validatorIndex":"0x181dd5"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70304d","index":"0x1dc1d54","validatorIndex":"0x181dd6"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70a858","index":"0x1dc1d55","validatorIndex":"0x181dd7"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70e9a2","index":"0x1dc1d56","validatorIndex":"0x181dd8"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70d504","index":"0x1dc1d57","validatorIndex":"0x181dd9"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x714ec3","index":"0x1dc1d58","validatorIndex":"0x181dda"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6fc48e","index":"0x1dc1d59","validatorIndex":"0x181ddb"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x715b55","index":"0x1dc1d5a","validatorIndex":"0x181ddc"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70f1ed","index":"0x1dc1d5b","validatorIndex":"0x181ddd"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6f3971","index":"0x1dc1d5c","validatorIndex":"0x181dde"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x7097ab","index":"0x1dc1d5d","validatorIndex":"0x181ddf"}],"withdrawalsRoot":"0x50c61c5b07f60722110b2beaa76a271bd33d1a56e691ae0818b57f6c138cc619"}`,
 			},
 			xcclient.TxInfo{
-				Name:  "chains/ETH/transactions/0x4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
-				Hash:  "4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
-				Chain: "ETH",
+				Name:   "chains/ETH/transactions/0x4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
+				Hash:   "4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
+				XChain: "ETH",
 				Block: &xcclient.Block{
+					Chain:  "ETH",
 					Height: 1960505,
 					Hash:   "0xb2cf3002b615c6213c4e6241a8a14afa9087a84db1f035812f2a54807851b934",
 					Time:   time.Unix(1721411604, 0),
@@ -549,29 +550,34 @@ func TestFetchTxInfo(t *testing.T) {
 				Confirmations: 649,
 				Movements: []*xcclient.Movement{
 					{
-						Asset:    "chains/ETH/assets/ETH",
-						Contract: "ETH",
+						XAsset:    "chains/ETH/assets/ETH",
+						XContract: "ETH",
+						AssetId:   "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("32000000000000000000"),
-								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								Balance:   xc.NewAmountBlockchainFromStr("32000000000000000000"),
+								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{
 							{
 
-								Balance: xc.NewAmountBlockchainFromStr("32000000000000000000"),
-								Address: "chains/ETH/addresses/0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
+								Balance:   xc.NewAmountBlockchainFromStr("32000000000000000000"),
+								XAddress:  "chains/ETH/addresses/0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
+								AddressId: "0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
 							},
 						},
 					},
 					{
-						Asset:    "chains/ETH/assets/ETH",
-						Contract: "ETH",
+						XAsset:    "chains/ETH/assets/ETH",
+						XContract: "ETH",
+						AssetId:   "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("2047469337720"),
-								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								Balance:   xc.NewAmountBlockchainFromStr("2047469337720"),
+								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{},
@@ -602,10 +608,11 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"baseFeePerGas":"0x8","blobGasUsed":"0x20000","difficulty":"0x0","excessBlobGas":"0x0","extraData":"0xd883010d0b846765746888676f312e32312e36856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0x1b6c4a","hash":"0x2911c7074fded3632ef8ab20b0dc1345218256cdbab353aa2c0a658a19c0522b","logsBloom":"0x000000200004006000000400000800001008010000080000124000004040400000000800008000000080200001840000200080000000020900001000002000000000080004006200000c0028000040000000000000400000480008000c0800000030031002001040081400000000080008000000000000200010001800020000000000040001000000100100000080000000a00800840800800083002000000002008140020010000000002008000000300804002000004210002000000001020008040200000100000010010000000201100080000000000000500000002690001000000020804000100100000000000004800000000c100000000048100000","miner":"0x65fdc9a172746d54a5b05e6ac5130b991abaf079","mixHash":"0x99cf77019aed1a40749697f38e92db0d5fb34685a28b433fa948a7f938fc2d30","nonce":"0x0000000000000000","number":"0x1e6e73","parentBeaconBlockRoot":"0xebb4c4b339592d25eb40382feef5e4ed1961f644f5cf55ec45d3b51a3646edba","parentHash":"0x67dba09f04c1524ddc4ec38d8c460984b84cc3ad179156a5aa4a6e9167e89dc3","receiptsRoot":"0x514043203efac1dd1ef956bf2654829ec5cefad45e3e04d60eb570db373011d1","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x29c1","stateRoot":"0x81d6876d14e806ee3aaf7542b90f6593447a231fc17fa6928a79f9b0da79ba28","timestamp":"0x66a15d64","totalDifficulty":"0x1","transactions":["0x7f67e03f8772bcf895349c7fd153e8921be2d23e1cea4a430b49480419c263de","0x4dc2920ccb656048b096e8879afa25259c1ad71cf7dfed2c30fffde518d4723e","0xea5b250bb1b687cf37f8af913c74bf6c00987cbf795c42505e46016c709eec15","0xcc45fb6c2cda441dae26de40aea637d57cff2b8e6c1df8aeb23bed98ec6ae5cb","0x3ad6490d40e543faaa5dc3e21f5a180516a919bc06eaf7839ec26418a8eca0f1","0xb790136eaff12f2ba9108d3c979e21d3eb77f7c17f93b4dffdc26f0bd4ea84c1","0xf9b36d7c74393869bcef2cbbfd85528c5840552370cc406b03b7895065e71e35","0x09f5fb83f061fabd15f27a2c0b4b1a39fd6e0b2bd614907ccc11a1b73bc5e1cd","0x87e0670f3bcb08d684e9e7f66ff01825f17d649e0ccd6e368dd791fcbae737a6","0xfe2747c02456240ae407f8b77f54d559157a785256a55c812b9d6b8bbba8a741","0x1da7d25bb9057520a83eeffbb9490be50144427cd7aea399d3af4ff48ee34fd8","0xbb17f76ee239dee7bbd82f65f46fbb7cdcf8f61273d98b80fbf8c6fd2ff4cd22","0x59bc4671a65ac4e386e9887d29f40a71a3cc77b5ae9351496e096357c36fc150"],"transactionsRoot":"0xca5fedf5b5726bbc095f0f259b1393a0b8e623aaccad08c4647295f01a43d94c","uncles":[],"withdrawals":[{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x739ca6","index":"0x1e434e6","validatorIndex":"0x1779f2"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73d864","index":"0x1e434e7","validatorIndex":"0x1779f3"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x7359af","index":"0x1e434e8","validatorIndex":"0x1779f4"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x740a77","index":"0x1e434e9","validatorIndex":"0x1779f5"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x737580","index":"0x1e434ea","validatorIndex":"0x1779f6"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x740072","index":"0x1e434eb","validatorIndex":"0x1779f7"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x74120c","index":"0x1e434ec","validatorIndex":"0x1779f8"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x742b9d","index":"0x1e434ed","validatorIndex":"0x1779f9"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x732127","index":"0x1e434ee","validatorIndex":"0x1779fa"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73a0e4","index":"0x1e434ef","validatorIndex":"0x1779fb"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73972f","index":"0x1e434f0","validatorIndex":"0x1779fc"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x734a28","index":"0x1e434f1","validatorIndex":"0x1779fd"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73d3b6","index":"0x1e434f2","validatorIndex":"0x1779fe"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72e5bf","index":"0x1e434f3","validatorIndex":"0x1779ff"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72dea0","index":"0x1e434f4","validatorIndex":"0x177a00"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72f973","index":"0x1e434f5","validatorIndex":"0x177a01"}],"withdrawalsRoot":"0x8c92f054a4fcf52b2fb74c040f5af9a7942cae9615d6ed9af4b1a6cfcd2972d3"}`,
 			},
 			xcclient.TxInfo{
-				Name:  "chains/ETH/transactions/0xfbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
-				Hash:  "fbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
-				Chain: "ETH",
+				Name:   "chains/ETH/transactions/0xfbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
+				Hash:   "fbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
+				XChain: "ETH",
 				Block: &xcclient.Block{
+					Chain:  "ETH",
 					Height: 1988490,
 					Hash:   "0x626eac5c41b2cf1c5ec9bdc3edc0d939e46eea3fb4dea387c0f3f0bd87ad9963",
 					Time:   testtypes.FromTimeStamp("2024-07-23T18:52:24-04:00"),
@@ -613,12 +620,14 @@ func TestFetchTxInfo(t *testing.T) {
 				Confirmations: 5865,
 				Movements: []*xcclient.Movement{
 					{
-						Asset:    "chains/ETH/assets/ETH",
-						Contract: "ETH",
+						XAsset:    "chains/ETH/assets/ETH",
+						XContract: "ETH",
+						AssetId:   "ETH",
 						From: []*xcclient.BalanceChange{
 							{
-								Balance: xc.NewAmountBlockchainFromStr("4757340142368"),
-								Address: "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								Balance:   xc.NewAmountBlockchainFromStr("4757340142368"),
+								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
+								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
 						To: []*xcclient.BalanceChange{},

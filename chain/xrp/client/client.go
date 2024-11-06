@@ -160,12 +160,12 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-
-	name := xclient.NewTransactionName(client.Asset.GetChain().Chain, txResponse.Result.Hash)
+	chain := client.Asset.GetChain().Chain
+	name := xclient.NewTransactionName(chain, txResponse.Result.Hash)
 
 	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
 
-	block := xclient.NewBlock(uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, blockTime)
+	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, blockTime)
 
 	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
@@ -178,7 +178,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	txInfo := xclient.TxInfo{
 		Name:          name,
 		Hash:          txResponse.Result.Hash,
-		Chain:         client.Asset.GetChain().Chain,
+		XChain:        client.Asset.GetChain().Chain,
 		Block:         block,
 		Movements:     []*xclient.Movement{},
 		Fees:          []*xclient.Balance{},

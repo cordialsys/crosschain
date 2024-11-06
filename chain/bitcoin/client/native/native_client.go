@@ -261,7 +261,7 @@ func (client *NativeClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	chain := client.Asset.GetChain().Chain
+	chain := client.Asset.GetChain()
 	// delete the fee to avoid double counting.
 	// the new model will calculate fees from the difference of inflows/outflows
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)

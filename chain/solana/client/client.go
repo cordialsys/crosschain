@@ -411,7 +411,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	}
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain().Chain, legacyTx, xclient.Account), nil
+	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Account), nil
 }
 
 func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (types.TokenAccountInfo, error) {

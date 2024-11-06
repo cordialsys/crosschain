@@ -35,9 +35,6 @@ func NewAssetName(chain xc.NativeAsset, contractOrNativeAsset string) AssetName 
 }
 
 func NewAddressName(chain xc.NativeAsset, address string) AddressName {
-	if address == "" {
-		address = string(chain)
-	}
 	if address != string(chain) {
 		address = normalize.Normalize(address, chain)
 	}
@@ -80,13 +77,19 @@ type TransferSource struct {
 }
 
 type BalanceChange struct {
-	Balance xc.AmountBlockchain     `json:"balance"`
-	Amount  *xc.AmountHumanReadable `json:"amount,omitempty"`
-	Address AddressName             `json:"address"`
+	Balance   xc.AmountBlockchain     `json:"balance"`
+	Amount    *xc.AmountHumanReadable `json:"amount,omitempty"`
+	XAddress  AddressName             `json:"address"`    // deprecated
+	AddressId xc.Address              `json:"address_id"` // replaces address
 }
 type Movement struct {
-	Asset    AssetName          `json:"asset"`
-	Contract xc.ContractAddress `json:"contract"`
+	XAsset    AssetName          `json:"asset"`    // deprecated
+	XContract xc.ContractAddress `json:"contract"` // deprecated
+	AssetId   xc.ContractAddress `json:"asset_id"` // replaces contract
+
+	// ContractId is set only when there is an alternative contract
+	// identifier used by the chain for the native asset.  It should be blank otherwise.
+	ContractId xc.ContractAddress `json:"contract_id,omitempty"`
 
 	// required: source debits
 	From []*BalanceChange `json:"from"`
@@ -99,6 +102,7 @@ type Movement struct {
 }
 
 type Block struct {
+	Chain xc.NativeAsset `json:"chain"`
 	// required: set the blockheight of the transaction
 	Height uint64 `json:"height"`
 	// required: set the hash of the block of the transaction
@@ -140,7 +144,7 @@ type TxInfo struct {
 	// required: set the transaction hash/id
 	Hash string `json:"hash"`
 	// required: set the chain
-	Chain xc.NativeAsset `json:"chain"`
+	XChain xc.NativeAsset `json:"chain"` //deprecated
 
 	// required: set the block info
 	Block *Block `json:"block"`
@@ -161,22 +165,27 @@ type TxInfo struct {
 	Error *string `json:"error,omitempty"`
 }
 
-func NewBlock(height uint64, hash string, time time.Time) *Block {
+func NewBlock(chain xc.NativeAsset, height uint64, hash string, time time.Time) *Block {
 	return &Block{
+		chain,
 		height,
 		hash,
 		time,
 	}
 }
 
-func NewBalanceChange(chain xc.NativeAsset, address xc.Address, balance xc.AmountBlockchain, decimals *int) *BalanceChange {
-	addressName := NewAddressName(chain, string(address))
+func NewBalanceChange(chain xc.NativeAsset, addressId xc.Address, balance xc.AmountBlockchain, decimals *int) *BalanceChange {
+	if addressId != xc.Address(chain) {
+		addressId = xc.Address(normalize.Normalize(string(addressId), chain))
+	}
+	addressName := NewAddressName(chain, string(addressId))
 	var amount *xc.AmountHumanReadable
 
 	return &BalanceChange{
 		balance,
 		amount,
 		addressName,
+		addressId,
 	}
 }
 
@@ -201,7 +210,7 @@ func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations ui
 }
 func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int, memo string) {
 
-	tf := NewMovement(info.Chain, contract)
+	tf := NewMovement(info.XChain, contract)
 	tf.SetMemo(memo)
 	tf.AddSource(from, balance, decimals)
 	tf.AddDestination(to, balance, decimals)
@@ -209,7 +218,7 @@ func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract x
 }
 
 func (info *TxInfo) AddFee(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
-	tf := NewMovement(info.Chain, contract)
+	tf := NewMovement(info.XChain, contract)
 	tf.AddSource(from, balance, decimals)
 	// no destination
 	info.Movements = append(info.Movements, tf)
@@ -232,50 +241,68 @@ func (info *TxInfo) Coalesece() {
 
 func (info *TxInfo) CalculateFees() []*Balance {
 	// use btree map to get deterministic order
-	var netBalances = btree.NewMap[AssetName, *big.Int](1)
-	contracts := map[AssetName]xc.ContractAddress{}
+	var netBalances = btree.NewMap[xc.ContractAddress, *big.Int](1)
 	for _, tf := range info.Movements {
-		for _ = range tf.From {
-			netBalances.Set(tf.Asset, xc.NewAmountBlockchainFromUint64(0).Int())
-			contracts[tf.Asset] = tf.Contract
-		}
-		for _ = range tf.To {
-			netBalances.Set(tf.Asset, xc.NewAmountBlockchainFromUint64(0).Int())
-			contracts[tf.Asset] = tf.Contract
-		}
+		netBalances.Set(tf.AssetId, xc.NewAmountBlockchainFromUint64(0).Int())
 	}
 	for _, tf := range info.Movements {
 		for _, from := range tf.From {
-			bal, _ := netBalances.GetMut(tf.Asset)
+			bal, _ := netBalances.GetMut(tf.AssetId)
 			bal.Add(bal, from.Balance.Int())
 		}
 
 		for _, to := range tf.To {
-			bal, _ := netBalances.GetMut(tf.Asset)
+			bal, _ := netBalances.GetMut(tf.AssetId)
 			bal.Sub(bal, to.Balance.Int())
 		}
 	}
 	balances := []*Balance{}
 	zero := big.NewInt(0)
-	netBalances.Ascend("", func(asset AssetName, net *big.Int) bool {
+	netBalances.Ascend("", func(asset xc.ContractAddress, net *big.Int) bool {
 		if net.Cmp(zero) != 0 {
-			balances = append(balances, NewBalance(info.Chain, contracts[asset], xc.AmountBlockchain(*net), nil))
+			balances = append(balances, NewBalance(info.XChain, asset, xc.AmountBlockchain(*net), nil))
 		}
 		return true
 	})
 	return balances
 }
 
+func (tx *TxInfo) SetContractIdForNativeAsset(contractId xc.ContractAddress) {
+	for _, m := range tx.Movements {
+		if m.AssetId == xc.ContractAddress(tx.XChain) {
+			m.ContractId = contractId
+		}
+	}
+}
+
+func (tx *TxInfo) SyncDeprecatedFields() {
+	for _, m := range tx.Movements {
+		if m.XContract == "" {
+			m.XContract = xc.ContractAddress(m.AssetId)
+		}
+		if m.AssetId == "" {
+			m.AssetId = xc.ContractAddress(m.XContract)
+		}
+		if m.XAsset == "" {
+			m.XAsset = NewAssetName(tx.XChain, string(m.AssetId))
+		}
+	}
+}
+
 func NewMovement(chain xc.NativeAsset, contract xc.ContractAddress) *Movement {
 	if contract == "" {
 		contract = xc.ContractAddress(chain)
 	}
-	asset := NewAssetName(chain, string(contract))
+	xasset := NewAssetName(chain, string(contract))
 	// avoid serializing null's in json
 	from := []*BalanceChange{}
 	to := []*BalanceChange{}
 	memo := ""
-	return &Movement{asset, contract, from, to, memo, chain}
+	contractId := xc.ContractAddress("")
+	assetId := contract
+	xcontract := contract
+
+	return &Movement{xasset, xcontract, assetId, contractId, from, to, memo, chain}
 }
 
 func (tf *Movement) AddSource(from xc.Address, balance xc.AmountBlockchain, decimals *int) {
@@ -291,13 +318,13 @@ func (tf *Movement) SetMemo(memo string) {
 // Merge together movements that have the same asset
 func coalesece(movements []*Movement) (coaleseced []*Movement) {
 	// use btree map to get deterministic order
-	var mapping = btree.NewMap[AssetName, []*Movement](1)
+	var mapping = btree.NewMap[xc.ContractAddress, []*Movement](1)
 	for _, m := range movements {
-		arr, _ := mapping.Get(m.Asset)
-		mapping.Set(m.Asset, append(arr, m))
+		arr, _ := mapping.Get(m.AssetId)
+		mapping.Set(m.AssetId, append(arr, m))
 	}
 
-	mapping.Ascend("", func(_ AssetName, value []*Movement) bool {
+	mapping.Ascend("", func(_ xc.ContractAddress, value []*Movement) bool {
 		if len(value) > 0 {
 			first := value[0]
 			for _, m := range value[1:] {
@@ -316,7 +343,8 @@ type LegacyTxInfoMappingType string
 var Utxo LegacyTxInfoMappingType = "utxo"
 var Account LegacyTxInfoMappingType = "account"
 
-func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
+func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx xc.LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
+	chain := chainCfg.Chain
 	var errMsg *string
 	if legacyTx.Status == xc.TxStatusFailure {
 		msg := "transaction failed"
@@ -327,7 +355,7 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 	}
 
 	txInfo := NewTxInfo(
-		NewBlock(uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
+		NewBlock(chain, uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
 		chain,
 		legacyTx.TxID,
 		uint64(legacyTx.Confirmations),
@@ -387,5 +415,9 @@ func TxInfoFromLegacy(chain xc.NativeAsset, legacyTx xc.LegacyTxInfo, mappingTyp
 			logrus.Warn("unknown stake event type: " + fmt.Sprintf("%T", ev))
 		}
 	}
+	if chainCfg.ChainCoin != "" {
+		txInfo.SetContractIdForNativeAsset(xc.ContractAddress(chainCfg.ChainCoin))
+	}
+	txInfo.SyncDeprecatedFields()
 	return *txInfo
 }
