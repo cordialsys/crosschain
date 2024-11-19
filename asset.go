@@ -232,9 +232,9 @@ func (native NativeAsset) Driver() Driver {
 
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverXrp:
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp:
 		return K256Sha256
-	case DriverEVM, DriverEVMLegacy, DriverCosmos, DriverCosmosEvmos, DriverTron:
+	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Ed255
