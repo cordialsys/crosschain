@@ -1,9 +1,16 @@
-FROM us-docker.pkg.dev/cordialsys/containers/build-base:latest
+FROM debian:bookworm-slim as cosmos-build
 WORKDIR /root
 
+RUN apt update
+RUN apt install -y git npm curl golang
 
-RUN yum install python3 python3-pip -y
-RUN pip3 install flask requests
+# prepackaged Go
+ENV GO_VER=1.23.1
+ENV PATH="/root/go/bin:/usr/local/go/bin:$PATH"
+RUN echo curl -fsSLO https://go.dev/dl/go$GO_VER.linux-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
+RUN curl -fsSLO https://go.dev/dl/go$GO_VER.linux-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
+RUN cat go$GO_VER.linux-*.tar.gz  | tar -C /usr/local -xz
+RUN go version
 
 # install ignite
 RUN curl https://get.ignite.com/cli! | bash
@@ -15,6 +22,16 @@ WORKDIR /root/example
 COPY config.yml /root/example/config.yml
 RUN ignite chain build
 RUN ignite chain init
+
+FROM debian:bookworm-slim
+COPY --from=cosmos-build /root/go/bin/exampled /usr/bin/
+COPY --from=cosmos-build  /root/example /root/example
+COPY --from=cosmos-build  /root/.example /root/.example
+WORKDIR /root/example
+
+RUN apt update
+RUN apt install -y python3 python3-pip
+RUN pip3 install --break-system-packages flask
 
 # we should also add wasm + cw20 contract, but ignite is still working on the wasm plugin.
 

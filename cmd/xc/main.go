@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/client/services"
+	"github.com/cordialsys/crosschain/cmd/xc/commands"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/cmd/xc/staking"
 	"github.com/sirupsen/logrus"
@@ -71,29 +71,15 @@ func CmdXc() *cobra.Command {
 	setup.AddRpcArgs(cmd)
 	setup.AddStakingArgs(cmd)
 
-	cmd.AddCommand(CmdRpcBalance())
-	cmd.AddCommand(CmdTxInput())
-	cmd.AddCommand(CmdTxInfo())
-	cmd.AddCommand(CmdTxTransfer())
-	cmd.AddCommand(CmdAddress())
-	cmd.AddCommand(CmdChains())
+	cmd.AddCommand(commands.CmdRpcBalance())
+	cmd.AddCommand(commands.CmdTxInput())
+	cmd.AddCommand(commands.CmdTxInfo())
+	cmd.AddCommand(commands.CmdTxTransfer())
+	cmd.AddCommand(commands.CmdAddress())
+	cmd.AddCommand(commands.CmdChains())
 	cmd.AddCommand(staking.CmdStaking())
 
 	return cmd
-}
-
-func assetConfig(chain *xc.ChainConfig, contractMaybe string, decimals int32) xc.ITask {
-	if contractMaybe != "" {
-		token := xc.TokenAssetConfig{
-			Contract:    contractMaybe,
-			Chain:       chain.Chain,
-			ChainConfig: chain,
-			Decimals:    decimals,
-		}
-		return &token
-	} else {
-		return chain
-	}
 }
 
 func main() {

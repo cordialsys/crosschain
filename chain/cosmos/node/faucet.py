@@ -22,6 +22,8 @@ def fund(chain_id:str, contract: str):
     print(f"REQUEST address={address} contract={contract} amount={amount}", flush=True)
 
     faucet_alice_addr = "xpla1mmu56rh6syyruc5xeea2f82askyk5tvts8xnqf"
+    if contract.lower() == 'xpla':
+        contract = 'axpla'
     system(f"exampled tx bank send {faucet_alice_addr} {address} {amount}{contract} --from alice -y --chain-id example --node tcp://127.0.0.1:{RPC_PORT}")
     # wait for block
     time.sleep(3)

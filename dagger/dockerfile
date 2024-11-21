@@ -1,0 +1,12 @@
+FROM rockylinux:9.3
+
+# prepackaged Go
+ENV GO_VER=1.23.1
+ENV PATH="/root/go/bin:/usr/local/go/bin:$PATH"
+RUN echo curl -fsSLO https://go.dev/dl/go$GO_VER.linux-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
+RUN curl -fsSLO https://go.dev/dl/go$GO_VER.linux-$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/').tar.gz
+RUN cat go$GO_VER.linux-*.tar.gz  | tar -C /usr/local -xz
+RUN go version
+
+# do not presume an entrypoint or it can break expected default behavior regarding usage of quotes with CMD later.
+ENTRYPOINT []

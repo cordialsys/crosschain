@@ -1,0 +1,10 @@
+{
+  "name": "dagger",
+  "sdk": "go",
+  "source": "dagger",
+  "exclude": [
+    "!dagger/**/*",
+    "!dagger.json"
+  ],
+  "engineVersion": "v0.14.0"
+}
