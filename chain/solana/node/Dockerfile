@@ -1,9 +1,15 @@
-FROM us-docker.pkg.dev/cordialsys/containers/build-base:latest as solana-build
+FROM debian:bookworm-slim as solana-build
 WORKDIR /root
 
 # install solana CLI build dependencies
-ENV PACKAGES perl-FindBin perl-File-Compare systemd-devel gcc-c++ clang-libs clang-devel bzip2
-RUN dnf -y install $PACKAGES
+RUN apt update
+ENV PACKAGES perl libsystemd-dev g++ libclang-dev bzip2 bzip2 curl unzip wget pkg-config libudev-dev make
+
+RUN apt install -y $PACKAGES
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v27.0/protoc-27.0-linux-$(uname -m | sed 's/x86_64/x86_64/' | sed 's/aarch64/aarch_64/').zip
 RUN unzip protoc-*.zip
 RUN mv ./bin/protoc /usr/bin/
@@ -18,19 +24,19 @@ ENV CARGO_TARGET_DIR=/tmp/target
 RUN --mount=type=cache,target=/tmp/target \
     --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cache \
-    cd solana-$SOLANA_VERSION && ln -s ${CARGO_TARGET_DIR} target && ./scripts/cargo-install-all.sh . && mv bin/* /solana
+    cd solana-$SOLANA_VERSION && ln -s ${CARGO_TARGET_DIR} target && ./scripts/cargo-install-all.sh . && cp -r bin/* /solana
 
 # setup faucet with binaries
-FROM us-docker.pkg.dev/cordialsys/containers/build-base:latest
+FROM debian:bookworm-slim
 COPY --from=solana-build /solana/* /usr/bin/
 WORKDIR /root
 
-RUN yum install bzip2 python3 python3-pip -y
-RUN pip3 install flask
+RUN apt update
+RUN apt install -y python3 python3-pip
+RUN pip3 install --break-system-packages flask
 
 # generate a wallet to request funds to
 RUN solana-keygen new -o /root/.config/solana/id.json --no-bip39-passphrase
-
 
 WORKDIR /root/solana-local-validator
 RUN mkdir -p test-ledger
