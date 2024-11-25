@@ -3,21 +3,23 @@
 package ci
 
 import (
+	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"testing"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/cmd/xc/commands"
+	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransfer(t *testing.T) {
 	flag.Parse()
 
-	validateRequiredFlags(t, chain, "Chain argument is required. Use --chain flag to specify it.")
-	validateRequiredFlags(t, rpc, "RPC argument is required. Use --rpc flag to specify it.")
+	validateCLIInputs(t)
 
 	fromPrivateKey := "93a4def9eb501965b9f5f3079fab53284ea6a557e48e8affa817ab0258908bbc"
 	toPrivateKey := "22194a8955e9233aa2f0a0206c8ea861e5fa92a613ab5c7e236a11de3f4bc9ad"
@@ -34,45 +36,109 @@ func TestTransfer(t *testing.T) {
 	chainConfig, err := setup.LoadChain(xcFactory, rpcArgs.Chain)
 	require.NoError(t, err, "Failed loading chain config")
 
-	client, err := xcFactory.NewClient(commands.AssetConfig(chainConfig, "", 0))
+	client, err := xcFactory.NewClient(chainConfig)
 	require.NoError(t, err, "Failed creating client")
 
-	fromWalletAddress, err := commands.DeriveAddress(xcFactory, chainConfig, fromPrivateKey)
-	require.NoError(t, err, "Failed generating address")
+	fromWalletAddress := deriveAddress(t, xcFactory, chainConfig, fromPrivateKey)
 
 	fmt.Println("Wallet Address:", fromWalletAddress)
+	transferAmount, err := xc.NewAmountHumanReadableFromStr("0.1")
+	require.NoError(t, err)
+	transferAmountBlockchain := transferAmount.ToBlockchain(chainConfig.Decimals)
 
-	foundAmount, err := fundWallet(chainConfig, fromWalletAddress)
+	fundWallet(t, chainConfig, fromWalletAddress, "1")
 	require.NoError(t, err, "Failed to fund wallet address")
 
-	initialWalletBalance, err := commands.RetrieveBalance(client, xc.Address(fromWalletAddress))
-	require.NoError(t, err, "Failed to retrieve wallet balance")
+	initialBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
+	require.NoError(t, err, "Failed to fetch balance")
 
-	fmt.Println("Wallet Balance before transaction:", initialWalletBalance)
+	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
 
-	require.Equal(t, initialWalletBalance, foundAmount)
+	require.Equal(t, "1", initialBalance.ToHuman(chainConfig.Decimals).String())
 
-	txTransfer, err := getTxTransfer(xcFactory, chainConfig, client, fromPrivateKey, toPrivateKey)
-	require.NoError(t, err, "Failed to get txTransfer")
+	signer, err := xcFactory.NewSigner(chainConfig, fromPrivateKey)
+	require.NoError(t, err)
 
-	parsedTxTransfer, err := parseTxTransaction(txTransfer)
-	require.NoError(t, err, "Failed to parse txTransfer")
+	publicKey, err := signer.PublicKey()
+	require.NoError(t, err)
 
-	fmt.Println("Transaction:", txTransfer)
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	require.NoError(t, err)
 
-	if parsedTxTransfer.Hash != "" {
-		fmt.Printf("Transaction was successful with hash: %s\n", parsedTxTransfer.Hash)
-	} else {
-		fmt.Println("Transaction failed")
+	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+	require.NoError(t, err)
+
+	toAddress := deriveAddress(t, xcFactory, chainConfig, toPrivateKey)
+	fmt.Println("sending from ", from, " to ", toAddress)
+
+	input, err := client.FetchLegacyTxInput(context.Background(), from, toAddress)
+	require.NoError(t, err)
+
+	if inputWithPublicKey, ok := input.(xc.TxInputWithPublicKey); ok {
+		inputWithPublicKey.SetPublicKey(publicKey)
+		fmt.Println("added public key = ", hex.EncodeToString(publicKey))
 	}
 
-	finalWalletBalance, err := commands.RetrieveBalance(client, xc.Address(fromWalletAddress))
-	require.NoError(t, err, "Failed to retrieve wallet balance")
+	if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
+		inputWithAmount.SetAmount(transferAmountBlockchain)
+	}
+	fmt.Println("transfer input: ", asJson(input))
 
-	fmt.Println("Wallet Balance after transaction:", finalWalletBalance)
+	builder, err := xcFactory.NewTxBuilder(chainConfig)
+	require.NoError(t, err)
 
-	balanceAfterTransfer, err := computeBalanceAfterTransfer(initialWalletBalance, parsedTxTransfer)
-	require.NoError(t, err, "Failed to compute balance after transfer")
+	tx, err := builder.NewTransfer(from, toAddress, transferAmountBlockchain, input)
+	require.NoError(t, err)
 
-	require.Equal(t, finalWalletBalance, balanceAfterTransfer)
+	sighashes, err := tx.Sighashes()
+	require.NoError(t, err)
+
+	signatures := []xc.TxSignature{}
+	for _, sighash := range sighashes {
+		// sign the tx sighash(es)
+		signature, err := signer.Sign(sighash)
+		if err != nil {
+			panic(err)
+		}
+		signatures = append(signatures, signature)
+	}
+
+	err = tx.AddSignatures(signatures...)
+	require.NoError(t, err, "could not add signatures")
+
+	err = client.SubmitTx(context.Background(), tx)
+	require.NoError(t, err)
+
+	fmt.Println("submitted tx", tx.Hash())
+	start := time.Now()
+
+	var txInfo xcclient.TxInfo
+	timeout := time.Minute * 1
+	for time.Since(start) < timeout {
+		time.Sleep(1 * time.Second)
+		info, err := client.FetchTxInfo(context.Background(), tx.Hash())
+		if err != nil {
+			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
+			continue
+		}
+		txInfo = info
+		fmt.Println(asJson(txInfo))
+		break
+	}
+
+	finalWalletBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
+	require.NoError(t, err, "Failed to fetch balance")
+
+	fmt.Println("Balance after transaction:", finalWalletBalance)
+
+	// TODO the main transfer may not necessary be reported first, we are being lazy here.
+	transferredAmount := xc.NewAmountBlockchainFromStr(txInfo.Movements[0].From[0].Balance.String())
+
+	// TODO there may be multiple fees, we are being lazy and assuming there is only one.
+	transactionFee := xc.NewAmountBlockchainFromStr(txInfo.Fees[0].Balance.String())
+
+	totalSpend := transferredAmount.Add(&transactionFee)
+	remainder := initialBalance.Sub(&totalSpend)
+
+	require.Equal(t, finalWalletBalance.String(), remainder.String())
 }
