@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -43,6 +44,9 @@ def fund(chain_id:str, contract: str):
             pass
         system(f"spl-token wrap {amount + 1}")
         system(f"spl-token transfer {contract} {amount} {address} --allow-unfunded-recipient --fund-recipient")
+
+    # it can take up to 10seconds for the local node to reflect the balance 
+    time.sleep(10)
     return {
     }
 

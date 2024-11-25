@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,15 +27,18 @@ func CmdRpcBalance() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			addressRaw := args[0]
 
-			client, err := xcFactory.NewClient(AssetConfig(chainConfig, contract, 0))
+			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
 			if err != nil {
 				return err
 			}
 
 			address := xcFactory.MustAddress(chainConfig, addressRaw)
-			balance, err := RetrieveBalance(client, address)
+			balance, err := client.FetchBalance(context.Background(), address)
+			if err != nil {
+				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
+			}
 
-			fmt.Println(balance)
+			fmt.Println(balance.String())
 
 			return nil
 		},
@@ -56,7 +60,7 @@ func CmdTxInput() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			addressRaw := args[0]
 
-			client, err := xcFactory.NewClient(AssetConfig(chainConfig, contract, 0))
+			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
 			if err != nil {
 				return err
 			}
@@ -64,12 +68,14 @@ func CmdTxInput() *cobra.Command {
 			fromAddress := xcFactory.MustAddress(chainConfig, addressRaw)
 			toAddress := xcFactory.MustAddress(chainConfig, addressTo)
 
-			txInput, err := RetrieveTxInput(client, fromAddress, toAddress)
+			input, err := client.FetchLegacyTxInput(context.Background(), fromAddress, toAddress)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not fetch transaction input: %v", err)
 			}
 
-			fmt.Println(txInput)
+			bz, _ := json.MarshalIndent(input, "", "  ")
+
+			fmt.Println(bz)
 
 			return nil
 		},
@@ -90,17 +96,18 @@ func CmdTxInfo() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			hash := args[0]
 
-			client, err := xcFactory.NewClient(AssetConfig(chainConfig, "", 0))
+			client, err := xcFactory.NewClient(assetConfig(chainConfig, "", 0))
 			if err != nil {
 				return err
 			}
 
-			txInfo, err := RetrieveTxInfo(client, hash)
+			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(hash))
 			if err != nil {
-				return err
+				return fmt.Errorf("could not fetch tx info: %v", err)
 			}
 
-			fmt.Println(txInfo)
+			bz, _ := json.MarshalIndent(txInfo, "", "  ")
+			fmt.Println(string(bz))
 
 			return nil
 		},
@@ -159,19 +166,119 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
 
-			client, err := xcFactory.NewClient(AssetConfig(chainConfig, contract, decimals))
+			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, decimals))
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
 
-			txTransfer, err := RetrieveTxTransfer(xcFactory, chainConfig, contract, memo, timeout, toWalletAddress, transferredAmount, decimals, privateKeyInput, client)
+			transferredAmountHuman, err := xc.NewAmountHumanReadableFromStr(transferredAmount)
 			if err != nil {
 				return err
 			}
 
-			fmt.Println(txTransfer)
+			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 
-			return nil
+			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+
+			publicKey, err := signer.PublicKey()
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+			if err != nil {
+				return fmt.Errorf("could not create address builder: %v", err)
+			}
+
+			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+			if err != nil {
+				return fmt.Errorf("could not derive address: %v", err)
+			}
+			logrus.WithField("address", from).Info("sending from")
+
+			input, err := client.FetchLegacyTxInput(context.Background(), from, xc.Address(toWalletAddress))
+			if err != nil {
+				return fmt.Errorf("could not fetch transfer input: %v", err)
+			}
+
+			if inputWithPublicKey, ok := input.(xc.TxInputWithPublicKey); ok {
+				inputWithPublicKey.SetPublicKey(publicKey)
+				logrus.WithField("public_key", hex.EncodeToString(publicKey)).Debug("added public key to transfer input")
+			}
+
+			if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
+				inputWithAmount.SetAmount(amountBlockchain)
+			}
+
+			if memo != "" {
+				if txInputWithMemo, ok := input.(xc.TxInputWithMemo); ok {
+					txInputWithMemo.SetMemo(memo)
+				} else {
+					return fmt.Errorf("cannot set memo; chain driver currently does not support memos")
+				}
+			}
+			bz, _ := json.Marshal(input)
+			logrus.WithField("input", string(bz)).Debug("transfer input")
+
+			// create tx
+			// (no network, no private key needed)
+			builder, err := xcFactory.NewTxBuilder(assetConfig(chainConfig, contract, decimals))
+			if err != nil {
+				return fmt.Errorf("could not load tx-builder: %v", err)
+			}
+
+			tx, err := builder.NewTransfer(from, xc.Address(toWalletAddress), amountBlockchain, input)
+			if err != nil {
+				return fmt.Errorf("could not build transfer: %v", err)
+			}
+
+			sighashes, err := tx.Sighashes()
+			if err != nil {
+				return fmt.Errorf("could not create payloads to sign: %v", err)
+			}
+
+			// sign
+			signatures := []xc.TxSignature{}
+			for _, sighash := range sighashes {
+				// sign the tx sighash(es)
+				signature, err := signer.Sign(sighash)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+			}
+
+			// complete the tx by adding its signature
+			// (no network, no private key needed)
+			err = tx.AddSignatures(signatures...)
+			if err != nil {
+				return fmt.Errorf("could not add signature(s): %v", err)
+			}
+
+			// submit the tx, wait a bit, fetch the tx info
+			// (network needed)
+			err = client.SubmitTx(context.Background(), tx)
+			if err != nil {
+				return fmt.Errorf("could not broadcast: %v", err)
+			}
+			logrus.WithField("hash", tx.Hash()).Info("submitted tx")
+			start := time.Now()
+			for time.Since(start) < timeout {
+				time.Sleep(5 * time.Second)
+				info, err := client.FetchTxInfo(context.Background(), tx.Hash())
+				if err != nil {
+					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again...")
+					continue
+				}
+				bz, _ := json.MarshalIndent(info, "", "  ")
+				fmt.Println(bz)
+				return nil
+			}
+
+			return fmt.Errorf("could not find transaction that we submitted by hash %s", tx.Hash())
 		},
 	}
 	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
@@ -195,9 +302,24 @@ func CmdAddress() *cobra.Command {
 				return fmt.Errorf("must set env PRIVATE_KEY")
 			}
 
-			from, err := DeriveAddress(xcFactory, chainConfig, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+
+			publicKey, err := signer.PublicKey()
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+			if err != nil {
+				return fmt.Errorf("could not create address builder: %v", err)
+			}
+
+			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+			if err != nil {
+				return fmt.Errorf("could not derive address: %v", err)
 			}
 
 			fmt.Println(from)
@@ -217,7 +339,7 @@ func CmdChains() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
 
-			cli, err := xcFactory.NewClient(AssetConfig(chain, "", 0))
+			cli, err := xcFactory.NewClient(assetConfig(chain, "", 0))
 			if err != nil {
 				return err
 			}
@@ -250,4 +372,18 @@ func CmdChains() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+func assetConfig(chain *xc.ChainConfig, contractMaybe string, decimals int32) xc.ITask {
+	if contractMaybe != "" {
+		token := xc.TokenAssetConfig{
+			Contract:    contractMaybe,
+			Chain:       chain.Chain,
+			ChainConfig: chain,
+			Decimals:    decimals,
+		}
+		return &token
+	} else {
+		return chain
+	}
 }

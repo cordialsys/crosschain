@@ -20,11 +20,8 @@ RUN wget https://github.com/solana-labs/solana/archive/refs/tags/v$SOLANA_VERSIO
 RUN tar xvf v$SOLANA_VERSION.tar.gz
 RUN mkdir -p /solana
 
-ENV CARGO_TARGET_DIR=/tmp/target
-RUN --mount=type=cache,target=/tmp/target \
-    --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cache \
-    cd solana-$SOLANA_VERSION && ln -s ${CARGO_TARGET_DIR} target && ./scripts/cargo-install-all.sh . && cp -r bin/* /solana
+# this takes a while, and unfortunately the cache mounts seem to break the binaries in multi-arch build
+RUN cd solana-$SOLANA_VERSION && ./scripts/cargo-install-all.sh . && cp -r bin/* /solana
 
 # setup faucet with binaries
 FROM debian:bookworm-slim

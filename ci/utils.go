@@ -1,3 +1,5 @@
+//go:build ci
+
 package ci
 
 import (
@@ -5,17 +7,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"testing"
-	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/client"
-	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/cmd/xc/commands"
 	"github.com/cordialsys/crosschain/factory"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -26,78 +26,64 @@ var (
 func init() {
 	flag.StringVar(&chain, "chain", "", "Used Blockchain chain")
 	flag.StringVar(&rpc, "rpc", "", "RPC endpoint")
+
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func validateRequiredFlags(t *testing.T, value, errorMsg string) {
-	if value == "" {
-		t.Fatal(errorMsg)
+func validateCLIInputs(t *testing.T) {
+	if chain == "" {
+		t.Fatal("--chain is required")
+	}
+	if rpc == "" {
+		t.Fatal("--rpc is required")
 	}
 }
 
-func fundWallet(chainConfig *xc.ChainConfig, walletAddress string) (string, error) {
-	foundAmount, err := getChainSpecificFoundAmount(chainConfig)
+func fundWallet(t *testing.T, chainConfig *xc.ChainConfig, walletAddress xc.Address, amount string) {
+	require.NotNil(t, chainConfig)
+
+	amountHuman, err := xc.NewAmountHumanReadableFromStr(amount)
+	require.NoError(t, err)
+	amountBlockchain := amountHuman.ToBlockchain(chainConfig.GetDecimals())
+
+	// The RPC host is the same as the faucet host
+	parsedURL, err := url.Parse(chainConfig.URL)
 	if err != nil {
-		return "", err
-	}
-
-	host, err := getHost(chainConfig.URL)
-	if err != nil {
-		return "", err
-	}
-
-	faucetUrl, err := buildFaucetURL(host, chainConfig)
-	if err != nil {
-		return "", err
-	}
-
-	err = getTestTokensFromFaucet(faucetUrl, walletAddress, foundAmount)
-	if err != nil {
-		return "", err
-	}
-
-	return foundAmount, nil
-}
-
-func getChainSpecificFoundAmount(chainConfig *xc.ChainConfig) (string, error) {
-	amountHuman, err := xc.NewAmountHumanReadableFromStr("1")
-	if err != nil {
-		return "", err
-	}
-
-	decimals := chainConfig.GetDecimals()
-	amountBlockchain := amountHuman.ToBlockchain(decimals)
-
-	return amountBlockchain.String(), nil
-}
-
-func getHost(inputURL string) (string, error) {
-	parsedURL, err := url.Parse(inputURL)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse URL: %w", err)
+		panic(err)
 	}
 
 	host := parsedURL.Hostname()
-	return host, nil
+	require.NotEmpty(t, host)
+
+	faucetUrl := fmt.Sprintf("http://%s:10001/chains/%s/assets/%s", host, chainConfig.Chain, chainConfig.Chain)
+	require.NoError(t, err)
+
+	err = getTestTokensFromFaucet(faucetUrl, walletAddress, amountBlockchain)
+	require.NoError(t, err)
+
 }
 
-func buildFaucetURL(host string, chainConfig *xc.ChainConfig) (string, error) {
-	if host == "" || chainConfig == nil {
-		return "", fmt.Errorf("baseURL, chainConfig must be non-empty")
+func asJson(data any) string {
+	bz, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		panic(err)
 	}
-
-	return fmt.Sprintf("http://%s:10001/chains/%s/assets/%s", host, chainConfig.Chain, chainConfig.Chain), nil
+	return string(bz)
 }
 
-func getTestTokensFromFaucet(faucetUrl string, walletAddress string, amount string) error {
-	requestBody, err := json.Marshal(map[string]string{
-		"amount":  amount,
+func getTestTokensFromFaucet(faucetUrl string, walletAddress xc.Address, amount xc.AmountBlockchain) error {
+	requestBody := map[string]interface{}{
+		"amount":  amount.String(),
 		"address": walletAddress,
-	})
+	}
+	requestBodyBz, err := json.Marshal(requestBody)
 	if err != nil {
 		return fmt.Errorf("error creating request body: %v", err)
 	}
+	fmt.Println("POST ", faucetUrl)
+	fmt.Println(asJson(requestBody))
 
-	req, err := http.NewRequest("POST", faucetUrl, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", faucetUrl, bytes.NewBuffer(requestBodyBz))
 	if err != nil {
 		return fmt.Errorf("error creating request: %v", err)
 	}
@@ -110,7 +96,7 @@ func getTestTokensFromFaucet(faucetUrl string, walletAddress string, amount stri
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response: %v", err)
 	}
@@ -123,50 +109,18 @@ func getTestTokensFromFaucet(faucetUrl string, walletAddress string, amount stri
 	return nil
 }
 
-func getTxTransfer(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, client xclient.Client, fromPrivateKey string, toPrivateKey string) (string, error) {
-	toWalletAddress, err := commands.DeriveAddress(xcFactory, chainConfig, toPrivateKey)
-	if err != nil {
-		return "", err
-	}
+func deriveAddress(t *testing.T, xcFactory *factory.Factory, chainConfig *xc.ChainConfig, privateKey string) xc.Address {
+	signer, err := xcFactory.NewSigner(chainConfig, privateKey)
+	require.NoError(t, err)
 
-	amountToTransfer := "0.001"
-	timeout := time.Duration(60000000000)
-	decimals := chainConfig.GetDecimals()
+	publicKey, err := signer.PublicKey()
+	require.NoError(t, err)
 
-	txTransfer, err := commands.RetrieveTxTransfer(xcFactory, chainConfig, "", "", timeout, toWalletAddress, amountToTransfer, decimals, fromPrivateKey, client)
-	if err != nil {
-		return "", err
-	}
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	require.NoError(t, err)
 
-	return string(txTransfer), nil
-}
+	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+	require.NoError(t, err)
 
-func computeBalanceAfterTransfer(initialBanalceStr string, parsedTx *client.TxInfo) (string, error) {
-	initialBallance, err := xc.NewAmountHumanReadableFromStr(initialBanalceStr)
-	if err != nil {
-		return "", err
-	}
-
-	transferredAmount, err := xc.NewAmountHumanReadableFromStr(parsedTx.Movements[0].From[0].Balance.String())
-	if err != nil {
-		return "", err
-	}
-
-	transactionFee, err := xc.NewAmountHumanReadableFromStr(parsedTx.Fees[0].Balance.String())
-	if err != nil {
-		return "", err
-	}
-
-	return initialBallance.Decimal().Sub(transferredAmount.Decimal().Add(transactionFee.Decimal())).String(), nil
-}
-
-func parseTxTransaction(data string) (*client.TxInfo, error) {
-	var tx client.TxInfo
-
-	err := json.Unmarshal([]byte(data), &tx)
-	if err != nil {
-		return nil, fmt.Errorf("error unmarshalling JSON: %v", err)
-	}
-
-	return &tx, nil
+	return from
 }
