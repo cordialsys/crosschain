@@ -51,7 +51,7 @@ func (m *Dagger) TestChain(
 		// Add node service
 		WithServiceBinding("node-service", nodeService).
 		// Run tests
-		// WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000"}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000"}).
 		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000"}).
 		Stdout(ctx)
 }
