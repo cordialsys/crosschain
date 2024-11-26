@@ -121,6 +121,10 @@ func TestTransfer(t *testing.T) {
 			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
 			continue
 		}
+		if info.Confirmations == 0 {
+			fmt.Printf("tx doesn't yet have a confirmation...\n")
+			continue
+		}
 		txInfo = info
 		fmt.Println(asJson(txInfo))
 		break
