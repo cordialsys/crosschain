@@ -513,3 +513,20 @@ chains:
     decimals: 6
     indexer_type: ripple
     polling_period: 3m
+    dti: L6GTZC9G4
+  BASE:
+    chain: BASE
+    driver: evm
+    chain_name: Base Protocol
+    decimals: 18
+    explorer_url: https://explorer.baseprotocol.com
+    dti: 6M4WCXL3X
+  NOBLE:
+    chain: NOBLE
+    driver: cosmos
+    chain_name: Noble
+    chain_prefix: noble
+    decimals: 0
+    # Noble does NOT have a canonical/native asset.
+    # To support assets on noble, tokens must be added separately
+    chain_coin: "uunoble"

@@ -62,6 +62,8 @@ const (
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
 	XRP    = NativeAsset("XRP")    // XRP
+	BASE   = NativeAsset("BASE")   // BASE
+	NOBLE  = NativeAsset("NOBLE")  // Noble Chain
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -106,6 +108,8 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	TRX,
 	SEI,
 	XRP,
+	BASE,
+	NOBLE,
 }
 
 // Driver is the type of a chain
@@ -206,13 +210,13 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA:
+	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE:
 		return DriverEVM
 	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE:
 		return DriverCosmos
 	case SUI:
 		return DriverSui
