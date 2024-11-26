@@ -36,6 +36,7 @@ type BlockchairClient struct {
 }
 
 var _ xclient.FullClient = &BlockchairClient{}
+var _ xclient.ClientWithDecimals = &BlockchairClient{}
 var _ address.WithAddressDecoder = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
@@ -372,4 +373,12 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), uint64(satsPerByteFloat), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
+}
+
+func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	return 0, fmt.Errorf("unsupported")
 }

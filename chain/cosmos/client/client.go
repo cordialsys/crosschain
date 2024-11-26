@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -22,9 +23,9 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
-
 	xc "github.com/cordialsys/crosschain"
+	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
+	injectiveexchangetypes "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/modules/exchange/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
 
@@ -42,6 +43,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 var _ xclient.StakingClient = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
@@ -399,7 +401,7 @@ func (client *Client) FetchCw20Balance(ctx context.Context, address xc.Address, 
 
 	input := json.RawMessage(`{"balance": {"address": "` + string(address) + `"}}`)
 	type TokenBalance struct {
-		Balance string
+		Balance string `json:"balance"`
 	}
 	var balResult TokenBalance
 
@@ -475,4 +477,68 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	}
 	balance := balResp.GetBalance().Amount.BigInt()
 	return xc.AmountBlockchain(*balance), nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+	queryClient := banktypes.NewQueryClient(client.Ctx)
+	denomMetaResponse, bankErr := queryClient.DenomMetadata(ctx, &banktypes.QueryDenomMetadataRequest{
+		Denom: string(contract),
+	})
+	if bankErr != nil {
+		logrus.WithError(bankErr).Debug("not a bank asset")
+		// Try lookup cw20
+		{
+			input := json.RawMessage(`{"token_info": {}}`)
+			type TokenInfoResponse struct {
+				Name        string `json:"name"`
+				Symbol      string `json:"symbol"`
+				Decimals    int64  `json:"decimals"`
+				TotalSupply int64  `json:"total_supply"`
+			}
+			var tokenInfo TokenInfoResponse
+
+			tokenResp, err := wasmtypes.NewQueryClient(client.Ctx).SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
+				QueryData: wasmtypes.RawContractMessage(input),
+				Address:   string(contract),
+			})
+
+			if err == nil {
+				logrus.WithField("response", string(tokenResp.Data.Bytes())).Debug("cw20 asset")
+				err = json.Unmarshal(tokenResp.Data.Bytes(), &tokenInfo)
+				if err != nil {
+					return 0, fmt.Errorf("failed to parse cw20 token info: '%v': %v", contract, err)
+				}
+				return int(tokenInfo.Decimals), nil
+			}
+		}
+		// Try lookup injective peggy asset
+		{
+			injectiveQ := injectiveexchangetypes.NewQueryClient(client.Ctx)
+			injectiveResponse, err := injectiveQ.DenomDecimal(ctx, &injectiveexchangetypes.QueryDenomDecimalRequest{
+				Denom: string(contract),
+			})
+
+			if err == nil {
+				return int(injectiveResponse.Decimal), nil
+			}
+		}
+
+		// return original bank error
+		return 0, bankErr
+	}
+	bz, _ := json.Marshal(denomMetaResponse.Metadata)
+	logrus.WithField("response", string(bz)).Debug("bank asset")
+
+	// The asset may be reported with a bunch of shorthand aliases with different exponents.
+	// We'll take the highest one, assuming that must be the difference from the machine amount.
+	maxDecimal := 0
+	for _, denom := range denomMetaResponse.Metadata.DenomUnits {
+		if denom.Exponent > uint32(maxDecimal) {
+			maxDecimal = int(denom.Exponent)
+		}
+	}
+	return maxDecimal, nil
 }

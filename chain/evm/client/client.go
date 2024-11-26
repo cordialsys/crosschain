@@ -51,6 +51,7 @@ type Client struct {
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientV2 = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // Ethereum does not support full delegated staking, so we can only report balance information.
 // A 3rd party 'staking provider' is required to do the rest.
@@ -351,4 +352,21 @@ func (client *Client) FetchBalance(ctx context.Context, addr xc.Address) (xc.Amo
 		return zero, err
 	}
 	return xc.AmountBlockchain(*balance), nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	tokenAddress, _ := address.FromHex(xc.Address(contract))
+	instance, err := erc20.NewErc20(tokenAddress, client.EthClient)
+	if err != nil {
+		return 0, err
+	}
+	dec, err := instance.Decimals(&bind.CallOpts{})
+	if err != nil {
+		return int(dec), err
+	}
+	return int(dec), nil
 }

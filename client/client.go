@@ -26,10 +26,16 @@ type Client interface {
 
 	// Fetch the native balance for the chain on an address
 	FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error)
+
+	// Fetch the precision (or "decimals") associated with the target asset
+	FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error)
 }
 type ClientV2 interface {
 	// Improved signature replacement of `FetchLegacyTxInput`
 	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
+}
+type ClientWithDecimals interface {
+	FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error)
 }
 
 type FullClient interface {

@@ -30,6 +30,7 @@ type Client struct {
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.StakingClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -414,6 +415,23 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Account), nil
 }
 
+func (client *Client) LookupTokenMint(ctx context.Context, tokenContract solana.PublicKey) (types.MintAccountInfo, error) {
+	var accountInfo types.MintAccountInfo
+	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, tokenContract, &rpc.GetAccountInfoOpts{
+		Commitment: rpc.CommitmentFinalized,
+		Encoding:   "jsonParsed",
+	})
+	if err != nil {
+		return types.MintAccountInfo{}, err
+	}
+	fmt.Println(string(info.Value.Data.GetRawJSON()))
+	err = json.Unmarshal(info.Value.Data.GetRawJSON(), &accountInfo)
+	if err != nil {
+		return types.MintAccountInfo{}, err
+	}
+	return accountInfo, nil
+}
+
 func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solana.PublicKey) (types.TokenAccountInfo, error) {
 	var accountInfo types.TokenAccountInfo
 	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, tokenAccount, &rpc.GetAccountInfoOpts{
@@ -423,6 +441,7 @@ func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solan
 	if err != nil {
 		return types.TokenAccountInfo{}, err
 	}
+	fmt.Println(string(info.Value.Data.GetRawJSON()))
 	accountInfo, err = types.ParseRpcData(info.Value.Data)
 	if err != nil {
 		return types.TokenAccountInfo{}, err
@@ -552,4 +571,23 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	}
 
 	return totalBal, nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+	mint, err := solana.PublicKeyFromBase58(string(contract))
+	if err != nil {
+		return 0, fmt.Errorf("invalid contract address: %s: %v", contract, err)
+	}
+
+	mintInfo, err := client.LookupTokenMint(ctx, mint)
+	if err != nil {
+		return 0, err
+	}
+	// bz, _ := json.MarshalIndent(mintInfo, "", "  ")
+	// fmt.Println(string(bz))
+
+	return int(mintInfo.Parsed.Info.Decimals), nil
 }

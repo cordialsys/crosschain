@@ -33,6 +33,7 @@ type Client struct {
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.StakingClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 const ServiceApiKeyHeader = "x-service-api-key"
 
@@ -275,4 +276,19 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
 	return r.BalanceRaw, err
+}
+
+// FetchBalance fetches token balance from a Crosschain endpoint
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/assets/%s/decimals", client.URL, client.Asset.GetChain().Chain, contract)
+	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	asString := string(res)
+	asString = strings.Trim(asString, "\"")
+	dec, err := strconv.Atoi(asString)
+
+	return dec, err
 }

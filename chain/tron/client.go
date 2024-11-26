@@ -18,6 +18,7 @@ import (
 )
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 const TX_TIMEOUT = 2 * time.Hour
@@ -323,4 +324,16 @@ func deserialiseNativeTransfer(tx *httpclient.GetTransactionIDResponse) (xc.Addr
 	amount := transferContract.Amount
 
 	return from, to, xc.NewAmountBlockchainFromUint64(uint64(amount)), nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.chain.IsChain(contract) {
+		return int(client.chain.Decimals), nil
+	}
+
+	dec, err := client.client.ReadTrc20Decimals(string(contract))
+	if err != nil {
+		return 0, err
+	}
+	return int(dec.Uint64()), nil
 }

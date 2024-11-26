@@ -34,6 +34,7 @@ type Client struct {
 const IndexerSubQuery = "subquery"
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // TxInput for Substrate
 type TxInput struct {
@@ -449,10 +450,11 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 // FetchBalance fetches token balance for a Substrate address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetContract() == "" {
+	contract := client.Asset.GetContract()
+	if contract == "" {
 		return client.FetchNativeBalance(ctx, address)
 	} else {
-		return xc.AmountBlockchain{}, errors.New("unsupported asset")
+		return xc.AmountBlockchain{}, fmt.Errorf("unsupported asset: %v", contract)
 	}
 }
 
@@ -477,4 +479,12 @@ func (client *Client) EstimateTip(ctx context.Context) (uint64, error) {
 	}
 
 	return total / count, nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	return 0, fmt.Errorf("unsupported asset: %v", contract)
 }

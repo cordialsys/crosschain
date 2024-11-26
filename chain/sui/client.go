@@ -34,6 +34,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 const GAS_BUDGET_PER_COIN = uint64(20_000_000)
 
@@ -397,4 +398,16 @@ func (c *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.Amoun
 
 func (c *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	return c.FetchBalanceFor(ctx, address, "0x2::sui::SUI")
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	meta, err := client.SuiClient.GetCoinMetadata(ctx, string(contract))
+	if err != nil {
+		return 0, err
+	}
+	return int(meta.Decimals), nil
 }

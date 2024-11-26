@@ -378,6 +378,21 @@ func (c *Client) ReadTrc20Balance(fromAddress string, contract string) (*big.Int
 	return value.SetBytes(response.ConstantResult[0]), nil
 }
 
+func (c *Client) ReadTrc20Decimals(contract string) (*big.Int, error) {
+	// need to put some junk address or it fails
+	const randomPlaceholder = "TRGhNNfnmgLegT4zHNjEqDSADjgmnHvubJ"
+	response, err := c.TriggerConstantContracts(randomPlaceholder, contract, "decimals()", "")
+	if err != nil {
+		return &big.Int{}, err
+	}
+
+	value := big.NewInt(0)
+	if len(response.ConstantResult) == 0 {
+		return value, fmt.Errorf("no decimals returned reading contract %s", contract)
+	}
+	return value.SetBytes(response.ConstantResult[0]), nil
+}
+
 func (c *Client) GetAccount(address string) (*GetAccountResponse, error) {
 	req, err := postRequest(c.Url("wallet/getaccount"), map[string]interface{}{
 		"address": address,

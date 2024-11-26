@@ -75,6 +75,7 @@ type NativeClient struct {
 }
 
 var _ xclient.Client = &NativeClient{}
+var _ xclient.ClientWithDecimals = &NativeClient{}
 var _ address.WithAddressDecoder = &NativeClient{}
 
 // NewClient returns a new Bitcoin Client
@@ -474,4 +475,12 @@ func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountBlockchai
 	satsPerByte := uint64(satsPerByteFloat)
 
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
+}
+
+func (client *NativeClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	return 0, fmt.Errorf("unsupported")
 }

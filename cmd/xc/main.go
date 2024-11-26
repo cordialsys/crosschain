@@ -72,6 +72,7 @@ func CmdXc() *cobra.Command {
 	setup.AddStakingArgs(cmd)
 
 	cmd.AddCommand(commands.CmdRpcBalance())
+	cmd.AddCommand(commands.CmdDecimals())
 	cmd.AddCommand(commands.CmdTxInput())
 	cmd.AddCommand(commands.CmdTxInfo())
 	cmd.AddCommand(commands.CmdTxTransfer())

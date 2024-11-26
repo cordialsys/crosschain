@@ -61,6 +61,11 @@ func (m *MockedClient) FetchBalanceForAsset(ctx context.Context, address xc.Addr
 	return args.Get(0).(xc.AmountBlockchain), args.Error(1)
 }
 
+func (m *MockedClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	args := m.Called(ctx, contract)
+	return args.Get(0).(int), args.Error(1)
+}
+
 func (m *MockedClient) UpdateAsset(assetCfg xc.ITask) error {
 	args := m.Called(assetCfg)
 	return args.Error(1)
