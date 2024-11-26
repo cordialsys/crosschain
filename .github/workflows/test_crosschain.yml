@@ -4,6 +4,9 @@ on:
     branches:
       - "**"
 
+env:
+  NOTHANKS: 1
+
 jobs:
   test:
     name: "Test crosschain"
@@ -14,3 +17,21 @@ jobs:
         with:
           go-version: "1.22"
       - run: make lint test
+
+  ci:
+    strategy:
+      matrix:
+        chain:
+          - chain: SOL
+            image: us-docker.pkg.dev/cordialsys/crosschain/solana:latest
+          - chain: ETH
+            image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
+          - chain: XPLA
+            image: us-docker.pkg.dev/cordialsys/crosschain/cosmos:latest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install dagger
+        run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.14.0 BIN_DIR=/usr/bin sudo -E sh
+      - name: chain
+        run: dagger --progress plain -v call test-chain --chain ${{matrix.chain.chain}} --image ${{matrix.chain.image}} --source .
