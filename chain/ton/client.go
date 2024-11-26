@@ -34,6 +34,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new Template Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -557,4 +558,20 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 		sum = sum.Add(&bal)
 	}
 	return sum, nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	var response api.JettonMastersResponse
+	err := client.get(fmt.Sprintf("/api/v3/jetton/masters?address=%s&limit=10&offset=0", contract), &response)
+	if err != nil {
+		return 0, err
+	}
+	if len(response.JettonMasters) == 0 {
+		return 0, fmt.Errorf("no jetton contract by address %v", contract)
+	}
+	return int(response.JettonMasters[0].JettonContent.Decimals.Uint64()), nil
 }

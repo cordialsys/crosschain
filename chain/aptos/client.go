@@ -23,6 +23,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -377,4 +378,16 @@ func (client *Client) EstimateGas(ctx context.Context, ledgerInfo *aptostypes.Le
 	unit_price := xc.NewAmountBlockchainFromUint64(uint64(averUnitPrice))
 
 	return unit_price, nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	info, err := client.AptosClient.GetCoinInfo(string(contract))
+	if err != nil {
+		return 0, nil
+	}
+	return info.Decimals, nil
 }

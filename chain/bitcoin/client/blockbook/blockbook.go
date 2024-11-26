@@ -36,6 +36,7 @@ type BlockbookClient struct {
 }
 
 var _ xclient.FullClient = &BlockbookClient{}
+var _ xclient.ClientWithDecimals = &BlockbookClient{}
 var _ address.WithAddressDecoder = &BlockbookClient{}
 
 func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
@@ -384,4 +385,12 @@ func (client *BlockbookClient) post(ctx context.Context, path string, contentTyp
 		}
 	}
 	return nil
+}
+
+func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().Decimals), nil
+	}
+
+	return 0, fmt.Errorf("unsupported")
 }

@@ -443,6 +443,10 @@ func (native *ChainConfig) GetAssetSymbol() string {
 	return string(native.Chain)
 }
 
+func (native *ChainConfig) IsChain(contract ContractAddress) bool {
+	return contract == "" || native.Chain == NativeAsset(contract)
+}
+
 func (c *TokenAssetConfig) String() string {
 	net := ""
 	native := c.GetChain()

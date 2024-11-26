@@ -18,6 +18,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 type TxInput evminput.TxInput
 
@@ -130,4 +131,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	return client.EvmClient.FetchBalance(ctx, address)
+}
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	return client.EvmClient.FetchDecimals(ctx, contract)
 }

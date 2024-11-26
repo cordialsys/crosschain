@@ -127,3 +127,7 @@ func (task TaskConfig) GetChain() *ChainConfig {
 func (task TaskConfig) GetTask() *TaskConfig {
 	return &task
 }
+
+func (task *TaskConfig) IsChain(contract ContractAddress) bool {
+	return contract == "" || task.GetChain().Chain == NativeAsset(contract)
+}

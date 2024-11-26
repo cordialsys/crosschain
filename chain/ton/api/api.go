@@ -149,3 +149,29 @@ type FeeEstimateRequest struct {
 	Address string `json:"address"`
 	Body    string `json:"body"`
 }
+
+type JettonMastersResponse struct {
+	JettonMasters []JettonMaster         `json:"jetton_masters"`
+	AddressBook   map[string]AddressInfo `json:"address_book"`
+}
+
+type JettonMaster struct {
+	Address              string        `json:"address"`
+	TotalSupply          string        `json:"total_supply"`
+	Mintable             bool          `json:"mintable"`
+	AdminAddress         *string       `json:"admin_address"`
+	JettonContent        JettonContent `json:"jetton_content"`
+	JettonWalletCodeHash string        `json:"jetton_wallet_code_hash"`
+	CodeHash             string        `json:"code_hash"`
+	DataHash             string        `json:"data_hash"`
+	LastTransactionLT    string        `json:"last_transaction_lt"`
+}
+
+type JettonContent struct {
+	Decimals xc.AmountBlockchain `json:"decimals"`
+	URI      string              `json:"uri"`
+}
+
+type AddressInfo struct {
+	UserFriendly string `json:"user_friendly"`
+}

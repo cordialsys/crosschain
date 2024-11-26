@@ -27,6 +27,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the XRP node
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -408,4 +409,13 @@ func (client *Client) getLatestValidatedLedgerSequence() (*int64, error) {
 
 	ledgerCurrentIndex := ledgerResponse.Result.LedgerCurrentIndex
 	return &ledgerCurrentIndex, nil
+}
+
+// Pretty simple for XRP as it's always fixed.
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if client.Asset.GetChain().IsChain(contract) {
+		return types.XRP_NATIVE_DECIMALS, nil
+	}
+
+	return types.TRUSTLINE_DECIMALS, nil
 }

@@ -11,6 +11,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain"
+	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -371,6 +372,43 @@ func CmdChains() *cobra.Command {
 			return nil
 		},
 	}
+	return cmd
+}
+
+func CmdDecimals() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "decimals",
+		Short: "Lookup the configured decimals for an asset.",
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			contract, err := cmd.Flags().GetString("contract")
+			if err != nil {
+				return err
+			}
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chainConfig := setup.UnwrapChain(cmd.Context())
+
+			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
+			if err != nil {
+				return err
+			}
+			clientWithDecimals, ok := client.(xcclient.ClientWithDecimals)
+			if !ok {
+				return fmt.Errorf("not implemented for %s", chainConfig.Chain)
+			}
+
+			// address := xcFactory.MustAddress(chainConfig, addressRaw)
+			decimals, err := clientWithDecimals.FetchDecimals(context.Background(), xc.ContractAddress(contract))
+			if err != nil {
+				return fmt.Errorf("could not fetch decimals for %s: %v", contract, err)
+			}
+
+			fmt.Println(decimals)
+
+			return nil
+		},
+	}
+	cmd.Flags().String("contract", "", "Contract to use to query.")
 	return cmd
 }
 

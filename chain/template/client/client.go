@@ -55,3 +55,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	return xc.AmountBlockchain{}, errors.New("not implemented")
 }
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	return 0, errors.New("not implemented")
+}
