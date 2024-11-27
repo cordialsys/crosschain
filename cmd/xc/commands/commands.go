@@ -99,7 +99,7 @@ func CmdTxInfo() *cobra.Command {
 
 			client, err := xcFactory.NewClient(assetConfig(chainConfig, "", 0))
 			if err != nil {
-				return err
+				return fmt.Errorf("could not load client: %v", err)
 			}
 
 			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(hash))

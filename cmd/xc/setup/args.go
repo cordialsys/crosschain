@@ -118,6 +118,8 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 	}
 	if args.Provider != "" {
 		chain.Provider = args.Provider
+		chain.IndexerType = args.Provider
+		chain.IndexerUrl = args.Rpc
 	}
 	if args.ApiKey != "" {
 		chain.AuthSecret = args.ApiKey
