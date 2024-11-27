@@ -1,4 +1,4 @@
-package substrate
+package api
 
 import (
 	"fmt"
@@ -6,8 +6,16 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate/api"
 )
+
+// An event is typically identified by something like "<module>.<event>", e.g. "Balances.Transfer"
+type EventI interface {
+	// Or may be called "pallet"
+	GetModule() string
+	// Or may just be the "name"
+	GetEvent() string
+	GetParam(name string, index int) (interface{}, bool)
+}
 
 type EventBind string
 
@@ -41,7 +49,7 @@ type EventDescriptor struct {
 var SupportedEvents = []EventDescriptor{
 	{
 		Module: "balances",
-		Event:  "Transfer",
+		Event:  "transfer",
 		Attributes: []*EventAttributeDescriptor{
 			{
 				Name:  "from",
@@ -70,21 +78,12 @@ type eventHandleS string
 var supportedEventMap = map[eventHandleS]EventDescriptor{}
 
 func eventHandle(module, event string) eventHandleS {
-	return eventHandleS(module + "." + event)
+	return eventHandleS(strings.ToLower(module) + "." + strings.ToLower(event))
 }
 func init() {
 	for _, ev := range SupportedEvents {
 		supportedEventMap[eventHandle(ev.Module, ev.Event)] = ev
 	}
-}
-
-var _ EventI = &api.Event{}
-var _ EventI = &api.SubqueryEvent{}
-
-type EventI interface {
-	GetModule() string
-	GetEvent() string
-	GetParam(name string, index int) (interface{}, bool)
 }
 
 func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*xc.LegacyTxInfoEndpoint, destinations []*xc.LegacyTxInfoEndpoint, err error) {

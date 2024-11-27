@@ -1,14 +1,13 @@
-package api
+package graphql
 
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
+
+	"github.com/cordialsys/crosschain/chain/substrate/api"
 )
 
-type BlockAndOffset string
 type Time struct {
 	time.Time
 }
@@ -54,9 +53,9 @@ type SubqueryExtrinsicResponse struct {
 	Data struct {
 		Extrinsics struct {
 			Nodes []struct {
-				ID     BlockAndOffset `json:"id"`
-				TxHash string         `json:"txHash"`
-				Tip    string         `json:"tip"`
+				ID     api.BlockAndOffset `json:"id"`
+				TxHash string             `json:"txHash"`
+				Tip    string             `json:"tip"`
 			} `json:"nodes"`
 		} `json:"extrinsics"`
 	} `json:"data"`
@@ -69,6 +68,8 @@ type SubqueryEvent struct {
 
 	parsedParams []interface{} `json:"-"`
 }
+
+var _ api.EventI = &SubqueryEvent{}
 
 // GraphQL event response
 type SubqueryEventResponse struct {
@@ -132,17 +133,4 @@ func GetSubqueryParam[T any](ev *SubqueryEvent, index int) (T, error) {
 		return value, fmt.Errorf("unexpected type for event %s.%s param %d, recieved %T but expected %T", ev.Module, ev.Event, index, ev.parsedParams[index], value)
 	}
 	return value, nil
-}
-
-func (s BlockAndOffset) Parse() (uint64, int, error) {
-	parts := strings.Split(string(s), "-")
-	height, err := strconv.ParseUint(parts[0], 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("extrinsic ID contained invalid block-height: %s", parts[0])
-	}
-	offset, err := strconv.ParseUint(parts[1], 10, 64)
-	if err != nil {
-		return 0, 0, fmt.Errorf("extrinsic ID contained invalid offset: %s", parts[1])
-	}
-	return height, int(offset), nil
 }

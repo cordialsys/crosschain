@@ -1,4 +1,4 @@
-package api
+package subscan
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate/api"
 )
 
 type SubscanExtrinsicResponse struct {
@@ -64,6 +65,8 @@ type Event struct {
 
 	parsedParams []*Param `json:"-"`
 }
+
+var _ api.EventI = &Event{}
 
 func (ev *Event) ParseParams() ([]*Param, error) {
 	var params = []*Param{}

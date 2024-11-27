@@ -1,10 +1,10 @@
-package api_test
+package graphql_test
 
 import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cordialsys/crosschain/chain/substrate/api"
+	"github.com/cordialsys/crosschain/chain/substrate/api/graphql"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestTimestamp(t *testing.T) {
 	for _, tc := range testcases {
 
 		data := []byte(tc.data)
-		ts := &api.Time{}
+		ts := &graphql.Time{}
 		err := json.Unmarshal(data, ts)
 		require.NoError(t, err)
 		require.EqualValues(t, tc.expectedTime, ts.Unix())
