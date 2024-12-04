@@ -31,9 +31,6 @@ func CmdXc() *cobra.Command {
 			if args.UseLocalImplementation {
 				xcFactory.NoXcClients = true
 			}
-			if args.Rpc == "" && args.UseLocalImplementation {
-				return fmt.Errorf("must pass --rpc when using --local")
-			}
 
 			chainConfig, err := setup.LoadChain(xcFactory, args.Chain)
 			if err != nil {
@@ -65,6 +62,15 @@ func CmdXc() *cobra.Command {
 				"chain":   chainConfig.Chain,
 			}).Info("chain")
 			cmd.SetContext(ctx)
+			switch cmd.Use {
+			case "chains":
+				// short circuit validation for some commands manually
+				return nil
+			}
+
+			if args.Rpc == "" && args.UseLocalImplementation {
+				return fmt.Errorf("must pass --rpc when using --local")
+			}
 			return nil
 		},
 	}

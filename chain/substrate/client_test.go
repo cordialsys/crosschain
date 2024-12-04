@@ -264,7 +264,6 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			ChainPrefix: "0",
 			Decimals:    10,
 			ChainID:     0,
-			ExplorerURL: http.URL,
 		})
 		require.NoError(err)
 		require.NotNil(client)

@@ -1,29 +1,41 @@
 network: "mainnet"
 chains:
+  abc:
+    external:
+      dti:
+      coin_gecko:
+        asset_id:
+      coin_market_cap:
+        platform_id:
+        asset_id:
   ACA:
     chain: ACA
     driver: evm-legacy
     chain_id: 787
     chain_name: Acala
-    explorer_url: https://acala.subscan.io
     decimals: 12
-    indexer_type: rpc
-    polling_period: 15m
-    coingecko_id: acala
+    external:
+      dti:
+      coin_gecko:
+        asset_id: acala
+      coin_market_cap:
+        platform_id:
+        asset_id:
+
   APTOS:
     chain: APTOS
     driver: aptos
     chain_id: 1
     chain_name: Aptos
     chain_coin: "0x1::aptos_coin::AptosCoin"
-    explorer_url: https://explorer.aptoslabs.com/
     decimals: 8
-    indexer_url: https://indexer.mainnet.aptoslabs.com
-    indexer_type: aptos
-    polling_period: 8m
-    coingecko_id: aptos
-    coinmarketcap_id: 141
-    dti: SSFZXXTDD
+    external:
+      dti: SSFZXXTDD
+      coin_gecko:
+        asset_id: aptos
+      coin_market_cap:
+        platform_id: "141"
+        asset_id: APT
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -33,10 +45,7 @@ chains:
     chain_coin: uatom
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
-    explorer_url: https://atomscan.com
     decimals: 6
-    indexer_type: cosmos
-    polling_period: 5m
     coingecko_id: cosmos
     coinmarketcap_id: 56
     dti: J51DXB76N
@@ -45,10 +54,7 @@ chains:
     driver: evm
     chain_id: 43114
     chain_name: Avalanche C-Chain
-    explorer_url: https://snowtrace.io
     decimals: 18
-    indexer_type: covalent
-    polling_period: 6m
     coingecko_id: avalanche
     coinmarketcap_id: 28
     dti: M3Z631TN4
@@ -58,10 +64,7 @@ chains:
     chain_id: 42161
     chain_name: Arbitrum
     chain_gas_multiplier: 0.05
-    explorer_url: https://arbiscan.io
     decimals: 18
-    indexer_type: rpc
-    polling_period: 10m
     coingecko_id: arbitrum-one
     coinmarketcap_id: 51
     dti: PXW7VQ0RC
@@ -70,10 +73,7 @@ chains:
     driver: evm-legacy
     chain_id: 1313161554
     chain_name: Aurora
-    explorer_url: https://aurorascan.dev
     decimals: 18
-    indexer_type: rpc
-    polling_period: 15m
     coingecko_id: aurora
     coinmarketcap_id: 98
     dti: 3555NMHK2
@@ -90,11 +90,7 @@ chains:
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin Cash
-    explorer_url: https://blockchair.com/bitcoin-cash
     decimals: 8
-    indexer_url: https://api.blockchair.com/bitcoin-cash
-    indexer_type: blockchair
-    polling_period: 10m
     coingecko_id: bitcoin-cash
     coinmarketcap_id: 39
     dti: J9K583ZGG
@@ -103,10 +99,7 @@ chains:
     driver: evm-legacy
     chain_id: 56
     chain_name: Binance Smart Chain
-    explorer_url: https://bscscan.com
     decimals: 18
-    indexer_type: covalent
-    polling_period: 6m
     coingecko_id: binance-smart-chain
     coinmarketcap_id: 14
     dti: HWRGLMT9T
@@ -116,22 +109,14 @@ chains:
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin
-    explorer_url: https://blockchair.com/bitcoin
     decimals: 8
-    indexer_url: https://api.blockchair.com/bitcoin
-    indexer_type: blockchair
-    polling_period: 10m
     dti: 4H95J0R2X
   CELO:
     chain: CELO
     driver: evm
     chain_id: 42220
     chain_name: Celo
-    explorer_url: https://explorer.celo.org
     decimals: 18
-    indexer_url: https://explorer.celo.org/mainnet
-    indexer_type: blockscout
-    polling_period: 6m
     coingecko_id: celo
     coinmarketcap_id: 35
     dti: PTN9Z5Q7D
@@ -140,11 +125,7 @@ chains:
     driver: evm-legacy
     chain_id: 99999
     chain_name: Chiliz
-    explorer_url: https://explorer.chiliz.com
     decimals: 18
-    indexer_url: https://explorer.chiliz.com
-    indexer_type: blockscout
-    polling_period: 6m
     disabled: true
     no_gas_fees: true
     coinmarketcap_id: 8
@@ -154,11 +135,7 @@ chains:
     driver: evm-legacy
     chain_id: 88888
     chain_name: Chiliz 2.0
-    explorer_url: https://scan.chiliz.com
     decimals: 18
-    indexer_url: https://scan.chiliz.com
-    indexer_type: blockscout
-    polling_period: 6m
     coingecko_id: chiliz
     dti: GV9QD1V9M
   DOGE:
@@ -167,11 +144,7 @@ chains:
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Dogecoin
-    explorer_url: https://blockchair.com/dogecoin
     decimals: 8
-    indexer_url: https://api.blockchair.com/dogecoin
-    indexer_type: blockchair
-    polling_period: 10m
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
     coingecko_id: dogecoin
@@ -183,7 +156,6 @@ chains:
     decimals: 10
     chain_name: Polkadot
     chain_prefix: "0"
-    indexer_url: "https://polkadot.api.subscan.io"
     coingecko_id: polkadot
     coinmarketcap_id: 37
     dti: P5B46MFPP
@@ -192,11 +164,7 @@ chains:
     driver: evm-legacy
     chain_id: 61
     chain_name: Ethereum Classic
-    explorer_url: https://blockscout.com/etc/mainnet
     decimals: 18
-    indexer_type: blockscout
-    indexer_url: https://etc.blockscout.com
-    polling_period: 10m
     coingecko_id: ethereum-classic
     dti: GWQWXVV7J
   ETH:
@@ -204,10 +172,7 @@ chains:
     driver: evm
     chain_id: 1
     chain_name: Ethereum
-    explorer_url: https://etherscan.io
     decimals: 18
-    indexer_type: covalent
-    polling_period: 3m
     staking:
       # KILN Batch deposit contract
       stake_contract: "0x576834cB068e677db4aFF6ca245c7bde16C3867e"
@@ -222,10 +187,7 @@ chains:
     driver: evm
     chain_id: 10001
     chain_name: EthereumPOW
-    explorer_url: https://etherscan.io
     decimals: 18
-    indexer_type: rpc
-    polling_period: 5m
     coingecko_id: ethereumpow
     dti: 5C3LXSVX7
   FTM:
@@ -233,10 +195,7 @@ chains:
     driver: evm-legacy
     chain_id: 250
     chain_name: Fantom
-    explorer_url: https://ftmscan.com
     decimals: 18
-    indexer_type: covalent
-    polling_period: 6m
     coingecko_id: fantom
     coinmarketcap_id: 24
     dti: WS6BZ8225
@@ -249,10 +208,7 @@ chains:
     chain_coin: inj
     chain_coin_hd_path: 60
     chain_gas_price_default: 5e+08
-    explorer_url: https://explorer.injective.network
     decimals: 18
-    indexer_type: cosmos
-    polling_period: 5m
     coingecko_id: injective
     coinmarketcap_id: 179
     dti: WFQSW1L5L
@@ -261,22 +217,16 @@ chains:
     driver: evm-legacy
     chain_id: 686
     chain_name: Karura
-    explorer_url: https://karura.subscan.io
     decimals: 12
-    indexer_type: rpc
-    polling_period: 15m
     coingecko_id: karura
   KLAY:
     chain: KLAY
     driver: evm-legacy
     chain_id: 8217
     chain_name: Klaytn
-    explorer_url: https://scope.klaytn.com
     # KLAY wants fixed gas prices (no change/multiplier)
     chain_gas_multiplier: 1
     decimals: 18
-    indexer_type: rpc
-    polling_period: 15m
     coingecko_id: klay-token
     coinmarketcap_id: 26
     dti: CNDP5R1T8
@@ -286,7 +236,6 @@ chains:
     decimals: 12
     chain_name: Kusama
     chain_prefix: "2"
-    indexer_url: "https://kusama.api.subscan.io"
     coingecko_id: kusama
     dti: MXLJ762RF
   LTC:
@@ -295,11 +244,7 @@ chains:
     auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Litecoin
-    explorer_url: https://blockchair.com/litecoin
     decimals: 8
-    indexer_url: https://api.blockchair.com/litecoin
-    indexer_type: blockchair
-    polling_period: 10m
     coingecko_id: litecoin
     dti: WTX0G7K46
   LUNA:
@@ -310,10 +255,7 @@ chains:
     chain_prefix: terra
     chain_coin: uluna
     chain_coin_hd_path: 330
-    explorer_url: https://finder.terra.money
     decimals: 6
-    indexer_type: cosmos
-    polling_period: 5m
     coingecko_id: terra-2
     coinmarketcap_id: 120
     dti: NGXHD2ZFQ
@@ -329,10 +271,7 @@ chains:
     chain_gas_price_default: 0.5
     chain_gas_multiplier: 2
     chain_transfer_tax: 0.005
-    explorer_url: https://finder.terra.money/classic
     decimals: 6
-    indexer_type: cosmos
-    polling_period: 5m
     coingecko_id: terra
     coinmarketcap_id: 22
     dti: NGXHD2ZFQ
@@ -343,10 +282,7 @@ chains:
     chain_name: Polygon
     chain_gas_multiplier: 4
     chain_gas_tip: 20
-    explorer_url: https://polygonscan.com
     decimals: 18
-    indexer_type: covalent
-    polling_period: 6m
     chain_max_gas_price: 120
     coingecko_id: polygon-pos
     coinmarketcap_id: 25
@@ -356,21 +292,14 @@ chains:
     driver: evm-legacy
     chain_id: 248
     chain_name: Oasys
-    explorer_url: https://explorer.oasys.games
     decimals: 18
-    indexer_url: https://scan.oasys.games
-    indexer_type: blockscout
-    polling_period: 6m
     coingecko_id: oasys
   OptETH:
     chain: OptETH
     driver: evm
     chain_id: 10
     chain_name: Optimism
-    explorer_url: https://optimistic.etherscan.io
     decimals: 18
-    indexer_type: rpc
-    polling_period: 15m
     coingecko_id: optimistic-ethereum
     coinmarketcap_id: 42
   EmROSE:
@@ -378,10 +307,7 @@ chains:
     driver: evm-legacy
     chain_id: 42262
     chain_name: Oasis
-    explorer_url: https://explorer.emerald.oasis.dev
     decimals: 18
-    indexer_type: covalent
-    polling_period: 6m
     coingecko_id: oasis
     coinmarketcap_id: 94
     dti: NVD7LRM61
@@ -394,10 +320,7 @@ chains:
     chain_coin: usei
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
-    explorer_url: https://sei.explorers.guru/
     decimals: 6
-    indexer_type: cosmos
-    polling_period: 15m
     coingecko_id: sei-network
     coinmarketcap_id: 188
     dti: P4JBC8R50
@@ -405,10 +328,7 @@ chains:
     chain: SOL
     driver: solana
     chain_name: Solana
-    explorer_url: https://explorer.solana.com
     decimals: 9
-    indexer_type: solana
-    polling_period: 3m
     coingecko_id: solana
     coinmarketcap_id: 16
     dti: 20J63Z4N3
@@ -416,10 +336,7 @@ chains:
     chain: SUI
     driver: sui
     chain_name: Sui
-    explorer_url: https://explorer.sui.io
     decimals: 9
-    indexer_type: rpc
-    polling_period: 3m
     coingecko_id: sui
     coinmarketcap_id: 176
     dti: 90KLX8GQX
@@ -428,7 +345,6 @@ chains:
     driver: tron
     net: mainnet
     chain_name: Tron
-    explorer_url: "http://tronscan.org"
     decimals: 6
     # 200 tron fee limit
     chain_max_gas_price: 2000000000
@@ -445,18 +361,13 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
-    indexer_type: cosmos
     coingecko_id: celestia
   XDC:
     chain: XDC
     driver: evm-legacy
     chain_id: 50
     chain_name: XinFin
-    explorer_url: https://explorer.xinfin.network/
     decimals: 18
-    indexer_url: https://xdc.blocksscan.io
-    indexer_type: blocksscan
-    polling_period: 6m
     coingecko_id: xdc-network
     coinmarketcap_id: 163
     dti: CCQZQXFDC
@@ -469,10 +380,7 @@ chains:
     chain_coin: axpla
     chain_coin_hd_path: 60
     chain_gas_price_default: 0.1
-    explorer_url: https://explorer.xpla.io/mainnet
     decimals: 18
-    indexer_type: cosmos
-    polling_period: 5m
     coingecko_id: xpla
   HASH:
     chain: HASH
@@ -482,21 +390,18 @@ chains:
     chain_prefix: pb
     chain_coin: nhash
     chain_coin_hd_path: 1
-    explorer_url: https://explorer.provenance.io
     decimals: 9
     chain_gas_multiplier: 10.0
     # translates to roughly max 50 HASH in gas per tx
     chain_max_gas_price: 125000.0
-    indexer_type: cosmos
-    polling_period: 5m
   TAO:
     chain: TAO
     driver: substrate
     decimals: 9
     chain_name: Bittensor
     chain_prefix: "42"
-    indexer_url: "https://api.subquery.network/sq/TaoStats/bittensor-dictionary"
-    indexer_type: subquery
+    indexer_url: "https://api.taostats.io"
+    indexer_type: taostats
     coingecko_id: bittensor
   TON:
     chain: TON
@@ -509,17 +414,13 @@ chains:
     chain: XRP
     driver: xrp
     chain_name: xrp
-    explorer_url: https://livenet.xrpl.org/
     decimals: 6
-    indexer_type: ripple
-    polling_period: 3m
     dti: L6GTZC9G4
   BASE:
     chain: BASE
     driver: evm
     chain_name: Base Protocol
     decimals: 18
-    explorer_url: https://explorer.baseprotocol.com
     dti: 6M4WCXL3X
   NOBLE:
     chain: NOBLE

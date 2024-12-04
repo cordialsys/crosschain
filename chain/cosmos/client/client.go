@@ -255,7 +255,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	chainCfg := client.Asset.GetChain()
 	result.TxID = string(txHash)
-	result.ExplorerURL = chainCfg.ExplorerURL + "/tx/" + result.TxID
 	result.Fee = tx.Fee()
 
 	events := ParseEvents(resultRaw.TxResult.Events)

@@ -291,6 +291,24 @@ type ExplorerUrls struct {
 	Token   string `yaml:"token"`
 }
 
+// External ID's used by other vendors for the given chain
+type External struct {
+	Dti          string       `yaml:"dti,omitempty"`
+	ExplorerUrls ExplorerUrls `yaml:"explorer_urls,omitempty"`
+
+	CoinMarketCap struct {
+		// CoinMarketCap's ID for the chain
+		PlatformId string `yaml:"platform_id,omitempty"`
+		// CoinMarketCap's ID for the chain's native asset, if relevant
+		AssetId string `yaml:"asset_id,omitempty"`
+	} `yaml:"coin_market_cap,omitempty"`
+	CoinGecko struct {
+		// TODO: is there a chain ID for coingecko?
+		// Coingecko's asset ID, if relevant
+		AssetId string `yaml:"asset_id,omitempty"`
+	} `yaml:"coin_gecko,omitempty"`
+}
+
 type StakingConfig struct {
 	// the contract used for staking, if relevant
 	StakeContract string `yaml:"stake_contract,omitempty"`
@@ -306,48 +324,105 @@ func (staking *StakingConfig) Enabled() bool {
 
 // AssetConfig is the model used to represent an asset read from config file or db
 type ChainConfig struct {
-	Chain                NativeAsset     `yaml:"chain,omitempty"`
-	XAssetDeprecated     NativeAsset     `yaml:"asset,omitempty"` // deprecated
-	Driver               Driver          `yaml:"driver,omitempty"`
-	Net                  string          `yaml:"net,omitempty"`
-	Clients              []*ClientConfig `yaml:"clients,omitempty"`
-	URL                  string          `yaml:"url,omitempty"`
-	FcdURL               string          `yaml:"fcd_url,omitempty"`
-	Auth                 string          `yaml:"auth,omitempty"`
-	Provider             string          `yaml:"provider,omitempty"`
-	ChainID              int64           `yaml:"chain_id,omitempty"`
-	ChainIDStr           string          `yaml:"chain_id_str,omitempty"`
-	ChainName            string          `yaml:"chain_name,omitempty"`
-	ChainPrefix          string          `yaml:"chain_prefix,omitempty"`
-	ChainCoin            string          `yaml:"chain_coin,omitempty"`
-	GasCoin              string          `yaml:"gas_coin,omitempty"`
-	ChainCoinHDPath      uint32          `yaml:"chain_coin_hd_path,omitempty"`
-	ChainGasPriceDefault float64         `yaml:"chain_gas_price_default,omitempty"`
-	ChainGasMultiplier   float64         `yaml:"chain_gas_multiplier,omitempty"`
-	ChainGasTip          uint64          `yaml:"chain_gas_tip,omitempty"`
-	ChainMaxGasPrice     float64         `yaml:"chain_max_gas_price,omitempty"`
-	ChainMinGasPrice     float64         `yaml:"chain_min_gas_price,omitempty"`
-	ChainTransferTax     float64         `yaml:"chain_transfer_tax,omitempty"`
-	ExplorerURL          string          `yaml:"explorer_url,omitempty"`
-	Decimals             int32           `yaml:"decimals,omitempty"`
-	IndexerUrl           string          `yaml:"indexer_url,omitempty"`
-	IndexerType          string          `yaml:"indexer_type,omitempty"`
-	IndexerSymbol        string          `yaml:"indexer_symbol,omitempty"`
-	PollingPeriod        string          `yaml:"polling_period,omitempty"`
-	NoGasFees            bool            `yaml:"no_gas_fees,omitempty"`
-	Disabled             *bool           `yaml:"disabled,omitempty"`
-	ExplorerUrls         ExplorerUrls    `yaml:"explorer_urls"`
-	CoinGeckoId          string          `yaml:"coingecko_id,omitempty"`
-	CoinMarketCapId      string          `yaml:"coinmarketcap_id,omitempty"`
-	Dti                  string          `yaml:"dti,omitempty"`
+	// The crosschain symbol of the chain
+	Chain NativeAsset `yaml:"chain,omitempty"`
+	// The driver to use for the chain
+	Driver Driver `yaml:"driver,omitempty"`
+	// The network selector, if necessary (e.g. select mainnet, testnet, or devnet for bitcoin chains)
+	Net string `yaml:"net,omitempty"`
+	// Decimals for the chain's native asset (if it has one).
+	Decimals int32 `yaml:"decimals,omitempty"`
+	// RPC URL to use
+	URL     string          `yaml:"url,omitempty"`
+	Clients []*ClientConfig `yaml:"clients,omitempty"`
 
+	// Optional configuration of the Driver.  Some chains support different kinds of RPC.
+	Provider string `yaml:"provider,omitempty"`
+
+	// The ChainID of the chain, either in integer or string format
+	ChainID    int64  `yaml:"chain_id,omitempty"`
+	ChainIDStr string `yaml:"chain_id_str,omitempty"`
+
+	// Human readable name of the chain, e.g. "Bitcoin"
+	ChainName string `yaml:"chain_name,omitempty"`
+
+	// Does the chain use a special prefix for it's address?
+	// E.g. most cosmos chains do this.
+	ChainPrefix string `yaml:"chain_prefix,omitempty"`
+
+	// If the chain has a native asset, and it has an actual contract address, it should be set here.
+	// This is also referred to as the "ContractID".
+	// E.g.
+	// - APTOS has 0x1::aptos_coin::AptosCoin
+	// - INJ has inj
+	// - HASH has nhash
+	// - LUNA has uluna
+	ChainCoin string `yaml:"chain_coin,omitempty"`
+
+	// If necessary, specific which asset to use to spend for gas.
+	GasCoin string `yaml:"gas_coin,omitempty"`
+
+	// Does the chain rely on an indexer in addition to RPC?  If so, the URL and type
+	// may be set here.
+	IndexerUrl  string `yaml:"indexer_url,omitempty"`
+	IndexerType string `yaml:"indexer_type,omitempty"`
+
+	// PollingPeriod string `yaml:"polling_period,omitempty"`
+	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
+	// Indicate if this chain should not be included.
+	Disabled *bool `yaml:"disabled,omitempty"`
+
+	// How many confirmations is considered "final" for this chain?
 	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
+	// Staking configuration
 	Staking StakingConfig `yaml:"staking,omitempty"`
 
-	// Internal
-	// dereferenced api token if used
+	// Optional settings around the gas, if needed.
+	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
+	ChainGasMultiplier   float64 `yaml:"chain_gas_multiplier,omitempty"`
+	ChainGasTip          uint64  `yaml:"chain_gas_tip,omitempty"`
+	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
+	// This should be in the blockchain amount.
+	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
+	ChainMinGasPrice float64 `yaml:"chain_min_gas_price,omitempty"`
+
+	// Transfer tax is percentage that the network takes from every transfer .. only used so far for Terra Classic
+	ChainTransferTax float64 `yaml:"chain_transfer_tax,omitempty"`
+
+	// Used only for deriving private keys from mnemonic phrases in local testing
+	ChainCoinHDPath uint32 `yaml:"chain_coin_hd_path,omitempty"`
+
+	// This contains the derefenced value of "auth", if "auth" is set.
 	AuthSecret string `yaml:"-"`
+	// Set a secret reference, see config/secret.go.  Used for setting an API key.
+	Auth string `yaml:"auth,omitempty"`
+
+	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
+	External External `yaml:"external,omitempty"`
+
+	// Unused deprecated fields
+	XAssetDeprecated NativeAsset  `yaml:"asset,omitempty"`
+	XExplorerUrls    ExplorerUrls `yaml:"explorer_urls,omitempty"`
+
+	XDti             string `yaml:"dti,omitempty"`
+	XCoinGeckoId     string `yaml:"coingecko_id,omitempty"`
+	XCoinMarketCapId string `yaml:"coinmarketcap_id,omitempty"`
+}
+
+func (chain *ChainConfig) Migrate() {
+	if chain.XDti != "" {
+		chain.External.Dti = chain.XDti
+		chain.XDti = ""
+	}
+	if chain.XCoinGeckoId != "" {
+		chain.External.CoinGecko.AssetId = chain.XCoinGeckoId
+		chain.XCoinGeckoId = ""
+	}
+	if chain.XCoinMarketCapId != "" {
+		chain.External.CoinMarketCap.PlatformId = chain.XCoinMarketCapId
+		chain.XCoinMarketCapId = ""
+	}
 }
 
 type TokenAssetConfig struct {

@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func CmdRpcBalance() *cobra.Command {
@@ -332,6 +333,7 @@ func CmdAddress() *cobra.Command {
 }
 
 func CmdChains() *cobra.Command {
+	format := ""
 	cmd := &cobra.Command{
 		Use:   "chains",
 		Short: "List information on all supported chains.",
@@ -345,6 +347,19 @@ func CmdChains() *cobra.Command {
 				return err
 			}
 
+			printer := func(data any) error {
+				if format == "json" {
+					dataBz, _ := json.MarshalIndent(data, "", "  ")
+					fmt.Println(string(dataBz))
+				} else if format == "yaml" {
+					dataBz, _ := yaml.Marshal(data)
+					fmt.Println(string(dataBz))
+				} else {
+					return fmt.Errorf("invalid format")
+				}
+				return nil
+			}
+
 			if xccli, ok := cli.(*crosschain.Client); ok {
 				logrus.Info("listing from remote configuration")
 				apiURL := fmt.Sprintf("%s/v1/chains", xccli.URL)
@@ -354,24 +369,29 @@ func CmdChains() *cobra.Command {
 				}
 				var data any
 				json.Unmarshal(res, &data)
-				res, _ = json.MarshalIndent(data, "", "  ")
-
-				fmt.Println(string(res))
+				err = printer(data)
+				if err != nil {
+					return err
+				}
 			} else {
 				logrus.Info("listing from local configuration")
 				chains := []*xc.ChainConfig{}
 				for _, asset := range xcFactory.GetAllAssets() {
 					if chain, ok := asset.(*xc.ChainConfig); ok {
+						chain.Migrate()
 						chains = append(chains, chain)
 					}
 				}
-				chainsBz, _ := json.MarshalIndent(chains, "", "  ")
-				fmt.Println(string(chainsBz))
+				err = printer(chains)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&format, "format", "json", "Format may be json or yaml")
 	return cmd
 }
 

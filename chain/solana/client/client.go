@@ -259,7 +259,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	result.Fee = xc.NewAmountBlockchainFromUint64(meta.Fee)
 
 	result.TxID = string(txHash)
-	result.ExplorerURL = client.Asset.GetChain().ExplorerURL + "/tx/" + result.TxID + "?cluster=" + client.Asset.GetChain().Net
 
 	sources := []*xc.LegacyTxInfoEndpoint{}
 	dests := []*xc.LegacyTxInfoEndpoint{}
