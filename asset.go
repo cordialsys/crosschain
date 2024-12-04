@@ -298,12 +298,13 @@ type External struct {
 
 	CoinMarketCap struct {
 		// CoinMarketCap's ID for the chain
-		PlatformId string `yaml:"platform_id,omitempty"`
-		// CoinMarketCap's ID for the chain's native asset, if relevant
+		ChainId string `yaml:"chain_id,omitempty"`
+		// CoinMarketCap's ID for the chain's native asset, also called "UCID"
 		AssetId string `yaml:"asset_id,omitempty"`
 	} `yaml:"coin_market_cap,omitempty"`
 	CoinGecko struct {
 		// TODO: is there a chain ID for coingecko?
+		ChainId string `yaml:"chain_id,omitempty"`
 		// Coingecko's asset ID, if relevant
 		AssetId string `yaml:"asset_id,omitempty"`
 	} `yaml:"coin_gecko,omitempty"`
@@ -420,7 +421,7 @@ func (chain *ChainConfig) Migrate() {
 		chain.XCoinGeckoId = ""
 	}
 	if chain.XCoinMarketCapId != "" {
-		chain.External.CoinMarketCap.PlatformId = chain.XCoinMarketCapId
+		chain.External.CoinMarketCap.ChainId = chain.XCoinMarketCapId
 		chain.XCoinMarketCapId = ""
 	}
 }
