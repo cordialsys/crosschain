@@ -1,13 +1,5 @@
 network: "mainnet"
 chains:
-  abc:
-    external:
-      dti:
-      coin_gecko:
-        asset_id:
-      coin_market_cap:
-        platform_id:
-        asset_id:
   ACA:
     chain: ACA
     driver: evm-legacy
@@ -19,7 +11,7 @@ chains:
       coin_gecko:
         asset_id: acala
       coin_market_cap:
-        platform_id:
+        chain_id:
         asset_id:
 
   APTOS:
@@ -34,8 +26,8 @@ chains:
       coin_gecko:
         asset_id: aptos
       coin_market_cap:
-        platform_id: "141"
-        asset_id: APT
+        chain_id: "141"
+        asset_id: "21794" # UCID
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -46,18 +38,24 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
-    coingecko_id: cosmos
-    coinmarketcap_id: 56
-    dti: J51DXB76N
+    external:
+      dti: J51DXB76N
+      coin_market_cap:
+        chain_id: "56"
+      coin_gecko:
+        asset_id: cosmos
   AVAX:
     chain: AVAX
     driver: evm
     chain_id: 43114
     chain_name: Avalanche C-Chain
     decimals: 18
-    coingecko_id: avalanche
-    coinmarketcap_id: 28
-    dti: M3Z631TN4
+    external:
+      dti: M3Z631TN4
+      coin_market_cap:
+        chain_id: "28"
+      coin_gecko:
+        asset_id: avalanche
   ArbETH:
     chain: ArbETH
     driver: evm
@@ -65,25 +63,32 @@ chains:
     chain_name: Arbitrum
     chain_gas_multiplier: 0.05
     decimals: 18
-    coingecko_id: arbitrum-one
-    coinmarketcap_id: 51
-    dti: PXW7VQ0RC
+    external:
+      dti: PXW7VQ0RC
+      coin_market_cap:
+        chain_id: "51"
+      coin_gecko:
+        asset_id: arbitrum-one
   AurETH:
     chain: AurETH
     driver: evm-legacy
     chain_id: 1313161554
     chain_name: Aurora
     decimals: 18
-    coingecko_id: aurora
-    coinmarketcap_id: 98
-    dti: 3555NMHK2
-  BERA:
-    # not yet released
-    chain: BERA
+    external:
+      dti: 3555NMHK2
+      coin_market_cap:
+        chain_id: "98"
+      coin_gecko:
+        asset_id: aurora
+  BASE:
+    chain: BASE
     driver: evm
-    chain_name: Berachain
+    chain_name: Base Protocol
     decimals: 18
-    coingecko_id: berachain-bera
+    external:
+      dti: 6M4WCXL3X
+
   BCH:
     chain: BCH
     driver: bitcoin-cash
@@ -91,18 +96,32 @@ chains:
     provider: blockbook
     chain_name: Bitcoin Cash
     decimals: 8
-    coingecko_id: bitcoin-cash
-    coinmarketcap_id: 39
-    dti: J9K583ZGG
+    external:
+      dti: J9K583ZGG
+      coin_market_cap:
+        chain_id: "39"
+      coin_gecko:
+        asset_id: bitcoin-cash
+  BERA:
+    chain: BERA
+    driver: evm
+    chain_name: Berachain
+    decimals: 18
+    external:
+      coin_gecko:
+        asset_id: berachain-bera
   BNB:
     chain: BNB
     driver: evm-legacy
     chain_id: 56
     chain_name: Binance Smart Chain
     decimals: 18
-    coingecko_id: binance-smart-chain
-    coinmarketcap_id: 14
-    dti: HWRGLMT9T
+    external:
+      dti: HWRGLMT9T
+      coin_market_cap:
+        chain_id: "14"
+      coin_gecko:
+        asset_id: binance-smart-chain
   BTC:
     chain: BTC
     driver: bitcoin
@@ -110,16 +129,24 @@ chains:
     provider: blockbook
     chain_name: Bitcoin
     decimals: 8
-    dti: 4H95J0R2X
+    external:
+      dti: 4H95J0R2X
+      coin_market_cap:
+        asset_id: 1
+      coin_gecko:
+        asset_id: bitcoin
   CELO:
     chain: CELO
     driver: evm
     chain_id: 42220
     chain_name: Celo
     decimals: 18
-    coingecko_id: celo
-    coinmarketcap_id: 35
-    dti: PTN9Z5Q7D
+    external:
+      dti: PTN9Z5Q7D
+      coin_market_cap:
+        chain_id: "35"
+      coin_gecko:
+        asset_id: celo
   CHZ:
     chain: CHZ
     driver: evm-legacy
@@ -136,8 +163,10 @@ chains:
     chain_id: 88888
     chain_name: Chiliz 2.0
     decimals: 18
-    coingecko_id: chiliz
-    dti: GV9QD1V9M
+    external:
+      dti: GV9QD1V9M
+      coin_gecko:
+        asset_id: chiliz
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
@@ -147,26 +176,34 @@ chains:
     decimals: 8
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
-    coingecko_id: dogecoin
-    coinmarketcap_id: 136
-    dti: 820B7G1NL
+    external:
+      dti: 820B7G1NL
+      coin_market_cap:
+        chain_id: "136"
+      coin_gecko:
+        asset_id: dogecoin
   DOT:
     chain: DOT
     driver: substrate
     decimals: 10
     chain_name: Polkadot
     chain_prefix: "0"
-    coingecko_id: polkadot
-    coinmarketcap_id: 37
-    dti: P5B46MFPP
+    external:
+      dti: P5B46MFPP
+      coin_market_cap:
+        chain_id: "37"
+      coin_gecko:
+        asset_id: polkadot
   ETC:
     chain: ETC
     driver: evm-legacy
     chain_id: 61
     chain_name: Ethereum Classic
     decimals: 18
-    coingecko_id: ethereum-classic
-    dti: GWQWXVV7J
+    external:
+      dti: GWQWXVV7J
+      coin_gecko:
+        asset_id: ethereum-classic
   ETH:
     chain: ETH
     driver: evm
@@ -179,26 +216,58 @@ chains:
       # KILN exit contract
       unstake_contract: "0x004c226fff73aa94b78a4df1a0e861797ba16819"
       providers: ["kiln", "twinstake"]
-    coingecko_id: ethereum
-    coinmarketcap_id: 1
-    dti: X9J9K872S
+    external:
+      dti: X9J9K872S
+      coin_market_cap:
+        chain_id: "1"
+      coin_gecko:
+        asset_id: ethereum
   ETHW:
     chain: ETHW
     driver: evm
     chain_id: 10001
     chain_name: EthereumPOW
     decimals: 18
-    coingecko_id: ethereumpow
-    dti: 5C3LXSVX7
+    external:
+      dti: 5C3LXSVX7
+      coin_gecko:
+        asset_id: ethereumpow
+  EmROSE:
+    chain: EmROSE
+    driver: evm-legacy
+    chain_id: 42262
+    chain_name: Oasis
+    decimals: 18
+    external:
+      dti: NVD7LRM61
+      coin_market_cap:
+        chain_id: "94"
+      coin_gecko:
+        asset_id: oasis
   FTM:
     chain: FTM
     driver: evm-legacy
     chain_id: 250
     chain_name: Fantom
     decimals: 18
-    coingecko_id: fantom
-    coinmarketcap_id: 24
-    dti: WS6BZ8225
+    external:
+      dti: WS6BZ8225
+      coin_market_cap:
+        chain_id: "24"
+      coin_gecko:
+        asset_id: fantom
+  HASH:
+    chain: HASH
+    driver: cosmos
+    chain_id_str: pio-mainnet-1
+    chain_name: Provenance
+    chain_prefix: pb
+    chain_coin: nhash
+    chain_coin_hd_path: 1
+    decimals: 9
+    chain_gas_multiplier: 10.0
+    # translates to roughly max 50 HASH in gas per tx
+    chain_max_gas_price: 125000.0
   INJ:
     chain: INJ
     driver: evmos
@@ -209,16 +278,21 @@ chains:
     chain_coin_hd_path: 60
     chain_gas_price_default: 5e+08
     decimals: 18
-    coingecko_id: injective
-    coinmarketcap_id: 179
-    dti: WFQSW1L5L
+    external:
+      dti: WFQSW1L5L
+      coin_market_cap:
+        chain_id: "179"
+      coin_gecko:
+        asset_id: injective
   KAR:
     chain: KAR
     driver: evm-legacy
     chain_id: 686
     chain_name: Karura
     decimals: 12
-    coingecko_id: karura
+    external:
+      coin_gecko:
+        asset_id: karura
   KLAY:
     chain: KLAY
     driver: evm-legacy
@@ -227,17 +301,22 @@ chains:
     # KLAY wants fixed gas prices (no change/multiplier)
     chain_gas_multiplier: 1
     decimals: 18
-    coingecko_id: klay-token
-    coinmarketcap_id: 26
-    dti: CNDP5R1T8
+    external:
+      dti: CNDP5R1T8
+      coin_market_cap:
+        chain_id: "26"
+      coin_gecko:
+        asset_id: klay-token
   KSM:
     chain: KSM
     driver: substrate
     decimals: 12
     chain_name: Kusama
     chain_prefix: "2"
-    coingecko_id: kusama
-    dti: MXLJ762RF
+    external:
+      dti: MXLJ762RF
+      coin_gecko:
+        asset_id: kusama
   LTC:
     chain: LTC
     driver: bitcoin-legacy
@@ -245,8 +324,10 @@ chains:
     provider: blockbook
     chain_name: Litecoin
     decimals: 8
-    coingecko_id: litecoin
-    dti: WTX0G7K46
+    external:
+      dti: WTX0G7K46
+      coin_gecko:
+        asset_id: litecoin
   LUNA:
     chain: LUNA
     driver: cosmos
@@ -256,9 +337,12 @@ chains:
     chain_coin: uluna
     chain_coin_hd_path: 330
     decimals: 6
-    coingecko_id: terra-2
-    coinmarketcap_id: 120
-    dti: NGXHD2ZFQ
+    external:
+      dti: NGXHD2ZFQ
+      coin_market_cap:
+        chain_id: "120"
+      coin_gecko:
+        asset_id: terra-2
   LUNC:
     chain: LUNC
     driver: cosmos
@@ -272,9 +356,12 @@ chains:
     chain_gas_multiplier: 2
     chain_transfer_tax: 0.005
     decimals: 6
-    coingecko_id: terra
-    coinmarketcap_id: 22
-    dti: NGXHD2ZFQ
+    external:
+      dti: NGXHD2ZFQ
+      coin_market_cap:
+        chain_id: "22"
+      coin_gecko:
+        asset_id: terra
   MATIC:
     chain: MATIC
     driver: evm
@@ -284,33 +371,42 @@ chains:
     chain_gas_tip: 20
     decimals: 18
     chain_max_gas_price: 120
-    coingecko_id: polygon-pos
-    coinmarketcap_id: 25
-    dti: RQWW6J6K0
+    external:
+      dti: RQWW6J6K0
+      coin_market_cap:
+        chain_id: "25"
+      coin_gecko:
+        asset_id: polygon-pos
+  NOBLE:
+    chain: NOBLE
+    driver: cosmos
+    chain_name: Noble
+    chain_prefix: noble
+    decimals: 0
+    # Noble does NOT have a canonical/native asset.
+    # To support assets on noble, tokens must be added separately
+    chain_coin: "uunoble"
   OAS:
     chain: OAS
     driver: evm-legacy
     chain_id: 248
     chain_name: Oasys
     decimals: 18
-    coingecko_id: oasys
+    external:
+      coin_gecko:
+        asset_id: oasys
   OptETH:
     chain: OptETH
     driver: evm
     chain_id: 10
     chain_name: Optimism
     decimals: 18
-    coingecko_id: optimistic-ethereum
-    coinmarketcap_id: 42
-  EmROSE:
-    chain: EmROSE
-    driver: evm-legacy
-    chain_id: 42262
-    chain_name: Oasis
-    decimals: 18
-    coingecko_id: oasis
-    coinmarketcap_id: 94
-    dti: NVD7LRM61
+    external:
+      coin_market_cap:
+        chain_id: "42"
+      coin_gecko:
+        asset_id: optimistic-ethereum
+
   SEI:
     chain: SEI
     driver: cosmos
@@ -321,36 +417,46 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
-    coingecko_id: sei-network
-    coinmarketcap_id: 188
-    dti: P4JBC8R50
+    external:
+      dti: P4JBC8R50
+      coin_market_cap:
+        chain_id: "188"
+      coin_gecko:
+        asset_id: sei-network
   SOL:
     chain: SOL
     driver: solana
     chain_name: Solana
     decimals: 9
-    coingecko_id: solana
-    coinmarketcap_id: 16
-    dti: 20J63Z4N3
+    external:
+      dti: 20J63Z4N3
+      coin_market_cap:
+        chain_id: "16"
+      coin_gecko:
+        asset_id: solana
   SUI:
     chain: SUI
     driver: sui
     chain_name: Sui
     decimals: 9
-    coingecko_id: sui
-    coinmarketcap_id: 176
-    dti: 90KLX8GQX
-  TRX:
-    chain: TRX
-    driver: tron
-    net: mainnet
-    chain_name: Tron
-    decimals: 6
-    # 200 tron fee limit
-    chain_max_gas_price: 2000000000
-    coingecko_id: tron
-    coinmarketcap_id: 47
-    dti: 993D8X1FB
+    external:
+      dti: 90KLX8GQX
+      coin_market_cap:
+        chain_id: "176"
+      coin_gecko:
+        asset_id: sui
+  TAO:
+    chain: TAO
+    driver: substrate
+    decimals: 9
+    chain_name: Bittensor
+    chain_prefix: "42"
+    indexer_url: "https://api.taostats.io"
+    indexer_type: taostats
+    external:
+      coin_gecko:
+        asset_id: bittensor
+
   TIA:
     chain: TIA
     driver: cosmos
@@ -361,16 +467,45 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
-    coingecko_id: celestia
+    external:
+      coin_gecko:
+        asset_id: celestia
+  TON:
+    chain: TON
+    driver: ton
+    decimals: 9
+    external:
+      dti: QBZLT5MT1
+      coin_market_cap:
+        chain_id: "173"
+      coin_gecko:
+        asset_id: the-open-network
+  TRX:
+    chain: TRX
+    driver: tron
+    net: mainnet
+    chain_name: Tron
+    decimals: 6
+    # 200 tron fee limit
+    chain_max_gas_price: 2000000000
+    external:
+      dti: 993D8X1FB
+      coin_market_cap:
+        chain_id: "47"
+      coin_gecko:
+        asset_id: tron
   XDC:
     chain: XDC
     driver: evm-legacy
     chain_id: 50
     chain_name: XinFin
     decimals: 18
-    coingecko_id: xdc-network
-    coinmarketcap_id: 163
-    dti: CCQZQXFDC
+    external:
+      dti: CCQZQXFDC
+      coin_market_cap:
+        chain_id: "163"
+      coin_gecko:
+        asset_id: xdc-network
   XPLA:
     chain: XPLA
     driver: cosmos
@@ -381,53 +516,15 @@ chains:
     chain_coin_hd_path: 60
     chain_gas_price_default: 0.1
     decimals: 18
-    coingecko_id: xpla
-  HASH:
-    chain: HASH
-    driver: cosmos
-    chain_id_str: pio-mainnet-1
-    chain_name: Provenance
-    chain_prefix: pb
-    chain_coin: nhash
-    chain_coin_hd_path: 1
-    decimals: 9
-    chain_gas_multiplier: 10.0
-    # translates to roughly max 50 HASH in gas per tx
-    chain_max_gas_price: 125000.0
-  TAO:
-    chain: TAO
-    driver: substrate
-    decimals: 9
-    chain_name: Bittensor
-    chain_prefix: "42"
-    indexer_url: "https://api.taostats.io"
-    indexer_type: taostats
-    coingecko_id: bittensor
-  TON:
-    chain: TON
-    driver: ton
-    decimals: 9
-    coingecko_id: the-open-network
-    coinmarketcap_id: 173
-    dti: QBZLT5MT1
+    external:
+      coin_gecko:
+        asset_id: xpla
   XRP:
     chain: XRP
     driver: xrp
     chain_name: xrp
     decimals: 6
-    dti: L6GTZC9G4
-  BASE:
-    chain: BASE
-    driver: evm
-    chain_name: Base Protocol
-    decimals: 18
-    dti: 6M4WCXL3X
-  NOBLE:
-    chain: NOBLE
-    driver: cosmos
-    chain_name: Noble
-    chain_prefix: noble
-    decimals: 0
-    # Noble does NOT have a canonical/native asset.
-    # To support assets on noble, tokens must be added separately
-    chain_coin: "uunoble"
+    external:
+      dti: L6GTZC9G4
+      coin_gecko:
+        asset_id: ripple
