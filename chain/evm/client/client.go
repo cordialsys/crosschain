@@ -147,8 +147,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	txHash := common.HexToHash(txHashHex)
 
 	result := xc.LegacyTxInfo{
-		TxID:        txHashHex,
-		ExplorerURL: nativeAsset.ExplorerURL + "/tx/0x" + txHashHex,
+		TxID: txHashHex,
 	}
 
 	trans, pending, err := client.EthClient.TransactionByHash(ctx, txHash)

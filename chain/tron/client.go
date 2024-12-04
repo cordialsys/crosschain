@@ -28,9 +28,8 @@ type Client struct {
 	// client *client.GrpcClient
 	client *httpclient.Client
 
-	contract         xc.ContractAddress
-	blockExplorerURL string
-	chain            *xc.ChainConfig
+	contract xc.ContractAddress
+	chain    *xc.ChainConfig
 }
 
 // TxInput for Template
@@ -129,7 +128,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	return &Client{
 		client,
 		xc.ContractAddress(cfgI.GetContract()),
-		cfgI.GetChain().ExplorerURL,
 		cfg,
 	}, nil
 }
@@ -218,7 +216,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	txInfo := xc.LegacyTxInfo{
 		BlockHash:       block.BlockId,
 		TxID:            string(txHash),
-		ExplorerURL:     client.blockExplorerURL + fmt.Sprintf("/transaction/%s", string(txHash)),
 		From:            from,
 		To:              to,
 		ContractAddress: xc.ContractAddress(info.ContractAddress),
