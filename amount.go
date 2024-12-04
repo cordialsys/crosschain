@@ -56,31 +56,36 @@ func (amount *AmountBlockchain) Cmp(other *AmountBlockchain) int {
 
 // Use the underlying big.Int.Add()
 func (amount *AmountBlockchain) Add(x *AmountBlockchain) AmountBlockchain {
-	sum := *amount
-	return AmountBlockchain(*sum.Int().Add(sum.Int(), x.Int()))
+	sum := new(big.Int)
+	sum.Set((*big.Int)(amount))
+	return AmountBlockchain(*sum.Add(sum, x.Int()))
 }
 
 // Use the underlying big.Int.Sub()
 func (amount *AmountBlockchain) Sub(x *AmountBlockchain) AmountBlockchain {
-	diff := *amount
-	return AmountBlockchain(*diff.Int().Sub(diff.Int(), x.Int()))
+	diff := new(big.Int)
+	diff.Set((*big.Int)(amount))
+	return AmountBlockchain(*diff.Sub(diff, x.Int()))
 }
 
 // Use the underlying big.Int.Mul()
 func (amount *AmountBlockchain) Mul(x *AmountBlockchain) AmountBlockchain {
-	prod := *amount
-	return AmountBlockchain(*prod.Int().Mul(prod.Int(), x.Int()))
+	prod := new(big.Int)
+	prod.Set((*big.Int)(amount))
+	return AmountBlockchain(*prod.Mul(prod, x.Int()))
 }
 
 // Use the underlying big.Int.Div()
 func (amount *AmountBlockchain) Div(x *AmountBlockchain) AmountBlockchain {
-	quot := *amount
-	return AmountBlockchain(*quot.Int().Div(quot.Int(), x.Int()))
+	quot := new(big.Int)
+	quot.Set((*big.Int)(amount))
+	return AmountBlockchain(*quot.Div(quot, x.Int()))
 }
 
 func (amount *AmountBlockchain) Abs() AmountBlockchain {
-	abs := *amount
-	return AmountBlockchain(*abs.Int().Abs(abs.Int()))
+	abs := new(big.Int)
+	abs.Set((*big.Int)(amount))
+	return AmountBlockchain(*abs.Abs(abs))
 }
 
 var zero = big.NewInt(0)
