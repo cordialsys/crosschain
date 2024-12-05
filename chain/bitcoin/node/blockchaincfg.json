@@ -1,0 +1,20 @@
+{
+    "coin_name": "Bitcoin",
+    "coin_shortcut": "BTC",
+    "coin_label": "Bitcoin",
+    "rpc_url": "http://127.0.0.1:18443",
+    "rpc_user": "bitcoin",
+    "rpc_pass": "1234",
+    "rpc_timeout": 25,
+    "parse": true,
+    "message_queue_binding": "tcp://127.0.0.1:48330",
+    "subversion": "",
+    "address_format": "",
+    "xpub_magic": 70617039,
+    "xpub_magic_segwit_p2sh": 71979618,
+    "xpub_magic_segwit_native": 73342198,
+    "slip44": 1,
+    "mempool_workers": 2,
+    "mempool_sub_workers": 2,
+    "block_addresses_to_keep": 2147483647
+}
