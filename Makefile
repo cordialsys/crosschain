@@ -31,3 +31,8 @@ build-sol-amd:
 	docker buildx bake --set '*.platform=linux/amd64' solana
 build-sol-arm:
 	docker buildx bake --set '*.platform=linux/arm64' solana
+
+build-bitcoin-amd:
+	docker buildx bake --set '*.platform=linux/amd64' bitcoin
+build-bitcoin-arm:
+	docker buildx bake --set '*.platform=linux/arm64' bitcoin

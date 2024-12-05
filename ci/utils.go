@@ -19,13 +19,15 @@ import (
 )
 
 var (
-	chain string
-	rpc   string
+	chain   string
+	rpc     string
+	network string
 )
 
 func init() {
 	flag.StringVar(&chain, "chain", "", "Used Blockchain chain")
 	flag.StringVar(&rpc, "rpc", "", "RPC endpoint")
+	flag.StringVar(&network, "network", "", "Bitcoin network, if relevant")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }

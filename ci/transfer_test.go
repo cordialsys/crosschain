@@ -27,6 +27,7 @@ func TestTransfer(t *testing.T) {
 	rpcArgs := &setup.RpcArgs{
 		Chain:     chain,
 		Rpc:       rpc,
+		Network:   network,
 		Overrides: map[string]*setup.ChainOverride{},
 	}
 
@@ -46,15 +47,19 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 	transferAmountBlockchain := transferAmount.ToBlockchain(chainConfig.Decimals)
 
-	fundWallet(t, chainConfig, fromWalletAddress, "1")
+	// fund multiple times, which results in multiple UTXO on utxo chains.
+	for i := 0; i < 3; i++ {
+		fundWallet(t, chainConfig, fromWalletAddress, "1")
+	}
 	require.NoError(t, err, "Failed to fund wallet address")
 
 	initialBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
 	require.NoError(t, err, "Failed to fetch balance")
 
 	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
+	require.NotEqualValues(t, 0, initialBalance.Uint64())
 
-	require.Equal(t, "1", initialBalance.ToHuman(chainConfig.Decimals).String())
+	require.Equal(t, "3", initialBalance.ToHuman(chainConfig.Decimals).String())
 
 	signer, err := xcFactory.NewSigner(chainConfig, fromPrivateKey)
 	require.NoError(t, err)
@@ -113,36 +118,52 @@ func TestTransfer(t *testing.T) {
 	start := time.Now()
 
 	var txInfo xcclient.TxInfo
+	var finalWalletBalance xc.AmountBlockchain
 	timeout := time.Minute * 1
-	for time.Since(start) < timeout {
+	for {
+		if time.Since(start) > timeout {
+			require.Fail(t, fmt.Sprintf("Timed out waiting %v for transactions", time.Since(start)))
+		}
 		time.Sleep(1 * time.Second)
 		info, err := client.FetchTxInfo(context.Background(), tx.Hash())
 		if err != nil {
 			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
 			continue
 		}
-		if info.Confirmations == 0 {
-			fmt.Printf("tx doesn't yet have a confirmation...\n")
+		if info.Confirmations < 1 {
+			fmt.Printf("waiting for 1 confirmation...\n")
 			continue
 		}
+		finalWalletBalance, err = client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
+		require.NoError(t, err, "Failed to fetch balance")
+		if finalWalletBalance.String() == initialBalance.String() {
+			fmt.Printf("waiting for change in balance...\n")
+			continue
+		}
+
 		txInfo = info
 		fmt.Println(asJson(txInfo))
 		break
 	}
 
-	finalWalletBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
-	require.NoError(t, err, "Failed to fetch balance")
-
 	fmt.Println("Balance after transaction:", finalWalletBalance)
 
-	// TODO the main transfer may not necessary be reported first, we are being lazy here.
-	transferredAmount := xc.NewAmountBlockchainFromStr(txInfo.Movements[0].From[0].Balance.String())
-
-	// TODO there may be multiple fees, we are being lazy and assuming there is only one.
-	transactionFee := xc.NewAmountBlockchainFromStr(txInfo.Fees[0].Balance.String())
-
-	totalSpend := transferredAmount.Add(&transactionFee)
-	remainder := initialBalance.Sub(&totalSpend)
+	remainder := initialBalance
+	for _, movement := range txInfo.Movements {
+		for _, from := range movement.From {
+			if from.AddressId == fromWalletAddress {
+				// subtract
+				remainder = remainder.Sub(&from.Balance)
+			}
+		}
+		for _, to := range movement.To {
+			if to.AddressId == fromWalletAddress {
+				// add
+				remainder = remainder.Add(&to.Balance)
+			}
+		}
+	}
 
 	require.Equal(t, finalWalletBalance.String(), remainder.String())
+	require.Less(t, finalWalletBalance.Uint64(), initialBalance.Uint64())
 }

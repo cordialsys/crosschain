@@ -80,14 +80,17 @@ func LoadFactory(rcpArgs *RpcArgs) (*factory.Factory, error) {
 		xcFactory = factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
 	}
 
+	override, ok := rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)]
+	if !ok {
+		rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)] = &ChainOverride{}
+		override = rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)]
+	}
+
 	if rcpArgs.Rpc != "" {
-		if existing, ok := rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)]; ok {
-			existing.Rpc = rcpArgs.Rpc
-		} else {
-			rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)] = &ChainOverride{
-				Rpc: rcpArgs.Rpc,
-			}
-		}
+		override.Rpc = rcpArgs.Rpc
+	}
+	if rcpArgs.Network != "" {
+		override.Network = rcpArgs.Network
 	}
 	OverwriteCrosschainSettings(rcpArgs.Overrides, xcFactory)
 	return xcFactory, nil
@@ -124,6 +127,9 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 	if args.ApiKey != "" {
 		chain.AuthSecret = args.ApiKey
 	}
+	if args.Network != "" {
+		chain.Net = args.Network
+	}
 }
 
 func CreateContext(xcFactory *factory.Factory, chain *xc.ChainConfig) context.Context {
@@ -140,6 +146,7 @@ type RpcArgs struct {
 	VerbosityCount int
 	NotMainnet     bool
 	Provider       string
+	Network        string
 	ApiKey         string
 	// ConfigPath     string
 	UseLocalImplementation bool
@@ -152,7 +159,8 @@ func AddRpcArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
 	cmd.PersistentFlags().String("api-key", "", "Api key to use for RPC client (may set API_KEY).")
-	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for BTC chains.")
+	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
+	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
 	cmd.PersistentFlags().Bool("not-mainnet", false, "Do not use mainnets, instead use a test or dev network.")
 	cmd.PersistentFlags().Bool("local", false, "Use local client implementation(s) instead of using remote connector.cordialapis.com.")
@@ -185,6 +193,10 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 			apikey = os.Getenv("API_KEY")
 		}
 	}
+	network, err := cmd.Flags().GetString("network")
+	if err != nil {
+		return nil, err
+	}
 
 	return &RpcArgs{
 		Chain:                  chain,
@@ -194,6 +206,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 		Provider:               rpcProvider,
 		ApiKey:                 apikey,
 		UseLocalImplementation: local,
+		Network:                network,
 		// ConfigPath:     config,
 		Overrides: map[string]*ChainOverride{},
 	}, nil

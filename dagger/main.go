@@ -14,7 +14,10 @@ func (m *Dagger) TestChain(
 	ctx context.Context,
 	chain string,
 	image string,
-	source *dagger.Directory) (string, error) {
+	source *dagger.Directory,
+	// +optional
+	network string,
+) (string, error) {
 	nodeService := dag.Container().
 		From(image).
 		WithExposedPort(10000).
@@ -51,7 +54,7 @@ func (m *Dagger) TestChain(
 		// Add node service
 		WithServiceBinding("node-service", nodeService).
 		// Run tests
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000"}).
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000"}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network}).
 		Stdout(ctx)
 }
