@@ -52,7 +52,6 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			xc.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9",
-				ExplorerURL:   "https://explorer.sui.io/txblock/J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9?network=devnet",
 				From:          "0x7d20dcdb2bca4f508ea9613994683eb4e76e9c4ed371169677c1be02aaf0b58e",
 				To:            "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 				BlockIndex:    1953362,
@@ -93,7 +92,6 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			xc.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "9aFfSrP7jvvteSS4q8L8RMC71NbfBeK1FK8aWcw8c8py",
-				ExplorerURL:   "https://explorer.sui.io/txblock/9aFfSrP7jvvteSS4q8L8RMC71NbfBeK1FK8aWcw8c8py?network=devnet",
 				From:          "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 				To:            "",
 				BlockIndex:    2652859,
@@ -127,7 +125,6 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			xc.LegacyTxInfo{
 				BlockHash:       "8S4qJohEmkdebSt2t9nHmtWquK39KZVJK5bKrARYNBYP",
 				TxID:            "7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP",
-				ExplorerURL:     "https://explorer.sui.io/txblock/7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP?network=devnet",
 				From:            "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 				To:              "0xfe33ab3ab64a92088402fc22d850f04f0770d899695104447ffd93d7b83cfeb8",
 				BlockIndex:      213114,

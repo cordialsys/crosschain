@@ -80,6 +80,8 @@ chains:
     chain_id: 1001
     chain_name: Rococo
     chain_prefix: "42"
+    indexer_url: "https://rococo.api.subscan.io"
+    indexer_type: subscan
   LTC:
     chain: LTC
     driver: bitcoin-legacy

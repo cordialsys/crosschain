@@ -281,10 +281,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Confirmations: int64(confirmations),
 		BlockHash:     fmt.Sprintf("%d", tx.Version),
 		// convert usec to sec
-		BlockTime:   int64((tx.Timestamp / 1000) / 1000),
-		TxID:        tx.Hash,
-		BlockIndex:  int64(tx.Version),
-		ExplorerURL: fmt.Sprintf("/txn/%d?network=%s", tx.Version, client.Asset.GetChain().Net),
+		BlockTime:  int64((tx.Timestamp / 1000) / 1000),
+		TxID:       tx.Hash,
+		BlockIndex: int64(tx.Version),
 	}, nil
 }
 

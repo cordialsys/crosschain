@@ -195,6 +195,8 @@ chains:
   DOT:
     chain: DOT
     driver: substrate
+    indexer_url: "https://polkadot.api.subscan.io"
+    indexer_type: subscan
     decimals: 10
     chain_name: Polkadot
     chain_prefix: "0"
@@ -335,6 +337,8 @@ chains:
     chain: KSM
     driver: substrate
     decimals: 12
+    indexer_url: "https://kusama.api.subscan.io"
+    indexer_type: subscan
     chain_name: Kusama
     chain_prefix: "2"
     external:

@@ -67,7 +67,7 @@ func (s *CrosschainTestSuite) TestSubstrateChainsHavePrefix() {
 					require.NoError(err, help)
 
 					// check indexer url
-					help = fmt.Sprintf("Invalid configuration for %s %s. Need indexer_url set for supported subscan endpoint, see https://support.subscan.io/",
+					help = fmt.Sprintf("Invalid configuration for %s %s. Need indexer_url set for supported subscan or taostats endpoint, see https://support.subscan.io/",
 						cfg.Config.Network,
 						chain.Chain,
 					)

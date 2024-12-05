@@ -218,7 +218,6 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		BlockIndex:    resp.Checkpoint.Int64(),
 		Confirmations: int64(latestCheckpoint.GetSequenceNumber()) - int64(txCheckpoint.GetSequenceNumber()),
 
-		ExplorerURL:  fmt.Sprintf("https://explorer.sui.io/txblock/%s?network=%s", resp.Digest, c.Asset.GetChain().Net),
 		Sources:      sources,
 		Destinations: destinations,
 		Error:        resp.Effects.Data.V1.Status.Error,
