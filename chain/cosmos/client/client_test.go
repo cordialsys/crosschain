@@ -258,7 +258,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
-				ExplorerURL:     "/tx/E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				To:              "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 				ToAlt:           "",
@@ -303,7 +302,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
-				ExplorerURL:     "/tx/7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 				ToAlt:           "",
@@ -347,7 +345,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
-				ExplorerURL:     "/tx/2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 				From:            "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 				To:              "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 				ToAlt:           "",

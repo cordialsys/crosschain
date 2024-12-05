@@ -17,7 +17,6 @@ type LegacyTxInfoEndpoint struct {
 type LegacyTxInfo struct {
 	BlockHash       string                  `json:"block_hash"`
 	TxID            string                  `json:"tx_id"`
-	ExplorerURL     string                  `json:"explorer_url"`
 	From            Address                 `json:"from"`
 	To              Address                 `json:"to"`
 	ToAlt           Address                 `json:"to_alt,omitempty"`

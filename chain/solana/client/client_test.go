@@ -450,7 +450,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
-				ExplorerURL:     "/tx/5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw?cluster=",
 				From:            "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g",
 				To:              "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				ToAlt:           "",
@@ -474,7 +473,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "3XRGeupw3XacNQ4op3TQdWJsX3VvSnzQdjBvQDjGHaTCZs1eJzbuVn67RThFXEBSDBvoCXT5eX7rU1frQLni5AKb",
-				ExplorerURL:     "/tx/3XRGeupw3XacNQ4op3TQdWJsX3VvSnzQdjBvQDjGHaTCZs1eJzbuVn67RThFXEBSDBvoCXT5eX7rU1frQLni5AKb?cluster=",
 				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				To:              "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh",
 				ToAlt:           "",
@@ -501,7 +499,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "ZJaJTB5oLfPrzEsFE2cEa94KdNb6SGvqMgaLdtqoYFnaqo4zAncVPjkpDqPbVPv85S68zNcaTyYobDcPJuRfhrX",
-				ExplorerURL:     "/tx/ZJaJTB5oLfPrzEsFE2cEa94KdNb6SGvqMgaLdtqoYFnaqo4zAncVPjkpDqPbVPv85S68zNcaTyYobDcPJuRfhrX?cluster=",
 				From:            "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
 				To:              "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
@@ -525,7 +522,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "5ZrG8iS4RxLXDRQEWkAoddWHzkS1fA1m6ppxaAekgGzskhcFqjkw1ZaFCsLorbhY5V4YUUkjE3SLY2JNLyVanxrM",
-				ExplorerURL:     "/tx/5ZrG8iS4RxLXDRQEWkAoddWHzkS1fA1m6ppxaAekgGzskhcFqjkw1ZaFCsLorbhY5V4YUUkjE3SLY2JNLyVanxrM?cluster=",
 				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				To:              "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
@@ -550,7 +546,6 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			xc.LegacyTxInfo{
 				TxID:            "66iwZvSCQc1br36ddj7keyLtSXb3yuPzDdMSk3qpkYJUAiiy3thmpzut1WzEWjnubr8oQV19wkhvH3X9j45kPZzx",
-				ExplorerURL:     "/tx/66iwZvSCQc1br36ddj7keyLtSXb3yuPzDdMSk3qpkYJUAiiy3thmpzut1WzEWjnubr8oQV19wkhvH3X9j45kPZzx?cluster=",
 				From:            "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2",
 				To:              "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq",
 				ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",

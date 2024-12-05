@@ -494,8 +494,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 		// Use the InMsg hash as this can be determined offline,
 		// whereas the tx.Hash is determined by the chain after submitting.
-		TxID:        tontx.Normalize(tx.InMsg.Hash),
-		ExplorerURL: "",
+		TxID: tontx.Normalize(tx.InMsg.Hash),
 
 		Sources:      sources,
 		Destinations: dests,

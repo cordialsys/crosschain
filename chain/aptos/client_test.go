@@ -166,7 +166,6 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 			xc.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
-				ExplorerURL:     "/txn/3509309?network=devnet",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 				To:              "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 				ToAlt:           "",
@@ -214,7 +213,6 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 			xc.LegacyTxInfo{
 				TxID:            "0x06a6c25f3601895a3d3330f6ba4696fb8e677973aa56aa7b0ea362915bcff39c",
 				BlockHash:       "176278674",
-				ExplorerURL:     "/txn/176278674?network=devnet",
 				From:            "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
 				To:              "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
 				ToAlt:           "",
