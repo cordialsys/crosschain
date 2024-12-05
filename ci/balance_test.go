@@ -23,6 +23,7 @@ func TestBalance(t *testing.T) {
 	rpcArgs := &setup.RpcArgs{
 		Chain:     chain,
 		Rpc:       rpc,
+		Network:   network,
 		Overrides: map[string]*setup.ChainOverride{},
 	}
 

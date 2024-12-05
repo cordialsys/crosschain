@@ -16,14 +16,21 @@ def system(cmd: str):
 @app.route("/chains/<chain_id>/assets/<contract>", methods = ['POST', 'PUT'])
 def fund(chain_id:str, contract: str):
     content = request.get_json(force=True)
-    amount = content.get('amount', '1')
+    sats = content.get('amount', '1')
     address = content['address']
-    print(f"REQUEST address={address} contract={contract} amount={amount}", flush=True)
+    
+    # convert sats to BTC
+    btc = f"{(int(sats) / 10**8):.8f}"
+
+    print(f"REQUEST address={address} contract={contract} amount={btc}", flush=True)
 
     username = os.getenv("USERNAME", "")
     password = os.getenv("PASSWORD", "")
 
-    system(f"bitcoin-cli -regtest -rpcuser={username} -rpcpassword={password} sendtoaddress {address} {amount}")
+    system(f"bitcoin-cli -regtest -rpcuser={username} -rpcpassword={password} sendtoaddress {address} {btc}")
+    # wait for block
+    time.sleep(6)
+
     return {
     }
 

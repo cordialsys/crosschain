@@ -77,7 +77,7 @@ func CmdTxInput() *cobra.Command {
 
 			bz, _ := json.MarshalIndent(input, "", "  ")
 
-			fmt.Println(bz)
+			fmt.Println(string(bz))
 
 			return nil
 		},
@@ -276,7 +276,7 @@ func CmdTxTransfer() *cobra.Command {
 					continue
 				}
 				bz, _ := json.MarshalIndent(info, "", "  ")
-				fmt.Println(bz)
+				fmt.Println(string(bz))
 				return nil
 			}
 

@@ -1,4 +1,4 @@
-FROM btc-base as btc-builder
+FROM bitcoin-base as btc-builder
 # use same WORKDIR as builder
 
 RUN apt-get update
@@ -22,11 +22,8 @@ RUN find /out/
 # now copy artifiacts to release image
 FROM ruimarinho/bitcoin-core:23
 
-ENV BITCOIN_DEB=backend-bitcoin-regtest_24.0.1-satoshilabs-1_arm64.deb
-ENV BLOCKBOOK_DEB=blockbook-bitcoin-regtest_0.4.0_arm64.deb
-
-COPY --from=btc-builder /out/$BITCOIN_DEB /
-COPY --from=btc-builder  /out/$BLOCKBOOK_DEB /
+COPY --from=btc-builder /out/backend-bitcoin-regtest* /
+COPY --from=btc-builder  /out/blockbook-bitcoin-regtest* /
 
 RUN apt update -y
 # blockbook deps
@@ -42,8 +39,8 @@ COPY miner.sh /
 COPY faucet.py /
 RUN chmod +x /miner.sh
 
-RUN dpkg -i /$BITCOIN_DEB
-RUN dpkg -i /$BLOCKBOOK_DEB
+RUN dpkg -i /backend-bitcoin-regtest*
+RUN dpkg -i /blockbook-bitcoin-regtest*
 
 # These need to match what's in blockchaincfg.json
 ENV USERNAME=bitcoin
@@ -55,8 +52,8 @@ EXPOSE 9030 9130
 
 # 18443 is default rpc port for regtest, which is kept internal as we use blockbook as our "RPC".
 CMD [ "/bin/bash", "-c", "\
-    bitcoind -printtoconsole -regtest=1 -fallbackfee=0.001 -rpcallowip=0.0.0.0/0 -rpcbind -rpcport=18443 -rpcuser=$USERNAME -rpcpassword=$PASSWORD & \
+    bitcoind -printtoconsole -txindex -regtest=1 -fallbackfee=0.001 -rpcallowip=0.0.0.0/0 -rpcbind -rpcport=18443 -rpcuser=$USERNAME -rpcpassword=$PASSWORD & \
     (python3 /faucet.py &) ; \
     (/miner.sh &) ; \
-    cd /opt/coins/blockbook/bitcoin_regtest/ && ./bin/blockbook -sync -blockchaincfg=/app/blockchaincfg.json -internal=0.0.0.0:9030 -public=0.0.0.0:10000 -resyncindexperiod=5000 -resyncmempoolperiod=5000 -workers=1 -logtostderr\
+    cd /opt/coins/blockbook/bitcoin_regtest/ && ./bin/blockbook -sync -enablesubnewtx -blockchaincfg=/app/blockchaincfg.json -internal=0.0.0.0:9030 -public=0.0.0.0:10000 -resyncindexperiod=5000 -resyncmempoolperiod=5000 -workers=1 -logtostderr\
     "]

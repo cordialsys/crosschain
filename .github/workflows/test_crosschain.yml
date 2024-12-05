@@ -28,10 +28,14 @@ jobs:
             image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
           - chain: XPLA
             image: us-docker.pkg.dev/cordialsys/crosschain/cosmos:latest
+          - chain: BTC
+            image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
+            network: regtest
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: install dagger
         run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.14.0 BIN_DIR=/usr/bin sudo -E sh
       - name: chain
-        run: dagger --progress plain -v call test-chain --chain ${{matrix.chain.chain}} --image ${{matrix.chain.image}} --source .
+        run: dagger --progress plain -v call test-chain --chain ${{matrix.chain.chain}} --image ${{matrix.chain.image}} --network "${{matrix.chain.network}}" --source .

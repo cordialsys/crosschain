@@ -32,6 +32,25 @@ target "cosmos" {
   context = "./chain/cosmos/node/"
 }
 
+target "bitcoin" {
+  dockerfile = "Dockerfile"
+  platforms = platforms
+  tags = [
+    "us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest",
+  ]
+  context = "./chain/bitcoin/node/"
+  contexts = {
+    bitcoin-base = "target:bitcoin-base"
+  }
+}
+
+// dependency for "bitcoin"
+target "bitcoin-base" {
+  dockerfile = "base.Dockerfile"
+  platforms = platforms
+  context = "./chain/bitcoin/node/"
+}
+
 group "default" {
-  targets = ["evm", "solana", "cosmos"]
+  targets = ["evm", "solana", "cosmos", "bitcoin"]
 }

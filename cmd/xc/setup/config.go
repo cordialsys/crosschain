@@ -13,6 +13,8 @@ type ChainOverride struct {
 	Rpc string `json:"rpc,omitempty" toml:"rpc,omitempty"`
 	// A secret that may be used with RPC access
 	ApiKey string `json:"api_key,omitempty" toml:"api_key,omitempty"`
+	// The network to use (e.g. mainnet/testnet/regtest on bitcoin chains)
+	Network string `json:"network,omitempty" toml:"network,omitempty"`
 
 	Applied bool `json:"-" toml:"-"`
 }
@@ -53,6 +55,9 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 							},
 						}
 					}
+				}
+				if override.Network != "" {
+					chain.Net = override.Network
 				}
 			}
 		}
