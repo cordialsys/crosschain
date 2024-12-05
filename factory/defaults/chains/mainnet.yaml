@@ -12,7 +12,7 @@ chains:
         asset_id: acala
       coin_market_cap:
         chain_id:
-        asset_id:
+        asset_id: "6756"
 
   APTOS:
     chain: APTOS
@@ -42,6 +42,7 @@ chains:
       dti: J51DXB76N
       coin_market_cap:
         chain_id: "56"
+        asset_id: "3794"
       coin_gecko:
         asset_id: cosmos
   AVAX:
@@ -54,6 +55,7 @@ chains:
       dti: M3Z631TN4
       coin_market_cap:
         chain_id: "28"
+        asset_id: "5805"
       coin_gecko:
         asset_id: avalanche
   ArbETH:
@@ -100,6 +102,7 @@ chains:
       dti: J9K583ZGG
       coin_market_cap:
         chain_id: "39"
+        asset_id: "1831"
       coin_gecko:
         asset_id: bitcoin-cash
   BERA:
@@ -108,6 +111,8 @@ chains:
     chain_name: Berachain
     decimals: 18
     external:
+      coin_market_cap:
+        asset_id: "24647"
       coin_gecko:
         asset_id: berachain-bera
   BNB:
@@ -120,6 +125,7 @@ chains:
       dti: HWRGLMT9T
       coin_market_cap:
         chain_id: "14"
+        asset_id: "1839"
       coin_gecko:
         asset_id: binance-smart-chain
   BTC:
@@ -132,7 +138,7 @@ chains:
     external:
       dti: 4H95J0R2X
       coin_market_cap:
-        asset_id: 1
+        asset_id: "1"
       coin_gecko:
         asset_id: bitcoin
   CELO:
@@ -145,6 +151,7 @@ chains:
       dti: PTN9Z5Q7D
       coin_market_cap:
         chain_id: "35"
+        asset_id: "5567"
       coin_gecko:
         asset_id: celo
   CHZ:
@@ -165,6 +172,8 @@ chains:
     decimals: 18
     external:
       dti: GV9QD1V9M
+      coin_market_cap:
+        asset_id: "4066"
       coin_gecko:
         asset_id: chiliz
   DOGE:
@@ -180,6 +189,7 @@ chains:
       dti: 820B7G1NL
       coin_market_cap:
         chain_id: "136"
+        asset_id: "74"
       coin_gecko:
         asset_id: dogecoin
   DOT:
@@ -192,6 +202,7 @@ chains:
       dti: P5B46MFPP
       coin_market_cap:
         chain_id: "37"
+        asset_id: "6636"
       coin_gecko:
         asset_id: polkadot
   ETC:
@@ -202,6 +213,8 @@ chains:
     decimals: 18
     external:
       dti: GWQWXVV7J
+      coin_market_cap:
+        asset_id: "1321"
       coin_gecko:
         asset_id: ethereum-classic
   ETH:
@@ -220,6 +233,7 @@ chains:
       dti: X9J9K872S
       coin_market_cap:
         chain_id: "1"
+        asset_id: "1027"
       coin_gecko:
         asset_id: ethereum
   ETHW:
@@ -230,6 +244,8 @@ chains:
     decimals: 18
     external:
       dti: 5C3LXSVX7
+      coin_market_cap:
+        asset_id: "21296"
       coin_gecko:
         asset_id: ethereumpow
   EmROSE:
@@ -254,6 +270,7 @@ chains:
       dti: WS6BZ8225
       coin_market_cap:
         chain_id: "24"
+        asset_id: "3513"
       coin_gecko:
         asset_id: fantom
   HASH:
@@ -268,6 +285,9 @@ chains:
     chain_gas_multiplier: 10.0
     # translates to roughly max 50 HASH in gas per tx
     chain_max_gas_price: 125000.0
+    external:
+      coin_market_cap:
+        asset_id: "19960"
   INJ:
     chain: INJ
     driver: evmos
@@ -282,6 +302,7 @@ chains:
       dti: WFQSW1L5L
       coin_market_cap:
         chain_id: "179"
+        asset_id: "7226"
       coin_gecko:
         asset_id: injective
   KAR:
@@ -291,6 +312,8 @@ chains:
     chain_name: Karura
     decimals: 12
     external:
+      coin_market_cap:
+        asset_id: "10042"
       coin_gecko:
         asset_id: karura
   KLAY:
@@ -305,6 +328,7 @@ chains:
       dti: CNDP5R1T8
       coin_market_cap:
         chain_id: "26"
+        asset_id: "4256"
       coin_gecko:
         asset_id: klay-token
   KSM:
@@ -315,6 +339,8 @@ chains:
     chain_prefix: "2"
     external:
       dti: MXLJ762RF
+      coin_market_cap:
+        asset_id: "5034"
       coin_gecko:
         asset_id: kusama
   LTC:
@@ -326,6 +352,8 @@ chains:
     decimals: 8
     external:
       dti: WTX0G7K46
+      coin_market_cap:
+        asset_id: "2"
       coin_gecko:
         asset_id: litecoin
   LUNA:
@@ -341,6 +369,7 @@ chains:
       dti: NGXHD2ZFQ
       coin_market_cap:
         chain_id: "120"
+        asset_id: "20314"
       coin_gecko:
         asset_id: terra-2
   LUNC:
@@ -360,6 +389,7 @@ chains:
       dti: NGXHD2ZFQ
       coin_market_cap:
         chain_id: "22"
+        asset_id: "4172"
       coin_gecko:
         asset_id: terra
   MATIC:
@@ -375,6 +405,7 @@ chains:
       dti: RQWW6J6K0
       coin_market_cap:
         chain_id: "25"
+        asset_id: "28321" # This is for "POL"
       coin_gecko:
         asset_id: polygon-pos
   NOBLE:
@@ -393,6 +424,8 @@ chains:
     chain_name: Oasys
     decimals: 18
     external:
+      coin_market_cap:
+        asset_id: "22265"
       coin_gecko:
         asset_id: oasys
   OptETH:
@@ -421,6 +454,7 @@ chains:
       dti: P4JBC8R50
       coin_market_cap:
         chain_id: "188"
+        asset_id: "23149"
       coin_gecko:
         asset_id: sei-network
   SOL:
@@ -432,6 +466,7 @@ chains:
       dti: 20J63Z4N3
       coin_market_cap:
         chain_id: "16"
+        asset_id: "5426"
       coin_gecko:
         asset_id: solana
   SUI:
@@ -443,6 +478,7 @@ chains:
       dti: 90KLX8GQX
       coin_market_cap:
         chain_id: "176"
+        asset_id: "20947"
       coin_gecko:
         asset_id: sui
   TAO:
@@ -454,6 +490,8 @@ chains:
     indexer_url: "https://api.taostats.io"
     indexer_type: taostats
     external:
+      coin_market_cap:
+        asset_id: "22974"
       coin_gecko:
         asset_id: bittensor
 
@@ -468,6 +506,8 @@ chains:
     chain_gas_price_default: 0.1
     decimals: 6
     external:
+      coin_market_cap:
+        asset_id: "22861"
       coin_gecko:
         asset_id: celestia
   TON:
@@ -478,6 +518,7 @@ chains:
       dti: QBZLT5MT1
       coin_market_cap:
         chain_id: "173"
+        asset_id: "11419"
       coin_gecko:
         asset_id: the-open-network
   TRX:
@@ -492,6 +533,7 @@ chains:
       dti: 993D8X1FB
       coin_market_cap:
         chain_id: "47"
+        asset_id: "1958"
       coin_gecko:
         asset_id: tron
   XDC:
@@ -504,6 +546,7 @@ chains:
       dti: CCQZQXFDC
       coin_market_cap:
         chain_id: "163"
+        asset_id: "2634"
       coin_gecko:
         asset_id: xdc-network
   XPLA:
@@ -517,6 +560,8 @@ chains:
     chain_gas_price_default: 0.1
     decimals: 18
     external:
+      coin_market_cap:
+        asset_id: "22359"
       coin_gecko:
         asset_id: xpla
   XRP:
@@ -526,5 +571,7 @@ chains:
     decimals: 6
     external:
       dti: L6GTZC9G4
+      coin_market_cap:
+        asset_id: "52"
       coin_gecko:
         asset_id: ripple
