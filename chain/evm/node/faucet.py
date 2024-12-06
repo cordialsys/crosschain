@@ -20,10 +20,24 @@ def fund(chain_id:str, contract: str):
     content = request.get_json(force=True)
     amount = content.get('amount', '1')
     address = content['address']
+    rpc_url = f"http://127.0.0.1:{RPC_PORT}"
+
+    # read the current balance
+    r = requests.post(rpc_url, json={
+        "jsonrpc": "2.0",
+        "method": "eth_getBalance",
+        "params": [address, "latest"],
+        "id": 1
+    })
+    current_balance_wei = int(r.json()['result'], 16)
+
+    # add to our current balance
+    new_balance = current_balance_wei + int(amount)
+
     # https://hardhat.org/hardhat-network/docs/reference#hardhat_setbalance
-    r = requests.post(f"http://127.0.0.1:{RPC_PORT}", json={
+    r = requests.post(rpc_url, json={
         "method":"hardhat_setBalance",
-        "params":[address, hex(int(amount))],
+        "params":[address, hex(int(new_balance))],
         "id":1,
         "jsonrpc":"2.0",
     })

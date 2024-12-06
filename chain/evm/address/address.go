@@ -37,7 +37,8 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	}
 
 	address := crypto.PubkeyToAddress(*publicKey).Hex()
-	return xc.Address(address), nil
+	// Lowercase the address is our normalized format
+	return xc.Address(strings.ToLower(address)), nil
 }
 
 // GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key

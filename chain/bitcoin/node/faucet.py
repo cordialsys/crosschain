@@ -28,8 +28,8 @@ def fund(chain_id:str, contract: str):
     password = os.getenv("PASSWORD", "")
 
     system(f"bitcoin-cli -regtest -rpcuser={username} -rpcpassword={password} sendtoaddress {address} {btc}")
-    # wait for block
-    time.sleep(6)
+    # wait for block (depends on resync period of blockbook)
+    time.sleep(3)
 
     return {
     }

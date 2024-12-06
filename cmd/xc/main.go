@@ -84,6 +84,7 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(commands.CmdTxTransfer())
 	cmd.AddCommand(commands.CmdAddress())
 	cmd.AddCommand(commands.CmdChains())
+	cmd.AddCommand(commands.CmdFund())
 	cmd.AddCommand(staking.CmdStaking())
 
 	return cmd

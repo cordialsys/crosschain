@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -13,28 +16,69 @@ import (
 	"github.com/cordialsys/crosschain/chain/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
+func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string) (xc.Address, error) {
+	if len(args) > 0 {
+		return xc.Address(args[0]), nil
+	}
+	privateKeyInput := os.Getenv("PRIVATE_KEY")
+	if privateKeyInput == "" {
+		return "", fmt.Errorf("must provide [address] as input, set env PRIVATE_KEY for it to be derived")
+	}
+	signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+	if err != nil {
+		return "", fmt.Errorf("could not import private key: %v", err)
+	}
+
+	publicKey, err := signer.PublicKey()
+	if err != nil {
+		return "", fmt.Errorf("could not create public key: %v", err)
+	}
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	if err != nil {
+		return "", fmt.Errorf("could not create address builder: %v", err)
+	}
+
+	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+	if err != nil {
+		return "", fmt.Errorf("could not derive address: %v", err)
+	}
+	return from, nil
+}
+
+func asJson(data any) string {
+	bz, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(bz)
+}
+
 func CmdRpcBalance() *cobra.Command {
+	var contract string
 	cmd := &cobra.Command{
-		Use:   "balance <address>",
+		Use:   "balance [address]",
 		Short: "Check balance of an asset.  Reported as big integer, not accounting for any decimals.",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			contract, _ := cmd.Flags().GetString("contract")
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			addressRaw := args[0]
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+			if err != nil {
+				return err
+			}
 
 			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
 			if err != nil {
 				return err
 			}
 
-			address := xcFactory.MustAddress(chainConfig, addressRaw)
 			balance, err := client.FetchBalance(context.Background(), address)
 			if err != nil {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
@@ -45,45 +89,45 @@ func CmdRpcBalance() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().String("contract", "", "Contract to use to query.  Default will use the native asset to query.")
+	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	return cmd
 }
 
 func CmdTxInput() *cobra.Command {
+	var addressTo string
+	var contract string
 	cmd := &cobra.Command{
-		Use:     "tx-input <address>",
+		Use:     "tx-input [address]",
 		Aliases: []string{"input"},
 		Short:   "Check inputs for a new transaction.",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			addressTo, _ := cmd.Flags().GetString("to")
 			contract, _ := cmd.Flags().GetString("contract")
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			addressRaw := args[0]
+			fromAddress, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+			if err != nil {
+				return err
+			}
 
 			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
 			if err != nil {
 				return err
 			}
 
-			fromAddress := xcFactory.MustAddress(chainConfig, addressRaw)
-			toAddress := xcFactory.MustAddress(chainConfig, addressTo)
-
-			input, err := client.FetchLegacyTxInput(context.Background(), fromAddress, toAddress)
+			input, err := client.FetchLegacyTxInput(context.Background(), fromAddress, xc.Address(addressTo))
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction input: %v", err)
 			}
 
-			bz, _ := json.MarshalIndent(input, "", "  ")
-
-			fmt.Println(string(bz))
+			fmt.Println(asJson(input))
 
 			return nil
 		},
 	}
-	cmd.Flags().String("contract", "", "Optional contract of token asset")
-	cmd.Flags().String("to", "", "Optional destination address")
+	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
+	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
 	return cmd
 }
 
@@ -108,8 +152,7 @@ func CmdTxInfo() *cobra.Command {
 				return fmt.Errorf("could not fetch tx info: %v", err)
 			}
 
-			bz, _ := json.MarshalIndent(txInfo, "", "  ")
-			fmt.Println(string(bz))
+			fmt.Println(asJson(txInfo))
 
 			return nil
 		},
@@ -275,8 +318,7 @@ func CmdTxTransfer() *cobra.Command {
 					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again...")
 					continue
 				}
-				bz, _ := json.MarshalIndent(info, "", "  ")
-				fmt.Println(string(bz))
+				fmt.Println(asJson(info))
 				return nil
 			}
 
@@ -349,8 +391,7 @@ func CmdChains() *cobra.Command {
 
 			printer := func(data any) error {
 				if format == "json" {
-					dataBz, _ := json.MarshalIndent(data, "", "  ")
-					fmt.Println(string(dataBz))
+					fmt.Println(asJson(data))
 				} else if format == "yaml" {
 					dataBz, _ := yaml.Marshal(data)
 					fmt.Println(string(dataBz))
@@ -429,6 +470,75 @@ func CmdDecimals() *cobra.Command {
 		},
 	}
 	cmd.Flags().String("contract", "", "Contract to use to query.")
+	return cmd
+}
+
+func CmdFund() *cobra.Command {
+	var contract string
+	var amountHuman string
+	var decimalsStr string
+	var api string
+	cmd := &cobra.Command{
+		Use:   "fund [address]",
+		Short: "Request funds from a crosschain node faucet.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chainConfig := setup.UnwrapChain(cmd.Context())
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+			if err != nil {
+				return err
+			}
+
+			decimals := int(chainConfig.Decimals)
+			if decimalsStr != "" {
+				decimals, err = strconv.Atoi(decimalsStr)
+				if err != nil {
+					return err
+				}
+			}
+			assetId := contract
+			if assetId == "" {
+				assetId = string(chainConfig.Chain)
+			}
+
+			amountHuman, err := xc.NewAmountHumanReadableFromStr(amountHuman)
+			if err != nil {
+				return err
+			}
+			amount := amountHuman.ToBlockchain(int32(decimals))
+			url := fmt.Sprintf("%s/chains/%s/assets/%s", api, chainConfig.Chain, assetId)
+
+			requestBody := map[string]interface{}{
+				"amount":  amount.String(),
+				"address": address,
+			}
+			req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(asJson(requestBody))))
+			if err != nil {
+				return fmt.Errorf("error creating request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return fmt.Errorf("error sending request: %v", err)
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("error reading response: %v", err)
+			}
+			if resp.StatusCode != http.StatusOK {
+				logrus.Error(string(body))
+				return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+			}
+			fmt.Println(string(body))
+
+			return nil
+		},
+	}
+	cmd.Flags().StringVar(&contract, "contract", "", "Contract to use to get funds for.")
+	cmd.Flags().StringVar(&decimalsStr, "decimals", "", "decimals of the token, when using --contract.")
+	cmd.Flags().StringVar(&api, "api", "http://127.0.0.1:10001", "API url to use for faucet.")
+	cmd.Flags().StringVar(&amountHuman, "amount", "1", "Decimal-adjusted amount of funds to request.")
 	return cmd
 }
 

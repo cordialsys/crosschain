@@ -146,7 +146,7 @@ func TestTransfer(t *testing.T) {
 		break
 	}
 
-	fmt.Println("Balance after transaction:", finalWalletBalance)
+	fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
 
 	remainder := initialBalance
 	for _, movement := range txInfo.Movements {

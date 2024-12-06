@@ -55,5 +55,5 @@ CMD [ "/bin/bash", "-c", "\
     bitcoind -printtoconsole -txindex -regtest=1 -fallbackfee=0.001 -rpcallowip=0.0.0.0/0 -rpcbind -rpcport=18443 -rpcuser=$USERNAME -rpcpassword=$PASSWORD & \
     (python3 /faucet.py &) ; \
     (/miner.sh &) ; \
-    cd /opt/coins/blockbook/bitcoin_regtest/ && ./bin/blockbook -sync -enablesubnewtx -blockchaincfg=/app/blockchaincfg.json -internal=0.0.0.0:9030 -public=0.0.0.0:10000 -resyncindexperiod=5000 -resyncmempoolperiod=5000 -workers=1 -logtostderr\
+    cd /opt/coins/blockbook/bitcoin_regtest/ && ./bin/blockbook -sync -enablesubnewtx -blockchaincfg=/app/blockchaincfg.json -internal=0.0.0.0:9030 -public=0.0.0.0:10000 -resyncindexperiod=2500 -resyncmempoolperiod=2500 -workers=1 -logtostderr\
     "]
