@@ -12,7 +12,9 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -113,6 +115,18 @@ func TestTransfer(t *testing.T) {
 
 	err = client.SubmitTx(context.Background(), tx)
 	require.NoError(t, err)
+
+	// submitting again should work or return a detectable error
+	err = client.SubmitTx(context.Background(), tx)
+	if err == nil {
+		// ok
+		fmt.Println("No error on resubmit")
+	} else {
+		// should be TransactionExists
+		fmt.Println("Resubmit error: ", err)
+		xcErr := drivers.CheckError(chainConfig.Driver, err)
+		require.Equal(t, errors.TransactionExists, xcErr)
+	}
 
 	fmt.Println("submitted tx", tx.Hash())
 	start := time.Now()

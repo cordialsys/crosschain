@@ -1,7 +1,6 @@
 package drivers_test
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/tron"
 	xrp "github.com/cordialsys/crosschain/chain/xrp/tx_input"
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 
@@ -239,8 +238,9 @@ func (s *CrosschainTestSuite) TestAllCheckError() {
 	require := s.Require()
 
 	for _, driver := range xc.SupportedDrivers {
-		anError := drivers.CheckError(driver, errors.New("eof"))
-		require.NotEqual(anError, xclient.UnknownError, "Missing driver for CheckError: "+driver)
+		anError := drivers.CheckError(driver, fmt.Errorf("eof"))
+		require.NotEqual(anError, errors.UnknownError, "Missing driver for CheckError: "+driver)
+		require.NotEqual(anError, "", "Missing driver for CheckError: "+driver)
 	}
 }
 

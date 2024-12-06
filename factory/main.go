@@ -10,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -543,6 +544,9 @@ func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
 	return builder.GetAddressFromPublicKey(publicKey)
 }
 
-func CheckError(driver Driver, err error) xclient.ClientError {
+func CheckError(driver Driver, err error) errors.Status {
+	if err, ok := err.(*errors.Error); ok {
+		return err.Status
+	}
 	return drivers.CheckError(driver, err)
 }

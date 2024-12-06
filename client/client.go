@@ -62,29 +62,6 @@ type ManualUnstakingClient interface {
 	CompleteManualUnstaking(ctx context.Context, unstake *Unstake) error
 }
 
-type ClientError string
-
-// A transaction terminally failed due to no balance
-const NoBalance ClientError = "NoBalance"
-
-// A transaction terminally failed due to no balance after accounting for gas cost
-const NoBalanceForGas ClientError = "NoBalanceForGas"
-
-// A transaction terminally failed due to another reason
-const TransactionFailure ClientError = "TransactionFailure"
-
-// A transaction failed to submit because it already exists
-const TransactionExists ClientError = "TransactionExists"
-
-// deadline exceeded and transaction can no longer be accepted
-const TransactionTimedOut ClientError = "TransactionTimedOut"
-
-// A network error occured -- there may be nothing wrong with the transaction
-const NetworkError ClientError = "NetworkError"
-
-// No outcome for this error known
-const UnknownError ClientError = "UnknownError"
-
 type State string
 
 var Activating State = "activating"

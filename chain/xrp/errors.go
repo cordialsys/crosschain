@@ -3,13 +3,13 @@ package newchain
 import (
 	"strings"
 
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 )
 
-func CheckError(err error) xclient.ClientError {
+func CheckError(err error) errors.Status {
 	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "a") {
-		return ""
+	if strings.Contains(msg, "eof") {
+		return errors.NetworkError
 	}
 	return ""
 }

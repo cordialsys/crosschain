@@ -1,8 +1,8 @@
 package drivers
 
 import (
-	"errors"
 	"fmt"
+
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 
 	. "github.com/cordialsys/crosschain"
@@ -35,6 +35,7 @@ import (
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
@@ -66,7 +67,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverXrp:
 		return xrpclient.NewClient(cfg)
 	}
-	return nil, errors.New("no client defined for chain: " + string(cfg.ID()))
+	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.ID()))
 }
 
 func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
@@ -130,7 +131,7 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	case DriverXrp:
 		return xrpbuilder.NewTxBuilder(cfg)
 	}
-	return nil, errors.New("no tx-builder defined for: " + string(cfg.ID()))
+	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }
 
 func NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
@@ -165,10 +166,13 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverXrp:
 		return xrpaddress.NewAddressBuilder(cfg)
 	}
-	return nil, errors.New("no address builder defined for: " + string(cfg.ID()))
+	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.ID()))
 }
 
-func CheckError(driver Driver, err error) xclient.ClientError {
+func CheckError(driver Driver, err error) errors.Status {
+	if err, ok := err.(*errors.Error); ok {
+		return err.Status
+	}
 	switch driver {
 	case DriverEVM:
 		return evm.CheckError(err)
@@ -195,5 +199,5 @@ func CheckError(driver Driver, err error) xclient.ClientError {
 	case DriverXrp:
 		return xrp.CheckError(err)
 	}
-	return xclient.UnknownError
+	return errors.UnknownError
 }

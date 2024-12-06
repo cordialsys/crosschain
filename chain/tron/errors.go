@@ -1,9 +1,7 @@
 package tron
 
-import (
-	xclient "github.com/cordialsys/crosschain/client"
-)
+import "github.com/cordialsys/crosschain/client/errors"
 
-func CheckError(err error) xclient.ClientError {
+func CheckError(err error) errors.Status {
 	return ""
 }
