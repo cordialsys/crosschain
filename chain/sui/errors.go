@@ -3,17 +3,17 @@ package sui
 import (
 	"strings"
 
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 )
 
-func CheckError(err error) xclient.ClientError {
+func CheckError(err error) errors.Status {
 	msg := strings.ToLower(err.Error())
 	if strings.Contains(msg, "eof") {
-		return xclient.NetworkError
+		return errors.NetworkError
 	}
 	if strings.Contains(msg, "transaction execution failed") {
-		return xclient.TransactionFailure
+		return errors.TransactionFailure
 	}
 
-	return xclient.UnknownError
+	return errors.UnknownError
 }

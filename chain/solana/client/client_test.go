@@ -3,7 +3,6 @@ package client_test
 import (
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
-	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
@@ -54,7 +53,7 @@ func TestFindAssociatedTokenAddress(t *testing.T) {
 }
 
 func TestErrors(t *testing.T) {
-	require.Equal(t, xcclient.TransactionTimedOut, xcsolana.CheckError(errors.New("Transaction simulation failed: Blockhash not found")))
+	require.Equal(t, errors.TransactionTimedOut, xcsolana.CheckError(fmt.Errorf("Transaction simulation failed: Blockhash not found")))
 }
 
 /*
@@ -250,7 +249,7 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			asset:           &xc.ChainConfig{},
-			resp:            errors.New(`{"message": "custom RPC error", "code": 123}`),
+			resp:            fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			blockHash:       "",
 			toIsATA:         false,
 			shouldCreateATA: false,
@@ -352,7 +351,7 @@ func TestAccountBalance(t *testing.T) {
 			"",
 		},
 		{
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
+			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			"",
 			"custom RPC error",
 		},
@@ -402,7 +401,7 @@ func TestTokenBalance(t *testing.T) {
 			"failed to get balance",
 		},
 		{
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
+			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			"",
 			"custom RPC error",
 		},
@@ -573,7 +572,7 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
+			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			xc.LegacyTxInfo{},
 			"custom RPC error",
 		},

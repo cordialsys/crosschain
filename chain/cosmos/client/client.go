@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -188,12 +189,16 @@ func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
 
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
-		return fmt.Errorf("failed to broadcast tx %v", err)
+		return errors.Unknownf("%v", err)
 	}
 
 	if res.Code != 0 {
 		txID := tx.TmHash(txBytes)
-		return fmt.Errorf("tx %v failed code: %v, log: %v", txID, res.Code, res.RawLog)
+		// Code for already in mempool
+		if res.Code == 19 {
+			return errors.TransactionExistsf("tx %v failed code: %v, log: %v", txID, res.Code, res.RawLog)
+		}
+		return errors.Unknownf("tx %v failed code: %v, log: %v", txID, res.Code, res.RawLog)
 	}
 
 	return nil

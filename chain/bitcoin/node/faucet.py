@@ -29,7 +29,7 @@ def fund(chain_id:str, contract: str):
 
     system(f"bitcoin-cli -regtest -rpcuser={username} -rpcpassword={password} sendtoaddress {address} {btc}")
     # wait for block (depends on resync period of blockbook)
-    time.sleep(3)
+    time.sleep(4)
 
     return {
     }

@@ -3,12 +3,12 @@ package ton
 import (
 	"strings"
 
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 )
 
-func CheckError(err error) xclient.ClientError {
+func CheckError(err error) errors.Status {
 	if strings.Contains(err.Error(), "duplicate message") {
-		return xclient.TransactionExists
+		return errors.TransactionExists
 	}
 	return ""
 }
