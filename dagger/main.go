@@ -4,6 +4,7 @@ import (
 	"context"
 	"runtime"
 	"strings"
+	"time"
 
 	"dagger/dagger/internal/dagger"
 )
@@ -53,6 +54,7 @@ func (m *Dagger) TestChain(
 
 		// Add node service
 		WithServiceBinding("node-service", nodeService).
+		WithEnvVariable("cache-bust", time.Now().String()).
 		// Run tests
 		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network}).
 		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network}).
