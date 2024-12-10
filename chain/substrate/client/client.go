@@ -1,4 +1,4 @@
-package substrate
+package client
 
 import (
 	"context"
@@ -13,13 +13,13 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/substrate/api"
-	"github.com/cordialsys/crosschain/chain/substrate/api/graphql"
-	"github.com/cordialsys/crosschain/chain/substrate/api/subscan"
-	"github.com/cordialsys/crosschain/chain/substrate/api/taostats"
+	"github.com/cordialsys/crosschain/chain/substrate/address"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/graphql"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/subscan"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/taostats"
+	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/factory/drivers/registry"
-	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -39,57 +39,6 @@ var SupportedIndexers = []string{IndexerSubQuery, IndexerSubScan, IndexerTaostat
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientWithDecimals = &Client{}
-
-// TxInput for Substrate
-type TxInput struct {
-	xc.TxInputEnvelope
-	Meta          Metadata             `json:"meta,omitempty"`
-	GenesisHash   types.Hash           `json:"genesis_hash,omitempty"`
-	CurHash       types.Hash           `json:"current_hash,omitempty"`
-	Rv            types.RuntimeVersion `json:"runtime_version,omitempty"`
-	CurrentHeight uint64               `json:"current_height,omitempty"`
-	Tip           uint64               `json:"tip,omitempty"`
-	Nonce         uint64               `json:"account_nonce,omitempty"`
-}
-
-func init() {
-	registry.RegisterTxBaseInput(&TxInput{})
-}
-
-func (input *TxInput) GetDriver() xc.Driver {
-	return xc.DriverSubstrate
-}
-
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	multipliedTip := multiplier.Mul(decimal.NewFromInt(int64(input.Tip)))
-	input.Tip = multipliedTip.BigInt().Uint64()
-	return nil
-}
-
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// different sequence means independence
-	if substrateOther, ok := other.(*TxInput); ok {
-		return substrateOther.Nonce != input.Nonce
-	}
-	return
-}
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
-		return false
-	}
-	// all same sequence means no double send
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
-	}
-	// sequence all same - we're safe
-	return true
-}
 
 // NewClient returns a new Substrate Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -146,42 +95,35 @@ func NewTxInfoClient(cfgI xc.ITask) (TxInfoClient, error) {
 	}, nil
 }
 
-// NewTxInput returns a new Substrate TxInput
-func NewTxInput() *TxInput {
-	return &TxInput{
-		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverSubstrate),
-	}
-}
-
-func (client *Client) FetchTxInputChain() (*types.Metadata, *TxInput, error) {
-	txInput := NewTxInput()
+func (client *Client) FetchTxInputChain() (*types.Metadata, *tx_input.TxInput, error) {
+	txInput := tx_input.NewTxInput()
 	rpc := client.DotClient.RPC
 	meta, err := rpc.State.GetMetadataLatest()
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
-	txInput.Meta, err = ParseMeta(meta)
+	txInput.Meta, err = tx_input.ParseMeta(meta)
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
 	// txInput.MetaData2 = *meta
 	txInput.GenesisHash, err = rpc.Chain.GetBlockHash(0)
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
 	rv, err := rpc.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
 	txInput.Rv = *rv
 	header, err := rpc.Chain.GetHeaderLatest()
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
 	txInput.CurrentHeight = uint64(header.Number)
 	txInput.CurHash, err = rpc.Chain.GetBlockHash(txInput.CurrentHeight)
 	if err != nil {
-		return meta, &TxInput{}, err
+		return meta, &tx_input.TxInput{}, err
 	}
 	return meta, txInput, nil
 }
@@ -207,11 +149,11 @@ func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (u
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	meta, txInput, err := client.FetchTxInputChain()
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 	txInput.Nonce, err = client.FetchAccountNonce(*meta, args.GetFrom())
 	if err != nil {
-		return &TxInput{}, err
+		return &tx_input.TxInput{}, err
 	}
 	amt, err := client.EstimateTip(ctx)
 	if err != nil {
@@ -278,7 +220,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	var tx xc.LegacyTxInfo
 
-	addressBuilder, err := NewAddressBuilder(client.Asset)
+	addressBuilder, err := address.NewAddressBuilder(client.Asset)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}

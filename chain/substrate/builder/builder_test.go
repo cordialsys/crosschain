@@ -1,35 +1,38 @@
-package substrate_test
+package builder_test
 
 import (
 	"encoding/json"
+	"testing"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate"
+	"github.com/cordialsys/crosschain/chain/substrate/builder"
+	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewTxBuilder() {
-	require := s.Require()
-	builder, err := substrate.NewTxBuilder(&xc.ChainConfig{})
+func TestNewTxBuilder(t *testing.T) {
+	require := require.New(t)
+	builder, err := builder.NewTxBuilder(&xc.ChainConfig{})
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
-func (s *CrosschainTestSuite) TestNewTransferFail() {
-	require := s.Require()
-	builder, _ := substrate.NewTxBuilder(&xc.ChainConfig{})
+func TestNewTransferFail(t *testing.T) {
+	require := require.New(t)
+	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
-	input := &TxInput{} // missing metadata
+	input := &tx_input.TxInput{} // missing metadata
 	_, err := builder.NewTransfer(from, to, amount, input)
 	require.Error(err)
 }
 
-func (s *CrosschainTestSuite) TestNewTransfer() {
-	require := s.Require()
-	builder, _ := substrate.NewTxBuilder(&xc.ChainConfig{Decimals: 10})
+func TestNewTransfer(t *testing.T) {
+	require := require.New(t)
+	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{Decimals: 10})
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
@@ -44,7 +47,7 @@ func (s *CrosschainTestSuite) TestNewTransfer() {
 		"account_nonce":14,
 		"tip":100}
 	`
-	input := &TxInput{}
+	input := &tx_input.TxInput{}
 	err := json.Unmarshal([]byte(inputBz), input)
 	require.NoError(err)
 	tx, err := builder.NewTransfer(from, to, amount, input)

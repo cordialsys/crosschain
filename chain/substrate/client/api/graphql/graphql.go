@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cordialsys/crosschain/chain/substrate/api"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 )
 
 type Time struct {

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/cordialsys/crosschain/chain/substrate/api/graphql"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/graphql"
 	"github.com/stretchr/testify/require"
 )
 

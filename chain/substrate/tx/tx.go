@@ -1,4 +1,4 @@
-package substrate
+package tx
 
 import (
 	"fmt"
@@ -9,14 +9,18 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic/extensions"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	"golang.org/x/crypto/blake2b"
 )
+
+// How many blocks the transaction will stay valid for
+const MORTAL_PERIOD = 4096
 
 // Tx for Template
 type Tx struct {
 	// extrinsic            types.Extrinsic
 	extrinsic            extrinsic.DynamicExtrinsic
-	meta                 Metadata
+	meta                 tx_input.Metadata
 	sender               types.MultiAddress
 	genesisHash, curHash types.Hash
 	rv                   types.RuntimeVersion
@@ -28,7 +32,7 @@ type Tx struct {
 
 var _ xc.Tx = &Tx{}
 
-func NewTx(extrinsic extrinsic.DynamicExtrinsic, sender types.MultiAddress, tip uint64, txInput *TxInput) (*Tx, error) {
+func NewTx(extrinsic extrinsic.DynamicExtrinsic, sender types.MultiAddress, tip uint64, txInput *tx_input.TxInput) (*Tx, error) {
 	tx := &Tx{
 		// extrinsic:   types.NewExtrinsic(call),
 		meta:        txInput.Meta,
@@ -69,7 +73,7 @@ func (tx *Tx) build() error {
 		opt(fieldValues)
 	}
 
-	payload, err := createPayload(&tx.meta, encodedMethod)
+	payload, err := tx_input.CreatePayload(&tx.meta, encodedMethod)
 	if err != nil {
 		return fmt.Errorf("creating payload: %w", err)
 	}

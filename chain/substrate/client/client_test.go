@@ -1,19 +1,23 @@
-package substrate_test
+package client_test
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"testing"
 	"time"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic/extensions"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate"
+	"github.com/cordialsys/crosschain/chain/substrate/client"
+	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/stretchr/testify/require"
 )
 
 // reserialize will drop internal fields set by constructors
@@ -30,9 +34,9 @@ func reserialize(tx *xclient.TxInfo) *xclient.TxInfo {
 //go:embed test_rpc_meta.json
 var RPC_META_RESPONSE string
 
-func (s *CrosschainTestSuite) TestNewClient() {
-	require := s.Require()
-	_, err := substrate.NewClient(&xc.ChainConfig{})
+func TestNewClient(t *testing.T) {
+	require := require.New(t)
+	_, err := client.NewClient(&xc.ChainConfig{})
 	require.Error(err)
 }
 
@@ -76,8 +80,8 @@ func accountInfo(nonce, balance uint64) *types.AccountInfo {
 	return ai
 }
 
-func (s *CrosschainTestSuite) TestBalance() {
-	require := s.Require()
+func TestBalance(t *testing.T) {
+	require := require.New(t)
 
 	type testcase struct {
 		responses   []string
@@ -102,10 +106,10 @@ func (s *CrosschainTestSuite) TestBalance() {
 	}
 
 	for i, tc := range testcases {
-		rpc, rpcClose := testtypes.MockJSONRPC(s.T(), tc.responses)
+		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
 
-		client, err := substrate.NewClient(&xc.ChainConfig{
+		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:      "DOT",
 			Driver:     "substrate",
 			URL:        rpc.URL,
@@ -117,15 +121,15 @@ func (s *CrosschainTestSuite) TestBalance() {
 		require.NoError(err)
 		require.NotNil(client.DotClient)
 
-		res, err := client.FetchBalance(s.Ctx, "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
+		res, err := client.FetchBalance(context.Background(), "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
 		fmt.Println("testcase ", i)
 		require.NoError(err)
 		require.EqualValues(tc.expectedBal, res.Uint64())
 	}
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInfo() {
-	require := s.Require()
+func TestFetchTxInfo(t *testing.T) {
+	require := require.New(t)
 
 	type testcase struct {
 		hash         string
@@ -198,7 +202,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		},
 		{
 			hash:        "anything",
-			indexerType: substrate.IndexerSubQuery,
+			indexerType: client.IndexerSubQuery,
 			responses: []string{
 				`{"data":{"extrinsics":{"nodes":[{"id":"3401817-0046","txHash":"0x88a147c2e869ec68827c1db6bba7e5923f555adbc658ad58ad74b730e5eae3e2","tip":"0"}]}}}`,
 				`{"data":{"events":{"nodes":[{"module":"system","event":"ExtrinsicSuccess","data":"[{\"weight\":{\"refTime\":286314000,\"proofSize\":3593},\"class\":\"Normal\",\"paysFee\":\"Yes\"}]"},{"module":"transactionPayment","event":"TransactionFeePaid","data":"[\"5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4\",124557,0]"},{"module":"balances","event":"Transfer","data":"[\"5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4\",\"5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ\",10000000]"},{"module":"balances","event":"Endowed","data":"[\"5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ\",10000000]"},{"module":"system","event":"NewAccount","data":"[\"5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ\"]"},{"module":"balances","event":"Withdraw","data":"[\"5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4\",124557]"}]},"blocks":{"nodes":[{"timestamp":"2024-07-17T01:17:24.002","hash":"0x9d264b95980880a3ce28024e093af7f39c434bfc2dd0472fffdcbb924a369b25"}]}}}`,
@@ -248,13 +252,13 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	for i, tc := range testcases {
 		fmt.Println("== tx-info test case", i)
 		// for the indexer to download the transaction
-		http, httpClose := testtypes.MockHTTP(s.T(), tc.responses, 200)
+		http, httpClose := testtypes.MockHTTP(t, tc.responses, 200)
 		defer httpClose()
 		// for the client fetching the lastest block height
-		rpc, rpcClose := testtypes.MockJSONRPC(s.T(), tc.rcpResponses)
+		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.rcpResponses)
 		defer rpcClose()
 
-		client, err := substrate.NewClient(&xc.ChainConfig{
+		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:       tc.expectedTx.XChain,
 			Driver:      "substrate",
 			URL:         rpc.URL,
@@ -268,7 +272,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 		require.NoError(err)
 		require.NotNil(client)
 
-		res, err := client.FetchTxInfo(s.Ctx, xc.TxHash(tc.hash))
+		res, err := client.FetchTxInfo(context.Background(), xc.TxHash(tc.hash))
 		require.NoError(err)
 
 		// don't compare fees as they are calculated from transfers
@@ -303,14 +307,14 @@ func exampleExtrinsics(tips []int) []types.Extrinsic {
 	return exts
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
+	require := require.New(t)
 
 	exts := exampleExtrinsics([]int{50, 100})
 	ext50 := exts[0]
 
-	expectedMeta := substrate.Metadata{
-		Calls: []*substrate.CallMeta{
+	expectedMeta := tx_input.Metadata{
+		Calls: []*tx_input.CallMeta{
 			{
 				Name:         "Balances.transfer_keep_alive",
 				SectionIndex: 5,
@@ -332,7 +336,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 
 	type testcase struct {
 		responses     []string
-		expectedInput substrate.TxInput
+		expectedInput tx_input.TxInput
 	}
 	var testcases = []testcase{
 		{
@@ -353,8 +357,8 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// get latest block info
 				`{"block":{"extrinsics": [` + mustMarshalScaleJson(ext50) + `]}}`,
 			},
-			expectedInput: substrate.TxInput{
-				TxInputEnvelope: substrate.NewTxInput().TxInputEnvelope,
+			expectedInput: tx_input.TxInput{
+				TxInputEnvelope: tx_input.NewTxInput().TxInputEnvelope,
 				Meta:            expectedMeta,
 				Rv: types.RuntimeVersion{
 					APIs: []types.RuntimeVersionAPI{},
@@ -381,8 +385,8 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 				// get latest block info
 				`{"block":{"extrinsics": [` + mustMarshalScaleJson(ext50) + `]}}`,
 			},
-			expectedInput: substrate.TxInput{
-				TxInputEnvelope: substrate.NewTxInput().TxInputEnvelope,
+			expectedInput: tx_input.TxInput{
+				TxInputEnvelope: tx_input.NewTxInput().TxInputEnvelope,
 				Meta:            expectedMeta,
 				Rv: types.RuntimeVersion{
 					APIs: []types.RuntimeVersionAPI{},
@@ -397,10 +401,10 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		fmt.Println("== tx-input test case", i)
 		// for the indexer to download the transaction
 		// for the client fetching the lastest block height
-		rpc, rpcClose := testtypes.MockJSONRPC(s.T(), tc.responses)
+		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
 
-		client, err := substrate.NewClient(&xc.ChainConfig{
+		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:       "DOT",
 			Driver:      "substrate",
 			URL:         rpc.URL,
@@ -414,15 +418,15 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 		require.NotNil(client)
 
 		addr := "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"
-		res, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(addr), xc.Address(addr))
+		res, err := client.FetchLegacyTxInput(context.Background(), xc.Address(addr), xc.Address(addr))
 		require.NoError(err)
 
 		require.Equal(&tc.expectedInput, res)
 	}
 }
 
-func (s *CrosschainTestSuite) TestEstimateTip() {
-	require := s.Require()
+func TestEstimateTip(t *testing.T) {
+	require := require.New(t)
 
 	type testcase struct {
 		responses   []string
@@ -471,10 +475,10 @@ func (s *CrosschainTestSuite) TestEstimateTip() {
 
 	for i, tc := range testcases {
 		fmt.Println("== Estimate tip case", i)
-		rpc, rpcClose := testtypes.MockJSONRPC(s.T(), tc.responses)
+		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
 
-		client, err := substrate.NewClient(&xc.ChainConfig{
+		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:      "DOT",
 			Driver:     "substrate",
 			IndexerUrl: "subscan",
@@ -484,7 +488,7 @@ func (s *CrosschainTestSuite) TestEstimateTip() {
 			ChainID:    0,
 		})
 		require.NoError(err)
-		amt, err := client.EstimateTip(s.Ctx)
+		amt, err := client.EstimateTip(context.Background())
 		require.NoError(err)
 		require.EqualValues(amt, tc.expectedTip)
 	}

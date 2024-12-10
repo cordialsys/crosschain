@@ -54,7 +54,8 @@ Flags:
 Set `PRIVATE_KEY` env and confirm you address is correct on the target chain you want to use.
 
 ```bash
-export PRIVATE_KEY=...
+# random 32-byte key
+export PRIVATE_KEY=$(cat /dev/urandom | head -c 32 | xxd -p -c100)
 xc address --chain SOL
 ```
 
