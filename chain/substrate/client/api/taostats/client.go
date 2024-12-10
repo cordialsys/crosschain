@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cordialsys/crosschain/chain/substrate/api"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/sirupsen/logrus"
 )
 

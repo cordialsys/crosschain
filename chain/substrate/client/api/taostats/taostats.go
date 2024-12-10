@@ -3,7 +3,7 @@ package taostats
 import (
 	"time"
 
-	"github.com/cordialsys/crosschain/chain/substrate/api"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 )
 
 type GetExtrinicResponse struct {

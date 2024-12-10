@@ -10,9 +10,10 @@ import (
 	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	evmtxinput "github.com/cordialsys/crosschain/chain/evm/tx_input"
+	substratetxinput "github.com/cordialsys/crosschain/chain/substrate/tx_input"
+
 	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
-	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/tron"
@@ -33,7 +34,7 @@ var LoadedTxInputs = []xc.TxInput{
 	&evmtxinput.TxInput{},
 	&evm_legacy.TxInput{},
 	&solanatxinput.TxInput{},
-	&substrate.TxInput{},
+	&substratetxinput.TxInput{},
 	&sui.TxInput{},
 	&ton.TxInput{},
 	&tron.TxInput{},

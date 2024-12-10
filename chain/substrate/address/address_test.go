@@ -1,43 +1,46 @@
-package substrate_test
+package address_test
 
 import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate"
+	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/factory"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewAddressBuilder() {
-	require := s.Require()
-	builder, err := substrate.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
+func TestNewAddressBuilder(t *testing.T) {
+	require := require.New(t)
+
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
 	require.Nil(err)
 	require.NotNil(builder)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
-	require := s.Require()
-	builder, _ := substrate.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
+func TestGetAddressFromPublicKey(t *testing.T) {
+	require := require.New(t)
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
 	bytes, _ := hex.DecodeString("192c3c7e5789b461fbf1c7f614ba5eed0b22efc507cda60a5e7fda8e046bcdce")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.Nil(err)
 	require.Equal(xc.Address("1a1LcBX6hGPKg5aQ6DXZpAHCCzWjckhea4sz3P1PvL3oc4F"), address)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
-	require := s.Require()
-	builder, _ := substrate.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
+func TestGetAddressFromPublicKeyErr(t *testing.T) {
+	require := require.New(t)
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
 
 	address, err := builder.GetAddressFromPublicKey([]byte{1, 2, 3})
 	require.Equal(xc.Address(""), address)
 	require.EqualError(err, "invalid sr25519 public key")
 }
 
-func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
-	require := s.Require()
-	builder, _ := substrate.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
+func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
+	require := require.New(t)
+	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
 	bytes, _ := hex.DecodeString("192c3c7e5789b461fbf1c7f614ba5eed0b22efc507cda60a5e7fda8e046bcdce")
 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
 	require.Nil(err)
@@ -46,8 +49,8 @@ func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require.Equal(xc.AddressTypeDefault, addresses[0].Type)
 }
 
-func (s *CrosschainTestSuite) TestSubstrateChainsHavePrefix() {
-	require := s.Require()
+func TestSubstrateChainsHavePrefix(t *testing.T) {
+	require := require.New(t)
 
 	configs := []*factory.Factory{
 		factory.NewFactory(&factory.FactoryOptions{}),
@@ -76,7 +79,7 @@ func (s *CrosschainTestSuite) TestSubstrateChainsHavePrefix() {
 			}
 		}
 	}
-	builder, err := substrate.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{ChainPrefix: "0"})
 	require.Nil(err)
 	require.NotNil(builder)
 }

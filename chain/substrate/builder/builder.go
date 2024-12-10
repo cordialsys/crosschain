@@ -1,4 +1,4 @@
-package substrate
+package builder
 
 import (
 	"fmt"
@@ -8,10 +8,9 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/substrate/tx"
+	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 )
-
-// How many blocks the transaction will stay valid for
-const MORTAL_PERIOD = 4096
 
 var DefaultMaxTotalTipHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 
@@ -36,7 +35,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
+	txInput := input.(*tx_input.TxInput)
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.ChainConfig:
 		// ok
@@ -47,18 +46,18 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	}
 	sender, err := types.NewMultiAddressFromAccountID(base58.Decode(string(from))[1:33])
 	if err != nil {
-		return &Tx{}, err
+		return &tx.Tx{}, err
 	}
 	receiver, err := types.NewMultiAddressFromAccountID(base58.Decode(string(to))[1:33])
 	if err != nil {
-		return &Tx{}, err
+		return &tx.Tx{}, err
 	}
 
 	// We use transfer_keep_alive to avoid accounts being reaped for sending too much balance that it no longer has the
 	// existential deposit. This would cause the account to get reaped, which can cause future TXs to have duped hashes
-	call, err := NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
+	call, err := tx_input.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
 	if err != nil {
-		return &Tx{}, err
+		return &tx.Tx{}, err
 	}
 
 	tip := txInput.Tip
@@ -67,5 +66,5 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		tip = maxTip
 	}
 
-	return NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
 }
