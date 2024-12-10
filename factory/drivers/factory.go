@@ -3,6 +3,7 @@ package drivers
 import (
 	"fmt"
 
+	"github.com/cordialsys/crosschain/chain/substrate"
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 
 	. "github.com/cordialsys/crosschain"
@@ -26,7 +27,9 @@ import (
 	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
 	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
 	solanaclient "github.com/cordialsys/crosschain/chain/solana/client"
-	"github.com/cordialsys/crosschain/chain/substrate"
+	substrateaddress "github.com/cordialsys/crosschain/chain/substrate/address"
+	substratebuilder "github.com/cordialsys/crosschain/chain/substrate/builder"
+	substrateclient "github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
@@ -59,7 +62,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverBitcoinCash:
 		return bitcoin_cash.NewClient(cfg)
 	case DriverSubstrate:
-		return substrate.NewClient(cfg)
+		return substrateclient.NewClient(cfg)
 	case DriverTron:
 		return tron.NewClient(cfg)
 	case DriverTon:
@@ -123,7 +126,7 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	case DriverBitcoinCash:
 		return bitcoin_cash.NewTxBuilder(cfg)
 	case DriverSubstrate:
-		return substrate.NewTxBuilder(cfg)
+		return substratebuilder.NewTxBuilder(cfg)
 	case DriverTron:
 		return tron.NewTxBuilder(cfg)
 	case DriverTon:
@@ -158,7 +161,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverSui:
 		return sui.NewAddressBuilder(cfg)
 	case DriverSubstrate:
-		return substrate.NewAddressBuilder(cfg)
+		return substrateaddress.NewAddressBuilder(cfg)
 	case DriverTron:
 		return tron.NewAddressBuilder(cfg)
 	case DriverTon:

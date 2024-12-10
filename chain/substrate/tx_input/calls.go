@@ -1,4 +1,4 @@
-package substrate
+package tx_input
 
 import (
 	"fmt"
@@ -13,6 +13,8 @@ import (
 var usedSubstrateCalls = []string{
 	"Balances.transfer_keep_alive",
 	"Assets.transfer",
+	"SubtensorModule.add_stake",
+	"SubtensorModule.remove_stake",
 }
 
 type CallMeta struct {
@@ -90,7 +92,7 @@ var LocalPayloadMutatorFns = map[extensions.SignedExtensionName]extrinsic.Payloa
 }
 
 // Replaces "github.com/centrifuge/go-substrate-rpc-client/v4/extrinsic".createPayload
-func createPayload(meta *Metadata, encodedCall []byte) (*extrinsic.Payload, error) {
+func CreatePayload(meta *Metadata, encodedCall []byte) (*extrinsic.Payload, error) {
 	payload := &extrinsic.Payload{
 		EncodedCall: encodedCall,
 	}

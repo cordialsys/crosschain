@@ -6,7 +6,7 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate/api"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 )
 
 type SubscanExtrinsicResponse struct {
