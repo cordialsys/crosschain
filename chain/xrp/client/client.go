@@ -349,6 +349,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	}
 
 	request, err := http.NewRequest(method, client.Url, bytes.NewBuffer(jsonPayload))
+	fmt.Printf("\n\n Request: %v \n", request)
 	if err != nil {
 		return fmt.Errorf("failed to create new HTTP request: %w", err)
 	}
@@ -359,6 +360,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 		return fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
+	fmt.Printf("\n\n Response: %v \n", resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
