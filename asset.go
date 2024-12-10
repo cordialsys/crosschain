@@ -66,6 +66,7 @@ const (
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
 	XRP    = NativeAsset("XRP")    // XRP
+	XLM    = NativeAsset("XLM")    // XLM
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -113,6 +114,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XRP,
 	BASE,
 	NOBLE,
+	XLM,
 }
 
 // Driver is the type of a chain
@@ -134,6 +136,7 @@ const (
 	DriverTron          = Driver("tron")
 	DriverTon           = Driver("ton")
 	DriverXrp           = Driver("xrp")
+	DriverXlm           = Driver("xlm")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -153,6 +156,7 @@ var SupportedDrivers = []Driver{
 	DriverTron,
 	DriverTon,
 	DriverXrp,
+	DriverXlm,
 }
 
 type StakingProvider string
@@ -233,6 +237,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverTon
 	case XRP:
 		return DriverXrp
+	case XLM:
+		return DriverXlm
 	}
 	return ""
 }

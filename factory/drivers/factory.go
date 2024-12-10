@@ -37,6 +37,7 @@ import (
 	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
+	xlmclient "github.com/cordialsys/crosschain/chain/xlm/client" 
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/client/services"
@@ -69,6 +70,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return ton.NewClient(cfg)
 	case DriverXrp:
 		return xrpclient.NewClient(cfg)
+	case DriverXlm:
+		return xlmclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.ID()))
 }

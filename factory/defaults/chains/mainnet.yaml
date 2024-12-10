@@ -641,3 +641,9 @@ chains:
         asset_id: "52"
       coin_gecko:
         asset_id: ripple
+  XLM:
+    chain: XLM
+    driver: xlm
+    chain_name: xlm
+    decimals: 7
+
