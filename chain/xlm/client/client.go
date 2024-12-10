@@ -1,23 +1,30 @@
 package client
 
 import (
-	// "bytes"
+	"bytes"
 	"context"
+	"encoding/json"
 	// "encoding/hex"
 	// "encoding/json"
-    "errors"
-	//"fmt"
+	"errors"
+	"fmt"
 	"net/http"
 	// "time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+
 	// "github.com/cordialsys/crosschain/chain/xrp/address/contract"
 	// "github.com/cordialsys/crosschain/chain/xrp/client/events"
-	// "github.com/cordialsys/crosschain/chain/xrp/client/types"
+	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	// "github.com/sirupsen/logrus"
+)
+
+const (
+	jsonrpcVersion = "2.0"
+	requestId = 0
 )
 
 type Client struct {
@@ -62,6 +69,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+	params := types.GetTransactionParams{ Hash: txHash }
+	txRequest := types.NewTransactionRequest(params)
 	return xclient.TxInfo{}, errors.New("not implemented")
 }
 
@@ -77,6 +86,17 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return 0, errors.New("not implemented")
 }
 
+func (client *Client) Send(method string, requestBody types.RPCRequest, response any) error {
+	jsonPayload, err := json.Marshal(requestBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request payload: %w", err)
+	}
 
+	request, err := http.NewRequest(MethodPost, client.Url, bytes.NewBuffer(jsonPayload))
+	if err != nil {
+		return fmt.Errorf("failed to create new HTTP request: %w", err)
+	}
+	return errors.New("not implemented")
+}
 
 const MethodPost string = "POST"
