@@ -103,6 +103,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
 		return solanaclient.NewClient(cfg)
+	case DriverSubstrate:
+		return substrateclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }

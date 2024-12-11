@@ -39,6 +39,7 @@ var SupportedIndexers = []string{IndexerSubQuery, IndexerSubScan, IndexerTaostat
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.StakingClient = &Client{}
 
 // NewClient returns a new Substrate Client
 func NewClient(cfgI xc.ITask) (*Client, error) {

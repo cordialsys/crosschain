@@ -19,6 +19,11 @@ type TxInput struct {
 	Nonce         uint64               `json:"account_nonce,omitempty"`
 }
 
+var _ xc.TxInput = &TxInput{}
+var _ xc.StakeTxInput = &TxInput{}
+var _ xc.UnstakeTxInput = &TxInput{}
+var _ xc.WithdrawTxInput = &TxInput{}
+
 // NewTxInput returns a new Substrate TxInput
 func NewTxInput() *TxInput {
 	return &TxInput{
@@ -64,3 +69,10 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	// sequence all same - we're safe
 	return true
 }
+
+func (input *TxInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewStakingInputType(xc.DriverSubstrate, string(xc.Native))
+}
+func (input *TxInput) Staking()     {}
+func (input *TxInput) Unstaking()   {}
+func (input *TxInput) Withdrawing() {}
