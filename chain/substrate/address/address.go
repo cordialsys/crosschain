@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/vedhavyas/go-subkey/v2"
 )
@@ -43,4 +45,28 @@ func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []b
 			Type:    xc.AddressTypeDefault,
 		},
 	}, err
+}
+
+func DecodeMulti(addr xc.Address) (types.MultiAddress, error) {
+	decodedVal := base58.Decode(string(addr))
+	if len(decodedVal) < 34 {
+		return types.MultiAddress{}, fmt.Errorf("address %s is too short", addr)
+	}
+	newAddr, err := types.NewMultiAddressFromAccountID(decodedVal[1:33])
+	if err != nil {
+		return types.MultiAddress{}, fmt.Errorf("invalid address %s: %v", addr, err)
+	}
+	return newAddr, nil
+}
+
+func Decode(addr xc.Address) (*types.AccountID, error) {
+	decodedVal := base58.Decode(string(addr))
+	if len(decodedVal) < 34 {
+		return &types.AccountID{}, fmt.Errorf("address %s is too short", addr)
+	}
+	newAddr, err := types.NewAccountID(decodedVal[1:33])
+	if err != nil {
+		return &types.AccountID{}, fmt.Errorf("invalid address %s: %v", addr, err)
+	}
+	return newAddr, nil
 }

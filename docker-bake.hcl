@@ -51,6 +51,15 @@ target "bitcoin-base" {
   context = "./chain/bitcoin/node/"
 }
 
+target "bittensor" {
+  dockerfile = "Dockerfile"
+  platforms = platforms
+  tags = [
+    "us-docker.pkg.dev/cordialsys/crosschain/bittensor:latest",
+  ]
+  context = "./chain/substrate/node/bittensor"
+}
+
 group "default" {
-  targets = ["evm", "solana", "cosmos", "bitcoin"]
+  targets = ["evm", "solana", "cosmos", "bitcoin", "bittensor"]
 }

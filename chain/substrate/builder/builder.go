@@ -3,11 +3,11 @@ package builder
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 )
@@ -20,6 +20,7 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.Staking = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
@@ -44,11 +45,11 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	default:
 		return nil, fmt.Errorf("NewTransfer not implemented for %T", asset)
 	}
-	sender, err := types.NewMultiAddressFromAccountID(base58.Decode(string(from))[1:33])
+	sender, err := address.DecodeMulti(from)
 	if err != nil {
 		return &tx.Tx{}, err
 	}
-	receiver, err := types.NewMultiAddressFromAccountID(base58.Decode(string(to))[1:33])
+	receiver, err := address.Decode(to)
 	if err != nil {
 		return &tx.Tx{}, err
 	}
