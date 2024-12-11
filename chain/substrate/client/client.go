@@ -16,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/graphql"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/rpc"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/subscan"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/taostats"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
@@ -34,6 +35,7 @@ type Client struct {
 const IndexerSubQuery = "subquery"
 const IndexerSubScan = "subscan"
 const IndexerTaostats = "taostats"
+const IndexerRpc = "rpc"
 
 var SupportedIndexers = []string{IndexerSubQuery, IndexerSubScan, IndexerTaostats}
 
@@ -81,7 +83,7 @@ func NewTxInfoClient(cfgI xc.ITask) (TxInfoClient, error) {
 	if indexerUrl == "" {
 		return nil, fmt.Errorf(`must set .indexer_url\n` + help)
 	}
-	if cfgI.GetChain().IndexerType == IndexerSubQuery {
+	if cfgI.GetChain().IndexerType == IndexerSubQuery || cfgI.GetChain().IndexerType == IndexerRpc {
 		// do not require api key
 	} else {
 		if apiKey == "" {
@@ -298,7 +300,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.BlockIndex = ext.BlockNumber
 		tx.BlockTime = ext.Timestamp.Unix()
 
-	} else {
+	} else if client.Asset.GetChain().IndexerType == IndexerSubQuery {
 		// support querying by either hash and extrinsic ID
 		var reqBody string
 		if _, _, err = api.BlockAndOffset(txHash).Parse(); err == nil {
@@ -329,6 +331,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.Fee = xc.NewAmountBlockchainFromStr(txInfoResp.Data.Fee)
 		tx.BlockIndex = int64(txInfoResp.Data.BlockNum)
 		tx.BlockTime = int64(txInfoResp.Data.BlockTimestamp)
+	} else {
+
+		rawClient := rpc.NewClient(client.DotClient, 100)
+		_, err = rawClient.GetTx(ctx, string(txHash))
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+
+		return xc.LegacyTxInfo{}, fmt.Errorf("DONE!")
 	}
 	if client.DotClient != nil && tx.Confirmations == 0 {
 		// calculate confirmations

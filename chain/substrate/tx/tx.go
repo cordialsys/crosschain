@@ -85,13 +85,18 @@ func (tx *Tx) build() error {
 	return nil
 }
 
+func HashSerialized(serialized []byte) []byte {
+	hash := blake2b.Sum256(serialized)
+	return hash[:]
+}
+
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
 	ser, err := tx.Serialize()
 	if err != nil {
 		return xc.TxHash("")
 	}
-	hash := blake2b.Sum256(ser)
+	hash := HashSerialized(ser)
 	return xc.TxHash(codec.HexEncodeToString(hash[:]))
 }
 
