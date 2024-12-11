@@ -8,7 +8,7 @@ import (
 
 const (
 	jsonrpcVersion = "2.0"
-	requestId = 0
+	requestId      = 0
 )
 
 type RPCRequest struct {
@@ -18,21 +18,42 @@ type RPCRequest struct {
 	Jsonrpc string      `json:"jsonrpc"`
 }
 
-func NewTransactionRequest(params GetTransactionParams) *RPCRequest {
-	return &RPCRequest{
-		Method: "getTransaction",
-		Params: params,
-		Id: 1,
+type RPCResponse struct {
+	Id      int64  `json:"id"`
+	Jsonrpc string `json:"jsonrpc"`
+	Result  any    `json:"result"`
+}
+
+func NewTransactionRequest(params GetTransactionParams) RPCRequest {
+	return RPCRequest{
+		Method:  "getTransaction",
+		Params:  params,
+		Id:      requestId,
 		Jsonrpc: jsonrpcVersion,
 	}
 }
 
+//
+// [getTransaction documentation]: https://developers.stellar.org/docs/data/rpc/api-reference/methods/getTransaction
 type GetTransactionParams struct {
 	Hash xc.TxHash `json:"hash"`
 }
 
-type TransactionParamEntry struct {
-	Transaction xc.TxHash `json:"transaction"`
-	Binary      bool      `json:"binary"`
+//
+// [getTransaction documentation]: https://developers.stellar.org/docs/data/rpc/api-reference/methods/getTransaction
+type GetTransactionResult struct {
+	Status                string `json:"status"`
+	LatestLedger          int    `json:"latestLedger"`
+	LatestLedgerCloseTime string `json:"latestLedgerCloseTime"`
+	OldestLedger          int    `json:"oldestLedger"`
+	OldestLedgerCloseTime string `json:"oldestLedgerCloseTime"`
+	Ledger                int    `json:"ledger,omitempty"`
+	CreatedAt             string `json:"createdAt,omitempty"`
+	ApplicationOrder      int    `json:"applicationOrder,omitempty"`
+	FeeBump               bool   `json:"feeBump,omitempty"`
+	// base64 encoded TransactionEnvelopeXDR
+	// [TransactionEnvelopeXDR]
+	EnvelopeXdr           string `json:"envelopeXdr,omitempty"`
+	ResultXdr             string `json:"resultXdr,omitempty"`
+	ResultMetaXdr         string `json:"resultMetaXdr,omitempty"`
 }
-
