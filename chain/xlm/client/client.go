@@ -3,11 +3,13 @@ package client
 import (
 	"bytes"
 	"context"
+
 	// "encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+
 	// "time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -19,6 +21,7 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stellar/go/xdr"
+	_ "github.com/stellar/go/xdr"
 	//"github.com/stellar/go/gxdr"
 )
 
