@@ -3,14 +3,15 @@ package client
 import (
 	"bytes"
 	"context"
+	"strconv"
 
-	// "encoding/base64"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
-	// "time"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -21,7 +22,6 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stellar/go/xdr"
-	_ "github.com/stellar/go/xdr"
 	//"github.com/stellar/go/gxdr"
 )
 
@@ -80,13 +80,59 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		return xclient.TxInfo{}, fmt.Errorf("failed to send http request: %w", err)
 	}
 
-	var te xdr.TransactionEnvelope
-	if err := te.UnmarshalBinary([]byte(response.EnvelopeXdr)); err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to send http request: %w", err)
+	decodedEnvelope, err := base64.StdEncoding.DecodeString(response.EnvelopeXdr)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to decode envelope: %w", err)
 	}
-	fmt.Printf("%v", te)
 
-	return xclient.TxInfo{}, errors.New("not implemented")
+	var envelope xdr.TransactionEnvelope
+	if err := envelope.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %e", err)
+	}
+
+	// decodedTransactionResult, err := base64.StdEncoding.DecodeString(response.ResultXdr)
+	// if err != nil {
+	// 	return xclient.TxInfo{}, fmt.Errorf("failed to decode result: %w", err)
+	// }
+	// var txResult xdr.TransactionResult
+	// if err := txResult.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
+	// 	return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal transaction result XDR", err)
+	// }
+
+	chain := client.Asset.GetChain().Chain
+	sTxHash := string(txHash)
+	name := xclient.NewTransactionName(chain, sTxHash)
+	timestamp, err := strconv.ParseInt(response.CreatedAt, 10, 64)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to parse timestamp: %w", err)
+	}
+	blockTime := time.Unix(timestamp, 0)
+	// TODO: Replace sTxHash with LedgerHash
+	block := xclient.NewBlock(chain, uint64(response.Ledger), sTxHash, blockTime)
+	transaction := types.Transaction {
+		SourceAccount: envelope.SourceAccount().ToAccountId().GoString(),
+		Fee: envelope.Fee(),
+		SeqNum: envelope.SeqNum(),
+		Operations: envelope.Operations(),
+		Signatures: envelope.Signatures(),
+	}
+	fmt.Printf("\nResponse: %v\n\n", transaction)
+
+	var errMsg *string
+	if response.Status == "FAILED" {
+		msg := "transaction failed"
+		errMsg = &msg
+	}
+
+	txInfo := xclient.TxInfo{
+		Name: name,
+		Hash: sTxHash,
+		XChain: chain,
+		Block: block,
+		Error: errMsg,
+	}
+
+	return txInfo, nil
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

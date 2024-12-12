@@ -4,6 +4,7 @@ import (
 	// "encoding/json"
 
 	xc "github.com/cordialsys/crosschain"
+	xdr "github.com/stellar/go/xdr"
 )
 
 const (
@@ -57,3 +58,13 @@ type GetTransactionResult struct {
 	ResultXdr             string `json:"resultXdr,omitempty"`
 	ResultMetaXdr         string `json:"resultMetaXdr,omitempty"`
 }
+
+type Transaction struct {
+	SourceAccount string
+	Fee uint32
+	SeqNum int64
+
+	Operations []xdr.Operation
+	Signatures []xdr.DecoratedSignature
+}
+
