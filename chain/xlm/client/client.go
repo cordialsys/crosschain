@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"strconv"
 
 	"encoding/base64"
 	"encoding/json"
@@ -16,13 +15,10 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 
-	// "github.com/cordialsys/crosschain/chain/xrp/address/contract"
-	// "github.com/cordialsys/crosschain/chain/xrp/client/events"
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stellar/go/xdr"
-	//"github.com/stellar/go/gxdr"
 )
 
 type Client struct {
@@ -32,8 +28,7 @@ type Client struct {
 }
 
 var _ xclient.FullClient = &Client{}
-
-// var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.ClientWithDecimals = &Client{}
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -65,19 +60,53 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return xc.LegacyTxInfo{}, errors.New("not implemented")
 }
 
-func (client *Client) FetchLatestLedgerInfo() (types.GetLatestLedgerResponse, error) {
-	params := types.NewGetLatestLedgerRequest()
-	var response types.GetLatestLedgerResponse
-	err := client.Send(params, &response)
-	return response, err
+func (client *Client) FetchLedgerInfo(sequence uint64) (types.GetLedgerResult, error) {
+	url := client.GetLedger(sequence)
+	var result types.GetLedgerResult
+	err := client.Get(url, &result)
+	return result, err
+}
+
+// Fetch ledger data and create xclient.TxInfo
+func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTransactionResult) (xclient.TxInfo, error) {
+	chain := client.Asset.GetChain().Chain
+	sTxHash := string(txHash)
+	name := xclient.NewTransactionName(chain, sTxHash)
+	// TODO: It works, but consider using proper ISO8601 parser
+	time, err := time.Parse(time.RFC3339, transaction.CreatedAt)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to parse timestamp: %w", err)
+	}
+
+	ledger, err := client.FetchLedgerInfo(transaction.Ledger)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to get ledger data: %w", err)
+	}
+
+	block := xclient.NewBlock(chain, uint64(transaction.Ledger), ledger.Hash, time)
+	var errMsg *string
+	if transaction.Successful != true {
+		msg := "transaction failed"
+		errMsg = &msg
+	}
+
+	confirmations := ledger.Sequence - transaction.Ledger
+	txInfo := xclient.TxInfo{
+		Name:          name,
+		Hash:          sTxHash,
+		XChain:        chain,
+		Block:         block,
+		Error:         errMsg,
+		Confirmations: confirmations,
+	}
+	return txInfo, nil
 }
 
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
-	params := types.GetTransactionParams{Hash: txHash}
-	txRequest := types.NewTransactionRequest(params)
+	url := client.GetTransactionUrl(string(txHash))
 	var response types.GetTransactionResult
-	err := client.Send(txRequest, &response)
+	err := client.Get(url, &response)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to send http request: %w", err)
 	}
@@ -87,59 +116,77 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		return xclient.TxInfo{}, fmt.Errorf("failed to decode envelope: %w", err)
 	}
 
+	txInfo, err := client.InitializeTxInfo(txHash, response)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to create transaction ifno: %w", err)
+	}
+
 	var envelope xdr.TransactionEnvelope
 	if err := envelope.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %e", err)
 	}
 
-	// decodedTransactionResult, err := base64.StdEncoding.DecodeString(response.ResultXdr)
-	// if err != nil {
-	// 	return xclient.TxInfo{}, fmt.Errorf("failed to decode result: %w", err)
-	// }
-	// var txResult xdr.TransactionResult
-	// if err := txResult.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
-	// 	return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal transaction result XDR", err)
-	// }
+	// Populate movements depending on operation type
+	for _, operation := range envelope.Operations() {
 
-	chain := client.Asset.GetChain().Chain
-	sTxHash := string(txHash)
-	name := xclient.NewTransactionName(chain, sTxHash)
-	timestamp, err := strconv.ParseInt(response.CreatedAt, 10, 64)
+		// Regular transfer from SourceAccount to Destination
+		payment, isPayment := operation.Body.GetPaymentOp()
+		if isPayment {
+			ProcessPayment(&txInfo, GetAssetCode(payment.Asset), *operation.SourceAccount, payment.Destination, payment.Amount)
+		}
+
+		// CreateAccount operation - this can be treated as a regular payment, because it involves the same movements
+		createAccount, isCreateAccount := operation.Body.GetCreateAccountOp()
+		if isCreateAccount {
+			ProcessPayment(&txInfo, "XLM", *operation.SourceAccount, createAccount.Destination.ToMuxedAccount(), createAccount.StartingBalance)
+		}
+
+		// PathPayments involve differenc source and destination assets
+		pathPaymentSend, isPathSend := operation.Body.GetPathPaymentStrictSendOp()
+		if isPathSend {
+			sendAsset := GetAssetCode(pathPaymentSend.SendAsset)
+			destAsset := GetAssetCode(pathPaymentSend.DestAsset)
+			ProcessPathPayment(
+				&txInfo,
+				sendAsset,
+				destAsset,
+				*operation.SourceAccount,
+				pathPaymentSend.Destination,
+				pathPaymentSend.SendAmount,
+				pathPaymentSend.DestMin)
+		}
+
+		// PathPayments involve differenc source and destination assets
+		pathPaymentReceive, isPathReceive := operation.Body.GetPathPaymentStrictReceiveOp()
+		if isPathReceive {
+			sendAsset := GetAssetCode(pathPaymentReceive.SendAsset)
+			destAsset := GetAssetCode(pathPaymentReceive.DestAsset)
+			ProcessPathPayment(
+				&txInfo,
+				sendAsset,
+				destAsset,
+				*operation.SourceAccount,
+				pathPaymentReceive.Destination,
+				pathPaymentReceive.SendMax,
+				pathPaymentReceive.DestAmount)
+		}
+	}
+
+	// Add Fee movement
+	txAccount := envelope.SourceAccount()
+	feeAccount, err := txAccount.GetAddress()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to parse timestamp: %w", err)
-	}
-	blockTime := time.Unix(timestamp, 0)
-	// TODO: Replace sTxHash with LedgerHash
-	block := xclient.NewBlock(chain, uint64(response.Ledger), sTxHash, blockTime)
-	transaction := types.Transaction{
-		SourceAccount: envelope.SourceAccount().ToAccountId().GoString(),
-		Fee:           envelope.Fee(),
-		SeqNum:        envelope.SeqNum(),
-		Operations:    envelope.Operations(),
-		Signatures:    envelope.Signatures(),
-	}
-	fmt.Printf("\nResponse: %v\n\n", transaction)
-
-	ledger, err := client.FetchLatestLedgerInfo()
-	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get ledger data: %w", err)
+		return xclient.TxInfo{}, fmt.Errorf("failed to get transaction account: %w", err)
 	}
 
-	var errMsg *string
-	if response.Status == "FAILED" {
-		msg := "transaction failed"
-		errMsg = &msg
+	feeAmount, err := xc.NewAmountHumanReadableFromStr(response.FeeCharged)
+	if err != nil{
+		return xclient.TxInfo{}, fmt.Errorf("failed to parse fee charged: %w", err)
 	}
-
-	confirmations := ledger.Sequence - response.Ledger
-	txInfo := xclient.TxInfo{
-		Name:   name,
-		Hash:   sTxHash,
-		XChain: chain,
-		Block:  block,
-		Error:  errMsg,
-		Confirmations: confirmations,
-	}
+	// FeeCharged is returned in "stroops", which is the smallest amount of lumen, so we can ignore the decimals
+	xcFee := feeAmount.ToBlockchain(0)
+	txInfo.AddFee(xc.Address(feeAccount), "", xcFee, nil)
+	txInfo.Fees = txInfo.CalculateFees()
 
 	return txInfo, nil
 }
@@ -156,36 +203,117 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return 0, errors.New("not implemented")
 }
 
-func (client *Client) Send(requestBody types.RPCRequest, response any) error {
+func (client *Client) GetTransactionUrl(txHash string) string {
+	return fmt.Sprintf("%s/transactions/%s", client.Url, txHash)
+}
+
+func (client *Client) GetLedger(sequence uint64) string {
+	return fmt.Sprintf("%s/ledgers/%d", client.Url, sequence)
+}
+
+// Send a POST request
+func (client *Client) Post(url string, requestBody any, response any) error {
 	jsonPayload, err := json.Marshal(requestBody)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request payload: %w", err)
 	}
 
-	request, err := http.NewRequest(MethodPost, client.Url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return fmt.Errorf("failed to create new HTTP request: %w", err)
-	}
-	request.Header.Add("Content-Type", "application/json")
-
-	resp, err := client.HttpClient.Do(request)
+	resp, err := client.HttpClient.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
+		return fmt.Errorf("failed to post, HTTP status: %s", resp.Status)
 	}
 
-	wrappedResponse := types.RPCResponse{}
-	wrappedResponse.Result = response
-
-	if err := json.NewDecoder(resp.Body).Decode(&wrappedResponse); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return fmt.Errorf("failed to decode response body: %w", err)
 	}
 
 	return nil
 }
 
-const MethodPost string = "POST"
+// Send a GET request
+func (client *Client) Get(url string, response any) error {
+	resp, err := client.HttpClient.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to execute HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to get, HTTP status: %s", resp.Status)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return fmt.Errorf("failed to decode response body: %w", err)
+	}
+
+	return nil
+}
+
+// Conversion from xdr.Asset to xc.NativeAsset
+func GetAssetCode(asset xdr.Asset) xc.NativeAsset {
+	code := asset.GetCode()
+	// Native ("XLM") is used if xdr.Asset is ""
+	if code == "" {
+		code = "XLM"
+	}
+	return xc.NativeAsset(code)
+}
+
+// Process payment like operation. This type of operations produce one movement containing source and destination.
+func ProcessPayment(txInfo *xclient.TxInfo, asset xc.NativeAsset, source xdr.MuxedAccount, destination xdr.MuxedAccount, amount xdr.Int64) error {
+	if txInfo == nil {
+		return errors.New("missing txInfo")
+	}
+
+	sourceAccount, err := source.GetAddress()
+	if err != nil {
+		return fmt.Errorf("failed to get source account: %w", err)
+	}
+
+	destinationAccount, err := destination.GetAddress()
+	if err != nil {
+		return fmt.Errorf("failed to get destination account: %w", err)
+	}
+
+	movement := xclient.NewMovement(xc.NativeAsset(asset), "")
+	xcAmount := xc.NewAmountBlockchainFromInt64(int64(amount))
+	movement.AddSource(xc.Address(sourceAccount), xcAmount, nil)
+	movement.AddDestination(xc.Address(destinationAccount), xcAmount, nil)
+
+	txInfo.AddMovement(movement)
+	return nil
+}
+
+// Process cross asset payments. This type of operation produce two movements: one for source account and one for destination account
+func ProcessPathPayment(txInfo *xclient.TxInfo, sourceAsset xc.NativeAsset, destinationAsset xc.NativeAsset, source xdr.MuxedAccount, destination xdr.MuxedAccount, sourceAmount xdr.Int64, destinationAmount xdr.Int64) error {
+	if txInfo == nil {
+		return errors.New("missing txInfo")
+	}
+
+	sourceAccount, err := source.GetAddress()
+	if err != nil {
+		return fmt.Errorf("failed to get source account: %w", err)
+	}
+
+	destinationAccount, err := destination.GetAddress()
+	if err != nil {
+		return fmt.Errorf("failed to get destination account: %w", err)
+	}
+
+	xcSourceAmount := xc.NewAmountBlockchainFromInt64(int64(sourceAmount))
+	sourceMovement := xclient.NewMovement(sourceAsset, "")
+	sourceMovement.AddSource(xc.Address(sourceAccount), xcSourceAmount, nil)
+	txInfo.AddMovement(sourceMovement)
+
+	xcDestinationAmount := xc.NewAmountBlockchainFromInt64(int64(destinationAmount))
+	destinationMovement := xclient.NewMovement(destinationAsset, "")
+	destinationMovement.AddDestination(xc.Address(destinationAccount), xcDestinationAmount, nil)
+	txInfo.AddMovement(destinationMovement)
+
+	return nil
+}

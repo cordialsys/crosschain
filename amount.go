@@ -121,6 +121,16 @@ func MultiplyByFloat(amount AmountBlockchain, multiplier float64) AmountBlockcha
 }
 
 // NewAmountBlockchainFromUint64 creates a new AmountBlockchain from a uint64
+func NewAmountBlockchainFromInt64(i64 int64) AmountBlockchain {
+	abs := uint64(i64)
+	if i64 < 0 {
+		abs = uint64(-i64)
+	}
+	bigInt := new(big.Int).SetUint64(abs)
+	return AmountBlockchain(*bigInt)
+}
+
+// NewAmountBlockchainFromUint64 creates a new AmountBlockchain from a uint64
 func NewAmountBlockchainFromUint64(u64 uint64) AmountBlockchain {
 	bigInt := new(big.Int).SetUint64(u64)
 	return AmountBlockchain(*bigInt)
