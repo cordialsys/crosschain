@@ -25,11 +25,6 @@ import (
 	//"github.com/stellar/go/gxdr"
 )
 
-const (
-	jsonrpcVersion = "2.0"
-	requestId      = 0
-)
-
 type Client struct {
 	Url        string
 	HttpClient *http.Client
@@ -68,6 +63,13 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 // Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	return xc.LegacyTxInfo{}, errors.New("not implemented")
+}
+
+func (client *Client) FetchLatestLedgerInfo() (types.GetLatestLedgerResponse, error) {
+	params := types.NewGetLatestLedgerRequest()
+	var response types.GetLatestLedgerResponse
+	err := client.Send(params, &response)
+	return response, err
 }
 
 // Returns transaction info - new endpoint
@@ -109,14 +111,19 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	blockTime := time.Unix(timestamp, 0)
 	// TODO: Replace sTxHash with LedgerHash
 	block := xclient.NewBlock(chain, uint64(response.Ledger), sTxHash, blockTime)
-	transaction := types.Transaction {
+	transaction := types.Transaction{
 		SourceAccount: envelope.SourceAccount().ToAccountId().GoString(),
-		Fee: envelope.Fee(),
-		SeqNum: envelope.SeqNum(),
-		Operations: envelope.Operations(),
-		Signatures: envelope.Signatures(),
+		Fee:           envelope.Fee(),
+		SeqNum:        envelope.SeqNum(),
+		Operations:    envelope.Operations(),
+		Signatures:    envelope.Signatures(),
 	}
 	fmt.Printf("\nResponse: %v\n\n", transaction)
+
+	ledger, err := client.FetchLatestLedgerInfo()
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to get ledger data: %w", err)
+	}
 
 	var errMsg *string
 	if response.Status == "FAILED" {
@@ -124,12 +131,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		errMsg = &msg
 	}
 
+	confirmations := ledger.Sequence - response.Ledger
 	txInfo := xclient.TxInfo{
-		Name: name,
-		Hash: sTxHash,
+		Name:   name,
+		Hash:   sTxHash,
 		XChain: chain,
-		Block: block,
-		Error: errMsg,
+		Block:  block,
+		Error:  errMsg,
+		Confirmations: confirmations,
 	}
 
 	return txInfo, nil
