@@ -35,7 +35,7 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 
 	address, err := builder.GetAddressFromPublicKey([]byte{1, 2, 3})
 	require.Equal(xc.Address(""), address)
-	require.EqualError(err, "invalid sr25519 public key")
+	require.ErrorContains(err, "invalid ed25519 public key")
 }
 
 func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
