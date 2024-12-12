@@ -421,8 +421,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (
 		return zero, err
 	}
 
-	// var acctInfo api.AccountInfoMinimal
-	var acctInfo types.AccountInfo
+	var acctInfo api.AccountInfoMinimal
 	ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &acctInfo)
 	if err != nil {
 		return zero, err

@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
+	"github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/stretchr/testify/require"
 )
@@ -70,11 +71,13 @@ func TestSubstrateChainsHavePrefix(t *testing.T) {
 					require.NoError(err, help)
 
 					// check indexer url
-					help = fmt.Sprintf("Invalid configuration for %s %s. Need indexer_url set for supported subscan or taostats endpoint, see https://support.subscan.io/",
-						cfg.Config.Network,
-						chain.Chain,
-					)
-					require.NotEmpty(chain.IndexerUrl, help)
+					if chain.IndexerType != client.IndexerRpc {
+						help = fmt.Sprintf("Invalid configuration for %s %s. Need to use 'rpc' or set indexer_url for supported subscan or taostats endpoint, see https://support.subscan.io/",
+							cfg.Config.Network,
+							chain.Chain,
+						)
+						require.NotEmpty(chain.IndexerUrl, help)
+					}
 				}
 			}
 		}

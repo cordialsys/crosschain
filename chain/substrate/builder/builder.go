@@ -49,14 +49,12 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if err != nil {
 		return &tx.Tx{}, err
 	}
-	receiver, err := address.Decode(to)
+	receiver, err := address.DecodeMulti(to)
 	if err != nil {
 		return &tx.Tx{}, err
 	}
 
-	// We use transfer_keep_alive to avoid accounts being reaped for sending too much balance that it no longer has the
-	// existential deposit. This would cause the account to get reaped, which can cause future TXs to have duped hashes
-	call, err := tx_input.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompactFromUInt(amount.Uint64()))
+	call, err := tx_input.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompact(amount.Int()))
 	if err != nil {
 		return &tx.Tx{}, err
 	}
