@@ -52,7 +52,7 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockch
 		if err != nil {
 			return args, err
 		}
-	case xc.DriverCosmos, xc.DriverSolana:
+	case xc.DriverCosmos, xc.DriverSolana, xc.DriverSubstrate:
 		if _, ok := args.GetValidator(); !ok {
 			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
 		}
