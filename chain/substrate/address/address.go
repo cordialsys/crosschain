@@ -56,19 +56,28 @@ func DecodeMulti(addr xc.Address) (types.MultiAddress, error) {
 	if len(decodedVal) < 34 {
 		return types.MultiAddress{}, fmt.Errorf("address %s is too short", addr)
 	}
-	newAddr, err := types.NewMultiAddressFromAccountID(decodedVal[1:33])
+	newAddr, err := types.NewMultiAddressFromAccountID(last32DropChecksum(decodedVal))
 	if err != nil {
 		return types.MultiAddress{}, fmt.Errorf("invalid address %s: %v", addr, err)
 	}
 	return newAddr, nil
 }
 
+// Decoding address without checking the checksum
+func last32DropChecksum(decoded []byte) []byte {
+	// drop the 2 checksum bytes
+	decoded = decoded[:len(decoded)-2]
+	// take the last 32 bytes (ignores the 1-2 byte prefix)
+	return decoded[len(decoded)-32:]
+}
+
 func Decode(addr xc.Address) (*types.AccountID, error) {
+
 	decodedVal := base58.Decode(string(addr))
 	if len(decodedVal) < 34 {
 		return &types.AccountID{}, fmt.Errorf("address %s is too short", addr)
 	}
-	newAddr, err := types.NewAccountID(decodedVal[1:33])
+	newAddr, err := types.NewAccountID(last32DropChecksum(decodedVal))
 	if err != nil {
 		return &types.AccountID{}, fmt.Errorf("invalid address %s: %v", addr, err)
 	}

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/btcsuite/btcutil/base58"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
@@ -133,7 +132,7 @@ func (client *Client) FetchTxInputChain() (*types.Metadata, *tx_input.TxInput, e
 }
 
 func (client *Client) FetchAccountNonce(meta types.Metadata, from xc.Address) (uint64, error) {
-	sender, err := types.NewMultiAddressFromAccountID(base58.Decode(string(from))[1:33])
+	sender, err := address.DecodeMulti(from)
 	if err != nil {
 		return 0, err
 	}
@@ -405,26 +404,36 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 }
 
 // FetchNativeBalance fetches account balance for a Substrate address
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	meta, err := client.DotClient.RPC.State.GetMetadataLatest()
 	if err != nil {
 		return zero, err
 	}
 
-	key, err := types.CreateStorageKey(meta, "System", "Account", base58.Decode(string(address))[1:33])
+	addrBz, err := address.Decode(addr)
 	if err != nil {
 		return zero, err
 	}
 
-	var acctInfo api.AccountInfoMinimal
-	// var acctInfo types.AccountInfo
-	ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &acctInfo)
-	if err != nil || !ok {
+	key, err := types.CreateStorageKey(meta, "System", "Account", addrBz.ToBytes())
+	if err != nil {
 		return zero, err
 	}
 
-	return xc.NewAmountBlockchainFromUint64(acctInfo.Data.Free.Uint64()), nil
+	// var acctInfo api.AccountInfoMinimal
+	var acctInfo types.AccountInfo
+	ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &acctInfo)
+	if err != nil {
+		return zero, err
+	}
+
+	if !ok {
+		// logrus.WithField("address", addr).WithError(err).Warn("could not locate a balance entry")
+		return zero, nil
+	}
+
+	return xc.AmountBlockchain(*acctInfo.Data.Free.Int), nil
 }
 
 // FetchBalance fetches token balance for a Substrate address
