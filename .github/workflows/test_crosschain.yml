@@ -31,6 +31,8 @@ jobs:
           - chain: BTC
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest
+          - chain: TAO
+            image: us-docker.pkg.dev/cordialsys/crosschain/bittensor:latest
 
     runs-on: ubuntu-latest
     steps:

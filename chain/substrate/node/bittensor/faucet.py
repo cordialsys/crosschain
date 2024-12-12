@@ -60,8 +60,8 @@ def fund(chain_id:str, contract: str):
     password = os.getenv("PASSWORD", "")
 
     system(f"btcli wallet transfer --amount {tao} --destination {address} -y --wallet-name xc --subtensor.chain_endpoint ws://localhost:{RPC_PORT}")
-    # wait for block (depends on resync period of blockbook)
-    time.sleep(0.1)
+    # wait for block
+    time.sleep(10)
 
     return {
     }
