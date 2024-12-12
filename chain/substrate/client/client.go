@@ -301,7 +301,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.BlockIndex = ext.BlockNumber
 		tx.BlockTime = ext.Timestamp.Unix()
 
-	} else if client.Asset.GetChain().IndexerType == IndexerSubQuery {
+	} else if client.Asset.GetChain().IndexerType == IndexerSubScan {
 		// support querying by either hash and extrinsic ID
 		var reqBody string
 		if _, _, err = api.BlockAndOffset(txHash).Parse(); err == nil {
@@ -337,7 +337,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if maxDepth <= 0 {
 			maxDepth = 100
 		}
-		rawClient := rpc.NewClient(client.DotClient, maxDepth)
+		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.Asset.GetChain().ScanDelay)
 		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
 			return xc.LegacyTxInfo{}, err

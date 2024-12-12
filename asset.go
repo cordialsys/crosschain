@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 )
 
 type SignatureType string
@@ -369,6 +370,8 @@ type ChainConfig struct {
 	IndexerType string `yaml:"indexer_type,omitempty"`
 	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
 	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
+	// Optional delay inbetween scanning
+	ScanDelay time.Duration `yaml:"scan_delay,omitempty"`
 
 	// PollingPeriod string `yaml:"polling_period,omitempty"`
 	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
