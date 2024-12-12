@@ -110,13 +110,14 @@ func TestBalance(t *testing.T) {
 		defer rpcClose()
 
 		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:      "DOT",
-			Driver:     "substrate",
-			URL:        rpc.URL,
-			IndexerUrl: "subscan",
-			AuthSecret: "aaa",
-			Decimals:   10,
-			ChainID:    0,
+			Chain:       "DOT",
+			Driver:      "substrate",
+			URL:         rpc.URL,
+			IndexerType: client.IndexerSubScan,
+			IndexerUrl:  "subscan",
+			AuthSecret:  "aaa",
+			Decimals:    10,
+			ChainID:     0,
 		})
 		require.NoError(err)
 		require.NotNil(client.DotClient)

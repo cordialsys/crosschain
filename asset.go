@@ -28,6 +28,7 @@ const (
 	ATOM   = NativeAsset("ATOM")   // Cosmos
 	AurETH = NativeAsset("AurETH") // Aurora
 	AVAX   = NativeAsset("AVAX")   // Avalanche
+	BASE   = NativeAsset("BASE")   // BASE
 	BERA   = NativeAsset("BERA")   // Berachain
 	BCH    = NativeAsset("BCH")    // Bitcoin Cash
 	BNB    = NativeAsset("BNB")    // Binance Coin
@@ -37,6 +38,7 @@ const (
 	CHZ2   = NativeAsset("CHZ2")   // Chiliz 2.0
 	DOGE   = NativeAsset("DOGE")   // Dogecoin
 	DOT    = NativeAsset("DOT")    // Polkadot
+	ENJ    = NativeAsset("ENJ")    // Enjin
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
@@ -51,6 +53,7 @@ const (
 	KSM    = NativeAsset("KSM")    // Kusama
 	XDC    = NativeAsset("XDC")    // XinFin
 	MATIC  = NativeAsset("MATIC")  // Polygon
+	NOBLE  = NativeAsset("NOBLE")  // Noble Chain
 	OAS    = NativeAsset("OAS")    // Oasys (not Oasis!)
 	OptETH = NativeAsset("OptETH") // Optimism
 	EmROSE = NativeAsset("EmROSE") // Rose (Oasis EVM-compat "Emerald" parachain)
@@ -63,8 +66,6 @@ const (
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
 	XRP    = NativeAsset("XRP")    // XRP
-	BASE   = NativeAsset("BASE")   // BASE
-	NOBLE  = NativeAsset("NOBLE")  // Noble Chain
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -84,6 +85,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	CHZ,
 	CHZ2,
 	DOT,
+	ENJ,
 	ETC,
 	ETH,
 	ETHW,
@@ -223,7 +225,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSui
 	case SOL:
 		return DriverSolana
-	case DOT, TAO, KSM:
+	case DOT, TAO, KSM, ENJ:
 		return DriverSubstrate
 	case TRX:
 		return DriverTron

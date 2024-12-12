@@ -93,6 +93,15 @@ chains:
     chain_id: 63
     chain_name: Ethereum Classic (Mordor)
     decimals: 18
+  ENJ:
+    chain: ENJ
+    driver: substrate
+    indexer_url: "https://canary.api.subscan.io"
+    indexer_type: subscan
+    chain_name: Enjin Canary Matrix
+    decimals: 18
+    chain_prefix: "9030"
+
   ETH:
     chain: ETH
     driver: evm
@@ -233,7 +242,7 @@ chains:
     decimals: 9
     chain_name: Bittensor
     chain_prefix: "42"
-    disabled: true
+    indexer_type: rpc
   TRX:
     chain: TRX
     driver: tron

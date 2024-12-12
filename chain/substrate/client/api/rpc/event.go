@@ -103,6 +103,8 @@ func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
 		return uint64(decoded), true
 	case uint64:
 		return decoded, true
+	case types.U128:
+		return decoded.String(), true
 	default:
 		bz, _ := json.MarshalIndent(decoded, "", "  ")
 		fmt.Println(string(bz))

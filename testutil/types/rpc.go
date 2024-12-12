@@ -69,7 +69,11 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 				responseBody, err = json.Marshal(curResponse)
 				require.NoError(t, err)
 			}
-			log.Println("<<rpc", string(responseBody))
+			if len(responseBody) > 100*1024 {
+				log.Println("<<rpc", fmt.Sprintf("[omitted %d byte response]", len(responseBody)))
+			} else {
+				log.Println("<<rpc", string(responseBody))
+			}
 			rw.Write(responseBody)
 		})),
 	}

@@ -207,6 +207,20 @@ chains:
         asset_id: "6636"
       coin_gecko:
         asset_id: polkadot
+  ENJ:
+    chain: ENJ
+    driver: substrate
+    indexer_url: "https://enjin.api.subscan.io"
+    indexer_type: subscan
+    decimals: 18
+    chain_name: Enjin Relay
+    chain_prefix: "2135"
+    external:
+      dti: M9LNQXMNV
+      coin_market_cap:
+        asset_id: "2130"
+      coin_gecko:
+        asset_id: enjincoin
   ETC:
     chain: ETC
     driver: evm-legacy
@@ -491,8 +505,9 @@ chains:
     decimals: 9
     chain_name: Bittensor
     chain_prefix: "42"
-    indexer_url: "https://api.taostats.io"
-    indexer_type: taostats
+    # indexer_url: "https://api.taostats.io"
+    # indexer_type: taostats
+    indexer_type: rpc
     external:
       coin_market_cap:
         asset_id: "22974"
