@@ -1,7 +1,6 @@
 package address
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -28,9 +27,14 @@ func NewAddressBuilder(cfgI xc.ITask) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	// Converts from sr25519 (32 bytes) to SS58
+	if len(publicKeyBytes) == 33 {
+		// drop address identifier?
+		publicKeyBytes = publicKeyBytes[1:]
+	}
+	// Converts from ed25519 (32 bytes) to SS58
 	if len(publicKeyBytes) != 32 {
-		return xc.Address(""), errors.New("invalid sr25519 public key")
+		fmt.Println(publicKeyBytes[0], "vs", ab.chainPrefix)
+		return xc.Address(""), fmt.Errorf("invalid ed25519 public key, expecting %d bytes but got %d", 32, len(publicKeyBytes))
 	}
 	addr := subkey.SS58Encode(publicKeyBytes, ab.chainPrefix)
 	return xc.Address(addr), nil
