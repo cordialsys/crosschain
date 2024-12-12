@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/taostats"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,23 +47,35 @@ var _ xclient.StakingClient = &Client{}
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	rpcurl := cfgI.GetChain().URL
 
-	txInfoClientI, err := NewTxInfoClient(cfgI)
-	if err != nil {
-		return nil, err
-	}
-	txInfoClient := txInfoClientI.(*Client)
-
 	client, err := gsrpc.NewSubstrateAPI(rpcurl)
 	if err != nil {
 		// We sack error here since we don't want to fail on connectivity in contructor.
 		// instead, we'll fail later when FetchBalance or something is called.
 		logrus.Warnf("invalid rpc url: %v", err)
 	}
+	indexerUrl := cfgI.GetChain().IndexerUrl
+	apiKey := cfgI.GetChain().AuthSecret
+
+	if cfgI.GetChain().IndexerType != IndexerRpc {
+		help := fmt.Sprintf(`The substrate driver relies on a supported subscan indexer (%v).\n`+
+			`This is used only to download transactions (extrinics) by their hash, as this is not natively supported by substrate chains.`, SupportedIndexers)
+		if indexerUrl == "" {
+			return nil, fmt.Errorf(`must set .indexer_url\n` + help)
+		}
+		if cfgI.GetChain().IndexerType == IndexerSubQuery {
+			// do not require api key
+		} else {
+			if apiKey == "" {
+				return nil, fmt.Errorf(`must set .api-key\n` + help)
+			}
+		}
+	}
+
 	return &Client{
 		DotClient:  client,
 		Asset:      cfgI,
-		indexerUrl: txInfoClient.indexerUrl,
-		apiKey:     txInfoClient.apiKey,
+		indexerUrl: indexerUrl,
+		apiKey:     apiKey,
 	}, nil
 }
 
@@ -72,30 +84,6 @@ type TxInfoClient interface {
 	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
 	// Fetching transaction info
 	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error)
-}
-
-func NewTxInfoClient(cfgI xc.ITask) (TxInfoClient, error) {
-	indexerUrl := cfgI.GetChain().IndexerUrl
-	apiKey := cfgI.GetChain().AuthSecret
-
-	help := fmt.Sprintf(`The substrate driver relies on a supported subscan indexer (%v).\n`+
-		`This is used only to download transactions (extrinics) by their hash, as this is not natively supported by substrate chains.`, SupportedIndexers)
-	if indexerUrl == "" {
-		return nil, fmt.Errorf(`must set .indexer_url\n` + help)
-	}
-	if cfgI.GetChain().IndexerType == IndexerSubQuery || cfgI.GetChain().IndexerType == IndexerRpc {
-		// do not require api key
-	} else {
-		if apiKey == "" {
-			return nil, fmt.Errorf(`must set .api-key\n` + help)
-		}
-	}
-	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
-	return &Client{
-		Asset:      cfgI,
-		indexerUrl: indexerUrl,
-		apiKey:     apiKey,
-	}, nil
 }
 
 func (client *Client) FetchTxInputChain() (*types.Metadata, *tx_input.TxInput, error) {
@@ -214,7 +202,11 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	logrus.WithField("tx", encoded).Debug("submitting tx")
 	err = client.DotClient.Client.Call(&res, "author_submitExtrinsic", encoded)
 	if err != nil {
-		return AsRpcErrorMaybe(err)
+		err = AsRpcErrorMaybe(err)
+		if strings.Contains(strings.ToLower(err.Error()), "transaction already imported") {
+			return errors.TransactionExistsf("%v", err)
+		}
+		return err
 	}
 	return nil
 }
@@ -316,7 +308,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var txInfoResp subscan.SubscanExtrinsicResponse
 		subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, &subscan.ClientArgs{ApiKey: client.apiKey})
 		if len(txInfoResp.Data.BlockHash) == 0 {
-			return xc.LegacyTxInfo{}, errors.New("not found")
+			return xc.LegacyTxInfo{}, fmt.Errorf("not found")
 		}
 
 		for _, ev := range txInfoResp.Data.Event {
