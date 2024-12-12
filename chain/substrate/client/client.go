@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -312,7 +313,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			reqBody = `{"hash": "` + string(txHash) + `"}`
 		}
 
-		fmt.Println(txHash, string(reqBody))
+		// fmt.Println(txHash, string(reqBody))
 		var txInfoResp subscan.SubscanExtrinsicResponse
 		subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, &subscan.ClientArgs{ApiKey: client.apiKey})
 		if len(txInfoResp.Data.BlockHash) == 0 {
@@ -332,14 +333,30 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.BlockIndex = int64(txInfoResp.Data.BlockNum)
 		tx.BlockTime = int64(txInfoResp.Data.BlockTimestamp)
 	} else {
-
-		rawClient := rpc.NewClient(client.DotClient, 100)
-		_, err = rawClient.GetTx(ctx, string(txHash))
+		maxDepth := client.Asset.GetChain().MaxScanDepth
+		if maxDepth <= 0 {
+			maxDepth = 100
+		}
+		rawClient := rpc.NewClient(client.DotClient, maxDepth)
+		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
 			return xc.LegacyTxInfo{}, err
 		}
-
-		return xc.LegacyTxInfo{}, fmt.Errorf("DONE!")
+		eventsI = txInfo.Events
+		tx.TxID = "0x" + hex.EncodeToString(txInfo.ExtrinsicHash)
+		_, fee, err := txInfo.Fee(addressBuilder)
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+		tx.Fee = fee
+		tx.BlockHash = "0x" + hex.EncodeToString(txInfo.BlockHash[:])
+		tx.BlockIndex = int64(txInfo.Block.Block.Header.Number)
+		// unfortunately there is no way to determine the block time that i can find.
+		tx.BlockTime = 0
+		failure, ok := txInfo.Failure()
+		if ok {
+			tx.Error = failure
+		}
 	}
 	if client.DotClient != nil && tx.Confirmations == 0 {
 		// calculate confirmations
@@ -353,6 +370,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	tx.Sources, tx.Destinations, err = api.ParseEvents(addressBuilder, chain, eventsI)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
+	}
+
+	stakes, unstakes, err := api.ParseStakingEvents(addressBuilder, chain, eventsI)
+	if err != nil {
+		return xc.LegacyTxInfo{}, err
+	}
+	for _, ev := range stakes {
+		tx.AddStakeEvent(ev)
+	}
+	for _, ev := range unstakes {
+		tx.AddStakeEvent(ev)
 	}
 
 	if len(tx.Sources) > 0 {

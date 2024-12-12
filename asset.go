@@ -367,6 +367,8 @@ type ChainConfig struct {
 	// may be set here.
 	IndexerUrl  string `yaml:"indexer_url,omitempty"`
 	IndexerType string `yaml:"indexer_type,omitempty"`
+	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
+	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
 
 	// PollingPeriod string `yaml:"polling_period,omitempty"`
 	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
