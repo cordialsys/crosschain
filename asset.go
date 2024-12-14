@@ -249,7 +249,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm:
 		return Ed255
 	}
 	return ""

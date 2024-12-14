@@ -37,6 +37,7 @@ import (
 	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
+	xlmaddress "github.com/cordialsys/crosschain/chain/xlm/address"
 	xlmclient "github.com/cordialsys/crosschain/chain/xlm/client" 
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
@@ -173,6 +174,8 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return tonaddress.NewAddressBuilder(cfg)
 	case DriverXrp:
 		return xrpaddress.NewAddressBuilder(cfg)
+	case DriverXlm:
+		return xlmaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.ID()))
 }
