@@ -180,7 +180,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	}
 
 	feeAmount, err := xc.NewAmountHumanReadableFromStr(response.FeeCharged)
-	if err != nil{
+	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to parse fee charged: %w", err)
 	}
 	// FeeCharged is returned in "stroops", which is the smallest amount of lumen, so we can ignore the decimals
@@ -192,11 +192,40 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return xc.AmountBlockchain{}, errors.New("not implemented")
+	return client.FetchBalanceByAsset(address, true, xc.NativeAsset("XLM"))
+}
+
+// Fetch asset balance by asset code
+func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, asset xc.NativeAsset) (xc.AmountBlockchain, error) {
+	url := client.GetAccountUrl(string(address))
+	var response types.GetAccountResult
+	if err := client.Get(url, &response); err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch account balances: %w", err)
+	}
+
+	// Asset code is omited for native currency
+	if asset == "XLM" {
+		asset = ""
+	}
+	for _, balance := range response.Balances {
+		if balance.AssetType == types.AssetTypeLiquidityPoolShares {
+			continue
+		}
+
+		if balance.AssetCode == string(asset) {
+			readableAmount, err := xc.NewAmountHumanReadableFromStr(balance.Balance)
+			if err != nil {
+				return xc.AmountBlockchain{}, fmt.Errorf("failed to read balance decimal: %w", err)
+			}
+			blockchainAmount := readableAmount.ToBlockchain(client.Asset.GetChain().GetDecimals())
+			return blockchainAmount, nil
+		}
+	}
+	return xc.AmountBlockchain{}, nil
 }
 
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return xc.AmountBlockchain{}, errors.New("not implemented")
+	return client.FetchBalanceByAsset(address, true, client.Asset.GetChain().Chain)
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
@@ -205,6 +234,10 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 
 func (client *Client) GetTransactionUrl(txHash string) string {
 	return fmt.Sprintf("%s/transactions/%s", client.Url, txHash)
+}
+
+func (client *Client) GetAccountUrl(address string) string {
+	return fmt.Sprintf("%s/accounts/%s", client.Url, address)
 }
 
 func (client *Client) GetLedger(sequence uint64) string {
