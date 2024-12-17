@@ -1,3 +1,11 @@
+# Notes:
+# confirmations_final may be taken from what exchanges use:
+#   - ByBit: https://www.bybit.com/en/announcement-info/deposit-withdraw/
+#   - Binance: https://www.binance.th/en/faq/crypto-deposit-%7C-withdrawal/3d76576f070d4c19bddac5279f37bd10
+#   - Robinhood: https://robinhood.com/us/en/support/articles/crypto-transfers/#Cryptodepositprocessingtimes
+# external.coin_gecko.asset_id: Take from CoinGecko page for the asset.
+# external.coin_market_cap.asset_id: Take from CoinMarketCap page for the asset.
+
 network: "mainnet"
 chains:
   ACA:
@@ -6,6 +14,7 @@ chains:
     chain_id: 787
     chain_name: Acala
     decimals: 12
+    confirmations_final: 4
     external:
       dti:
       coin_gecko:
@@ -18,6 +27,7 @@ chains:
     chain: APTOS
     driver: aptos
     chain_id: 1
+    confirmations_final: 1
     chain_name: Aptos
     chain_coin: "0x1::aptos_coin::AptosCoin"
     decimals: 8
@@ -35,6 +45,7 @@ chains:
     chain_name: Cosmos
     chain_prefix: cosmos
     chain_coin: uatom
+    confirmations_final: 15
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
@@ -51,6 +62,7 @@ chains:
     chain_id: 43114
     chain_name: Avalanche C-Chain
     decimals: 18
+    confirmations_final: 15
     external:
       dti: M3Z631TN4
       coin_market_cap:
@@ -65,6 +77,7 @@ chains:
     chain_name: Arbitrum
     chain_gas_multiplier: 0.05
     decimals: 18
+    confirmations_final: 120
     external:
       dti: PXW7VQ0RC
       coin_market_cap:
@@ -77,6 +90,8 @@ chains:
     chain_id: 1313161554
     chain_name: Aurora
     decimals: 18
+    # using NEAR network for confirmations
+    confirmations_final: 5
     external:
       dti: 3555NMHK2
       coin_market_cap:
@@ -86,6 +101,7 @@ chains:
   BASE:
     chain: BASE
     driver: evm
+    confirmations_final: 64
     chain_name: Base Protocol
     decimals: 18
     external:
@@ -98,6 +114,7 @@ chains:
     provider: blockbook
     chain_name: Bitcoin Cash
     decimals: 8
+    confirmations_final: 15
     external:
       dti: J9K583ZGG
       coin_market_cap:
@@ -121,6 +138,7 @@ chains:
     chain_id: 56
     chain_name: Binance Smart Chain
     decimals: 18
+    confirmations_final: 15
     external:
       dti: HWRGLMT9T
       coin_market_cap:
@@ -135,6 +153,7 @@ chains:
     provider: blockbook
     chain_name: Bitcoin
     decimals: 8
+    confirmations_final: 2
     external:
       dti: 4H95J0R2X
       coin_market_cap:
@@ -147,6 +166,7 @@ chains:
     chain_id: 42220
     chain_name: Celo
     decimals: 18
+    confirmations_final: 1
     external:
       dti: PTN9Z5Q7D
       coin_market_cap:
@@ -170,6 +190,7 @@ chains:
     chain_id: 88888
     chain_name: Chiliz 2.0
     decimals: 18
+    confirmations_final: 40
     external:
       dti: GV9QD1V9M
       coin_market_cap:
@@ -183,6 +204,7 @@ chains:
     provider: blockbook
     chain_name: Dogecoin
     decimals: 8
+    confirmations_final: 15
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
     external:
@@ -200,6 +222,7 @@ chains:
     decimals: 10
     chain_name: Polkadot
     chain_prefix: "0"
+    confirmations_final: 3
     external:
       dti: P5B46MFPP
       coin_market_cap:
@@ -227,6 +250,7 @@ chains:
     chain_id: 61
     chain_name: Ethereum Classic
     decimals: 18
+    confirmations_final: 150
     external:
       dti: GWQWXVV7J
       coin_market_cap:
@@ -239,6 +263,7 @@ chains:
     chain_id: 1
     chain_name: Ethereum
     decimals: 18
+    confirmations_final: 30
     staking:
       # KILN Batch deposit contract
       stake_contract: "0x576834cB068e677db4aFF6ca245c7bde16C3867e"
@@ -258,6 +283,7 @@ chains:
     chain_id: 10001
     chain_name: EthereumPOW
     decimals: 18
+    confirmations_final: 50
     external:
       dti: 5C3LXSVX7
       coin_market_cap:
@@ -270,6 +296,7 @@ chains:
     chain_id: 42262
     chain_name: Oasis
     decimals: 18
+    confirmations_final: 10
     external:
       dti: NVD7LRM61
       coin_market_cap:
@@ -282,6 +309,7 @@ chains:
     chain_id: 250
     chain_name: Fantom
     decimals: 18
+    confirmations_final: 12
     external:
       dti: WS6BZ8225
       coin_market_cap:
@@ -296,6 +324,7 @@ chains:
     chain_name: Provenance
     chain_prefix: pb
     chain_coin: nhash
+    confirmations_final: 15
     chain_coin_hd_path: 1
     decimals: 9
     chain_gas_multiplier: 10.0
@@ -311,6 +340,7 @@ chains:
     chain_name: Injective
     chain_prefix: inj
     chain_coin: inj
+    confirmations_final: 100
     chain_coin_hd_path: 60
     chain_gas_price_default: 5e+08
     decimals: 18
@@ -340,6 +370,7 @@ chains:
     # KLAY wants fixed gas prices (no change/multiplier)
     chain_gas_multiplier: 1
     decimals: 18
+    confirmations_final: 30
     external:
       dti: CNDP5R1T8
       coin_market_cap:
@@ -355,6 +386,7 @@ chains:
     indexer_type: subscan
     chain_name: Kusama
     chain_prefix: "2"
+    confirmations_final: 3
     external:
       dti: MXLJ762RF
       coin_market_cap:
@@ -368,6 +400,7 @@ chains:
     provider: blockbook
     chain_name: Litecoin
     decimals: 8
+    confirmations_final: 6
     external:
       dti: WTX0G7K46
       coin_market_cap:
@@ -382,6 +415,7 @@ chains:
     chain_prefix: terra
     chain_coin: uluna
     chain_coin_hd_path: 330
+    confirmations_final: 30
     decimals: 6
     external:
       dti: NGXHD2ZFQ
@@ -402,6 +436,7 @@ chains:
     chain_gas_price_default: 0.5
     chain_gas_multiplier: 2
     chain_transfer_tax: 0.005
+    confirmations_final: 30
     decimals: 6
     external:
       dti: NGXHD2ZFQ
@@ -419,6 +454,7 @@ chains:
     chain_gas_tip: 20
     decimals: 18
     chain_max_gas_price: 120
+    confirmations_final: 300
     external:
       dti: RQWW6J6K0
       coin_market_cap:
@@ -441,6 +477,7 @@ chains:
     chain_id: 248
     chain_name: Oasys
     decimals: 18
+    confirmations_final: 15
     external:
       coin_market_cap:
         asset_id: "22265"
@@ -452,6 +489,7 @@ chains:
     chain_id: 10
     chain_name: Optimism
     decimals: 18
+    confirmations_final: 64
     external:
       coin_market_cap:
         chain_id: "42"
@@ -467,6 +505,7 @@ chains:
     chain_coin: usei
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
+    confirmations_final: 15
     decimals: 6
     external:
       dti: P4JBC8R50
@@ -480,6 +519,7 @@ chains:
     driver: solana
     chain_name: Solana
     decimals: 9
+    confirmations_final: 200
     external:
       dti: 20J63Z4N3
       coin_market_cap:
@@ -492,6 +532,7 @@ chains:
     driver: sui
     chain_name: Sui
     decimals: 9
+    confirmations_final: 1
     external:
       dti: 90KLX8GQX
       coin_market_cap:
@@ -508,6 +549,7 @@ chains:
     # indexer_url: "https://api.taostats.io"
     # indexer_type: taostats
     indexer_type: rpc
+    confirmations_final: 3
     external:
       coin_market_cap:
         asset_id: "22974"
@@ -524,6 +566,7 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
+    confirmations_final: 6
     external:
       coin_market_cap:
         asset_id: "22861"
@@ -533,6 +576,7 @@ chains:
     chain: TON
     driver: ton
     decimals: 9
+    confirmations_final: 1
     external:
       dti: QBZLT5MT1
       coin_market_cap:
@@ -548,6 +592,7 @@ chains:
     decimals: 6
     # 200 tron fee limit
     chain_max_gas_price: 2000000000
+    confirmations_final: 20
     external:
       dti: 993D8X1FB
       coin_market_cap:
@@ -561,6 +606,7 @@ chains:
     chain_id: 50
     chain_name: XinFin
     decimals: 18
+    confirmations_final: 32
     external:
       dti: CCQZQXFDC
       coin_market_cap:
@@ -588,6 +634,7 @@ chains:
     driver: xrp
     chain_name: xrp
     decimals: 6
+    confirmations_final: 1
     external:
       dti: L6GTZC9G4
       coin_market_cap:
