@@ -270,6 +270,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		to = destinations[0].Address
 		amount = destinations[0].Amount
 	}
+	errMsg := ""
+	if !tx.Success {
+		// APTOS doesn't seem to emit logs if the tx failed, so we should be okay with this.
+		errMsg = "transaction failed"
+	}
 
 	return xc.LegacyTxInfo{
 		To:            to,
@@ -284,6 +289,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		BlockTime:  int64((tx.Timestamp / 1000) / 1000),
 		TxID:       tx.Hash,
 		BlockIndex: int64(tx.Version),
+		Error:      errMsg,
 	}, nil
 }
 

@@ -239,6 +239,32 @@ func (s *AptosTestSuite) TestFetchTxInfo() {
 			},
 			"",
 		},
+		{
+			// 1.234 APTOS failed transaction
+			"0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
+			[]string{
+				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
+				`{"version":"3509309","hash":"0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222","state_change_hash":"0xe0e855e3d08f97fc71a5b41b368800588ac7f8b2e49b29daef4d2577c761fe80","event_root_hash":"0x3846412f44cf58865775791b67093d555c854fbffe153965e325f8744c988a71","state_checkpoint_hash":null,"gas_used":"6","success":false,"vm_status":"Executed successfully","accumulator_root_hash":"0x30c4b395b9da13dfdeb74a341798f20d6c65872594f1e22f8fc734c9378c0747","changes":[],"sender":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682","sequence_number":"1","max_gas_amount":"2000","gas_unit_price":"100","expiration_timestamp_secs":"1683055757286067","payload":{"function":"0x1::aptos_account::transfer","type_arguments":[],"arguments":["0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365","123400000"],"type":"entry_function_payload"},"signature":{"public_key":"0xa09bb3957ad788bfcfd3f7c5eda9ab2876ff0de8db38dafdf439cfe3f96673b6","signature":"0xd488cd2fda4ef325c68e3c7503a7075841f5ba08808fa2014407e18680fc3d4f515be9cdf6c619baa0e680990d7aad2f5f066cdba778598b28cc8dc3108f420c","type":"ed25519_signature"},"events":[{"guid":{"creation_number":"3","account_address":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"},"sequence_number":"1","type":"0x1::coin::WithdrawEvent","data":{"amount":"123400000"}},{"guid":{"creation_number":"2","account_address":"0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365"},"sequence_number":"730","type":"0x1::coin::DepositEvent","data":{"amount":"123400000"}}],"timestamp":"1683055759739669","type":"user_transaction"}`,
+				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
+				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
+			},
+			xc.LegacyTxInfo{
+				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
+				BlockHash:       "3509309",
+				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
+				To:              "",
+				ToAlt:           "",
+				ContractAddress: "",
+				Fee:             xc.NewAmountBlockchainFromUint64(600),
+				BlockIndex:      3509309,
+				BlockTime:       1683055759,
+				Confirmations:   7334,
+				Sources:         []*xc.LegacyTxInfoEndpoint{},
+				Destinations:    []*xc.LegacyTxInfoEndpoint{},
+				Error:           "transaction failed",
+			},
+			"",
+		},
 	}
 
 	for _, v := range vectors {
