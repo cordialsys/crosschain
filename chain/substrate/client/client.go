@@ -291,6 +291,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.Fee = xc.NewAmountBlockchainFromStr(ext.Fee)
 		tx.BlockIndex = ext.BlockNumber
 		tx.BlockTime = ext.Timestamp.Unix()
+		if ext.Error != nil {
+			tx.Error = *ext.Error
+		}
 
 	} else if client.Asset.GetChain().IndexerType == IndexerSubScan {
 		// support querying by either hash and extrinsic ID
@@ -323,6 +326,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.Fee = xc.NewAmountBlockchainFromStr(txInfoResp.Data.Fee)
 		tx.BlockIndex = int64(txInfoResp.Data.BlockNum)
 		tx.BlockTime = int64(txInfoResp.Data.BlockTimestamp)
+		if txInfoResp.Data.Error != nil {
+			errBz, _ := json.Marshal(txInfoResp.Data.Error)
+			tx.Error = string(errBz)
+		}
+
 	} else {
 		maxDepth := client.Asset.GetChain().MaxScanDepth
 		if maxDepth <= 0 {
@@ -335,19 +343,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		eventsI = txInfo.Events
 		tx.TxID = "0x" + hex.EncodeToString(txInfo.ExtrinsicHash)
-		_, fee, err := txInfo.Fee(addressBuilder)
-		if err != nil {
-			return xc.LegacyTxInfo{}, err
-		}
-		tx.Fee = fee
+
 		tx.BlockHash = "0x" + hex.EncodeToString(txInfo.BlockHash[:])
 		tx.BlockIndex = int64(txInfo.Block.Block.Header.Number)
 		// unfortunately there is no way to determine the block time that i can find.
 		tx.BlockTime = 0
-		failure, ok := txInfo.Failure()
-		if ok {
-			tx.Error = failure
-		}
+
 	}
 	if client.DotClient != nil && tx.Confirmations == 0 {
 		// calculate confirmations
@@ -356,6 +357,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			return tx, err
 		}
 		tx.Confirmations = int64(header.Number) - tx.BlockIndex
+	}
+	if tx.Error == "" {
+		// check for failure from events
+		failure, ok := api.ParseFailed(eventsI)
+		if ok {
+			tx.Error = failure
+		}
 	}
 
 	tx.Sources, tx.Destinations, err = api.ParseEvents(addressBuilder, chain, eventsI)
@@ -380,6 +388,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if len(tx.Destinations) > 0 {
 		tx.Amount = tx.Destinations[0].Amount
 		tx.To = tx.Destinations[0].Address
+	}
+	if tx.Fee.Uint64() == 0 || tx.From == "" {
+		// check for fee from events
+		from, fee, err := api.ParseFee(addressBuilder, eventsI)
+		if err != nil {
+			return xc.LegacyTxInfo{}, err
+		}
+		if tx.From == "" {
+			tx.From = from
+		}
+		tx.Fee = fee
 	}
 
 	return tx, nil

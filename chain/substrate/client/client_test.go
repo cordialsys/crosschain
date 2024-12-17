@@ -28,6 +28,10 @@ func reserialize(tx *xclient.TxInfo) *xclient.TxInfo {
 	return &info
 }
 
+func ref[T any](tx T) *T {
+	return &tx
+}
+
 // *** RPC & HTTP Test Responses ***
 // A copy of the metadata JSON blob from RPC call. This is SCALE-encoded hex that decodes to Substrate Metadata
 //
@@ -130,7 +134,6 @@ func TestBalance(t *testing.T) {
 }
 
 func TestFetchTxInfo(t *testing.T) {
-	require := require.New(t)
 
 	type testcase struct {
 		hash         string
@@ -245,42 +248,107 @@ func TestFetchTxInfo(t *testing.T) {
 							},
 						},
 					},
+					{
+						XAsset:    "chains/TAO/assets/TAO",
+						XContract: "TAO",
+						AssetId:   "TAO",
+						From: []*xclient.BalanceChange{
+							// fee
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(124557),
+								XAddress:  xclient.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
+								AddressId: "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4",
+							},
+						},
+						To: []*xclient.BalanceChange{},
+					},
 				},
 				Confirmations: 8,
+			},
+		},
+
+		{
+			// extrinsic failed
+			hash:        "anything",
+			indexerType: client.IndexerSubScan,
+			responses: []string{
+				`{"code":0,"message":"Success","generated_at":1687790045,"data":{"block_timestamp":1687547412,"block_num":16097417,"extrinsic_index":"16097417-2","call_module_function":"transfer_keep_alive","call_module":"balances","account_id":"138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2","signature":"0x14683b601d4798f437c7278db90763d36a9750ecf84a711206a0f4e30014e9236d22f89f5c90f66cc9c74ff192afe3bb54fdc531a09ee956101c037ff1fd4c01","nonce":0,"extrinsic_hash":"0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb","success":true,"params":
+					[{"name":"dest","type":"sp_runtime:multiaddress:MultiAddress","type_name":"AccountIdLookupOf","value":{"Id":"0x4f3396dd2c6b55498f67ce8883524360347427e30cbc50fb981922de73c4551e"}},{"name":"value","type":"compact\u003cU128\u003e","type_name":"Balance","value":"872321233400"}],"transfer":{"from":"138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2","to":"12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz","module":"balances","amount":"87.23212334","hash":"0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb","success":true,"asset_symbol":"DOT","to_account_display":{"address":"12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz","merkle":{"address_type":"hot_wallet","tag_type":"Exchange","tag_subtype":"Optional KYC and AML","tag_name":"ByBit.com"}}},
+					"event":[
+					{"event_index":"16097417-2","block_num":16097417,"extrinsic_idx":2,"module_id":"transactionpayment","event_id":"TransactionFeePaid","params":"[{\"type\":\"[U8; 32]\",\"type_name\":\"AccountId\",\"value\":\"0x5df87265f6ce0c1914eb15c3bdacf6722373e69a1a8d90ac0bc58f5e7fdd246d\",\"name\":\"who\"},{\"type\":\"U128\",\"type_name\":\"BalanceOf\",\"value\":\"157316518\",\"name\":\"actual_fee\"},{\"type\":\"U128\",\"type_name\":\"BalanceOf\",\"value\":\"0\",\"name\":\"tip\"}]","phase":0,"event_idx":45,"extrinsic_hash":"0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb","finalized":true,"block_timestamp":0},
+					{"event_index":"16097417-2","block_num":16097417,"extrinsic_idx":2,"module_id":"system","event_id":"ExtrinsicFailed","params":"[{\"type\":\"frame_support:dispatch:DispatchInfo\",\"type_name\":\"DispatchInfo\",\"value\":{\"class\":\"Normal\",\"pays_fee\":\"Yes\",\"weight\":{\"proof_size\":3593,\"ref_time\":254268000}},\"name\":\"dispatch_info\"}]","phase":0,"event_idx":46,"extrinsic_hash":"0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb","finalized":true,"block_timestamp":0}
+					],"event_count":2,"fee":"157316518","fee_used":"157316518","error":null,"finalized":true,"lifetime":{"birth":16097411,"death":16098435},"tip":"0","account_display":{"address":"138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"},"block_hash":"0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4","pending":false}}`,
+			},
+			rcpResponses: []string{
+				RPC_META_RESPONSE,
+				// seem some endpoints are inconsistent and do not mix scale encoding
+				asRpcResult(&types.Header{Number: 16097420}),
+			},
+			expectedTx: xclient.TxInfo{
+				Name:   "chains/DOT/transactions/0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
+				Hash:   "0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
+				XChain: xc.DOT,
+				Block: &xclient.Block{
+					Chain:  xc.DOT,
+					Height: 16097417,
+					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
+					Time:   time.Unix(1687547412, 0),
+				},
+				Movements: []*xclient.Movement{
+					// fee
+					{
+						XAsset:    "chains/DOT/assets/DOT",
+						XContract: "DOT",
+						AssetId:   "DOT",
+						To:        []*xclient.BalanceChange{},
+						From: []*xclient.BalanceChange{
+							{
+
+								Balance:   xc.NewAmountBlockchainFromUint64(157316518),
+								XAddress:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+								AddressId: "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2",
+							},
+						},
+					},
+				},
+				Confirmations: 3,
+				Error:         ref("transaction failed"),
 			},
 		},
 	}
 
 	for i, tc := range testcases {
-		fmt.Println("== tx-info test case", i)
-		// for the indexer to download the transaction
-		http, httpClose := testtypes.MockHTTP(t, tc.responses, 200)
-		defer httpClose()
-		// for the client fetching the lastest block height
-		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.rcpResponses)
-		defer rpcClose()
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			require := require.New(t)
+			// for the indexer to download the transaction
+			http, httpClose := testtypes.MockHTTP(t, tc.responses, 200)
+			defer httpClose()
+			// for the client fetching the lastest block height
+			rpc, rpcClose := testtypes.MockJSONRPC(t, tc.rcpResponses)
+			defer rpcClose()
 
-		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:       tc.expectedTx.XChain,
-			Driver:      "substrate",
-			URL:         rpc.URL,
-			IndexerUrl:  http.URL,
-			IndexerType: tc.indexerType,
-			AuthSecret:  "aaa",
-			ChainPrefix: "0",
-			Decimals:    10,
-			ChainID:     0,
+			client, err := client.NewClient(&xc.ChainConfig{
+				Chain:       tc.expectedTx.XChain,
+				Driver:      "substrate",
+				URL:         rpc.URL,
+				IndexerUrl:  http.URL,
+				IndexerType: tc.indexerType,
+				AuthSecret:  "aaa",
+				ChainPrefix: "0",
+				Decimals:    10,
+				ChainID:     0,
+			})
+			require.NoError(err)
+			require.NotNil(client)
+
+			res, err := client.FetchTxInfo(context.Background(), xc.TxHash(tc.hash))
+			require.NoError(err)
+
+			// don't compare fees as they are calculated from transfers
+			res.Fees = nil
+
+			require.Equal(reserialize(&tc.expectedTx), reserialize(&res))
 		})
-		require.NoError(err)
-		require.NotNil(client)
-
-		res, err := client.FetchTxInfo(context.Background(), xc.TxHash(tc.hash))
-		require.NoError(err)
-
-		// don't compare fees as they are calculated from transfers
-		res.Fees = nil
-
-		require.Equal(reserialize(&tc.expectedTx), reserialize(&res))
 	}
 }
 
