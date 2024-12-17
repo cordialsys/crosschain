@@ -620,6 +620,69 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			err: "",
 		},
+		{
+			// test error
+			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+			txResp: `{
+			  "result": {
+				"Account": "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
+				"Amount": "10000000",
+				"Destination": "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
+				"Fee": "12",
+				"Flags": 2147483648,
+				"LastLedgerSequence": 94538,
+				"Sequence": 92261,
+				"SigningPubKey": "ED3F6EB32DDCFACD6128D245B7B8663391CEBFFF881310552B2C4911E267AAF81B",
+				"TransactionType": "Payment",
+				"TxnSignature": "1491B434F7DA81624D83F9C5F1CE82AAA3154715BCF1151E720531846E14D16A78F4BCBF4D35B012DC48189DA00888B5DF8F9221645C54FAB17B063BC122690F",
+				"hash": "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				"DeliverMax": "10000000",
+				"ctid": "C001711E00000001",
+				"meta": {
+				  "AffectedNodes": [
+				  ],
+				  "TransactionIndex": 0,
+				  "TransactionResult": "tecPATH_PARTIAL",
+				  "delivered_amount": "10000000"
+				},
+				"validated": true,
+				"date": 777656992,
+				"ledger_index": 94494,
+				"inLedger": 94494,
+				"status": "success"
+			  }
+			}
+			`,
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{
+					Ledger: types.LedgerInfo{
+						Closed:      false,
+						LedgerIndex: "91190071",
+						ParentHash:  "8BFD1FBA7E3E16C6F604DDB9DC235567D8D0C5F7BB62CF8A0A58B074937429C2",
+					},
+					LedgerCurrentIndex: 91190071,
+					Validated:          false,
+					Status:             "success",
+				},
+			},
+			expectedTxInfo: xclient.TxInfo{
+				Name:   "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				XChain: "XRP",
+				Error:  testtypes.Ref("transaction failed: tecPATH_PARTIAL"),
+				Block: &xclient.Block{
+					Chain:  "XRP",
+					Height: 94494,
+					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					Time:   time.Unix(1724341792, 0),
+				},
+				Movements:     nil,
+				Fees:          []*xclient.Balance{},
+				Confirmations: 91097810,
+			},
+			err: "",
+		},
 	}
 
 	for i, vector := range vectors {

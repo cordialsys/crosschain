@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -171,8 +172,8 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
 	var errMsg *string
-	if txResponse.Result.Status == "error" {
-		msg := "transaction failed"
+	if txResponse.Result.Meta.TransactionResult != "tesSUCCESS" {
+		msg := fmt.Sprintf("transaction failed: %s", txResponse.Result.Meta.TransactionResult)
 		errMsg = &msg
 	}
 
@@ -362,8 +363,12 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
 	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	bz, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(bz, response)
+	if err != nil {
 		return fmt.Errorf("failed to decode response body: %w", err)
 	}
 
