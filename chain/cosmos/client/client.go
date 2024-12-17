@@ -247,20 +247,29 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return result, err
 	}
+	chainCfg := client.Asset.GetChain()
+	memo := ""
 
 	decoder := client.Ctx.TxConfig.TxDecoder()
-	decodedTx, err := decoder(resultRaw.Tx)
-	if err != nil {
-		return result, err
-	}
+	{
+		decodedTx, err := decoder(resultRaw.Tx)
+		if err != nil {
+			logrus.WithError(err).Warn("could not decode full transaction")
+		} else {
+			result.TxID = string(txHash)
+			switch tf := decodedTx.(type) {
+			case types.FeeTx:
+				result.Fee = xc.AmountBlockchain(*tf.GetFee()[0].Amount.BigInt())
+			default:
+				logrus.Warnf("could not determine transaction type for fee %T", tf)
+			}
+			// Set memo if set
+			if withMemo, ok := decodedTx.(types.TxWithMemo); ok {
+				memo = withMemo.GetMemo()
 
-	tx := &tx.Tx{
-		CosmosTx:        decodedTx,
-		CosmosTxEncoder: client.Ctx.TxConfig.TxEncoder(),
+			}
+		}
 	}
-	chainCfg := client.Asset.GetChain()
-	result.TxID = string(txHash)
-	result.Fee = tx.Fee()
 
 	events := ParseEvents(resultRaw.TxResult.Events)
 	for _, ev := range events.Transfers {
@@ -313,13 +322,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		result.Amount = result.Destinations[0].Amount
 		result.ContractAddress = result.Destinations[0].ContractAddress
 	}
-
-	// Set memo if set
-	if withMemo, ok := decodedTx.(types.TxWithMemo); ok {
-		memo := withMemo.GetMemo()
-		for _, dst := range result.Destinations {
-			dst.Memo = memo
-		}
+	for _, dst := range result.Destinations {
+		dst.Memo = memo
 	}
 
 	result.BlockIndex = resultRaw.Height
@@ -328,6 +332,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	if resultRaw.TxResult.Code != 0 {
 		result.Status = xc.TxStatusFailure
+		result.Error = resultRaw.TxResult.Log
+		// drop movements
+		result.Sources = nil
+		result.Destinations = nil
+		result.ResetStakeEvents()
 	}
 
 	return result, nil

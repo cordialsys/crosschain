@@ -12,7 +12,6 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/registry/state"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
-	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	substratetx "github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/sirupsen/logrus"
@@ -36,47 +35,13 @@ type Tx struct {
 	ExtrinsicHash []byte
 }
 
-func (tx *Tx) Failure() (string, bool) {
+func (tx *Tx) Get(module, event string) (api.EventI, bool) {
 	for _, ev := range tx.Events {
-		if strings.EqualFold(ev.GetModule(), "systems") && strings.EqualFold(ev.GetEvent(), "extrinsicfailure") {
-			reason, ok := ev.GetParam("", 0)
-			if ok {
-				asString, ok := reason.(string)
-				if ok {
-					return asString, true
-				} else {
-					logrus.WithField("type", fmt.Sprintf("%T", reason)).Warn("did not expect type for failure")
-				}
-			}
+		if strings.EqualFold(ev.GetModule(), module) && strings.EqualFold(ev.GetEvent(), event) {
+			return ev, true
 		}
 	}
-	return "", false
-}
-
-func (tx *Tx) Fee(ab xc.AddressBuilder) (xc.Address, xc.AmountBlockchain, error) {
-	for _, ev := range tx.Events {
-		if strings.EqualFold(ev.GetModule(), "TransactionPayment") && strings.EqualFold(ev.GetEvent(), "TransactionFeePaid") {
-			who, ok := ev.GetParam("", 0)
-			if !ok {
-				return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid did not have 0 param")
-			}
-			whoString, ok := who.(string)
-			if !ok {
-				return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid 0 param unexpected type: %T", who)
-			}
-			addr, err := api.ParseAddress(ab, whoString)
-			if err != nil {
-				return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid who invalid address: %v", err)
-			}
-			amountRaw, ok := ev.GetParam("", 1)
-			if !ok {
-				return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid amount missing")
-			}
-			amount := xc.NewAmountBlockchainFromStr(fmt.Sprint(amountRaw))
-			return addr, amount, nil
-		}
-	}
-	return "", xc.AmountBlockchain{}, fmt.Errorf("missing fee")
+	return nil, false
 }
 
 func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, error) {

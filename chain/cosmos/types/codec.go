@@ -58,6 +58,10 @@ func registerInterfacesInjective(registry codectypes.InterfaceRegistry) {
 		&injective.ExtensionOptionsWeb3Tx{},
 	)
 	registry.RegisterImplementations((*cryptotypes.PubKey)(nil), &injethsecp256k1.PubKey{})
+
+	// registry.RegisterImplementations((*sdk.Msg)(nil),
+	// 	&injectiveexchangetypes.MsgCreateSpotLimitOrder{},
+	// )
 }
 
 func registerInterfacesCosmosExtra(registry codectypes.InterfaceRegistry) {

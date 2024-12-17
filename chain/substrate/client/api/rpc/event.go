@@ -14,9 +14,9 @@ import (
 )
 
 type Event struct {
-	module string
-	event  string
-	raw    *parser.Event
+	Module string
+	Event  string
+	Raw    *parser.Event
 }
 
 var _ api.EventI = &Event{}
@@ -33,12 +33,12 @@ func NewEvent(raw *parser.Event) *Event {
 
 // Or may be called "pallet"
 func (ev *Event) GetModule() string {
-	return ev.module
+	return ev.Module
 }
 
 // Or may just be the "name"
 func (ev *Event) GetEvent() string {
-	return ev.event
+	return ev.Event
 }
 
 func unwrap(value *registry.DecodedField) (decoded interface{}) {
@@ -68,10 +68,10 @@ func cloneArrayTo[T any](_ T, array []interface{}) []T {
 }
 
 func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
-	if index >= len(ev.raw.Fields) {
+	if index >= len(ev.Raw.Fields) {
 		return nil, false
 	}
-	value := ev.raw.Fields[index]
+	value := ev.Raw.Fields[index]
 
 	decoded := unwrap(value)
 	switch maybeWrappedStill := decoded.(type) {
