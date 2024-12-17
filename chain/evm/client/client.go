@@ -303,6 +303,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 	}
 
+	if result.Error != "" {
+		// drop all changes
+		result.Sources = nil
+		result.Destinations = nil
+		result.ResetStakeEvents()
+	}
+
 	return result, nil
 }
 

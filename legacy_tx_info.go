@@ -52,6 +52,9 @@ func (info *LegacyTxInfo) GetDroppedBtcDestinations() []*LegacyTxInfoEndpoint {
 func (info *LegacyTxInfo) AddStakeEvent(ev StakeEvent) {
 	info.stakeEvents = append(info.stakeEvents, ev)
 }
+func (info *LegacyTxInfo) ResetStakeEvents() {
+	info.stakeEvents = nil
+}
 func (info *LegacyTxInfo) GetStakeEvents() []StakeEvent {
 	return info.stakeEvents
 }
