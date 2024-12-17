@@ -390,11 +390,22 @@ func CmdChains() *cobra.Command {
 			}
 
 			printer := func(data any) error {
+				dataYamlBz, _ := yaml.Marshal(data)
 				if format == "json" {
-					fmt.Println(asJson(data))
+					reserialized := []interface{}{}
+					err = yaml.Unmarshal(dataYamlBz, &reserialized)
+					if err != nil {
+						reserialized2 := map[string]interface{}{}
+						err = yaml.Unmarshal(dataYamlBz, &reserialized2)
+						fmt.Println(asJson(reserialized2))
+						if err != nil {
+							panic(err)
+						}
+					} else {
+						fmt.Println(asJson(reserialized))
+					}
 				} else if format == "yaml" {
-					dataBz, _ := yaml.Marshal(data)
-					fmt.Println(string(dataBz))
+					fmt.Println(string(dataYamlBz))
 				} else {
 					return fmt.Errorf("invalid format")
 				}
