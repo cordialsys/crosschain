@@ -105,6 +105,15 @@ func encodeApiKeyUserPassword(userPwMaybe string) string {
 	return userPwMaybe
 }
 
+func asJson(data interface{}) string {
+	if data != nil {
+		bz, _ := json.MarshalIndent(data, "", "  ")
+		return string(bz)
+	} else {
+		return ""
+	}
+}
+
 func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url string, data interface{}) ([]byte, error) {
 	// Serialize the request
 	var req *http.Request
@@ -133,6 +142,7 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 		"method":  method,
 		"url":     url,
 		"network": client.Network,
+		"body":    asJson(data),
 	}).Debug("connector request")
 
 	// Send the request

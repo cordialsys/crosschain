@@ -398,8 +398,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		result.ContractAddress = dests[0].ContractAddress
 	}
 
-	result.Sources = sources
-	result.Destinations = dests
+	if meta.Err != nil {
+		// no movements
+		errBz, _ := json.Marshal(meta.Err)
+		result.Error = string(errBz)
+	} else {
+		result.Sources = sources
+		result.Destinations = dests
+	}
 
 	return result, nil
 }
