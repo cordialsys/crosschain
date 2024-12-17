@@ -39,3 +39,6 @@ func JsonPrint(a any) {
 	bz, _ := json.MarshalIndent(a, "", "  ")
 	fmt.Println(string(bz))
 }
+func Ref[T any](s T) *T {
+	return &s
+}
