@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
+	"github.com/sirupsen/logrus"
 )
 
 var _ xclient.FullClient = &Client{}
@@ -194,23 +195,23 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if len(sources) == 0 && len(destinations) == 0 {
 		from, to, amount, err = deserialiseNativeTransfer(tx)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			logrus.WithError(err).Warn("unknown transaction")
+		} else {
+			source := new(xc.LegacyTxInfoEndpoint)
+			source.Address = from
+			source.Amount = amount
+			source.Asset = string(client.chain.Chain)
+			source.NativeAsset = client.chain.Chain
+
+			destination := new(xc.LegacyTxInfoEndpoint)
+			destination.Address = to
+			destination.Amount = amount
+			destination.Asset = string(client.chain.Chain)
+			destination.NativeAsset = client.chain.Chain
+
+			sources = append(sources, source)
+			destinations = append(destinations, destination)
 		}
-
-		source := new(xc.LegacyTxInfoEndpoint)
-		source.Address = from
-		source.Amount = amount
-		source.Asset = string(client.chain.Chain)
-		source.NativeAsset = client.chain.Chain
-
-		destination := new(xc.LegacyTxInfoEndpoint)
-		destination.Address = to
-		destination.Amount = amount
-		destination.Asset = string(client.chain.Chain)
-		destination.NativeAsset = client.chain.Chain
-
-		sources = append(sources, source)
-		destinations = append(destinations, destination)
 	}
 
 	txInfo := xc.LegacyTxInfo{
@@ -230,6 +231,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Time:            int64(info.BlockTimeStamp),
 		TimeReceived:    0,
 		Error:           "",
+	}
+	if info.Receipt.Result == httpclient.Revert {
+		txInfo.Error = "transaction reverted"
+		txInfo.Sources = nil
+		txInfo.Destinations = nil
 	}
 
 	return txInfo, nil

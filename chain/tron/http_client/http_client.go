@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/okx/go-wallet-sdk/crypto/base58"
+	"github.com/sirupsen/logrus"
 )
 
 // Implement basic tron client that use's TRON's http api.
@@ -32,6 +33,11 @@ func (b *Bytes) UnmarshalJSON(inputBz []byte) error {
 	return err
 }
 
+type TxResult string
+
+var Success TxResult = "SUCCESS"
+var Revert TxResult = "REVERT"
+
 type Client struct {
 	baseUrl *url.URL
 	client  *http.Client
@@ -51,7 +57,11 @@ type ContractData struct {
 	Type      string            `json:"type"`
 }
 type Receipt struct {
-	NetFee uint64 `json:"net_fee"`
+	EnergyUsage       int64    `json:"energy_usage"`
+	OriginEnergyUsage int64    `json:"origin_energy_usage"`
+	EnergyUsageTotal  int64    `json:"energy_usage_total"`
+	NetFee            int64    `json:"net_fee"`
+	Result            TxResult `json:"result"`
 }
 type TransactionRawData struct {
 	Contract          []ContractData `json:"contract"`
@@ -68,6 +78,7 @@ type CreateTransactionResponse struct {
 }
 type GetTransactionIDResponse struct {
 	Error
+	Ret        []RetItem          `json:"ret"`
 	RawData    TransactionRawData `json:"raw_data"`
 	RawDataHex Bytes              `json:"raw_data_hex"`
 	TxID       Bytes              `json:"txID"`
@@ -86,6 +97,9 @@ type GetTransactionInfoById struct {
 
 	Logs                 []*Log                 `json:"log"`
 	InternalTransactions []*InternalTransaction `json:"internal_transactions"`
+}
+type RetItem struct {
+	ContractRet TxResult `json:"contractRet"`
 }
 
 type Log struct {
@@ -169,6 +183,11 @@ func postRequest(url string, body any) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.WithFields(logrus.Fields{
+		"body": string(bz),
+		"url":  url,
+	}).Debug("POST")
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(bz))
 	if err != nil {
 		return req, err
