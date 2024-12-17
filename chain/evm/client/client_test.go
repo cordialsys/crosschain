@@ -476,6 +476,36 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 			},
 			"",
 		},
+		// Send erc20 normal tx
+		{
+			"tx_with_logs_but_no_topic",
+			"0x7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b",
+			[]string{
+				// eth_getTransactionByHash
+				`{"blockHash":"0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7","blockNumber":"0x891528","from":"0xe8be958f910fb1bb439eafbcfd0475509ab6d43f","gas":"0x8757","gasPrice":"0x59682f0b","maxPriorityFeePerGas":"0x59682f00","maxFeePerGas":"0x59682f0d","hash":"0x7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b","input":"0xa9059cbb0000000000000000000000005d2ebdf613d50dc598a09d8ebdc3f285be6cf8ed000000000000000000000000000000000000000000000000000009184e72a000","nonce":"0x33","to":"0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6","transactionIndex":"0xe","value":"0x0","type":"0x2","accessList":[],"chainId":"0x5","v":"0x0","r":"0xabf9ed0aa2255eda67c71e8fed5ee44b50059d507216221ea81400fa2db82289","s":"0x69e16a358d7a216499825143fdfe71f0c7d31d2a5613c5f0aeb5cdff7f04d39d"}`,
+				// eth_getTransactionReceipt
+				`{"blockHash":"0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7","blockNumber":"0x891528","contractAddress":null,"cumulativeGasUsed":"0x2f3b78","effectiveGasPrice":"0x59682f0b","from":"0xe8be958f910fb1bb439eafbcfd0475509ab6d43f","gasUsed":"0x8757","logs":[{"address":"0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6","topics":[],"data":"0x000000000000000000000000000000000000000000000000000009184e72a000","blockNumber":"0x891528","transactionHash":"0x7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b","transactionIndex":"0xe","blockHash":"0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7","logIndex":"0x18","removed":false}],"logsBloom":"0x00000000000000000000000000000000000000000000000000000400000000000000100000000000000000000000000000000000000000000000020000000000000040000400000000000008000000000000400000000000000000000000000000000000000000000000100000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004202000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","status":"0x1","to":"0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6","transactionHash":"0x7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b","transactionIndex":"0xe","type":"0x2"}`,
+				// eth_getBlockByNumber
+				`{"baseFeePerGas":"0xb","difficulty":"0x0","extraData":"0xd883010b06846765746888676f312e32302e33856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0x3edb5d","hash":"0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7","logsBloom":"0xc00c04400500404c00110000840900841002080000000008810004128011008004221400000000000020000801840084440010144002002000001600002022400882402294400000500000090022120000044040010a204280408100000800010000020002000000904090a52410081000000040000841c808a2581400001000130030e0b000002a00000800000004000000048080100280000901010046008046000004300000004810000228000200200002012040024003020104000200029005462208200008040320410502440004489400000800000103a000080221001030002020200004a00001200000600000000200001002000002080002000000","miner":"0x9427a30991170f917d7b83def6e44d26577871ed","mixHash":"0xbe979c23ebac83783f28bd19bc54156afede8a9881f67ee68e585c617d35fa8c","nonce":"0x0000000000000000","number":"0x891528","parentHash":"0x4c0741acfa16a7544e8384ae6ff8e99fc13f7d4f425d37e9b98d649c205d3a7f","receiptsRoot":"0x1b208b79d2ac75825098ae78411aefb6e2e9a475fad97d8d1a1daa8642bde2cd","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xb581","stateRoot":"0xdffaf71a94e6b64d04bc9b5d18a07f1c38c85038504d8ac898c81249e7826578","timestamp":"0x645d71cc","totalDifficulty":"0xa4a470","transactions":["0x2a02b2fea90d4d2210c2b106bfa09bd3083329285479ea56cbb459d1c1d04a39","0xb12cbda3b2674432ce747a93d6297bb153fe8934c34d49c7c462fe251a805552","0x231c2aa257987ceb68d837e5b6625d9783cec0b6eecedd7f35851096ef3a064e","0xefe67c0b5fde1610393b5e81baaf6be946d40c1a8b5cc35e3e96913bc55a08f4","0xefd5d8f84bad43612d72949db1a031a2e631bdfa31ba4da0b56737ec42c0fc34","0x68a3b34a9c88b646b47f9349ad87093fc7696be1d8607eaba41ae60458ed0b00","0x2a7003970d1352ef5b3f36b8e4567f0f79b12c1221aca6def7541c714bd63275","0xefd4a264368a75f0aadd042f1937623cea77a424b32afe03b40bd71fa0cd3c58","0xc7cf43c1b7382901b229f43137b614c86676710863f477b1b976e76a0965095f","0x0a24277f4c37e23a3eb6b1aa5690dea691b86d21cdd8e9b4a63d43c5bc5f358b","0xc769cfe9366d3cc102971db20ee15d77bf22eaedb720a5ab74e985d730129cfe","0x96cf02bdac52cf94bb32192a6ba717cd54832ba182f9bbe6e2fc08674ec3ae4a","0x8dcb26141ec67dcba395a7d07ff4cf2aa7c6faff9b55f384705b131fef5ea127","0x8915c01b564b7ca7f8c3bc8b20cf7311d94e8570c6bdff196b55bb2751ef70d1","0x7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b","0x79a7dc020d3d6989de12e22f7191f9338a96693288fc4fbeaed1bdae7173f46e","0x5ed535730523c3eb3db632b2d59579004bc01a30cd1a40b4e52b94ca07606902","0xd7ce3cae178416095b0205d987d225519420cd93bbad595670e8794544177db5","0x4233c7fea875b11ba216fb98e65ef3fe53b47ab0d07aef3debfaf7c6a14c9d72","0x76b67bfdf76b4242e3d503bec804feed60fc6edd65d57c0a09beef0102db3b70","0x4b5f4b515f0c7e596b959faa233f76402aa70131b0469032e21fe2160e10e2ca"],"transactionsRoot":"0x70a7dbc37ea27140077f216ce19070150afbfbc1abf758d085c9021b463667de","uncles":[],"withdrawals":[{"index":"0x4fd4ac","validatorIndex":"0x33979","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x19f56d"},{"index":"0x4fd4ad","validatorIndex":"0x3397a","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1ca348"},{"index":"0x4fd4ae","validatorIndex":"0x3397b","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1cc394"},{"index":"0x4fd4af","validatorIndex":"0x3397c","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1a6016"},{"index":"0x4fd4b0","validatorIndex":"0x3397d","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x186780"},{"index":"0x4fd4b1","validatorIndex":"0x3397e","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1c38d5"},{"index":"0x4fd4b2","validatorIndex":"0x3397f","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x34f8fd0"},{"index":"0x4fd4b3","validatorIndex":"0x33980","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1a04eb"},{"index":"0x4fd4b4","validatorIndex":"0x33981","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1a0e4c"},{"index":"0x4fd4b5","validatorIndex":"0x33982","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1d8c4a"},{"index":"0x4fd4b6","validatorIndex":"0x33983","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1cbb62"},{"index":"0x4fd4b7","validatorIndex":"0x33984","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1d1aac"},{"index":"0x4fd4b8","validatorIndex":"0x33985","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1c8852"},{"index":"0x4fd4b9","validatorIndex":"0x33986","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x18c245"},{"index":"0x4fd4ba","validatorIndex":"0x33987","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1c978f"},{"index":"0x4fd4bb","validatorIndex":"0x33988","address":"0x85bc9b9da65694345f2a360e46c7abeed8df895b","amount":"0x1c835c"}],"withdrawalsRoot":"0x19c8289ae378446696ca072ea8bd762ba1ebd465e505e31ed93d89b99b62ae8c"}`,
+				// eth_getBlockByNumber
+				`{"baseFeePerGas":"0xa","difficulty":"0x0","extraData":"0xd883010b05846765746888676f312e32302e32856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0xe7023b","hash":"0x7041515bf99b52262d4faeb17ba2a5f772ea463c30db9798371ff2094aa75ddc","logsBloom":"0x006408484088f02c801010009515008412eb29040002580c858101128851002004aa84e00080800041110000150401a4485110540020082012001624c124a26100026032947080805802020800801224020d82404007202080518105888b08010010350492478080804004a604102b0000080036000c50c48020125602001040132020621880ad0a20442c44400305264001800102100a880001014914668040660c000638880202101200222518830026000220a04402400702018408a2000390a144a3014020082402204345126444000814000080229030432739098261821810002120628114a854032c1280501001012300000812508106400802100080","miner":"0xc6e2459991bfe27cca6d86722f35da23a1e4cb97","mixHash":"0x522990debf63b7812eb8b6b96e0c56f91d567b8e2109e0a5f77450e7315ca21d","nonce":"0x0000000000000000","number":"0x89153b","parentHash":"0x41957451a5214e3420e12199c702016f2aa6a2d4848d429eefdfccc98661afd9","receiptsRoot":"0x01d943be32594c16c5c7558ca9b0fed2bfbb159e4e607835aeb22a827916f552","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xfb37","stateRoot":"0x0d2abf67da6fd97a434c3d39058eff6acdf45b276e40b387eb32390c576fc413","timestamp":"0x645d72e0","totalDifficulty":"0xa4a470","transactions":["0x1aae2d96b2aee3ecfb01d95c33b32493df758a99b93046ff7dd50172b8cf6d30","0xa498121ad49d5dfc5b46d24b85ea857b426a1ed0cf4133c2cb96561a478d8e08","0xbd4de1c91760f3123402e74a6814fd972fa9a5c03fd18b13ffb7ec7586883425","0xce48fb1ee75beb40acee9bc54dda29e7811a4d3eed1d635ce7ba184979a6d883","0xe532067ac4b74deffca708c1eec3cfe7ba79dbac70518fb752d86941d828e4eb","0x7eb0a23f03525a0830befde8bfa3fa7c1bccef491711356c4880d401b62eb671","0xde51711ca74c63e8d9afdd8152d0a2c0c4f125ba3f6a9126c7d490fdd032c4cf","0xbd6aa59ce286c4221afd9000f834ddc207a93a7bc2a9ae068713ce8a43ee2742","0x746f05148b6ce98fc136d7c4ed00a73cc5c2ea68ab80bd3c5d3bd94402e20cc7","0x32991b9b8a1b1ba7ff7a9763f59e2ea1543acd28d6e2789d328a8317b4f74244","0x5a21a15f8736d513c48ce432ef3640c647f22d2ebb3dba833b0edfc92f27ef1d","0x4ee9cb1837031eb167b1357e8c9c19701ef6295729c2c580f9f7b9dee3b03f7c","0x4d5d016a4067cac522a426f12698d10915546fb65136074eb971cffbb8d6169e","0x68007016d532e43af452ef414a95040259ba86dcc26f380985673601e6692522","0xea0a297b661d014fedfdb2da3268fa1798db565d90ca9596bdf71df8b573df80","0x81058b8e6beef482f6a93e74c8cc5eaec892466465c3094713a950179c1a8785","0x786824ed4919c538506cfa100ee2e96869dca946d9e2be02401a8f7e1f66c6a8","0xdee6f95049d81f0d8375db35e5d0a668d8492032b1448a94b0f7912ec6c2ac64","0x61134262a45b0cdeb52d96e90c97780bc08779af8b086036d61d0657623dda01","0xbe825ab6ca9760557b9fa90e88c0d5f3fc58f5dd197bc2454f27d5e05b482f10","0xd71385e6984b41eafa8ef8e8614ec7c955e0c6c0073b2ae0073d4be11c1f7610","0x5e4ce86d4b6b09ef361f873a8ccb02c6b28f203b54a5a299ff5b3a486a5591e0","0x0ce8a4a79d39c3d8f57eb632deefd3901c23ae9cb9f49fc8811bc815195e7ec1","0xbd5f6f91610afd56a4d80483e38c14b7b479876e6f156828590c75bc09a317f4","0x824a8744c6cc856e49239d0e6547396d8435944bdb8fe89ca868f5a6c31a9c3f","0xf46646fc9e738b4079367c8d950b6037315ecff744b6fefa52afe1943c88a45e","0xb77420a96f2b4be4a4bedac65b41bdd98e5e7541edfa022451cfc927ec46c60f","0x5d4fa90d7fd3fe0571f403149cd88869f9185ce6854a323ed8d454e319f4d80a","0x6dbdd47cdaa9cd3c391c67d6d623e7bbeb3302c09ea7b4770ee0649245dfc80e","0x50e6add79c2895a3f78f748eff4778d52f5e428e2672e23fa38b9347559e451d","0xd0f55fd2c13714ba6aee6cff8851733545ce2a2b1a89723f88d039a0d68f68d8","0xd4965e1587ec7256dbdda89b73d961cd5d4d5623ddbe78bca33eb00de141f236","0x62ccd2c5e3b5bff5be54f95f5f26e70043edb8e3dc875ae4c7aa9ca7bb26f4fa","0xea90ddc11b18a323704f9b488f854e915ed1f85e47a5aa97d92490c3cb104f6b","0x23d2bd4b44bff5517b1302d15fa69195ddd288ec666cf7ac06c091ed415324d0","0xdc6d15f3e70d77a059570e8f797c8bd77bc1a763e03351175dcafe80235c8654","0xfba6bed9ee750c686a7f97fb1639a9eadd746ba47d367221caa9a3d6ca8e76b3","0x382510b2ee498a11dfc79c13ccc881221b5d22ac1079c42ece5a9ca481a83299","0xbee5e61838f19180bf3b2d6a1f5457be9449060a77cf997f9899c2c0abbe8bcb","0xb8772fe626c2a3151e5c2947b51f80519df6cdff0ba34d9b22a148d9e88740b1","0x89a3606507a02b2b879ded73d8a21240dd53f5e8b3a2733458d773de8368022c","0xd87c56af4fdc483cb66935d7b47afcc0f545098a0c689f6baa102ed52debdef2","0x7b49ea42028f098d46b330bd4b15422004cfdab6194de4307d6465fe3842dffb"],"transactionsRoot":"0xd6a76734c1194ba7a54efdf597b6bbd71a7c258df83e17ae24c61ef55ed6f5a6","uncles":[],"withdrawals":[{"index":"0x4fd5dc","validatorIndex":"0x343b9","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e3737"},{"index":"0x4fd5dd","validatorIndex":"0x343ba","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e6b61"},{"index":"0x4fd5de","validatorIndex":"0x343bb","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e609a"},{"index":"0x4fd5df","validatorIndex":"0x343bc","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e446a"},{"index":"0x4fd5e0","validatorIndex":"0x343bd","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1ec58a"},{"index":"0x4fd5e1","validatorIndex":"0x343be","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f08f0"},{"index":"0x4fd5e2","validatorIndex":"0x343bf","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e388e"},{"index":"0x4fd5e3","validatorIndex":"0x343c0","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1de6e9"},{"index":"0x4fd5e4","validatorIndex":"0x343c1","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d8671"},{"index":"0x4fd5e5","validatorIndex":"0x343c2","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d921d"},{"index":"0x4fd5e6","validatorIndex":"0x343c3","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e47be"},{"index":"0x4fd5e7","validatorIndex":"0x343c4","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e68a0"},{"index":"0x4fd5e8","validatorIndex":"0x343c5","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d4535"},{"index":"0x4fd5e9","validatorIndex":"0x343c6","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e9eee"},{"index":"0x4fd5ea","validatorIndex":"0x343c7","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1eb96d"},{"index":"0x4fd5eb","validatorIndex":"0x343c8","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1da634"}],"withdrawalsRoot":"0x5f2d20dfa1ed20da2588eea50327afc1b477e2ad628b8d40c5eaddabbf7d32be"}`,
+			},
+			xc.LegacyTxInfo{
+				BlockHash:       "0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7",
+				TxID:            "7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b",
+				From:            "0xE8Be958f910FB1bb439EaFBcFD0475509AB6D43F",
+				To:              "0x5D2EBDf613D50Dc598A09d8Ebdc3F285bE6CF8ed",
+				BlockIndex:      8983848,
+				BlockTime:       1683845580,
+				Confirmations:   19,
+				ContractAddress: "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+				Sources:         nil,
+				Destinations:    nil,
+				Fee:             xc.NewAmountBlockchainFromStr("51970500381117"),
+				Amount:          xc.NewAmountBlockchainFromStr("10000000000000"),
+			},
+			"",
+		},
 	}
 
 	for _, v := range vectors {
@@ -641,30 +671,31 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 	}
 
-	for _, v := range vectors {
-		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
-		asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5, Decimals: 18}
+	for i, v := range vectors {
+		t.Run(fmt.Sprintf("%d_%s", i, v.name), func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5, Decimals: 18}
 
-		asset.URL = server.URL
-		client, _ := client.NewClient(asset)
-		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.txHash))
+			asset.URL = server.URL
+			client, _ := client.NewClient(asset)
+			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.txHash))
 
-		if v.err != "" {
-			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, v.err)
-		} else {
-			// for _, movement := range txInfo.Sources {
-			// 	fmt.Println("FROM: ", movement.Address, movement.ContractAddress, movement.Amount.String())
-			// }
-			// for _, movement := range txInfo.Destinations {
-			// 	fmt.Println("  TO: ", movement.Address, movement.ContractAddress, movement.Amount.String())
-			// }
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			txInfo.Fees = nil
-			require.Equal(t, testtypes.Reserialize(&v.val), testtypes.Reserialize(&txInfo))
-		}
+			if v.err != "" {
+				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				// for _, movement := range txInfo.Sources {
+				// 	fmt.Println("FROM: ", movement.Address, movement.ContractAddress, movement.Amount.String())
+				// }
+				// for _, movement := range txInfo.Destinations {
+				// 	fmt.Println("  TO: ", movement.Address, movement.ContractAddress, movement.Amount.String())
+				// }
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+				txInfo.Fees = nil
+				require.Equal(t, testtypes.Reserialize(&v.val), testtypes.Reserialize(&txInfo))
+			}
+		})
 	}
 }

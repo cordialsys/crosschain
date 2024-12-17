@@ -262,6 +262,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 
 	// Look for stake/unstake events
 	for _, log := range receipt.Logs {
+		if len(log.Topics) == 0 {
+			continue
+		}
 		ev, _ := stake_deposit.EventByID(log.Topics[0])
 		if ev != nil {
 			// fmt.Println("found staking event")

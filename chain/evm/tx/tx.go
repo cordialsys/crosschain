@@ -90,6 +90,9 @@ func (tx *Tx) ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset)
 	loggedSources := []*xc.LegacyTxInfoEndpoint{}
 	loggedDestinations := []*xc.LegacyTxInfoEndpoint{}
 	for _, log := range receipt.Logs {
+		if len(log.Topics) == 0 {
+			continue
+		}
 		event, _ := ERC20.EventByID(log.Topics[0])
 		if event != nil {
 			fmt.Println("PARSE LOG", event.RawName)
