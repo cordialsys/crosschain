@@ -12,9 +12,14 @@ import (
 
 func TestTxInfoFees(t *testing.T) {
 
+	chainCfg := &xc.ChainConfig{
+		ConfirmationsFinal: 3,
+		Chain:              xc.ETH,
+	}
+
 	tx := client.NewTxInfo(
-		client.NewBlock(xc.ETH, 1, "1234", time.Unix(1, 0)),
-		xc.ETH,
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
 		"0x1234",
 		3,
 		nil,
@@ -50,12 +55,20 @@ func TestTxInfoFees(t *testing.T) {
 	tx.AddSimpleTransfer("a", "b", "", xc.NewAmountBlockchainFromUint64(0), nil, "memo")
 	require.Equal(t, "memo", tx.Movements[len(tx.Movements)-1].Memo)
 
+	require.Equal(t, true, tx.Final)
+	require.Equal(t, client.Succeeded, tx.State)
+
 }
 
 func TestTxInfoMultiLegFees(t *testing.T) {
+
+	chainCfg := &xc.ChainConfig{
+		ConfirmationsFinal: 3,
+		Chain:              xc.BTC,
+	}
 	tx := client.NewTxInfo(
-		client.NewBlock(xc.BTC, 1, "1234", time.Unix(1, 0)),
-		xc.BTC,
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
 		"0x1234",
 		3,
 		nil,
@@ -77,9 +90,13 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 // This is like `TestTxInfoMultiLegFees`, but we add every balance change as an
 // independent transfer, and test we can coalesce them into 1 transfer again.
 func TestTxInfoMultiLegCoalesce(t *testing.T) {
+	chainCfg := &xc.ChainConfig{
+		ConfirmationsFinal: 3,
+		Chain:              xc.BTC,
+	}
 	tx := client.NewTxInfo(
-		client.NewBlock(xc.BTC, 1, "1234", time.Unix(1, 0)),
-		xc.BTC,
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
 		"0x1234",
 		3,
 		nil,
@@ -106,4 +123,56 @@ func TestTxInfoMultiLegCoalesce(t *testing.T) {
 	require.Len(t, tx.Movements, 1)
 	require.Equal(t, "200", tx.CalculateFees()[0].Balance.String())
 	require.EqualValues(t, "BTC", tx.CalculateFees()[0].Contract)
+}
+
+func TestTxInfoState(t *testing.T) {
+	chainCfg := &xc.ChainConfig{
+		ConfirmationsFinal: 3,
+		Chain:              xc.BTC,
+	}
+
+	// succeeded, final
+	tx := client.NewTxInfo(
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
+		"0x1234",
+		3,
+		nil,
+	)
+	require.True(t, tx.Final, "final")
+	require.Equal(t, client.Succeeded, tx.State)
+
+	// succeeded, not final
+	tx = client.NewTxInfo(
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
+		"0x1234",
+		2,
+		nil,
+	)
+	require.False(t, tx.Final, "final")
+	require.Equal(t, client.Succeeded, tx.State)
+
+	// failed
+	errMsg := "err"
+	tx = client.NewTxInfo(
+		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+		chainCfg,
+		"0x1234",
+		2,
+		&errMsg,
+	)
+	require.False(t, tx.Final, "final")
+	require.Equal(t, client.Failed, tx.State)
+
+	// mining
+	tx = client.NewTxInfo(
+		client.NewBlock(chainCfg.Chain, 0, "1234", time.Unix(1, 0)),
+		chainCfg,
+		"0x1234",
+		0,
+		nil,
+	)
+	require.False(t, tx.Final, "final")
+	require.Equal(t, client.Mining, tx.State)
 }

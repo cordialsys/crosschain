@@ -26,7 +26,7 @@ type Client struct {
 
 var _ xcclient.StakingClient = &Client{}
 
-func toStakingState(status string) (xcclient.State, bool) {
+func toStakingState(status string) (xcclient.StakeState, bool) {
 	// ethereum validator states
 	state, ok := evmclient.ValidatorStatus(status).ToState()
 	if ok {

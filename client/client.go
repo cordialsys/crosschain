@@ -62,12 +62,12 @@ type ManualUnstakingClient interface {
 	CompleteManualUnstaking(ctx context.Context, unstake *Unstake) error
 }
 
-type State string
+type StakeState string
 
-var Activating State = "activating"
-var Active State = "active"
-var Deactivating State = "deactivating"
-var Inactive State = "inactive"
+var Activating StakeState = "activating"
+var Active StakeState = "active"
+var Deactivating StakeState = "deactivating"
+var Inactive StakeState = "inactive"
 
 type StakedBalanceState struct {
 	Active       xc.AmountBlockchain `json:"active,omitempty"`
@@ -93,7 +93,7 @@ func NewStakedBalances(balances StakedBalanceState, validator, account string) *
 	}
 }
 
-func NewStakedBalance(balance xc.AmountBlockchain, state State, validator, account string) *StakedBalance {
+func NewStakedBalance(balance xc.AmountBlockchain, state StakeState, validator, account string) *StakedBalance {
 	balances := StakedBalanceState{}
 	switch state {
 	case Activating:

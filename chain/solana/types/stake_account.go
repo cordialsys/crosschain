@@ -12,7 +12,7 @@ type StakeAccount struct {
 	Space   int    `json:"space"`
 }
 
-func (stake *StakeAccount) GetState(currentEpoch uint64) xcclient.State {
+func (stake *StakeAccount) GetState(currentEpoch uint64) xcclient.StakeState {
 	activationEpoch := xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.ActivationEpoch).Uint64()
 	deactivationEpoch := xc.NewAmountBlockchainFromStr(stake.Parsed.Info.Stake.Delegation.DeactivationEpoch).Uint64()
 	if activationEpoch == deactivationEpoch {

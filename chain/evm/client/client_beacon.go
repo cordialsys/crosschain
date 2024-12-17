@@ -30,8 +30,8 @@ type Validator struct {
 
 type ValidatorStatus string
 
-func (s ValidatorStatus) ToState() (xcclient.State, bool) {
-	var state xcclient.State = ""
+func (s ValidatorStatus) ToState() (xcclient.StakeState, bool) {
+	var state xcclient.StakeState = ""
 	// ethereum validator states
 	switch s {
 	case "pending_initialized", "pending_queued":
