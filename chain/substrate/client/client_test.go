@@ -158,6 +158,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/DOT/transactions/0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				Hash:   "0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				XChain: xc.DOT,
+				State:  xclient.Succeeded,
+				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.DOT,
 					Height: 16097417,
@@ -221,6 +223,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/TAO/transactions/0x88a147c2e869ec68827c1db6bba7e5923f555adbc658ad58ad74b730e5eae3e2",
 				Hash:   "0x88a147c2e869ec68827c1db6bba7e5923f555adbc658ad58ad74b730e5eae3e2",
 				XChain: xc.TAO,
+				State:  xclient.Succeeded,
+				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.TAO,
 					Height: 3401817,
@@ -288,6 +292,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/DOT/transactions/0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				Hash:   "0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				XChain: xc.DOT,
+				State:  xclient.Failed,
+				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.DOT,
 					Height: 16097417,

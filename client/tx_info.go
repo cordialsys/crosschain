@@ -138,6 +138,12 @@ func (s *Unstake) GetValidator() string {
 	return s.Validator
 }
 
+type State string
+
+const Succeeded State = "succeeded"
+const Failed State = "failed"
+const Mining State = "mining"
+
 // This should roughly match stoplight
 type TxInfo struct {
 	Name TransactionName `json:"name"`
@@ -145,6 +151,9 @@ type TxInfo struct {
 	Hash string `json:"hash"`
 	// required: set the chain
 	XChain xc.NativeAsset `json:"chain"` //deprecated
+
+	State State `json:"state"`
+	Final bool  `json:"final"`
 
 	// required: set the block info
 	Block *Block `json:"block"`
@@ -189,16 +198,31 @@ func NewBalanceChange(chain xc.NativeAsset, addressId xc.Address, balance xc.Amo
 	}
 }
 
-func NewTxInfo(block *Block, chain xc.NativeAsset, hash string, confirmations uint64, err *string) *TxInfo {
+func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmations uint64, err *string) *TxInfo {
 	transfers := []*Movement{}
 	fees := []*Balance{}
 	var stakes []*Stake = nil
 	var unstakes []*Unstake = nil
-	name := NewTransactionName(chain, hash)
+	name := NewTransactionName(chainCfg.Chain, hash)
+
+	state := Succeeded
+	if err != nil {
+		state = Failed
+	} else if block.Height == 0 {
+		state = Mining
+	}
+
+	final := false
+	if int(confirmations) >= chainCfg.ConfirmationsFinal {
+		final = true
+	}
+
 	return &TxInfo{
 		name,
 		hash,
-		chain,
+		chainCfg.Chain,
+		state,
+		final,
 		block,
 		transfers,
 		fees,
@@ -356,7 +380,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx xc.LegacyTxInfo, mappin
 
 	txInfo := NewTxInfo(
 		NewBlock(chain, uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
-		chain,
+		chainCfg,
 		legacyTx.TxID,
 		uint64(legacyTx.Confirmations),
 		errMsg,

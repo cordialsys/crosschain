@@ -598,6 +598,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/ETH/transactions/0x4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
 				Hash:   "4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
 				XChain: "ETH",
+				State:  xcclient.Succeeded,
+				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "ETH",
 					Height: 1960505,
@@ -668,6 +670,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/ETH/transactions/0xfbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
 				Hash:   "fbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
 				XChain: "ETH",
+				State:  xcclient.Succeeded,
+				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "ETH",
 					Height: 1988490,

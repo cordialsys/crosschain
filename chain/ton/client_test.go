@@ -213,6 +213,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/TON/transactions/5a4431eb12a936144130c7c75f292170f92749cf08b8d7259821171418a5cbef",
 				Hash:   "5a4431eb12a936144130c7c75f292170f92749cf08b8d7259821171418a5cbef",
 				XChain: xc.TON,
+				State:  xcclient.Succeeded,
+				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21080779,
@@ -243,7 +245,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Memo: "hii",
 					},
 					// fee
-					&xcclient.Movement{
+					{
 						XAsset:    "chains/TON/assets/TON",
 						XContract: "TON",
 						AssetId:   "TON",
@@ -279,6 +281,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Name:   "chains/TON/transactions/ce2c0eeb0dd69d5a5d108869fa29f9943055e42c127b67256aeb6eddb688024f",
 				Hash:   "ce2c0eeb0dd69d5a5d108869fa29f9943055e42c127b67256aeb6eddb688024f",
 				XChain: xc.TON,
+				State:  xcclient.Succeeded,
+				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21082496,

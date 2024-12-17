@@ -172,6 +172,8 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		txWithInfo.BlockHash = data.BlockHash
 		txWithInfo.Confirmations = int64(latestBlock) - int64(data.BlockHeight) + 1
 		txWithInfo.Status = xc.TxStatusSuccess
+	} else {
+		// still in mempool
 	}
 	txWithInfo.TxID = string(txHash)
 
