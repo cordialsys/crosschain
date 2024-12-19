@@ -146,6 +146,8 @@ const Mining State = "mining"
 
 // This should roughly match stoplight
 type TxInfo struct {
+	// Normalized name of the transaction
+	// Format: "chains/{chain_name}/transactions/{hash}"
 	Name TransactionName `json:"name"`
 	// required: set the transaction hash/id
 	Hash string `json:"hash"`

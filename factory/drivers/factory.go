@@ -34,6 +34,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xlmaddress "github.com/cordialsys/crosschain/chain/xlm/address"
+	xlmbuilder "github.com/cordialsys/crosschain/chain/xlm/builder"
+	xlmclient "github.com/cordialsys/crosschain/chain/xlm/client"
 	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
@@ -69,6 +72,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return ton.NewClient(cfg)
 	case DriverXrp:
 		return xrpclient.NewClient(cfg)
+	case DriverXlm:
+		return xlmclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.ID()))
 }
@@ -135,6 +140,8 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 		return ton.NewTxBuilder(cfg)
 	case DriverXrp:
 		return xrpbuilder.NewTxBuilder(cfg)
+	case DriverXlm:
+		return xlmbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }
@@ -170,6 +177,8 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 		return tonaddress.NewAddressBuilder(cfg)
 	case DriverXrp:
 		return xrpaddress.NewAddressBuilder(cfg)
+	case DriverXlm:
+		return xlmaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.ID()))
 }

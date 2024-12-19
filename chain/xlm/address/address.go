@@ -1,0 +1,59 @@
+package address
+
+import (
+	base32 "encoding/base32"
+	"encoding/binary"
+	"fmt"
+
+	xc "github.com/cordialsys/crosschain"
+)
+
+// base32 encodes to G
+const VersionByte byte = 6 << 3
+
+type AddressBuilder struct{}
+
+var _ xc.AddressBuilder = AddressBuilder{}
+
+func NewAddressBuilder(cfg xc.ITask) (xc.AddressBuilder, error) {
+	return AddressBuilder{}, nil
+}
+
+// GetAddressFromPublicKey returns an Address given a public key
+func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
+	if len(publicKeyBytes) != 32 {
+		return xc.Address(""), fmt.Errorf("expected public key length 32, got %v", len(publicKeyBytes))
+	}
+
+	// Allocate space for publicKeyBytes + versionByte(1) + checksum(2)
+	fullKeyLen := 32 + 1 + 2
+	raw := make([]byte, fullKeyLen)
+	raw[0] = VersionByte
+
+	// Add version byte prefix
+	copy(raw[1:], publicKeyBytes)
+
+	// Calculate checksum - omit padding zeros
+	checksum := Checksum(raw[:1+32])
+
+	// Put the checksum at the end of our array
+	lenWithVersion := 32 + 1
+	binary.LittleEndian.PutUint16(raw[lenWithVersion:], checksum)
+
+	encoded := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(raw)
+
+	return xc.Address(encoded), nil
+}
+
+// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
+// TODO: Consider listing all federation accounts for given public key
+// [Stellar federation documentation]: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/federation#:~:text=Stellar%20federated%20addresses%20are%20divided,stellar.org%20is%20the%20domain
+func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
+	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
+	return []xc.PossibleAddress{
+		{
+			Address: address,
+			Type:    xc.AddressTypeDefault,
+		},
+	}, err
+}
