@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 
+	"cosmossdk.io/math"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -20,7 +21,7 @@ func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.Amo
 	amountInt := big.Int(amount)
 	amountCoin := types.Coin{
 		Denom:  txBuilder.GetDenom(),
-		Amount: types.NewIntFromBigInt(&amountInt),
+		Amount: math.NewIntFromBigInt(&amountInt),
 	}
 
 	if strings.HasPrefix(task.Code, "CosmosUndelegateOperator") {

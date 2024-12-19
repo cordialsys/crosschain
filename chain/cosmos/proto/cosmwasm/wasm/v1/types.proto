@@ -6,7 +6,8 @@ import "gogoproto/gogo.proto";
 import "google/protobuf/any.proto";
 import "amino/amino.proto";
 
-option go_package = "github.com/CosmWasm/wasmd/x/wasm/types";
+// option go_package = "github.com/CosmWasm/wasmd/x/wasm/types";
+option go_package = "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types";
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.equal_all) = true;
 

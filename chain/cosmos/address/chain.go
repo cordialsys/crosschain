@@ -3,7 +3,7 @@ package address
 import (
 	xc "github.com/cordialsys/crosschain"
 	injethsecp256k1 "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/crypto/ethsecp256k1"
-	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/evmos/v20/crypto/ethsecp256k1"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 )

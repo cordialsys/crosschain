@@ -9,7 +9,8 @@ import "cosmos/query/v1/query.proto";
 import "amino/amino.proto";
 import "cosmos_proto/cosmos.proto";
 
-option go_package = "github.com/CosmWasm/wasmd/x/wasm/types";
+// option go_package = "github.com/CosmWasm/wasmd/x/wasm/types";
+option go_package = "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types";
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.equal_all) = false;
 
@@ -88,6 +89,13 @@ service Query {
     option (cosmos.query.v1.module_query_safe) = true;
     option (google.api.http).get =
         "/cosmwasm/wasm/v1/contracts/creator/{creator_address}";
+  }
+
+  // WasmLimitsConfig gets the configured limits for static validation of Wasm
+  // files, encoded in JSON.
+  rpc WasmLimitsConfig(QueryWasmLimitsConfigRequest)
+      returns (QueryWasmLimitsConfigResponse) {
+    option (google.api.http).get = "/cosmwasm/wasm/v1/wasm-limits-config";
   }
 
   // BuildAddress builds a contract address
@@ -316,6 +324,15 @@ message QueryContractsByCreatorResponse {
   // Pagination defines the pagination in the response.
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
+
+// QueryWasmLimitsConfigRequest is the request type for the
+// Query/WasmLimitsConfig RPC method.
+message QueryWasmLimitsConfigRequest {}
+
+// QueryWasmLimitsConfigResponse is the response type for the
+// Query/WasmLimitsConfig RPC method. It contains the JSON encoded limits for
+// static validation of Wasm files.
+message QueryWasmLimitsConfigResponse { string config = 1; }
 
 // QueryBuildAddressRequest is the request type for the Query/BuildAddress RPC
 // method.
