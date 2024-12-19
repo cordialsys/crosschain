@@ -1,12 +1,16 @@
 package builder
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"sort"
 
+	signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
+	"cosmossdk.io/math"
+	"cosmossdk.io/x/tx/signing"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/address"
@@ -16,8 +20,8 @@ import (
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
-	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	"github.com/cosmos/cosmos-sdk/x/auth/signing"
+	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
@@ -117,7 +121,7 @@ func (txBuilder TxBuilder) NewBankTransfer(from xc.Address, to xc.Address, amoun
 		Amount: types.Coins{
 			{
 				Denom:  denom,
-				Amount: types.NewIntFromBigInt(&amountInt),
+				Amount: math.NewIntFromBigInt(&amountInt),
 			},
 		},
 	}
@@ -190,7 +194,7 @@ func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, input *tx_i
 	feeCoins := types.Coins{
 		{
 			Denom:  gasDenom,
-			Amount: types.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
+			Amount: math.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
 		},
 	}
 	if includeTax {
@@ -201,7 +205,7 @@ func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, input *tx_i
 			if token, ok := asset.(*xc.TokenAssetConfig); ok && token.Contract != "" {
 				taxDenom = token.Contract
 			}
-			taxStr, _ := types.NewIntFromString(tax.String())
+			taxStr, _ := math.NewIntFromString(tax.String())
 			// cannot add two coins that are the same so must check
 			if feeCoins[0].Denom == taxDenom {
 				// add to existing
@@ -243,12 +247,12 @@ func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Ms
 
 	cosmosBuilder.SetFeeAmount(fees)
 
-	sigMode := signingtypes.SignMode_SIGN_MODE_DIRECT
-	sigsV2 := []signingtypes.SignatureV2{
+	sigMode := signingv1beta1.SignMode_SIGN_MODE_DIRECT
+	sigsV2 := []txsigning.SignatureV2{
 		{
 			PubKey: address.GetPublicKey(asset.GetChain(), args.FromPublicKey),
-			Data: &signingtypes.SingleSignatureData{
-				SignMode:  sigMode,
+			Data: &txsigning.SingleSignatureData{
+				SignMode:  txsigning.SignMode_SIGN_MODE_DIRECT,
 				Signature: nil,
 			},
 			Sequence: input.Sequence,
@@ -269,7 +273,13 @@ func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Ms
 		ChainID:       chainId,
 		Sequence:      input.Sequence,
 	}
-	sighashData, err := cosmosTxConfig.SignModeHandler().GetSignBytes(sigMode, signerData, cosmosBuilder.GetTx())
+	legacyTx := cosmosBuilder.GetTx()
+	adaptableTx, ok := legacyTx.(authsigning.V2AdaptableTx)
+	if !ok {
+		return nil, fmt.Errorf("expected tx to implement V2AdaptableTx, got %T", legacyTx)
+	}
+	txData := adaptableTx.GetSigningTxData()
+	sighashData, err := cosmosTxConfig.SignModeHandler().GetSignBytes(context.Background(), sigMode, signerData, txData)
 	if err != nil {
 		return nil, err
 	}
