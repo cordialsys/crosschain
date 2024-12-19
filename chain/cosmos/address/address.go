@@ -1,6 +1,8 @@
 package address
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -21,11 +23,14 @@ func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	publicKey := GetPublicKey(ab.Asset.GetChain(), publicKeyBytes)
 	rawAddress := publicKey.Address()
-
-	err := sdk.VerifyAddressFormat(rawAddress)
-	if err != nil {
-		return xc.Address(""), err
+	if len(rawAddress) == 0 {
+		return "", fmt.Errorf("address cannot be empty")
 	}
+
+	// err := sdk.VerifyAddressFormat(rawAddress)
+	// if err != nil {
+	// 	return xc.Address(""), err
+	// }
 	bech32Addr, err := sdk.Bech32ifyAddressBytes(ab.Asset.GetChain().ChainPrefix, rawAddress)
 	return xc.Address(bech32Addr), err
 }

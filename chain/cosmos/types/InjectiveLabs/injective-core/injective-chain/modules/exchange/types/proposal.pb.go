@@ -11,7 +11,7 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/cosmos/cosmos-sdk/types/msgservice"
 	_ "github.com/cosmos/cosmos-sdk/types/tx/amino"
-	types1 "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	types1 "cosmossdk.io/x/distribution/types"
 	_ "github.com/cosmos/gogoproto/gogoproto"
 	proto "github.com/cosmos/gogoproto/proto"
 	io "io"

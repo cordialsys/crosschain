@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"cosmossdk.io/math"
+	stakingtypes "cosmossdk.io/x/staking/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 var _ xc.TxXTransferBuilder = &TxBuilder{}

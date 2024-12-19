@@ -30,10 +30,11 @@ func TestTxSighashesErr(t *testing.T) {
 }
 
 func TestTxAddSignaturesErr(t *testing.T) {
-	cosmosCfg := types.MakeEncodingConfig()
+	cosmosCfg, err := types.MakeEncodingConfig(&xc.ChainConfig{ChainPrefix: "atom"})
+	require.NoError(t, err)
 
 	tx := Tx{}
-	err := tx.AddSignatures([]xc.TxSignature{}...)
+	err = tx.AddSignatures([]xc.TxSignature{}...)
 	require.EqualError(t, err, "transaction not initialized")
 
 	tx = Tx{

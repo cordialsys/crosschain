@@ -205,7 +205,8 @@ func TestFetchTxInput(t *testing.T) {
 		defer close()
 
 		v.asset.URL = server.URL
-		client, _ := client.NewClient(&v.asset)
+		client, err := client.NewClient(&v.asset)
+		require.NoError(t, err)
 		from := xc.Address(v.from)
 		to := xc.Address(v.to)
 		input, err := client.FetchLegacyTxInput(context.Background(), from, to)

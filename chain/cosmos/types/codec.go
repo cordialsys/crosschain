@@ -126,8 +126,8 @@ func registerInterfacesTerraClassic(registry codectypes.InterfaceRegistry) {
 
 func registerLegacyAminoTerraClassic(cdc *codec.LegacyAmino) {
 	cdc.RegisterInterface((*exported.VestingAccount)(nil), nil)
-	cdc.RegisterConcrete(&vestingtypes.BaseVestingAccount{}, "core/BaseVestingAccount", nil)
-	cdc.RegisterConcrete(&terraclassic.LazyGradedVestingAccount{}, "core/LazyGradedVestingAccount", nil)
+	cdc.RegisterConcrete(&vestingtypes.BaseVestingAccount{}, "core/BaseVestingAccount")
+	cdc.RegisterConcrete(&terraclassic.LazyGradedVestingAccount{}, "core/LazyGradedVestingAccount")
 }
 
 func registerInterfacesWasmd(registry codectypes.InterfaceRegistry) {

@@ -33,11 +33,15 @@ func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, er
 		if len(privateKeyOrMnemonic) < 16 {
 			return nil, errors.New("invalid mnemonic")
 		}
-		codec := cosmostypes.MakeCosmosConfig().Marshaler
+		encoding, err := cosmostypes.MakeCosmosConfig(&xc.ChainConfig{ChainPrefix: "any"})
+		if err != nil {
+			return PrivateKey{}, err
+		}
+		codec := encoding.Marshaler
 		kb := keyring.NewInMemory(codec)
 		// common path, will not be correct for all chains
 		hdPath := hd.CreateHDPath(hdPathNum, 0, 0).String()
-		_, err := kb.NewAccount("test", privateKeyOrMnemonic, keyring.DefaultBIP39Passphrase, hdPath, hd.Secp256k1)
+		_, err = kb.NewAccount("test", privateKeyOrMnemonic, keyring.DefaultBIP39Passphrase, hdPath, hd.Secp256k1)
 		if err != nil {
 			return PrivateKey{}, err
 		}
