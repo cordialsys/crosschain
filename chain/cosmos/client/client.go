@@ -18,11 +18,11 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 
+	banktypes "cosmossdk.io/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	xc "github.com/cordialsys/crosschain"
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
@@ -91,7 +91,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}
 	httpClient, err := rpchttp.NewWithClient(
 		host,
-		"websocket",
 		rawHttpClient,
 	)
 
@@ -106,7 +105,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cosmosCfg := localcodectypes.MakeCosmosConfig()
+	cosmosCfg, err := localcodectypes.MakeCosmosConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
 	cliCtx := client.Context{}.
 		WithClient(httpClient).
 		WithCodec(cosmosCfg.Marshaler).

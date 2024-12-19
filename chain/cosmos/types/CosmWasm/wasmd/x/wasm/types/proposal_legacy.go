@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"cosmossdk.io/x/gov/types/v1beta1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 )
 
 const ModuleName = "wasm"

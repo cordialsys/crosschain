@@ -10,6 +10,7 @@ import (
 
 	signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
 	"cosmossdk.io/math"
+	banktypes "cosmossdk.io/x/bank/types"
 	"cosmossdk.io/x/tx/signing"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -22,7 +23,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 )
@@ -41,7 +41,10 @@ var _ xcbuilder.FullBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Cosmos TxBuilder
 func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
-	cosmosCfg := localcodectypes.MakeCosmosConfig()
+	cosmosCfg, err := localcodectypes.MakeCosmosConfig(asset.GetChain())
+	if err != nil {
+		return TxBuilder{}, err
+	}
 
 	return TxBuilder{
 		Asset:           asset,

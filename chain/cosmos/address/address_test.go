@@ -67,7 +67,7 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	builder, _ = address.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
 	bytes, _ = hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
 	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
-	require.ErrorContains(t, err, "addresses cannot be empty")
+	require.ErrorContains(t, err, "address cannot be empty")
 	require.Equal(t, xc.Address(""), derivedAddress)
 }
 

@@ -276,6 +276,12 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, uint16(0x2), solTx.Message.Instructions[0].ProgramIDIndex) // system tx
 }
 
+func Bytes32(i byte) []byte {
+	bz := make([]byte, 32)
+	bz[0] = i
+	return bz
+}
+
 func TestNewTransferAsToken(t *testing.T) {
 
 	builder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
@@ -294,13 +300,13 @@ func TestNewTransferAsToken(t *testing.T) {
 	testcases := []testcase{
 		{
 			txInput: &TxInput{
-				RecentBlockHash: solana.HashFromBytes([]byte{1, 2, 3, 4}),
+				RecentBlockHash: solana.HashFromBytes(Bytes32(1)),
 			},
 			expectedSourceAccount: "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
 		},
 		{
 			txInput: &TxInput{
-				RecentBlockHash: solana.HashFromBytes([]byte{1, 2, 3, 4}),
+				RecentBlockHash: solana.HashFromBytes(Bytes32(1)),
 				SourceTokenAccounts: []*tx_input.TokenAccount{
 					{
 						Account: solana.MustPublicKeyFromBase58("gCr8Xc43gEKntp7pjsBNq8qFHeUUdie2D7TrfbzPMJP"),
