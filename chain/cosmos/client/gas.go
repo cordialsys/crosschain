@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
 )
 
 // EstimateGas estimates gas price for a Cosmos chain
@@ -93,7 +94,7 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	sig, _, err := kb.Sign("from", toSign[0])
+	sig, _, err := kb.Sign("from", toSign[0], txsigning.SignMode_SIGN_MODE_DIRECT)
 	if err != nil {
 		return nil, err
 	}

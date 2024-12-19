@@ -5,11 +5,13 @@ import "cosmos/base/v1beta1/coin.proto";
 import "cosmos_proto/cosmos.proto";
 import "gogoproto/gogo.proto";
 import "injective/oracle/v1beta1/oracle.proto";
+import "amino/amino.proto";
 
 // option go_package = "github.com/InjectiveLabs/injective-core/injective-chain/modules/oracle/types";
 option go_package = "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/modules/oracle/types";
 
 message GrantBandOraclePrivilegeProposal {
+  option (amino.name) = "oracle/GrantBandOraclePrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -21,6 +23,7 @@ message GrantBandOraclePrivilegeProposal {
 }
 
 message RevokeBandOraclePrivilegeProposal {
+  option (amino.name) = "oracle/RevokeBandOraclePrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -32,6 +35,7 @@ message RevokeBandOraclePrivilegeProposal {
 }
 
 message GrantPriceFeederPrivilegeProposal {
+  option (amino.name) = "oracle/GrantPriceFeederPrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -45,6 +49,7 @@ message GrantPriceFeederPrivilegeProposal {
 }
 
 message GrantProviderPrivilegeProposal {
+  option (amino.name) = "oracle/GrantProviderPrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -57,6 +62,7 @@ message GrantProviderPrivilegeProposal {
 }
 
 message RevokeProviderPrivilegeProposal {
+  option (amino.name) = "oracle/RevokeProviderPrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -69,6 +75,7 @@ message RevokeProviderPrivilegeProposal {
 }
 
 message RevokePriceFeederPrivilegeProposal {
+  option (amino.name) = "oracle/RevokePriceFeederPrivilegeProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -82,6 +89,7 @@ message RevokePriceFeederPrivilegeProposal {
 }
 
 message AuthorizeBandOracleRequestProposal {
+  option (amino.name) = "oracle/AuthorizeBandOracleRequestProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -93,6 +101,7 @@ message AuthorizeBandOracleRequestProposal {
 }
 
 message UpdateBandOracleRequestProposal {
+  option (amino.name) = "oracle/UpdateBandOracleRequestProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -105,6 +114,7 @@ message UpdateBandOracleRequestProposal {
 }
 
 message EnableBandIBCProposal {
+  option (amino.name) = "oracle/EnableBandIBCProposal";
   option (gogoproto.equal) = false;
   option (gogoproto.goproto_getters) = false;
 
@@ -114,4 +124,30 @@ message EnableBandIBCProposal {
   string description = 2;
 
   BandIBCParams band_ibc_params = 3 [ (gogoproto.nullable) = false ];
+}
+
+message GrantStorkPublisherPrivilegeProposal {
+  option (amino.name) = "oracle/GrantStorkPublisherPrivilegeProposal";
+  option (gogoproto.equal) = false;
+  option (gogoproto.goproto_getters) = false;
+
+  option (cosmos_proto.implements_interface) = "cosmos.gov.v1beta1.Content";
+
+  string title = 1;
+  string description = 2;
+
+  repeated string stork_publishers = 3;
+}
+
+message RevokeStorkPublisherPrivilegeProposal {
+  option (amino.name) = "oracle/RevokeStorkPublisherPrivilegeProposal";
+  option (gogoproto.equal) = false;
+  option (gogoproto.goproto_getters) = false;
+
+  option (cosmos_proto.implements_interface) = "cosmos.gov.v1beta1.Content";
+
+  string title = 1;
+  string description = 2;
+
+  repeated string stork_publishers = 3;
 }

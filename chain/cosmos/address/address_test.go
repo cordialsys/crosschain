@@ -7,7 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cosmos/address"
-	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/ethermint/crypto/ethsecp256k1"
+	"github.com/cordialsys/crosschain/chain/cosmos/types/evmos/evmos/v20/crypto/ethsecp256k1"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	"github.com/stretchr/testify/require"

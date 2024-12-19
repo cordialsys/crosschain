@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 
+	"cosmossdk.io/math"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -29,7 +30,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	msg := &stakingtypes.MsgDelegate{
 		DelegatorAddress: string(from),
 		ValidatorAddress: validatorAddress,
-		Amount:           types.NewCoin(denom, types.NewIntFromBigInt(amount.Int())),
+		Amount:           types.NewCoin(denom, math.NewIntFromBigInt(amount.Int())),
 	}
 
 	fees := txBuilder.calculateFees(amount, &stakeInput.TxInput, false)
@@ -63,7 +64,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	msg := &stakingtypes.MsgUndelegate{
 		DelegatorAddress: string(from),
 		ValidatorAddress: validatorAddress,
-		Amount:           types.NewCoin(denom, types.NewIntFromBigInt(amount.Int())),
+		Amount:           types.NewCoin(denom, math.NewIntFromBigInt(amount.Int())),
 	}
 
 	fees := txBuilder.calculateFees(amount, &stakeInput.TxInput, false)

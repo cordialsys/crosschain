@@ -4,16 +4,14 @@ package types
 // Some code deleted for compatibility
 
 import (
-	"errors"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	math "cosmossdk.io/math"
 )
 
 //-----------------------------------------------------------------------------
 // Schedule
 
 // NewSchedule returns new Schedule instance
-func NewSchedule(startTime, endTime int64, ratio sdk.Dec) Schedule {
+func NewSchedule(startTime, endTime int64, ratio math.LegacyDec) Schedule {
 	return Schedule{
 		StartTime: startTime,
 		EndTime:   endTime,
@@ -32,28 +30,12 @@ func (s Schedule) GetEndTime() int64 {
 }
 
 // GetRatio returns ratio
-func (s Schedule) GetRatio() sdk.Dec {
+func (s Schedule) GetRatio() math.LegacyDec {
 	return s.Ratio
 }
 
 // Validate checks that the lazy schedule is valid.
 func (s Schedule) Validate() error {
-	startTime := s.GetStartTime()
-	endTime := s.GetEndTime()
-	ratio := s.GetRatio()
-
-	if startTime < 0 {
-		return errors.New("vesting start-time cannot be negative")
-	}
-
-	if endTime < startTime {
-		return errors.New("vesting start-time cannot be before end-time")
-	}
-
-	if ratio.LTE(sdk.ZeroDec()) {
-		return errors.New("vesting ratio cannot be smaller than or equal with zero")
-	}
-
 	return nil
 }
 
@@ -72,25 +54,8 @@ func NewVestingSchedule(denom string, schedules Schedules) VestingSchedule {
 }
 
 // GetVestedRatio returns the ratio of tokens that have vested by blockTime.
-func (vs VestingSchedule) GetVestedRatio(blockTime int64) sdk.Dec {
-	sumRatio := sdk.ZeroDec()
-	for _, lazySchedule := range vs.Schedules {
-		startTime := lazySchedule.GetStartTime()
-		endTime := lazySchedule.GetEndTime()
-		ratio := lazySchedule.GetRatio()
-
-		if blockTime < startTime {
-			continue
-		}
-
-		if blockTime < endTime {
-			ratio = ratio.MulInt64(blockTime - startTime).QuoInt64(endTime - startTime)
-		}
-
-		sumRatio = sumRatio.Add(ratio)
-
-	}
-	return sumRatio
+func (vs VestingSchedule) GetVestedRatio(blockTime int64) math.LegacyDec {
+	return math.LegacyDec{}
 }
 
 // GetDenom returns the denom of vesting schedule
@@ -100,23 +65,6 @@ func (vs VestingSchedule) GetDenom() string {
 
 // Validate checks that the vesting lazy schedule is valid.
 func (vs VestingSchedule) Validate() error {
-	sumRatio := sdk.ZeroDec()
-	for _, lazySchedule := range vs.Schedules {
-		if err := lazySchedule.Validate(); err != nil {
-			return err
-		}
-
-		sumRatio = sumRatio.Add(lazySchedule.GetRatio())
-	}
-
-	// Removed for compat
-	// // add rounding to allow language specific calculation errors
-	// const fixedPointDecimals = 1000000000
-	// if !sumRatio.MulInt64(fixedPointDecimals).RoundInt().
-	// 	ToDec().QuoInt64(fixedPointDecimals).Equal(sdk.OneDec()) {
-	// 	return errors.New("vesting total ratio must be one")
-	// }
-
 	return nil
 }
 
