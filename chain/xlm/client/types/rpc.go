@@ -33,7 +33,7 @@ type GetTransactionResult struct {
 type GetLedgerResult struct {
 	Id       string `json:"id"`
 	Hash     string `json:"hash"`
-	Sequence uint64 `json:"sequence"`
+	Sequence int64  `json:"sequence"`
 }
 
 type Balance struct {
@@ -43,5 +43,14 @@ type Balance struct {
 }
 
 type GetAccountResult struct {
+	Sequence string    `json:"sequence"`
 	Balances []Balance `json:"balances"`
+}
+
+type Records struct {
+	Records []GetLedgerResult `json:"records"`
+}
+
+type GetLatestLedgerResult struct {
+	Embedded Records `json:"_embedded"`
 }

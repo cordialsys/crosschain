@@ -34,11 +34,12 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
+	xlmaddress "github.com/cordialsys/crosschain/chain/xlm/address"
+	xlmbuilder "github.com/cordialsys/crosschain/chain/xlm/builder"
+	xlmclient "github.com/cordialsys/crosschain/chain/xlm/client"
 	xrp "github.com/cordialsys/crosschain/chain/xrp"
 	xrpaddress "github.com/cordialsys/crosschain/chain/xrp/address"
 	xrpclient "github.com/cordialsys/crosschain/chain/xrp/client"
-	xlmaddress "github.com/cordialsys/crosschain/chain/xlm/address"
-	xlmclient "github.com/cordialsys/crosschain/chain/xlm/client" 
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/client/services"
@@ -139,6 +140,8 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 		return ton.NewTxBuilder(cfg)
 	case DriverXrp:
 		return xrpbuilder.NewTxBuilder(cfg)
+	case DriverXlm:
+		return xlmbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }

@@ -645,5 +645,6 @@ chains:
     chain: XLM
     driver: xlm
     chain_name: xlm
+    chain_gas_price_default: 0.0000001
     decimals: 7
-
+    transaction_validity_time: 30

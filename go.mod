@@ -36,7 +36,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
-	github.com/stellar/go v0.0.0-20220112001115-ce5f636a91d5
+	github.com/stellar/go v0.0.0-20220406183204-45b6f52202f3
 	github.com/stretchr/testify v1.9.0
 	github.com/test-go/testify v1.1.4
 	github.com/tidwall/btree v1.6.0

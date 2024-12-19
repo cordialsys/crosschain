@@ -9,7 +9,7 @@ import (
 )
 
 // base32 encodes to G
-const VersionByte byte = 6 << 3;
+const VersionByte byte = 6 << 3
 
 type AddressBuilder struct{}
 
@@ -57,4 +57,3 @@ func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []b
 		},
 	}, err
 }
-

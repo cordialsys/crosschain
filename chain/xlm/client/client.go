@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"strconv"
 
 	"encoding/base64"
 	"encoding/json"
@@ -16,7 +17,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
-	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
+	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stellar/go/xdr"
 )
@@ -42,12 +43,32 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // FetchTransferInput returns tx input for a Template tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	return &xrptxinput.TxInput{}, errors.New("not implemented")
+	txInput := xlminput.NewTxInput()
+	account := args.GetFrom()
+	currentSequence, err := client.FetchSequenceNumber(account)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch account sequence number: %w", err)
+	}
+
+	ledger, err := client.FetchLatestLedgerInfo()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch ledger info: %w", err)
+	}
+
+	txInput.Sequence = currentSequence
+	txInput.MinLedgerSequence = ledger.Sequence
+
+	return txInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	return nil, errors.New("not implemented")
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	txInput, err := client.FetchTransferInput(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+	return txInput, nil
 }
 
 // Broadcast a signed transaction to the chain
@@ -60,8 +81,23 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return xc.LegacyTxInfo{}, errors.New("not implemented")
 }
 
+func (client *Client) FetchLatestLedgerInfo() (types.GetLedgerResult, error) {
+	url := client.GetLatestLedgerUrl()
+	var result types.GetLatestLedgerResult
+	err := client.Get(url, &result)
+	if err != nil {
+		return types.GetLedgerResult{}, nil
+	}
+
+	if len(result.Embedded.Records) == 0 {
+		return types.GetLedgerResult{}, errors.New("fetch latest ledger response empty")
+	}
+
+	return result.Embedded.Records[0], nil
+}
+
 func (client *Client) FetchLedgerInfo(sequence uint64) (types.GetLedgerResult, error) {
-	url := client.GetLedger(sequence)
+	url := client.GetLedgerUrl(sequence)
 	var result types.GetLedgerResult
 	err := client.Get(url, &result)
 	return result, err
@@ -90,7 +126,7 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 		errMsg = &msg
 	}
 
-	confirmations := ledger.Sequence - transaction.Ledger
+	confirmations := uint64(ledger.Sequence) - transaction.Ledger
 	txInfo := xclient.TxInfo{
 		Name:          name,
 		Hash:          sTxHash,
@@ -224,12 +260,27 @@ func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, 
 	return xc.AmountBlockchain{}, nil
 }
 
+func (client *Client) FetchSequenceNumber(address xc.Address) (int64, error) {
+	url := client.GetAccountUrl(string(address))
+	var response types.GetAccountResult
+	if err := client.Get(url, &response); err != nil {
+		return 0, fmt.Errorf("failed to fetch account data: %w", err)
+	}
+
+	sequence, err := strconv.ParseInt(response.Sequence, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse sequence number: %w", err)
+	}
+
+	return sequence, nil
+}
+
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	return client.FetchBalanceByAsset(address, true, client.Asset.GetChain().Chain)
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return 0, errors.New("not implemented")
+	return int(client.Asset.GetChain().GetDecimals()), nil
 }
 
 func (client *Client) GetTransactionUrl(txHash string) string {
@@ -240,8 +291,12 @@ func (client *Client) GetAccountUrl(address string) string {
 	return fmt.Sprintf("%s/accounts/%s", client.Url, address)
 }
 
-func (client *Client) GetLedger(sequence uint64) string {
+func (client *Client) GetLedgerUrl(sequence uint64) string {
 	return fmt.Sprintf("%s/ledgers/%d", client.Url, sequence)
+}
+
+func (client *Client) GetLatestLedgerUrl() string {
+	return fmt.Sprintf("%s/ledgers?order=desc&limit=1")
 }
 
 // Send a POST request

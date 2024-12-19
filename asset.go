@@ -422,6 +422,9 @@ type ChainConfig struct {
 	XDti             string `yaml:"dti,omitempty"`
 	XCoinGeckoId     string `yaml:"coingecko_id,omitempty"`
 	XCoinMarketCapId string `yaml:"coinmarketcap_id,omitempty"`
+
+	// Number of seconds for which the transaction will be considered valid after submission. Used only by Stellar so far
+	TransactionValidityTime int `yaml:"transaction_validity_time"`
 }
 
 func (chain *ChainConfig) Migrate() {
