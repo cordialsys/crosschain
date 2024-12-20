@@ -43,12 +43,16 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		To:   trans.EthTx.To(),
 		// use a high limit just for the estimation
 		Gas:        8_000_000,
-		GasPrice:   zero,
-		GasFeeCap:  zero,
-		GasTipCap:  zero,
 		Value:      trans.EthTx.Value(),
 		Data:       trans.EthTx.Data(),
 		AccessList: types.AccessList{},
+	}
+	// we should not include both gas pricing, need to pick one.
+	if client.Asset.GetChain().Driver == xc.DriverEVMLegacy {
+		msg.GasPrice = zero
+	} else {
+		msg.GasFeeCap = zero
+		msg.GasTipCap = zero
 	}
 	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
 
