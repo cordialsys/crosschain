@@ -28,7 +28,6 @@ type TxBuilder struct {
 	xc.TxBuilder
 	Asset          xc.ITask
 	CosmosTxConfig client.TxConfig
-	// CosmosTxBuilder client.TxBuilder
 }
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
@@ -43,7 +42,6 @@ func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 	return TxBuilder{
 		Asset:          asset,
 		CosmosTxConfig: cosmosCfg.TxConfig,
-		// CosmosTxBuilder: cosmosCfg.TxConfig.NewTxBuilder(),
 	}, nil
 }
 

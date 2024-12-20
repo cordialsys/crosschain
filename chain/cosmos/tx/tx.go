@@ -131,9 +131,8 @@ func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {
 
 func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 	body := &sdktx.TxBody{
-		Memo: tx.Memo,
-		// TODO we should set this
-		// TimeoutHeight: 0,
+		Memo:          tx.Memo,
+		TimeoutHeight: tx.Input.TimeoutHeight,
 	}
 	msgsAny, err := sdktx.SetMsgs(tx.Msgs)
 	if err != nil {
@@ -159,7 +158,6 @@ func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 	signerInfo := []*sdktx.SignerInfo{
 		{PublicKey: pubkeyAny, ModeInfo: modeInfo, Sequence: tx.Input.Sequence},
 	}
-	// signerInfo = append(signerInfo, &sdktx.SignerInfo{PublicKey: pubKey, ModeInfo: &modeInfo, Sequence: param.Sequence})
 	fee := &sdktx.Fee{Amount: tx.Fees, GasLimit: tx.Input.GasLimit}
 	authInfo := sdktx.AuthInfo{SignerInfos: signerInfo, Fee: fee}
 
