@@ -43,6 +43,9 @@ type Client struct {
 	Prefix    string
 }
 
+// At roughly 5s/block this is a ~12 hour timeout.
+const TimeoutInBlocks = 10_000
+
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientWithDecimals = &Client{}
 var _ xclient.StakingClient = &Client{}
@@ -158,6 +161,7 @@ func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*t
 		return txInput, fmt.Errorf("could not lookup chain_id: %v", err)
 	}
 	txInput.ChainId = status.NodeInfo.Network
+	txInput.TimeoutHeight = uint64(status.SyncInfo.LatestBlockHeight) + TimeoutInBlocks
 
 	if !client.Asset.GetChain().NoGasFees {
 		gasPrice, err := client.EstimateGasPrice(ctx)

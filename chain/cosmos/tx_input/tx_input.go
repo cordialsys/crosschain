@@ -28,6 +28,7 @@ type TxInput struct {
 	GasPrice            float64 `json:"gas_price,omitempty"`
 	LegacyMemo          string  `json:"memo,omitempty"`
 	LegacyFromPublicKey []byte  `json:"from_pubkey,omitempty"`
+	TimeoutHeight       uint64  `json:"timeout_height"`
 
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
 	ChainId   string         `json:"chain_id,omitempty"`

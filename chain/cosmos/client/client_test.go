@@ -45,7 +45,7 @@ func TestFetchTxInput(t *testing.T) {
 			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 			[]string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
-				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {"latest_block_height": "123"},"validator_info": {}}}`,
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
 				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
@@ -59,6 +59,7 @@ func TestFetchTxInput(t *testing.T) {
 				GasLimit:            gas.NativeTransferGasLimit,
 				GasPrice:            0.015,
 				LegacyMemo:          "",
+				TimeoutHeight:       client.TimeoutInBlocks + 123,
 				AssetType:           tx_input.BANK,
 				ChainId:             "chainId",
 			},
@@ -82,6 +83,7 @@ func TestFetchTxInput(t *testing.T) {
 				AccountNumber:       1442,
 				Sequence:            4,
 				GasLimit:            gas.NativeTransferGasLimit,
+				TimeoutHeight:       client.TimeoutInBlocks,
 				GasPrice:            850000,
 				LegacyMemo:          "",
 				AssetType:           tx_input.BANK,
@@ -110,6 +112,7 @@ func TestFetchTxInput(t *testing.T) {
 				AccountNumber:       1442,
 				Sequence:            4,
 				GasLimit:            gas.NativeTransferGasLimit,
+				TimeoutHeight:       client.TimeoutInBlocks,
 				GasPrice:            850000,
 				LegacyMemo:          "",
 				AssetType:           tx_input.CW20,
@@ -174,6 +177,7 @@ func TestFetchTxInput(t *testing.T) {
 				AccountNumber:   17241,
 				Sequence:        3,
 				GasLimit:        gas.NativeTransferGasLimit,
+				TimeoutHeight:   client.TimeoutInBlocks,
 				ChainId:         "chainId",
 			},
 			"failed to estimate gas",
@@ -192,6 +196,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
 				GasLimit:        gas.NativeTransferGasLimit,
+				TimeoutHeight:   client.TimeoutInBlocks,
 				Sequence:        3,
 				ChainId:         "chainId",
 			},
@@ -200,29 +205,30 @@ func TestFetchTxInput(t *testing.T) {
 	}
 
 	for i, v := range vectors {
-		fmt.Println("test vector", i)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
 
-		v.asset.URL = server.URL
-		client, err := client.NewClient(&v.asset)
-		require.NoError(t, err)
-		from := xc.Address(v.from)
-		to := xc.Address(v.to)
-		input, err := client.FetchLegacyTxInput(context.Background(), from, to)
-
-		if v.err != "" {
-			require.ErrorContains(t, err, v.err)
-		} else {
+			v.asset.URL = server.URL
+			client, err := client.NewClient(&v.asset)
 			require.NoError(t, err)
-			require.NotNil(t, input)
+			from := xc.Address(v.from)
+			to := xc.Address(v.to)
+			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
 
-			if v.pubKeyStr != "" {
-				input.(xc.TxInputWithPublicKey).SetPublicKeyFromStr(v.pubKeyStr)
+			if v.err != "" {
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, input)
+
+				if v.pubKeyStr != "" {
+					input.(xc.TxInputWithPublicKey).SetPublicKeyFromStr(v.pubKeyStr)
+				}
+
+				require.Equal(t, v.txInput, input)
 			}
-
-			require.Equal(t, v.txInput, input)
-		}
+		})
 	}
 }
 
