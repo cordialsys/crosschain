@@ -231,7 +231,7 @@ func TestSubmitTxErr(t *testing.T) {
 	client, _ := client.NewClient(&xc.ChainConfig{
 		URL: "",
 	})
-	tx := &tx.Tx{}
+	tx := &tx.Tx{ChainCfg: &xc.ChainConfig{}}
 	err := client.SubmitTx(context.Background(), tx)
 	require.ErrorContains(t, err, "no Host in request URL")
 }

@@ -1,28 +1,22 @@
 package builder
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"sort"
 
-	signingv1beta1 "cosmossdk.io/api/cosmos/tx/signing/v1beta1"
 	"cosmossdk.io/math"
 	banktypes "cosmossdk.io/x/bank/types"
-	"cosmossdk.io/x/tx/signing"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/cosmos/address"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
-	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 )
@@ -32,9 +26,9 @@ var DefaultMaxTotalFeeHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 // TxBuilder for Cosmos
 type TxBuilder struct {
 	xc.TxBuilder
-	Asset           xc.ITask
-	CosmosTxConfig  client.TxConfig
-	CosmosTxBuilder client.TxBuilder
+	Asset          xc.ITask
+	CosmosTxConfig client.TxConfig
+	// CosmosTxBuilder client.TxBuilder
 }
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
@@ -47,9 +41,9 @@ func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 	}
 
 	return TxBuilder{
-		Asset:           asset,
-		CosmosTxConfig:  cosmosCfg.TxConfig,
-		CosmosTxBuilder: cosmosCfg.TxConfig.NewTxBuilder(),
+		Asset:          asset,
+		CosmosTxConfig: cosmosCfg.TxConfig,
+		// CosmosTxBuilder: cosmosCfg.TxConfig.NewTxBuilder(),
 	}, nil
 }
 
@@ -236,63 +230,12 @@ type txArgs struct {
 
 // createTxWithMsg creates a new Tx given Cosmos Msg
 func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Msg, args txArgs, fees types.Coins) (xc.Tx, error) {
-	asset := txBuilder.Asset
-	cosmosTxConfig := txBuilder.CosmosTxConfig
-	cosmosBuilder := txBuilder.CosmosTxBuilder
-
-	err := cosmosBuilder.SetMsgs(msg)
-	if err != nil {
-		return nil, err
-	}
-
-	cosmosBuilder.SetMemo(args.Memo)
-	cosmosBuilder.SetGasLimit(input.GasLimit)
-
-	cosmosBuilder.SetFeeAmount(fees)
-
-	sigMode := signingv1beta1.SignMode_SIGN_MODE_DIRECT
-	sigsV2 := []txsigning.SignatureV2{
-		{
-			PubKey: address.GetPublicKey(asset.GetChain(), args.FromPublicKey),
-			Data: &txsigning.SingleSignatureData{
-				SignMode:  txsigning.SignMode_SIGN_MODE_DIRECT,
-				Signature: nil,
-			},
-			Sequence: input.Sequence,
-		},
-	}
-	err = cosmosBuilder.SetSignatures(sigsV2...)
-	if err != nil {
-		return nil, err
-	}
-
-	chainId := input.ChainId
-	if chainId == "" {
-		chainId = asset.GetChain().ChainIDStr
-	}
-
-	signerData := signing.SignerData{
-		AccountNumber: input.AccountNumber,
-		ChainID:       chainId,
-		Sequence:      input.Sequence,
-	}
-	legacyTx := cosmosBuilder.GetTx()
-	adaptableTx, ok := legacyTx.(authsigning.V2AdaptableTx)
-	if !ok {
-		return nil, fmt.Errorf("expected tx to implement V2AdaptableTx, got %T", legacyTx)
-	}
-	txData := adaptableTx.GetSigningTxData()
-	sighashData, err := cosmosTxConfig.SignModeHandler().GetSignBytes(context.Background(), sigMode, signerData, txData)
-	if err != nil {
-		return nil, err
-	}
-	sighash := tx.GetSighash(asset.GetChain(), sighashData)
-	return &tx.Tx{
-		CosmosTx:        cosmosBuilder.GetTx(),
-		ParsedTransfers: []types.Msg{msg},
-		CosmosTxBuilder: cosmosBuilder,
-		CosmosTxEncoder: cosmosTxConfig.TxEncoder(),
-		SigsV2:          sigsV2,
-		TxDataToSign:    sighash,
-	}, nil
+	return tx.NewTx(
+		txBuilder.Asset.GetChain(),
+		*input,
+		[]types.Msg{msg},
+		fees,
+		args.FromPublicKey,
+		args.Memo,
+	), nil
 }
