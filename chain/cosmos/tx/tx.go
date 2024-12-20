@@ -3,28 +3,37 @@ package tx
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cosmos/address"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/cometbft/cometbft/crypto/tmhash"
-	"github.com/cosmos/cosmos-sdk/client"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdktx "github.com/cosmos/cosmos-sdk/types/tx"
 	signingtypes "github.com/cosmos/cosmos-sdk/types/tx/signing"
 )
 
 // Tx for Cosmos
 type Tx struct {
-	CosmosTx        types.Tx
-	ParsedTransfers []types.Msg
-	// aux fields
-	CosmosTxBuilder client.TxBuilder
-	CosmosTxEncoder types.TxEncoder
-	SigsV2          []signingtypes.SignatureV2
-	InputSignatures []xc.TxSignature
-	TxDataToSign    []byte
+	ChainCfg        *xc.ChainConfig
+	Input           tx_input.TxInput
+	Msgs            []types.Msg
+	Fees            types.Coins
+	SignerPublicKey []byte
+	Memo            string
+
+	signatures [][]byte
+}
+
+func NewTx(chain *xc.ChainConfig, input tx_input.TxInput, msgs []types.Msg, fees types.Coins, senderPubkey []byte, memo string) *Tx {
+	signatures := [][]byte{}
+	return &Tx{
+		chain, input, msgs, fees, senderPubkey, memo, signatures,
+	}
 }
 
 var _ xc.Tx = &Tx{}
@@ -53,67 +62,63 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	if tx.TxDataToSign == nil {
-		return nil, errors.New("transaction not initialized")
+	signDoc, err := tx.BuildUnsigned()
+	if err != nil {
+		return nil, err
 	}
-	return []xc.TxDataToSign{tx.TxDataToSign}, nil
+	signDocBytes, err := signDoc.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	sighash := GetSighash(tx.ChainCfg, signDocBytes)
+	return []xc.TxDataToSign{sighash}, nil
 }
 
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
-	if tx.SigsV2 == nil || len(tx.SigsV2) < 1 || tx.CosmosTxBuilder == nil {
-		return errors.New("transaction not initialized")
+	if len(signatures) == 0 {
+		return fmt.Errorf("invalid signatures size")
 	}
-	if len(signatures) != len(tx.SigsV2) {
-		return errors.New("invalid signatures size")
-	}
-	for i, signature := range signatures {
+	for _, signature := range signatures {
 		sig := signature[:]
 		if len(sig) > 64 {
 			sig = sig[:64]
 		}
-		data := tx.SigsV2[i].Data
-		signMode := data.(*signingtypes.SingleSignatureData).SignMode
-		tx.SigsV2[i].Data = &signingtypes.SingleSignatureData{
-			SignMode:  signMode,
-			Signature: sig,
+		if len(signature) == 0 {
+			return fmt.Errorf("invalid signature size")
 		}
+		tx.signatures = append(tx.signatures, sig)
 	}
-	tx.InputSignatures = signatures
-	return tx.CosmosTxBuilder.SetSignatures(tx.SigsV2...)
+	return nil
 }
 
 func (tx Tx) GetSignatures() []xc.TxSignature {
-	return tx.InputSignatures
+	sigs := []xc.TxSignature{}
+	for _, sig := range tx.signatures {
+		sigs = append(sigs, sig)
+	}
+
+	return sigs
 }
 
 // Serialize serializes a Tx
 func (tx Tx) Serialize() ([]byte, error) {
-	if tx.CosmosTxEncoder == nil {
-		return []byte{}, errors.New("transaction not initialized")
+	signDoc, err := tx.BuildUnsigned()
+	if err != nil {
+		return nil, err
 	}
 
-	// if CosmosTxBuilder is set, prioritize GetTx()
-	txToEncode := tx.CosmosTx
-	if tx.CosmosTxBuilder != nil {
-		txToEncode = tx.CosmosTxBuilder.GetTx()
+	txRaw := &sdktx.TxRaw{
+		BodyBytes:     signDoc.BodyBytes,
+		AuthInfoBytes: signDoc.AuthInfoBytes,
+		Signatures:    tx.signatures,
 	}
-
-	if txToEncode == nil {
-		return []byte{}, errors.New("transaction not initialized")
+	serialized, err := txRaw.Marshal()
+	if err != nil {
+		return nil, err
 	}
-	serialized, err := tx.CosmosTxEncoder(txToEncode)
-	return serialized, err
-}
-
-// Fee returns the fee of a Tx
-func (tx Tx) Fee() xc.AmountBlockchain {
-	switch tf := tx.CosmosTx.(type) {
-	case types.FeeTx:
-		fee := tf.GetFee()[0].Amount.BigInt()
-		return xc.AmountBlockchain(*fee)
-	}
-	return xc.NewAmountBlockchainFromUint64(0)
+	return serialized, nil
 }
 
 func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {
@@ -122,4 +127,61 @@ func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {
 	}
 	sighash := sha256.Sum256(sigData)
 	return sighash[:]
+}
+
+func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
+	body := &sdktx.TxBody{
+		Memo: tx.Memo,
+		// TODO we should set this
+		// TimeoutHeight: 0,
+	}
+	msgsAny, err := sdktx.SetMsgs(tx.Msgs)
+	if err != nil {
+		return nil, err
+	}
+	body.Messages = msgsAny
+
+	pubkey := address.GetPublicKey(tx.ChainCfg, tx.SignerPublicKey)
+	pubkeyAny, err := codectypes.NewAnyWithValue(pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	mode := sdktx.ModeInfo_Single_{
+		Single: &sdktx.ModeInfo_Single{
+			Mode: signingtypes.SignMode_SIGN_MODE_DIRECT,
+		},
+	}
+	modeInfo := &sdktx.ModeInfo{
+		Sum: &mode,
+	}
+
+	signerInfo := []*sdktx.SignerInfo{
+		{PublicKey: pubkeyAny, ModeInfo: modeInfo, Sequence: tx.Input.Sequence},
+	}
+	// signerInfo = append(signerInfo, &sdktx.SignerInfo{PublicKey: pubKey, ModeInfo: &modeInfo, Sequence: param.Sequence})
+	fee := &sdktx.Fee{Amount: tx.Fees, GasLimit: tx.Input.GasLimit}
+	authInfo := sdktx.AuthInfo{SignerInfos: signerInfo, Fee: fee}
+
+	bodyBytes, err := body.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	authInfoBytes, err := authInfo.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	chainId := tx.Input.ChainId
+	if chainId == "" {
+		chainId = tx.ChainCfg.ChainIDStr
+	}
+	all := sdktx.SignDoc{
+		BodyBytes:     bodyBytes,
+		AuthInfoBytes: authInfoBytes,
+		ChainId:       chainId,
+		AccountNumber: tx.Input.AccountNumber,
+	}
+
+	return &all, nil
 }

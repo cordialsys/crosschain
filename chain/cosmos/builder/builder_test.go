@@ -11,7 +11,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
-	"github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -67,8 +66,7 @@ func TestTransferWithTax(t *testing.T) {
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
 		require.NoError(t, err)
-		cosmosTx := xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
-		fee := cosmosTx.GetFee()
+		fee := xcTx.(*tx.Tx).Fees
 		// should only be one fee (tax and normal fee should be added)
 		require.Len(t, fee, 1)
 		// 5% of 100 is 5
@@ -78,8 +76,7 @@ func TestTransferWithTax(t *testing.T) {
 		asset.GasCoin = "uusd"
 		xcTx, err = builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
 		require.NoError(t, err)
-		cosmosTx = xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
-		fee = cosmosTx.GetFee()
+		fee = xcTx.(*tx.Tx).Fees
 		// should now be two fees: 1 normal fee in gas goin, 1 tax fee in transfer coin
 		if tc.Tax > 0 {
 			require.Len(t, fee, 2)
@@ -139,8 +136,7 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 
 		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
 		require.NoError(t, err)
-		cosmosTx := xcTx.(*tx.Tx).CosmosTx.(types.FeeTx)
-		fee := cosmosTx.GetFee()
+		fee := xcTx.(*tx.Tx).Fees
 		require.Len(t, fee, 1)
 		require.EqualValues(t, tc.totalFee, fee.AmountOf("uluna").Uint64())
 

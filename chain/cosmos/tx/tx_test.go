@@ -6,65 +6,24 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
-	"github.com/cordialsys/crosschain/chain/cosmos/types"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
-	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/stretchr/testify/require"
 )
 
 type Tx = tx.Tx
 
-func TestTxHashErr(t *testing.T) {
+func TestTxHash(t *testing.T) {
 
-	tx := Tx{}
+	tx := Tx{ChainCfg: &xc.ChainConfig{}}
 	hash := tx.Hash()
-	require.Equal(t, "", string(hash))
-}
-
-func TestTxSighashesErr(t *testing.T) {
-
-	tx := Tx{}
-	sighashes, err := tx.Sighashes()
-	require.EqualError(t, err, "transaction not initialized")
-	require.Nil(t, sighashes)
+	require.Equal(t, "023bcbe3ae753509926a7b9aa62f631830cdab9b0a1ae1e9ddceceba85bd677d", string(hash))
 }
 
 func TestTxAddSignaturesErr(t *testing.T) {
-	cosmosCfg, err := types.MakeEncodingConfig(&xc.ChainConfig{ChainPrefix: "atom"})
-	require.NoError(t, err)
-
-	tx := Tx{}
-	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(t, err, "transaction not initialized")
-
-	tx = Tx{
-		SigsV2: []signing.SignatureV2{},
-	}
-	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(t, err, "transaction not initialized")
-
-	tx = Tx{
-		SigsV2: []signing.SignatureV2{
-			{},
-		},
-		// missing Builder
-	}
-	err = tx.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(t, err, "transaction not initialized")
-
-	tx = Tx{
-		SigsV2: []signing.SignatureV2{
-			{
-				PubKey:   &secp256k1.PubKey{},
-				Data:     &signing.SingleSignatureData{SignMode: 0, Signature: nil},
-				Sequence: 0,
-			},
-		},
-		CosmosTxBuilder: cosmosCfg.TxConfig.NewTxBuilder(),
-	}
-	err = tx.AddSignatures([]xc.TxSignature{}...)
+	tx := Tx{ChainCfg: &xc.ChainConfig{}}
+	err := tx.AddSignatures([]xc.TxSignature{}...)
 	require.EqualError(t, err, "invalid signatures size")
 
+	tx = Tx{ChainCfg: &xc.ChainConfig{}}
 	err = tx.AddSignatures(xc.TxSignature{1, 2, 3})
 	require.NoError(t, err)
 
@@ -81,10 +40,10 @@ func TestTxAddSignaturesErr(t *testing.T) {
 
 func TestTxSerialize(t *testing.T) {
 
-	tx := Tx{}
+	tx := Tx{ChainCfg: &xc.ChainConfig{}}
 	serialized, err := tx.Serialize()
-	require.EqualError(t, err, "transaction not initialized")
-	require.Equal(t, serialized, []byte{})
+	require.NoError(t, err)
+	require.NotEmpty(t, serialized)
 }
 
 func TestGetSighash(t *testing.T) {
