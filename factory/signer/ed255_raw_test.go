@@ -33,7 +33,7 @@ func TestEd255Raw(t *testing.T) {
 
 		s := ScalarFromSeed(seedBz)
 
-		sig := signer.SignUsingRawScalar(s.Bytes(), message)
+		sig := signer.SignWithScalar(s.Bytes(), message)
 
 		// verify signature is valid using native lib
 		valid := ed25519.Verify(priv.Public().(ed25519.PublicKey), message, sig)

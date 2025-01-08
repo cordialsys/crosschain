@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
@@ -13,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/client/services/kiln"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -91,9 +91,9 @@ func CmdStake() *cobra.Command {
 				return err
 			}
 
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
 			if err != nil {
@@ -228,9 +228,9 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
 			if err != nil {
@@ -353,9 +353,9 @@ func CmdKilnTest() *cobra.Command {
 			}
 			jsonprint(stakes)
 			// cli.
-			// privateKeyInput := os.Getenv("PRIVATE_KEY")
+			// privateKeyInput := signer.ReadPrivateKeyEnv()
 			// if privateKeyInput == "" {
-			// 	return fmt.Errorf("must set env PRIVATE_KEY")
+			// 	return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			// }
 			// signer, err := xcFactory.NewSigner(chain, privateKeyInput)
 			// if err != nil {

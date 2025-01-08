@@ -5,11 +5,11 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
@@ -22,9 +22,9 @@ func sendToAuxAccount(mint string, from string, to string, amount uint64, seed s
 	toOwnerAddress := to
 	tokenAddress := mint
 
-	key := os.Getenv("PRIVATE_KEY")
+	key := signer.ReadPrivateKeyEnv()
 	if key == "" {
-		return errors.New("must set env PRIVATE_KEY to base58 private key")
+		return fmt.Errorf("must set env %s to base58 private key", signer.EnvPrivateKey)
 	}
 
 	signer, err := solana.WalletFromPrivateKeyBase58(key)

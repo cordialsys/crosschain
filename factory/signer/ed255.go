@@ -8,11 +8,15 @@ import (
 	"filippo.io/edwards25519"
 )
 
-// Normally a ed25519 private key is in a 64 byte {seed, public-key} format.
-// During signing, the seed is hashed to derive the actual scalar.  This is not
-// very compatible with MPC algorithms, so we provide this alternative signing implementation.
-// This will perform the signing using the "naked" scalar -- what would be part of the hashed "seed".
-func SignUsingRawScalar(sBz []byte, message []byte) []byte {
+// With regular RFC 8032 Ed25519 signing, a private key is in 64 byte {seed, public-key} format.
+// During signing, the seed is hashed to derive the actual scalar.  This is
+// incompatible with MPC algorithms, so we provide this alternative signing implementation, which is essentially FROST-Ed25519 signing for the case t = n = 1.
+// This will perform the signing using the scalar itself -- what would be part of the hashed output of "seed".
+//
+// For more background, see:
+// - https://github.com/taurushq-io/frost-ed25519/blob/master/README.md#signatures
+// - https://blog.web3auth.io/introducing-ed25519-in-web3auths-mpc-secure-signing-for-dapps-and-wallets/
+func SignWithScalar(sBz []byte, message []byte) []byte {
 	var err error
 	if len(sBz) != 32 {
 		panic(fmt.Sprintf("expected the scalar to be 32 bytes but got %d bytes", len(sBz)))

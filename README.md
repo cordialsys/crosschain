@@ -28,7 +28,7 @@ Usage:
   xc [command]
 
 Available Commands:
-  address     Derive an address from the PRIVATE_KEY environment variable.
+  address     Derive an address from the XC_PRIVATE_KEY environment variable.
   balance     Check balance of an asset.  Reported as big integer, not accounting for any decimals.
   chains      List information on all supported chains.
   completion  Generate the autocompletion script for the specified shell
@@ -51,11 +51,11 @@ Flags:
 
 ### Generate or import a wallet
 
-Set `PRIVATE_KEY` env and confirm you address is correct on the target chain you want to use.
+Set `XC_PRIVATE_KEY` env and confirm you address is correct on the target chain you want to use.
 
 ```bash
 # random 32-byte key
-export PRIVATE_KEY=$(cat /dev/urandom | head -c 32 | xxd -p -c100)
+export XC_PRIVATE_KEY=$(cat /dev/urandom | head -c 32 | xxd -p -c100)
 xc address --chain SOL
 ```
 
@@ -204,12 +204,12 @@ Just open an issue to discuss what you'd like to contribute and then submit a PR
 To support compatibility with recovered Ed25519 keys from MPC products like [Cordial Treasury](https://docs.cordialsystems.com/),
 signing can be configured to treat the key as a raw scalar, rather than a standard ed25519 "seed".
 
-To enable this, set env `XC_ED25519_SCALAR_SIGNING=1`.
+To enable this, set env `XC_SIGN_WITH_SCALAR=1`.
 
 ```bash
 # The scalar must be 32 bytes
-export PRIVATE_KEY=$(cat scalar.bin | xxd -p -c 512)
-export XC_ED25519_SCALAR_SIGNING=1
+export XC_PRIVATE_KEY=$(cat scalar.bin | xxd -p -c 512)
+export XC_SIGN_WITH_SCALAR=1
 
 xc transfer ...
 ```

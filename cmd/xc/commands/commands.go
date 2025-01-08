@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -26,9 +26,9 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 	if len(args) > 0 {
 		return xc.Address(args[0]), nil
 	}
-	privateKeyInput := os.Getenv("PRIVATE_KEY")
+	privateKeyInput := signer.ReadPrivateKeyEnv()
 	if privateKeyInput == "" {
-		return "", fmt.Errorf("must provide [address] as input, set env PRIVATE_KEY for it to be derived")
+		return "", fmt.Errorf("must provide [address] as input, set env %s for it to be derived", signer.EnvPrivateKey)
 	}
 	signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
 	if err != nil {
@@ -206,9 +206,9 @@ func CmdTxTransfer() *cobra.Command {
 				decimals = int32(parsed)
 			}
 
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
 			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, decimals))
@@ -335,15 +335,15 @@ func CmdTxTransfer() *cobra.Command {
 func CmdAddress() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "address",
-		Short: "Derive an address from the PRIVATE_KEY environment variable.",
+		Short: fmt.Sprintf("Derive an address from the %s environment variable.", signer.EnvPrivateKey),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
 			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)

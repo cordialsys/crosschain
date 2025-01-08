@@ -18,11 +18,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/gagliardetto/solana-go"
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
 	"github.com/gagliardetto/solana-go/programs/stake"
@@ -77,9 +77,9 @@ func CmdStake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			privateKeyInput := os.Getenv("PRIVATE_KEY")
+			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env PRIVATE_KEY")
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
 			if err != nil {
