@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -14,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/sirupsen/logrus"
 )
 
 // Reference implementation to sign transactions - not meant to be used for production
@@ -27,6 +29,8 @@ type PrivateKey []byte
 
 // PublicKey is a public key
 type PublicKey []byte
+
+const EnvEd25519ScalarSigning = "XC_ED25519_SCALAR_SIGNING"
 
 func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, error) {
 	if strings.Contains(privateKeyOrMnemonic, " ") {
@@ -87,6 +91,12 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig) (*Signer, er
 	alg := driver.SignatureAlgorithm()
 	switch alg {
 	case xc.Ed255:
+		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
+			if len(secretBz) != 32 {
+				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
+			}
+			return &Signer{driver, secretBz}, nil
+		}
 		if len(secretBz) == ed25519.SeedSize {
 			key := ed25519.NewKeyFromSeed(secretBz)
 			return &Signer{driver, key}, nil
@@ -109,7 +119,13 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig) (*Signer, er
 func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 	switch s.driver.SignatureAlgorithm() {
 	case xc.Ed255:
-		signatureRaw := ed25519.Sign(ed25519.PrivateKey(s.privateKey), []byte(data))
+		var signatureRaw []byte
+		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
+			logrus.Debug("using raw scalar signing for ed25519 key")
+			signatureRaw = SignUsingRawScalar(s.privateKey, []byte(data))
+		} else {
+			signatureRaw = ed25519.Sign(ed25519.PrivateKey(s.privateKey), []byte(data))
+		}
 		return xc.TxSignature(signatureRaw), nil
 	case xc.K256Keccak, xc.K256Sha256:
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))

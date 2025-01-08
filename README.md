@@ -196,3 +196,20 @@ To add a new chain, we recommend you first study existing implementations in `ch
 Normally it's easiest to start with the client methods (reporting a balance), and then incrementally get to building a transaction and broadcasting it.
 
 Just open an issue to discuss what you'd like to contribute and then submit a PR.
+
+## Notes
+
+### Ed25519 Signing
+
+To support compatibility with recovered Ed25519 keys from MPC products like [Cordial Treasury](https://docs.cordialsystems.com/),
+signing can be configured to treat the key as a raw scalar, rather than a standard ed25519 "seed".
+
+To enable this, set env `XC_ED25519_SCALAR_SIGNING=1`.
+
+```bash
+# The scalar must be 32 bytes
+export PRIVATE_KEY=$(cat scalar.bin | xxd -p -c 512)
+export XC_ED25519_SCALAR_SIGNING=1
+
+xc transfer ...
+```
