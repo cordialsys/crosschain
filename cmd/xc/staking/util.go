@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -15,9 +14,9 @@ import (
 )
 
 func LoadPrivateKey(xcFactory *factory.Factory, chain *xc.ChainConfig) (xc.Address, *signer.Signer, error) {
-	privateKeyInput := os.Getenv("PRIVATE_KEY")
+	privateKeyInput := signer.ReadPrivateKeyEnv()
 	if privateKeyInput == "" {
-		return "", nil, fmt.Errorf("must set env PRIVATE_KEY")
+		return "", nil, fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 	}
 	signer, err := xcFactory.NewSigner(chain, privateKeyInput)
 	if err != nil {

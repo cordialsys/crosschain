@@ -30,7 +30,18 @@ type PrivateKey []byte
 // PublicKey is a public key
 type PublicKey []byte
 
-const EnvEd25519ScalarSigning = "XC_ED25519_SCALAR_SIGNING"
+const EnvEd25519ScalarSigning = "XC_SIGN_WITH_SCALAR"
+
+const EnvPrivateKey = "XC_PRIVATE_KEY"
+
+func ReadPrivateKeyEnv() string {
+	val := os.Getenv(EnvPrivateKey)
+	if val != "" {
+		return val
+	}
+	// fallback to old PRIVATE_KEY
+	return os.Getenv("PRIVATE_KEY")
+}
 
 func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, error) {
 	if strings.Contains(privateKeyOrMnemonic, " ") {
@@ -122,7 +133,7 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		var signatureRaw []byte
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			logrus.Debug("using raw scalar signing for ed25519 key")
-			signatureRaw = SignUsingRawScalar(s.privateKey, []byte(data))
+			signatureRaw = SignWithScalar(s.privateKey, []byte(data))
 		} else {
 			signatureRaw = ed25519.Sign(ed25519.PrivateKey(s.privateKey), []byte(data))
 		}

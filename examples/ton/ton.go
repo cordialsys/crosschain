@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
-	"os"
 
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/liteclient"
 	"github.com/xssnick/tonutils-go/tlb"
@@ -25,7 +25,7 @@ func tryTon() error {
 	fmt.Println("querying ton")
 
 	// wallet.FromPrivateKey()
-	keyseedhex := os.Getenv("PRIVATE_KEY")
+	keyseedhex := signer.ReadPrivateKeyEnv()
 	keyseed, _ := hex.DecodeString(keyseedhex)
 	key := ed25519.NewKeyFromSeed(keyseed)
 
