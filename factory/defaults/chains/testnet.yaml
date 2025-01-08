@@ -213,6 +213,7 @@ chains:
     chain: SUI
     driver: sui
     net: devnet
+    chain_coin: "0x2::sui::SUI"
     chain_name: Sui (Devnet)
     decimals: 9
   XPLA:
