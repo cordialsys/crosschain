@@ -531,6 +531,7 @@ chains:
     chain: SUI
     driver: sui
     chain_name: Sui
+    chain_coin: "0x2::sui::SUI"
     decimals: 9
     confirmations_final: 1
     external:
