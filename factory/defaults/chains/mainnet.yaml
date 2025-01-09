@@ -5,6 +5,7 @@
 #   - Robinhood: https://robinhood.com/us/en/support/articles/crypto-transfers/#Cryptodepositprocessingtimes
 # external.coin_gecko.asset_id: Take from CoinGecko page for the asset.
 # external.coin_market_cap.asset_id: Take from CoinMarketCap page for the asset.
+# IndexingCo ID's can be found at https://jiti.indexing.co/networks
 
 network: "mainnet"
 chains:
@@ -38,6 +39,8 @@ chains:
       coin_market_cap:
         chain_id: "141"
         asset_id: "21794" # UCID
+      indexing_co:
+        chain_id: aptos
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -70,6 +73,8 @@ chains:
         asset_id: "5805"
       coin_gecko:
         asset_id: avalanche
+      indexing_co:
+        chain_id: avalanche
   ArbETH:
     chain: ArbETH
     driver: evm
@@ -84,6 +89,8 @@ chains:
         chain_id: "51"
       coin_gecko:
         asset_id: arbitrum-one
+      indexing_co:
+        chain_id: arbitrum
   AurETH:
     chain: AurETH
     driver: evm-legacy
@@ -106,6 +113,8 @@ chains:
     decimals: 18
     external:
       dti: 6M4WCXL3X
+      indexing_co:
+        chain_id: base
 
   BCH:
     chain: BCH
@@ -146,6 +155,8 @@ chains:
         asset_id: "1839"
       coin_gecko:
         asset_id: binance-smart-chain
+      indexing_co:
+        chain_id: bsc
   BTC:
     chain: BTC
     driver: bitcoin
@@ -160,6 +171,8 @@ chains:
         asset_id: "1"
       coin_gecko:
         asset_id: bitcoin
+      indexing_co:
+        chain_id: bitcoin
   CELO:
     chain: CELO
     driver: evm
@@ -174,6 +187,8 @@ chains:
         asset_id: "5567"
       coin_gecko:
         asset_id: celo
+      indexing_co:
+        chain_id: celo
   CHZ:
     chain: CHZ
     driver: evm-legacy
@@ -214,6 +229,8 @@ chains:
         asset_id: "74"
       coin_gecko:
         asset_id: dogecoin
+      indexing_co:
+        chain_id: dogecoin
   DOT:
     chain: DOT
     driver: substrate
@@ -277,6 +294,8 @@ chains:
         asset_id: "1027"
       coin_gecko:
         asset_id: ethereum
+      indexing_co:
+        chain_id: ethereum
   ETHW:
     chain: ETHW
     driver: evm
@@ -462,6 +481,8 @@ chains:
         asset_id: "28321" # This is for "POL"
       coin_gecko:
         asset_id: polygon-pos
+      indexing_co:
+        chain_id: polygon
   NOBLE:
     chain: NOBLE
     driver: cosmos
@@ -495,6 +516,8 @@ chains:
         chain_id: "42"
       coin_gecko:
         asset_id: optimistic-ethereum
+      indexing_co:
+        chain_id: optimism
 
   SEI:
     chain: SEI
@@ -527,6 +550,8 @@ chains:
         asset_id: "5426"
       coin_gecko:
         asset_id: solana
+      indexing_co:
+        chain_id: solana
   SUI:
     chain: SUI
     driver: sui
@@ -585,6 +610,8 @@ chains:
         asset_id: "11419"
       coin_gecko:
         asset_id: the-open-network
+      indexing_co:
+        chain_id: ton
   TRX:
     chain: TRX
     driver: tron
@@ -601,6 +628,8 @@ chains:
         asset_id: "1958"
       coin_gecko:
         asset_id: tron
+      indexing_co:
+        chain_id: tron
   XDC:
     chain: XDC
     driver: evm-legacy
@@ -642,3 +671,5 @@ chains:
         asset_id: "52"
       coin_gecko:
         asset_id: ripple
+      indexing_co:
+        chain_id: ripple

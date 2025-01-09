@@ -311,6 +311,9 @@ type External struct {
 		// Coingecko's asset ID, if relevant
 		AssetId string `yaml:"asset_id,omitempty"`
 	} `yaml:"coin_gecko,omitempty"`
+	IndexingCo struct {
+		ChainId string `yaml:"chain_id,omitempty"`
+	} `yaml:"indexing_co,omitempty"`
 }
 
 type StakingConfig struct {
