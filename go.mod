@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	cloud.google.com/go/secretmanager v1.13.1
-	cosmossdk.io/api v0.8.0-rc.3
+	cosmossdk.io/api v0.8.0-rc.3 // indirect
 	cosmossdk.io/errors v1.0.1
 	cosmossdk.io/math v1.4.0
 	cosmossdk.io/x/evidence v0.2.0-rc.1
@@ -39,6 +39,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
+	github.com/stellar/go v0.0.0-20220406183204-45b6f52202f3
 	github.com/stretchr/testify v1.10.0
 	github.com/test-go/testify v1.1.4
 	github.com/tidwall/btree v1.7.0
@@ -64,6 +65,7 @@ require (
 	cosmossdk.io/x/params v0.2.0-rc.1
 	cosmossdk.io/x/slashing v0.2.0-rc.1
 	cosmossdk.io/x/staking v0.0.0-20241218110910-47409028a73d
+	filippo.io/edwards25519 v1.1.0
 )
 
 require (
@@ -84,7 +86,6 @@ require (
 	cosmossdk.io/schema v1.0.0 // indirect
 	cosmossdk.io/store v1.10.0-rc.1.0.20241218084712-ca559989da43 // indirect
 	cosmossdk.io/x/epochs v0.0.0-20241218110910-47409028a73d // indirect
-	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
@@ -247,6 +248,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stellar/go-xdr v0.0.0-20211103144802-8017fc4bdfee // indirect
 	github.com/streamingfast/logging v0.0.0-20230608130331-f22c91403091 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect

@@ -66,6 +66,7 @@ const (
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
 	XRP    = NativeAsset("XRP")    // XRP
+	XLM    = NativeAsset("XLM")    // XLM
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -113,6 +114,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XRP,
 	BASE,
 	NOBLE,
+	XLM,
 }
 
 // Driver is the type of a chain
@@ -134,6 +136,7 @@ const (
 	DriverTron          = Driver("tron")
 	DriverTon           = Driver("ton")
 	DriverXrp           = Driver("xrp")
+	DriverXlm           = Driver("xlm")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -153,6 +156,7 @@ var SupportedDrivers = []Driver{
 	DriverTron,
 	DriverTon,
 	DriverXrp,
+	DriverXlm,
 }
 
 type StakingProvider string
@@ -233,6 +237,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverTon
 	case XRP:
 		return DriverXrp
+	case XLM:
+		return DriverXlm
 	}
 	return ""
 }
@@ -243,7 +249,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm:
 		return Ed255
 	}
 	return ""
@@ -259,7 +265,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
 		return Compressed
-	case DriverCosmos, DriverCosmosEvmos, DriverXrp:
+	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron:
 		return Uncompressed
@@ -419,6 +425,11 @@ type ChainConfig struct {
 	XDti             string `yaml:"dti,omitempty"`
 	XCoinGeckoId     string `yaml:"coingecko_id,omitempty"`
 	XCoinMarketCapId string `yaml:"coinmarketcap_id,omitempty"`
+
+	// Number of seconds for which the transaction will be considered valid after submission.
+	// Format: `time.Duration` string
+	// Used only by Stellar so far
+	TransactionActiveTime time.Duration `yaml:"transaction_active_time"`
 }
 
 func (chain *ChainConfig) Migrate() {

@@ -673,3 +673,13 @@ chains:
         asset_id: ripple
       indexing_co:
         chain_id: ripple
+  XLM:
+    chain: XLM
+    driver: xlm
+    chain_name: xlm
+    chain_gas_price_default: 0.00001
+    decimals: 7
+    transaction_active_time: "2h"
+    # Stellar network passphrase
+    # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
+    chain_id_str: "Public Global Stellar Network ; September 2015"
