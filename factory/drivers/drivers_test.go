@@ -73,6 +73,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	if driver == xc.DriverSubstrate {
 		fakeAsset.ChainPrefix = "0"
 	}
+	if driver == xc.DriverXlm {
+		fakeAsset.ChainIDStr = "Test SDF Network ; September 2015"
+	}
 	return fakeAsset
 }
 
