@@ -5,7 +5,7 @@
 #   - Robinhood: https://robinhood.com/us/en/support/articles/crypto-transfers/#Cryptodepositprocessingtimes
 # external.coin_gecko.asset_id: Take from CoinGecko page for the asset.
 # external.coin_market_cap.asset_id: Take from CoinMarketCap page for the asset.
-# IndexingCo ID's can be found at https://jiti.indexing.co/networks
+# IndexingCo IDs can be found at https://jiti.indexing.co/networks
 
 network: "mainnet"
 chains:

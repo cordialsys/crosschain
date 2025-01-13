@@ -1,3 +1,5 @@
+# IndexingCo IDs can be found at https://jiti.indexing.co/networks
+
 network: "testnet"
 chains:
   APTOS:
@@ -27,6 +29,9 @@ chains:
     driver: evm
     chain_name: Berachain
     decimals: 18
+    external:
+      indexing_co:
+        chain_id: berachain_bartio
   BCH:
     chain: BCH
     driver: bitcoin-cash
@@ -113,6 +118,9 @@ chains:
       # KILN exit contract
       unstake_contract: "0x75838e6FC51fa2dFE22be1d5f3817AEf90306Be6"
       providers: ["kiln", "twinstake"]
+    external:
+      indexing_co:
+        chain_id: eth_holesky
   FTM:
     chain: FTM
     driver: evm-legacy
@@ -268,6 +276,9 @@ chains:
     driver: evm
     chain_name: Base Protocol
     decimals: 18
+    external:
+      indexing_co:
+        chain_id: base_sepolia
   NOBLE:
     chain: NOBLE
     driver: cosmos
