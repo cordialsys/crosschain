@@ -2,24 +2,19 @@ package client
 
 import (
 	"context"
-	"math"
-	"strconv"
-
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-
+	"strconv"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/sirupsen/logrus"
-
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
+	"github.com/cordialsys/crosschain/chain/xlm/common"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stellar/go/xdr"
@@ -39,17 +34,15 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 	networkPassphrase := cfg.ChainIDStr
 	if networkPassphrase == "" {
-		error := "Stellar configuration is missing ChainIDStr."
-		logrus.Error(error)
-		return nil, errors.New(error)
+		return nil, errors.New("stellar configuration is missing chain-id-str")
 	}
 
-	if cfg.ChainGasPriceDefault < 0 {
-		return nil, fmt.Errorf("ChainGasPriceDefault cannot be negative: %f", cfg.ChainGasPriceDefault)
+	if cfg.ChainMaxGasPrice <= 0 {
+		return nil, errors.New("chain-max-gas-price should be set to value greater than 0.0")
 	}
 
-	if cfg.ChainMinGasPrice < 0 {
-		return nil, fmt.Errorf("ChainMinGasPrice cannot be negative: %f", cfg.ChainMinGasPrice)
+	if cfg.TransactionActiveTime == 0 {
+		return nil, errors.New("transaction-active-time should be greaterthan 0")
 	}
 
 	return &Client{
@@ -59,14 +52,19 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-// FetchTransferInput returns tx input for a Template tx
+// FetchTransferInput returns tx input for a Stellar tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	config := client.Asset.GetChain()
 	txInput := xlminput.NewTxInput(config.ChainIDStr)
 	account := args.GetFrom()
-	currentSequence, err := client.FetchSequenceNumber(account)
+	accountDetails, err := client.FetchAccountDetails(account)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch account sequence number: %w", err)
+		return nil, fmt.Errorf("failed to fetch account details: %w", err)
+	}
+
+	currentSequence, err := strconv.ParseInt(accountDetails.Sequence, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse sequence number: %w", err)
 	}
 
 	ledger, err := client.FetchLatestLedgerInfo()
@@ -77,17 +75,35 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.Sequence = currentSequence + 1
 	txInput.MinLedgerSequence = ledger.Sequence
 
-	defaultFee := config.ChainGasPriceDefault
-	defaultIFee := uint32(defaultFee * math.Pow10(int(config.Decimals)))
-	txInput.BaseFee = defaultIFee
-	txInput.MaxFee = defaultIFee
+	remainingBalance, err := accountDetails.GetNativeBalance()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read native balance: %w", err)
+	}
 
-	minFee := config.ChainMinGasPrice
-	minIFee := uint32(minFee * math.Pow10(int(config.Decimals)))
-	txInput.MinFee = minIFee
+	// Validate the amount and deduct it from the balance if the input 
+	// pertains to a native transaction
+	if _, ok := client.Asset.(*xc.ChainConfig); ok {
+		amount := args.GetAmount()
+		if remainingBalance.Cmp(&amount) == -1 {
+			return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), remainingBalance.String())
+		}
+		remainingBalance = remainingBalance.Sub(&amount)
+	}
+
+	// Stellar requires the MaxFee specification, which defines the maximum amount
+	// we are willing to spend on the transaction fee.
+	maxFee := xc.NewAmountHumanReadableFromFloat(config.ChainMaxGasPrice)
+	blockchainFee := maxFee.ToBlockchain(config.Decimals)
+
+	// If balance is greater than blockchainFee, we can safely use specified MaxFee
+	// Use remaining balance as a max fee otherwise
+	if remainingBalance.Cmp(&blockchainFee) == 1 {
+		txInput.MaxFee = uint32(blockchainFee.Int().Uint64())
+	} else {
+		txInput.MaxFee = uint32(remainingBalance.Uint64())
+	}
 
 	txInput.TransactionActiveTime = config.TransactionActiveTime
-
 	return txInput, nil
 }
 
@@ -112,13 +128,18 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	// Make sure that base64 string is properly escaped
 	urlTx := url.QueryEscape(encoded)
 	url := fmt.Sprintf("%s/transactions_async?tx=%s", client.Url, urlTx)
-	var submitResult types.SubmitTxAsyncResult
+
+
+	var submitResult types.AsyncTxSubmissionResult
 	if err := client.Post(url, nil, &submitResult); err != nil {
 		return fmt.Errorf("failed to send post request: %w", err)
 	}
 
-	if submitResult.TxStatus != types.TxStatusPending {
-		return fmt.Errorf("failed to create transaction: %+v", submitResult)
+	if submitResult.IsError() {
+		if err := submitResult.DecodeErrorResultXdr(); err != nil {
+			return fmt.Errorf("failed to decode error: %w", err)
+		}
+		return fmt.Errorf("failed to submit transaction: %w", &submitResult)
 	}
 
 	return nil
@@ -164,7 +185,7 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 
 	ledger, err := client.FetchLedgerInfo(transaction.Ledger)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get ledger (%v) data: %w", transaction.Ledger, err)
+		return xclient.TxInfo{}, fmt.Errorf("failed to get ledger (%v) data, error: %w", transaction.Ledger, err)
 	}
 
 	block := xclient.NewBlock(chain, uint64(transaction.Ledger), ledger.Hash, time)
@@ -176,7 +197,7 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 
 	latestLedger, err := client.FetchLatestLedgerInfo()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get latest ledger data: %w", err)
+		return xclient.TxInfo{}, fmt.Errorf("failed to get latest ledger data, error: %w", err)
 	}
 
 	confirmations := uint64(latestLedger.Sequence) - transaction.Ledger
@@ -281,27 +302,30 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalanceByAsset(address, true, xc.NativeAsset("XLM"))
+	return client.FetchBalanceByAsset(address, true, "XLM")
 }
 
 // Fetch asset balance by asset code
-func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, asset xc.NativeAsset) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, assetID string) (xc.AmountBlockchain, error) {
 	url := fmt.Sprintf("%s/accounts/%s", client.Url, string(address))
 	var response types.GetAccountResult
 	if err := client.Get(url, &response); err != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch account balances: %w", err)
 	}
 
-	// Asset code is omitted for native currency
-	if asset == "XLM" {
-		asset = ""
+	contractDetails, err := common.GetAssetAndIssuerFromContract(assetID)
+	if err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to get asset details: %w", err)
 	}
+
 	for _, balance := range response.Balances {
 		if balance.AssetType == types.AssetTypeLiquidityPoolShares {
 			continue
 		}
 
-		if balance.AssetCode == string(asset) {
+		if balance.AssetCode == contractDetails.AssetCode &&
+			balance.AssetIssuer == string(contractDetails.Issuer) {
+
 			readableAmount, err := xc.NewAmountHumanReadableFromStr(balance.Balance)
 			if err != nil {
 				return xc.AmountBlockchain{}, fmt.Errorf("failed to read balance decimal: %w", err)
@@ -313,23 +337,22 @@ func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, 
 	return xc.AmountBlockchain{}, nil
 }
 
-func (client *Client) FetchSequenceNumber(address xc.Address) (int64, error) {
+func (client *Client) FetchAccountDetails(address xc.Address) (types.GetAccountResult, error) {
 	url := fmt.Sprintf("%s/accounts/%s", client.Url, string(address))
 	var response types.GetAccountResult
 	if err := client.Get(url, &response); err != nil {
-		return 0, fmt.Errorf("failed to fetch account data: %w", err)
+		return response, fmt.Errorf("failed to fetch account data: %w", err)
 	}
 
-	sequence, err := strconv.ParseInt(response.Sequence, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse sequence number: %w", err)
-	}
-
-	return sequence, nil
+	return response, nil
 }
 
 func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalanceByAsset(address, true, client.Asset.GetChain().Chain)
+	if tk, ok := client.Asset.(*xc.TokenAssetConfig); ok {
+		return client.FetchBalanceByAsset(address, true, tk.Contract)
+	} else {
+		return client.FetchBalanceByAsset(address, true, "XLM")
+	}
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
@@ -349,18 +372,8 @@ func (client *Client) Post(url string, requestBody any, response any) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to post, HTTP status: %s, failed to decode response body: %w", resp.Status, err)
-		}
-		return fmt.Errorf("failed to post, HTTP status: %s, Body: \n%v", resp.Status, string(body))
-	}
-
-	if response != nil {
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
-		}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return fmt.Errorf("failed to decode response body: %w", err)
 	}
 
 	return nil
@@ -375,11 +388,12 @@ func (client *Client) Get(url string, response any) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to post, HTTP status: %s, failed to decode response body: %w", resp.Status, err)
+		var queryProblem types.QueryProblem
+		if err := json.NewDecoder(resp.Body).Decode(&queryProblem); err != nil {
+			return fmt.Errorf("failed to decode response body: %s", err)
 		}
-		return fmt.Errorf("failed to get, HTTP status: %s, error:\n%v", resp.Status, string(body))
+
+		return fmt.Errorf("failed to get, error: %w", &queryProblem)
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -391,12 +405,11 @@ func (client *Client) Get(url string, response any) error {
 
 // Conversion from xdr.Asset to xc.NativeAsset
 func GetAssetCode(asset xdr.Asset) xc.NativeAsset {
-	code := asset.GetCode()
-	// Native ("XLM") is used if xdr.Asset is ""
-	if code == "" {
-		code = "XLM"
+	if asset.Type == xdr.AssetTypeAssetTypeNative {
+		return xc.NativeAsset("XLM")
 	}
-	return xc.NativeAsset(code)
+
+	return xc.NativeAsset(fmt.Sprintf("%s-%s", asset.GetCode(), asset.GetIssuer()))
 }
 
 // Process payment like operation. This type of operations produce one movement containing source and destination.

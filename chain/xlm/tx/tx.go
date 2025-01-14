@@ -7,75 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
-
-	// "time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/stellar/go/xdr"
 )
 
-func NetworkId(passphrase string) [32]byte {
-	return sha256.Sum256([]byte(passphrase))
-}
-
-// TimeBounds represents the time window during which a Stellar transaction is considered valid.
-//
-// MinTime and MaxTime represent Stellar timebounds - a window of time over which the Transaction will be
-// considered valid. In general, almost all Transactions benefit from setting an upper timebound, because once submitted,
-// the status of a pending Transaction may remain unresolved for a long time if the network is congested.
-// With an upper timebound, the submitter has a guaranteed time at which the Transaction is known to have either
-// succeeded or failed, and can then take appropriate action (e.g. resubmit or mark as resolved).
-//
-// Create a TimeBounds struct using NewTimeout()
-type TimeBounds struct {
-	MinTime  int64
-	MaxTime  int64
-	wasBuilt bool
-}
-
-func NewTimeout(timeout time.Duration) TimeBounds {
-	return TimeBounds{0, time.Now().Add(timeout).Unix(), true}
-}
-
-func NewInfiniteTimeout() TimeBounds {
-	return TimeBounds{0, int64(0), false}
-}
-
-// Operation represents the operation types of the Stellar network.
-type Operation interface {
-	BuildXDR() (xdr.Operation, error)
-	FromXDR(xdrOp xdr.Operation) error
-	Validate() error
-	GetSourceAccount() string
-}
-
-// Preconditions is a container for all transaction preconditions.
-type Preconditions struct {
-	// Transaction is only valid during a certain time range (units are seconds).
-	TimeBounds TimeBounds
-	// Transaction is valid for ledger numbers n such that minLedger <= n
-	MinLedgerSequence int64
-}
-
-func (prec Preconditions) BuildXDR() xdr.Preconditions {
-	xdrCond := xdr.Preconditions{}
-	xdrTimeBounds := xdr.TimeBounds{
-		MinTime: xdr.TimePoint(prec.TimeBounds.MinTime),
-		MaxTime: xdr.TimePoint(prec.TimeBounds.MaxTime),
-	}
-
-	xdrCond.Type = xdr.PreconditionTypePrecondTime
-	xdrCond.TimeBounds = &xdrTimeBounds
-
-	return xdrCond
-}
-
 type Tx struct {
-	TxEnvelope        *xdr.TransactionEnvelope
-	Signatures        []xc.TxSignature
-	// Passphrase used to build transaction hash.
-	// Passphrases are public and defined per network. More info:
+	TxEnvelope *xdr.TransactionEnvelope
+	Signatures []xc.TxSignature
+	// NetworkPassphrase is used to build the transaction hash.
+	// Passphrases are publicly defined for each network.
+	// For more information, see the Stellar documentation:
 	// https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
 	NetworkPassphrase string
 }
@@ -98,24 +40,20 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 func HashEnvelope(envelope *xdr.TransactionEnvelope, passphrase string) ([]byte, error) {
-	var hash []byte
-	var err error
 	if envelope == nil {
-		return hash, errors.New("transaction envelope is missing")
+		return []byte{}, errors.New("transaction envelope is missing")
 	}
 
 	switch envelope.Type {
 	case xdr.EnvelopeTypeEnvelopeTypeTx:
-		hash, err = HashTransactionV1(envelope.V1.Tx, passphrase)
+		return HashTransactionV1(envelope.V1.Tx, passphrase)
 	case xdr.EnvelopeTypeEnvelopeTypeTxV0:
-		err = errors.New("XLM Transaction type 0 is unsupported")
+		return []byte{}, errors.New("XLM Transaction type 0 is unsupported")
 	case xdr.EnvelopeTypeEnvelopeTypeTxFeeBump:
-		err = errors.New("XLM FeeBump transaction is unsupported")
+		return []byte{}, errors.New("XLM FeeBump transaction is unsupported")
 	default:
-		err = errors.New("Invalid transaction type")
+		return []byte{}, errors.New("Invalid transaction type")
 	}
-
-	return hash, err
 }
 
 func HashTransactionV1(transaction xdr.Transaction, passphrase string) ([]byte, error) {
@@ -155,12 +93,12 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	return []xc.TxDataToSign{hash}, err
 }
 
-// Create a new xdr.DecoratedSignature, which is a signature bundled with last
-// 4 bytes of signer public key
+// NewDecoratedSignature creates a new xdr.DecoratedSignature, which combines a signature
+// with the last 4 bytes of the signer's public key (called Hint).
 func NewDecoratedSignature(signature xc.TxSignature, pub_key []byte) (xdr.DecoratedSignature, error) {
 	pub_key_len := len(pub_key)
-	if pub_key_len < 32 {
-		return xdr.DecoratedSignature{}, fmt.Errorf("specified public key is too short: %v, expected len: 32", pub_key_len)
+	if pub_key_len != 32 {
+		return xdr.DecoratedSignature{}, fmt.Errorf("specified public key is invalid: %v, expected len: 32", pub_key_len)
 	}
 
 	return xdr.DecoratedSignature{

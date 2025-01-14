@@ -19,7 +19,9 @@ func NewAddressBuilder(cfg xc.ITask) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
 
-// GetAddressFromPublicKey returns an Address given a public key
+// GetAddressFromPublicKey generates an Address from a given public key.
+// The method takes a public key in the form of a byte slice and returns a corresponding Address
+// after encoding it with a version byte and a checksum. The public key must be 32 bytes long.
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	if len(publicKeyBytes) != 32 {
 		return xc.Address(""), fmt.Errorf("expected public key length 32, got %v", len(publicKeyBytes))
