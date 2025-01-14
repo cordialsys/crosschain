@@ -3,8 +3,6 @@ package client_test
 import (
 	"context"
 	"encoding/json"
-
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -12,43 +10,87 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/xlm"
 	client "github.com/cordialsys/crosschain/chain/xlm/client"
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
+	"github.com/cordialsys/crosschain/chain/xlm/common"
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	txinput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
-	"github.com/stellar/go/xdr"
-
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/defaults/chains"
+	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewClient(t *testing.T) {
-	defaultClient, err := client.NewClient(&xc.ChainConfig{})
-	require.Nil(t, defaultClient)
-	require.Error(t, err)
-
-	badConfig := &xc.ChainConfig{
-		ChainIDStr:           "Some chain id",
-		ChainGasPriceDefault: -1,
-	}
-	badClient, err := client.NewClient(badConfig)
-	require.Nil(t, badClient)
-	require.ErrorContains(t, err, "ChainGasPriceDefault cannot be negative")
-
-	badConfig = &xc.ChainConfig{
-		ChainIDStr:       "Some chain id",
-		ChainMinGasPrice: -1,
-	}
-	badClient, err = client.NewClient(badConfig)
-	require.Nil(t, badClient)
-	require.ErrorContains(t, err, "ChainMinGasPrice cannot be negative")
-
+func TestValidClientConfiguration(t *testing.T) {
 	config := &xc.ChainConfig{
-		ChainIDStr: "ChainID",
+		ChainIDStr:            "ChainID",
+		ChainMaxGasPrice:      2.0,
+		TransactionActiveTime: time.Duration(500),
 	}
 	client, err := client.NewClient(config)
 	require.NotNil(t, client)
 	require.NoError(t, err)
+}
+
+func TestEmptyClientConfiguration(t *testing.T) {
+	defaultClient, err := client.NewClient(&xc.ChainConfig{})
+	require.Nil(t, defaultClient)
+	require.Error(t, err)
+}
+
+func TestClientConfigurationMissingChainIDStr(t *testing.T) {
+	missingChainIDStr := &xc.ChainConfig{
+		ChainMaxGasPrice:      2.0,
+		TransactionActiveTime: time.Duration(500),
+	}
+	badClient, err := client.NewClient(missingChainIDStr)
+	require.Nil(t, badClient)
+	require.ErrorContains(t, err, "chain-id-str")
+}
+
+func TestClientConfigurationBadMaxFee(t *testing.T) {
+	negativeMaxFee := &xc.ChainConfig{
+		ChainIDStr:            "Some chain id",
+		ChainMaxGasPrice:      -1.1,
+		TransactionActiveTime: time.Duration(500),
+	}
+	badClient, err := client.NewClient(negativeMaxFee)
+	require.Nil(t, badClient)
+	require.ErrorContains(t, err, "chain-max-gas-price")
+
+	zeroMaxFee := &xc.ChainConfig{
+		ChainIDStr:            "ChainID",
+		ChainMaxGasPrice:      0.0,
+		TransactionActiveTime: time.Duration(500),
+	}
+	client, err := client.NewClient(zeroMaxFee)
+	require.Nil(t, client)
+	require.ErrorContains(t, err, "chain-max-gas-price")
+}
+
+func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
+	missingTransactionActiveTime := &xc.ChainConfig{
+		ChainIDStr:       "Some chain id",
+		ChainMaxGasPrice: 2.0,
+	}
+	badClient, err := client.NewClient(missingTransactionActiveTime)
+	require.Nil(t, badClient)
+	require.ErrorContains(t, err, "transaction-active-time")
+}
+
+func TestMainnetConfiguration(t *testing.T) {
+	mainnetConfig := chains.Mainnet["xlm"]
+	require.Greater(t, mainnetConfig.ChainMaxGasPrice, 0.0)
+	require.NotZero(t, mainnetConfig.ChainIDStr)
+	require.NotZero(t, mainnetConfig.TransactionActiveTime)
+}
+
+func TestTestnetConfiguration(t *testing.T) {
+	testnetConfig := chains.Testnet["xlm"]
+	require.Greater(t, testnetConfig.ChainMaxGasPrice, 0.0)
+	require.NotZero(t, testnetConfig.TransactionActiveTime)
 }
 
 func TestFetchTxInput(t *testing.T) {
@@ -56,20 +98,30 @@ func TestFetchTxInput(t *testing.T) {
 	require.NoError(t, err)
 
 	vectors := []struct {
+		name                  string
 		asset                 xc.ITask
+		amount                xc.AmountBlockchain
 		getAccountResult      types.GetAccountResult
 		getLatestLedgerResult types.GetLatestLedgerResult
 		err                   string
 		expectedTxInput       txinput.TxInput
 	}{
 		{
+			name: "Test valid Tx input",
 			asset: &xc.ChainConfig{
-				ChainGasPriceDefault:  0.00001,
+				ChainMaxGasPrice:      0.00001,
 				TransactionActiveTime: txActiveTime,
 				ChainIDStr:            "Test SDF Network ; September 2015",
 			},
+			amount: xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
+				Balances: []types.Balance{
+					{
+						Balance:   "2.0",
+						AssetType: "native",
+					},
+				},
 			},
 			getLatestLedgerResult: types.GetLatestLedgerResult{
 				Embedded: types.Records{
@@ -86,8 +138,115 @@ func TestFetchTxInput(t *testing.T) {
 			expectedTxInput: txinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
 				Sequence:        1213,
-				BaseFee:         100,
 				MaxFee:          100,
+				// 2h * nanoseconds (10^9)
+				TransactionActiveTime: time.Duration(7200 * 1e9),
+				MinLedgerSequence:     1111,
+				Passphrase:            "Test SDF Network ; September 2015",
+			},
+		},
+		{
+			name: "Check fee greater than balance",
+			asset: &xc.ChainConfig{
+				ChainMaxGasPrice:      5.00000,
+				TransactionActiveTime: txActiveTime,
+				ChainIDStr:            "Test SDF Network ; September 2015",
+			},
+			amount: xc.NewAmountBlockchainFromUint64(100),
+			getAccountResult: types.GetAccountResult{
+				Sequence: "1212",
+				Balances: []types.Balance{
+					{
+						Balance:   "2.0",
+						AssetType: "native",
+					},
+				},
+			},
+			getLatestLedgerResult: types.GetLatestLedgerResult{
+				Embedded: types.Records{
+					Records: []types.GetLedgerResult{
+						{
+							Id:       "5",
+							Hash:     "totally_valid_hash",
+							Sequence: 1111,
+						},
+					},
+				},
+			},
+			err: "",
+			expectedTxInput: txinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
+				Sequence:        1213,
+				// Balance*10^7 - Amount
+				MaxFee: 20000000 - 100,
+				// 2h * nanoseconds (10^9)
+				TransactionActiveTime: time.Duration(7200 * 1e9),
+				MinLedgerSequence:     1111,
+				Passphrase:            "Test SDF Network ; September 2015",
+			},
+		},
+		{
+			name: "Check balance lower than tx amount",
+			asset: &xc.ChainConfig{
+				ChainMaxGasPrice:      1.00000,
+				TransactionActiveTime: txActiveTime,
+				ChainIDStr:            "Test SDF Network ; September 2015",
+			},
+			amount: xc.NewAmountBlockchainFromUint64(50000000),
+			getAccountResult: types.GetAccountResult{
+				Sequence: "1212",
+			},
+			getLatestLedgerResult: types.GetLatestLedgerResult{
+				Embedded: types.Records{
+					Records: []types.GetLedgerResult{
+						{
+							Id:       "5",
+							Hash:     "totally_valid_hash",
+							Sequence: 1111,
+						},
+					},
+				},
+			},
+			err:             "failed to create tx input",
+			expectedTxInput: txinput.TxInput{},
+		},
+		{
+			name: "Check fee greater token tx",
+			asset: &xc.TokenAssetConfig{
+				ChainConfig: &xc.ChainConfig{
+					ChainMaxGasPrice:      5.00000,
+					TransactionActiveTime: txActiveTime,
+					ChainIDStr:            "Test SDF Network ; September 2015",
+				},
+				Contract: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			},
+			amount: xc.NewAmountBlockchainFromUint64(100),
+			getAccountResult: types.GetAccountResult{
+				Sequence: "1212",
+				Balances: []types.Balance{
+					{
+						Balance:   "2.0",
+						AssetType: "native",
+					},
+				},
+			},
+			getLatestLedgerResult: types.GetLatestLedgerResult{
+				Embedded: types.Records{
+					Records: []types.GetLedgerResult{
+						{
+							Id:       "5",
+							Hash:     "totally_valid_hash",
+							Sequence: 1111,
+						},
+					},
+				},
+			},
+			err: "",
+			expectedTxInput: txinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
+				Sequence:        1213,
+				// Balance*10^7
+				MaxFee: 20000000,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
@@ -96,68 +255,70 @@ func TestFetchTxInput(t *testing.T) {
 		},
 	}
 
-	for i, vector := range vectors {
-		fmt.Printf("\nRunning TestFetchTxInput-%d\n", i)
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			url := r.URL.String()
-			if strings.Contains(url, "/accounts/") {
-				json.NewEncoder(w).Encode(vector.getAccountResult)
-			} else if strings.Contains(url, "/ledgers") {
-				json.NewEncoder(w).Encode(vector.getLatestLedgerResult)
+	for _, vector := range vectors {
+		t.Run(vector.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				url := r.URL.String()
+				if strings.Contains(url, "/accounts/") {
+					json.NewEncoder(w).Encode(vector.getAccountResult)
+				} else if strings.Contains(url, "/ledgers") {
+					json.NewEncoder(w).Encode(vector.getLatestLedgerResult)
+				} else {
+					t.Errorf("unexpected url: %s", url)
+				}
+			}))
+			defer server.Close()
+
+			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
+				token.ChainConfig.URL = server.URL
+				token.ChainConfig.Decimals = 7
 			} else {
-				t.Errorf("unexpected url: %s", url)
+				vector.asset.(*xc.ChainConfig).URL = server.URL
+				vector.asset.(*xc.ChainConfig).Decimals = 7
 			}
-		}))
-		defer server.Close()
 
-		if _, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-			// TODO: Implement when tokens are finished
-		} else {
-			vector.asset.(*xc.ChainConfig).URL = server.URL
-			vector.asset.(*xc.ChainConfig).Decimals = 7
-		}
-
-		client, _ := client.NewClient(vector.asset)
-		from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
-		to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
-		input, err := client.FetchLegacyTxInput(
-			context.Background(),
-			from,
-			to,
-		)
-		if err != nil {
-			require.Nil(t, input)
-			require.ErrorContains(t, err, vector.err)
-		} else {
-			require.NoError(t, err)
-			require.NotNil(t, input)
-			txInput := input.(xc.TxInput)
-			require.Equal(t, &vector.expectedTxInput, txInput)
-		}
+			client, _ := client.NewClient(vector.asset)
+			from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
+			to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
+			args, _ := builder.NewTransferArgs(from, to, vector.amount)
+			input, err := client.FetchTransferInput(
+				context.Background(),
+				args,
+			)
+			if err != nil {
+				t.Logf("Error: %v", err)
+				require.Nil(t, input)
+				require.ErrorContains(t, err, vector.err)
+				require.NotEqual(t, vector.err, "")
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, input)
+				txInput := input.(xc.TxInput)
+				require.Equal(t, &vector.expectedTxInput, txInput)
+			}
+		})
 	}
 }
 
 func TestSubmitTx(t *testing.T) {
 	from := xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF")
-	var source xdr.MuxedAccount
-	err := source.SetAddress(string(from))
-	require.NoError(t, err)
+	source := common.MustMuxedAccountFromAddres(from)
 
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
-	var destination xdr.MuxedAccount
-	err = destination.SetAddress(string(to))
-	require.NoError(t, err)
+	destination := common.MustMuxedAccountFromAddres(to)
 
-	require.NoError(t, err)
-	preconditions := tx.Preconditions{
-		TimeBounds: tx.NewInfiniteTimeout(),
+	preconditions := xlm.Preconditions{
+		TimeBounds: xlm.NewInfiniteTimeout(),
 	}
 
 	vectors := []struct {
-		txInput xc.Tx
-		error   string
+		name     string
+		txInput  xc.Tx
+		response string
+		error    string
 	}{
 		{
+			name: "Test native transaction",
 			txInput: &tx.Tx{
 				TxEnvelope: &xdr.TransactionEnvelope{
 					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
@@ -183,18 +344,253 @@ func TestSubmitTx(t *testing.T) {
 						},
 						Signatures: []xdr.DecoratedSignature{
 							{
-								Hint:      [4]byte{57, 234, 167, 44},
-								Signature: []byte{76, 51, 186, 154, 227, 143, 149, 39, 183, 152, 173, 83, 50, 63, 221, 130, 197, 118, 246, 30, 240, 3, 76, 48, 214, 166, 72, 248, 30, 98, 172, 161, 138, 67, 145, 48, 26, 55, 132, 10, 66, 22, 68, 119, 3, 77, 57, 31, 236, 107, 181, 221, 226, 227, 161, 248, 59, 232, 44, 127, 126, 237, 215, 5},
+								Hint: [4]byte{57, 234, 167, 44},
+								Signature: []byte{
+									76, 51, 186, 154, 227, 143,
+									149, 39, 183, 152, 173, 83,
+									50, 63, 221, 130, 197, 118,
+									246, 30, 240, 3, 76, 48,
+									214, 166, 72, 248, 30, 98,
+									172, 161, 138, 67, 145, 48,
+									26, 55, 132, 10, 66, 22,
+									68, 119, 3, 77, 57, 31,
+									236, 107, 181, 221, 226, 227,
+									161, 248, 59, 232, 44, 127,
+									126, 237, 215, 5,
+								},
 							},
 						},
 					},
 				},
 				Signatures: []xc.TxSignature{
-					{76, 51, 186, 154, 227, 143, 149, 39, 183, 152, 173, 83, 50, 63, 221, 130, 197, 118, 246, 30, 240, 3, 76, 48, 214, 166, 72, 248, 30, 98, 172, 161, 138, 67, 145, 48, 26, 55, 132, 10, 66, 22, 68, 119, 3, 77, 57, 31, 236, 107, 181, 221, 226, 227, 161, 248, 59, 232, 44, 127, 126, 237, 215, 5},
+					{
+						76, 51, 186, 154, 227, 143,
+						149, 39, 183, 152, 173, 83,
+						50, 63, 221, 130, 197, 118,
+						246, 30, 240, 3, 76, 48,
+						214, 166, 72, 248, 30, 98,
+						172, 161, 138, 67, 145, 48,
+						26, 55, 132, 10, 66, 22,
+						68, 119, 3, 77, 57, 31,
+						236, 107, 181, 221, 226, 227,
+						161, 248, 59, 232, 44, 127,
+						126, 237, 215, 5,
+					},
 				},
 			},
+			response: `{ "tx_status": "PENDING", "hash": "6cbb7f714bd08cea7c30cab7818a35c510cbbfc0a6aa06172a1e94146ecf0165" }`,
 		},
 		{
+			name: "Test token transaction",
+			txInput: &tx.Tx{
+				TxEnvelope: &xdr.TransactionEnvelope{
+					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
+					V1: &xdr.TransactionV1Envelope{
+						Tx: xdr.Transaction{
+							SourceAccount: source,
+							Fee:           xdr.Uint32(100),
+							SeqNum:        338194314821653,
+							Cond:          preconditions.BuildXDR(),
+							Operations: []xdr.Operation{
+								{
+									SourceAccount: &source,
+									Body: xdr.OperationBody{
+										Type: xdr.OperationTypePayment,
+										PaymentOp: &xdr.PaymentOp{
+											Asset: xdr.Asset{
+												Type: xdr.AssetTypeAssetTypeCreditAlphanum4,
+												AlphaNum4: &xdr.AlphaNum4{
+													AssetCode: [4]byte{byte('U'), byte('S'), byte('D'), byte('C')},
+													Issuer:    common.MustMuxedAccountFromAddres(xc.Address("GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5")).ToAccountId(),
+												},
+											},
+											Destination: destination,
+											Amount:      xdr.Int64(10000000),
+										},
+									},
+								},
+							},
+						},
+						Signatures: []xdr.DecoratedSignature{
+							{
+								Hint: [4]byte{57, 234, 167, 44},
+								Signature: []byte{
+									0x64, 0x65, 0x35, 0x34, 0x31, 0x30, 0x37, 0x32, 0x31, 0x34, 0x38, 0x31,
+									0x66, 0x33, 0x39, 0x33, 0x62, 0x62, 0x62, 0x34, 0x37, 0x31, 0x37, 0x35,
+									0x32, 0x37, 0x39, 0x31, 0x35, 0x62, 0x64, 0x61, 0x33, 0x32, 0x31, 0x64,
+									0x64, 0x33, 0x39, 0x37, 0x33, 0x39, 0x39, 0x30, 0x63, 0x65, 0x65, 0x65,
+									0x38, 0x65, 0x61, 0x61, 0x38, 0x31, 0x64, 0x33, 0x64, 0x64, 0x33, 0x66,
+									0x61, 0x39, 0x34, 0x31, 0x66, 0x61, 0x39, 0x63, 0x37, 0x36, 0x34, 0x30,
+									0x37, 0x35, 0x35, 0x66, 0x64, 0x66, 0x38, 0x36, 0x65, 0x62, 0x31, 0x35,
+									0x31, 0x36, 0x64, 0x35, 0x34, 0x35, 0x38, 0x64, 0x38, 0x34, 0x65, 0x64,
+									0x30, 0x62, 0x63, 0x34, 0x39, 0x64, 0x64, 0x37, 0x66, 0x64, 0x36, 0x34,
+									0x62, 0x32, 0x65, 0x61, 0x35, 0x32, 0x33, 0x62, 0x61, 0x65, 0x30, 0x30,
+									0x35, 0x61, 0x39, 0x63, 0x65, 0x61, 0x30, 0x34, 0x0a,
+								},
+							},
+						},
+					},
+				},
+				Signatures: []xc.TxSignature{
+					{
+						76, 51, 186, 154, 227, 143,
+						149, 39, 183, 152, 173, 83,
+						50, 63, 221, 130, 197, 118,
+						246, 30, 240, 3, 76, 48,
+						214, 166, 72, 248, 30, 98,
+						172, 161, 138, 67, 145, 48,
+						26, 55, 132, 10, 66, 22,
+						68, 119, 3, 77, 57, 31,
+						236, 107, 181, 221, 226, 227,
+						161, 248, 59, 232, 44, 127,
+						126, 237, 215, 5,
+					},
+				},
+			},
+			response: `{ "tx_status": "PENDING", "hash": "6cbb7f714bd08cea7c30cab7818a35c510cbbfc0a6aa06172a1e94146ecf0165" }`,
+			error:    "",
+		},
+		{
+			name: "Test AsyncTxSubmissionResponse error reply",
+			txInput: &tx.Tx{
+				TxEnvelope: &xdr.TransactionEnvelope{
+					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
+					V1: &xdr.TransactionV1Envelope{
+						Tx: xdr.Transaction{
+							SourceAccount: source,
+							Fee:           xdr.Uint32(100),
+							SeqNum:        338194314821647,
+							Cond:          preconditions.BuildXDR(),
+							Operations: []xdr.Operation{
+								{
+									SourceAccount: &source,
+									Body: xdr.OperationBody{
+										Type: xdr.OperationTypePayment,
+										PaymentOp: &xdr.PaymentOp{
+											Asset:       xdr.Asset{Type: xdr.AssetTypeAssetTypeNative},
+											Destination: destination,
+											Amount:      xdr.Int64(10000000),
+										},
+									},
+								},
+							},
+						},
+						Signatures: []xdr.DecoratedSignature{
+							{
+								Hint: [4]byte{57, 234, 167, 44},
+								Signature: []byte{
+									76, 51, 186, 154, 227, 143,
+									149, 39, 183, 152, 173, 83,
+									50, 63, 221, 130, 197, 118,
+									246, 30, 240, 3, 76, 48,
+									214, 166, 72, 248, 30, 98,
+									172, 161, 138, 67, 145, 48,
+									26, 55, 132, 10, 66, 22,
+									68, 119, 3, 77, 57, 31,
+									236, 107, 181, 221, 226, 227,
+									161, 248, 59, 232, 44, 127,
+									126, 237, 215, 5,
+								},
+							},
+						},
+					},
+				},
+				Signatures: []xc.TxSignature{
+					{
+						76, 51, 186, 154, 227, 143,
+						149, 39, 183, 152, 173, 83,
+						50, 63, 221, 130, 197, 118,
+						246, 30, 240, 3, 76, 48,
+						214, 166, 72, 248, 30, 98,
+						172, 161, 138, 67, 145, 48,
+						26, 55, 132, 10, 66, 22,
+						68, 119, 3, 77, 57, 31,
+						236, 107, 181, 221, 226, 227,
+						161, 248, 59, 232, 44, 127,
+						126, 237, 215, 5,
+					},
+				},
+			},
+			response: `{
+				"tx_status": "ERROR",
+				"errorResultXDR": "AAAAAAAAAGT////7AAAAAA=="
+			}`,
+			error: "tx_bad_seq",
+		},
+		{
+			name: "Test AsyncTxSubmissionProblem  reply",
+			txInput: &tx.Tx{
+				TxEnvelope: &xdr.TransactionEnvelope{
+					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
+					V1: &xdr.TransactionV1Envelope{
+						Tx: xdr.Transaction{
+							SourceAccount: source,
+							Fee:           xdr.Uint32(100),
+							SeqNum:        338194314821647,
+							Cond:          preconditions.BuildXDR(),
+							Operations: []xdr.Operation{
+								{
+									SourceAccount: &source,
+									Body: xdr.OperationBody{
+										Type: xdr.OperationTypePayment,
+										PaymentOp: &xdr.PaymentOp{
+											Asset:       xdr.Asset{Type: xdr.AssetTypeAssetTypeNative},
+											Destination: destination,
+											Amount:      xdr.Int64(10000000),
+										},
+									},
+								},
+							},
+						},
+						Signatures: []xdr.DecoratedSignature{
+							{
+								Hint: [4]byte{57, 234, 167, 44},
+								Signature: []byte{
+									76, 51, 186, 154, 227, 143,
+									149, 39, 183, 152, 173, 83,
+									50, 63, 221, 130, 197, 118,
+									246, 30, 240, 3, 76, 48,
+									214, 166, 72, 248, 30, 98,
+									172, 161, 138, 67, 145, 48,
+									26, 55, 132, 10, 66, 22,
+									68, 119, 3, 77, 57, 31,
+									236, 107, 181, 221, 226, 227,
+									161, 248, 59, 232, 44, 127,
+									126, 237, 215, 5,
+								},
+							},
+						},
+					},
+				},
+				Signatures: []xc.TxSignature{
+					{
+						76, 51, 186, 154, 227, 143,
+						149, 39, 183, 152, 173, 83,
+						50, 63, 221, 130, 197, 118,
+						246, 30, 240, 3, 76, 48,
+						214, 166, 72, 248, 30, 98,
+						172, 161, 138, 67, 145, 48,
+						26, 55, 132, 10, 66, 22,
+						68, 119, 3, 77, 57, 31,
+						236, 107, 181, 221, 226, 227,
+						161, 248, 59, 232, 44, 127,
+						126, 237, 215, 5,
+					},
+				},
+			},
+			response: `{
+				"type": "transaction_malformed",
+				"title": "Transaction Malformed",
+				"status": 400,
+				"detail": "Horizon could not decode the transaction envelope in this request. A transaction should be an XDR TransactionEnvelope struct encoded using base64. The envelope read from this request is echoed in the extras.envelope_xdr field of this response for your convenience.",
+				"extras": {
+					"envelope_xdr": ""
+				}
+			}`,
+			error: "Transaction Malformed",
+		},
+		{
+			name: "Test missing operations",
 			txInput: &tx.Tx{
 				TxEnvelope: &xdr.TransactionEnvelope{
 					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
@@ -208,19 +604,45 @@ func TestSubmitTx(t *testing.T) {
 						},
 						Signatures: []xdr.DecoratedSignature{
 							{
-								Hint:      [4]byte{57, 234, 167, 44},
-								Signature: []byte{76, 51, 186, 154, 227, 143, 149, 39, 183, 152, 173, 83, 50, 63, 221, 130, 197, 118, 246, 30, 240, 3, 76, 48, 214, 166, 72, 248, 30, 98, 172, 161, 138, 67, 145, 48, 26, 55, 132, 10, 66, 22, 68, 119, 3, 77, 57, 31, 236, 107, 181, 221, 226, 227, 161, 248, 59, 232, 44, 127, 126, 237, 215, 5},
+								Hint: [4]byte{57, 234, 167, 44},
+								Signature: []byte{
+									76, 51, 186, 154, 227, 143,
+									149, 39, 183, 152, 173, 83,
+									50, 63, 221, 130, 197, 118,
+									246, 30, 240, 3, 76, 48,
+									214, 166, 72, 248, 30, 98,
+									172, 161, 138, 67, 145, 48,
+									26, 55, 132, 10, 66, 22,
+									68, 119, 3, 77, 57, 31,
+									236, 107, 181, 221, 226, 227,
+									161, 248, 59, 232, 44, 127,
+									126, 237, 215, 5,
+								},
 							},
 						},
 					},
 				},
 				Signatures: []xc.TxSignature{
-					{76, 51, 186, 154, 227, 143, 149, 39, 183, 152, 173, 83, 50, 63, 221, 130, 197, 118, 246, 30, 240, 3, 76, 48, 214, 166, 72, 248, 30, 98, 172, 161, 138, 67, 145, 48, 26, 55, 132, 10, 66, 22, 68, 119, 3, 77, 57, 31, 236, 107, 181, 221, 226, 227, 161, 248, 59, 232, 44, 127, 126, 237, 215, 5},
+					{
+						76, 51, 186, 154, 227, 143,
+						149, 39, 183, 152, 173, 83,
+						50, 63, 221, 130, 197, 118,
+						246, 30, 240, 3, 76, 48,
+						214, 166, 72, 248, 30, 98,
+						172, 161, 138, 67, 145, 48,
+						26, 55, 132, 10, 66, 22,
+						68, 119, 3, 77, 57, 31,
+						236, 107, 181, 221, 226, 227,
+						161, 248, 59, 232, 44, 127,
+						126, 237, 215, 5,
+					},
 				},
 			},
-			error: "missing transaction operations",
+			response: "",
+			error:    "missing transaction operations",
 		},
 		{
+			name: "Test missing signatures",
 			txInput: &tx.Tx{
 				TxEnvelope: &xdr.TransactionEnvelope{
 					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
@@ -247,32 +669,36 @@ func TestSubmitTx(t *testing.T) {
 					},
 				},
 			},
-			error: "missing transaction signatures",
+			response: "",
+			error:    "missing transaction signatures",
 		},
 	}
 
 	for _, vector := range vectors {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			json.NewEncoder(w).Encode("")
-		}))
-		defer server.Close()
+		t.Run(vector.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte(vector.response))
+			}))
+			defer server.Close()
 
-		txActiveTime, err := time.ParseDuration("2h")
-		require.NoError(t, err)
-		client, _ := client.NewClient(&xc.ChainConfig{
-			URL:                   server.URL,
-			Decimals:              7,
-			TransactionActiveTime: txActiveTime,
-			ChainGasPriceDefault:  0.00001,
-			ChainIDStr:            "Test SDF Network ; September 2015",
-		})
-
-		err = client.SubmitTx(context.Background(), vector.txInput)
-		if err != nil {
-			require.ErrorContains(t, err, vector.error)
-		} else {
+			txActiveTime, err := time.ParseDuration("2h")
 			require.NoError(t, err)
-		}
+			client, _ := client.NewClient(&xc.ChainConfig{
+				URL:                   server.URL,
+				Decimals:              7,
+				TransactionActiveTime: txActiveTime,
+				ChainMaxGasPrice:      0.00001,
+				ChainIDStr:            "Test SDF Network ; September 2015",
+			})
+
+			err = client.SubmitTx(context.Background(), vector.txInput)
+			if err != nil {
+				require.NotEqual(t, err, "")
+				require.ErrorContains(t, err, vector.error)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }
 
@@ -444,10 +870,12 @@ func TestFetchTxInfo(t *testing.T) {
 		defer server.Close()
 
 		client, _ := client.NewClient(&xc.ChainConfig{
-			Chain:    "XLM",
-			URL:      server.URL,
-			Decimals: 7,
-			ChainIDStr: "Test SDF Network ; September 2015",
+			Chain:                 "XLM",
+			URL:                   server.URL,
+			TransactionActiveTime: time.Duration(500),
+			Decimals:              7,
+			ChainIDStr:            "Test SDF Network ; September 2015",
+			ChainMaxGasPrice:      0.00001,
 		})
 		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.hash))
 		if vector.err != "" {
@@ -461,13 +889,15 @@ func TestFetchTxInfo(t *testing.T) {
 	}
 }
 
-func TestFetchNativeBalance(t *testing.T) {
+func TestFetchBalance(t *testing.T) {
 	vectors := []struct {
+		assetID          string
 		getAccountResult string
 		expected         xc.AmountBlockchain
 		err              string
 	}{
 		{
+			assetID: "XLM",
 			getAccountResult: `{
 			  "id": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
 			  "account_id": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
@@ -494,6 +924,13 @@ func TestFetchNativeBalance(t *testing.T) {
 				  "buying_liabilities": "0.0000000",
 				  "selling_liabilities": "0.0000000",
 				  "asset_type": "native"
+				},
+				{
+				  "balance": "5.0",
+				  "buying_liabilities": "0.0000000",
+				  "selling_liabilities": "0.0000000",
+				  "asset_code": "USDC",
+				  "asset_issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
 				}
 			  ],
 			  "signers": [
@@ -510,6 +947,57 @@ func TestFetchNativeBalance(t *testing.T) {
 			}`,
 			expected: xc.NewAmountBlockchainFromUint64(99899998500),
 		},
+		{
+			assetID: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			getAccountResult: `{
+			  "id": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
+			  "account_id": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
+			  "sequence": "338194314821647",
+			  "sequence_ledger": 514624,
+			  "sequence_time": "1736426769",
+			  "subentry_count": 0,
+			  "last_modified_ledger": 514624,
+			  "last_modified_time": "2025-01-09T12:46:09Z",
+			  "thresholds": {
+				"low_threshold": 0,
+				"med_threshold": 0,
+				"high_threshold": 0
+			  },
+			  "flags": {
+				"auth_required": false,
+				"auth_revocable": false,
+				"auth_immutable": false,
+				"auth_clawback_enabled": false
+			  },
+			  "balances": [
+				{
+				  "balance": "9989.9998500",
+				  "buying_liabilities": "0.0000000",
+				  "selling_liabilities": "0.0000000",
+				  "asset_type": "native"
+				},
+				{
+				  "balance": "5.0",
+				  "buying_liabilities": "0.0000000",
+				  "selling_liabilities": "0.0000000",
+				  "asset_code": "USDC",
+				  "asset_issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+				}
+			  ],
+			  "signers": [
+				{
+				  "weight": 1,
+				  "key": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
+				  "type": "ed25519_public_key"
+				}
+			  ],
+			  "data": {},
+			  "num_sponsoring": 0,
+			  "num_sponsored": 0,
+			  "paging_token": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"
+			}`,
+			expected: xc.NewAmountBlockchainFromUint64(50000000),
+		},
 	}
 
 	for _, vector := range vectors {
@@ -523,14 +1011,28 @@ func TestFetchNativeBalance(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client, _ := client.NewClient(&xc.ChainConfig{
-			Chain:    "XLM",
-			URL:      server.URL,
-			Decimals: 7,
-			ChainIDStr: "Test SDF Network ; September 2015",
-		})
+		defaultConfig := &xc.ChainConfig{
+			Chain:                 "XLM",
+			URL:                   server.URL,
+			TransactionActiveTime: time.Duration(500),
+			Decimals:              7,
+			ChainIDStr:            "Test SDF Network ; September 2015",
+			ChainMaxGasPrice:      0.00001,
+		}
 
-		balance, err := client.FetchBalance(context.Background(), xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
+		var cl *client.Client
+		if vector.assetID != "XLM" {
+			assetConfig := &xc.TokenAssetConfig{
+				Contract:    vector.assetID,
+				ChainConfig: defaultConfig,
+			}
+
+			cl, _ = client.NewClient(assetConfig)
+		} else {
+			cl, _ = client.NewClient(defaultConfig)
+		}
+
+		balance, err := cl.FetchBalance(context.Background(), xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
 		if vector.err != "" {
 			require.ErrorContains(t, err, vector.err)
 		} else {

@@ -1,11 +1,11 @@
 package tx_input
 
 import (
-	"fmt"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/shopspring/decimal"
 )
 
 var _ xc.TxInput = &TxInput{}
@@ -18,13 +18,10 @@ type TxInput struct {
 	// Is `Sequence == 0` then only transaction where
 	// `SourceAccount.Sequence == tx.Sequence - 1` is allowed
 	Sequence int64
-	// Min fee for stellar transactions
-	MinFee uint32
-	// Base fee for stellar transactions
-	BaseFee uint32
-	// Max amount of fee we are willing to pay in total
+	// Stellar requires the MaxFee specification, which defines the maximum amount
+	// we are willing to spend on the transaction fee.
 	MaxFee uint32
-	// Time for which the transaction will be considered valid
+	// Specifies the duration for which a transaction remains valid after being submitted.
 	TransactionActiveTime time.Duration
 	MinLedgerSequence     int64
 	// Transaction memo
@@ -79,17 +76,8 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 		return err
 	}
 
-	// Multiply the BaseFee and check if it's valid
-	newFee := input.BaseFee * uint32(multiplier.BigInt().Uint64())
-	if newFee < input.MinFee {
-		return fmt.Errorf(
-			"calculated gas(%d) is lower than minimal allowed gas(%d)",
-			newFee,
-			input.MinFee,
-		)
-	}
-
-	input.MaxFee = input.MinFee * uint32(multiplier.BigInt().Uint64())
+	multipliedFee := multiplier.Mul(decimal.NewFromInt(int64(input.MaxFee)))
+	input.MaxFee = uint32(multipliedFee.BigInt().Uint64())
 	return nil
 }
 

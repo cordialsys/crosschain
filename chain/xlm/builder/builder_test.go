@@ -5,6 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xlm/builder"
+	"github.com/cordialsys/crosschain/chain/xlm/common"
 	"github.com/cordialsys/crosschain/chain/xlm/tx"
 	"github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	"github.com/stellar/go/xdr"
@@ -26,22 +27,68 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
-	nt, err := txBuilder.NewNativeTransfer(from, to, amount, input)
+	nt, err := txBuilder.NewTransfer(from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
 
 	txEnvelope := nt.(*Tx).TxEnvelope
-	var source xdr.MuxedAccount
-	err = source.SetAddress(string(from))
-	require.NoError(t, err)
+	source := common.MustMuxedAccountFromAddres(from)
 	require.Equal(t, txEnvelope.SourceAccount(), source)
 
-	var destination xdr.MuxedAccount
-	err = destination.SetAddress(string(to))
-	require.NoError(t, err)
+	destination := common.MustMuxedAccountFromAddres(to)
 	payment, ok := txEnvelope.Operations()[0].Body.GetPaymentOp()
 	require.NotZero(t, ok)
 	require.Equal(t, payment.Destination, destination)
 
 	require.Equal(t, int64(payment.Amount), amount.Int().Int64())
+}
+
+func TestNewTokenTransfer(t *testing.T) {
+	txBuilder, _ := builder.NewTxBuilder(
+		&xc.TokenAssetConfig{
+			Contract: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			ChainConfig: &xc.ChainConfig{
+				Chain: "XLM",
+			},
+		},
+	)
+	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
+	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
+	amount := xc.NewAmountBlockchainFromUint64(10)
+	input := &tx_input.TxInput{}
+	nt, err := txBuilder.NewTransfer(from, to, amount, input)
+	require.NoError(t, err)
+	require.NotNil(t, nt)
+
+	txEnvelope := nt.(*Tx).TxEnvelope
+	source := common.MustMuxedAccountFromAddres(from)
+	require.Equal(t, txEnvelope.SourceAccount(), source)
+
+	destination := common.MustMuxedAccountFromAddres(to)
+	payment, ok := txEnvelope.Operations()[0].Body.GetPaymentOp()
+	require.NotZero(t, ok)
+	require.Equal(t, payment.Destination, destination)
+	require.Equal(t, payment.Asset.AlphaNum4.AssetCode, xdr.AssetCode4{'U', 'S', 'D', 'C'})
+	require.Equal(t, payment.Asset.AlphaNum4.Issuer.Address(), "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5")
+
+	require.Equal(t, int64(payment.Amount), amount.Int().Int64())
+}
+
+func TestInvalidTokenTransfer(t *testing.T) {
+	txBuilder, _ := builder.NewTxBuilder(
+		&xc.TokenAssetConfig{
+			// Asset code is too long
+			Contract: "USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			ChainConfig: &xc.ChainConfig{
+				Chain: "XLM",
+			},
+		},
+	)
+	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
+	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
+	amount := xc.NewAmountBlockchainFromUint64(10)
+	input := &tx_input.TxInput{}
+
+	_, err := txBuilder.NewTransfer(from, to, amount, input)
+	require.Error(t, err)
 }

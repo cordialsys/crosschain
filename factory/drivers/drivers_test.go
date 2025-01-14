@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	aptostxinput "github.com/cordialsys/crosschain/chain/aptos/tx_input"
@@ -75,6 +76,8 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	}
 	if driver == xc.DriverXlm {
 		fakeAsset.ChainIDStr = "Test SDF Network ; September 2015"
+		fakeAsset.TransactionActiveTime = time.Duration(500)
+		fakeAsset.ChainMaxGasPrice = 2.0
 	}
 	return fakeAsset
 }

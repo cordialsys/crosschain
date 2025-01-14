@@ -426,9 +426,11 @@ type ChainConfig struct {
 	XCoinGeckoId     string `yaml:"coingecko_id,omitempty"`
 	XCoinMarketCapId string `yaml:"coinmarketcap_id,omitempty"`
 
-	// Number of seconds for which the transaction will be considered valid after submission.
-	// Format: `time.Duration` string
-	// Used only by Stellar so far
+	// TransactionActiveTime specifies the duration for which a transaction remains valid after being submitted.
+	// The value is represented as a `time.Duration` string.
+	// This field is currently used only by the Stellar network.
+	//
+	// Example format: "30s" (30 seconds), "2m" (2 minutes), "1h" (1 hour).
 	TransactionActiveTime time.Duration `yaml:"transaction_active_time"`
 }
 

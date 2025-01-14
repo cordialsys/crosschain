@@ -1,14 +1,15 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/cordialsys/crosschain/chain/xlm"
+	"github.com/stellar/go/xdr"
+	common "github.com/cordialsys/crosschain/chain/xlm/common"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xlmtx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
-	"github.com/stellar/go/xdr"
+	xlmtx "github.com/cordialsys/crosschain/chain/xlm/tx"
 )
 
 type TxBuilder struct {
@@ -27,34 +28,21 @@ func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 	}, nil
 }
 
+// Implements xcbuilder/Transfer interface
 func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	return builder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
+// Implements xc.TxBuilder interface
 func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	switch builder.Asset.(type) {
-	case *xc.ChainConfig:
-		return builder.NewNativeTransfer(from, to, amount, input)
-	case *xc.TokenAssetConfig:
-	default:
-		return &xlmtx.Tx{}, errors.New("not implemented")
-	}
-
-	return &xlmtx.Tx{}, errors.New("not implemented")
-}
-
-func (builder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-
-	var sourceAccount xdr.MuxedAccount
-	fromStr := string(from)
-	err := sourceAccount.SetAddress(fromStr)
+	sourceAccount, err := common.MuxedAccountFromAddress(from)
 	if err != nil {
 		return &xlmtx.Tx{}, fmt.Errorf("invalid `from` address: %w", err)
 	}
 
-	preconditions := xlmtx.Preconditions{
-		TimeBounds: xlmtx.NewTimeout(txInput.TransactionActiveTime),
+	preconditions := xlm.Preconditions{
+		TimeBounds: xlm.NewTimeout(txInput.TransactionActiveTime),
 	}
 
 	txe := xdr.TransactionV1Envelope{
@@ -62,7 +50,7 @@ func (builder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amoun
 			SourceAccount: sourceAccount,
 			// We can skip fee * operation_count multiplication because the transfer is a single
 			// `Payment` operation
-			Fee:    xdr.Uint32(txInput.MaxFee),
+			Fee:    xdr.Uint32(50000000),
 			SeqNum: xdr.SequenceNumber(txInput.Sequence),
 			Cond:   preconditions.BuildXDR(),
 		},
@@ -74,14 +62,25 @@ func (builder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amoun
 		txe.Tx.Memo = xdrMemo
 	}
 
-	var destinationMuxedAccount xdr.MuxedAccount
-	err = destinationMuxedAccount.SetAddress(string(to))
+	destinationMuxedAccount, err := common.MuxedAccountFromAddress(to)
 	if err != nil {
 		return &xlmtx.Tx{}, fmt.Errorf("invalid `to` address: %w", err)
 	}
 	xdrAmount := xdr.Int64(amount.Int().Int64())
-	xdrAsset := xdr.Asset{
-		Type: xdr.AssetTypeAssetTypeNative,
+
+	var xdrAsset xdr.Asset
+	if tokenConfig, ok := builder.Asset.(*xc.TokenAssetConfig); ok {
+		contractDetails, err := common.GetAssetAndIssuerFromContract(tokenConfig.Contract)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to get contract details: %w", err)
+		}
+
+		xdrAsset, err = common.CreateAssetFromContractDetails(contractDetails)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to create token details: %w", err)
+		}
+	} else {
+		xdrAsset.Type = xdr.AssetTypeAssetTypeNative
 	}
 
 	xdrPayment := xdr.PaymentOp{
