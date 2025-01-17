@@ -678,6 +678,7 @@ chains:
     driver: xlm
     chain_name: xlm
     decimals: 7
+    confirmations_final: 1
     transaction_active_time: "2h"
     # Defines the maximum amount we are willing to spend on the transaction fee.
     # Specified in "XLM"
@@ -685,3 +686,10 @@ chains:
     # Network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
     chain_id_str: "Public Global Stellar Network ; September 2015"
+    external:
+      coin_market_cap:
+        asset_id: "512"
+      coin_gecko:
+        asset_id: stellar
+      indexing_co:
+        chain_id: stellar
