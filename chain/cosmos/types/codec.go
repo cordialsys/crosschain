@@ -74,6 +74,10 @@ func registerInterfacesEthermint(registry codectypes.InterfaceRegistry) {
 		&etherminttypes.EthAccount{},
 	)
 	registry.RegisterImplementations(
+		(*sdk.AccountI)(nil),
+		&etherminttypes.EthAccount{},
+	)
+	registry.RegisterImplementations(
 		(*authtypes.GenesisAccount)(nil),
 		&etherminttypes.EthAccount{},
 	)
