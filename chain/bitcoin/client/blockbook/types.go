@@ -5,8 +5,14 @@ import (
 )
 
 type ErrorResponse struct {
-	Error string `json:"error"`
+	ErrorMessage string `json:"error"`
+	HttpStatus   int    `json:"-"`
 }
+
+func (err *ErrorResponse) Error() string {
+	return err.ErrorMessage
+}
+
 type BlockbookStats struct {
 	Coin            string `json:"coin"`
 	Host            string `json:"host"`

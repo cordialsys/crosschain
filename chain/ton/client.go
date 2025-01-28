@@ -19,18 +19,21 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	tontx "github.com/cordialsys/crosschain/chain/ton/tx"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/xssnick/tonutils-go/address"
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton/jetton"
 	"github.com/xssnick/tonutils-go/tvm/cell"
+	"golang.org/x/time/rate"
 )
 
 // Client for Template
 type Client struct {
-	Url    string
-	Asset  xc.ITask
-	ApiKey string
+	Url     string
+	Asset   xc.ITask
+	ApiKey  string
+	limiter *rate.Limiter
 }
 
 var _ xclient.FullClient = &Client{}
@@ -49,8 +52,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 			return nil, fmt.Errorf("could not load TON client API key: %v", err)
 		}
 	}
+	// very conservative rate limit
+	var limiter = rate.NewLimiter(0.5, 1)
 
-	return &Client{url, cfgI, apiKey}, nil
+	return &Client{url, cfgI, apiKey, limiter}, nil
 }
 
 func (cli *Client) get(path string, response any) error {
@@ -60,6 +65,7 @@ func (cli *Client) post(path string, requestBody any, response any) error {
 	return cli.send("POST", path, requestBody, response)
 }
 func (cli *Client) send(method string, path string, requestBody any, response any) error {
+	cli.limiter.Wait(context.Background())
 	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("%s/%s", cli.Url, path)
 	var request *http.Request
@@ -110,14 +116,8 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 		if err := json.Unmarshal(body, &errorResponse); err != nil {
 			return fmt.Errorf("failed to unmarshal error response: %v", err)
 		}
-		if errorResponse.Error != "" {
-			return fmt.Errorf("%s", errorResponse.Error)
-		}
-		if len(errorResponse.Detail) > 0 {
-			return fmt.Errorf("%s: %s", errorResponse.Detail[0].Type, errorResponse.Detail[0].Msg)
-		}
-		logrus.WithField("body", string(body)).WithField("chain", cli.Asset.GetChain().Chain).Warn("unknown ton error")
-		return fmt.Errorf("unknown ton error (%d)", resp.StatusCode)
+		errorResponse.StatusCode = resp.StatusCode
+		return &errorResponse
 	}
 }
 func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contract xc.ContractAddress) (xc.Address, error) {
@@ -412,7 +412,7 @@ func (client *Client) FetchTonTxByHash(ctx context.Context, txHash xc.TxHash) (a
 		}
 
 		if len(transactions.Transactions) == 0 {
-			return api.Transaction{}, nil, fmt.Errorf("no TON transaction found by %s", txHash)
+			return api.Transaction{}, nil, errors.TransactionNotFoundf("no TON transaction found by %s", txHash)
 		}
 	}
 	return transactions.Transactions[0], transactions.AddressBook, nil

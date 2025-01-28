@@ -241,6 +241,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		"prove": false,
 	}, resultRaw)
 	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return result, errors.TransactionNotFoundf("%v", err)
+		}
 		return result, fmt.Errorf("could not download tx: %v", err)
 	}
 

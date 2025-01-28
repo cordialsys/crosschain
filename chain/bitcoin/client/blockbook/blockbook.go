@@ -20,6 +20,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	"github.com/cordialsys/crosschain/client/errors"
 
 	// "github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -157,8 +158,15 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	err := client.get(ctx, "/api/v2/tx/"+string(txHash), &data)
 	if err != nil {
+		if bbErr, ok := err.(*ErrorResponse); ok {
+			// they don't use 404 code :/
+			if bbErr.HttpStatus >= 400 && strings.Contains(bbErr.ErrorMessage, "not found") {
+				return *txWithInfo, errors.TransactionNotFoundf("%v", err)
+			}
+		}
 		return *txWithInfo, err
 	}
+
 	latestBlock, err := client.LatestBlock(ctx)
 	if err != nil {
 		return *txWithInfo, err
@@ -339,10 +347,11 @@ func (client *BlockbookClient) get(ctx context.Context, path string, resp interf
 	if res.StatusCode != 200 && res.StatusCode != 201 {
 		var errResponse ErrorResponse
 		err = json.Unmarshal(body, &errResponse)
-		if err == nil {
-			return fmt.Errorf("failed to get %s: %s", path, errResponse.Error)
+		if err != nil {
+			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
 		}
-		return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
+		errResponse.HttpStatus = res.StatusCode
+		return &errResponse
 	}
 
 	if resp != nil {
@@ -374,10 +383,11 @@ func (client *BlockbookClient) post(ctx context.Context, path string, contentTyp
 	if res.StatusCode != 200 && res.StatusCode != 201 {
 		var errResponse ErrorResponse
 		err = json.Unmarshal(body, &errResponse)
-		if err == nil {
-			return fmt.Errorf("failed to post %s: %s", path, errResponse.Error)
+		if err != nil {
+			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
 		}
-		return fmt.Errorf("failed to post %s: code=%d", path, res.StatusCode)
+		errResponse.HttpStatus = res.StatusCode
+		return &errResponse
 	}
 
 	if resp != nil {

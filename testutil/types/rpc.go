@@ -24,9 +24,10 @@ func wrapRPCError(err string) string {
 // MockJSONRPCServer is a mocked RPC server
 type MockJSONRPCServer struct {
 	*httptest.Server
-	body     []byte
-	Counter  int
-	Response interface{}
+	body       []byte
+	Counter    int
+	ForceError int
+	Response   interface{}
 }
 
 // MockJSONRPC creates a new MockJSONRPCServer given a response, or array of responses
@@ -34,6 +35,11 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 	mock = &MockJSONRPCServer{
 		Response: response,
 		Server: httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+			var err error
+			mock.body, err = io.ReadAll(req.Body)
+			log.Println("rpc>>", string(mock.body))
+
+			require.NoError(t, err)
 			curResponse := mock.Response
 			if a, ok := mock.Response.([]string); ok {
 				curResponse = a[mock.Counter]
@@ -52,14 +58,14 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 				if strings.Contains(s, "jsonrpc") {
 					curResponse = json.RawMessage(s)
 				} else {
-					curResponse = json.RawMessage(wrapRPCResult(s))
+					if mock.ForceError > 0 {
+						rw.WriteHeader(mock.ForceError)
+						curResponse = json.RawMessage(wrapRPCError(s))
+					} else {
+						curResponse = json.RawMessage(wrapRPCResult(s))
+					}
 				}
 			}
-
-			var err error
-			mock.body, err = io.ReadAll(req.Body)
-			log.Println("rpc>>", string(mock.body))
-			require.NoError(t, err)
 
 			// JSON input, or serializable into JSON
 			var responseBody []byte
@@ -111,8 +117,12 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 			// error => send RPC error
 			if e, ok := curResponse.(error); ok {
 				rw.WriteHeader(400)
-				rw.Write([]byte(wrapRPCError(e.Error())))
+				errBz, _ := json.Marshal(e)
+				rw.Write([]byte(wrapRPCError(string(errBz))))
 				return
+			}
+			if status == 0 {
+				status = http.StatusOK
 			}
 
 			// string => convert to JSON
@@ -134,7 +144,7 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 				responseBody, err = json.Marshal(curResponse)
 				require.NoError(t, err)
 			}
-			log.Println("<<http", string(responseBody))
+			log.Printf("<<http(%d) %s\n", status, string(responseBody))
 			rw.Write(responseBody)
 		})),
 	}

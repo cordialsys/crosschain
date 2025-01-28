@@ -412,6 +412,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {
+		// TODO should test each provider instead
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return xclient.TxInfo{}, errors.TransactionNotFoundf("%v", err)
+		}
 		return xclient.TxInfo{}, err
 	}
 

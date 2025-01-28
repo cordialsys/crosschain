@@ -17,6 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -146,6 +147,9 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	err := client.Send(MethodPost, txRequest, &txResponse)
 	if err != nil {
 		return xclient.TxInfo{}, err
+	}
+	if txResponse.Result.Hash == "" {
+		return xclient.TxInfo{}, errors.TransactionNotFoundf("no transaction by hash '%s'", txHash)
 	}
 
 	ledgerRequest := types.LedgerRequest{

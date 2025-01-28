@@ -16,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/normalize"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -144,6 +145,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 
 	trans, pending, err := client.EthClient.TransactionByHash(ctx, txHash)
 	if err != nil {
+		// evm returns a simple string for not found condition
+		if strings.ToLower(err.Error()) == "not found" {
+			return result, errors.TransactionNotFoundf("%v", err)
+		}
 		// TODO retry only for KLAY
 		client.Interceptor.Enable()
 		trans, pending, err = client.EthClient.TransactionByHash(ctx, txHash)

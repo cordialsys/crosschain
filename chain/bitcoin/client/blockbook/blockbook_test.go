@@ -152,3 +152,19 @@ func (s *ClientTestSuite) TestFetchTxInfo() {
 	require.EqualValues(70, info.Confirmations)
 	require.EqualValues(3442, info.Fee.Uint64())
 }
+
+func (s *ClientTestSuite) TestNotFoundFetchTxInfo() {
+	require := s.Require()
+	server, close := testtypes.MockHTTP(s.T(), []string{
+		// tx
+		`{"error":"Transaction '5065d8469f4d02d58c002d234127ab6966fb36737b3fc22c08f0866c01fac38b' not found"}`,
+	}, 400)
+	defer close()
+	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook)}
+	client, err := bitcoin.NewClient(asset)
+	require.NoError(err)
+	_, err = client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
+	require.Error(err)
+
+	require.ErrorContains(err, "TransactionNotFound:")
+}
