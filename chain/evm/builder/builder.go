@@ -72,9 +72,6 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 }
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	switch asset := txBuilder.Asset.(type) {
-	case *xc.TaskConfig:
-		return txBuilder.NewTask(from, to, amount, input)
-
 	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 

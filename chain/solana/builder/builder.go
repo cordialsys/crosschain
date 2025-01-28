@@ -42,8 +42,6 @@ func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	switch asset := txBuilder.Asset.(type) {
-	case *xc.TaskConfig:
-		return txBuilder.NewTask(from, to, amount, input)
 	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 	case *xc.TokenAssetConfig:
@@ -257,59 +255,6 @@ func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, acco
 	return &tx.Tx{
 		SolTx: tx1,
 	}, nil
-}
-
-func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	txInput := input.(*TxInput)
-	task := txBuilder.Asset.(*xc.TaskConfig)
-	switch task.Code {
-	case "WrapTx":
-		return txBuilder.BuildWrapTx(from, to, amount, txInput)
-	case "UnwrapEverythingTx":
-		return txBuilder.BuildUnwrapEverythingTx(from, to, amount, txInput)
-	}
-	return &tx.Tx{}, fmt.Errorf("not implemented task: '%s'", txBuilder.Asset.ID())
-}
-
-func (txBuilder TxBuilder) BuildWrapTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput *TxInput) (xc.Tx, error) {
-	// use the dst asset
-	task := txBuilder.Asset.(*xc.TaskConfig)
-	asset := task.DstAsset
-
-	accountFrom, err := solana.PublicKeyFromBase58(string(from))
-	if err != nil {
-		return nil, err
-	}
-
-	contract := asset.GetContract()
-	accountContract, err := solana.PublicKeyFromBase58(string(contract))
-	if err != nil {
-		return nil, err
-	}
-
-	ataFromStr, err := types.FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
-	if err != nil {
-		return nil, err
-	}
-	ataFrom := solana.MustPublicKeyFromBase58(ataFromStr)
-
-	// instructions to:
-	// - transfer to the ATA (system.NewTransferInstruction())
-	// - create the ATA (associatedtokenaccount.NewCreateInstruction())
-	instructions := []solana.Instruction{
-		ata.NewCreateInstruction(
-			accountFrom,
-			accountFrom,
-			accountContract,
-		).Build(),
-		system.NewTransferInstruction(
-			amount.Uint64(),
-			accountFrom,
-			ataFrom,
-		).Build(),
-	}
-
-	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
 }
 
 func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput *TxInput) (xc.Tx, error) {

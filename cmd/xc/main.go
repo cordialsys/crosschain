@@ -36,6 +36,8 @@ func CmdXc() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			fmt.Println("--- url", chainConfig.URL)
+
 			setup.OverrideChainSettings(chainConfig, args)
 
 			stakingArgs, err := setup.StakingArgsFromCmd(cmd)

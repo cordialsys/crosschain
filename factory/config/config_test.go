@@ -50,46 +50,6 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
       chain_name: Solana
       explorer_url: 'https://explorer.solana.com'
       decimals: 9
-
-  tokens:
-    USDC.SOL:
-      asset: USDC
-      chain: SOL
-      net: testnet
-      decimals: 6
-      contract: 4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
-
-  tasks:
-    # Solana
-    sol-wrap:
-      name: sol-wrap
-      default_params:
-        param1: abc
-      code: WrapTx
-      chain: SOL
-      allow:
-      - SOL -> WSOL.SOL
-    sol-unwrap:
-      name: sol-unwrap
-      default_params:
-        param2: xyz
-      code: UnwrapEverythingTx
-      chain: SOL
-      allow:
-      - WSOL.SOL -> SOL
-
-  pipelines:
-    wrappyMcUnwrappyFace:
-      name: wrappyMcUnwrappyFace
-      allow:
-        - SOL -> WSOL.SOL
-        - WSOL.SOL -> SOL
-        - ETH -> WETH.ETH
-        - WETH.ETH->ETH
-      tasks:
-        - sol-wrap
-        - sol-unwrap
-
 `), &cfg)
 	require.NoError(err)
 
@@ -98,11 +58,10 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	cfg = factoryconfig.Config{}
 	err = yaml.Unmarshal(bz, &cfg)
 	require.NoError(err)
+	cfg.MigrateFields()
 
 	// Test tokens and chains
 	require.Len(cfg.Chains, 2)
-	require.Len(cfg.Tokens, 1)
-	require.Len(cfg.GetChainsAndTokens(), 3)
 
 	// viper lowercases the config keys, but yaml natively
 	// is case sensitive.
@@ -111,28 +70,6 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	require.Equal(xc.SOL, cfg.Chains["SOL"].Chain)
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
 
-	require.Equal("USDC", cfg.Tokens["USDC.SOL"].Asset)
-
-	tasks := cfg.GetTasks()
-	pipelines := cfg.GetPipelines()
-
-	// Test tasks
-	require.Len(tasks, 2)
-	// Allow lists should be parsed
-	require.Len(tasks[0].AllowList, 1)
-	require.Len(tasks[1].AllowList, 1)
-	require.Equal(tasks[0].AllowList[0], &xc.AllowEntry{Src: "WSOL.SOL", Dst: "SOL"})
-	require.Equal(tasks[1].AllowList[0], &xc.AllowEntry{Src: "SOL", Dst: "WSOL.SOL"})
-	require.Contains(tasks[0].DefaultParams, "param2")
-	require.Equal(tasks[0].DefaultParams["param2"], "xyz")
-	require.Contains(tasks[1].DefaultParams, "param1")
-	require.Equal(tasks[1].DefaultParams["param1"], "abc")
-	// Test pipelines
-	require.Len(pipelines, 1)
-	require.Equal(pipelines[0].Name, "wrappyMcUnwrappyFace")
-	require.Len(pipelines[0].AllowList, 4)
-	require.Equal(pipelines[0].AllowList[0], &xc.AllowEntry{Src: "SOL", Dst: "WSOL.SOL"})
-	require.Equal(pipelines[0].AllowList[3], &xc.AllowEntry{Src: "WETH.ETH", Dst: "ETH"})
 }
 
 type ConfigWrapper struct {
@@ -155,36 +92,7 @@ crosschain:
       chain_name: Ethereum (Goerli)
       explorer_url: 'https://goerli.etherscan.io'
       decimals: 18
-  tasks:
-    wormhole-transfer:
-      name: wormhole-transfer
-      code: WormholeTransferTx
-      default_params:
-        arbiter_fee_usd: 5
-      operations:
-      - function: transfer
-        signature: 0f5287b0
-        contract:
-          ETH: 0x3ee18B2214AFF97000D974cf647E7C347E8fa585
-          FTM: 0x7C9Fc5741288cDFdD83CeB07f3ea7e22618D79D2
-          AVAX: 0x0e082F06FF657D94310cB8cE8B0D9a04541d8052
-        params:
-        - name: token
-          type: address
-          bind: contract
-        - name: amount
-          type: uint256
-          bind: amount
-        - name: chain
-          type: uint256
-          match: dst_asset
-          value:
-            SOL: 1
-            ETH: 2
-            MATIC: 5
-        - name: recipient
-          type: address
-          bind: to
+
 `)
 	file, _ := os.CreateTemp(os.TempDir(), "xctest")
 	file.Write(cfgBz)
@@ -194,7 +102,6 @@ crosschain:
 	var wrapper ConfigWrapper
 	wrapper.Parse()
 	yaml.Unmarshal(cfgBz, &wrapper)
-	require.Contains(wrapper.Config.Tasks["wormhole-transfer"].DefaultParams, "arbiter_fee_usd")
 	var cfg factoryconfig.Config
 	err := config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
@@ -202,9 +109,6 @@ crosschain:
 
 	// Test tokens and chains
 	require.Len(cfg.Chains, 1)
-	require.Len(cfg.Tasks, 1)
-	require.Len(cfg.GetChainsAndTokens(), 1)
-	require.Contains(cfg.Tasks["wormhole-transfer"].DefaultParams, "arbiter_fee_usd")
 }
 
 func (s *CrosschainTestSuite) TestUseMainnet() {
@@ -225,15 +129,12 @@ crosschain:
 	})
 	expectedChainCount := len(defaults.Mainnet.Chains)
 	count := 0
-	xcf.AllAssets.Range(func(key, value any) bool {
-		if chain, ok := value.(*xc.ChainConfig); ok {
-			count += 1
-			require.NotEqual(chain.Net, "testnet")
-			require.NotEqual(chain.Net, "")
-			require.NotEqual(chain.Net, "devnet")
-		}
-		return true
-	})
+	for _, chain := range xcf.AllChains {
+		count += 1
+		require.NotEqual(chain.Net, "testnet")
+		require.NotEqual(chain.Net, "")
+		require.NotEqual(chain.Net, "devnet")
+	}
 	require.Equal(expectedChainCount, count)
 }
 
@@ -260,7 +161,7 @@ crosschain:
       auth: 'env:TEST_PASSWORD'
 `,
 			// should stay the same
-			expectedAssets:  len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedAssets:  len(defaults.Testnet.Chains),
 			expectedUrl:     "myurl",
 			expectedAuth:    pw,
 			expectedNetwork: "testnet",
@@ -274,7 +175,7 @@ crosschain:
       url: myurl2
 `,
 			// should stay the same
-			expectedAssets:  len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedAssets:  len(defaults.Testnet.Chains),
 			expectedUrl:     "myurl2",
 			expectedNetwork: "testnet",
 		},
@@ -287,7 +188,7 @@ crosschain:
       url: myurl_mainnet
 `,
 			// should have mainnet assets
-			expectedAssets:  len(defaults.Mainnet.Chains) + len(defaults.Mainnet.Tokens),
+			expectedAssets:  len(defaults.Mainnet.Chains),
 			expectedUrl:     "myurl_mainnet",
 			expectedNetwork: "mainnet",
 		},
@@ -299,7 +200,7 @@ crosschain:
       url: myurl_mainnet
 `,
 			// should default to mainnet
-			expectedAssets:  len(defaults.Mainnet.Chains) + len(defaults.Mainnet.Tokens),
+			expectedAssets:  len(defaults.Mainnet.Chains),
 			expectedUrl:     "myurl_mainnet",
 			expectedNetwork: "mainnet",
 		},
@@ -315,7 +216,7 @@ crosschain:
       url: myurl4
 `,
 			// should be 1 extra chain
-			expectedAssets:  1 + len(defaults.Testnet.Chains) + len(defaults.Testnet.Tokens),
+			expectedAssets:  1 + len(defaults.Testnet.Chains),
 			expectedUrl:     "myurl3",
 			expectedNetwork: "testnet",
 		},
@@ -328,15 +229,14 @@ crosschain:
 			UseDisabledChains: true,
 		})
 		count := 0
-		f.AllAssets.Range(func(key, val any) bool {
+		for _ = range f.AllChains {
 			count += 1
-			return true
-		})
+		}
 
 		require.EqualValues(tc.expectedNetwork, f.Config.Network)
 		require.Equal(tc.expectedAssets, count, "there is likely a token or chain with duplicate identifier")
-		eth, err := f.GetAssetConfig("", "ETH")
-		require.NoError(err)
+		eth, ok := f.GetChain("ETH")
+		require.True(ok)
 		require.Equal(xc.ETH, eth.GetChain().Chain)
 		require.Equal(tc.expectedAuth, eth.GetChain().AuthSecret)
 		require.Equal(tc.expectedUrl, eth.GetChain().URL)
@@ -361,46 +261,12 @@ func (s *CrosschainTestSuite) TestSorted() {
 					Chain: "CCC",
 				},
 			},
-			Tasks: map[string]*xc.TaskConfig{
-				"BBB": {
-					Name: "BBB",
-				},
-				"AAA": {
-					Name: "AAA",
-				},
-				"CCC": {
-					Name: "CCC",
-				},
-			},
-			Pipelines: map[string]*xc.PipelineConfig{
-				"BBB": {
-					Name: "BBB",
-				},
-				"AAA": {
-					Name: "AAA",
-				},
-				"CCC": {
-					Name: "CCC",
-				},
-			},
 		}
-		assets := cfg.GetChainsAndTokens()
-		tasks := cfg.GetTasks()
-		pipes := cfg.GetChainsAndTokens()
-		require.Len(assets, 3)
-		require.Equal("AAA", string(assets[0].ID()))
-		require.Equal("BBB", string(assets[1].ID()))
-		require.Equal("CCC", string(assets[2].ID()))
-
-		require.Len(tasks, 3)
-		require.Equal("AAA", string(tasks[0].ID()))
-		require.Equal("BBB", string(tasks[1].ID()))
-		require.Equal("CCC", string(tasks[2].ID()))
-
-		require.Len(pipes, 3)
-		require.Equal("AAA", string(pipes[0].ID()))
-		require.Equal("BBB", string(pipes[1].ID()))
-		require.Equal("CCC", string(pipes[2].ID()))
+		chains := cfg.GetChains()
+		require.Len(chains, 3)
+		require.Equal("AAA", string(chains[0].ID()))
+		require.Equal("BBB", string(chains[1].ID()))
+		require.Equal("CCC", string(chains[2].ID()))
 
 	}
 }

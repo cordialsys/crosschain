@@ -17,5 +17,4 @@ type TxTokenBuilder interface {
 // This interface is soon being removed.
 type TxXTransferBuilder interface {
 	TxBuilder
-	NewTask(from Address, to Address, amount AmountBlockchain, input TxInput) (Tx, error)
 }

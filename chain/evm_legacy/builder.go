@@ -97,8 +97,3 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	inputEvm := (*evminput.TxInput)(input.(*TxInput))
 	return evmbuilder.TxBuilder(txBuilder).NewTokenTransfer(from, to, amount, inputEvm)
 }
-
-func (txBuilder TxBuilder) NewTask(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	inputEvm := (*evminput.TxInput)(input.(*TxInput))
-	return evmbuilder.TxBuilder(txBuilder).NewTask(from, to, amount, inputEvm)
-}

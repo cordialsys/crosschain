@@ -13,8 +13,8 @@ import (
 func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.NativeAsset, txHash string) {
 	// get asset model, including config data
 	// asset is used to create client, builder, signer, etc.
-	asset, err := xc.GetAssetConfig("", nativeAsset)
-	if err != nil {
+	asset, ok := xc.GetChain(nativeAsset)
+	if !ok {
 		panic("unsupported asset: " + nativeAsset)
 	}
 

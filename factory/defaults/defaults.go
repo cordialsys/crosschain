@@ -6,9 +6,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/defaults/chains"
-	"github.com/cordialsys/crosschain/factory/defaults/pipelines"
-	"github.com/cordialsys/crosschain/factory/defaults/tasks"
-	"github.com/cordialsys/crosschain/factory/defaults/tokens"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,24 +25,12 @@ func listToMap[T HasID](list []T) map[string]T {
 	return toMap
 }
 
-var mainnetTaskMap = listToMap(tasks.Mainnet)
-var testnetTaskMap = listToMap(tasks.Testnet)
-
-var mainnetPipelineMap = listToMap(pipelines.Mainnet)
-var testnetPipelineMap = listToMap(pipelines.Testnet)
-
 var Mainnet = factoryconfig.Config{
-	Network:   "mainnet",
-	Chains:    chains.Mainnet,
-	Tokens:    tokens.Mainnet,
-	Pipelines: mainnetPipelineMap,
-	Tasks:     mainnetTaskMap,
+	Network: "mainnet",
+	Chains:  chains.Mainnet,
 }
 
 var Testnet = factoryconfig.Config{
-	Network:   "testnet",
-	Chains:    chains.Testnet,
-	Tokens:    tokens.Testnet,
-	Pipelines: testnetPipelineMap,
-	Tasks:     testnetTaskMap,
+	Network: "testnet",
+	Chains:  chains.Testnet,
 }

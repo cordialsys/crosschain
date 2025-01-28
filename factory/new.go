@@ -3,7 +3,6 @@ package factory
 import (
 	"os"
 	"strings"
-	"sync"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/config"
@@ -78,20 +77,18 @@ func NewDefaultFactory() *Factory {
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
 func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOptions) *Factory {
-	assetsList := cfg.GetChainsAndTokens()
+	chainsList := cfg.GetChains()
 	if options == nil {
 		options = &FactoryOptions{}
 	}
 
 	factory := &Factory{
-		AllAssets:    &sync.Map{},
-		AllTasks:     cfg.GetTasks(),
-		AllPipelines: cfg.GetPipelines(),
-		NoXcClients:  options.NoXcClients,
-		Config:       cfg,
+		AllChains:   []*xc.ChainConfig{},
+		NoXcClients: options.NoXcClients,
+		Config:      cfg,
 	}
-	for _, asset := range assetsList {
-		disabled := asset.GetChain().Disabled
+	for _, chain := range chainsList {
+		disabled := chain.Disabled
 		if disabled != nil && *disabled {
 			// skip unless explicity including
 			if !options.UseDisabledChains {
@@ -99,19 +96,15 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			}
 		}
 		// dereference secrets
-		if native, ok := asset.(*xc.ChainConfig); ok {
-			if native.Auth != "" {
-				var err error
-				native.AuthSecret, err = config.GetSecret(native.Auth)
-				if err != nil {
-					logrus.WithError(err).WithField("chain", native.Chain).Error("could not access secret")
-				}
+		// if native, ok := asset.(*xc.ChainConfig); ok {
+		if chain.Auth != "" {
+			var err error
+			chain.AuthSecret, err = config.GetSecret(chain.Auth)
+			if err != nil {
+				logrus.WithError(err).WithField("chain", chain.Chain).Error("could not access secret")
 			}
 		}
-		_, err := factory.PutAssetConfig(asset)
-		if err != nil {
-			logrus.WithError(err).WithField("asset", asset).Warn("could not add asset")
-		}
+		factory.AllChains = append(factory.AllChains, chain)
 	}
 
 	return factory

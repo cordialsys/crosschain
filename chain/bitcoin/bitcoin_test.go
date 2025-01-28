@@ -96,11 +96,12 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyUsesCompressed() {
 
 func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 	require := s.Require()
-	builder, err := address.NewAddressBuilder(&xc.ChainConfig{
+	builderI, err := address.NewAddressBuilder(&xc.ChainConfig{
 		Net:    "testnet",
 		Chain:  "BTC",
 		Driver: xc.BTC.Driver(),
 	})
+	builder := builderI.(address.AddressBuilder)
 	require.NoError(err)
 	pubkey, err := base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
 	require.NoError(err)

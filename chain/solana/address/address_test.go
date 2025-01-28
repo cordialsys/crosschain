@@ -34,13 +34,3 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require.Equal(t, xc.Address(""), address)
 	require.EqualError(t, err, "expected address length 32, got address length 3")
 }
-
-func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
-	bytes, _ := hex.DecodeString("FC880863219008406235FA4C8FBB2A86D3DA7B6762EAC39323B2A1D8C404A414")
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(addresses))
-	require.Equal(t, xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb"), addresses[0].Address)
-	require.Equal(t, xc.AddressTypeDefault, addresses[0].Type)
-}

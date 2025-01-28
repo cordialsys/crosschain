@@ -428,11 +428,9 @@ func CmdChains() *cobra.Command {
 			} else {
 				logrus.Info("listing from local configuration")
 				chains := []*xc.ChainConfig{}
-				for _, asset := range xcFactory.GetAllAssets() {
-					if chain, ok := asset.(*xc.ChainConfig); ok {
-						chain.Migrate()
-						chains = append(chains, chain)
-					}
+				for _, chain := range xcFactory.GetAllChains() {
+					chain.Migrate()
+					chains = append(chains, chain)
 				}
 				err = printer(chains)
 				if err != nil {

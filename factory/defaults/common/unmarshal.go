@@ -37,9 +37,6 @@ func Unmarshal(data string) *config.Config {
 	cfg.MigrateFields()
 
 	cfg.Chains = lowercaseMap(cfg.Chains)
-	cfg.Tokens = lowercaseMap(cfg.Tokens)
-	cfg.Tasks = lowercaseMap(cfg.Tasks)
-	cfg.Pipelines = lowercaseMap(cfg.Pipelines)
 
 	return cfg
 }

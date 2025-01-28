@@ -23,42 +23,40 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 	if overrides == nil {
 		return
 	}
-	for _, task := range xcFactory.GetAllAssets() {
-		if chain, ok := task.(*xc.ChainConfig); ok {
-			chainKey := strings.ToLower(string(chain.Chain))
-			override, ok := overrides[chainKey]
-			if ok {
-				override.Applied = true
-				if override.ApiKey != "" {
-					logrus.WithField("chain", chain.Chain).Info("overriding api-key")
-					chain.AuthSecret = override.ApiKey
-				}
-				if override.Rpc != "" {
-					logrus.WithField("chain", chain.Chain).Info("overriding rpc")
-					chain.URL = override.Rpc
-					if strings.Contains(override.Rpc, "cordialapis.com") {
-						logrus.WithField("chain", chain.Chain).WithField("rpc", chain.URL).Info("using cordialapis driver")
-						// ensure crosschain driver is used
-						chain.Driver = chain.Chain.Driver()
-						chain.Clients = []*xc.ClientConfig{
-							{
-								Driver: xc.DriverCrosschain,
-								URL:    chain.URL,
-							},
-						}
-					} else {
-						// ensure native driver is used
-						chain.Clients = []*xc.ClientConfig{
-							{
-								Driver: chain.Chain.Driver(),
-								URL:    chain.URL,
-							},
-						}
+	for _, chain := range xcFactory.GetAllChains() {
+		chainKey := strings.ToLower(string(chain.Chain))
+		override, ok := overrides[chainKey]
+		if ok {
+			override.Applied = true
+			if override.ApiKey != "" {
+				logrus.WithField("chain", chain.Chain).Info("overriding api-key")
+				chain.AuthSecret = override.ApiKey
+			}
+			if override.Rpc != "" {
+				logrus.WithField("chain", chain.Chain).Info("overriding rpc")
+				chain.URL = override.Rpc
+				if strings.Contains(override.Rpc, "cordialapis.com") {
+					logrus.WithField("chain", chain.Chain).WithField("rpc", chain.URL).Info("using cordialapis driver")
+					// ensure crosschain driver is used
+					chain.Driver = chain.Chain.Driver()
+					chain.Clients = []*xc.ClientConfig{
+						{
+							Driver: xc.DriverCrosschain,
+							URL:    chain.URL,
+						},
+					}
+				} else {
+					// ensure native driver is used
+					chain.Clients = []*xc.ClientConfig{
+						{
+							Driver: chain.Chain.Driver(),
+							URL:    chain.URL,
+						},
 					}
 				}
-				if override.Network != "" {
-					chain.Net = override.Network
-				}
+			}
+			if override.Network != "" {
+				chain.Net = override.Network
 			}
 		}
 	}
