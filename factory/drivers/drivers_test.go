@@ -61,15 +61,15 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	}
 	if driver == xc.DriverBitcoin {
 		fakeAsset.Chain = "BTC"
-		fakeAsset.AuthSecret = "1234"
+		fakeAsset.Auth2 = "env:SECRET_X"
 	}
 	if driver == xc.DriverBitcoinLegacy {
 		fakeAsset.Chain = "DOGE"
-		fakeAsset.AuthSecret = "1234"
+		fakeAsset.Auth2 = "env:SECRET_X"
 	}
 	if driver == xc.DriverBitcoinCash {
 		fakeAsset.Chain = "BCH"
-		fakeAsset.AuthSecret = "1234"
+		fakeAsset.Auth2 = "env:SECRET_X"
 	}
 	if driver == xc.DriverSubstrate {
 		fakeAsset.ChainPrefix = "0"

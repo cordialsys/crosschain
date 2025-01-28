@@ -38,18 +38,21 @@ var _ xclient.ClientWithDecimals = &Client{}
 const ServiceApiKeyHeader = "x-service-api-key"
 
 // NewClient returns a new Crosschain Client
-func NewClient(cfgI xc.ITask, apiKey string) (*Client, error) {
-	url := cfgI.GetChain().Clients[0].URL
+func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.NetworkSelector) (*Client, error) {
 	url = strings.TrimSuffix(url, "/")
-	network := cfgI.GetChain().Clients[0].Network
-
-	if config.HasTypePrefix(apiKey) {
-		var err error
-		apiKey, err = config.GetSecret(apiKey)
+	var apiKey string
+	var err error
+	if apiKeyRef != "" {
+		apiKey, err = apiKeyRef.Load()
 		if err != nil {
-			logrus.WithError(err).Warn("failed to get connector api key")
+			return nil, fmt.Errorf("could not load api-key: %v", err)
 		}
 	}
+
+	if apiKey == "" {
+		logrus.WithError(err).Warn("connector api key is empty")
+	}
+
 	return &Client{
 		Asset:   cfgI,
 		URL:     url,
@@ -59,8 +62,8 @@ func NewClient(cfgI xc.ITask, apiKey string) (*Client, error) {
 	}, nil
 }
 
-func NewStakingClient(cfgI xc.ITask, apiKey string, serviceApiKey config.Secret, provider xc.StakingProvider) (*Client, error) {
-	client, err := NewClient(cfgI, apiKey)
+func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, serviceApiKey config.Secret, provider xc.StakingProvider, network xc.NetworkSelector) (*Client, error) {
+	client, err := NewClient(cfgI, url, apiKeyRef, network)
 	if err != nil {
 		return nil, err
 	}

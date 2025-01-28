@@ -123,10 +123,13 @@ type VaultLoader interface {
 // GetSecret returns a secret, e.g. from env variable. Extend as needed.
 func GetSecret(uri string) (string, error) {
 	value := uri
+	if uri == "" {
+		return "", fmt.Errorf("secret reference is empty")
+	}
 
 	splits := strings.Split(value, ":")
 	if len(splits) < 2 {
-		return "", errors.New("invalid secret source for: ***")
+		return "", errors.New("invalid secret reference")
 	}
 
 	secretType := strings.ToLower(splits[0])

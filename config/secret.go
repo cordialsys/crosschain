@@ -18,6 +18,18 @@ var GoogleSecretManager SecretType = "gsm"
 func (s Secret) Load() (string, error) {
 	return GetSecret(string(s))
 }
+
+func (s Secret) LoadNonEmpty() (string, error) {
+	secret, err := GetSecret(string(s))
+	if err != nil {
+		return "", err
+	}
+	if secret == "" {
+		return "", fmt.Errorf("secret value is empty")
+	}
+	return secret, nil
+}
+
 func (s Secret) LoadOrBlank() string {
 	deref, _ := GetSecret(string(s))
 	return deref

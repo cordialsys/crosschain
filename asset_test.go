@@ -54,20 +54,6 @@ func (s *CrosschainTestSuite) TestChainType() {
 	require.False(NativeAsset("unknown").IsValid())
 }
 
-func (s *CrosschainTestSuite) TestAssetConfig() {
-	require := s.Require()
-	assetConfig := ChainConfig{
-		Chain:      "myasset",
-		Net:        "mynet",
-		URL:        "myurl",
-		Auth:       "myauth",
-		Provider:   "myprovider",
-		AuthSecret: "SECRET",
-	}
-	require.Equal("NativeAssetConfig(id=myasset asset=myasset chainId=0 driver= chainCoin= prefix= net=mynet url=myurl auth=myauth provider=myprovider)", assetConfig.String())
-	require.NotContains(assetConfig.String(), "SECRET")
-}
-
 func (s *CrosschainTestSuite) TestLegacyParseAssetAndNativeAsset() {
 	require := s.Require()
 	var asset string

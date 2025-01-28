@@ -13,12 +13,25 @@ type NetworkSetting string
 
 var Mainnet NetworkSetting = "mainnet"
 var Testnet NetworkSetting = "testnet"
+var NotMainnet NetworkSetting = "!mainnet"
+
+func (setting NetworkSetting) Selector() xc.NetworkSelector {
+	if setting == Testnet {
+		return xc.NotMainnets
+	}
+	if setting == NotMainnet {
+		return xc.NotMainnets
+	}
+	return xc.Mainnets
+}
 
 // Config is the full config containing all Assets
 type Config struct {
 	// which network to default to: "mainnet" or "testnet"
 	// Default: "testnet"
-	Network NetworkSetting `yaml:"network"`
+	Network       NetworkSetting `yaml:"network"`
+	CrosschainUrl string         `yaml:"crosschain_url"`
+
 	// map of lowercase(native_asset) -> NativeAssetObject
 	Chains map[string]*xc.ChainConfig `yaml:"chains"`
 

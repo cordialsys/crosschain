@@ -50,10 +50,11 @@ func CmdStaking() *cobra.Command {
 			ctx := setup.CreateContext(xcFactory, chainConfig)
 			ctx = setup.WrapStakingArgs(ctx, stakingArgs)
 			ctx = setup.WrapStakingConfig(ctx, stakingCfg)
+			clientUrl, _ := chainConfig.ClientURL()
 
 			logrus.WithFields(logrus.Fields{
-				"rpc":     chainConfig.GetAllClients()[0].URL,
-				"network": chainConfig.GetAllClients()[0].Network,
+				"rpc":     clientUrl,
+				"network": chainConfig.CrosschainClient.Network,
 				"chain":   chainConfig.Chain,
 			}).Info("chain")
 			cmd.SetContext(ctx)

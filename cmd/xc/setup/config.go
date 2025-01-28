@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/sirupsen/logrus"
 )
@@ -11,8 +12,8 @@ import (
 type ChainOverride struct {
 	// The RPC URL for the chain
 	Rpc string `json:"rpc,omitempty" toml:"rpc,omitempty"`
-	// A secret that may be used with RPC access
-	ApiKey string `json:"api_key,omitempty" toml:"api_key,omitempty"`
+	// A secret reference that may be used with RPC access
+	ApiKey config.Secret `json:"api_key,omitempty" toml:"api_key,omitempty"`
 	// The network to use (e.g. mainnet/testnet/regtest on bitcoin chains)
 	Network string `json:"network,omitempty" toml:"network,omitempty"`
 
@@ -30,7 +31,7 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 			override.Applied = true
 			if override.ApiKey != "" {
 				logrus.WithField("chain", chain.Chain).Info("overriding api-key")
-				chain.AuthSecret = override.ApiKey
+				chain.Auth2 = override.ApiKey
 			}
 			if override.Rpc != "" {
 				logrus.WithField("chain", chain.Chain).Info("overriding rpc")
@@ -38,21 +39,7 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 				if strings.Contains(override.Rpc, "cordialapis.com") {
 					logrus.WithField("chain", chain.Chain).WithField("rpc", chain.URL).Info("using cordialapis driver")
 					// ensure crosschain driver is used
-					chain.Driver = chain.Chain.Driver()
-					chain.Clients = []*xc.ClientConfig{
-						{
-							Driver: xc.DriverCrosschain,
-							URL:    chain.URL,
-						},
-					}
-				} else {
-					// ensure native driver is used
-					chain.Clients = []*xc.ClientConfig{
-						{
-							Driver: chain.Chain.Driver(),
-							URL:    chain.URL,
-						},
-					}
+					chain.Driver = xc.DriverCrosschain
 				}
 			}
 			if override.Network != "" {

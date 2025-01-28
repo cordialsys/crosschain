@@ -8,7 +8,6 @@ import (
 	"github.com/cordialsys/crosschain/config"
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/defaults"
-	"github.com/sirupsen/logrus"
 )
 
 type FactoryOptions struct {
@@ -93,15 +92,6 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			// skip unless explicity including
 			if !options.UseDisabledChains {
 				continue
-			}
-		}
-		// dereference secrets
-		// if native, ok := asset.(*xc.ChainConfig); ok {
-		if chain.Auth != "" {
-			var err error
-			chain.AuthSecret, err = config.GetSecret(chain.Auth)
-			if err != nil {
-				logrus.WithError(err).WithField("chain", chain.Chain).Error("could not access secret")
 			}
 		}
 		factory.AllChains = append(factory.AllChains, chain)

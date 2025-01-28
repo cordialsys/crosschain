@@ -3,7 +3,6 @@ package setup
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/cometbft/cometbft/types/time"
@@ -11,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -114,7 +114,7 @@ func LoadChain(xcFactory *factory.Factory, chain string) (*xc.ChainConfig, error
 }
 func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 	if args.NotMainnet {
-		chain.GetAllClients()[0].Network = "!mainnet"
+		chain.CrosschainClient.Network = "!mainnet"
 		// needed for bitcoin chains
 		chain.Net = "testnet"
 	}
@@ -124,7 +124,7 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 		chain.IndexerUrl = args.Rpc
 	}
 	if args.ApiKey != "" {
-		chain.AuthSecret = args.ApiKey
+		chain.Auth2 = args.ApiKey
 	}
 	if args.Network != "" {
 		chain.Net = args.Network
@@ -146,18 +146,20 @@ type RpcArgs struct {
 	NotMainnet     bool
 	Provider       string
 	Network        string
-	ApiKey         string
+	ApiKey         config.Secret
 	// ConfigPath     string
 	UseLocalImplementation bool
 
 	Overrides map[string]*ChainOverride
 }
 
+const DefaultApiRef = "env:API_KEY"
+
 func AddRpcArgs(cmd *cobra.Command) {
 	// cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
-	cmd.PersistentFlags().String("api-key", "", "Api key to use for RPC client (may set API_KEY).")
+	cmd.PersistentFlags().String("api-key", DefaultApiRef, "Secret reference for API key to use for RPC client.")
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
 	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
@@ -181,17 +183,10 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	notmainnet, _ := cmd.Flags().GetBool("not-mainnet")
 	rpcProvider, _ := cmd.Flags().GetString("rpc-provider")
 	apikey, _ := cmd.Flags().GetString("api-key")
-	if apikey == "" {
-		apikey = os.Getenv("CORDIAL_API_KEY")
-		if apikey == "" {
-			// alias
-			apikey = os.Getenv("TREASURY_API_KEY")
-		}
-		if apikey == "" {
-			// alias
-			apikey = os.Getenv("API_KEY")
-		}
+	if apikey != "" && len(strings.Split(apikey, ":")) == 0 {
+		return nil, fmt.Errorf("api-key must not be passed directly on command, instead you should use a reference (default is %s)", DefaultApiRef)
 	}
+
 	network, err := cmd.Flags().GetString("network")
 	if err != nil {
 		return nil, err
@@ -203,7 +198,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 		VerbosityCount:         count,
 		NotMainnet:             notmainnet,
 		Provider:               rpcProvider,
-		ApiKey:                 apikey,
+		ApiKey:                 config.Secret(apikey),
 		UseLocalImplementation: local,
 		Network:                network,
 		// ConfigPath:     config,
