@@ -86,31 +86,34 @@ func (f *Factory) EnrichAssetConfig(partialCfg *TokenAssetConfig, nativeAsset Na
 
 // NewClient creates a new Client
 func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
-	nativeAsset := cfg.GetChain()
-	clients := nativeAsset.GetAllClients()
+	chainConfig := cfg.GetChain()
 	if f.NoXcClients {
-		// prevent recursion
-		clients = nativeAsset.GetNativeClients()
-	}
-	for _, client := range clients {
-		switch Driver(client.Driver) {
-		case DriverCrosschain:
-			return remoteclient.NewClient(cfg, client.Auth)
-		default:
-			return drivers.NewClient(cfg, Driver(client.Driver))
+		if chainConfig.URL == "" {
+			return nil, fmt.Errorf("no .URL set for %s chain, cannot construct client", chainConfig.Chain)
 		}
+		if chainConfig.Driver == DriverCrosschain {
+			return nil, fmt.Errorf("cannot construct client for %s when no-xc-clients is set, and chain driver is %s", chainConfig.Chain, chainConfig.Driver)
+		}
+		return drivers.NewClient(cfg, chainConfig.Driver)
 	}
-	return nil, fmt.Errorf("no clients possible for %s", nativeAsset.Chain)
+
+	url, driver := chainConfig.ClientURL()
+	switch driver {
+	case DriverCrosschain:
+		return remoteclient.NewClient(cfg, url, chainConfig.Auth2, chainConfig.CrosschainClient.Network)
+	default:
+		return drivers.NewClient(cfg, chainConfig.Driver)
+	}
 }
 
 func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+	chainConfig := cfg.GetChain()
 	if !f.NoXcClients {
-		clients := cfg.GetChain().GetAllClients()
-		for _, client := range clients {
-			switch Driver(client.Driver) {
-			case DriverCrosschain:
-				return remoteclient.NewStakingClient(cfg, client.Auth, stakingCfg.GetApiSecret(provider), provider)
-			}
+		url, driver := chainConfig.ClientURL()
+		network := chainConfig.CrosschainClient.Network
+		switch Driver(driver) {
+		case DriverCrosschain:
+			return remoteclient.NewStakingClient(cfg, url, chainConfig.Auth2, stakingCfg.GetApiSecret(provider), provider, network)
 		}
 	}
 	return drivers.NewStakingClient(stakingCfg, cfg, provider)

@@ -36,8 +36,6 @@ func CmdXc() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println("--- url", chainConfig.URL)
-
 			setup.OverrideChainSettings(chainConfig, args)
 
 			stakingArgs, err := setup.StakingArgsFromCmd(cmd)
@@ -58,9 +56,11 @@ func CmdXc() *cobra.Command {
 			ctx = setup.WrapStakingArgs(ctx, stakingArgs)
 			ctx = setup.WrapStakingConfig(ctx, stakingCfg)
 
+			url, _ := chainConfig.ClientURL()
+
 			logrus.WithFields(logrus.Fields{
-				"rpc":     chainConfig.GetAllClients()[0].URL,
-				"network": chainConfig.GetAllClients()[0].Network,
+				"rpc":     url,
+				"network": chainConfig.CrosschainClient.Network,
 				"chain":   chainConfig.Chain,
 			}).Info("chain")
 			cmd.SetContext(ctx)

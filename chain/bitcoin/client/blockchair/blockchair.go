@@ -49,11 +49,16 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 		return &BlockchairClient{}, err
 	}
 
-	if strings.TrimSpace(cfg.AuthSecret) == "" {
+	if strings.TrimSpace(string(cfg.Auth2)) == "" {
 		return &BlockchairClient{}, fmt.Errorf("api token required for blockchair blockchain client (set .auth reference)")
 	}
+	apiKey, err := cfg.Auth2.LoadNonEmpty()
+	if err != nil {
+		return nil, fmt.Errorf("could not load blockchair API key: %v", err)
+	}
+
 	return &BlockchairClient{
-		ApiKey:         cfg.AuthSecret,
+		ApiKey:         apiKey,
 		Url:            cfg.URL,
 		Chaincfg:       params,
 		httpClient:     httpClient,

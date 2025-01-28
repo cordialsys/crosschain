@@ -57,14 +57,6 @@ var _ xclient.ClientWithDecimals = &Client{}
 // A 3rd party 'staking provider' is required to do the rest.
 var _ xclient.StakingClient = &Client{}
 
-func configToEVMClientURL(cfgI xc.ITask) string {
-	cfg := cfgI.GetChain()
-	if cfg.Provider == "infura" {
-		return cfg.URL + "/" + cfg.AuthSecret
-	}
-	return cfg.URL
-}
-
 func ReplaceIncompatiableEvmResponses(body []byte) []byte {
 	bodyStr := string(body)
 	newStr := ""
@@ -100,7 +92,7 @@ func ReplaceIncompatiableEvmResponses(body []byte) []byte {
 // NewClient returns a new EVM Client
 func NewClient(asset xc.ITask) (*Client, error) {
 	nativeAsset := asset.GetChain()
-	url := configToEVMClientURL(asset)
+	url := asset.GetChain().URL
 
 	// c, err := rpc.DialContext(context.Background(), url)
 	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableEvmResponses)

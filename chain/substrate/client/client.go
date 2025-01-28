@@ -54,7 +54,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		logrus.Warnf("invalid rpc url: %v", err)
 	}
 	indexerUrl := cfgI.GetChain().IndexerUrl
-	apiKey := cfgI.GetChain().AuthSecret
+	apiKeyRef := cfgI.GetChain().Auth2
+	apiKey := ""
 
 	if cfgI.GetChain().IndexerType != IndexerRpc {
 		help := fmt.Sprintf(`The substrate driver relies on a supported subscan indexer (%v).\n`+
@@ -65,8 +66,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		if cfgI.GetChain().IndexerType == IndexerSubQuery {
 			// do not require api key
 		} else {
-			if apiKey == "" {
-				return nil, fmt.Errorf(`must set .api-key\n` + help)
+			if apiKeyRef == "" {
+				return nil, fmt.Errorf(`must set .auth to be api-key\n` + help)
+			}
+			apiKey, err = apiKeyRef.LoadNonEmpty()
+			if err != nil {
+				return nil, fmt.Errorf(`could not load substrate provider API key: %v\n`+help, err)
 			}
 		}
 	}

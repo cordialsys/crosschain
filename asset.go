@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/cordialsys/crosschain/config"
 )
 
 type SignatureType string
@@ -331,6 +333,11 @@ type StakingConfig struct {
 	Providers []StakingProvider `yaml:"providers,omitempty"`
 }
 
+type CrosschainClientConfig struct {
+	Url     string          `yaml:"url"`
+	Network NetworkSelector `yaml:"network,omitempty"`
+}
+
 func (staking *StakingConfig) Enabled() bool {
 	return len(staking.Providers) > 0
 }
@@ -346,8 +353,9 @@ type ChainConfig struct {
 	// Decimals for the chain's native asset (if it has one).
 	Decimals int32 `yaml:"decimals,omitempty"`
 	// RPC URL to use
-	URL     string          `yaml:"url,omitempty"`
-	Clients []*ClientConfig `yaml:"clients,omitempty"`
+	URL string `yaml:"url,omitempty"`
+
+	CrosschainClient CrosschainClientConfig `yaml:"crosschain_client"`
 
 	// Optional configuration of the Driver.  Some chains support different kinds of RPC.
 	Provider string `yaml:"provider,omitempty"`
@@ -410,10 +418,8 @@ type ChainConfig struct {
 	// Used only for deriving private keys from mnemonic phrases in local testing
 	ChainCoinHDPath uint32 `yaml:"chain_coin_hd_path,omitempty"`
 
-	// This contains the derefenced value of "auth", if "auth" is set.
-	AuthSecret string `yaml:"-"`
-	// Set a secret reference, see config/secret.go.  Used for setting an API key.
-	Auth string `yaml:"auth,omitempty"`
+	// Set a secret reference, see config/secret.go.  Used for setting an API keys.
+	Auth2 config.Secret `yaml:"auth,omitempty"`
 
 	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
 	External External `yaml:"external,omitempty"`
@@ -471,7 +477,7 @@ func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
 		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.ID(), c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth, c.Provider,
+		c.ID(), c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
 	)
 }
 
@@ -483,10 +489,6 @@ func (asset *ChainConfig) GetDecimals() int32 {
 	return asset.Decimals
 }
 
-// func (asset NativeAssetConfig) GetDriver() Driver {
-// 	return Driver(asset.Driver)
-// }
-
 func (asset *ChainConfig) GetChain() *ChainConfig {
 	return asset
 }
@@ -495,42 +497,20 @@ func (native *ChainConfig) GetContract() string {
 	return ""
 }
 
-// Return list of clients with the "default" client added
-// if it's not already there
-func (asset ChainConfig) GetAllClients() []*ClientConfig {
-	defaultCfg := &ClientConfig{
-		Driver: asset.Driver,
-		URL:    asset.URL,
-	}
-	cfgs := asset.Clients[:]
-	hasDefault := false
-	for _, cfg := range cfgs {
-		if cfg.Driver == defaultCfg.Driver {
-			hasDefault = true
-		}
-	}
-	empty := defaultCfg.Driver == "" && defaultCfg.URL == ""
-	if !hasDefault && !empty {
-		cfgs = append(cfgs, defaultCfg)
-	}
-
-	return cfgs
-}
-
-// Return all clients that are not crosschain driver
-func (asset ChainConfig) GetNativeClients() []*ClientConfig {
-	clients := asset.GetAllClients()
-	filtered := []*ClientConfig{}
-	for _, client := range clients {
-		if client.Driver != DriverCrosschain {
-			filtered = append(filtered, client)
-		}
-	}
-	return filtered
-}
-
 func (native *ChainConfig) GetAssetSymbol() string {
 	return string(native.Chain)
+}
+
+// Returns URL and driver used for the client.  This will either
+// Be the chain driver, or the 'special' crosschain driver.
+func (native *ChainConfig) ClientURL() (string, Driver) {
+	if native.URL == "" || native.URL == "-" {
+		if native.CrosschainClient.Url != "" {
+			return native.CrosschainClient.Url, DriverCrosschain
+		}
+		return "https://connector.cordialapis.com", DriverCrosschain
+	}
+	return native.URL, native.Driver
 }
 
 func (native *ChainConfig) IsChain(contract ContractAddress) bool {

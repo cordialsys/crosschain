@@ -40,7 +40,15 @@ var _ xclient.ClientWithDecimals = &Client{}
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	url := cfgI.GetChain().URL
 	url = strings.TrimSuffix(url, "/")
-	apiKey := cfgI.GetChain().AuthSecret
+	var apiKey string
+	var err error
+	apiKeyRef := cfgI.GetChain().Auth2
+	if apiKeyRef != "" {
+		apiKey, err = apiKeyRef.Load()
+		if err != nil {
+			return nil, fmt.Errorf("could not load TON client API key: %v", err)
+		}
+	}
 
 	return &Client{url, cfgI, apiKey}, nil
 }

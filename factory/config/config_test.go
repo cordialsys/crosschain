@@ -238,7 +238,14 @@ crosschain:
 		eth, ok := f.GetChain("ETH")
 		require.True(ok)
 		require.Equal(xc.ETH, eth.GetChain().Chain)
-		require.Equal(tc.expectedAuth, eth.GetChain().AuthSecret)
+
+		var secret string
+		var err error
+		if eth.GetChain().Auth2 != "" {
+			secret, err = eth.GetChain().Auth2.Load()
+			require.NoError(err)
+		}
+		require.Equal(tc.expectedAuth, secret)
 		require.Equal(tc.expectedUrl, eth.GetChain().URL)
 
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -112,6 +113,8 @@ func TestBalance(t *testing.T) {
 	for i, tc := range testcases {
 		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
+		os.Setenv("SUBSTRATE_AAA", "AAA")
+		defer os.Unsetenv("SUBSTRATE_AAA")
 
 		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:       "DOT",
@@ -119,7 +122,7 @@ func TestBalance(t *testing.T) {
 			URL:         rpc.URL,
 			IndexerType: client.IndexerSubScan,
 			IndexerUrl:  "subscan",
-			AuthSecret:  "aaa",
+			Auth2:       "env:SUBSTRATE_AAA",
 			Decimals:    10,
 			ChainID:     0,
 		})
@@ -333,13 +336,16 @@ func TestFetchTxInfo(t *testing.T) {
 			rpc, rpcClose := testtypes.MockJSONRPC(t, tc.rcpResponses)
 			defer rpcClose()
 
+			os.Setenv("SUBSTRATE_AAA", "AAA")
+			defer os.Unsetenv("SUBSTRATE_AAA")
+
 			client, err := client.NewClient(&xc.ChainConfig{
 				Chain:       tc.expectedTx.XChain,
 				Driver:      "substrate",
 				URL:         rpc.URL,
 				IndexerUrl:  http.URL,
 				IndexerType: tc.indexerType,
-				AuthSecret:  "aaa",
+				Auth2:       "env:SUBSTRATE_AAA",
 				ChainPrefix: "0",
 				Decimals:    10,
 				ChainID:     0,
@@ -479,13 +485,14 @@ func TestFetchTxInput(t *testing.T) {
 		// for the client fetching the lastest block height
 		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
-
+		os.Setenv("SUBSTRATE_AAA", "AAA")
+		defer os.Unsetenv("SUBSTRATE_AAA")
 		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:       "DOT",
 			Driver:      "substrate",
 			URL:         rpc.URL,
 			IndexerUrl:  "aaa",
-			AuthSecret:  "aaa",
+			Auth2:       "env:SUBSTRATE_AAA",
 			ChainPrefix: "0",
 			Decimals:    10,
 			ChainID:     0,
@@ -554,11 +561,13 @@ func TestEstimateTip(t *testing.T) {
 		rpc, rpcClose := testtypes.MockJSONRPC(t, tc.responses)
 		defer rpcClose()
 
+		os.Setenv("SUBSTRATE_AAA", "AAA")
+		defer os.Unsetenv("SUBSTRATE_AAA")
 		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:      "DOT",
 			Driver:     "substrate",
 			IndexerUrl: "subscan",
-			AuthSecret: "aaa",
+			Auth2:      "env:SUBSTRATE_AAA",
 			URL:        rpc.URL,
 			Decimals:   10,
 			ChainID:    0,

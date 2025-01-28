@@ -157,8 +157,11 @@ func TestEnrichAssetConfig(t *testing.T) {
 	require.True(ok)
 
 	// default should be crosschainapi client
-	require.NotEqual("", chainCfg.GetAllClients()[0].URL)
+	require.NotEqual("", chainCfg.CrosschainClient.Network)
 	require.NotEqual("", chainCfg.Driver)
+	url, driver := chainCfg.ClientURL()
+	require.Equal(xc.DriverCrosschain, driver)
+	require.NotEqual("", url)
 
 	token := xc.TokenAssetConfig{}
 	_, err := xcf.EnrichAssetConfig(&token, xc.SOL)
