@@ -106,12 +106,11 @@ func LoadChain(xcFactory *factory.Factory, chain string) (*xc.ChainConfig, error
 		return nil, fmt.Errorf("invalid chain: %s\noptions: %v", chain, xc.NativeAssetList)
 	}
 
-	chainConfig, err := xcFactory.GetAssetConfig("", nativeAsset)
-	if err != nil {
-		return nil, err
+	chainConfig, ok := xcFactory.GetChain(nativeAsset)
+	if !ok {
+		return nil, fmt.Errorf("chain not found: %v", nativeAsset)
 	}
-	chainCfg := chainConfig.(*xc.ChainConfig)
-	return chainCfg, nil
+	return chainConfig, nil
 }
 func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 	if args.NotMainnet {

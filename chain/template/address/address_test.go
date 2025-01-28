@@ -22,11 +22,3 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 	require.Equal(t, xc.Address(""), address)
 	require.EqualError(t, err, "not implemented")
 }
-
-func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
-
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey([]byte{})
-	require.NotNil(t, addresses)
-	require.EqualError(t, err, "not implemented")
-}

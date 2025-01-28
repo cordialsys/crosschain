@@ -495,15 +495,6 @@ func (native *ChainConfig) GetContract() string {
 	return ""
 }
 
-// TODO we should delete these extra fields that are indicative of chain
-// func (asset *NativeAssetConfig) GetChainIdentifier() string {
-// 	return asset.Asset
-// }
-
-// func (asset NativeAssetConfig) GetTask() *TaskConfig {
-// 	return nil
-// }
-
 // Return list of clients with the "default" client added
 // if it's not already there
 func (asset ChainConfig) GetAllClients() []*ClientConfig {

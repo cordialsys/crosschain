@@ -44,14 +44,3 @@ func (s *AptosTestSuite) TestGetAddressFromPublicKeyErr() {
 	require.Equal(xc.Address(""), address)
 	require.EqualError(err, "invalid format for ed25519 public key")
 }
-
-func (s *AptosTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
-	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
-	bytes, _ := hex.DecodeString("E0651D94176024B0C137C23A782D50291C04C8B5BCEDD4A7CD066BF4C0D21B22")
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
-	require.Nil(err)
-	require.Equal(1, len(addresses))
-	require.Equal(xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85"), addresses[0].Address)
-	require.Equal(xc.AddressTypeDefault, addresses[0].Type)
-}

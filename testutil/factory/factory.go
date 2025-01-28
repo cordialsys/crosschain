@@ -74,14 +74,6 @@ func (f *TestFactory) GetAddressFromPublicKey(asset xc.ITask, publicKey []byte) 
 	return f.DefaultFactory.GetAddressFromPublicKey(asset, publicKey)
 }
 
-// GetAllPossibleAddressesFromPublicKey returns all PossibleAddress(es) given a public key
-func (f *TestFactory) GetAllPossibleAddressesFromPublicKey(asset xc.ITask, publicKey []byte) ([]xc.PossibleAddress, error) {
-	if f.GetAddressFromPublicKeyFunc != nil {
-		return f.GetAllPossibleAddressesFromPublicKey(asset, publicKey)
-	}
-	return f.DefaultFactory.GetAllPossibleAddressesFromPublicKey(asset, publicKey)
-}
-
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
 func (f *TestFactory) ConvertAmountToHuman(asset xc.ITask, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error) {
 	return f.DefaultFactory.ConvertAmountToHuman(asset, blockchainAmount)
@@ -98,63 +90,13 @@ func (f *TestFactory) ConvertAmountStrToBlockchain(asset xc.ITask, humanAmountSt
 }
 
 // GetAssetConfig returns an AssetConfig by asset and native asset (chain)
-func (f *TestFactory) GetAssetConfig(asset string, nativeAsset xc.NativeAsset) (xc.ITask, error) {
-	return f.DefaultFactory.GetAssetConfig(asset, nativeAsset)
-}
-
-// GetTaskConfig returns an AssetConfig by task name and assetID
-func (f *TestFactory) GetTaskConfig(taskName string, assetID xc.AssetID) (xc.ITask, error) {
-	return f.DefaultFactory.GetTaskConfig(taskName, assetID)
-}
-
-func (f *TestFactory) GetTaskConfigByNameSrcDstAssetIDs(taskName string, srcAssetID xc.AssetID, dstAssetID xc.AssetID) (xc.ITask, error) {
-	return f.DefaultFactory.GetTaskConfigByNameSrcDstAssetIDs(taskName, srcAssetID, dstAssetID)
-}
-
-// GetTaskConfigBySrcDstAssets returns an AssetConfig by source and destination assets
-func (f *TestFactory) GetTaskConfigBySrcDstAssets(srcAsset xc.ITask, dstAsset xc.ITask) ([]xc.ITask, error) {
-	return f.DefaultFactory.GetTaskConfigBySrcDstAssets(srcAsset, srcAsset)
-}
-
-// GetMultiAssetConfig returns an AssetConfig by source and destination assetIDs
-func (f *TestFactory) GetMultiAssetConfig(srcAssetID xc.AssetID, dstAssetID xc.AssetID) ([]xc.ITask, error) {
-	return f.DefaultFactory.GetMultiAssetConfig(srcAssetID, dstAssetID)
-}
-
-// GetAssetConfigByContract returns an AssetConfig by contract and native asset (chain)
-func (f *TestFactory) GetAssetConfigByContract(contract string, nativeAsset xc.NativeAsset) (xc.ITask, error) {
-	return f.DefaultFactory.GetAssetConfigByContract(contract, nativeAsset)
+func (f *TestFactory) GetChain(nativeAsset xc.NativeAsset) (*xc.ChainConfig, bool) {
+	return f.DefaultFactory.GetChain(nativeAsset)
 }
 
 // EnrichAssetConfig augments a partial AssetConfig, for example if some info is stored in a db and other in a config file
-func (f *TestFactory) EnrichAssetConfig(partialCfg *xc.TokenAssetConfig) (*xc.TokenAssetConfig, error) {
-	return f.DefaultFactory.EnrichAssetConfig(partialCfg)
-}
-
-// EnrichDestinations augments a TxInfo by resolving assets and amounts in TxInfo.Destinations
-func (f *TestFactory) EnrichDestinations(activity xc.ITask, txInfo xc.LegacyTxInfo) (xc.LegacyTxInfo, error) {
-	return f.DefaultFactory.EnrichDestinations(activity, txInfo)
-}
-
-func (f *TestFactory) RegisterGetAssetConfigCallback(callback func(assetID xc.AssetID) (xc.ITask, error)) {
-	f.DefaultFactory.RegisterGetAssetConfigCallback(callback)
-}
-
-func (f *TestFactory) UnregisterGetAssetConfigCallback() {
-	f.DefaultFactory.UnregisterGetAssetConfigCallback()
-}
-
-func (f *TestFactory) RegisterGetAssetConfigByContractCallback(callback func(contract string, nativeAsset xc.NativeAsset) (xc.ITask, error)) {
-	f.DefaultFactory.RegisterGetAssetConfigByContractCallback(callback)
-}
-
-func (f *TestFactory) UnregisterGetAssetConfigByContractCallback() {
-	f.DefaultFactory.UnregisterGetAssetConfigByContractCallback()
-}
-
-// PutAssetConfig adds an AssetConfig to the current Config cache
-func (f *TestFactory) PutAssetConfig(config xc.ITask) (xc.ITask, error) {
-	return f.DefaultFactory.PutAssetConfig(config)
+func (f *TestFactory) EnrichAssetConfig(partialCfg *xc.TokenAssetConfig, nativeAsset xc.NativeAsset) (*xc.TokenAssetConfig, error) {
+	return f.DefaultFactory.EnrichAssetConfig(partialCfg, nativeAsset)
 }
 
 // Config returns the Config
@@ -173,12 +115,8 @@ func (f *TestFactory) MustAmountBlockchain(asset xc.ITask, humanAmountStr string
 
 }
 
-func (f *TestFactory) GetAllAssets() []xc.ITask {
-	return f.DefaultFactory.GetAllAssets()
-}
-
-func (f *TestFactory) GetAllTasks() []*xc.TaskConfig {
-	return f.DefaultFactory.GetAllTasks()
+func (f *TestFactory) GetAllChains() []*xc.ChainConfig {
+	return f.DefaultFactory.GetAllChains()
 }
 
 func (f *TestFactory) GetNetworkSelector() xc.NetworkSelector {

@@ -41,16 +41,6 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require.EqualError(t, err, "invalid secp256k1 public key")
 }
 
-func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
-	bytes, _ := hex.DecodeString("04760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1b01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d")
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(addresses))
-	require.Equal(t, xc.Address("0x5891906fef64a5ae924c7fc5ed48c0f64a55fce1"), addresses[0].Address)
-	require.Equal(t, xc.AddressTypeDefault, addresses[0].Type)
-}
-
 func TestHexToAddress(t *testing.T) {
 	addr, err := address.FromHex("0x5891906fEf64A5ae924C7Fc5ed48c0F64a55fCe1")
 	require.NoError(t, err)

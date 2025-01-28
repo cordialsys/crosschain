@@ -71,16 +71,6 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require.Equal(t, xc.Address(""), derivedAddress)
 }
 
-func TestGetAllPossibleAddressesFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
-	bytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(addresses))
-	require.Equal(t, xc.Address("terra1mzqd0kynsjzsnf3d37m5uvs53kkxssf0aasf27"), addresses[0].Address)
-	require.Equal(t, xc.AddressTypeDefault, addresses[0].Type)
-}
-
 func TestKeyDerivation(t *testing.T) {
 
 	type testcase struct {

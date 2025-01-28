@@ -18,6 +18,9 @@ const TransactionFailure Status = "TransactionFailure"
 // A transaction failed to submit because it already exists
 const TransactionExists Status = "TransactionExists"
 
+// The transaction could not be found
+const TransactionNotFound Status = "TransactionNotFound"
+
 // deadline exceeded and transaction can no longer be accepted
 const TransactionTimedOut Status = "TransactionTimedOut"
 

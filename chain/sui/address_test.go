@@ -45,14 +45,3 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
 	require.Equal(xc.Address(""), address)
 	require.EqualError(err, "invalid format for ed25519 sui public key")
 }
-
-func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
-	require := s.Require()
-	builder, _ := sui.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
-	bytes, _ := hex.DecodeString("E0651D94176024B0C137C23A782D50291C04C8B5BCEDD4A7CD066BF4C0D21B22")
-	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
-	require.Nil(err)
-	require.Equal(1, len(addresses))
-	require.Equal(xc.Address("0x086d8e59c3ef72ccc8cbf74c55e7f611b0ee9eba788c7153924c4e4a32449a8e"), addresses[0].Address)
-	require.Equal(xc.AddressTypeDefault, addresses[0].Type)
-}

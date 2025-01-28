@@ -9,7 +9,6 @@ type ContractAddress Address
 // AddressBuilder is the interface for building addresses
 type AddressBuilder interface {
 	GetAddressFromPublicKey(publicKeyBytes []byte) (Address, error)
-	GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]PossibleAddress, error)
 }
 
 // AddressType represents the type of an address, for discovery purposes
