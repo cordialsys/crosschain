@@ -3,8 +3,8 @@ package aptos
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
@@ -13,6 +13,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -142,6 +143,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
+		if aptosErr, ok := err.(*aptostypes.RestError); ok {
+			if aptosErr.Code == http.StatusNotFound {
+				return xc.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+			}
+		}
 		return xc.LegacyTxInfo{}, err
 	}
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
@@ -331,7 +337,7 @@ func (client *Client) EstimateGas(ctx context.Context, ledgerInfo *aptostypes.Le
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	height := ledgerInfo.BlockHeight
 	if height < 500 {
-		return zero, errors.New("the chain is too young")
+		return zero, fmt.Errorf("the chain is too young")
 	}
 	attempts := 10
 

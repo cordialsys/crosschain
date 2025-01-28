@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
+
+	"github.com/cordialsys/crosschain/client/errors"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/sirupsen/logrus"
@@ -51,7 +52,7 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 		return nil, fmt.Errorf("could not get latest blockhash: %v", err)
 	}
 	if recent == nil || recent.Value == nil {
-		return nil, errors.New("error fetching latest blockhash")
+		return nil, fmt.Errorf("error fetching latest blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
 
@@ -147,7 +148,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 		if len(tokenAccounts) == 0 {
 			// no balance
-			return nil, errors.New("no balance to send solana token")
+			return nil, fmt.Errorf("no balance to send solana token")
 		}
 	}
 
@@ -226,10 +227,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		},
 	)
 	if err != nil {
+		if err.Error() == "not found" {
+			// similar to EVM, solana uses simple "not found" string
+			return result, errors.TransactionNotFoundf("%v", err)
+		}
 		return result, err
 	}
 	if res == nil || res.Transaction == nil {
-		return result, errors.New("invalid transaction in response")
+		return result, fmt.Errorf("invalid transaction in response")
 	}
 
 	solTx, err := solana.TransactionFromDecoder(bin.NewBinDecoder(res.Transaction.GetBinary()))

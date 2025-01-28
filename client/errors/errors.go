@@ -55,6 +55,13 @@ func TransactionExistsf(format string, args ...interface{}) error {
 	}
 }
 
+func TransactionNotFoundf(format string, args ...interface{}) error {
+	return &Error{
+		Status:  TransactionNotFound,
+		Message: fmt.Sprintf(format, args...),
+	}
+}
+
 func Unknownf(format string, args ...interface{}) error {
 	return &Error{
 		Status:  UnknownError,

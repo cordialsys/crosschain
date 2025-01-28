@@ -80,6 +80,7 @@ func TestFetchTxInput(t *testing.T) {
 		shouldCreateATA   bool
 		tokenAccountCount int
 		err               string
+		forceError        int
 	}{
 		{
 			asset: &xc.ChainConfig{},
@@ -258,43 +259,45 @@ func TestFetchTxInput(t *testing.T) {
 	}
 
 	for i, v := range vectors {
-		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
-		fmt.Println("ASSET", v.asset)
-		if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-			token.ChainConfig = &xc.ChainConfig{
-				URL:   server.URL,
-				Chain: "SOL",
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			fmt.Println("ASSET", v.asset)
+			server.ForceError = v.forceError
+			if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
+				token.ChainConfig = &xc.ChainConfig{
+					URL:   server.URL,
+					Chain: "SOL",
+				}
+			} else {
+				v.asset.(*xc.ChainConfig).URL = server.URL
 			}
-		} else {
-			v.asset.(*xc.ChainConfig).URL = server.URL
-		}
 
-		client, _ := client.NewClient(v.asset)
-		from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
-		to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+			client, _ := client.NewClient(v.asset)
+			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+			to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
 
-		if v.err != "" {
-			require.Nil(t, input)
-			require.ErrorContains(t, err, v.err)
-		} else {
-			require.NoError(t, err)
-			require.NotNil(t, input)
-			require.Equal(t, v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
-			require.Equal(t, v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
-			require.Equal(t, v.blockHash, input.(*TxInput).RecentBlockHash.String())
-			if v.tokenAccountCount > 0 {
-				require.Len(t, input.(*TxInput).SourceTokenAccounts, v.tokenAccountCount)
-				// token accounts must be sorted descending
-				for i := 1; i < v.tokenAccountCount; i++ {
-					prior := input.(*TxInput).SourceTokenAccounts[i-1].Balance.Uint64()
-					current := input.(*TxInput).SourceTokenAccounts[i].Balance.Uint64()
-					require.LessOrEqual(t, current, prior)
+			if v.err != "" {
+				require.Nil(t, input)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, input)
+				require.Equal(t, v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
+				require.Equal(t, v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
+				require.Equal(t, v.blockHash, input.(*TxInput).RecentBlockHash.String())
+				if v.tokenAccountCount > 0 {
+					require.Len(t, input.(*TxInput).SourceTokenAccounts, v.tokenAccountCount)
+					// token accounts must be sorted descending
+					for i := 1; i < v.tokenAccountCount; i++ {
+						prior := input.(*TxInput).SourceTokenAccounts[i-1].Balance.Uint64()
+						current := input.(*TxInput).SourceTokenAccounts[i].Balance.Uint64()
+						require.LessOrEqual(t, current, prior)
+					}
 				}
 			}
-		}
+		})
 	}
 }
 
@@ -408,27 +411,28 @@ func TestTokenBalance(t *testing.T) {
 	}
 
 	for i, v := range vectors {
-		fmt.Println("testcase ", i)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
 
-		client, _ := client.NewClient(&xc.TokenAssetConfig{
-			ChainConfig: &xc.ChainConfig{
-				URL: server.URL,
-			},
-			Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+			client, _ := client.NewClient(&xc.TokenAssetConfig{
+				ChainConfig: &xc.ChainConfig{
+					URL: server.URL,
+				},
+				Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+			})
+			from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+			balance, err := client.FetchBalance(context.Background(), from)
+
+			if v.err != "" {
+				require.Equal(t, "0", balance.String())
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.Nil(t, err)
+				require.NotNil(t, balance)
+				require.Equal(t, v.val, balance.String())
+			}
 		})
-		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-		balance, err := client.FetchBalance(context.Background(), from)
-
-		if v.err != "" {
-			require.Equal(t, "0", balance.String())
-			require.ErrorContains(t, err, v.err)
-		} else {
-			require.Nil(t, err)
-			require.NotNil(t, balance)
-			require.Equal(t, v.val, balance.String())
-		}
 	}
 }
 
@@ -593,7 +597,7 @@ func TestFetchTxInfo(t *testing.T) {
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 			`null`,
 			xc.LegacyTxInfo{},
-			"not found",
+			"TransactionNotFound: not found",
 		},
 		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",

@@ -159,6 +159,15 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 			},
 			"",
 		},
+		{
+			"sui_missing_tx",
+			// sui_getTransactionBlock
+			fmt.Errorf(`{"code":-32602,"message":"Could not find the referenced transaction [TransactionDigest(7xZ5AAjrybwwPjXh7ojKert5v7eSYgzWEREtKrhSGQ7d)]."}`),
+			xc.LegacyTxInfo{
+				TxID: "7xZ5AAjrybwwPjXh7ojKert5v7eSYgzWEREtKrhSGQ7d",
+			},
+			"TransactionNotFound: ",
+		},
 	}
 
 	for _, v := range vectors {

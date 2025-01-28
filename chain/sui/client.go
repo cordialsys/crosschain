@@ -3,7 +3,6 @@ package sui
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -76,7 +76,7 @@ func (c *Client) FetchLatestCheckpoint(ctx context.Context) (*Checkpoint, error)
 	// get last 1 checkpoint, descending order
 	err := c.SuiClient.CallContext(ctx, resp, getCheckpoints, nil, 1, true)
 	if len(resp.Data) == 0 {
-		return &Checkpoint{}, errors.New("no checkpoints yet")
+		return &Checkpoint{}, fmt.Errorf("no checkpoints yet")
 	}
 	return resp.Data[0], err
 }
@@ -101,6 +101,19 @@ func AddressOrObjectOwner(obj *types.ObjectOwner) (string, bool) {
 	return "", false
 }
 
+func isMissingTransactionErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	// SUI does not return a specific error code in JSON RPC for missing transaction,
+	// so we must string match.
+	if strings.Contains(strings.ToLower(err.Error()), "could not find the referenced transaction") {
+		return true
+	}
+
+	return false
+}
+
 func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	opts := types.SuiTransactionBlockResponseOptions{
 		ShowInput:          true,
@@ -111,12 +124,15 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		ShowEvents: true,
 	}
 	txHashBz, err := lib.NewBase58(string(txHash))
-	if err != nil || txHashBz == nil || len(txHashBz.Data()) < 10 || len(txHashBz.Data()) > 33 {
-		return xc.LegacyTxInfo{}, errors.Join(errors.New("could not decode txHash"), err)
+	if err != nil || txHashBz == nil || len(*txHashBz) == 0 {
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %v", err)
 	}
 
 	resp, err := c.SuiClient.GetTransactionBlock(ctx, *txHashBz, opts)
 	if err != nil {
+		if isMissingTransactionErr(err) {
+			return xc.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+		}
 		return xc.LegacyTxInfo{}, err
 	}
 
@@ -126,7 +142,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		return xc.LegacyTxInfo{}, err
 	}
 	if resp.Checkpoint == nil {
-		return xc.LegacyTxInfo{}, errors.New("sui endpoint failed to provide checkpoint")
+		return xc.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {

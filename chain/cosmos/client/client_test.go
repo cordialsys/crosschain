@@ -489,6 +489,14 @@ func TestFetchTxInfo(t *testing.T) {
 			xc.LegacyTxInfo{},
 			"encoding/hex: invalid byte",
 		},
+		{
+			// should be able to catch this as TransactionNotFound case
+			&xc.ChainConfig{Chain: "LUNA", ChainCoin: "uluna", ChainPrefix: "terra"},
+			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
+			errors.New(`{"message": "RPC error -32603 - Internal error: tx (E97DB7DB40A02F0773EFE3AA5328292EDB27BEB089DF0972A26E8683068BCFA7) not found"}`),
+			xc.LegacyTxInfo{},
+			"TransactionNotFound:",
+		},
 	}
 
 	for i, v := range vectors {

@@ -437,7 +437,7 @@ type ChainConfig struct {
 	// This field is currently used only by the Stellar network.
 	//
 	// Example format: "30s" (30 seconds), "2m" (2 minutes), "1h" (1 hour).
-	TransactionActiveTime time.Duration `yaml:"transaction_active_time"`
+	TransactionActiveTime time.Duration `yaml:"transaction_active_time,omitempty"`
 }
 
 func (chain *ChainConfig) Migrate() {

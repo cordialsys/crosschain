@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -17,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/stellar/go/xdr"
 )
 
@@ -34,15 +34,15 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 	networkPassphrase := cfg.ChainIDStr
 	if networkPassphrase == "" {
-		return nil, errors.New("stellar configuration is missing chain-id-str")
+		return nil, fmt.Errorf("stellar configuration is missing chain-id-str")
 	}
 
 	if cfg.ChainMaxGasPrice <= 0 {
-		return nil, errors.New("chain-max-gas-price should be set to value greater than 0.0")
+		return nil, fmt.Errorf("chain-max-gas-price should be set to value greater than 0.0")
 	}
 
 	if cfg.TransactionActiveTime == 0 {
-		return nil, errors.New("transaction-active-time should be greaterthan 0")
+		return nil, fmt.Errorf("transaction-active-time should be greaterthan 0")
 	}
 
 	return &Client{
@@ -80,7 +80,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to read native balance: %w", err)
 	}
 
-	// Validate the amount and deduct it from the balance if the input 
+	// Validate the amount and deduct it from the balance if the input
 	// pertains to a native transaction
 	if _, ok := client.Asset.(*xc.ChainConfig); ok {
 		amount := args.GetAmount()
@@ -129,7 +129,6 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	urlTx := url.QueryEscape(encoded)
 	url := fmt.Sprintf("%s/transactions_async?tx=%s", client.Url, urlTx)
 
-
 	var submitResult types.AsyncTxSubmissionResult
 	if err := client.Post(url, nil, &submitResult); err != nil {
 		return fmt.Errorf("failed to send post request: %w", err)
@@ -147,7 +146,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 // Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	return xc.LegacyTxInfo{}, errors.New("not implemented")
+	return xc.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
 func (client *Client) FetchLatestLedgerInfo() (types.GetLedgerResult, error) {
@@ -159,7 +158,7 @@ func (client *Client) FetchLatestLedgerInfo() (types.GetLedgerResult, error) {
 	}
 
 	if len(result.Embedded.Records) == 0 {
-		return types.GetLedgerResult{}, errors.New("fetch latest ledger response empty")
+		return types.GetLedgerResult{}, fmt.Errorf("fetch latest ledger response empty")
 	}
 
 	return result.Embedded.Records[0], nil
@@ -218,6 +217,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	var response types.GetTransactionResult
 	err := client.Get(url, &response)
 	if err != nil {
+		if queryErr, ok := err.(*types.QueryProblem); ok {
+			if queryErr.Status == 404 {
+				return xclient.TxInfo{}, errors.TransactionNotFoundf("%v", err)
+			}
+		}
 		return xclient.TxInfo{}, fmt.Errorf("failed to send http request: %w", err)
 	}
 
@@ -393,7 +397,7 @@ func (client *Client) Get(url string, response any) error {
 			return fmt.Errorf("failed to decode response body: %s", err)
 		}
 
-		return fmt.Errorf("failed to get, error: %w", &queryProblem)
+		return &queryProblem
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -415,7 +419,7 @@ func GetAssetCode(asset xdr.Asset) xc.NativeAsset {
 // Process payment like operation. This type of operations produce one movement containing source and destination.
 func ProcessPayment(txInfo *xclient.TxInfo, asset xc.NativeAsset, source xdr.MuxedAccount, destination xdr.MuxedAccount, amount xdr.Int64) error {
 	if txInfo == nil {
-		return errors.New("missing txInfo")
+		return fmt.Errorf("missing txInfo")
 	}
 
 	sourceAccount, err := source.GetAddress()
@@ -443,7 +447,7 @@ func ProcessPayment(txInfo *xclient.TxInfo, asset xc.NativeAsset, source xdr.Mux
 // Process cross asset payments. This type of operation produce two movements: one for source account and one for destination account
 func ProcessPathPayment(txInfo *xclient.TxInfo, sourceAsset xc.NativeAsset, destinationAsset xc.NativeAsset, source xdr.MuxedAccount, destination xdr.MuxedAccount, sourceAmount xdr.Int64, destinationAmount xdr.Int64) error {
 	if txInfo == nil {
-		return errors.New("missing txInfo")
+		return fmt.Errorf("missing txInfo")
 	}
 
 	sourceAccount, err := source.GetAddress()

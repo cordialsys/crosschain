@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 	"github.com/sirupsen/logrus"
 )
@@ -44,10 +45,18 @@ type Client struct {
 }
 
 type Error struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Error   string `json:"Error"`
+	Code         string `json:"code"`
+	Message      string `json:"message"`
+	ErrorMessage string `json:"Error"`
 }
+
+func (e *Error) Error() string {
+	if len(e.Code) > 0 && len(e.Message) > 0 {
+		return fmt.Sprintf("%s: %s", e.Code, e.Message)
+	}
+	return fmt.Sprintf("%s", e.ErrorMessage)
+}
+
 type ContractParameter struct {
 	Value   map[string]interface{} `json:"value"`
 	TypeUrl string                 `json:"type_url"`
@@ -170,10 +179,10 @@ func parseResponse[T any](res *http.Response, dest T) (T, error) {
 
 func checkError(res Error) error {
 	if len(res.Code) > 0 && len(res.Message) > 0 {
-		return fmt.Errorf("%s: %s", res.Code, res.Message)
+		return &res
 	}
-	if len(res.Error) > 0 {
-		return fmt.Errorf("%s", res.Error)
+	if len(res.ErrorMessage) > 0 {
+		return &res
 	}
 	return nil
 }
@@ -278,7 +287,7 @@ func (c *Client) GetTransactionByID(txHash string) (*GetTransactionIDResponse, e
 		return parsed, err
 	}
 	if len(parsed.TxID) == 0 {
-		return parsed, fmt.Errorf("could not find tx: %s", txHash)
+		return parsed, errors.TransactionNotFoundf("could not find tx: %s", txHash)
 	}
 
 	return parsed, nil

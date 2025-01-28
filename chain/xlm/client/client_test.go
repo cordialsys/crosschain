@@ -851,11 +851,25 @@ func TestFetchTxInfo(t *testing.T) {
 				Confirmations: 5711,
 			},
 		},
+		{
+			getTxResult: `{
+				"type": "https://stellar.org/horizon-errors/not_found",
+				"title": "Resource Missing",
+				"status": 404,
+				"detail": "The resource at the url requested was not found",
+				"extras": {
+				}
+			}`,
+			err: "TransactionNotFound:",
+		},
 	}
 
 	for _, vector := range vectors {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			url := r.URL.String()
+			if vector.err != "" {
+				w.WriteHeader(http.StatusBadRequest)
+			}
 
 			if strings.Contains(url, "/transactions/") {
 				w.Write([]byte(vector.getTxResult))

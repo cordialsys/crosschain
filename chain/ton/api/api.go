@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 )
 
@@ -29,8 +31,20 @@ type Detail struct {
 type ErrorResponse struct {
 	// API doc specifies "details" as being in the response but in practice
 	// it seems just a single error string is returned
-	Error  string   `json:"error"`
-	Detail []Detail `json:"detail"`
+	ErrorMessage string   `json:"error"`
+	Detail       []Detail `json:"detail"`
+	// should be set by http client
+	StatusCode int `json:"-"`
+}
+
+func (e *ErrorResponse) Error() string {
+	if e.ErrorMessage != "" {
+		return fmt.Sprintf("%s", e.ErrorMessage)
+	}
+	if len(e.Detail) > 0 {
+		return fmt.Sprintf("%s: %s", e.Detail[0].Type, e.Detail[0].Msg)
+	}
+	return fmt.Sprintf("unknown ton error (%d)", e.StatusCode)
 }
 
 type JettonWallet struct {
