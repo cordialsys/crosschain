@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -267,6 +268,11 @@ var Uncompressed PublicKeyFormat = "uncompressed"
 func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
 	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+		if val := os.Getenv("PUBKEY_UNCOMPRESSED"); val != "" {
+			fmt.Println("--- using uncompressed pubkey format for btc")
+			return Uncompressed
+		}
+		fmt.Println("--- using compressed pubkey format for btc")
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
