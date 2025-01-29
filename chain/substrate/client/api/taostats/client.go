@@ -10,6 +10,7 @@ import (
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 type Error struct {
@@ -25,13 +26,15 @@ type ClientArgs struct {
 type Client struct {
 	baseUrl string
 	apiKey  string
+	limiter *rate.Limiter
 }
 
-func NewClient(baseUrl string, apiKey string) *Client {
-	return &Client{baseUrl, apiKey}
+func NewClient(baseUrl string, apiKey string, limiter *rate.Limiter) *Client {
+	return &Client{baseUrl, apiKey, limiter}
 }
 
 func (client *Client) Get(ctx context.Context, url string, outputData any) error {
+	client.limiter.Wait(ctx)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -41,6 +44,7 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 	if client.apiKey != "" {
 		req.Header.Add("Authorization", client.apiKey)
 	}
+	logrus.WithField("url", url).Debug("post request")
 
 	explorerClient := &http.Client{}
 	resp, err := explorerClient.Do(req)
@@ -53,7 +57,7 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 	if err != nil {
 		return err
 	}
-	logrus.WithField("body", string(body)).WithField("url", url).WithField("status", resp.StatusCode).Debug("post")
+	logrus.WithField("body", string(body)).WithField("url", url).WithField("status", resp.StatusCode).Debug("post response")
 	if resp.StatusCode != 200 {
 		rpcErr := &Error{}
 		err2 := json.Unmarshal(body, rpcErr)

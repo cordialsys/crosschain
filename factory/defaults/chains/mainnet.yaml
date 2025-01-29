@@ -576,6 +576,7 @@ chains:
     # indexer_type: taostats
     indexer_type: rpc
     confirmations_final: 3
+    rate_limit: 0.5
     external:
       coin_market_cap:
         asset_id: "22974"
@@ -603,6 +604,7 @@ chains:
     driver: ton
     decimals: 9
     confirmations_final: 1
+    rate_limit: 0.5
     external:
       dti: QBZLT5MT1
       coin_market_cap:

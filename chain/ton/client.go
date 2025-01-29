@@ -41,19 +41,22 @@ var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new Template Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	url := cfgI.GetChain().URL
+	chain := cfgI.GetChain()
+	url := chain.URL
 	url = strings.TrimSuffix(url, "/")
 	var apiKey string
 	var err error
-	apiKeyRef := cfgI.GetChain().Auth2
+	apiKeyRef := chain.Auth2
 	if apiKeyRef != "" {
 		apiKey, err = apiKeyRef.Load()
 		if err != nil {
 			return nil, fmt.Errorf("could not load TON client API key: %v", err)
 		}
 	}
-	// very conservative rate limit
-	var limiter = rate.NewLimiter(0.5, 1)
+	var limiter = rate.NewLimiter(rate.Inf, 1)
+	if chain.RateLimit > 0 {
+		limiter = rate.NewLimiter(chain.RateLimit, 1)
+	}
 
 	return &Client{url, cfgI, apiKey, limiter}, nil
 }

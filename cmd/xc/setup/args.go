@@ -124,7 +124,11 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 		chain.IndexerUrl = args.Rpc
 	}
 	if args.ApiKey != "" {
-		chain.Auth2 = args.ApiKey
+		if args.ApiKey == DefaultApiRef && chain.Auth2 != "" {
+			// do not override existing config setting with default api-ref
+		} else {
+			chain.Auth2 = args.ApiKey
+		}
 	}
 	if args.Network != "" {
 		chain.Net = args.Network

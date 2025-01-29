@@ -15,16 +15,18 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	substratetx "github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 type Client struct {
 	rpc      *gsrpc.SubstrateAPI
 	maxDepth int
 	delay    time.Duration
+	limiter  *rate.Limiter
 }
 
-func NewClient(rpc *gsrpc.SubstrateAPI, maxDepth int, delay time.Duration) *Client {
-	return &Client{rpc, maxDepth, delay}
+func NewClient(rpc *gsrpc.SubstrateAPI, maxDepth int, delay time.Duration, limiter *rate.Limiter) *Client {
+	return &Client{rpc, maxDepth, delay, limiter}
 }
 
 type Tx struct {
@@ -132,6 +134,7 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 	}
 	scans := 0
 	for scans < client.maxDepth {
+		client.limiter.Wait(ctx)
 		scans++
 		block, err = client.rpc.RPC.Chain.GetBlock(blockHash)
 		if err != nil {

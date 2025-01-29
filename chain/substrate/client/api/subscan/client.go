@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 type Error struct {
@@ -18,7 +19,8 @@ type Error struct {
 }
 
 type ClientArgs struct {
-	ApiKey string
+	ApiKey  string
+	Limiter *rate.Limiter
 }
 
 func Post(ctx context.Context, url string, inputJson []byte, outputData any, args *ClientArgs) error {
@@ -27,6 +29,9 @@ func Post(ctx context.Context, url string, inputJson []byte, outputData any, arg
 		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
+	if args.Limiter != nil {
+		args.Limiter.Wait(ctx)
+	}
 
 	if args.ApiKey != "" {
 		req.Header.Add("X-API-Key", args.ApiKey)
