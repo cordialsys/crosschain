@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/config"
+	"golang.org/x/time/rate"
 )
 
 type SignatureType string
@@ -438,6 +439,9 @@ type ChainConfig struct {
 	//
 	// Example format: "30s" (30 seconds), "2m" (2 minutes), "1h" (1 hour).
 	TransactionActiveTime time.Duration `yaml:"transaction_active_time,omitempty"`
+
+	// Rate limit setting on RPC requests for client, in requests/second.
+	RateLimit rate.Limit `yaml:"rate_limit,omitempty"`
 }
 
 func (chain *ChainConfig) Migrate() {
