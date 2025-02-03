@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -138,12 +139,12 @@ func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
 
 // NewSigner creates a new Signer
 func (f *Factory) NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
-	return drivers.NewSigner(cfg, secret)
+	return drivers.NewSigner(cfg, secret, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
 }
 
 // NewAddressBuilder creates a new AddressBuilder
 func (f *Factory) NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
-	return drivers.NewAddressBuilder(cfg)
+	return drivers.NewAddressBuilder(cfg, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
 }
 
 // MarshalTxInput marshalls a TxInput struct
@@ -158,7 +159,11 @@ func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (f *Factory) GetAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
-	return getAddressFromPublicKey(cfg, publicKey)
+	return getAddressFromPublicKey(
+		cfg,
+		publicKey,
+		address.OptionAlgorithm(f.Config.SignatureAlgorithm),
+	)
 }
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
@@ -238,8 +243,8 @@ func (f *Factory) GetNetworkSelector() NetworkSelector {
 	return NotMainnets
 }
 
-func getAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
-	builder, err := drivers.NewAddressBuilder(cfg)
+func getAddressFromPublicKey(cfg ITask, publicKey []byte, options ...address.AddressOption) (Address, error) {
+	builder, err := drivers.NewAddressBuilder(cfg, options...)
 	if err != nil {
 		return "", err
 	}

@@ -31,6 +31,10 @@ jobs:
           - chain: BTC
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest
+          - chain: BTC
+            image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
+            network: regtest
+            signature-algorithm: schnorr
           - chain: TAO
             image: us-docker.pkg.dev/cordialsys/crosschain/bittensor:latest
 
@@ -40,4 +44,4 @@ jobs:
       - name: install dagger
         run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.14.0 BIN_DIR=/usr/bin sudo -E sh
       - name: chain
-        run: dagger --progress plain -v call test-chain --chain ${{matrix.chain.chain}} --image ${{matrix.chain.image}} --network "${{matrix.chain.network}}" --source .
+        run: dagger --progress plain -v call test-chain --chain ${{matrix.chain.chain}} --image ${{matrix.chain.image}} --network "${{matrix.chain.network}}" --source . --signature-algorithm "${{matrix.chain.signature-algorithm}}"

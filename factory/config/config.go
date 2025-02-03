@@ -29,8 +29,9 @@ func (setting NetworkSetting) Selector() xc.NetworkSelector {
 type Config struct {
 	// which network to default to: "mainnet" or "testnet"
 	// Default: "testnet"
-	Network       NetworkSetting `yaml:"network"`
-	CrosschainUrl string         `yaml:"crosschain_url"`
+	Network            NetworkSetting   `yaml:"network"`
+	CrosschainUrl      string           `yaml:"crosschain_url"`
+	SignatureAlgorithm xc.SignatureType `yaml:"signature_algorithm"`
 
 	// map of lowercase(native_asset) -> NativeAssetObject
 	Chains map[string]*xc.ChainConfig `yaml:"chains"`

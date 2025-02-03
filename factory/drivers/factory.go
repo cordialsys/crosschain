@@ -7,6 +7,7 @@ import (
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 
 	. "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/aptos"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
@@ -147,12 +148,12 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }
 
-func NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
+func NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	chain := cfg.GetChain()
-	return signer.New(chain.Driver, secret, chain)
+	return signer.New(chain.Driver, secret, chain, options...)
 }
 
-func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
+func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBuilder, error) {
 	switch Driver(cfg.GetChain().Driver) {
 	case DriverEVM:
 		return evmaddress.NewAddressBuilder(cfg)
@@ -165,7 +166,7 @@ func NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
 	case DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
 	case DriverBitcoin, DriverBitcoinLegacy:
-		return bitcoinaddress.NewAddressBuilder(cfg)
+		return bitcoinaddress.NewAddressBuilder(cfg, options...)
 	case DriverBitcoinCash:
 		return bitcoin_cash.NewAddressBuilder(cfg)
 	case DriverSui:

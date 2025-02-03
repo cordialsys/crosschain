@@ -2,9 +2,11 @@ package signer_test
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/stretchr/testify/require"
 )
@@ -27,11 +29,12 @@ func TestNewSigner(t *testing.T) {
 func TestSign(t *testing.T) {
 
 	vectors := []struct {
-		alg xc.Driver
-		pri string
-		pub string
-		msg string
-		sig string
+		alg         xc.Driver
+		pri         string
+		pub         string
+		msg         string
+		sig         string
+		algOverride string
 	}{
 		{
 			alg: xc.DriverEVM,
@@ -68,19 +71,36 @@ func TestSign(t *testing.T) {
 			msg: "b87d3813e03f58cf19fd0b6395",
 			sig: "d8bb64aad8c9955a115a793addd24f7f2b077648714f49c4694ec995b330d09d640df310f447fd7b6cb5c14f9fe9f490bcf8cfadbfd2169c8ac20d3b8af49a0c",
 		},
+		{
+			alg:         xc.DriverBitcoin,
+			pri:         "1d25811b76f43c86d59d757622773b2969ee71270ea810a42deda024e0cf896a",
+			pub:         "03e3dacffee283cbfb561f8f44b0a0cff6d86b6d6b72bd0f57c15aeee965c708a4",
+			msg:         "d7d9a2283d9899c96550a848c7ecd6e8a3094780a08c9760730399cb3d594d61",
+			sig:         "311832a81c1ff59db4adafedcfad97bc4352d427557954629c81c00c58b25ac5f1e0ff1fa81e5e104ad4a7f470c2931e7903c0d8733d9c846186112579fc7103",
+			algOverride: "schnorr",
+		},
+		{
+			alg: xc.DriverBitcoin,
+			pri: "1d25811b76f43c86d59d757622773b2969ee71270ea810a42deda024e0cf896a",
+			pub: "03e3dacffee283cbfb561f8f44b0a0cff6d86b6d6b72bd0f57c15aeee965c708a4",
+			msg: "c6325ffd8690ecdb28e4d655707e3e79e2ab51087e9611555a7ed0064eee285f",
+			sig: "fb04cee56283d000ad37232a66b0b98e2acc903b89cbf11b1edb32d51029ee5a74b332ca5b347ff86832daae64fb685d656b13c5b276253bf10bc4eaacfcab7001",
+		},
 	}
 
 	for _, v := range vectors {
-		s, err := signer.New(v.alg, v.pri, nil)
-		require.NoError(t, err)
-		bytesMsg, _ := hex.DecodeString(v.msg)
-		sig, err := s.Sign(xc.TxDataToSign(bytesMsg))
-		require.NoError(t, err)
-		require.NotNil(t, sig)
-		require.Equal(t, v.sig, hex.EncodeToString(sig))
+		t.Run(fmt.Sprintf("TestSign-%s-%s", v.alg, v.algOverride), func(t *testing.T) {
+			s, err := signer.New(v.alg, v.pri, nil, address.OptionAlgorithm(xc.SignatureType(v.algOverride)))
+			require.NoError(t, err)
+			bytesMsg, _ := hex.DecodeString(v.msg)
+			sig, err := s.Sign(xc.TxDataToSign(bytesMsg))
+			require.NoError(t, err)
+			require.NotNil(t, sig)
+			require.Equal(t, v.sig, hex.EncodeToString(sig))
 
-		pub, err := s.PublicKey()
-		require.NoError(t, err)
-		require.Equal(t, v.pub, hex.EncodeToString(pub))
+			pub, err := s.PublicKey()
+			require.NoError(t, err)
+			require.Equal(t, v.pub, hex.EncodeToString(pub))
+		})
 	}
 }

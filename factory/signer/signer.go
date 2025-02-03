@@ -8,8 +8,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/address"
 	cosmostypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -22,6 +25,7 @@ import (
 type Signer struct {
 	driver     xc.Driver
 	privateKey []byte
+	algorithm  xc.SignatureType
 }
 
 // PrivateKey is a private key or reference to private key
@@ -90,7 +94,7 @@ func fromString(secret string, hdNumMaybe uint32) ([]byte, error) {
 	return bz, nil
 }
 
-func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig) (*Signer, error) {
+func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, options ...address.AddressOption) (*Signer, error) {
 	hdNum := uint32(118)
 	if cfgMaybe != nil {
 		hdNum = cfgMaybe.ChainCoinHDPath
@@ -99,36 +103,46 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig) (*Signer, er
 	if err != nil {
 		return nil, fmt.Errorf("expected private key to be a hex or base58 string")
 	}
+
+	opts, err := address.NewAddressOptions(options...)
+	if err != nil {
+		return nil, errors.New("invalid address options")
+	}
 	alg := driver.SignatureAlgorithm()
+	algorithmOverride, ok := opts.GetAlgorithmType()
+	if ok {
+		alg = algorithmOverride
+	}
+
 	switch alg {
 	case xc.Ed255:
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			if len(secretBz) != 32 {
 				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
 			}
-			return &Signer{driver, secretBz}, nil
+			return &Signer{driver, secretBz, alg}, nil
 		}
 		if len(secretBz) == ed25519.SeedSize {
 			key := ed25519.NewKeyFromSeed(secretBz)
-			return &Signer{driver, key}, nil
+			return &Signer{driver, key, alg}, nil
 		}
 		if len(secretBz) == ed25519.PrivateKeySize {
-			return &Signer{driver, secretBz}, nil
+			return &Signer{driver, secretBz, alg}, nil
 		}
 		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
-	case xc.K256Keccak, xc.K256Sha256:
+	case xc.K256Keccak, xc.K256Sha256, xc.Schnorr:
 		_, err := crypto.HexToECDSA(hex.EncodeToString(secretBz))
 		if err != nil {
 			return nil, err
 		}
-		return &Signer{driver, secretBz}, nil
+		return &Signer{driver, secretBz, alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
 	}
 }
 
 func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
-	switch s.driver.SignatureAlgorithm() {
+	switch s.algorithm {
 	case xc.Ed255:
 		var signatureRaw []byte
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
@@ -145,6 +159,13 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		}
 		signatureRaw, err := crypto.Sign([]byte(data), ecdsaKey)
 		return xc.TxSignature(signatureRaw), err
+	case xc.Schnorr:
+		privKey, _ := btcec.PrivKeyFromBytes(s.privateKey)
+		signature, err := schnorr.Sign(privKey, data)
+		if err != nil {
+			return nil, err
+		}
+		return signature.Serialize(), nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg for driver: %v", s.driver)
 	}
@@ -170,13 +191,13 @@ func (s *Signer) MustSignAll(data []xc.TxDataToSign) []xc.TxSignature {
 
 }
 func (s *Signer) PublicKey() (PublicKey, error) {
-	switch s.driver.SignatureAlgorithm() {
+	switch s.algorithm {
 	case xc.Ed255:
 		privateKey := ed25519.PrivateKey(s.privateKey)
+
 		publicKey := privateKey.Public().(ed25519.PublicKey)
 		return PublicKey(publicKey), nil
-	case xc.K256Keccak, xc.K256Sha256:
-		// _, pub := btcec.PrivKeyFromBytes(privateKey)
+	case xc.K256Keccak, xc.K256Sha256, xc.Schnorr:
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))
 		if err != nil {
 			return []byte{}, err

@@ -82,12 +82,31 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		var hash []byte
 		var err error
 
-		log.Debugf("Sighashes params: IsPayToWitnessPubKeyHash(pubKeyScript)=%t", txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
-		if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) {
-			log.Debugf("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
-			hash, err = txscript.CalcWitnessSigHash(pubKeyScript, txscript.NewTxSigHashes(tx.MsgTx, fetcher), txscript.SigHashAll, tx.MsgTx, i, int64(value))
+		isTaproot := txscript.IsPayToTaproot(pubKeyScript)
+		isSegWit := txscript.IsPayToWitnessPubKeyHash(pubKeyScript)
+		log.Debugf("Sighashes params: IsPayToWitnessPubKeyHash(pubKeyScript)=%t, IsPayToTaproot(pubKeyScript)=%t", isSegWit, isTaproot)
+
+		if isTaproot {
+			log.Info("CalcTaprootSignatureHash")
+			hash, err = txscript.CalcTaprootSignatureHash(
+				txscript.NewTxSigHashes(tx.MsgTx, fetcher),
+				txscript.SigHashDefault,
+				tx.MsgTx,
+				i,
+				fetcher,
+			)
+		} else if isSegWit {
+			log.Infof("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+			hash, err = txscript.CalcWitnessSigHash(
+				pubKeyScript,
+				txscript.NewTxSigHashes(tx.MsgTx, fetcher),
+				txscript.SigHashAll,
+				tx.MsgTx,
+				i,
+				int64(value),
+			)
 		} else {
-			log.Debugf("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
+			log.Infof("CalcSignatureHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
 			hash, err = txscript.CalcSignatureHash(pubKeyScript, txscript.SigHashAll, tx.MsgTx, i)
 		}
 
@@ -145,13 +164,19 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		pubKeyScript := tx.Input.UnspentOutputs[i].PubKeyScript
 		signatureWithSuffix := append(signature.Serialize(), byte(txscript.SigHashAll))
 
-		// Support segwit.
-		if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
+		// Taproot witness
+		if txscript.IsPayToTaproot(pubKeyScript) {
+			log.Debug("append signature (taproot)")
+			tx.MsgTx.TxIn[i].Witness = wire.TxWitness{rsvBytes}
+			continue
+		} else if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
+			// Segwit witness
 			log.Debug("append signature (segwit)")
 			tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{signatureWithSuffix, tx.Input.FromPublicKey})
 			continue
 		}
 
+		log.Debug("append signature (legacy)")
 		// Support non-segwit
 		builder := txscript.NewScriptBuilder()
 		builder.AddData(signatureWithSuffix)

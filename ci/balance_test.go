@@ -21,10 +21,11 @@ func TestBalance(t *testing.T) {
 	privateKey := "715a5f0e6adff28fb7aee4082d3763e1182a7f93c65bb407028f70b07fc2b0f9"
 
 	rpcArgs := &setup.RpcArgs{
-		Chain:     chain,
-		Rpc:       rpc,
-		Network:   network,
-		Overrides: map[string]*setup.ChainOverride{},
+		Chain:              chain,
+		Rpc:                rpc,
+		Network:            network,
+		Overrides:          map[string]*setup.ChainOverride{},
+		SignatureAlgorithm: signatureAlgorithm,
 	}
 
 	xcFactory, err := setup.LoadFactory(rpcArgs)

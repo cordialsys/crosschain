@@ -1,6 +1,7 @@
 package bitcoin
 
 import (
+	log "github.com/sirupsen/logrus"
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
@@ -31,17 +32,22 @@ func NewClient(cfgI xc.ITask) (BtcClient, error) {
 }
 func NewBitcoinClient(cfgI xc.ITask) (BtcClient, error) {
 	if strings.Contains(cfgI.GetChain().URL, "api.blockchair.com") {
+		log.Debug("Running blockchair btc client")
 		return blockchair.NewBlockchairClient(cfgI)
 	}
 
 	switch BitcoinClient(cfgI.GetChain().Provider) {
 	case Native:
+		log.Debug("Running native btc client")
 		return native.NewNativeClient(cfgI)
 	case Blockchair:
+		log.Debug("Running blockchair btc client")
 		return blockchair.NewBlockchairClient(cfgI)
 	case Blockbook:
+		log.Debug("Running blockbook btc client")
 		return blockbook.NewClient(cfgI)
 	default:
+		log.Debug("Running default (blockbook) btc client")
 		return blockbook.NewClient(cfgI)
 	}
 }
