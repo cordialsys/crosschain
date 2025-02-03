@@ -46,7 +46,7 @@ def fund(chain_id:str, contract: str):
     content = request.get_json(force=True)
     sats = content.get('amount', '1')
     address = content['address']
-    
+
     # convert RAO to TAO
     tao = f"{(int(sats) / 10**9):.8f}"
     while DID_PoW is False:
@@ -60,8 +60,8 @@ def fund(chain_id:str, contract: str):
     password = os.getenv("PASSWORD", "")
 
     system(f"btcli wallet transfer --amount {tao} --destination {address} -y --wallet-name xc --subtensor.chain_endpoint ws://localhost:{RPC_PORT}")
-    # wait for block (12s block time)
-    time.sleep(12.5)
+    # Wait 4x block time(12) because the test is really flacky
+    time.sleep(4*12)
 
     return {
     }

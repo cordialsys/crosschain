@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	. "github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -45,6 +46,57 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	}
 }
 
+func (s *CrosschainTestSuite) TestNewAddressBuilderInvalidAlgorithm() {
+	require := s.Require()
+	_, err := address.NewAddressBuilder(&xc.ChainConfig{Chain: xc.BTC}, xcaddress.OptionAlgorithm(xc.Ed255))
+	require.ErrorContains(err, "ed255")
+}
+
+func (s *CrosschainTestSuite) TestNewAddressBuilderValidAlgorithms() {
+	require := s.Require()
+	tests := []struct {
+		name                string
+		asset               xc.NativeAsset
+		algorithm           xc.SignatureType
+		expectedAddressType address.AddressType
+	}{
+		{
+			name:                "taproot-address",
+			asset:               xc.BTC,
+			algorithm:           xc.Schnorr,
+			expectedAddressType: address.AddressTypeTaproot,
+		},
+		{
+			name:                "legacy-address",
+			asset:               xc.DOGE,
+			algorithm:           xc.K256Sha256,
+			expectedAddressType: address.AddressTypeLegacy,
+		},
+		{
+			name:                "segwit-explicit-algo-address",
+			asset:               xc.BTC,
+			algorithm:           xc.K256Sha256,
+			expectedAddressType: address.AddressTypeSegWit,
+		},
+		{
+			name:                "segwit-missing-algo-address",
+			asset:               xc.BTC,
+			algorithm:           "",
+			expectedAddressType: address.AddressTypeSegWit,
+		},
+	}
+
+	for _, t := range tests {
+		s.Run(t.name, func() {
+			builder, err := address.NewAddressBuilder(&xc.ChainConfig{Driver: t.asset.Driver(), Chain: t.asset}, xcaddress.OptionAlgorithm(t.algorithm))
+			require.NoError(err)
+
+			addressType, err := builder.(address.AddressBuilder).GetAddressType()
+			require.Equal(addressType, t.expectedAddressType)
+		})
+	}
+}
+
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
@@ -76,6 +128,24 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 		}
 	}
 }
+
+func (s *CrosschainTestSuite) TestGetTaprootAddressFromPublicKey() {
+	require := s.Require()
+	builder, err := address.NewAddressBuilder(&xc.ChainConfig{
+		Net:    "mainnet",
+		Chain:  xc.BTC,
+		Driver: xc.DriverBitcoin,
+	}, xcaddress.OptionAlgorithm(xc.Schnorr))
+
+	require.NoError(err)
+	pubkey, err := base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
+	require.NoError(err)
+
+	address, err := builder.GetAddressFromPublicKey(pubkey)
+	require.NoError(err)
+	require.Equal(xc.Address("bc1pnd4mrawmtka70vtvdpkkx3dpghrjemn8ng9dqmmncwvxrtk5yjfqgd0t2x"), address)
+}
+
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyUsesCompressed() {
 	require := s.Require()
 	builder, err := address.NewAddressBuilder(&xc.ChainConfig{

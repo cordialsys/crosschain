@@ -171,7 +171,21 @@ func invoke(ctx context.Context, parentJSON []byte, parentName string, fnName st
 					panic(fmt.Errorf("%s: %w", "failed to unmarshal input arg source", err))
 				}
 			}
-			return (*Dagger).TestChain(&parent, ctx, chain, image, source)
+			var network string
+			if inputArgs["network"] != nil {
+				err = json.Unmarshal([]byte(inputArgs["network"]), &network)
+				if err != nil {
+					panic(fmt.Errorf("%s: %w", "failed to unmarshal input arg network", err))
+				}
+			}
+			var signatureAlg string
+			if inputArgs["signature-algorithm"] != nil {
+				err = json.Unmarshal([]byte(inputArgs["signature-algorithm"]), &signatureAlg)
+				if err != nil {
+					panic(fmt.Errorf("%s: %w", "failed to unmarshal input arg signature-algorithm", err))
+				}
+			}
+			return (*Dagger).TestChain(&parent, ctx, chain, image, source, network, signatureAlg)
 		default:
 			return nil, fmt.Errorf("unknown function %s", fnName)
 		}

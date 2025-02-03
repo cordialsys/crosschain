@@ -230,6 +230,7 @@ func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte) []Outpu
 			Value:        xc.NewAmountBlockchainFromUint64(u.GetValue()),
 			PubKeyScript: addressScript,
 		}
+		log.Debugf("Utoxo hash: %v", u.GetTxHash())
 		res = append(res, output)
 	}
 	return res
