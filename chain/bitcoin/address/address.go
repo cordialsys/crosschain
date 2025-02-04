@@ -149,6 +149,13 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", err
 	}
 
+	if len(publicKeyBytes) == 32 {
+		// btcec.ParsePubKey requires there be a compressed '2' header
+		withCompressedHeader := make([]byte, 33)
+		withCompressedHeader[0] = 0x02
+		copy(withCompressedHeader[1:], publicKeyBytes)
+		publicKeyBytes = withCompressedHeader
+	}
 	pubkey, err := btcec.ParsePubKey(publicKeyBytes)
 	if err != nil {
 		return "", err
