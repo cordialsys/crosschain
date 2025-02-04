@@ -99,6 +99,10 @@ func (s *CrosschainTestSuite) TestNewAddressBuilderValidAlgorithms() {
 
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
+	type testcase struct {
+		pubkeyHex string
+		addresses map[xc.NativeAsset]string
+	}
 	for _, nativeAsset := range UXTO_ASSETS {
 		builder, err := address.NewAddressBuilder(&xc.ChainConfig{
 			Net:    "testnet",
@@ -106,25 +110,35 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 			Driver: nativeAsset.Driver(),
 		})
 		require.NoError(err)
-		pubkey, err := base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
-		require.NoError(err)
-		fmt.Println("checking address for ", nativeAsset)
-		switch nativeAsset {
-		case xc.BTC:
+		for _, tc := range []testcase{
+			{
+				// with 0x02 prefix
+				pubkeyHex: "029b6bb1f5db5dbbe7b16c686d6345a145c72cee679a0ad06f73c39861aed42492",
+				addresses: map[xc.NativeAsset]string{
+					xc.BTC:  "tb1qzca49vcyxkt989qcmhjfp7wyze7n9pq50k2cfd",
+					xc.DOGE: "nWDiCL2RxZcMTvhUGRWCnPDWFWHSCfkhoz",
+					xc.LTC:  "mhYWE7RrYCgbq4RJDaqZp8fvzVmYnPVnFD",
+				},
+			},
+			{
+				// without 0x02 prefix
+				pubkeyHex: "9b6bb1f5db5dbbe7b16c686d6345a145c72cee679a0ad06f73c39861aed42492",
+				addresses: map[xc.NativeAsset]string{
+					xc.BTC:  "tb1qzca49vcyxkt989qcmhjfp7wyze7n9pq50k2cfd",
+					xc.DOGE: "nWDiCL2RxZcMTvhUGRWCnPDWFWHSCfkhoz",
+					xc.LTC:  "mhYWE7RrYCgbq4RJDaqZp8fvzVmYnPVnFD",
+				},
+			},
+		} {
+			pubkey, err := hex.DecodeString(tc.pubkeyHex)
+			require.NoError(err)
+			fmt.Println("checking address for ", nativeAsset)
+
 			address, err := builder.GetAddressFromPublicKey(pubkey)
 			require.NoError(err)
-			// BTC should use newest address type, segwit
-			require.Equal(xc.Address("tb1qzca49vcyxkt989qcmhjfp7wyze7n9pq50k2cfd"), address)
-		case xc.DOGE:
-			address, err := builder.GetAddressFromPublicKey(pubkey)
-			require.NoError(err)
-			require.Equal(xc.Address("nWDiCL2RxZcMTvhUGRWCnPDWFWHSCfkhoz"), address)
-		case xc.LTC:
-			address, err := builder.GetAddressFromPublicKey(pubkey)
-			require.NoError(err)
-			require.Equal(xc.Address("mhYWE7RrYCgbq4RJDaqZp8fvzVmYnPVnFD"), address)
-		default:
-			panic("need to add address test case for " + nativeAsset)
+
+			expectedAddress := tc.addresses[nativeAsset]
+			require.Equal(xc.Address(expectedAddress), address)
 		}
 	}
 }
