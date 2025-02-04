@@ -213,3 +213,7 @@ export XC_SIGN_WITH_SCALAR=1
 
 xc transfer ...
 ```
+
+### Cross-platform builds
+
+OrbStack has been used to build cross-platform images (`make build-push-images`), as Docker Desktop as some issues.

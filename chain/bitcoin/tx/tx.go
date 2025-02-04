@@ -164,26 +164,24 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		pubKeyScript := tx.Input.UnspentOutputs[i].PubKeyScript
 		signatureWithSuffix := append(signature.Serialize(), byte(txscript.SigHashAll))
 
-		// Taproot witness
 		if txscript.IsPayToTaproot(pubKeyScript) {
+			// Taproot witness
 			log.Debug("append signature (taproot)")
 			tx.MsgTx.TxIn[i].Witness = wire.TxWitness{rsvBytes}
-			continue
 		} else if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
 			// Segwit witness
 			log.Debug("append signature (segwit)")
 			tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{signatureWithSuffix, tx.Input.FromPublicKey})
-			continue
-		}
-
-		log.Debug("append signature (legacy)")
-		// Support non-segwit
-		builder := txscript.NewScriptBuilder()
-		builder.AddData(signatureWithSuffix)
-		builder.AddData(tx.Input.FromPublicKey)
-		tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
-		if err != nil {
-			return err
+		} else {
+			log.Debug("append signature (legacy)")
+			// Support non-segwit
+			builder := txscript.NewScriptBuilder()
+			builder.AddData(signatureWithSuffix)
+			builder.AddData(tx.Input.FromPublicKey)
+			tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
+			if err != nil {
+				return err
+			}
 		}
 	}
 
