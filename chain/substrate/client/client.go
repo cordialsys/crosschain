@@ -357,7 +357,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if maxDepth <= 0 {
 			maxDepth = 100
 		}
-		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.Asset.GetChain().ScanDelay, client.limiter)
+		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.limiter)
 		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
 			return xc.LegacyTxInfo{}, err
