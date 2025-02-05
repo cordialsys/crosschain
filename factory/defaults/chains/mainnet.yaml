@@ -576,7 +576,6 @@ chains:
     # indexer_type: taostats
     indexer_type: rpc
     confirmations_final: 3
-    rate_limit: 0.5
     external:
       coin_market_cap:
         asset_id: "22974"

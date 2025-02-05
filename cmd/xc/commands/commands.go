@@ -315,12 +315,15 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
 			logrus.WithField("hash", tx.Hash()).Info("submitted tx")
+
+			time.Sleep(1 * time.Second)
+			logrus.Info("fetching transaction...")
 			start := time.Now()
 			for time.Since(start) < timeout {
-				time.Sleep(5 * time.Second)
 				info, err := client.FetchTxInfo(context.Background(), tx.Hash())
 				if err != nil {
-					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again...")
+					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again in 3s...")
+					time.Sleep(3 * time.Second)
 					continue
 				}
 				fmt.Println(asJson(info))

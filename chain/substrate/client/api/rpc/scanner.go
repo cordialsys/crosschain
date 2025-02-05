@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/registry/retriever"
@@ -21,12 +20,11 @@ import (
 type Client struct {
 	rpc      *gsrpc.SubstrateAPI
 	maxDepth int
-	delay    time.Duration
 	limiter  *rate.Limiter
 }
 
-func NewClient(rpc *gsrpc.SubstrateAPI, maxDepth int, delay time.Duration, limiter *rate.Limiter) *Client {
-	return &Client{rpc, maxDepth, delay, limiter}
+func NewClient(rpc *gsrpc.SubstrateAPI, maxDepth int, limiter *rate.Limiter) *Client {
+	return &Client{rpc, maxDepth, limiter}
 }
 
 type Tx struct {
@@ -149,10 +147,6 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 		}
 		// scan the parent next
 		blockHash = block.Block.Header.ParentHash
-
-		if client.delay > 0 {
-			time.Sleep(client.delay)
-		}
 	}
 	// not found
 	return nil, blockHash, ext, -1, false, nil
