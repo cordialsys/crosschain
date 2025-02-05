@@ -2,6 +2,7 @@ package signer
 
 import (
 	"crypto/ed25519"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -160,8 +161,10 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		signatureRaw, err := crypto.Sign([]byte(data), ecdsaKey)
 		return xc.TxSignature(signatureRaw), err
 	case xc.Schnorr:
+		// schnorr signing is NOT prehashed
+		hash := sha256.Sum256(data)
 		privKey, _ := btcec.PrivKeyFromBytes(s.privateKey)
-		signature, err := schnorr.Sign(privKey, data)
+		signature, err := schnorr.Sign(privKey, hash[:])
 		if err != nil {
 			return nil, err
 		}

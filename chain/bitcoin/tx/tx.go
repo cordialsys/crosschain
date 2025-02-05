@@ -88,7 +88,7 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 
 		if isTaproot {
 			log.Info("CalcTaprootSignatureHash")
-			hash, err = txscript.CalcTaprootSignatureHash(
+			hash, err = calcTaprootSignatureHashRaw(
 				txscript.NewTxSigHashes(tx.MsgTx, fetcher),
 				txscript.SigHashDefault,
 				tx.MsgTx,
