@@ -51,9 +51,10 @@ func TestTransfer(t *testing.T) {
 	transferAmountBlockchain := transferAmount.ToBlockchain(chainConfig.Decimals)
 
 	// fund multiple times, which results in multiple UTXO on utxo chains.
-	for i := 0; i < 3; i++ {
-		fundWallet(t, chainConfig, fromWalletAddress, "1")
-	}
+	fundWallet(t, chainConfig, fromWalletAddress, "0.8")
+	fundWallet(t, chainConfig, fromWalletAddress, "1")
+	fundWallet(t, chainConfig, fromWalletAddress, "1.2")
+
 	require.NoError(t, err, "Failed to fund wallet address")
 
 	initialBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
