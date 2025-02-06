@@ -19,7 +19,7 @@ import (
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
 	NewTxBuilder(asset ITask) (builder.FullTransferBuilder, error)
-	NewSigner(asset ITask, secret string) (*signer.Signer, error)
+	NewSigner(asset ITask, secret string, interactive bool) (*signer.Signer, error)
 	NewAddressBuilder(asset ITask) (AddressBuilder, error)
 
 	MarshalTxInput(input TxInput) ([]byte, error)
@@ -138,8 +138,8 @@ func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
 }
 
 // NewSigner creates a new Signer
-func (f *Factory) NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
-	return drivers.NewSigner(cfg, secret, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
+func (f *Factory) NewSigner(cfg ITask, secret string, interactive bool) (*signer.Signer, error) {
+	return drivers.NewSigner(cfg, secret, interactive, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
 }
 
 // NewAddressBuilder creates a new AddressBuilder

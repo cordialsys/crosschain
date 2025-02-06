@@ -40,11 +40,11 @@ func (f *TestFactory) NewTxBuilder(asset xc.ITask) (builder.FullTransferBuilder,
 }
 
 // NewSigner creates a new Signer
-func (f *TestFactory) NewSigner(asset xc.ITask, secret string) (*signer.Signer, error) {
+func (f *TestFactory) NewSigner(asset xc.ITask, secret string, interactive bool) (*signer.Signer, error) {
 	if f.NewSignerFunc != nil {
 		return f.NewSignerFunc(asset)
 	}
-	return f.DefaultFactory.NewSigner(asset.GetChain(), secret)
+	return f.DefaultFactory.NewSigner(asset.GetChain(), secret, interactive)
 }
 
 // NewAddressBuilder creates a new AddressBuilder

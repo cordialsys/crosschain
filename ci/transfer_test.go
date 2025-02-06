@@ -64,7 +64,7 @@ func TestTransfer(t *testing.T) {
 
 	require.Equal(t, "3", initialBalance.ToHuman(chainConfig.Decimals).String())
 
-	signer, err := xcFactory.NewSigner(chainConfig, fromPrivateKey)
+	signer, err := xcFactory.NewSigner(chainConfig, fromPrivateKey, false)
 	require.NoError(t, err)
 
 	publicKey, err := signer.PublicKey()

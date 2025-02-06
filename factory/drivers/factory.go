@@ -148,9 +148,9 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }
 
-func NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+func NewSigner(cfg ITask, secret string, interactive bool, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	chain := cfg.GetChain()
-	return signer.New(chain.Driver, secret, chain, options...)
+	return signer.New(chain.Driver, secret, chain, interactive, options...)
 }
 
 func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBuilder, error) {

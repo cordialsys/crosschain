@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&chain, "chain", "", "Used Blockchain chain")
 	flag.StringVar(&rpc, "rpc", "", "RPC endpoint")
 	flag.StringVar(&network, "network", "", "Bitcoin network, if relevant")
-	flag.StringVar(&signatureAlgorithm, "signature-algorithm", "", "Used to override signature algorithm. Bitcoin only")
+	flag.StringVar(&signatureAlgorithm, "algorithm", "", "Used to override signature algorithm. Bitcoin only")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }
@@ -114,7 +114,7 @@ func getTestTokensFromFaucet(faucetUrl string, walletAddress xc.Address, amount 
 }
 
 func deriveAddress(t *testing.T, xcFactory *factory.Factory, chainConfig *xc.ChainConfig, privateKey string) xc.Address {
-	signer, err := xcFactory.NewSigner(chainConfig, privateKey)
+	signer, err := xcFactory.NewSigner(chainConfig, privateKey, false)
 	require.NoError(t, err)
 
 	publicKey, err := signer.PublicKey()

@@ -146,7 +146,7 @@ func TestKeyDerivation(t *testing.T) {
 			Chain:           tc.NativeAsset,
 			Driver:          tc.Driver,
 		}
-		s, err := signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset)
+		s, err := signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset, false)
 		require.NoError(t, err)
 		pubkey, err := s.PublicKey()
 		require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestKeyDerivation(t *testing.T) {
 			// try to discover what the derivation path is
 			for i := 0; i < 512; i++ {
 				asset.ChainCoinHDPath = uint32(i)
-				s, _ = signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset)
+				s, _ = signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset, false)
 				pubkey, _ = s.PublicKey()
 				builder, _ = address.NewAddressBuilder(asset)
 				otherAddress, _ := builder.GetAddressFromPublicKey(pubkey)

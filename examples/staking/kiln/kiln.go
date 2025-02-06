@@ -95,7 +95,7 @@ func CmdStake() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
-			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput, false)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -232,7 +232,7 @@ func CmdUnstake() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
-			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chain, privateKeyInput, false)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}

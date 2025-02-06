@@ -167,7 +167,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	// cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
-	cmd.PersistentFlags().String("signature-algorithm", "", "Override default signature algorithm. Optional, used only by bitcoin.")
+	cmd.PersistentFlags().String("algorithm", "", "Override default signature algorithm. Optional, used only by bitcoin.")
 	cmd.PersistentFlags().String("api-key", DefaultApiRef, "Secret reference for API key to use for RPC client.")
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
 	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
@@ -180,7 +180,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	// config, _ := cmd.Flags().GetString("config")
 
 	chain, _ := cmd.Flags().GetString("chain")
-	algorithm, _ := cmd.Flags().GetString("signature-algorithm")
+	algorithm, _ := cmd.Flags().GetString("algorithm")
 	rpc, _ := cmd.Flags().GetString("rpc")
 	if chain == "" {
 		return nil, fmt.Errorf("--chain required")

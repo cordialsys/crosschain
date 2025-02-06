@@ -30,7 +30,7 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 	if privateKeyInput == "" {
 		return "", fmt.Errorf("must provide [address] as input, set env %s for it to be derived", signer.EnvPrivateKey)
 	}
-	signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+	signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, false)
 	if err != nil {
 		return "", fmt.Errorf("could not import private key: %v", err)
 	}
@@ -189,12 +189,16 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			interactive, err := cmd.Flags().GetBool("interactive")
+			if err != nil {
+				return err
+			}
 
 			if decimalsStr == "" && contract != "" {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
 
-			algorithm, _ := cmd.Flags().GetString("signature-algorithm")
+			algorithm, _ := cmd.Flags().GetString("algorithm")
 			if algorithm != "" {
 				xcFactory.Config.SignatureAlgorithm = xc.SignatureType(algorithm)
 			}
@@ -211,11 +215,6 @@ func CmdTxTransfer() *cobra.Command {
 				decimals = int32(parsed)
 			}
 
-			privateKeyInput := signer.ReadPrivateKeyEnv()
-			if privateKeyInput == "" {
-				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
-			}
-
 			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, decimals))
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
@@ -228,7 +227,14 @@ func CmdTxTransfer() *cobra.Command {
 
 			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+			var privateKeyInput string
+			if !interactive {
+				privateKeyInput = signer.ReadPrivateKeyEnv()
+				if privateKeyInput == "" {
+					return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
+				}
+			}
+			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, interactive)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -337,6 +343,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "set a memo for the transfer.")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
+	cmd.Flags().Bool("interactive", false, "Sign the transaction interactively.")
 	return cmd
 }
 
@@ -348,20 +355,33 @@ func CmdAddress() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-
-			privateKeyInput := signer.ReadPrivateKeyEnv()
-			if privateKeyInput == "" {
-				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
-			}
-
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+			publicKeyMaybe, err := cmd.Flags().GetString("public-key")
 			if err != nil {
-				return fmt.Errorf("could not import private key: %v", err)
+				return err
 			}
+			var publicKey signer.PublicKey
+			if publicKeyMaybe != "" {
+				bz, err := hex.DecodeString(publicKeyMaybe)
+				if err != nil {
+					return fmt.Errorf("invalid hex for --public-key: %v", err)
+				}
+				publicKey = bz
+			} else {
+				// read from private key
+				privateKeyInput := signer.ReadPrivateKeyEnv()
+				if privateKeyInput == "" {
+					return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
+				}
 
-			publicKey, err := signer.PublicKey()
-			if err != nil {
-				return fmt.Errorf("could not create public key: %v", err)
+				signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, false)
+				if err != nil {
+					return fmt.Errorf("could not import private key: %v", err)
+				}
+
+				publicKey, err = signer.PublicKey()
+				if err != nil {
+					return fmt.Errorf("could not create public key: %v", err)
+				}
 			}
 
 			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
@@ -379,6 +399,7 @@ func CmdAddress() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().String("public-key", "", "The public key (in hex) to derive an address from.  By default will look for "+signer.EnvPrivateKey)
 	return cmd
 }
 

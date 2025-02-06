@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
@@ -23,9 +24,10 @@ import (
 
 // Reference implementation to sign transactions - not meant to be used for production
 type Signer struct {
-	driver     xc.Driver
-	privateKey []byte
-	algorithm  xc.SignatureType
+	driver      xc.Driver
+	privateKey  []byte
+	algorithm   xc.SignatureType
+	interactive bool
 }
 
 // PrivateKey is a private key or reference to private key
@@ -80,6 +82,7 @@ func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, er
 
 func fromString(secret string, hdNumMaybe uint32) ([]byte, error) {
 	// try mnemonic first
+	secret = strings.TrimSpace(secret)
 	bz, err := fromMnemonic(secret, hdNumMaybe)
 	if err != nil {
 		// Try hex next
@@ -94,15 +97,7 @@ func fromString(secret string, hdNumMaybe uint32) ([]byte, error) {
 	return bz, nil
 }
 
-func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, options ...address.AddressOption) (*Signer, error) {
-	hdNum := uint32(118)
-	if cfgMaybe != nil {
-		hdNum = cfgMaybe.ChainCoinHDPath
-	}
-	secretBz, err := fromString(secret, hdNum)
-	if err != nil {
-		return nil, fmt.Errorf("expected private key to be a hex or base58 string")
-	}
+func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, interactive bool, options ...address.AddressOption) (*Signer, error) {
 
 	opts, err := address.NewAddressOptions(options...)
 	if err != nil {
@@ -114,20 +109,32 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, options ...a
 		alg = algorithmOverride
 	}
 
+	if interactive {
+		return &Signer{driver, []byte{}, alg, true}, nil
+	}
+	hdNum := uint32(118)
+	if cfgMaybe != nil {
+		hdNum = cfgMaybe.ChainCoinHDPath
+	}
+	secretBz, err := fromString(secret, hdNum)
+	if err != nil {
+		return nil, fmt.Errorf("expected private key to be a hex or base58 string")
+	}
+
 	switch alg {
 	case xc.Ed255:
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			if len(secretBz) != 32 {
 				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
 			}
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver, secretBz, alg, false}, nil
 		}
 		if len(secretBz) == ed25519.SeedSize {
 			key := ed25519.NewKeyFromSeed(secretBz)
-			return &Signer{driver, key, alg}, nil
+			return &Signer{driver, key, alg, false}, nil
 		}
 		if len(secretBz) == ed25519.PrivateKeySize {
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver, secretBz, alg, false}, nil
 		}
 		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
 	case xc.K256Keccak, xc.K256Sha256, xc.Schnorr:
@@ -135,13 +142,26 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, options ...a
 		if err != nil {
 			return nil, err
 		}
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver, secretBz, alg, false}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
 	}
 }
 
 func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
+	if s.interactive {
+		fmt.Println("Payload: ", hex.EncodeToString(data))
+		fmt.Printf("Enter signature in hex: ")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		fmt.Println()
+		bz, err := hex.DecodeString(strings.TrimSpace(text))
+		if err != nil {
+			return nil, fmt.Errorf("invalid input: %v", err)
+		}
+		return bz, nil
+	}
+
 	switch s.algorithm {
 	case xc.Ed255:
 		var signatureRaw []byte
@@ -191,6 +211,17 @@ func (s *Signer) MustSignAll(data []xc.TxDataToSign) []xc.TxSignature {
 
 }
 func (s *Signer) PublicKey() (PublicKey, error) {
+	if s.interactive {
+		fmt.Printf("Enter the public key of the signer in hex: ")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		fmt.Println()
+		bz, err := hex.DecodeString(strings.TrimSpace(text))
+		if err != nil {
+			return nil, fmt.Errorf("invalid input: %v", err)
+		}
+		return bz, nil
+	}
 	switch s.algorithm {
 	case xc.Ed255:
 		privateKey := ed25519.PrivateKey(s.privateKey)
