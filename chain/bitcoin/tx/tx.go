@@ -10,6 +10,7 @@ import (
 
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
@@ -71,13 +72,30 @@ func (tx *Tx) txHashNormalBytes() []byte {
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	sighashes := make([]xc.TxDataToSign, len(tx.Input.UnspentOutputs))
+	if len(tx.Input.UnspentOutputs) == 0 {
+		return sighashes, nil
+	}
+
+	// Taproot requires calculating the sum of all input values for
+	// precomputed midstate sighashes. Because of this, we have to
+	// prepare a proper mapped fetcher.
+	mapping := make(map[wire.OutPoint]*wire.TxOut)
+	for _, utxo := range tx.Input.UnspentOutputs {
+		op := wire.OutPoint{
+			Hash:  chainhash.Hash(utxo.Outpoint.Hash),
+			Index: utxo.Outpoint.Index,
+		}
+		mapping[op] = &wire.TxOut{
+			Value:    int64(utxo.Value.Uint64()),
+			PkScript: utxo.PubKeyScript,
+		}
+	}
+	fetcher := txscript.NewMultiPrevOutFetcher(mapping)
+	sighashMidstate := txscript.NewTxSigHashes(tx.MsgTx, fetcher)
 
 	for i, utxo := range tx.Input.UnspentOutputs {
 		pubKeyScript := utxo.PubKeyScript
 		value := utxo.Value.Uint64()
-		fetcher := txscript.NewCannedPrevOutputFetcher(
-			pubKeyScript, int64(value),
-		)
 
 		var hash []byte
 		var err error
@@ -89,7 +107,7 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		if isTaproot {
 			log.Info("CalcTaprootSignatureHash")
 			hash, err = txscript.CalcTaprootSignatureHash(
-				txscript.NewTxSigHashes(tx.MsgTx, fetcher),
+				sighashMidstate,
 				txscript.SigHashDefault,
 				tx.MsgTx,
 				i,
@@ -99,7 +117,7 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 			log.Infof("CalcWitnessSigHash with pubKeyScript: %s", base64.RawURLEncoding.EncodeToString(pubKeyScript))
 			hash, err = txscript.CalcWitnessSigHash(
 				pubKeyScript,
-				txscript.NewTxSigHashes(tx.MsgTx, fetcher),
+				sighashMidstate,
 				txscript.SigHashAll,
 				tx.MsgTx,
 				i,
