@@ -32,11 +32,12 @@ jobs:
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest
           - chain: BTC
+            signature-algorithm: schnorr
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest
-            signature-algorithm: schnorr
           - chain: TAO
             image: us-docker.pkg.dev/cordialsys/crosschain/bittensor:latest
+
 
     runs-on: ubuntu-latest
     steps:

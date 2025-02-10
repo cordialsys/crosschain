@@ -68,6 +68,7 @@ const (
 	TON    = NativeAsset("TON")    // TON
 	TRX    = NativeAsset("TRX")    // TRON
 	SEI    = NativeAsset("SEI")    // Sei
+	SeiEVM = NativeAsset("SeiEVM") // SeiEVM
 	XRP    = NativeAsset("XRP")    // XRP
 	XLM    = NativeAsset("XLM")    // XLM
 )
@@ -114,6 +115,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	TON,
 	TRX,
 	SEI,
+	SeiEVM,
 	XRP,
 	BASE,
 	NOBLE,
@@ -220,7 +222,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE:
+	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM:
 		return DriverEVM
 	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KAR, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
