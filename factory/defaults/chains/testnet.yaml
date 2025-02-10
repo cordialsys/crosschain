@@ -302,3 +302,14 @@ chains:
     # Stellar network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
     chain_id_str: "Test SDF Network ; September 2015"
+  SeiEVM:
+    chain: SeiEVM
+    driver: evm
+    chain_id: 1328
+    chain_id_str: atlantis-2
+    chain_name: Sei
+    chain_prefix: sei
+    chain_coin: sei
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    decimals: 18
