@@ -295,7 +295,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		// convert usec to sec
 		BlockTime:  int64((tx.Timestamp / 1000) / 1000),
 		TxID:       tx.Hash,
-		BlockIndex: int64(tx.Version),
+		BlockIndex: int64(block.BlockHeight),
 		Error:      errMsg,
 	}, nil
 }

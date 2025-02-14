@@ -61,6 +61,17 @@ type LedgerParamEntry struct {
 	OwnerFunds   bool        `json:"owner_funds"`
 }
 
+type LedgerDataRequest struct {
+	Method string             `json:"method"`
+	Params []LedgerDataParams `json:"params"`
+}
+
+type LedgerDataParams struct {
+	LedgerIndex LedgerIndex `json:"ledger_index"`
+	Limit       int         `json:"limit"`
+	// ...
+}
+
 type SubmitRequest struct {
 	Method string             `json:"method"`
 	Params []SubmitParamEntry `json:"params"`
@@ -114,7 +125,6 @@ type LedgerResult struct {
 	Ledger LedgerInfo `json:"ledger"`
 	// This appears to only be set when ledger is requested with "current" index param.
 	LedgerCurrentIndex int64  `json:"ledger_current_index"`
-	LedgerIndex        int64  `json:"ledger_index"`
 	Validated          bool   `json:"validated"`
 	Status             string `json:"status"`
 }
@@ -123,12 +133,39 @@ type LedgerInfo struct {
 	Closed      bool   `json:"closed"`
 	LedgerIndex string `json:"ledger_index"`
 	ParentHash  string `json:"parent_hash"`
-	LedgerHash  string `json:"ledger_hash"`
+	// This `hash` is a lie:
+	// Hash        string `json:"hash"`
 	// transactions included if parameter transactions=true is set
 	Transactions []string `json:"transactions"`
 	CloseTime    int64    `json:"close_time"`
 	CloseTimeIso string   `json:"close_time_iso"`
 	// ...other fields omitted
+}
+
+type LedgerDataResponse struct {
+	Result LedgerData `json:"result"`
+}
+
+type LedgerData struct {
+	Accepted            bool   `json:"accepted"`
+	AccountHash         string `json:"account_hash"`
+	CloseFlags          int    `json:"close_flags"`
+	CloseTime           int    `json:"close_time"`
+	CloseTimeHuman      string `json:"close_time_human"`
+	CloseTimeResolution int    `json:"close_time_resolution"`
+	Closed              bool   `json:"closed"`
+	LedgerHash          string `json:"ledger_hash"`
+	LedgerIndex         int    `json:"ledger_index"`
+	ParentCloseTime     int    `json:"parent_close_time"`
+	ParentHash          string `json:"parent_hash"`
+	SeqNum              string `json:"seqNum"`
+	TotalCoinsNew       string `json:"total_coins"`
+	TransactionHash     string `json:"transaction_hash"`
+	Marker              string `json:"marker,omitempty"`
+	// State                  []LedgerState `json:"state"`
+	Validated bool   `json:"validated"`
+	Status    string `json:"status"`
+	// Warnings               []Warning    `json:"warnings,omitempty"`
 }
 
 type TransactionResponse struct {

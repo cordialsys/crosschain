@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/base64"
+	"strings"
 
 	comettypes "github.com/cometbft/cometbft/abci/types"
 	xc "github.com/cordialsys/crosschain"
@@ -56,6 +57,20 @@ func DecodeEventAttributes(attrs []comettypes.EventAttribute) {
 	}
 }
 
+func getEvent(events comettypes.Event, key string) (string, bool) {
+	for _, ev := range events.Attributes {
+		if ev.Key == key {
+			return ev.Value, true
+		}
+	}
+	return "", false
+}
+
+func getEventOrZero(events comettypes.Event, key string) string {
+	v, _ := getEvent(events, key)
+	return v
+}
+
 func ParseEvents(events []comettypes.Event) ParsedEvents {
 	parseEvents := ParsedEvents{}
 	var sender string
@@ -86,108 +101,97 @@ func ParseEvents(events []comettypes.Event) ParsedEvents {
 			continue
 		}
 		if event.Type == "transfer" {
-			var transferEvent TransferEvent
-			for _, attr := range event.Attributes {
-				if attr.Key == "recipient" {
-					transferEvent.Recipient = attr.Value
-				}
-				if attr.Key == "sender" {
-					transferEvent.Sender = attr.Value
-				}
-				if attr.Key == "amount" {
-					coin, _ := types.ParseCoinNormalized(attr.Value)
-					transferEvent.Amount = xc.AmountBlockchain(*coin.Amount.BigInt())
-					transferEvent.Contract = coin.Denom
+			var amounts []TransferEvent
+			amountValue, ok := getEvent(event, "amount")
+			if ok {
+				// E.g.
+				// https://finder.terra.money/classic/tx/5dc2034edcfdb74a5d33d73b9ccd9cce034d7950e5691c2be5ddd93e6091cfff
+				amountParts := strings.Split(amountValue, ",")
+				for _, amountValue := range amountParts {
+					coin, _ := types.ParseCoinNormalized(amountValue)
+					amounts = append(amounts, TransferEvent{
+						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:  coin.Denom,
+						Recipient: getEventOrZero(event, "recipient"),
+						Sender:    getEventOrZero(event, "sender"),
+					})
 				}
 			}
-			// if transferEvent.Sender != sender {
-			// 	// drop transfers not originating from the sender, otherwise we get spammy events
-			// 	// relating to inter-module cosmos transfers
-			// 	continue
-			// }
-			parseEvents.Transfers = append(parseEvents.Transfers, transferEvent)
+			parseEvents.Transfers = amounts
 		}
-		// parse withdraw rewards event
 		if event.Type == "withdraw_rewards" {
-			var withdrawRewardsEvent WithdrawRewardsEvent
-			for _, attr := range event.Attributes {
-				if attr.Key == "validator" {
-					withdrawRewardsEvent.Validator = attr.Value
-				}
-				if attr.Key == "delegator" {
-					withdrawRewardsEvent.Delegator = attr.Value
-				}
-				if attr.Key == "amount" {
-					coin, _ := types.ParseCoinNormalized(attr.Value)
-					withdrawRewardsEvent.Amount = xc.AmountBlockchain(*coin.Amount.BigInt())
-					withdrawRewardsEvent.Contract = coin.Denom
+			var amounts []WithdrawRewardsEvent
+			amountValue, ok := getEvent(event, "amount")
+			if ok {
+				amountParts := strings.Split(amountValue, ",")
+				for _, amountValue := range amountParts {
+					coin, _ := types.ParseCoinNormalized(amountValue)
+					amounts = append(amounts, WithdrawRewardsEvent{
+						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:  coin.Denom,
+						Validator: getEventOrZero(event, "validator"),
+						Delegator: getEventOrZero(event, "delegator"),
+					})
 				}
 			}
-			parseEvents.Withdraws = append(parseEvents.Withdraws, withdrawRewardsEvent)
+			parseEvents.Withdraws = amounts
 		}
-		// parse delegate event
 		if event.Type == "delegate" {
-			var delegateEvent DelegateEvent
-			for _, attr := range event.Attributes {
-				if attr.Key == "validator" {
-					delegateEvent.Validator = attr.Value
-				}
-				if attr.Key == "delegator" {
-					delegateEvent.Delegator = attr.Value
-				}
-				if attr.Key == "amount" {
-					coin, _ := types.ParseCoinNormalized(attr.Value)
-					delegateEvent.Amount = xc.AmountBlockchain(*coin.Amount.BigInt())
-					delegateEvent.Contract = coin.Denom
+			var amounts []DelegateEvent
+			amountValue, ok := getEvent(event, "amount")
+			if ok {
+				amountParts := strings.Split(amountValue, ",")
+				for _, amountValue := range amountParts {
+					coin, _ := types.ParseCoinNormalized(amountValue)
+					amounts = append(amounts, DelegateEvent{
+						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:  coin.Denom,
+						Validator: getEventOrZero(event, "validator"),
+						Delegator: getEventOrZero(event, "delegator"),
+					})
 				}
 			}
-			parseEvents.Delegates = append(parseEvents.Delegates, delegateEvent)
+			parseEvents.Delegates = amounts
 		}
-		// parse unbond event
 		if event.Type == "unbond" {
-			var unbondEvent UnbondEvent
-			for _, attr := range event.Attributes {
-				if attr.Key == "validator" {
-					unbondEvent.Validator = attr.Value
-				}
-				if attr.Key == "delegator" {
-					unbondEvent.Delegator = attr.Value
-				}
-				if attr.Key == "amount" {
-					coin, _ := types.ParseCoinNormalized(attr.Value)
-					unbondEvent.Amount = xc.AmountBlockchain(*coin.Amount.BigInt())
-					unbondEvent.Contract = coin.Denom
+			var amounts []UnbondEvent
+			amountValue, ok := getEvent(event, "amount")
+			if ok {
+				amountParts := strings.Split(amountValue, ",")
+				for _, amountValue := range amountParts {
+					coin, _ := types.ParseCoinNormalized(amountValue)
+					amounts = append(amounts, UnbondEvent{
+						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:  coin.Denom,
+						Validator: getEventOrZero(event, "validator"),
+						Delegator: getEventOrZero(event, "delegator"),
+					})
 				}
 			}
-			parseEvents.Unbonds = append(parseEvents.Unbonds, unbondEvent)
+			parseEvents.Unbonds = amounts
 		}
-		// parse wasm CW20 transfer event
+
 		if event.Type == "wasm" {
-			var action string
-			for _, attr := range event.Attributes {
-				if attr.Key == "action" {
-					action = attr.Value
-					break
+			var amounts []TransferEvent
+			action, _ := getEvent(event, "action")
+			amountValue, ok := getEvent(event, "amount")
+
+			if ok && action == "transfer" {
+				amountParts := strings.Split(amountValue, ",")
+				for _, amountValue := range amountParts {
+					tf := TransferEvent{
+						Amount:    xc.NewAmountBlockchainFromStr(amountValue),
+						Contract:  getEventOrZero(event, "contract_address"),
+						Recipient: getEventOrZero(event, "to"),
+						Sender:    getEventOrZero(event, "from"),
+					}
+					if tf.Contract == "" {
+						tf.Contract = getEventOrZero(event, "_contract_address")
+					}
+					amounts = append(amounts, tf)
 				}
 			}
-			if action == "transfer" {
-				var transferEvent TransferEvent
-				for _, attr := range event.Attributes {
-					if attr.Key == "to" {
-						transferEvent.Recipient = attr.Value
-					}
-					if attr.Key == "from" {
-						transferEvent.Sender = attr.Value
-					}
-					if attr.Key == "amount" {
-						transferEvent.Amount = xc.NewAmountBlockchainFromStr(attr.Value)
-					}
-					if attr.Key == "_contract_address" || attr.Key == "contract_address" {
-						transferEvent.Contract = attr.Value
-					}
-				}
-				parseEvents.Transfers = append(parseEvents.Transfers, transferEvent)
-			}
+			parseEvents.Transfers = append(parseEvents.Transfers, amounts...)
 		}
 	}
 	return parseEvents

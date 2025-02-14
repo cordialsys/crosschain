@@ -413,14 +413,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	if tx.Fee.Uint64() == 0 || tx.From == "" {
 		// check for fee from events
-		from, fee, err := api.ParseFee(addressBuilder, eventsI)
+		from, fee, ok, err := api.ParseFee(addressBuilder, eventsI)
 		if err != nil {
 			return xc.LegacyTxInfo{}, err
 		}
-		if tx.From == "" {
-			tx.From = from
+		if ok {
+			if tx.From == "" {
+				tx.From = from
+			}
+			tx.Fee = fee
 		}
-		tx.Fee = fee
 	}
 
 	return tx, nil

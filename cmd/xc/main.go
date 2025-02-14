@@ -62,6 +62,7 @@ func CmdXc() *cobra.Command {
 				"rpc":     url,
 				"network": chainConfig.CrosschainClient.Network,
 				"chain":   chainConfig.Chain,
+				"driver":  chainConfig.Driver,
 			}).Info("chain")
 			cmd.SetContext(ctx)
 			switch cmd.Use {

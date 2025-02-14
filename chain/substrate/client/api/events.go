@@ -182,29 +182,30 @@ func ParseFailed(events []EventI) (string, bool) {
 	return "", false
 }
 
-func ParseFee(ab xc.AddressBuilder, events []EventI) (xc.Address, xc.AmountBlockchain, error) {
+func ParseFee(ab xc.AddressBuilder, events []EventI) (xc.Address, xc.AmountBlockchain, bool, error) {
 	ev, ok := find(events, "TransactionPayment", "TransactionFeePaid")
 	if ok {
 		who, ok := ev.GetParam("who", 0)
 		if !ok {
-			return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid did not have 0 param")
+			return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid did not have 0 param")
 		}
 		whoString, ok := who.(string)
 		if !ok {
-			return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid 0 param unexpected type: %T", who)
+			return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid 0 param unexpected type: %T", who)
 		}
 		addr, err := ParseAddress(ab, whoString)
 		if err != nil {
-			return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid who invalid address: %v", err)
+			return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid who invalid address: %v", err)
 		}
 		amountRaw, ok := ev.GetParam("actual_fee", 1)
 		if !ok {
-			return "", xc.AmountBlockchain{}, fmt.Errorf("TransactionPayment.TransactionFeePaid amount missing")
+			return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid amount missing")
 		}
 		amount := xc.NewAmountBlockchainFromStr(fmt.Sprint(amountRaw))
-		return addr, amount, nil
+		return addr, amount, true, nil
 	}
-	return "", xc.AmountBlockchain{}, fmt.Errorf("missing fee")
+	// no fee detected
+	return "", xc.AmountBlockchain{}, false, nil
 }
 func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*xc.LegacyTxInfoEndpoint, destinations []*xc.LegacyTxInfoEndpoint, err error) {
 	for _, ev := range events {
