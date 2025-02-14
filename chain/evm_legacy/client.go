@@ -137,5 +137,5 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
-	panic("unimplemented")
+	return client.EvmClient.FetchBlock(ctx, args)
 }

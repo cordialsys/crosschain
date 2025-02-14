@@ -176,7 +176,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "",
 				Amount:          xc.NewAmountBlockchainFromUint64(123400000),
 				Fee:             xc.NewAmountBlockchainFromUint64(600),
-				BlockIndex:      3509309,
+				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
 				Sources: []*xc.LegacyTxInfoEndpoint{{
@@ -223,7 +223,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "",
 				Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(600),
-				BlockIndex:      176278674,
+				BlockIndex:      67467400,
 				BlockTime:       1688879042,
 				Confirmations:   546501,
 				Sources: []*xc.LegacyTxInfoEndpoint{{
@@ -260,7 +260,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ToAlt:           "",
 				ContractAddress: "",
 				Fee:             xc.NewAmountBlockchainFromUint64(600),
-				BlockIndex:      3509309,
+				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
 				Sources:         []*xc.LegacyTxInfoEndpoint{},

@@ -606,7 +606,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	var err error
 	height, ok := args.Height()
 	if !ok {
-		height, err = client.SolClient.GetBlockHeight(ctx, rpc.CommitmentFinalized)
+		height, err = client.SolClient.GetSlot(ctx, rpc.CommitmentFinalized)
 		if err != nil {
 			return nil, err
 		}
@@ -618,9 +618,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, err
 	}
-	if solBlock.BlockHeight != nil {
-		height = *solBlock.BlockHeight
-	}
+	height = solBlock.ParentSlot + 1
 	blockTime := time.Unix(0, 0)
 	if solBlock.BlockTime != nil {
 		blockTime = solBlock.BlockTime.Time()

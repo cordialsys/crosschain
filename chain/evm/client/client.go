@@ -384,21 +384,32 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if !ok {
 		height, err = client.EthClient.BlockNumber(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not get current block number: %v", err)
 		}
 	}
 	bigHeight := big.NewInt(0)
 	bigHeight.SetUint64(height)
-	ethBlock, err := client.EthClient.BlockByNumber(ctx, bigHeight)
+	var evmBlock Block
+	err = client.EthClient.Client().CallContext(ctx, &evmBlock, "eth_getBlockByNumber", "0x"+bigHeight.Text(16), false)
+	// ethBlock, err := client.EthClient.BlockByNumber(ctx, bigHeight)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not download block: %v", err)
+	}
+
+	returnedNumber := big.NewInt(0)
+	_, ok = returnedNumber.SetString(evmBlock.Number, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse downloaded block number: %s", evmBlock.Number)
+	}
+	unix := big.NewInt(0)
+	_, ok = unix.SetString(evmBlock.Timestamp, 0)
+	if !ok {
+		return nil, fmt.Errorf("could not parse downloaded timestamp: %s", evmBlock.Timestamp)
 	}
 
 	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(client.Asset.GetChain().Chain, ethBlock.NumberU64(), ethBlock.Hash().Hex(), time.Unix(int64(ethBlock.Header().Time), 0)),
-	}
-	for _, tx := range ethBlock.Transactions() {
-		block.TransactionIds = append(block.TransactionIds, tx.Hash().String())
+		Block:          *xclient.NewBlock(client.Asset.GetChain().Chain, returnedNumber.Uint64(), evmBlock.Hash, time.Unix(int64(unix.Uint64()), 0)),
+		TransactionIds: evmBlock.Transactions,
 	}
 
 	return block, nil

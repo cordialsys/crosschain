@@ -139,20 +139,20 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		if isMissingTransactionErr(err) {
 			return xc.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 		}
-		return xc.LegacyTxInfo{}, err
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %v", err)
 	}
 
 	// get latest checkpoint so we can compute our confirmations
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %v", err)
 	}
 	if resp.Checkpoint == nil {
 		return xc.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %v", resp.Checkpoint.Uint64(), err)
 	}
 	// latestCheckpoint.Epoch
 	sources := []*xc.LegacyTxInfoEndpoint{}

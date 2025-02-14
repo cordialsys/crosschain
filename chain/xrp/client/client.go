@@ -161,7 +161,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 
 	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
 
-	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, blockTime)
+	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), "", blockTime)
 
 	confirmations := ledger.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
@@ -335,6 +335,18 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 	return humanReadbleBalance.ToBlockchain(types.TRUSTLINE_DECIMALS), nil
 }
 
+type XrpError struct {
+	Result struct {
+		ErrorStatus  string `json:"error"`
+		ErrorMessage string `json:"error_message"`
+		ErrorCode    int    `json:"error_code"`
+	} `json:"result"`
+}
+
+func (err *XrpError) Error() string {
+	return fmt.Sprintf("%s: %s (code: %d)", err.Result.ErrorStatus, err.Result.ErrorMessage, err.Result.ErrorCode)
+}
+
 func (client *Client) Send(method string, requestBody any, response any) error {
 
 	jsonPayload, err := json.Marshal(requestBody)
@@ -362,6 +374,13 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	if err != nil {
 		return err
 	}
+
+	var errMaybe XrpError
+	_ = json.Unmarshal(bz, &errMaybe)
+	if errMaybe.Result.ErrorStatus != "" || errMaybe.Result.ErrorMessage != "" {
+		return &errMaybe
+	}
+
 	logrus.WithField("body", string(bz)).Debug("response")
 	err = json.Unmarshal(bz, response)
 	if err != nil {
@@ -412,6 +431,26 @@ func (client *Client) getLedger(index types.LedgerIndex, transactions bool) (*ty
 	return &ledgerResponse, nil
 }
 
+func (client *Client) getLedgerData(index types.LedgerIndex) (*types.LedgerDataResponse, error) {
+	ledgerRequest := types.LedgerDataRequest{
+		Method: "ledger_data",
+		Params: []types.LedgerDataParams{
+			{
+				LedgerIndex: index,
+				Limit:       1,
+			},
+		},
+	}
+
+	var ledgerResponse types.LedgerDataResponse
+	err := client.Send(MethodPost, ledgerRequest, &ledgerResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ledgerResponse, nil
+}
+
 func (client *Client) getLatestLedger(transactions bool) (*types.LedgerResponse, error) {
 	return client.getLedger(types.Current, transactions)
 }
@@ -441,12 +480,16 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 			return nil, err
 		}
 	}
+	data, err := client.getLedgerData(types.LedgerIndex(ledger.Result.Ledger.LedgerIndex))
+	if err != nil {
+		return nil, err
+	}
 
 	block := &xclient.BlockWithTransactions{
 		Block: *xclient.NewBlock(
 			client.Asset.GetChain().Chain,
-			uint64(ledger.Result.LedgerIndex),
-			ledger.Result.Ledger.LedgerHash,
+			xc.NewAmountBlockchainFromStr(ledger.Result.Ledger.LedgerIndex).Uint64(),
+			data.Result.LedgerHash,
 			time.Unix(types.XRP_EPOCH+ledger.Result.Ledger.CloseTime, 0),
 		),
 		TransactionIds: ledger.Result.Ledger.Transactions,
