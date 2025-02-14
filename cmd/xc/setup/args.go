@@ -79,8 +79,8 @@ func LoadFactory(rcpArgs *RpcArgs) (*factory.Factory, error) {
 	if rcpArgs.NotMainnet {
 		xcFactory = factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
 	}
-	if rcpArgs.SignatureAlgorithm != "" {
-		xcFactory.Config.SignatureAlgorithm = xc.SignatureType(rcpArgs.SignatureAlgorithm)
+	if rcpArgs.Algorithm != "" {
+		xcFactory.Config.SignatureAlgorithm = xc.SignatureType(rcpArgs.Algorithm)
 	}
 
 	override, ok := rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)]
@@ -147,14 +147,14 @@ func CreateContext(xcFactory *factory.Factory, chain *xc.ChainConfig) context.Co
 
 type RpcArgs struct {
 	// Config         *tconfig.Connector
-	Rpc                string
-	Chain              string
-	SignatureAlgorithm string
-	VerbosityCount     int
-	NotMainnet         bool
-	Provider           string
-	Network            string
-	ApiKey             config.Secret
+	Rpc            string
+	Chain          string
+	Algorithm      string
+	VerbosityCount int
+	NotMainnet     bool
+	Provider       string
+	Network        string
+	ApiKey         config.Secret
 	// ConfigPath     string
 	UseLocalImplementation bool
 
@@ -167,7 +167,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	// cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
-	cmd.PersistentFlags().String("signature-algorithm", "", "Override default signature algorithm. Optional, used only by bitcoin.")
+	cmd.PersistentFlags().String("algorithm", "", "Override default signing algorithm. Optional, used only by bitcoin.")
 	cmd.PersistentFlags().String("api-key", DefaultApiRef, "Secret reference for API key to use for RPC client.")
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
 	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
@@ -180,7 +180,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	// config, _ := cmd.Flags().GetString("config")
 
 	chain, _ := cmd.Flags().GetString("chain")
-	algorithm, _ := cmd.Flags().GetString("signature-algorithm")
+	algorithm, _ := cmd.Flags().GetString("algorithm")
 	rpc, _ := cmd.Flags().GetString("rpc")
 	if chain == "" {
 		return nil, fmt.Errorf("--chain required")
@@ -204,7 +204,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 
 	return &RpcArgs{
 		Chain:                  chain,
-		SignatureAlgorithm:     algorithm,
+		Algorithm:              algorithm,
 		Rpc:                    rpc,
 		VerbosityCount:         count,
 		NotMainnet:             notmainnet,

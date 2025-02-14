@@ -69,7 +69,7 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 			Block:         block,
 			Events:        matchingEvents,
 			Extrinsic:     &ext,
-			ExtrinsicHash: hash(&ext),
+			ExtrinsicHash: HashExtrinsic(&ext),
 		}, nil
 	} else {
 		extrinsicHashBz, err := codec.HexDecodeString(extrinsicHash)
@@ -141,7 +141,7 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 		// fmt.Println("-- block", block.Block.Header.Number)
 		index = -1
 		for i, ext := range block.Block.Extrinsics {
-			if bytes.Equal(extrinsicHash, hash(&ext)) {
+			if bytes.Equal(extrinsicHash, HashExtrinsic(&ext)) {
 				return block, blockHash, &ext, i, true, nil
 			}
 		}
@@ -152,7 +152,7 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 	return nil, blockHash, ext, -1, false, nil
 }
 
-func hash(ext *types.Extrinsic) []byte {
+func HashExtrinsic(ext *types.Extrinsic) []byte {
 	bz, _ := codec.Encode(ext)
 	return substratetx.HashSerialized(bz)
 }

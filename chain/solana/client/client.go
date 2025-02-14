@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/cordialsys/crosschain/client/errors"
 
@@ -600,4 +601,41 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	// fmt.Println(string(bz))
 
 	return int(mintInfo.Parsed.Info.Decimals), nil
+}
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		height, err = client.SolClient.GetBlockHeight(ctx, rpc.CommitmentFinalized)
+		if err != nil {
+			return nil, err
+		}
+	}
+	maxVersion := uint64(0)
+	solBlock, err := client.SolClient.GetBlockWithOpts(ctx, height, &rpc.GetBlockOpts{
+		MaxSupportedTransactionVersion: &maxVersion,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if solBlock.BlockHeight != nil {
+		height = *solBlock.BlockHeight
+	}
+	blockTime := time.Unix(0, 0)
+	if solBlock.BlockTime != nil {
+		blockTime = solBlock.BlockTime.Time()
+	}
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(client.Asset.GetChain().Chain, height, solBlock.Blockhash.String(), blockTime),
+	}
+	for _, tx := range solBlock.Transactions {
+		parsed, err := tx.GetTransaction()
+		// Should we just skip it?
+		if err != nil {
+			return nil, fmt.Errorf("could not parsed tx in block: %v", err)
+		}
+		block.TransactionIds = append(block.TransactionIds, parsed.Signatures[0].String())
+	}
+	return block, nil
+
 }

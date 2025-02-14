@@ -115,3 +115,11 @@ func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
 func (tx *SubmitTxReq) Serialize() ([]byte, error) {
 	return tx.TxData, nil
 }
+
+type BlockResponse struct {
+	Hash           string              `json:"hash"`
+	Height         xc.AmountBlockchain `json:"height"`
+	Time           *string             `json:"time,omitempty"`
+	ChainId        string              `json:"chain_id"`
+	TransactionIds []string            `json:"transaction_ids"`
+}

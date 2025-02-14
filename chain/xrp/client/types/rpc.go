@@ -111,16 +111,24 @@ type LedgerResponse struct {
 }
 
 type LedgerResult struct {
-	Ledger             LedgerInfo `json:"ledger"`
-	LedgerCurrentIndex int64      `json:"ledger_current_index"`
-	Validated          bool       `json:"validated"`
-	Status             string     `json:"status"`
+	Ledger LedgerInfo `json:"ledger"`
+	// This appears to only be set when ledger is requested with "current" index param.
+	LedgerCurrentIndex int64  `json:"ledger_current_index"`
+	LedgerIndex        int64  `json:"ledger_index"`
+	Validated          bool   `json:"validated"`
+	Status             string `json:"status"`
 }
 
 type LedgerInfo struct {
 	Closed      bool   `json:"closed"`
 	LedgerIndex string `json:"ledger_index"`
 	ParentHash  string `json:"parent_hash"`
+	LedgerHash  string `json:"ledger_hash"`
+	// transactions included if parameter transactions=true is set
+	Transactions []string `json:"transactions"`
+	CloseTime    int64    `json:"close_time"`
+	CloseTimeIso string   `json:"close_time_iso"`
+	// ...other fields omitted
 }
 
 type TransactionResponse struct {

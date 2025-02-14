@@ -484,3 +484,6 @@ func (client *NativeClient) FetchDecimals(ctx context.Context, contract xc.Contr
 
 	return 0, fmt.Errorf("unsupported")
 }
+func (client *NativeClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	panic("unimplemented")
+}

@@ -19,17 +19,17 @@ import (
 )
 
 var (
-	chain              string
-	rpc                string
-	network            string
-	signatureAlgorithm string
+	chain     string
+	rpc       string
+	network   string
+	algorithm string
 )
 
 func init() {
 	flag.StringVar(&chain, "chain", "", "Used Blockchain chain")
 	flag.StringVar(&rpc, "rpc", "", "RPC endpoint")
 	flag.StringVar(&network, "network", "", "Bitcoin network, if relevant")
-	flag.StringVar(&signatureAlgorithm, "signature-algorithm", "", "Used to override signature algorithm. Bitcoin only")
+	flag.StringVar(&algorithm, "algorithm", "", "Used to override signature algorithm. Bitcoin only")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }

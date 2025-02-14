@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
@@ -375,4 +376,30 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return int(dec), err
 	}
 	return int(dec), nil
+}
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		height, err = client.EthClient.BlockNumber(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	bigHeight := big.NewInt(0)
+	bigHeight.SetUint64(height)
+	ethBlock, err := client.EthClient.BlockByNumber(ctx, bigHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(client.Asset.GetChain().Chain, ethBlock.NumberU64(), ethBlock.Hash().Hex(), time.Unix(int64(ethBlock.Header().Time), 0)),
+	}
+	for _, tx := range ethBlock.Transactions() {
+		block.TransactionIds = append(block.TransactionIds, tx.Hash().String())
+	}
+
+	return block, nil
 }

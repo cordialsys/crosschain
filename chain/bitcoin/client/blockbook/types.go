@@ -117,3 +117,36 @@ type EstimateFeeResponse struct {
 	// This is a decimal string.  It is BTC/kilobyte.
 	Result string `json:"result"`
 }
+
+type Block struct {
+	Page              int    `json:"page"`
+	TotalPages        int    `json:"totalPages"`
+	ItemsOnPage       int    `json:"itemsOnPage"`
+	Hash              string `json:"hash"`
+	PreviousBlockHash string `json:"previousBlockHash"`
+	NextBlockHash     string `json:"nextBlockHash"`
+	Height            int    `json:"height"`
+	Confirmations     int    `json:"confirmations"`
+	Size              int    `json:"size"`
+	Time              int64  `json:"time"`
+	Version           int    `json:"version"`
+	MerkleRoot        string `json:"merkleRoot"`
+	Nonce             string `json:"nonce"`
+	Bits              string `json:"bits"`
+	Difficulty        string `json:"difficulty"`
+	TxCount           int    `json:"txCount"`
+	Txs               []Tx   `json:"txs"`
+}
+
+type Tx struct {
+	TxID          string `json:"txid"`
+	Vin           []Vin  `json:"vin"`
+	Vout          []Vout `json:"vout"`
+	BlockHash     string `json:"blockHash"`
+	BlockHeight   int    `json:"blockHeight"`
+	Confirmations int    `json:"confirmations"`
+	BlockTime     int64  `json:"blockTime"`
+	Value         string `json:"value"`
+	ValueIn       string `json:"valueIn"`
+	Fees          string `json:"fees"`
+}

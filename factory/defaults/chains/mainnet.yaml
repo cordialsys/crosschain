@@ -119,7 +119,6 @@ chains:
   BCH:
     chain: BCH
     driver: bitcoin-cash
-    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin Cash
     decimals: 8
@@ -160,7 +159,6 @@ chains:
   BTC:
     chain: BTC
     driver: bitcoin
-    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin
     decimals: 8
@@ -215,7 +213,6 @@ chains:
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
-    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Dogecoin
     decimals: 8
@@ -415,7 +412,6 @@ chains:
   LTC:
     chain: LTC
     driver: bitcoin-legacy
-    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Litecoin
     decimals: 8

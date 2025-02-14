@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coming-chat/go-sui/v2/client"
 	"github.com/coming-chat/go-sui/v2/lib"
@@ -52,12 +55,15 @@ func (m SuiMethod) String() string {
 }
 
 type Checkpoint struct {
-	Epoch                    string `json:"epoch"`
-	SequenceNumber           string `json:"sequenceNumber"`
-	Digest                   string `json:"digest"`
-	NetworkTotalTransactions string `json:"networkTotalTransactions"`
-	PreviousDigest           string `json:"PreviousDigest"`
-	TimestampMs              string `json:"timestampMs"`
+	Epoch                    string   `json:"epoch"`
+	SequenceNumber           string   `json:"sequenceNumber"`
+	Digest                   string   `json:"digest"`
+	NetworkTotalTransactions string   `json:"networkTotalTransactions"`
+	PreviousDigest           string   `json:"PreviousDigest"`
+	TimestampMs              string   `json:"timestampMs"`
+	Transactions             []string `json:"transactions"`
+	CheckpointCommitments    []string `json:"checkpointCommitments"`
+	ValidatorSignature       string   `json:"validatorSignature"`
 }
 
 func (ch *Checkpoint) GetEpoch() uint64 {
@@ -425,4 +431,40 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return 0, err
 	}
 	return int(meta.Decimals), nil
+}
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	height, ok := args.Height()
+	if !ok {
+		seq, err := client.SuiClient.GetLatestCheckpointSequenceNumber(ctx)
+		if err != nil {
+			return nil, err
+		}
+		asInt := big.NewInt(0)
+		_, ok := asInt.SetString(seq, 0)
+		if !ok {
+			return nil, fmt.Errorf("received invalid sequence: %s", seq)
+		}
+		height = asInt.Uint64()
+	}
+
+	checkpoint := &Checkpoint{}
+	err := client.SuiClient.CallContext(ctx, checkpoint, getCheckpoint, fmt.Sprint(height))
+	if err != nil {
+		return nil, err
+	}
+
+	timestampMs, _ := strconv.ParseUint(checkpoint.TimestampMs, 10, 64)
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			height,
+			checkpoint.Digest,
+			time.Unix(int64(timestampMs/1000), 0),
+		),
+	}
+	for _, tx := range checkpoint.Transactions {
+		block.TransactionIds = append(block.TransactionIds, tx)
+	}
+	return block, nil
 }

@@ -218,7 +218,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21080779,
-					Hash:   "2000000000000000",
+					Hash:   "0:71afd498d0000:22624217",
 					Time:   time.Unix(1721063820, 0),
 				},
 				Movements: []*xcclient.Movement{
@@ -286,7 +286,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21082496,
-					Hash:   "2000000000000000",
+					Hash:   "0:71afd498d0000:22626042",
 					Time:   time.Unix(1721068303, 0),
 				},
 				Movements: []*xcclient.Movement{

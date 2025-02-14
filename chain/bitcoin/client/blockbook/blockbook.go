@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -339,7 +339,7 @@ func (client *BlockbookClient) get(ctx context.Context, path string, resp interf
 		return fmt.Errorf("blockbook get failed: %v", err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -375,7 +375,7 @@ func (client *BlockbookClient) post(ctx context.Context, path string, contentTyp
 		return fmt.Errorf("blockbook post failed: %v", err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -405,4 +405,36 @@ func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.Co
 	}
 
 	return 0, fmt.Errorf("unsupported")
+}
+
+func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	height, ok := args.Height()
+	if !ok {
+		var stats StatsResponse
+
+		err := client.get(ctx, "/api/v2", &stats)
+		if err != nil {
+			return nil, err
+		}
+		height = uint64(stats.Backend.Blocks)
+	}
+
+	var blockResponse Block
+	err := client.get(ctx, fmt.Sprintf("/api/v2/block/%d", height), &blockResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: xclient.Block{
+			Chain:  client.Asset.GetChain().Chain,
+			Height: uint64(blockResponse.Height),
+			Hash:   blockResponse.Hash,
+			Time:   time.Unix(blockResponse.Time, 0),
+		},
+	}
+	for _, tx := range blockResponse.Txs {
+		block.TransactionIds = append(block.TransactionIds, tx.TxID)
+	}
+	return block, nil
 }

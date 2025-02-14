@@ -29,6 +29,9 @@ type Client interface {
 
 	// Fetch the precision (or "decimals") associated with the target asset
 	FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error)
+
+	// Fetch a specific block or the latest block
+	FetchBlock(ctx context.Context, args *BlockArgs) (*BlockWithTransactions, error)
 }
 type ClientV2 interface {
 	// Improved signature replacement of `FetchLegacyTxInput`
@@ -60,6 +63,20 @@ type StakingClient interface {
 // Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
 type ManualUnstakingClient interface {
 	CompleteManualUnstaking(ctx context.Context, unstake *Unstake) error
+}
+
+type BlockArgs struct {
+	height uint64
+}
+
+func (args *BlockArgs) Height() (uint64, bool) {
+	return args.height, args.height > 0
+}
+func AtHeight(height uint64) *BlockArgs {
+	return &BlockArgs{height}
+}
+func LatestHeight() *BlockArgs {
+	return &BlockArgs{}
 }
 
 type StakeState string

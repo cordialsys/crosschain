@@ -107,8 +107,13 @@ type Block struct {
 	Height uint64 `json:"height"`
 	// required: set the hash of the block of the transaction
 	Hash string `json:"hash"`
-	// required: set the time of the block of the transaction
+	// required-if-supported: set the time of the block of the transaction
 	Time time.Time `json:"time"`
+}
+
+type BlockWithTransactions struct {
+	Block
+	TransactionIds []string `json:"transaction_ids"`
 }
 
 type Stake struct {

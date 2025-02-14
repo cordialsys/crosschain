@@ -70,6 +70,7 @@ type Receipt struct {
 	OriginEnergyUsage int64    `json:"origin_energy_usage"`
 	EnergyUsageTotal  int64    `json:"energy_usage_total"`
 	NetFee            int64    `json:"net_fee"`
+	NetUsage          int      `json:"net_usage,omitempty"`
 	Result            TxResult `json:"result"`
 }
 type TransactionRawData struct {
@@ -84,6 +85,7 @@ type CreateTransactionResponse struct {
 	Error
 	RawData    TransactionRawData `json:"raw_data"`
 	RawDataHex Bytes              `json:"raw_data_hex"`
+	TxID       string             `json:"txID"`
 }
 type GetTransactionIDResponse struct {
 	Error
@@ -135,8 +137,22 @@ type BlockHeader struct {
 }
 type BlockResponse struct {
 	Error
-	BlockHeader BlockHeader `json:"block_header"`
-	BlockId     string      `json:"blockID"`
+	BlockHeader  BlockHeader                  `json:"block_header"`
+	BlockId      string                       `json:"blockID"`
+	Transactions []*CreateTransactionResponse `json:"transactions"`
+}
+type BlocksResponse struct {
+	Error
+	Block []*BlockResponse `json:"block"`
+}
+
+type TransactionInBlock struct {
+	Fee            int      `json:"fee,omitempty"`
+	BlockNumber    int      `json:"blockNumber"`
+	ContractResult []string `json:"contractResult"`
+	BlockTimeStamp int64    `json:"blockTimeStamp"`
+	Receipt        Receipt  `json:"receipt"`
+	ID             string   `json:"id"`
 }
 
 type TriggerConstantContractResponse struct {
@@ -347,6 +363,53 @@ func (c *Client) GetBlockByNum(num uint64) (*BlockResponse, error) {
 	}
 
 	return parsed, nil
+}
+
+func (c *Client) GetBlockByLatest(num uint64) (*BlocksResponse, error) {
+	req, err := postRequest(c.Url("wallet/getblockbylatestnum"), map[string]interface{}{
+		"num": num,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := parseResponse(resp, &BlocksResponse{})
+	if err != nil {
+		return nil, err
+	}
+	err = checkError(parsed.Error)
+	if err != nil {
+		return parsed, err
+	}
+
+	return parsed, nil
+}
+
+func (c *Client) GetTransactionInfoByBlocknum(num uint64) ([]*TransactionInBlock, error) {
+	req, err := postRequest(c.Url("wallet/gettransactioninfobyblocknum"), map[string]interface{}{
+		"num": num,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	txs := []*TransactionInBlock{}
+	_, err = parseResponse(resp, &txs)
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 func (c *Client) TriggerConstantContracts(ownerAddress string, contract string, funcSelector string, param string) (*TriggerConstantContractResponse, error) {

@@ -59,3 +59,6 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	return 0, errors.New("not implemented")
 }
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	return &xclient.BlockWithTransactions{}, errors.New("not implemented")
+}
