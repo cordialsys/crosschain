@@ -171,6 +171,13 @@ func (client *Client) FetchLedgerInfo(sequence uint64) (types.GetLedgerResult, e
 	return result, err
 }
 
+func (client *Client) FetchLedgerTransactions(sequence uint64, limit int, cursor string) (*types.GetLedgerTransactionResult, error) {
+	url := fmt.Sprintf("%s/ledgers/%d/transactions?include_failed=true&limit=%d&cursor=%s", client.Url, sequence, limit, cursor)
+	var result types.GetLedgerTransactionResult
+	err := client.Get(url, &result)
+	return &result, err
+}
+
 // Fetch ledger data and create xclient.TxInfo
 func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTransactionResult) (xclient.TxInfo, error) {
 	chain := client.Asset.GetChain().Chain
@@ -477,4 +484,49 @@ func ProcessPathPayment(txInfo *xclient.TxInfo, sourceAsset xc.NativeAsset, dest
 	txInfo.AddMovement(destinationMovement)
 
 	return nil
+}
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var ledger types.GetLedgerResult
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		ledger, err = client.FetchLatestLedgerInfo()
+	} else {
+		ledger, err = client.FetchLedgerInfo(height)
+	}
+	if err != nil {
+		return nil, err
+	}
+	time, err := time.Parse(time.RFC3339, ledger.ClosedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse block timestamp: %w", err)
+	}
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(ledger.Sequence),
+			ledger.Hash,
+			time,
+		),
+	}
+
+	const maxPageSize = 200
+	cursor := ""
+	// page through max 25 pages
+	for range 25 {
+		ledgerTxs, err := client.FetchLedgerTransactions(uint64(ledger.Sequence), maxPageSize, cursor)
+		if err != nil {
+			return nil, err
+		}
+		for _, tx := range ledgerTxs.Embedded.Records {
+			block.TransactionIds = append(block.TransactionIds, tx.Hash)
+			cursor = tx.PagingToken
+		}
+		if len(ledgerTxs.Embedded.Records) < maxPageSize {
+			break
+		}
+	}
+
+	return block, nil
 }

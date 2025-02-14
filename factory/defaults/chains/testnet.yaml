@@ -46,7 +46,6 @@ chains:
   BTC:
     chain: BTC
     driver: bitcoin
-    auth: env:CORDIAL_BLOCKCHAIR_API_KEY
     provider: blockbook
     chain_name: Bitcoin (Testnet)
     decimals: 8

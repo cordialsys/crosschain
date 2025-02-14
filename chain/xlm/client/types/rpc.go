@@ -56,12 +56,14 @@ type GetTransactionResult struct {
 	ResultXdr string `json:"result_xdr,omitempty"`
 	// base64 encoded github.com/stellar/go/xdr.TransactionResultMeta XDR binary
 	ResultMetaXdr string `json:"result_meta_xdr,omitempty"`
+	PagingToken   string `json:"paging_token,omitempty"`
 }
 
 type GetLedgerResult struct {
 	Id       string `json:"id"`
 	Hash     string `json:"hash"`
 	Sequence int64  `json:"sequence"`
+	ClosedAt string `json:"closed_at"`
 }
 
 type Balance struct {
@@ -222,4 +224,12 @@ func (r *AsyncTxSubmissionResult) Error() string {
 	} else {
 		return r.AsyncTxSubmissionResponse.Error()
 	}
+}
+
+type GetLedgerTransactionResult struct {
+	Embedded TransactionRecords `json:"_embedded"`
+}
+
+type TransactionRecords struct {
+	Records []GetTransactionResult `json:"records"`
 }

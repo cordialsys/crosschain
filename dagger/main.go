@@ -18,7 +18,7 @@ func (m *Dagger) TestChain(
 	source *dagger.Directory,
 	// +optional
 	network string,
-	signatureAlgorithm string,
+	algorithm string,
 ) (string, error) {
 	nodeService := dag.Container().
 		From(image).
@@ -57,7 +57,8 @@ func (m *Dagger) TestChain(
 		WithServiceBinding("node-service", nodeService).
 		WithEnvVariable("cache-bust", time.Now().String()).
 		// Run tests
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--signature-algorithm", signatureAlgorithm}).
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--signature-algorithm", signatureAlgorithm}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
+		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestFetchBlock", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
 		Stdout(ctx)
 }

@@ -27,11 +27,11 @@ func TestTransfer(t *testing.T) {
 	toPrivateKey := "22194a8955e9233aa2f0a0206c8ea861e5fa92a613ab5c7e236a11de3f4bc9ad"
 
 	rpcArgs := &setup.RpcArgs{
-		Chain:              chain,
-		Rpc:                rpc,
-		Network:            network,
-		Overrides:          map[string]*setup.ChainOverride{},
-		SignatureAlgorithm: signatureAlgorithm,
+		Chain:     chain,
+		Rpc:       rpc,
+		Network:   network,
+		Overrides: map[string]*setup.ChainOverride{},
+		Algorithm: algorithm,
 	}
 
 	xcFactory, err := setup.LoadFactory(rpcArgs)

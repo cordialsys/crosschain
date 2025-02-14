@@ -194,7 +194,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
 
-			algorithm, _ := cmd.Flags().GetString("signature-algorithm")
+			algorithm, _ := cmd.Flags().GetString("algorithm")
 			if algorithm != "" {
 				xcFactory.Config.SignatureAlgorithm = xc.SignatureType(algorithm)
 			}

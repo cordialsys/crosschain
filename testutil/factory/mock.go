@@ -70,3 +70,6 @@ func (m *MockedClient) UpdateAsset(assetCfg xc.ITask) error {
 	args := m.Called(assetCfg)
 	return args.Error(1)
 }
+func (client *MockedClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	panic("unimplemented")
+}

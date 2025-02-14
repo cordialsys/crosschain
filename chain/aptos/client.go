@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
@@ -401,4 +402,32 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return 0, nil
 	}
 	return info.Decimals, nil
+}
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	height, ok := args.Height()
+	if !ok {
+		ledger, err := client.AptosClient.LedgerInfo()
+		if err != nil {
+			return nil, err
+		}
+		height = ledger.BlockHeight
+	}
+
+	aptosBlock, err := client.AptosClient.GetBlockByHeight(fmt.Sprint(height), true)
+	if err != nil {
+		return nil, err
+	}
+	block := &xclient.BlockWithTransactions{
+		Block: xclient.Block{
+			Height: aptosBlock.BlockHeight,
+			Chain:  client.Asset.GetChain().Chain,
+			Hash:   aptosBlock.BlockHash,
+			Time:   time.Unix(int64(aptosBlock.BlockTimestamp/1000/1000), 0),
+		},
+	}
+	for _, tx := range aptosBlock.Transactions {
+		block.TransactionIds = append(block.TransactionIds, tx.Hash)
+	}
+	return block, nil
 }

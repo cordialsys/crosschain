@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
@@ -510,4 +511,40 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	return 0, fmt.Errorf("unsupported asset: %v", contract)
+}
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var subBlock *types.SignedBlock
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		subBlock, err = client.DotClient.RPC.Chain.GetBlockLatest()
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		blockHash, err := client.DotClient.RPC.Chain.GetBlockHash(height)
+		if err != nil {
+			return nil, err
+		}
+		subBlock, err = client.DotClient.RPC.Chain.GetBlock(blockHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(subBlock.Block.Header.Number),
+			subBlock.Block.Header.ExtrinsicsRoot.Hex(),
+			time.Unix(0, 0),
+		),
+	}
+	for _, tx := range subBlock.Block.Extrinsics {
+		hash := rpc.HashExtrinsic(&tx)
+		block.TransactionIds = append(block.TransactionIds, hex.EncodeToString(hash))
+	}
+
+	return block, nil
 }

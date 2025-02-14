@@ -135,3 +135,7 @@ func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	return client.EvmClient.FetchDecimals(ctx, contract)
 }
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	panic("unimplemented")
+}

@@ -56,11 +56,11 @@ func (client *Client) FetchBaseInput(ctx context.Context, args xcbuilder.Transfe
 	currentSequencePtr := *currentSequence
 	txInput.Sequence = currentSequencePtr
 
-	ledgerSequence, err := client.getLatestValidatedLedgerSequence()
+	ledger, err := client.getLatestLedger(false)
 	if err != nil {
 		return xrptxinput.TxInput{}, err
 	}
-	ledgerSequencePtr := *ledgerSequence
+	ledgerSequencePtr := ledger.Result.LedgerCurrentIndex
 	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
 	txInput.LastLedgerSequence = lastLedgerSequence
@@ -152,17 +152,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		return xclient.TxInfo{}, errors.TransactionNotFoundf("no transaction by hash '%s'", txHash)
 	}
 
-	ledgerRequest := types.LedgerRequest{
-		Method: "ledger",
-		Params: []types.LedgerParamEntry{
-			{
-				LedgerIndex: "current",
-			},
-		},
-	}
-
-	var ledgerResponse types.LedgerResponse
-	err = client.Send(MethodPost, ledgerRequest, &ledgerResponse)
+	ledger, err := client.getLatestLedger(false)
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
@@ -173,7 +163,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 
 	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), txResponse.Result.Hash, blockTime)
 
-	confirmations := ledgerResponse.Result.LedgerCurrentIndex - txResponse.Result.Sequence
+	confirmations := ledger.Result.LedgerCurrentIndex - txResponse.Result.Sequence
 
 	var errMsg *string
 	if txResponse.Result.Meta.TransactionResult != "tesSUCCESS" {
@@ -357,6 +347,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 		return fmt.Errorf("failed to create new HTTP request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	logrus.WithField("method", method).WithField("params", string(jsonPayload)).Debug("request")
 
 	resp, err := client.HttpClient.Do(request)
 	if err != nil {
@@ -371,6 +362,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	if err != nil {
 		return err
 	}
+	logrus.WithField("body", string(bz)).Debug("response")
 	err = json.Unmarshal(bz, response)
 	if err != nil {
 		return fmt.Errorf("failed to decode response body: %w", err)
@@ -400,12 +392,13 @@ func (client *Client) getNextValidSeqNumber(address xc.Address) (*int64, error) 
 	return &sequence, nil
 }
 
-func (client *Client) getLatestValidatedLedgerSequence() (*int64, error) {
+func (client *Client) getLedger(index types.LedgerIndex, transactions bool) (*types.LedgerResponse, error) {
 	ledgerRequest := types.LedgerRequest{
 		Method: "ledger",
 		Params: []types.LedgerParamEntry{
 			{
-				LedgerIndex: types.Current,
+				LedgerIndex:  index,
+				Transactions: transactions,
 			},
 		},
 	}
@@ -416,8 +409,11 @@ func (client *Client) getLatestValidatedLedgerSequence() (*int64, error) {
 		return nil, err
 	}
 
-	ledgerCurrentIndex := ledgerResponse.Result.LedgerCurrentIndex
-	return &ledgerCurrentIndex, nil
+	return &ledgerResponse, nil
+}
+
+func (client *Client) getLatestLedger(transactions bool) (*types.LedgerResponse, error) {
+	return client.getLedger(types.Current, transactions)
 }
 
 // Pretty simple for XRP as it's always fixed.
@@ -427,4 +423,35 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	return types.TRUSTLINE_DECIMALS, nil
+}
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var ledger *types.LedgerResponse
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		ledger, err = client.getLatestLedger(true)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		ledger, err = client.getLedger(types.LedgerIndex(fmt.Sprint(height)), true)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(ledger.Result.LedgerIndex),
+			ledger.Result.Ledger.LedgerHash,
+			time.Unix(types.XRP_EPOCH+ledger.Result.Ledger.CloseTime, 0),
+		),
+		TransactionIds: ledger.Result.Ledger.Transactions,
+	}
+
+	return block, nil
+
 }

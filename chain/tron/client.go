@@ -340,3 +340,40 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 	return int(dec.Uint64()), nil
 }
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var tonBlock *httpclient.BlockResponse
+	height, ok := args.Height()
+	if !ok {
+		response, err := client.client.GetBlockByLatest(1)
+		if err != nil {
+			return nil, err
+		}
+		if len(response.Block) == 0 {
+			return nil, fmt.Errorf("no blocks found on chain")
+		}
+		tonBlock = response.Block[0]
+	} else {
+		response, err := client.client.GetBlockByNum(height)
+		if err != nil {
+			return nil, err
+		}
+		tonBlock = response
+	}
+	height = tonBlock.BlockHeader.RawData.Number
+
+	txs := tonBlock.Transactions
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.chain.Chain,
+			height,
+			tonBlock.BlockId,
+			time.Unix(int64(tonBlock.BlockHeader.RawData.Timestamp/1000), 0),
+		),
+	}
+	for _, tx := range txs {
+		block.TransactionIds = append(block.TransactionIds, tx.TxID)
+	}
+
+	return block, nil
+}

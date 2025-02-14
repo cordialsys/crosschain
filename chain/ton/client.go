@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,6 +60,26 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}
 
 	return &Client{url, cfgI, apiKey, limiter}, nil
+}
+
+// TON blocks don't have a clearly used hash.  There's no canonical block hash.
+// There are instead adhoc identifiers like "{workchain}:{shard-id}:{height}".
+// I'm not sure what `{workchain}` is.  Best of my knowledge, it's just -1 for the master chain, and 0 for everything else.
+func NewBlockId(workChain int, shard string, height int64) string {
+	// The TON API will return the shard ID as like "-9223372036854775808", but that's not a valid way
+	// to represent shards.  It should be in hex, e.g. 0x8000000000000000.  Seems their encoding is a hot mess.
+	shardInt := big.NewInt(0)
+	_, ok := shardInt.SetString(shard, 0)
+	if !ok {
+		err := fmt.Errorf("invalid shard on block: %s", shard)
+		logrus.WithError(err).Error("TON block-id")
+	} else {
+		shardInt = shardInt.Abs(shardInt)
+		shard = shardInt.Text(16)
+	}
+
+	blockId := fmt.Sprintf("%d:%s:%d", workChain, shard, height)
+	return blockId
 }
 
 func (cli *Client) get(path string, response any) error {
@@ -497,8 +518,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	sources = append(sources, jettonSources...)
 	dests = append(dests, jettonDests...)
+	blockId := NewBlockId(tx.BlockRef.Workchain, tx.BlockRef.Shard, tx.BlockRef.Seqno)
 	info := xc.LegacyTxInfo{
-		BlockHash:     tx.BlockRef.Shard,
+		// use the workchain ID as the blockhash
+		BlockHash: blockId,
+		// use the master chain block height as our height
 		BlockIndex:    tx.McBlockSeqno,
 		BlockTime:     tx.Now,
 		Confirmations: chainInfo.Last.Seqno - tx.McBlockSeqno,
@@ -584,4 +608,93 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return 0, fmt.Errorf("no jetton contract by address %v", contract)
 	}
 	return int(response.JettonMasters[0].JettonContent.Decimals.Uint64()), nil
+}
+
+// It's complicated getting a "block" for TON as they have concept of "master chain" and then "shard chains".
+// It seems that normal transactions get included in shard chains / shard blocks.  Then shard blocks are included
+// in the master chain / master block.
+// Currently our reporting uses the master "block" as the blocknumber.  So we have to:
+// - look up master block
+// - look up the shard blocks in master block
+// - finally, look up transactions in the shard blocks
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	// workchain of the "master" chain is -1
+	masterWorkChain := -1
+	height, hasHeightInput := args.Height()
+	if !hasHeightInput {
+		chainInfo := &api.V2MasterchainInfoResponse{}
+		err := client.get("/api/v2/getMasterchainInfo", chainInfo)
+		if err != nil {
+			return nil, err
+		}
+		height = uint64(chainInfo.Result.Last.Seqno)
+		masterWorkChain = chainInfo.Result.Last.Workchain
+		logrus.WithFields(logrus.Fields{
+			"height":    height,
+			"workchain": masterWorkChain,
+		}).Debug("latest master block")
+	}
+
+	// fetch the master block info
+	masterBlockInfo := &api.V2BlockResponse{}
+	err := client.get(fmt.Sprintf("/api/v2/lookupBlock?workchain=%d&shard=0&seqno=%d", masterWorkChain, height), masterBlockInfo)
+	if err != nil {
+		return nil, fmt.Errorf("could not get ton master block: %v", err)
+	}
+	// adhoc block identifier
+	masterBlockId := NewBlockId(masterWorkChain, masterBlockInfo.Result.Shard, masterBlockInfo.Result.Seqno)
+
+	// They have blocktime thrown in this adhoc string, e.g. "1739542296.249538:1:0.3620847591001577"
+	extraParts := strings.Split(masterBlockInfo.Result.Extra, ":")
+	blockTimeString := extraParts[0]
+	blockTimeFloat, err := strconv.ParseFloat(blockTimeString, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid 'extra' field on block: %s: %v", masterBlockInfo.Result.Extra, err)
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(masterBlockInfo.Result.Seqno),
+			masterBlockId,
+			time.Unix(int64(blockTimeFloat), 0),
+		),
+	}
+
+	// fetch the shards of the master block
+	shards := &api.V2GetShardsResponse{}
+	err = client.get(fmt.Sprintf("/api/v2/shards?seqno=%d", height), shards)
+	if err != nil {
+		return nil, fmt.Errorf("could not get ton master block shards: %v", err)
+	}
+
+	// get the transactions for each shard
+	for _, shard := range shards.Result.Shards {
+		shardBlockId := NewBlockId(shard.Workchain, shard.Shard, shard.Seqno)
+		logrus.WithFields(logrus.Fields{
+			"master-block-id": masterBlockId,
+			"shard-block-id":  shardBlockId,
+		}).Debug("fetching shard txs")
+		// on average, TON shard blocks are <100 tx
+		const maxTx = 2000
+		shardTxs := &api.V2GetBlockTransactionsResponse{}
+		err = client.get(
+			fmt.Sprintf(
+				"/api/v2/getBlockTransactionsExt?workchain=%d&shard=%s&seqno=%d&count=%d",
+				shard.Workchain, shard.Shard, shard.Seqno, maxTx,
+			),
+			shardTxs,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not get block shard '%s' transactions: %v", shardBlockId, err)
+		}
+		for _, tx := range shardTxs.Result.Transactions {
+			// TON can identify tx by multiple different hashes :(
+			// Currently using the "InMsg" hash, as this is the one that can be calculated offline (i.e., before broadcasting).
+			hash := tontx.Normalize(tx.InMsg.Hash)
+			block.TransactionIds = append(block.TransactionIds, hash)
+		}
+	}
+
+	return block, nil
 }

@@ -387,3 +387,7 @@ func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.C
 
 	return 0, fmt.Errorf("unsupported")
 }
+
+func (client *BlockchairClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	panic("unimplemented")
+}

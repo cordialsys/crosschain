@@ -564,3 +564,34 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 	return maxDecimal, nil
 }
+
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var cometBlock *comettypes.ResultBlock
+	var err error
+	height, ok := args.Height()
+	if !ok {
+		cometBlock, err = client.Ctx.Client.Block(ctx, nil)
+	} else {
+		h := int64(height)
+		cometBlock, err = client.Ctx.Client.Block(ctx, &h)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	block := &xclient.BlockWithTransactions{
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(cometBlock.Block.Height),
+			cometBlock.BlockID.Hash.String(),
+			cometBlock.Block.Time,
+		),
+		TransactionIds: []string{},
+	}
+	for _, tx := range cometBlock.Block.Txs {
+		block.TransactionIds = append(block.TransactionIds, hex.EncodeToString(tx.Hash()))
+	}
+
+	return block, nil
+
+}
