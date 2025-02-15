@@ -1,4 +1,4 @@
-package client
+package rpctypes
 
 // A an EVM block with no transaction details.
 // The Geth client doesn't expose a way to get this, so we define it.

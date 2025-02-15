@@ -211,7 +211,7 @@ func (b *AmountBlockchain) UnmarshalJSON(p []byte) error {
 	}
 	str := strings.Trim(string(p), "\"")
 	var z big.Int
-	_, ok := z.SetString(str, 10)
+	_, ok := z.SetString(str, 0)
 	if !ok {
 		return fmt.Errorf("not a valid big integer: %s", p)
 	}

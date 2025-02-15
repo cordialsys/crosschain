@@ -307,7 +307,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Chain:  "XRP",
 					Height: 94494,
-					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
 				Movements: []*xclient.Movement{
@@ -561,7 +561,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Chain:  "XRP",
 					Height: 90659219,
-					Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+					Hash:   "",
 					Time:   time.Unix(1725988340, 0),
 				},
 				Movements: []*xclient.Movement{
@@ -674,7 +674,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xclient.Block{
 					Chain:  "XRP",
 					Height: 94494,
-					Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
 				Movements:     nil,
@@ -721,7 +721,6 @@ func TestFetchTxInfo(t *testing.T) {
 				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(t, err, vector.err)
 			} else {
-
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
 				// redundantly test time so it's easier to see which unix second is expected
