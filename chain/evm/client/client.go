@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/client/rpctypes"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
@@ -24,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/sirupsen/logrus"
@@ -144,23 +144,18 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		TxID: txHashHex,
 	}
 
-	trans, pending, err := client.EthClient.TransactionByHash(ctx, txHash)
+	var trans = &rpctypes.Transaction{}
+	err := client.EthClient.Client().CallContext(ctx, trans, "eth_getTransactionByHash", txHash.String())
 	if err != nil {
 		// evm returns a simple string for not found condition
 		if strings.ToLower(err.Error()) == "not found" {
 			return result, errors.TransactionNotFoundf("%v", err)
 		}
-		// TODO retry only for KLAY
-		client.Interceptor.Enable()
-		trans, pending, err = client.EthClient.TransactionByHash(ctx, txHash)
-		client.Interceptor.Disable()
-		if err != nil {
-			return result, fmt.Errorf("fetching tx by hash '%s': %v", txHashStr, err)
-		}
+		return result, fmt.Errorf("fetching tx by hash '%s': %v", txHashStr, err)
 	}
 
 	// If the transaction is still pending, return an empty txInfo.
-	if pending {
+	if trans.BlockNumber.Uint64() == 0 {
 		return result, nil
 	}
 
@@ -215,13 +210,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	}
 	result.Confirmations = latestHeader.Number.Int64() - receipt.BlockNumber.Int64()
 
-	// // tx confirmed
-	confirmedTx := tx.Tx{
-		EthTx:  trans,
-		Signer: types.LatestSignerForChainID(trans.ChainId()),
-	}
-
-	tokenMovements := confirmedTx.ParseTokenLogs(receipt, xc.NativeAsset(nativeAsset.Chain))
+	tokenMovements := tx.ParseTokenLogs(receipt, xc.NativeAsset(nativeAsset.Chain))
 	ethMovements, err := client.TraceEthMovements(ctx, txHash)
 	if err != nil {
 		// Not all RPC nodes support this trace call, so we'll just drop reporting
@@ -232,29 +221,30 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 			"error":   err,
 		}).Warn("could not trace ETH tx")
 		// set default eth movements
-		amount := trans.Value()
+		amount := trans.Value.Int()
 		zero := big.NewInt(0)
-		if amount.Cmp(zero) > 0 {
+
+		from := trans.From
+		to := ""
+		if trans.ToMaybe != nil {
+			to = trans.ToMaybe.String()
+		}
+		if from != "" && amount.Cmp(zero) > 0 {
 			ethMovements = tx.SourcesAndDests{
 				Sources: []*xc.LegacyTxInfoEndpoint{{
-					Address:     confirmedTx.From(),
+					Address:     xc.Address(from),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
 				}},
 				Destinations: []*xc.LegacyTxInfoEndpoint{{
-					Address:     confirmedTx.To(),
+					Address:     xc.Address(to),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
 				}},
 			}
 		}
 	}
-
-	result.From = confirmedTx.From()
-	result.To = confirmedTx.To()
-	result.ContractAddress = confirmedTx.ContractAddress()
-	result.Amount = confirmedTx.Amount()
-	result.Fee = confirmedTx.Fee(baseFee, gasUsed)
+	result.Fee = tx.Fee(trans.MaxPriorityFeePerGas, trans.GasPrice, baseFee, gasUsed)
 	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 
@@ -301,12 +291,43 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 	}
 
+	// map in the legacy fields
+	if len(result.Sources) > 0 && len(result.Destinations) > 0 {
+		result.From = result.Sources[0].Address
+		result.To = result.Destinations[0].Address
+		result.Amount = result.Destinations[0].Amount
+		result.ContractAddress = result.Destinations[0].ContractAddress
+		if len(result.Sources) > 1 && len(result.Destinations) > 1 {
+			// legacy behavior..  map to evm `value` in case of multi source/dest
+			result.Amount = trans.Value
+		}
+	} else {
+		result.Amount = trans.Value
+	}
+	if result.From == "" {
+		result.From = xc.Address(strings.ToLower(trans.From))
+	}
+
 	if result.Error != "" {
 		// drop all changes
 		result.Sources = nil
 		result.Destinations = nil
 		result.ResetStakeEvents()
 	}
+	// normalize
+	for _, movement := range result.Sources {
+		movement.Address = xc.Address(strings.ToLower(string(movement.Address)))
+		movement.ContractAddress = xc.ContractAddress(strings.ToLower(string(movement.ContractAddress)))
+		movement.ContractId = xc.ContractAddress(strings.ToLower(string(movement.ContractId)))
+	}
+	for _, movement := range result.Destinations {
+		movement.Address = xc.Address(strings.ToLower(string(movement.Address)))
+		movement.ContractAddress = xc.ContractAddress(strings.ToLower(string(movement.ContractAddress)))
+		movement.ContractId = xc.ContractAddress(strings.ToLower(string(movement.ContractId)))
+	}
+	result.To = xc.Address(strings.ToLower(string(result.To)))
+	result.From = xc.Address(strings.ToLower(string(result.From)))
+	result.ContractAddress = xc.ContractAddress(strings.ToLower(string(result.ContractAddress)))
 
 	return result, nil
 }
@@ -389,9 +410,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}
 	bigHeight := big.NewInt(0)
 	bigHeight.SetUint64(height)
-	var evmBlock Block
+	var evmBlock rpctypes.Block
 	err = client.EthClient.Client().CallContext(ctx, &evmBlock, "eth_getBlockByNumber", "0x"+bigHeight.Text(16), false)
-	// ethBlock, err := client.EthClient.BlockByNumber(ctx, bigHeight)
 	if err != nil {
 		return nil, fmt.Errorf("could not download block: %v", err)
 	}
