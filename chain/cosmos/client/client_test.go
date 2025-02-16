@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 )
 
 type TxInput = tx_input.TxInput
@@ -210,6 +211,7 @@ func TestFetchTxInput(t *testing.T) {
 			defer close()
 
 			v.asset.URL = server.URL
+			v.asset.Limiter = rate.NewLimiter(rate.Inf, 1)
 			client, err := client.NewClient(&v.asset)
 			require.NoError(t, err)
 			from := xc.Address(v.from)
@@ -235,7 +237,8 @@ func TestFetchTxInput(t *testing.T) {
 func TestSubmitTxErr(t *testing.T) {
 
 	client, _ := client.NewClient(&xc.ChainConfig{
-		URL: "",
+		URL:     "",
+		Limiter: rate.NewLimiter(rate.Inf, 1),
 	})
 	tx := &tx.Tx{ChainCfg: &xc.ChainConfig{}}
 	err := client.SubmitTx(context.Background(), tx)
@@ -506,6 +509,7 @@ func TestFetchTxInfo(t *testing.T) {
 
 			asset := v.asset
 			asset.GetChain().URL = server.URL
+			v.asset.GetChain().Limiter = rate.NewLimiter(rate.Inf, 1)
 			client, _ := client.NewClient(asset)
 			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
@@ -623,6 +627,7 @@ func TestFetchBalance(t *testing.T) {
 
 		asset := v.asset
 		asset.GetChain().URL = server.URL
+		v.asset.GetChain().Limiter = rate.NewLimiter(rate.Inf, 1)
 		client, _ := client.NewClient(asset)
 		from := xc.Address(v.address)
 		balance, err := client.FetchBalance(context.Background(), from)

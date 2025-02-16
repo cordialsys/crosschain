@@ -25,15 +25,13 @@ import (
 	"github.com/xssnick/tonutils-go/tlb"
 	"github.com/xssnick/tonutils-go/ton/jetton"
 	"github.com/xssnick/tonutils-go/tvm/cell"
-	"golang.org/x/time/rate"
 )
 
 // Client for Template
 type Client struct {
-	Url     string
-	Asset   xc.ITask
-	ApiKey  string
-	limiter *rate.Limiter
+	Url    string
+	Asset  xc.ITask
+	ApiKey string
 }
 
 var _ xclient.FullClient = &Client{}
@@ -53,12 +51,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 			return nil, fmt.Errorf("could not load TON client API key: %v", err)
 		}
 	}
-	var limiter = rate.NewLimiter(rate.Inf, 1)
-	if chain.RateLimit > 0 {
-		limiter = rate.NewLimiter(chain.RateLimit, 1)
-	}
 
-	return &Client{url, cfgI, apiKey, limiter}, nil
+	return &Client{url, cfgI, apiKey}, nil
 }
 
 // TON blocks don't have a clearly used hash.  There's no canonical block hash.
@@ -94,7 +88,7 @@ func (cli *Client) post(path string, requestBody any, response any) error {
 	return cli.send("POST", path, requestBody, response)
 }
 func (cli *Client) send(method string, path string, requestBody any, response any) error {
-	cli.limiter.Wait(context.Background())
+	_ = cli.Asset.GetChain().Limiter.Wait(context.Background())
 	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("%s/%s", cli.Url, path)
 	var request *http.Request

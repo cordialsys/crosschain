@@ -15,6 +15,7 @@ import (
 	xcclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/time/rate"
 )
 
 func fromHex(s string) []byte {
@@ -170,6 +171,7 @@ func TestFetchTxInput(t *testing.T) {
 			} else {
 				v.asset.(*xc.ChainConfig).URL = server.URL
 			}
+			v.asset.GetChain().Limiter = rate.NewLimiter(rate.Inf, 1)
 
 			client, err := ton.NewClient(v.asset)
 			require.NoError(t, err)
@@ -371,6 +373,7 @@ func TestFetchTxInfo(t *testing.T) {
 			server, close := testtypes.MockHTTP(t, v.resp, httpStatus)
 			defer close()
 			chain.URL = server.URL
+			chain.Limiter = rate.NewLimiter(rate.Inf, 1)
 
 			client, err := ton.NewClient(&chain)
 			require.NoError(t, err)
