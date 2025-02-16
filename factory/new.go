@@ -95,6 +95,7 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			}
 		}
 		factory.AllChains = append(factory.AllChains, chain)
+		chain.Configure()
 	}
 
 	return factory

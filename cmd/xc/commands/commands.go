@@ -12,6 +12,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/chain/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -193,10 +194,10 @@ func CmdTxTransfer() *cobra.Command {
 			if decimalsStr == "" && contract != "" {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
-
 			algorithm, _ := cmd.Flags().GetString("algorithm")
+			addressArgs := []xcaddress.AddressOption{}
 			if algorithm != "" {
-				xcFactory.Config.SignatureAlgorithm = xc.SignatureType(algorithm)
+				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}
 
 			toWalletAddress := args[0]
@@ -228,7 +229,7 @@ func CmdTxTransfer() *cobra.Command {
 
 			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -238,7 +239,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
@@ -348,13 +349,18 @@ func CmdAddress() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
+			algorithm, _ := cmd.Flags().GetString("algorithm")
+			addressArgs := []xcaddress.AddressOption{}
+			if algorithm != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
+			}
 
 			privateKeyInput := signer.ReadPrivateKeyEnv()
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -364,7 +370,7 @@ func CmdAddress() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
@@ -437,7 +443,7 @@ func CmdChains() *cobra.Command {
 				logrus.Info("listing from local configuration")
 				chains := []*xc.ChainConfig{}
 				for _, chain := range xcFactory.GetAllChains() {
-					chain.Migrate()
+					chain.Configure()
 					chains = append(chains, chain)
 				}
 				err = printer(chains)

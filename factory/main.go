@@ -5,6 +5,7 @@ import (
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	remoteclient "github.com/cordialsys/crosschain/chain/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -19,13 +20,13 @@ import (
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
 	NewTxBuilder(asset ITask) (builder.FullTransferBuilder, error)
-	NewSigner(asset ITask, secret string) (*signer.Signer, error)
-	NewAddressBuilder(asset ITask) (AddressBuilder, error)
+	NewSigner(asset ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error)
+	NewAddressBuilder(asset ITask, options ...xcaddress.AddressOption) (AddressBuilder, error)
 
 	MarshalTxInput(input TxInput) ([]byte, error)
 	UnmarshalTxInput(data []byte) (TxInput, error)
 
-	GetAddressFromPublicKey(asset ITask, publicKey []byte) (Address, error)
+	GetAddressFromPublicKey(asset ITask, publicKey []byte, options ...xcaddress.AddressOption) (Address, error)
 
 	MustAmountBlockchain(asset ITask, humanAmountStr string) AmountBlockchain
 	MustAddress(asset ITask, addressStr string) Address
@@ -138,13 +139,13 @@ func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
 }
 
 // NewSigner creates a new Signer
-func (f *Factory) NewSigner(cfg ITask, secret string) (*signer.Signer, error) {
-	return drivers.NewSigner(cfg, secret, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
+func (f *Factory) NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+	return drivers.NewSigner(cfg, secret, options...)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
-func (f *Factory) NewAddressBuilder(cfg ITask) (AddressBuilder, error) {
-	return drivers.NewAddressBuilder(cfg, address.OptionAlgorithm(f.Config.SignatureAlgorithm))
+func (f *Factory) NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBuilder, error) {
+	return drivers.NewAddressBuilder(cfg, options...)
 }
 
 // MarshalTxInput marshalls a TxInput struct
@@ -158,11 +159,11 @@ func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
-func (f *Factory) GetAddressFromPublicKey(cfg ITask, publicKey []byte) (Address, error) {
+func (f *Factory) GetAddressFromPublicKey(cfg ITask, publicKey []byte, options ...xcaddress.AddressOption) (Address, error) {
 	return getAddressFromPublicKey(
 		cfg,
 		publicKey,
-		address.OptionAlgorithm(f.Config.SignatureAlgorithm),
+		options...,
 	)
 }
 
