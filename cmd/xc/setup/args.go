@@ -79,9 +79,6 @@ func LoadFactory(rcpArgs *RpcArgs) (*factory.Factory, error) {
 	if rcpArgs.NotMainnet {
 		xcFactory = factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
 	}
-	if rcpArgs.Algorithm != "" {
-		xcFactory.Config.SignatureAlgorithm = xc.SignatureType(rcpArgs.Algorithm)
-	}
 
 	override, ok := rcpArgs.Overrides[strings.ToLower(rcpArgs.Chain)]
 	if !ok {

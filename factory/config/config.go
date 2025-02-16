@@ -29,9 +29,8 @@ func (setting NetworkSetting) Selector() xc.NetworkSelector {
 type Config struct {
 	// which network to default to: "mainnet" or "testnet"
 	// Default: "testnet"
-	Network            NetworkSetting   `yaml:"network"`
-	CrosschainUrl      string           `yaml:"crosschain_url"`
-	SignatureAlgorithm xc.SignatureType `yaml:"signature_algorithm"`
+	Network       NetworkSetting `yaml:"network"`
+	CrosschainUrl string         `yaml:"crosschain_url"`
 
 	// map of lowercase(native_asset) -> NativeAssetObject
 	Chains map[string]*xc.ChainConfig `yaml:"chains"`
@@ -46,18 +45,13 @@ func (cfg *Config) MigrateFields() {
 			logrus.WithField("chain", cfg.Chain).Warn(".asset field is deprecated, please migrate to using .chain field instead")
 			cfg.Chain = cfg.XAssetDeprecated
 		}
+		cfg.Configure()
 	}
 }
 
 func (cfg *Config) Parse() {
 	// Add all tokens + native assets to same list
 	cfg.MigrateFields()
-	for _, chain := range cfg.Chains {
-		// migrate deprecated fields
-		if chain.XAssetDeprecated != "" && chain.Chain == "" {
-			chain.Chain = chain.XAssetDeprecated
-		}
-	}
 
 	cfg.parsed = true
 }

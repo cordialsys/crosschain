@@ -2,6 +2,7 @@ package testutil
 
 import (
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
@@ -40,15 +41,15 @@ func (f *TestFactory) NewTxBuilder(asset xc.ITask) (builder.FullTransferBuilder,
 }
 
 // NewSigner creates a new Signer
-func (f *TestFactory) NewSigner(asset xc.ITask, secret string) (*signer.Signer, error) {
+func (f *TestFactory) NewSigner(asset xc.ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	if f.NewSignerFunc != nil {
 		return f.NewSignerFunc(asset)
 	}
-	return f.DefaultFactory.NewSigner(asset.GetChain(), secret)
+	return f.DefaultFactory.NewSigner(asset.GetChain(), secret, options...)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
-func (f *TestFactory) NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
+func (f *TestFactory) NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
 	if f.NewAddressBuilderFunc != nil {
 		return f.NewAddressBuilderFunc(asset)
 	}
@@ -67,11 +68,11 @@ func (f *TestFactory) UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
-func (f *TestFactory) GetAddressFromPublicKey(asset xc.ITask, publicKey []byte) (xc.Address, error) {
+func (f *TestFactory) GetAddressFromPublicKey(asset xc.ITask, publicKey []byte, options ...xcaddress.AddressOption) (xc.Address, error) {
 	if f.GetAddressFromPublicKeyFunc != nil {
 		return f.GetAddressFromPublicKeyFunc(asset, publicKey)
 	}
-	return f.DefaultFactory.GetAddressFromPublicKey(asset, publicKey)
+	return f.DefaultFactory.GetAddressFromPublicKey(asset, publicKey, options...)
 }
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
