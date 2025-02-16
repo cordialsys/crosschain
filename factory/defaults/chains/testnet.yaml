@@ -128,9 +128,9 @@ chains:
     decimals: 18
   KAR:
     chain: KAR
-    driver: "evm-legacy"
+    driver: substrate
+    disabled: true
     net: testnet
-    chain_id: 686
     chain_name: Karura (Testnet)
     decimals: 12
   KLAY:
