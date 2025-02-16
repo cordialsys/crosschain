@@ -2,6 +2,8 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -121,5 +123,85 @@ type BlockResponse struct {
 	Height         xc.AmountBlockchain `json:"height"`
 	Time           *string             `json:"time,omitempty"`
 	ChainId        string              `json:"chain_id"`
-	TransactionIds []string            `json:"transaction_ids"`
+	TransactionIds []string            `json:"transaction_ids,omitempty"`
+	SubBlocks      []*BlockResponse    `json:"sub_blocks,omitempty"`
+}
+
+func UnpackBlock(apiBlock *BlockResponse) (*xclient.BlockWithTransactions, error) {
+	var t time.Time
+	var err error
+	if apiBlock.Time != nil {
+		t, err = time.Parse(time.RFC3339, *apiBlock.Time)
+		if err != nil {
+			return nil, fmt.Errorf("invalid time: %v", err)
+		}
+	}
+	block := &xclient.BlockWithTransactions{
+		Block: xclient.Block{
+			Chain:  xc.NativeAsset(apiBlock.ChainId),
+			Height: apiBlock.Height.Uint64(),
+			Hash:   apiBlock.Hash,
+			Time:   t,
+		},
+		TransactionIds: apiBlock.TransactionIds,
+	}
+	return block, nil
+}
+func UnpackBlocksInner(apiBlocks []*BlockResponse) ([]*xclient.BlockWithTransactions, error) {
+	if len(apiBlocks) == 0 {
+		return []*xclient.BlockWithTransactions{}, nil
+	}
+	blocks := make([]*xclient.BlockWithTransactions, len(apiBlocks))
+	var err error
+	for i := range apiBlocks {
+		blocks[i], err = UnpackBlock(apiBlocks[i])
+		if err != nil {
+			return blocks, nil
+		}
+	}
+
+	return blocks, nil
+}
+
+func UnpackBlocks(apiBlocks []*BlockResponse) ([]*xclient.BlockWithTransactions, error) {
+	blocks, err := UnpackBlocksInner(apiBlocks)
+	if err != nil {
+		return blocks, err
+	}
+	// Do we really need nesting for reporting blocks?
+	// -> So far 1 level is fine.
+	// only unnest 3 levels deep for now
+	// for i := range apiBlocks {
+	// 	blocks[i].SubBlocks, err = UnpackBlocksInner(apiBlocks[i].SubBlocks)
+	// 	if err != nil {
+	// 		return blocks, err
+	// 	}
+	// 	for j := range apiBlocks[i].SubBlocks {
+	// 		blocks[i].SubBlocks[j].SubBlocks, err = UnpackBlocksInner(apiBlocks[i].SubBlocks[j].SubBlocks)
+	// 		if err != nil {
+	// 			return blocks, err
+	// 		}
+	// 	}
+	// }
+
+	return blocks, nil
+}
+
+func UnpackSubBlocks(apiBlocks []*BlockResponse) ([]*xclient.SubBlockWithTransactions, error) {
+	if len(apiBlocks) == 0 {
+		return []*xclient.SubBlockWithTransactions{}, nil
+	}
+	blocks := make([]*xclient.SubBlockWithTransactions, len(apiBlocks))
+	for i := range apiBlocks {
+		block, err := UnpackBlock(apiBlocks[i])
+		if err != nil {
+			return blocks, nil
+		}
+		blocks = append(blocks, &xclient.SubBlockWithTransactions{
+			Block:          block.Block,
+			TransactionIds: block.TransactionIds,
+		})
+	}
+
+	return blocks, nil
 }

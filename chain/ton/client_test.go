@@ -218,7 +218,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21080779,
-					Hash:   "0:71afd498d0000:22624217",
+					Hash:   "0:2000000000000000:22624217",
 					Time:   time.Unix(1721063820, 0),
 				},
 				Movements: []*xcclient.Movement{
@@ -286,7 +286,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Block: &xcclient.Block{
 					Chain:  "TON",
 					Height: 21082496,
-					Hash:   "0:71afd498d0000:22626042",
+					Hash:   "0:2000000000000000:22626042",
 					Time:   time.Unix(1721068303, 0),
 				},
 				Movements: []*xcclient.Movement{
@@ -388,4 +388,15 @@ func TestFetchTxInfo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewBlockId(t *testing.T) {
+	id := ton.NewBlockId(0, "a000000000000000", 10)
+	require.Equal(t, "0:a000000000000000:10", id)
+
+	id = ton.NewBlockId(0, "-2305843009213693952", 10)
+	require.Equal(t, "0:2000000000000000:10", id)
+
+	id = ton.NewBlockId(0, "2000000000000000", 10)
+	require.Equal(t, "0:2000000000000000:10", id)
 }

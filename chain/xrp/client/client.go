@@ -467,29 +467,32 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
 	var ledger *types.LedgerResponse
 	var err error
+	var ledgerHash string
 	height, ok := args.Height()
 	if !ok {
 		ledger, err = client.getLatestLedger(true)
 		if err != nil {
 			return nil, err
 		}
-
+		// unable to get ledgerData on head of chain
 	} else {
 		ledger, err = client.getLedger(types.LedgerIndex(fmt.Sprint(height)), true)
 		if err != nil {
 			return nil, err
 		}
-	}
-	data, err := client.getLedgerData(types.LedgerIndex(ledger.Result.Ledger.LedgerIndex))
-	if err != nil {
-		return nil, err
+		// fetch data to get ledger hash
+		data, err := client.getLedgerData(types.LedgerIndex(ledger.Result.Ledger.LedgerIndex))
+		if err != nil {
+			return nil, err
+		}
+		ledgerHash = data.Result.LedgerHash
 	}
 
 	block := &xclient.BlockWithTransactions{
 		Block: *xclient.NewBlock(
 			client.Asset.GetChain().Chain,
 			xc.NewAmountBlockchainFromStr(ledger.Result.Ledger.LedgerIndex).Uint64(),
-			data.Result.LedgerHash,
+			ledgerHash,
 			time.Unix(types.XRP_EPOCH+ledger.Result.Ledger.CloseTime, 0),
 		),
 		TransactionIds: ledger.Result.Ledger.Transactions,

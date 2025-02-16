@@ -6,7 +6,7 @@ type V2GetShardsResponse struct {
 }
 
 type V2BlockShards struct {
-	Type   string          `json:"@type"`
-	Shards []*V2BlockIdExt `json:"shards"`
-	Extra  string          `json:"@extra"`
+	Type   string                 `json:"@type"`
+	Shards []*V2BlockIdExtNoExtra `json:"shards"`
+	Extra  ExtraString            `json:"@extra"`
 }

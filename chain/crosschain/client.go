@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -323,22 +322,13 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, err
 	}
-	var t time.Time
-	if apiBlock.Time != nil {
-		t, err = time.Parse(time.RFC3339, *apiBlock.Time)
-		if err != nil {
-			return nil, fmt.Errorf("invalid time: %v", err)
-		}
+	block, err := types.UnpackBlock(&apiBlock)
+	if err != nil {
+		return nil, err
 	}
-
-	block := &xclient.BlockWithTransactions{
-		Block: xclient.Block{
-			Chain:  xc.NativeAsset(apiBlock.ChainId),
-			Height: apiBlock.Height.Uint64(),
-			Hash:   apiBlock.Hash,
-			Time:   t,
-		},
-		TransactionIds: apiBlock.TransactionIds,
+	block.SubBlocks, err = types.UnpackSubBlocks(apiBlock.SubBlocks)
+	if err != nil {
+		return nil, err
 	}
 
 	return block, err

@@ -589,6 +589,14 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		TransactionIds: []string{},
 	}
 	for _, tx := range cometBlock.Block.Txs {
+		if client.Asset.GetChain().Chain == xc.TIA {
+			// this is pretty hacky, but otherwise the standard way of producing the hash isn't correct.
+			// Not sure how else to calculate the hash, and can't find an efficient way to otherwise figure out what it is.
+			if strings.Contains(string(tx), "/celestia.blob.v1.MsgPayForBlobs") {
+				// just drop it
+				continue
+			}
+		}
 		block.TransactionIds = append(block.TransactionIds, hex.EncodeToString(tx.Hash()))
 	}
 

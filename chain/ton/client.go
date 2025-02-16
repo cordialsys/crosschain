@@ -10,7 +10,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +68,12 @@ func NewBlockId(workChain int, shard string, height int64) string {
 	// The TON API will return the shard ID as like "-9223372036854775808", but that's not a valid way
 	// to represent shards.  It should be in hex, e.g. 0x8000000000000000.  Seems their encoding is a hot mess.
 	shardInt := big.NewInt(0)
+	if strings.HasSuffix(shard, "0000000") {
+		// assume it's hexidecimal, as TON api's will just mix and match without any notation.
+		if !strings.HasPrefix(shard, "0x") {
+			shard = "0x" + shard
+		}
+	}
 	_, ok := shardInt.SetString(shard, 0)
 	if !ok {
 		err := fmt.Errorf("invalid shard on block: %s", shard)
@@ -645,11 +650,9 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	masterBlockId := NewBlockId(masterWorkChain, masterBlockInfo.Result.Shard, masterBlockInfo.Result.Seqno)
 
 	// They have blocktime thrown in this adhoc string, e.g. "1739542296.249538:1:0.3620847591001577"
-	extraParts := strings.Split(masterBlockInfo.Result.Extra, ":")
-	blockTimeString := extraParts[0]
-	blockTimeFloat, err := strconv.ParseFloat(blockTimeString, 64)
+	blockTimeFloat, err := masterBlockInfo.Result.Extra.Timestamp()
 	if err != nil {
-		return nil, fmt.Errorf("invalid 'extra' field on block: %s: %v", masterBlockInfo.Result.Extra, err)
+		return nil, err
 	}
 
 	block := &xclient.BlockWithTransactions{
@@ -667,9 +670,24 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, fmt.Errorf("could not get ton master block shards: %v", err)
 	}
+	shardTimeFloat, err := shards.Result.Extra.Timestamp()
+	if err != nil {
+		return nil, err
+	}
 
 	// get the transactions for each shard
 	for _, shard := range shards.Result.Shards {
+		shardId := NewBlockId(shard.Workchain, shard.Shard, shard.Seqno)
+
+		subblock := &xclient.SubBlockWithTransactions{
+			Block: *xclient.NewBlock(
+				client.Asset.GetChain().Chain,
+				uint64(shard.Seqno),
+				shardId,
+				time.Unix(int64(shardTimeFloat), 0),
+			),
+		}
+
 		shardBlockId := NewBlockId(shard.Workchain, shard.Shard, shard.Seqno)
 		logrus.WithFields(logrus.Fields{
 			"master-block-id": masterBlockId,
@@ -692,8 +710,9 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 			// TON can identify tx by multiple different hashes :(
 			// Currently using the "InMsg" hash, as this is the one that can be calculated offline (i.e., before broadcasting).
 			hash := tontx.Normalize(tx.InMsg.Hash)
-			block.TransactionIds = append(block.TransactionIds, hash)
+			subblock.TransactionIds = append(subblock.TransactionIds, hash)
 		}
+		block.SubBlocks = append(block.SubBlocks, subblock)
 	}
 
 	return block, nil
