@@ -113,7 +113,12 @@ type Block struct {
 
 type BlockWithTransactions struct {
 	Block
-	TransactionIds []string `json:"transaction_ids"`
+	TransactionIds []string                    `json:"transaction_ids,omitempty"`
+	SubBlocks      []*SubBlockWithTransactions `json:"sub_blocks,omitempty"`
+}
+type SubBlockWithTransactions struct {
+	Block
+	TransactionIds []string `json:"transaction_ids,omitempty"`
 }
 
 type Stake struct {
