@@ -11,11 +11,13 @@ network: "mainnet"
 chains:
   ACA:
     chain: ACA
-    driver: evm-legacy
+    driver: substrate
     chain_id: 787
     chain_name: Acala
     decimals: 12
+    chain_prefix: "10"
     confirmations_final: 4
+    indexer_type: rpc
     external:
       dti:
       coin_gecko:
@@ -369,10 +371,11 @@ chains:
         asset_id: injective
   KAR:
     chain: KAR
-    driver: evm-legacy
-    chain_id: 686
+    driver: substrate
+    chain_prefix: "8"
     chain_name: Karura
     decimals: 12
+    indexer_type: rpc
     external:
       coin_market_cap:
         asset_id: "10042"
