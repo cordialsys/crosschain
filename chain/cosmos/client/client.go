@@ -140,6 +140,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	account, err := client.GetAccount(ctx, from)
 	if err != nil || account == nil {
 		return txInput, fmt.Errorf("failed to get account data for %v: %v", from, err)
@@ -156,6 +157,7 @@ func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*t
 		txInput.GasLimit = gas.TokenTransferGasLimit
 	}
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	status, err := client.Ctx.Client.Status(context.Background())
 	if err != nil {
 		return txInput, fmt.Errorf("could not lookup chain_id: %v", err)
@@ -193,6 +195,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
 	txBytes, _ := tx1.Serialize()
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
 		return errors.Unknownf("%v", err)
@@ -236,6 +239,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		hashFormatted = hex.EncodeToString(hash)
 	}
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	_, err = client.rpcClient.Call(ctx, "tx", map[string]interface{}{
 		"hash":  hashFormatted,
 		"prove": false,
@@ -247,11 +251,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		return result, fmt.Errorf("could not download tx: %v", err)
 	}
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	blockResultRaw, err := client.Ctx.Client.Block(ctx, &resultRaw.Height)
 	if err != nil {
 		return result, err
 	}
 
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	abciInfo, err := client.Ctx.Client.ABCIInfo(ctx)
 	if err != nil {
 		return result, err
@@ -365,6 +371,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 // GetAccount returns a Cosmos account
 // Equivalent to client.Ctx.AccountRetriever.GetAccount(), but doesn't rely GetConfig()
 func (client *Client) GetAccount(ctx context.Context, address xc.Address) (client.Account, error) {
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	_, err := types.GetFromBech32(string(address), client.Prefix)
 	if err != nil {
 		return nil, fmt.Errorf("bad address: '%v': %v", address, err)
@@ -413,6 +420,7 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 }
 
 func (client *Client) FetchCw20Balance(ctx context.Context, address xc.Address, contract string) (xc.AmountBlockchain, error) {
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	contractAddress := contract
 
@@ -451,6 +459,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 // Cosmos chains can have multiple native assets.  This helper is necessary to query the
 // native bank module for a given asset.
 func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Address, asset xc.ITask) (xc.AmountBlockchain, error) {
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
 	_, err := types.GetFromBech32(string(address), client.Prefix)
@@ -505,6 +514,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().Decimals), nil
 	}
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	queryClient := banktypes.NewQueryClient(client.Ctx)
 	denomMetaResponse, bankErr := queryClient.DenomMetadata(ctx, &banktypes.QueryDenomMetadataRequest{
 		Denom: string(contract),
@@ -522,6 +532,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 			}
 			var tokenInfo TokenInfoResponse
 
+			_ = client.Asset.GetChain().Limiter.Wait(ctx)
 			tokenResp, err := wasmtypes.NewQueryClient(client.Ctx).SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 				QueryData: wasmtypes.RawContractMessage(input),
 				Address:   string(contract),
@@ -538,6 +549,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		}
 		// Try lookup injective peggy asset
 		{
+			_ = client.Asset.GetChain().Limiter.Wait(ctx)
 			injectiveQ := injectiveexchangetypes.NewQueryClient(client.Ctx)
 			injectiveResponse, err := injectiveQ.DenomDecimal(ctx, &injectiveexchangetypes.QueryDenomDecimalRequest{
 				Denom: string(contract),
@@ -566,6 +578,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	var cometBlock *comettypes.ResultBlock
 	var err error
 	height, ok := args.Height()

@@ -23,7 +23,6 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/time/rate"
 )
 
 // Client for Substrate
@@ -32,7 +31,6 @@ type Client struct {
 	Asset      xc.ITask
 	indexerUrl string
 	apiKey     string
-	limiter    *rate.Limiter
 }
 
 const IndexerSubQuery = "subquery"
@@ -60,10 +58,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	indexerUrl := chain.IndexerUrl
 	apiKeyRef := chain.Auth2
 	apiKey := ""
-	var limiter = rate.NewLimiter(rate.Inf, 1)
-	if chain.RateLimit > 0 {
-		limiter = rate.NewLimiter(chain.RateLimit, 1)
-	}
 
 	if chain.IndexerType != IndexerRpc {
 		help := fmt.Sprintf("The substrate driver relies on a supported substrate indexer (%v).\n"+
@@ -89,7 +83,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Asset:      cfgI,
 		indexerUrl: indexerUrl,
 		apiKey:     apiKey,
-		limiter:    limiter,
 	}, nil
 }
 
@@ -243,7 +236,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		)
 		args := &graphql.ClientArgs{
 			ApiKey:  client.apiKey,
-			Limiter: client.limiter,
+			Limiter: client.Asset.GetChain().Limiter,
 		}
 		var response graphql.SubqueryExtrinsicResponse
 		err := graphql.Post(ctx, client.indexerUrl, []byte(extrinsicQuery), &response, args)
@@ -285,7 +278,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.BlockIndex = int64(height)
 		tx.BlockTime = block.Timestamp.Unix()
 	} else if client.Asset.GetChain().IndexerType == IndexerTaostats {
-		taostatClient := taostats.NewClient(client.indexerUrl, client.apiKey, client.limiter)
+		taostatClient := taostats.NewClient(client.indexerUrl, client.apiKey, client.Asset.GetChain().Limiter)
 		ext, err := taostatClient.GetTransaction(ctx, string(txHash))
 		if err != nil {
 			return xc.LegacyTxInfo{}, err
@@ -326,7 +319,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		var args = &subscan.ClientArgs{
 			ApiKey:  client.apiKey,
-			Limiter: client.limiter,
+			Limiter: client.Asset.GetChain().Limiter,
 		}
 
 		// fmt.Println(txHash, string(reqBody))
@@ -358,7 +351,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if maxDepth <= 0 {
 			maxDepth = 100
 		}
-		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.limiter)
+		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.Asset.GetChain().Limiter)
 		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
 			return xc.LegacyTxInfo{}, err

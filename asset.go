@@ -442,9 +442,31 @@ type ChainConfig struct {
 
 	// Rate limit setting on RPC requests for client, in requests/second.
 	RateLimit rate.Limit `yaml:"rate_limit,omitempty"`
+	// Period between requests (alternative to `rate_limit`)
+	PeriodLimit time.Duration `yaml:"period_limit"`
+	// Number of requests to permit in burst
+	Burst int `yaml:"burst"`
+
+	// Rate limiter configured from `rate_limit`, `period_limit`, `burst` (requires calling .Configure after loading from config)
+	Limiter *rate.Limiter `yaml:"-" mapstructure:"-"`
 }
 
-func (chain *ChainConfig) Migrate() {
+func (chain *ChainConfig) NewClientLimiter() *rate.Limiter {
+	// default no limit
+	burst := chain.Burst
+	var limiter = rate.NewLimiter(rate.Inf, burst)
+	if chain.PeriodLimit != 0 {
+		limiter = rate.NewLimiter(rate.Every(chain.PeriodLimit), burst)
+	}
+	if chain.RateLimit != 0 {
+		limiter = rate.NewLimiter(chain.RateLimit, burst)
+	}
+	return limiter
+}
+
+func (chain *ChainConfig) Configure() {
+	// rename deprecated fields
+	chain.Limiter = chain.NewClientLimiter()
 	if chain.XDti != "" {
 		chain.External.Dti = chain.XDti
 		chain.XDti = ""
