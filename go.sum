@@ -407,8 +407,8 @@ github.com/consensys/gnark-crypto v0.14.0 h1:DDBdl4HaBtdQsq/wfMwJvZNE80sHidrK3Nf
 github.com/consensys/gnark-crypto v0.14.0/go.mod h1:CU4UijNPsHawiVGNxe9co07FkzCeWHHrb1li/n1XoU0=
 github.com/containerd/continuity v0.3.0 h1:nisirsYROK15TAMVukJOUyGJjz4BNQJBVsNvAXZJ/eg=
 github.com/containerd/continuity v0.3.0/go.mod h1:wJEAIwKOm/pBZuBd0JmeTvnLquTB1Ag8espWhkykbPM=
-github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250215004458-2e8eae1e8327 h1:qIMDw7HDBpQE8dNOBsUUy6Hp18m7yvrl3Z8lm7IQDXE=
-github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250215004458-2e8eae1e8327/go.mod h1:CEcT3hIMwYmEoBEHWrBkEQOgwdO02slYt8iUxdVeJLQ=
+github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5 h1:K/rLcFPSCGcCQEdeB+FM2el8VQopZbiK+xCYYCPUcz4=
+github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5/go.mod h1:CEcT3hIMwYmEoBEHWrBkEQOgwdO02slYt8iUxdVeJLQ=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e h1:+7Qlxur12FHCy565/p4Bz9e1WpaeNZ3dqhWAHotcspw=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e/go.mod h1:N2GL3FT9suJEPh4wRxEGD0nobzxzGIyVbzCAye7BbfA=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
