@@ -139,7 +139,8 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 	hash = strings.TrimSpace(hash)
 
 	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
-	case xc.DriverEVM, xc.DriverEVMLegacy:
+	// evm and substrate share same hash format
+	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverSubstrate:
 		prefix := "0x"
 		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix

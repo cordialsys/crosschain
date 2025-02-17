@@ -1,6 +1,7 @@
 package taostats
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
@@ -20,22 +21,35 @@ type Pagination struct {
 	PrevPage    *int `json:"prev_page"`
 }
 
+type ExtrinsicError struct {
+	ExtraInfo string `json:"extra_info"`
+	Name      string `json:"name"`
+	Pallet    string `json:"pallet"`
+}
+
+func (err *ExtrinsicError) String() string {
+	if err == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s/%s: %v", err.Pallet, err.Name, err.ExtraInfo)
+}
+
 type Extrinsic struct {
-	Timestamp     time.Time `json:"timestamp"`
-	BlockNumber   int64     `json:"block_number"`
-	Hash          string    `json:"hash"`
-	ID            string    `json:"id"`
-	Index         int       `json:"index"`
-	Version       int       `json:"version"`
-	Signature     Signature `json:"signature"`
-	SignerAddress string    `json:"signer_address"`
-	Tip           string    `json:"tip"`
-	Fee           string    `json:"fee"`
-	Success       bool      `json:"success"`
-	Error         *string   `json:"error"`
-	CallID        string    `json:"call_id"`
-	FullName      string    `json:"full_name"`
-	CallArgs      CallArgs  `json:"call_args"`
+	Timestamp     time.Time       `json:"timestamp"`
+	BlockNumber   int64           `json:"block_number"`
+	Hash          string          `json:"hash"`
+	ID            string          `json:"id"`
+	Index         int             `json:"index"`
+	Version       int             `json:"version"`
+	Signature     Signature       `json:"signature"`
+	SignerAddress string          `json:"signer_address"`
+	Tip           string          `json:"tip"`
+	Fee           string          `json:"fee"`
+	Success       bool            `json:"success"`
+	Error         *ExtrinsicError `json:"error"`
+	CallID        string          `json:"call_id"`
+	FullName      string          `json:"full_name"`
+	CallArgs      CallArgs        `json:"call_args"`
 }
 
 type Signature struct {
@@ -84,18 +98,19 @@ type GetEventsResponse struct {
 }
 
 type Event struct {
-	ID             string                 `json:"id"`
-	ExtrinsicIndex int                    `json:"extrinsic_index"`
-	Index          int                    `json:"index"`
-	Phase          string                 `json:"phase"`
-	Pallet         string                 `json:"pallet"`
-	Name           string                 `json:"name"`
-	FullName       string                 `json:"full_name"`
-	Args           map[string]interface{} `json:"args"`
-	BlockNumber    int                    `json:"block_number"`
-	ExtrinsicID    string                 `json:"extrinsic_id"`
-	CallID         *string                `json:"call_id"`
-	Timestamp      time.Time              `json:"timestamp"`
+	ID             string `json:"id"`
+	ExtrinsicIndex int    `json:"extrinsic_index"`
+	Index          int    `json:"index"`
+	Phase          string `json:"phase"`
+	Pallet         string `json:"pallet"`
+	Name           string `json:"name"`
+	FullName       string `json:"full_name"`
+	// Args           map[string]interface{} `json:"args"`
+	Args        interface{} `json:"args"`
+	BlockNumber int         `json:"block_number"`
+	ExtrinsicID string      `json:"extrinsic_id"`
+	CallID      *string     `json:"call_id"`
+	Timestamp   time.Time   `json:"timestamp"`
 }
 
 var _ api.EventI = &Event{}
@@ -108,10 +123,15 @@ func (ev *Event) GetModule() string {
 }
 
 func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
-	for key, value := range ev.Args {
-		if key == name {
-			return value, true
+	if args, ok := ev.Args.(map[string]interface{}); ok {
+		for key, value := range args {
+			if key == name {
+				return value, true
+			}
 		}
+	}
+	if args, ok := ev.Args.([]int); ok {
+		return args, true
 	}
 	return nil, false
 }

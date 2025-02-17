@@ -199,7 +199,10 @@ func ParseFee(ab xc.AddressBuilder, events []EventI) (xc.Address, xc.AmountBlock
 		}
 		amountRaw, ok := ev.GetParam("actual_fee", 1)
 		if !ok {
-			return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid amount missing")
+			amountRaw, ok = ev.GetParam("actualFee", 1)
+			if !ok {
+				return "", xc.AmountBlockchain{}, false, fmt.Errorf("TransactionPayment.TransactionFeePaid amount missing")
+			}
 		}
 		amount := xc.NewAmountBlockchainFromStr(fmt.Sprint(amountRaw))
 		return addr, amount, true, nil
