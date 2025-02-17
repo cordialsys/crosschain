@@ -85,13 +85,13 @@ var SupportedStakingEvents = []EventDescriptor{
 		Attributes: []*EventAttributeDescriptor{
 			{
 				Name:  "from",
-				Index: 0,
+				Index: 1,
 				Bind:  BindValidator,
 				Type:  EventAddress,
 			},
 			{
 				Name:  "amount",
-				Index: 1,
+				Index: 2,
 				Bind:  BindAmount,
 				Type:  EventInteger,
 			},

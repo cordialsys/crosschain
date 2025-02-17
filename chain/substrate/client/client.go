@@ -324,7 +324,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 		// fmt.Println(txHash, string(reqBody))
 		var txInfoResp subscan.SubscanExtrinsicResponse
-		subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, args)
+		err = subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, args)
+		if err != nil {
+			return xc.LegacyTxInfo{}, fmt.Errorf("failed to lookup extrinsic: %v", err)
+		}
 		if len(txInfoResp.Data.BlockHash) == 0 {
 			return xc.LegacyTxInfo{}, fmt.Errorf("not found")
 		}
@@ -332,7 +335,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		for _, ev := range txInfoResp.Data.Event {
 			_, err := ev.ParseParams()
 			if err != nil {
-				return xc.LegacyTxInfo{}, err
+				return xc.LegacyTxInfo{}, fmt.Errorf("could not parse event params: %v", err)
 			}
 			eventsI = append(eventsI, ev)
 		}
@@ -383,12 +386,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	tx.Sources, tx.Destinations, err = api.ParseEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not parse events: %v", err)
 	}
 
 	stakes, unstakes, err := api.ParseStakingEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xc.LegacyTxInfo{}, fmt.Errorf("could not staking events: %v", err)
 	}
 	for _, ev := range stakes {
 		tx.AddStakeEvent(ev)
@@ -408,7 +411,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		// check for fee from events
 		from, fee, ok, err := api.ParseFee(addressBuilder, eventsI)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xc.LegacyTxInfo{}, fmt.Errorf("could not parse fee: %v", err)
 		}
 		if ok {
 			if tx.From == "" {
