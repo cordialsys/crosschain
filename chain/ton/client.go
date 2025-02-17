@@ -304,9 +304,9 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return nil
 }
 
-func (client *Client) LookupTransferForTokenWallet(tokenWallet *address.Address) (*api.JettonTransfer, error) {
+func (client *Client) LookupTransferForTokenWallet(tokenWallet string) (*api.JettonTransfer, error) {
 	resp := &api.JettonTransfersResponse{}
-	err := client.get(fmt.Sprintf("/api/v3/jetton/transfers?jetton_wallet=%s&direction=both&limit=1&offset=0&sort=desc", tokenWallet.String()), resp)
+	err := client.get(fmt.Sprintf("/api/v3/jetton/transfers?jetton_wallet=%s&direction=both&limit=1&offset=0&sort=desc", tokenWallet), resp)
 	if err != nil {
 		return nil, fmt.Errorf("could not resolve token master address: %v", err)
 	}
@@ -331,7 +331,19 @@ func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, bo
 	if !ok {
 		memo, _ = ParseComment(jettonTfMaybe.CustomPayload)
 	}
-	tf, err := client.LookupTransferForTokenWallet(tokenWallet)
+	var tf *api.JettonTransfer
+	if tokenWallet.Type() == address.NoneAddress {
+		// not sure why sometimes the token wallet is 'none'
+		// try finding it from the addresses referenced in the address book
+		for _, entry := range book {
+			tf, err = client.LookupTransferForTokenWallet(entry.UserFriendly)
+			if err == nil {
+				break
+			}
+		}
+	} else {
+		tf, err = client.LookupTransferForTokenWallet(tokenWallet.String())
+	}
 	if err != nil {
 		return nil, nil, false, err
 	}
