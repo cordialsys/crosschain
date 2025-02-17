@@ -146,9 +146,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 
 	var trans = &rpctypes.Transaction{}
 	err := client.EthClient.Client().CallContext(ctx, trans, "eth_getTransactionByHash", txHash.String())
+	if err == nil && len(trans.Hash) == 0 {
+		err = fmt.Errorf("not found")
+	}
 	if err != nil {
 		// evm returns a simple string for not found condition
-		if strings.ToLower(err.Error()) == "not found" {
+		if strings.ToLower(err.Error()) == "not found" || len(trans.Hash) == 0 {
 			return result, errors.TransactionNotFoundf("%v", err)
 		}
 		return result, fmt.Errorf("fetching tx by hash '%s': %v", txHashStr, err)

@@ -139,7 +139,7 @@ func UnpackBlock(apiBlock *BlockResponse) (*xclient.BlockWithTransactions, error
 	block := &xclient.BlockWithTransactions{
 		Block: xclient.Block{
 			Chain:  xc.NativeAsset(apiBlock.ChainId),
-			Height: apiBlock.Height.Uint64(),
+			Height: apiBlock.Height,
 			Hash:   apiBlock.Hash,
 			Time:   t,
 		},

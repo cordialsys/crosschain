@@ -219,7 +219,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "TON",
-					Height: 21080779,
+					Height: xc.NewAmountBlockchainFromUint64(21080779),
 					Hash:   "0:2000000000000000:22624217",
 					Time:   time.Unix(1721063820, 0),
 				},
@@ -287,7 +287,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "TON",
-					Height: 21082496,
+					Height: xc.NewAmountBlockchainFromUint64(21082496),
 					Hash:   "0:2000000000000000:22626042",
 					Time:   time.Unix(1721068303, 0),
 				},

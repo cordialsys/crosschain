@@ -165,7 +165,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.DOT,
-					Height: 16097417,
+					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 					Time:   time.Unix(1687547412, 0),
 				},
@@ -230,7 +230,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.TAO,
-					Height: 3401817,
+					Height: xc.NewAmountBlockchainFromUint64(3401817),
 					Hash:   "0x9d264b95980880a3ce28024e093af7f39c434bfc2dd0472fffdcbb924a369b25",
 					Time:   time.Unix(1721179044, 0),
 				},
@@ -299,7 +299,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xclient.Block{
 					Chain:  xc.DOT,
-					Height: 16097417,
+					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 					Time:   time.Unix(1687547412, 0),
 				},

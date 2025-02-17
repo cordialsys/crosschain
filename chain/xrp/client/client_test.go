@@ -306,7 +306,7 @@ func TestFetchTxInfo(t *testing.T) {
 				XChain: "XRP",
 				Block: &xclient.Block{
 					Chain:  "XRP",
-					Height: 94494,
+					Height: xc.NewAmountBlockchainFromUint64(94494),
 					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
@@ -560,7 +560,7 @@ func TestFetchTxInfo(t *testing.T) {
 				XChain: "XRP",
 				Block: &xclient.Block{
 					Chain:  "XRP",
-					Height: 90659219,
+					Height: xc.NewAmountBlockchainFromUint64(90659219),
 					Hash:   "",
 					Time:   time.Unix(1725988340, 0),
 				},
@@ -673,7 +673,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Error:  testtypes.Ref("transaction failed: tecPATH_PARTIAL"),
 				Block: &xclient.Block{
 					Chain:  "XRP",
-					Height: 94494,
+					Height: xc.NewAmountBlockchainFromUint64(94494),
 					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
