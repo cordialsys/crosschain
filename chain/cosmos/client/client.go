@@ -221,6 +221,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		BlockIndex:    0,
 		BlockTime:     0,
 		Confirmations: 0,
+		TxID:          string(txHash),
 	}
 	if strings.HasPrefix(string(txHash), "0x") {
 		txHash = txHash[2:]
@@ -272,7 +273,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			logrus.WithError(err).Warn("could not decode full transaction")
 		} else {
-			result.TxID = string(txHash)
 			switch tf := decodedTx.(type) {
 			case types.FeeTx:
 				result.Fee = xc.AmountBlockchain(*tf.GetFee()[0].Amount.BigInt())
@@ -282,12 +282,19 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			// Set memo if set
 			if withMemo, ok := decodedTx.(types.TxWithMemo); ok {
 				memo = withMemo.GetMemo()
-
 			}
 		}
 	}
 
 	events := ParseEvents(resultRaw.TxResult.Events)
+	for _, fee := range events.Fees {
+		result.Fee = fee.Amount
+		result.FeeContract = xc.ContractAddress(fee.Contract)
+		if result.FeeContract == xc.ContractAddress(client.Asset.GetChain().ChainCoin) {
+			// same as native asset
+			result.FeeContract = ""
+		}
+	}
 	for _, ev := range events.Transfers {
 		contract := ev.Contract
 		// Assets on cosmos chains techically always have a contract value ("denom") that is not

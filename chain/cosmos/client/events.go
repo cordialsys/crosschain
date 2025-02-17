@@ -36,12 +36,29 @@ type UnbondEvent struct {
 	Contract  string
 }
 
+type Fee struct {
+	Amount xc.AmountBlockchain
+	// Contract address of asset (may be chain coin)
+	Contract string
+	// Address of who paid
+	Payer string
+}
+
 type ParsedEvents struct {
+	ParsedMsgEvents
+	ParsedTxEvents
+}
+
+type ParsedMsgEvents struct {
 	Transfers []TransferEvent
 	// Every withdraw event also has a transfer event; so far we can ignore these
 	Withdraws []WithdrawRewardsEvent
 	Delegates []DelegateEvent
 	Unbonds   []UnbondEvent
+}
+
+type ParsedTxEvents struct {
+	Fees []Fee
 }
 
 func DecodeEventAttributes(attrs []comettypes.EventAttribute) {
@@ -72,25 +89,21 @@ func getEventOrZero(events comettypes.Event, key string) string {
 }
 
 func ParseEvents(events []comettypes.Event) ParsedEvents {
-	parseEvents := ParsedEvents{}
-	var sender string
 	for _, event := range events {
-		if event.Type == "message" {
-			for _, attr := range event.Attributes {
-				if attr.Key == "sender" {
-					sender = attr.Value
-					break
-				}
-			}
-		}
-		if sender != "" {
-			break
-		}
+		// cosmos-sdk natively base64 encodes everything so we unwrap that in place
+		DecodeEventAttributes(event.Attributes)
 	}
+
+	return ParsedEvents{
+		ParsedMsgEvents: parseMsgEvents(events),
+		ParsedTxEvents:  parseTxEvents(events),
+	}
+}
+
+func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
+	parseEvents := ParsedMsgEvents{}
 	foundMsgEvent := false
 	for _, event := range events {
-		DecodeEventAttributes(event.Attributes)
-
 		if event.Type == "message" {
 			foundMsgEvent = true
 		}
@@ -192,6 +205,34 @@ func ParseEvents(events []comettypes.Event) ParsedEvents {
 				}
 			}
 			parseEvents.Transfers = append(parseEvents.Transfers, amounts...)
+		}
+
+	}
+	return parseEvents
+}
+
+func parseTxEvents(events []comettypes.Event) ParsedTxEvents {
+	parseEvents := ParsedTxEvents{}
+
+	for _, event := range events {
+
+		if event.Type == "tx" {
+			var fees []Fee
+			feeAmount, ok := getEvent(event, "fee")
+			feePayer, _ := getEvent(event, "fee_payer")
+			if ok && feeAmount != "" {
+				amountParts := strings.Split(feeAmount, ",")
+				for _, amountValue := range amountParts {
+					coin, _ := types.ParseCoinNormalized(amountValue)
+					fee := Fee{
+						Amount:   xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract: coin.Denom,
+						Payer:    feePayer,
+					}
+					fees = append(fees, fee)
+				}
+			}
+			parseEvents.Fees = fees
 		}
 	}
 	return parseEvents
