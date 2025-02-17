@@ -375,6 +375,10 @@ type Balance struct {
 	TokenAmount *Amount `json:"TokenAmount,omitempty"`
 }
 
+func (b *Balance) Valid() bool {
+	return b.XRPAmount != "" || b.TokenAmount != nil
+}
+
 // UnmarshalJSON is the custom unmarshal method for Balance
 func (b *Balance) UnmarshalJSON(data []byte) error {
 	var xrpAmount string

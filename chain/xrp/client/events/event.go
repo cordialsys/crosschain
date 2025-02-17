@@ -22,9 +22,12 @@ func NewEvent(node types.AffectedNodes) (Event, bool, error) {
 		}
 		switch node.ModifiedNode.LedgerEntryType {
 		case "AccountRoot":
-
 			return &EventModifiedAccountRoot{node.ModifiedNode}, true, nil
 		case "RippleState":
+			if !node.ModifiedNode.PreviousFields.Balance.Valid() {
+				// skip
+				return nil, false, nil
+			}
 			return &eventModifiedRippleState{node.ModifiedNode}, true, nil
 		default:
 			// skip
