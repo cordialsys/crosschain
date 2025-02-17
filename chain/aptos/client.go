@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	"github.com/cordialsys/crosschain/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,18 +23,67 @@ import (
 type Client struct {
 	Asset       xc.ITask
 	AptosClient *aptosclient.RestClient
+	interceptor *utils.HttpInterceptor
 }
 
 var _ xclient.FullClient = &Client{}
 var _ xclient.ClientWithDecimals = &Client{}
 
+// Some APTOS responses are incompatible for our current APTOS library.
+// The differences are minor, but hard to accomodate in the library.  An issue opened, but
+// since the differences are in data we don't need, we can surgically remove them here :)
+// - Transaction.signature type incompatible
+func ReplaceIncompatiableTxResponses(body []byte) []byte {
+	data := map[string]json.RawMessage{}
+
+	err := json.Unmarshal(body, &data)
+	if err != nil {
+		panic(err)
+	}
+
+	// - consider Block.transactions[].signature
+	if txs, ok := data["transactions"]; ok {
+		txsData := []map[string]json.RawMessage{}
+		err := json.Unmarshal(txs, &txsData)
+		if err != nil {
+			panic(err)
+		}
+		for _, tx := range txsData {
+			delete(tx, "signature")
+		}
+		bz, err := json.Marshal(txsData)
+		if err != nil {
+			panic(err)
+		}
+		data["transactions"] = bz
+	}
+	// - consider Transaction.signature
+	if _, ok := data["signature"]; ok {
+		delete(data, "signature")
+	}
+
+	newBody, err := json.Marshal(data)
+	if err != nil {
+		panic(err)
+	}
+
+	// return body
+	return newBody
+}
+
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
-	client, err := aptosclient.Dial(context.Background(), cfg.URL)
+	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableTxResponses)
+	httpClient := &http.Client{
+		Transport: interceptor,
+		Timeout:   30 * time.Second,
+	}
+	client, err := aptosclient.DialWithClient(context.Background(), cfg.URL, httpClient)
 	return &Client{
-		Asset:       cfgI,
-		AptosClient: client,
+		cfgI,
+		client,
+		interceptor,
 	}, err
 }
 
@@ -141,7 +191,8 @@ func parseContractAddress(typeString string) string {
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-
+	client.interceptor.Enable()
+	defer client.interceptor.Disable()
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
 		if aptosErr, ok := err.(*aptostypes.RestError); ok {
@@ -151,6 +202,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		return xc.LegacyTxInfo{}, err
 	}
+	client.interceptor.Disable()
+
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
@@ -414,6 +467,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		height = ledger.BlockHeight
 	}
 
+	client.interceptor.Enable()
+	defer client.interceptor.Disable()
 	aptosBlock, err := client.AptosClient.GetBlockByHeight(fmt.Sprint(height), true)
 	if err != nil {
 		return nil, err
