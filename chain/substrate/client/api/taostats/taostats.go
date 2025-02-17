@@ -133,6 +133,12 @@ func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
 	if args, ok := ev.Args.([]int); ok {
 		return args, true
 	}
+	if args, ok := ev.Args.([]interface{}); ok {
+		if index >= len(args) {
+			return nil, false
+		}
+		return args[index], true
+	}
 	return nil, false
 }
 

@@ -2,6 +2,7 @@ package subscan
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
@@ -51,28 +52,54 @@ type Param struct {
 }
 
 type Event struct {
-	EventIndex     string `json:"event_index"`
-	BlockNum       int64  `json:"block_num"`
-	ExtrinsicIdx   int    `json:"extrinsic_idx"`
-	ModuleID       string `json:"module_id"`
-	EventID        string `json:"event_id"`
-	Params         string `json:"params"`
-	Phase          int    `json:"phase"`
-	EventIdx       int    `json:"event_idx"`
-	ExtrinsicHash  string `json:"extrinsic_hash"`
-	Finalized      bool   `json:"finalized"`
-	BlockTimestamp int64  `json:"block_timestamp"`
+	EventIndex     string          `json:"event_index"`
+	BlockNum       int64           `json:"block_num"`
+	ExtrinsicIdx   int             `json:"extrinsic_idx"`
+	ModuleID       string          `json:"module_id"`
+	EventID        string          `json:"event_id"`
+	Params         json.RawMessage `json:"params"`
+	Phase          int             `json:"phase"`
+	EventIdx       int             `json:"event_idx"`
+	ExtrinsicHash  string          `json:"extrinsic_hash"`
+	Finalized      bool            `json:"finalized"`
+	BlockTimestamp int64           `json:"block_timestamp"`
 
 	parsedParams []*Param `json:"-"`
 }
 
 var _ api.EventI = &Event{}
 
+// these pesky events can be reported as:
+// - expected type, json encoded
+// - encoded as an embedded json string
+// - empty string
 func (ev *Event) ParseParams() ([]*Param, error) {
-	var params = []*Param{}
-	err := json.Unmarshal([]byte(ev.Params), &params)
-	ev.parsedParams = params
-	return params, err
+	var asJsonString string
+	var asParams = []*Param{}
+	if len(ev.Params) == 0 {
+		return nil, nil
+	}
+	err1 := json.Unmarshal(ev.Params, &asParams)
+	if err1 != nil {
+		// try as embedded JSON string
+		err := json.Unmarshal(ev.Params, &asJsonString)
+		if err != nil {
+			return nil, err1
+		}
+		if string(asJsonString) == "" {
+			return nil, nil
+		}
+		asParams = []*Param{}
+		err2 := json.Unmarshal([]byte(asJsonString), &asParams)
+		ev.parsedParams = asParams
+		if err2 == nil {
+			return ev.parsedParams, nil
+		}
+		return ev.parsedParams, errors.Join(err1, err2)
+	} else {
+		ev.parsedParams = asParams
+	}
+	return ev.parsedParams, nil
 }
 
 type AccountDisplay struct {
