@@ -11,6 +11,7 @@ import (
 	comettypes "github.com/cometbft/cometbft/rpc/core/types"
 	jsonrpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/client/localtypes"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
@@ -230,7 +231,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		return result, err
 	}
 
-	resultRaw := new(comettypes.ResultTx)
+	resultRaw := new(localtypes.ResultTx)
 
 	var hashFormatted interface{} = hash
 	switch client.Asset.GetChain().Chain {
