@@ -297,7 +297,7 @@ require (
 )
 
 replace (
-	github.com/coming-chat/go-sui/v2 => github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250215004458-2e8eae1e8327
+	github.com/coming-chat/go-sui/v2 => github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5
 	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-rc.1
 	github.com/okx/go-wallet-sdk/coins/tron => github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e
 )
