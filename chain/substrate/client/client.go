@@ -303,7 +303,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		tx.BlockIndex = ext.BlockNumber
 		tx.BlockTime = ext.Timestamp.Unix()
 		if ext.Error != nil {
-			tx.Error = *ext.Error
+			tx.Error = ext.Error.String()
 		}
 
 	} else if client.Asset.GetChain().IndexerType == IndexerSubScan {
