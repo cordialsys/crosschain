@@ -2,6 +2,7 @@ package events
 
 import (
 	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	"github.com/shopspring/decimal"
@@ -22,7 +23,7 @@ func (mnw *eventModifiedRippleState) GetAddress(txResponse *types.TransactionRes
 
 	if isSource {
 		if mnw.node.FinalFields.LowLimit == nil {
-			return "", fmt.Errorf("empty HighLimit in FinalFields")
+			return "", fmt.Errorf("empty LowLimit in FinalFields")
 		}
 
 		return xc.Address(mnw.node.FinalFields.LowLimit.Issuer), nil
