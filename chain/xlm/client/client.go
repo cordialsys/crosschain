@@ -244,7 +244,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 
 	var envelope xdr.TransactionEnvelope
 	if err := envelope.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %e", err)
+		return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %v", err)
 	}
 
 	// Populate movements depending on operation type
