@@ -615,7 +615,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "ETH",
-					Height: 1960505,
+					Height: xc.NewAmountBlockchainFromUint64(1960505),
 					Hash:   "0xb2cf3002b615c6213c4e6241a8a14afa9087a84db1f035812f2a54807851b934",
 					Time:   time.Unix(1721411604, 0),
 				},
@@ -687,7 +687,7 @@ func TestFetchTxInfo(t *testing.T) {
 				Final:  true,
 				Block: &xcclient.Block{
 					Chain:  "ETH",
-					Height: 1988490,
+					Height: xc.NewAmountBlockchainFromUint64(1988490),
 					Hash:   "0x626eac5c41b2cf1c5ec9bdc3edc0d939e46eea3fb4dea387c0f3f0bd87ad9963",
 					Time:   testtypes.FromTimeStamp("2024-07-23T18:52:24-04:00"),
 				},

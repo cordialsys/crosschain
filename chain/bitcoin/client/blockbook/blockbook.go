@@ -426,12 +426,12 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 	}
 
 	block := &xclient.BlockWithTransactions{
-		Block: xclient.Block{
-			Chain:  client.Asset.GetChain().Chain,
-			Height: uint64(blockResponse.Height),
-			Hash:   blockResponse.Hash,
-			Time:   time.Unix(blockResponse.Time, 0),
-		},
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			uint64(blockResponse.Height),
+			blockResponse.Hash,
+			time.Unix(blockResponse.Time, 0),
+		),
 	}
 	for _, tx := range blockResponse.Txs {
 		block.TransactionIds = append(block.TransactionIds, tx.TxID)

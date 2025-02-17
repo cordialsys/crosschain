@@ -104,7 +104,7 @@ type Movement struct {
 type Block struct {
 	Chain xc.NativeAsset `json:"chain"`
 	// required: set the blockheight of the transaction
-	Height uint64 `json:"height"`
+	Height xc.AmountBlockchain `json:"height"`
 	// required: set the hash of the block of the transaction
 	Hash string `json:"hash"`
 	// required-if-supported: set the time of the block of the transaction
@@ -189,7 +189,7 @@ type TxInfo struct {
 func NewBlock(chain xc.NativeAsset, height uint64, hash string, time time.Time) *Block {
 	return &Block{
 		chain,
-		height,
+		xc.NewAmountBlockchainFromUint64(height),
 		hash,
 		time,
 	}
@@ -220,7 +220,7 @@ func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmation
 	state := Succeeded
 	if err != nil {
 		state = Failed
-	} else if block.Height == 0 {
+	} else if block.Height.Uint64() == 0 {
 		state = Mining
 	}
 

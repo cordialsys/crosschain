@@ -474,12 +474,12 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, err
 	}
 	block := &xclient.BlockWithTransactions{
-		Block: xclient.Block{
-			Height: aptosBlock.BlockHeight,
-			Chain:  client.Asset.GetChain().Chain,
-			Hash:   aptosBlock.BlockHash,
-			Time:   time.Unix(int64(aptosBlock.BlockTimestamp/1000/1000), 0),
-		},
+		Block: *xclient.NewBlock(
+			client.Asset.GetChain().Chain,
+			aptosBlock.BlockHeight,
+			aptosBlock.BlockHash,
+			time.Unix(int64(aptosBlock.BlockTimestamp/1000/1000), 0),
+		),
 	}
 	for _, tx := range aptosBlock.Transactions {
 		block.TransactionIds = append(block.TransactionIds, tx.Hash)

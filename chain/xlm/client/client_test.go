@@ -807,7 +807,7 @@ func TestFetchTxInfo(t *testing.T) {
 				XChain: xc.NativeAsset("XLM"),
 				Block: &xclient.Block{
 					Chain:  xc.NativeAsset("XLM"),
-					Height: 514624,
+					Height: xc.NewAmountBlockchainFromUint64(514624),
 					Hash:   "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
 					Time:   MustParseTime("2025-01-09T12:46:09Z"),
 				},
