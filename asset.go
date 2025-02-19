@@ -56,6 +56,7 @@ const (
 	KSM    = NativeAsset("KSM")    // Kusama
 	XDC    = NativeAsset("XDC")    // XinFin
 	MATIC  = NativeAsset("MATIC")  // Polygon
+	MON    = NativeAsset("MON")    // MONAD
 	NOBLE  = NativeAsset("NOBLE")  // Noble Chain
 	OAS    = NativeAsset("OAS")    // Oasys (not Oasis!)
 	OptETH = NativeAsset("OptETH") // Optimism
@@ -104,6 +105,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	KSM,
 	XDC,
 	MATIC,
+	MON,
 	OAS,
 	OptETH,
 	EmROSE,
@@ -222,7 +224,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM:
+	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON:
 		return DriverEVM
 	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

@@ -482,6 +482,16 @@ chains:
         asset_id: polygon-pos
       indexing_co:
         chain_id: polygon
+  MON:
+    chain: MON
+    driver: evm
+    chain_name: Monad
+    chain_gas_multiplier: 4
+    chain_gas_tip: 20
+    decimals: 18
+    chain_max_gas_price: 120
+    confirmations_final: 250
+
   NOBLE:
     chain: NOBLE
     driver: cosmos
