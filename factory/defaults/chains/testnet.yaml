@@ -183,6 +183,12 @@ chains:
     chain_id: 80001
     chain_name: Polygon (Mumbai)
     decimals: 18
+  MON:
+    chain: MON
+    driver: evm
+    chain_id: 10143
+    chain_name: Monad
+    decimals: 18
   EmROSE:
     chain: EmROSE
     driver: evm-legacy
