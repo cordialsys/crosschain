@@ -319,6 +319,18 @@ chains:
         chain_id: "94"
       coin_gecko:
         asset_id: oasis
+  FIL:
+    chain: FIL
+    driver: filecoin
+    chain_name: Filecoin
+    decimals: 18
+    confirmations_final: 10
+    external:
+      dti: K8B662X5Z
+      coin_market_cap:
+        asset_id: "23149"
+      coin_gecko:
+        asset_id: filecoin
   FTM:
     chain: FTM
     driver: evm-legacy
@@ -533,6 +545,25 @@ chains:
         asset_id: "23149"
       coin_gecko:
         asset_id: sei-network
+  SeiEVM:
+    chain: SeiEVM
+    driver: evm
+    chain_id: 1329
+    chain_id_str: pacific-1
+    chain_name: Sei
+    chain_prefix: sei
+    chain_coin: sei
+    chain_coin_hd_path: 118
+    chain_gas_price_default: 0.1
+    confirmations_final: 15
+    decimals: 18
+    external:
+      dti: P4JBC8R50
+      coin_market_cap:
+        chain_id: "188"
+        asset_id: "23149"
+      coin_gecko:
+        asset_id: sei-network
   SOL:
     chain: SOL
     driver: solana
@@ -690,22 +721,3 @@ chains:
         asset_id: stellar
       indexing_co:
         chain_id: stellar
-  SeiEVM:
-    chain: SeiEVM
-    driver: evm
-    chain_id: 1329
-    chain_id_str: pacific-1
-    chain_name: Sei
-    chain_prefix: sei
-    chain_coin: sei
-    chain_coin_hd_path: 118
-    chain_gas_price_default: 0.1
-    confirmations_final: 15
-    decimals: 18
-    external:
-      dti: P4JBC8R50
-      coin_market_cap:
-        chain_id: "188"
-        asset_id: "23149"
-      coin_gecko:
-        asset_id: sei-network

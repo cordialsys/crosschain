@@ -45,6 +45,7 @@ const (
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
+	FIL    = NativeAsset("FIL")    // Filecoin
 	FTM    = NativeAsset("FTM")    // Fantom
 	HASH   = NativeAsset("HASH")   // Provenance
 	INJ    = NativeAsset("INJ")    // Injective
@@ -94,6 +95,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ETC,
 	ETH,
 	ETHW,
+	FIL,
 	FTM,
 	INJ,
 	HASH,
@@ -135,6 +137,7 @@ const (
 	DriverCosmosEvmos   = Driver("evmos")
 	DriverEVM           = Driver("evm")
 	DriverEVMLegacy     = Driver("evm-legacy")
+	DriverFilecoin      = Driver("filecoin")
 	DriverSubstrate     = Driver("substrate")
 	DriverSolana        = Driver("solana")
 	DriverSui           = Driver("sui")
@@ -155,6 +158,7 @@ var SupportedDrivers = []Driver{
 	DriverCosmosEvmos,
 	DriverEVM,
 	DriverEVMLegacy,
+	DriverFilecoin,
 	DriverSubstrate,
 	DriverSolana,
 	DriverSui,
@@ -244,13 +248,15 @@ func (native NativeAsset) Driver() Driver {
 		return DriverXrp
 	case XLM:
 		return DriverXlm
+	case FIL:
+		return DriverFilecoin
 	}
 	return ""
 }
 
 func (driver Driver) SignatureAlgorithm() SignatureType {
 	switch driver {
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp:
+	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin:
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
@@ -272,7 +278,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
-	case DriverEVM, DriverEVMLegacy, DriverTron:
+	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate:
 		return Raw
@@ -407,7 +413,8 @@ type ChainConfig struct {
 	// Optional settings around the gas, if needed.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
 	ChainGasMultiplier   float64 `yaml:"chain_gas_multiplier,omitempty"`
-	ChainGasTip          uint64  `yaml:"chain_gas_tip,omitempty"`
+	// The gas tip is the amount of gas to pay above the gas price.
+	ChainGasTip uint64 `yaml:"chain_gas_tip,omitempty"`
 	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
 	// This should be in the blockchain amount.
 	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
