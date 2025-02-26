@@ -17,6 +17,11 @@ type AmountBlockchain big.Int
 // AmountHumanReadable is a decimal amount as a human expects it for readability.
 type AmountHumanReadable decimal.Decimal
 
+func (amount AmountBlockchain) Bytes() []byte {
+	bigInt := big.Int(amount)
+	return bigInt.Bytes()
+}
+
 func (amount AmountBlockchain) String() string {
 	bigInt := big.Int(amount)
 	return bigInt.String()

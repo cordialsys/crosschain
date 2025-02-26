@@ -1055,5 +1055,4 @@ func TestFetchBalance(t *testing.T) {
 			require.Equal(t, vector.expected, balance)
 		}
 	}
-
 }

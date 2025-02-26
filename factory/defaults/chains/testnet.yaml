@@ -120,6 +120,12 @@ chains:
     external:
       indexing_co:
         chain_id: eth_holesky
+  FIL:
+    chain: FIL
+    driver: filecoin
+    chain_name: Filecoin
+    decimals: 18
+    confirmations_final: 1
   FTM:
     chain: FTM
     driver: evm-legacy

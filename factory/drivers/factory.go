@@ -24,6 +24,10 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/client/staking/figment"
 	"github.com/cordialsys/crosschain/chain/evm/client/staking/kiln"
 	evm_legacy "github.com/cordialsys/crosschain/chain/evm_legacy"
+	fil "github.com/cordialsys/crosschain/chain/filecoin"
+	filaddress "github.com/cordialsys/crosschain/chain/filecoin/address"
+	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
+	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
 	"github.com/cordialsys/crosschain/chain/solana"
 	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
 	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
@@ -54,6 +58,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 		return evmclient.NewClient(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewClient(cfg)
+	case DriverFilecoin:
+		return filclient.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
@@ -144,6 +150,8 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 		return xrpbuilder.NewTxBuilder(cfg)
 	case DriverXlm:
 		return xlmbuilder.NewTxBuilder(cfg)
+	case DriverFilecoin:
+		return filbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
 }
@@ -159,6 +167,8 @@ func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBu
 		return evmaddress.NewAddressBuilder(cfg)
 	case DriverEVMLegacy:
 		return evm_legacy.NewAddressBuilder(cfg)
+	case DriverFilecoin:
+		return filaddress.NewAddressBuilder(cfg, options...)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmosaddress.NewAddressBuilder(cfg)
 	case DriverSolana:
@@ -194,6 +204,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return evm.CheckError(err)
 	case DriverEVMLegacy:
 		return evm.CheckError(err)
+	case DriverFilecoin:
+		return fil.CheckError(err)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmos.CheckError(err)
 	case DriverSolana:

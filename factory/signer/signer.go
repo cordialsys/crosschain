@@ -153,6 +153,7 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		}
 		return xc.TxSignature(signatureRaw), nil
 	case xc.K256Keccak, xc.K256Sha256:
+		// return xc.TxSignature(s.privateKey), nil
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))
 		if err != nil {
 			return []byte{}, err
