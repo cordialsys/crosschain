@@ -271,9 +271,9 @@ func (s *CrosschainTestSuite) TestSorted() {
 		}
 		chains := cfg.GetChains()
 		require.Len(chains, 3)
-		require.Equal("AAA", string(chains[0].ID()))
-		require.Equal("BBB", string(chains[1].ID()))
-		require.Equal("CCC", string(chains[2].ID()))
+		require.EqualValues("AAA", string(chains[0].Chain))
+		require.EqualValues("BBB", string(chains[1].Chain))
+		require.EqualValues("CCC", string(chains[2].Chain))
 
 	}
 }

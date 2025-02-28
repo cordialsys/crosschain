@@ -288,10 +288,6 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	return ""
 }
 
-// AssetID is an internal identifier for each asset (legacy/deprecated)
-// Examples: ETH, USDC, USDC.SOL - see tests for details
-type AssetID string
-
 // Network selector is used by crosschain client to select which network of a blockchain to select.
 type NetworkSelector string
 
@@ -511,13 +507,9 @@ var _ ITask = &TokenAssetConfig{}
 func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
-		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.ID(), c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
+		"NativeAssetConfig(asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
+		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
 	)
-}
-
-func (asset *ChainConfig) ID() AssetID {
-	return GetAssetIDFromAsset("", asset.Chain)
 }
 
 func (asset *ChainConfig) GetDecimals() int32 {
@@ -559,22 +551,15 @@ func (c *TokenAssetConfig) String() string {
 		net = native.Net
 	}
 	return fmt.Sprintf(
-		"TokenAssetConfig(id=%s asset=%s chain=%s net=%s decimals=%d contract=%s)",
-		c.ID(), c.Asset, c.Chain, net, c.Decimals, c.Contract,
+		"TokenAssetConfig(asset=%s chain=%s net=%s decimals=%d contract=%s)",
+		c.Asset, c.Chain, net, c.Decimals, c.Contract,
 	)
-}
-
-func (asset *TokenAssetConfig) ID() AssetID {
-	return GetAssetIDFromAsset(asset.Asset, asset.Chain)
 }
 
 func (asset *TokenAssetConfig) GetChain() *ChainConfig {
 	return asset.ChainConfig
 }
 
-//	func (asset *TokenAssetConfig) GetDriver() Driver {
-//		return Driver(asset.GetNativeAsset().Driver)
-//	}
 func (asset *TokenAssetConfig) GetDecimals() int32 {
 	return asset.Decimals
 }
@@ -585,20 +570,6 @@ func (token *TokenAssetConfig) GetContract() string {
 func (token *TokenAssetConfig) GetAssetSymbol() string {
 	return token.Asset
 }
-
-// func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {
-// 	asset.AssetConfig.Asset = asset.Asset
-// 	asset.AssetConfig.Chain = asset.Chain
-// 	asset.AssetConfig.Net = asset.Net
-// 	asset.AssetConfig.Decimals = asset.Decimals
-// 	asset.AssetConfig.Contract = asset.Contract
-// 	asset.AssetConfig.Type = asset.Type
-// 	return &asset.AssetConfig
-// }
-
-// func (asset *TokenAssetConfig) GetTask() *TaskConfig {
-// 	return nil
-// }
 
 func LegacyParseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
 	if asset == "" && nativeAsset == "" {
@@ -626,29 +597,4 @@ func LegacyParseAssetAndNativeAsset(asset string, nativeAsset string) (string, N
 	}
 
 	return asset, NativeAsset(nativeAsset)
-}
-
-// GetAssetIDFromAsset return the canonical AssetID given two input strings asset, nativeAsset.
-// Input can come from user input.
-// Examples:
-// - GetAssetIDFromAsset("USDC", "") -> "USDC.ETH"
-// - GetAssetIDFromAsset("USDC", "ETH") -> "USDC.ETH"
-// - GetAssetIDFromAsset("USDC", "SOL") -> "USDC.SOL"
-// - GetAssetIDFromAsset("USDC.SOL", "") -> "USDC.SOL"
-// See tests for more examples.
-func GetAssetIDFromAsset(asset string, nativeAsset NativeAsset) AssetID {
-	// id is SYMBOL for ERC20 and SYMBOL.CHAIN for others
-	// e.g. BTC, ETH, USDC, SOL, USDC.SOL
-	asset, nativeAsset = LegacyParseAssetAndNativeAsset(asset, string(nativeAsset))
-	validNative := NativeAsset(asset).IsValid()
-
-	// native asset, e.g. BTC, ETH, SOL
-	if asset == string(nativeAsset) {
-		return AssetID(asset)
-	}
-	if nativeAsset == "ETH" && !validNative {
-		return AssetID(asset + ".ETH")
-	}
-	// token, e.g. USDC, USDC.SOL
-	return AssetID(asset + "." + string(nativeAsset))
 }

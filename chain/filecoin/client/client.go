@@ -251,7 +251,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		XChain:        chain,
 		Hash:          sHash,
 		Block:         block,
-		Confirmations: chainHeadHeight - block.Height,
+		Confirmations: chainHeadHeight - block.Height.Uint64(),
 	}
 
 	if msgState.Receipt.ExitCode != 0 {

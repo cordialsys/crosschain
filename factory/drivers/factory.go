@@ -83,7 +83,7 @@ func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
 	case DriverXlm:
 		return xlmclient.NewClient(cfg)
 	}
-	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.ID()))
+	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
 
 func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
@@ -153,7 +153,7 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	case DriverFilecoin:
 		return filbuilder.NewTxBuilder(cfg)
 	}
-	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.ID()))
+	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.GetChain().Chain))
 }
 
 func NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
@@ -192,7 +192,7 @@ func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBu
 	case DriverXlm:
 		return xlmaddress.NewAddressBuilder(cfg)
 	}
-	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.ID()))
+	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.GetChain().Chain))
 }
 
 func CheckError(driver Driver, err error) errors.Status {

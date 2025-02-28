@@ -150,35 +150,3 @@ func (s *CrosschainTestSuite) TestLegacyParseAssetAndNativeAssetEdgeCases() {
 	require.Equal("USDC.ETH.SOL", asset)
 	require.Equal(ETH, native)
 }
-
-func (s *CrosschainTestSuite) TestGetAssetIDFromAsset() {
-	require := s.Require()
-
-	require.Equal(AssetID(""), GetAssetIDFromAsset("", ""))
-
-	require.Equal(AssetID("SOL"), GetAssetIDFromAsset("", "SOL"))
-	require.Equal(AssetID("SOL"), GetAssetIDFromAsset("SOL", ""))
-	require.Equal(AssetID("SOL"), GetAssetIDFromAsset("SOL", "SOL"))
-	require.Equal(AssetID("SOL"), GetAssetIDFromAsset("SOL.SOL", ""))
-
-	require.Equal(AssetID("ETH"), GetAssetIDFromAsset("", "ETH"))
-	require.Equal(AssetID("ETH"), GetAssetIDFromAsset("ETH", ""))
-	require.Equal(AssetID("ETH"), GetAssetIDFromAsset("ETH", "ETH"))
-	require.Equal(AssetID("ETH"), GetAssetIDFromAsset("ETH.ETH", ""))
-
-	require.Equal(AssetID("USDC.ETH"), GetAssetIDFromAsset("USDC", ""))
-	require.Equal(AssetID("USDC.ETH"), GetAssetIDFromAsset("USDC", "ETH"))
-	require.Equal(AssetID("USDC.ETH"), GetAssetIDFromAsset("USDC.ETH", ""))
-	require.Equal(AssetID("USDC.SOL"), GetAssetIDFromAsset("USDC", "SOL"))
-	require.Equal(AssetID("USDC.SOL"), GetAssetIDFromAsset("USDC.SOL", ""))
-
-	require.Equal(AssetID("ArbETH"), GetAssetIDFromAsset("", "ArbETH"))
-	require.Equal(AssetID("WETH.ArbETH"), GetAssetIDFromAsset("WETH", "ArbETH"))
-	require.Equal(AssetID("WETH.ArbETH"), GetAssetIDFromAsset("WETH.ArbETH", ""))
-
-	require.Equal(AssetID("INJ"), GetAssetIDFromAsset("INJ", "INJ"))
-	require.Equal(AssetID("INJ.ETH"), GetAssetIDFromAsset("INJ", "ETH"))
-	require.Equal(AssetID("INJ.SOL"), GetAssetIDFromAsset("INJ", "SOL"))
-
-	require.Equal(AssetID("TEST.ETH"), GetAssetIDFromAsset("TEST", ""))
-}
