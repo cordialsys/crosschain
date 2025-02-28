@@ -9,17 +9,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type HasID interface {
-	ID() xc.AssetID
-}
-
 // right now xc / viper will always lowercase the keys in maps.
 // whereas unmarshaling "natively" will preserve case.
 // So we need to do an extra step here to lowercase all of the keys
-func lowercaseMap[T HasID](list map[string]T) map[string]T {
-	toMap := map[string]T{}
+func lowercaseMap(list map[string]*xc.ChainConfig) map[string]*xc.ChainConfig {
+	toMap := map[string]*xc.ChainConfig{}
 	for _, item := range list {
-		asset := strings.ToLower(string(item.ID()))
+		asset := strings.ToLower(string(item.Chain))
 		if _, ok := toMap[asset]; ok {
 			logrus.Warnf("multiple entries for %s (%T)", asset, item)
 		}
