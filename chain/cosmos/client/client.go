@@ -483,7 +483,7 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	}
 
 	if denom == "" {
-		return zero, fmt.Errorf("failed to account balance: no denom on asset %s", asset.ID())
+		return zero, fmt.Errorf("failed to account balance: no denom on asset")
 	}
 
 	queryClient := banktypes.NewQueryClient(client.Ctx)
