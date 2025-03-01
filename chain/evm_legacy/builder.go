@@ -18,8 +18,6 @@ var DefaultMaxTipCapGwei uint64 = 5
 type TxBuilder evmbuilder.TxBuilder
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
-var _ xc.TxTokenBuilder = &TxBuilder{}
-var _ xc.TxXTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new EVM TxBuilder
 func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
@@ -80,20 +78,5 @@ func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Addre
 }
 
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	// type cast back to evm input, which is expected by the evm builder
-	inputEvm := (*evminput.TxInput)(input.(*TxInput))
-	return evmbuilder.TxBuilder(txBuilder).NewTransfer(from, to, amount, inputEvm)
-}
-
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	inputEvm := (*evminput.TxInput)(input.(*TxInput))
-	return evmbuilder.TxBuilder(txBuilder).NewNativeTransfer(from, to, amount, inputEvm)
-}
-
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	inputEvm := (*evminput.TxInput)(input.(*TxInput))
-	return evmbuilder.TxBuilder(txBuilder).NewTokenTransfer(from, to, amount, inputEvm)
+	return evmbuilder.TxBuilder(txBuilder).Transfer(args, input)
 }

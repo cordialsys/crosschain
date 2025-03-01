@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 )
 
@@ -26,7 +28,7 @@ func (args *TransferArgs) GetPriority() (xc.GasFeePriority, bool) { return args.
 func (args *TransferArgs) GetPublicKey() ([]byte, bool)           { return args.options.GetPublicKey() }
 
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
-	builderOptions := builderOptions{}
+	builderOptions := newBuilderOptions()
 	args := TransferArgs{
 		builderOptions,
 		from,
@@ -39,5 +41,9 @@ func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain,
 			return args, err
 		}
 	}
+	if len(args.options.maxFees) == 0 {
+		return args, fmt.Errorf("max_fee is a required argument for transactions")
+	}
+
 	return args, nil
 }

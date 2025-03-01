@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -135,7 +136,11 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			input, err := client.FetchLegacyTxInput(context.Background(), from, "")
+			tfArgs, err := builder.NewTransferArgs(from, "", amount)
+			if err != nil {
+				return err
+			}
+			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return err
 			}

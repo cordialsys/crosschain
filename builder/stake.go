@@ -43,6 +43,9 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockch
 			return args, err
 		}
 	}
+	if len(args.options.maxFees) == 0 {
+		return args, fmt.Errorf("max_fee is a required argument for transactions")
+	}
 
 	// Chain specific validation of arguments
 	switch chain.Driver() {

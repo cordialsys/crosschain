@@ -68,6 +68,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	// TODO validate max fee
 
 	var local_input *tx_input.TxInput
 	var ok bool

@@ -40,8 +40,7 @@ const IndexerRpc = "rpc"
 
 var SupportedIndexers = []string{IndexerSubQuery, IndexerSubScan, IndexerTaostats}
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 
 // NewClient returns a new Substrate Client

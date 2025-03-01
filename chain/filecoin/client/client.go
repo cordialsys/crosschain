@@ -31,7 +31,7 @@ type Client struct {
 
 const DefaultGasLimit = 15_000_000
 
-var _ xclient.FullClient = &Client{}
+var _ xclient.Client = &Client{}
 var DefaultMaxGasPrice = xc.NewAmountBlockchainFromUint64(10_000_000)
 
 // NewClient returns a new Filecoin Client

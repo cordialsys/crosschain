@@ -52,7 +52,7 @@ import (
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
-func NewClient(cfg ITask, driver Driver) (xclient.FullClient, error) {
+func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 	switch driver {
 	case DriverEVM:
 		return evmclient.NewClient(cfg)

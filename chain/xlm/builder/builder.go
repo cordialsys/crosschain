@@ -3,20 +3,19 @@ package builder
 import (
 	"fmt"
 
-	"github.com/cordialsys/crosschain/chain/xlm"
-	"github.com/stellar/go/xdr"
-	common "github.com/cordialsys/crosschain/chain/xlm/common"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/cordialsys/crosschain/chain/xlm"
+	common "github.com/cordialsys/crosschain/chain/xlm/common"
 	xlmtx "github.com/cordialsys/crosschain/chain/xlm/tx"
+	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/stellar/go/xdr"
 )
 
 type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 type TxInput = xlminput.TxInput
@@ -40,6 +39,7 @@ func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.A
 	if err != nil {
 		return &xlmtx.Tx{}, fmt.Errorf("invalid `from` address: %w", err)
 	}
+	// TODO max fee
 
 	preconditions := xlm.Preconditions{
 		TimeBounds: xlm.NewTimeout(txInput.TransactionActiveTime),
@@ -59,6 +59,9 @@ func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.A
 	if txInput.Memo != "" {
 		var xdrMemo xdr.Memo
 		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, txInput.Memo)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to create memo: %w", err)
+		}
 		txe.Tx.Memo = xdrMemo
 	}
 

@@ -9,6 +9,7 @@ chains:
     net: devnet
     chain_name: Aptos (Devnet)
     decimals: 8
+    max_fee: "100.0"
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -18,17 +19,20 @@ chains:
     chain_coin: uatom
     chain_coin_hd_path: 118
     decimals: 6
+    max_fee: "100.0"
   AVAX:
     chain: AVAX
     driver: evm
     chain_id: 43113
     chain_name: Avalanche (Fuji Testnet)
     decimals: 18
+    max_fee: "100.0"
   BERA:
     chain: BERA
     driver: evm
     chain_name: Berachain
     decimals: 18
+    max_fee: "100.0"
     external:
       indexing_co:
         chain_id: berachain_bartio
@@ -37,24 +41,28 @@ chains:
     driver: bitcoin-cash
     chain_name: Bitcoin Cash (Testnet)
     decimals: 8
+    max_fee: "100.0"
   BNB:
     chain: BNB
     driver: evm-legacy
     chain_id: 97
     chain_name: Binance Smart Chain (Testnet)
     decimals: 18
+    max_fee: "100.0"
   BTC:
     chain: BTC
     driver: bitcoin
     provider: blockbook
     chain_name: Bitcoin (Testnet)
     decimals: 8
+    max_fee: "100.0"
   CELO:
     chain: CELO
     driver: evm
     chain_id: 44787
     chain_name: Celo (Testnet)
     decimals: 18
+    max_fee: "100.0"
   CHZ:
     chain: CHZ
     driver: "evm-legacy"
@@ -64,23 +72,27 @@ chains:
     no_gas_fees: true
     disabled: true
     decimals: 18
+    max_fee: "100.0"
   CHZ2:
     chain: CHZ2
     driver: evm-legacy
     chain_id: 88882
     chain_name: Chiliz 2.0 (testnet)
     decimals: 18
+    max_fee: "100.0"
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
     chain_name: Dogecoin (Testnet)
     decimals: 8
+    max_fee: "100.0"
     # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
     chain_max_gas_price: 50000000
   DOT:
     chain: DOT
     driver: substrate
     decimals: 12 # different decimals from mainnet
+    max_fee: "100.0"
     chain_id: 1001
     chain_name: Rococo
     chain_prefix: "42"
@@ -91,12 +103,14 @@ chains:
     driver: bitcoin-legacy
     chain_name: Litecoin (Testnet)
     decimals: 8
+    max_fee: "100.0"
   ETC:
     chain: ETC
     driver: evm-legacy
     chain_id: 63
     chain_name: Ethereum Classic (Mordor)
     decimals: 18
+    max_fee: "100.0"
   ENJ:
     chain: ENJ
     driver: substrate
@@ -104,6 +118,7 @@ chains:
     indexer_type: subscan
     chain_name: Enjin Canary Matrix
     decimals: 18
+    max_fee: "100.0"
     chain_prefix: "9030"
 
   ETH:
@@ -111,6 +126,7 @@ chains:
     driver: evm
     chain_name: Ethereum (Holesky)
     decimals: 18
+    max_fee: "100.0"
     staking:
       # KILN Batch deposit contract
       stake_contract: "0x0866af1D55bb1e9c2f63b1977926276F8d51b806"
@@ -125,6 +141,7 @@ chains:
     driver: filecoin
     chain_name: Filecoin
     decimals: 18
+    max_fee: "100.0"
     confirmations_final: 1
   FTM:
     chain: FTM
@@ -132,6 +149,7 @@ chains:
     chain_id: 4002
     chain_name: Fantom (Testnet)
     decimals: 18
+    max_fee: "100.0"
   KAR:
     chain: KAR
     driver: substrate
@@ -139,6 +157,7 @@ chains:
     net: testnet
     chain_name: Karura (Testnet)
     decimals: 12
+    max_fee: "100.0"
   KLAY:
     chain: KLAY
     driver: "evm-legacy"
@@ -148,10 +167,12 @@ chains:
     # KLAY wants fixed gas prices (no change/multiplier)
     chain_gas_multiplier: 1
     decimals: 18
+    max_fee: "100.0"
   KSM:
     chain: KSM
     driver: substrate
     decimals: 9
+    max_fee: "100.0"
     chain_name: Bittensor
     chain_prefix: "42"
     disabled: true
@@ -165,6 +186,7 @@ chains:
     chain_coin_hd_path: 60
     chain_gas_price_default: 5e+08
     decimals: 18
+    max_fee: "100.0"
   LUNA:
     chain: LUNA
     driver: cosmos
@@ -174,6 +196,7 @@ chains:
     chain_coin: uluna
     chain_coin_hd_path: 330
     decimals: 6
+    max_fee: "100.0"
   LUNC:
     chain: LUNC
     driver: cosmos
@@ -183,24 +206,28 @@ chains:
     chain_coin: uluna
     chain_coin_hd_path: 330
     decimals: 6
+    max_fee: "100000000000.0"
   MATIC:
     chain: MATIC
     driver: evm
     chain_id: 80001
     chain_name: Polygon (Mumbai)
     decimals: 18
+    max_fee: "100.0"
   MON:
     chain: MON
     driver: evm
     chain_id: 10143
     chain_name: Monad
     decimals: 18
+    max_fee: "100.0"
   EmROSE:
     chain: EmROSE
     driver: evm-legacy
     chain_id: 42261
     chain_name: Oasis Emerald (Testnet)
     decimals: 18
+    max_fee: "100.0"
   SEI:
     chain: SEI
     driver: cosmos
@@ -211,6 +238,7 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
+    max_fee: "100.0"
   TIA:
     chain: TIA
     driver: cosmos
@@ -221,12 +249,14 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 6
+    max_fee: "100.0"
   SOL:
     chain: SOL
     driver: solana
     net: devnet
     chain_name: Solana (Devnet)
     decimals: 9
+    max_fee: "100.0"
     chain_gas_multiplier: 1.5
   SUI:
     chain: SUI
@@ -235,6 +265,7 @@ chains:
     chain_coin: "0x2::sui::SUI"
     chain_name: Sui (Devnet)
     decimals: 9
+    max_fee: "100.0"
   XPLA:
     chain: XPLA
     driver: cosmos
@@ -244,6 +275,7 @@ chains:
     chain_coin: axpla
     chain_coin_hd_path: 60
     decimals: 18
+    max_fee: "100.0"
   HASH:
     chain: HASH
     driver: cosmos
@@ -253,6 +285,7 @@ chains:
     chain_coin: nhash
     chain_coin_hd_path: 1
     decimals: 9
+    max_fee: "100.0"
     chain_gas_multiplier: 10.0
     # translates to roughly max 50 HASH in gas per tx
     chain_max_gas_price: 125000.0
@@ -260,6 +293,7 @@ chains:
     chain: TAO
     driver: substrate
     decimals: 9
+    max_fee: "100.0"
     chain_name: Bittensor
     chain_prefix: "42"
     indexer_type: rpc
@@ -270,12 +304,14 @@ chains:
     net: testnet
     chain_name: Nile
     decimals: 6
+    max_fee: "100.0"
     # 200 tron fee limit
     chain_max_gas_price: 2000000000
   TON:
     chain: TON
     driver: ton
     decimals: 9
+    max_fee: "100.0"
     net: testnet
     rate_limit: 0.5
   XRP:
@@ -284,11 +320,13 @@ chains:
     net: devnet
     chain_name: xrp (Devnet)
     decimals: 6
+    max_fee: "100.0"
   BASE:
     chain: BASE
     driver: evm
     chain_name: Base Protocol
     decimals: 18
+    max_fee: "100.0"
     external:
       indexing_co:
         chain_id: base_sepolia
@@ -297,15 +335,29 @@ chains:
     driver: cosmos
     chain_name: Noble
     chain_prefix: noble
-    decimals: 0
-    # Noble does NOT have a canonical/native asset.
-    # To support assets on noble, tokens must be added separately
-    chain_coin: "uunoble"
+    chain_coin: "uusdc"
+    disabled: true
+    no_native_asset: true
+    additional_native_assets:
+      # https://www.mintscan.io/noble/assets
+      - asset_id: "uusdc"
+        decimals: 6
+        max_fee: "20.0"
+      - asset_id: "ausdy"
+        decimals: 18
+        max_fee: "20.0"
+      - asset_id: "ueure"
+        decimals: 6
+        max_fee: "20.0"
+      - asset_id: "uusyc"
+        decimals: 6
+        max_fee: "20.0"
   XLM:
     chain: XLM
     driver: xlm
     chain_name: xlm
     decimals: 7
+    max_fee: "100.0"
     transaction_active_time: "2h"
     # Defines the maximum amount we are willing to spend on the transaction fee.
     # Specified in "XLM"
@@ -324,3 +376,4 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
     decimals: 18
+    max_fee: "100.0"

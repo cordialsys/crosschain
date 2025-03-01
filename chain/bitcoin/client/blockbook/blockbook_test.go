@@ -10,6 +10,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
@@ -93,7 +94,8 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 		to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-		input, err := client.FetchLegacyTxInput(s.Ctx, from, to)
+		args := buildertest.DefaultTransferOpts(from, to, xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
+		input, err := client.FetchTransferInput(s.Ctx, args)
 		require.NotNil(input)
 		// optimize the utxo amounts
 		input.(xc.TxInputWithAmount).SetAmount(xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))

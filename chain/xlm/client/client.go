@@ -27,8 +27,7 @@ type Client struct {
 	Passphrase string
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()

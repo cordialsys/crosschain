@@ -6,7 +6,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/config"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // right now xc / viper will always lowercase the keys in maps.

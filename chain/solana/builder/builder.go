@@ -78,6 +78,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		return nil, err
 	}
 	input := txInput.(*TxInput)
+	// TODO validate max fee
 
 	// txLog := map[string]string{
 	// 	"type":      "system.Transfer",

@@ -20,7 +20,6 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 type TxInput = xrptxinput.TxInput
@@ -63,6 +62,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
+	// TODO max fee
 
 	XRPAmount := xrptx.AmountBlockchain{
 		XRPAmount: amount.String(),
@@ -90,6 +90,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	asset := txBuilder.Asset
 	txInput := input.(*TxInput)
+	// TODO max fee
 
 	assetContract := asset.GetContract()
 	if assetContract == "" {

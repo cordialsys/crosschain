@@ -25,7 +25,6 @@ var DefaultMaxTotalFeeHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 
 // TxBuilder for Cosmos
 type TxBuilder struct {
-	xc.TxBuilder
 	Asset          xc.ITask
 	CosmosTxConfig client.TxConfig
 }
@@ -53,6 +52,7 @@ func DefaultMaxGasPrice(nativeAsset *xc.ChainConfig) float64 {
 
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	// TODO validate max fee
 	txInput := input.(*tx_input.TxInput)
 	native := txBuilder.Asset.GetChain()
 	max := native.ChainMaxGasPrice

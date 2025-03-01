@@ -1,12 +1,14 @@
 package crosschain
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"strings"
 
 	"github.com/shopspring/decimal"
+	"gopkg.in/yaml.v3"
 )
 
 const FLOAT_PRECISION = 6
@@ -189,6 +191,28 @@ func (amount AmountHumanReadable) Div(x AmountHumanReadable) AmountHumanReadable
 	return AmountHumanReadable(decimal.Decimal(amount).Div(decimal.Decimal(x)))
 }
 
+var _ json.Marshaler = AmountHumanReadable{}
+var _ json.Unmarshaler = &AmountHumanReadable{}
+var _ yaml.Unmarshaler = &AmountHumanReadable{}
+var _ yaml.Marshaler = &AmountHumanReadable{}
+
+func (b AmountHumanReadable) MarshalYAML() (interface{}, error) {
+	return b.String(), nil
+}
+
+func (b *AmountHumanReadable) UnmarshalYAML(node *yaml.Node) error {
+	value := node.Value
+	value = strings.TrimSpace(value)
+	value = strings.TrimPrefix(value, "\"")
+	value = strings.TrimSuffix(value, "\"")
+	dec, err := decimal.NewFromString(value)
+	if err != nil {
+		return fmt.Errorf("invalid decimal amount: %v", err)
+	}
+	*b = AmountHumanReadable(dec)
+	return nil
+}
+
 func (b AmountHumanReadable) MarshalJSON() ([]byte, error) {
 	return []byte("\"" + b.String() + "\""), nil
 }
@@ -205,6 +229,9 @@ func (b *AmountHumanReadable) UnmarshalJSON(p []byte) error {
 	*b = AmountHumanReadable(decimal)
 	return nil
 }
+
+var _ json.Marshaler = AmountBlockchain{}
+var _ json.Unmarshaler = &AmountBlockchain{}
 
 func (b AmountBlockchain) MarshalJSON() ([]byte, error) {
 	return []byte("\"" + b.String() + "\""), nil

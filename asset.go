@@ -340,6 +340,15 @@ type StakingConfig struct {
 	Providers []StakingProvider `yaml:"providers,omitempty"`
 }
 
+type AdditionalNativeAsset struct {
+	// Tyically the contract address of the asset
+	AssetId ContractAddress `yaml:"asset_id,omitempty"`
+	// Decimals for the assets
+	Decimals int32 `yaml:"decimals,omitempty"`
+	// Maximum fee limit
+	MaxFee AmountHumanReadable `yaml:"max_fee"`
+}
+
 type CrosschainClientConfig struct {
 	Url     string          `yaml:"url"`
 	Network NetworkSelector `yaml:"network,omitempty"`
@@ -386,6 +395,10 @@ type ChainConfig struct {
 	// - HASH has nhash
 	// - LUNA has uluna
 	ChainCoin string `yaml:"chain_coin,omitempty"`
+	// Additional native assets that may be used to pay fees on the chain.
+	AdditionalNativeAssets []*AdditionalNativeAsset `yaml:"additional_native_assets,omitempty"`
+	// If true, then the `.Chain` does not represent any native asset (i.e. no chain-coin, no decimals).
+	NoNativeAsset bool `yaml:"no_native_asset"`
 
 	// If necessary, specific which asset to use to spend for gas.
 	GasCoin string `yaml:"gas_coin,omitempty"`
@@ -407,6 +420,9 @@ type ChainConfig struct {
 
 	// Staking configuration
 	Staking StakingConfig `yaml:"staking,omitempty"`
+
+	// Maximum fee limit
+	MaxFee AmountHumanReadable `yaml:"max_fee"`
 
 	// Optional settings around the gas, if needed.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
@@ -497,10 +513,6 @@ type TokenAssetConfig struct {
 	ChainConfig *ChainConfig `yaml:"-"`
 }
 
-// type AssetMetadataConfig struct {
-// 	PriceUSD AmountHumanReadable `yaml:"-"`
-// }
-
 var _ ITask = &ChainConfig{}
 var _ ITask = &TokenAssetConfig{}
 
@@ -569,32 +581,4 @@ func (token *TokenAssetConfig) GetContract() string {
 }
 func (token *TokenAssetConfig) GetAssetSymbol() string {
 	return token.Asset
-}
-
-func LegacyParseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
-	if asset == "" && nativeAsset == "" {
-		return "", ""
-	}
-	if asset == "" && nativeAsset != "" {
-		asset = nativeAsset
-	}
-
-	assetSplit := strings.Split(asset, ".")
-	if len(assetSplit) == 2 && NativeAsset(assetSplit[1]).IsValid() {
-		asset = assetSplit[0]
-		if nativeAsset == "" {
-			nativeAsset = assetSplit[1]
-		}
-	}
-	validNative := NativeAsset(asset).IsValid()
-
-	if nativeAsset == "" {
-		if validNative {
-			nativeAsset = asset
-		} else {
-			nativeAsset = "ETH"
-		}
-	}
-
-	return asset, NativeAsset(nativeAsset)
 }

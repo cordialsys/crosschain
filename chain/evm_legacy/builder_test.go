@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/test-go/testify/require"
@@ -24,15 +25,8 @@ func TestBuilderLegacyTransfer(t *testing.T) {
 	fmt.Printf("--- %T\n", input)
 
 	input.GasTipCap = builder.GweiToWei(evm_legacy.DefaultMaxTipCapGwei - 1)
-	trans, err := b.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	trans, err := b.Transfer(buildertest.DefaultTransferOpts(xc.Address(from), xc.Address(to), amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, trans)
 
-	trans, err = b.NewTokenTransfer(xc.Address(from), xc.Address(to), amount, input)
-	require.NoError(t, err)
-	require.NotNil(t, trans)
-
-	trans, err = b.NewNativeTransfer(xc.Address(from), xc.Address(to), amount, input)
-	require.NoError(t, err)
-	require.NotNil(t, trans)
 }

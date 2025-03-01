@@ -47,8 +47,7 @@ type Client struct {
 // At roughly 5s/block this is a ~12 hour timeout.
 const TimeoutInBlocks = 10_000
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
