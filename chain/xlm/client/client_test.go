@@ -24,9 +24,10 @@ import (
 )
 
 func TestValidClientConfiguration(t *testing.T) {
+	xc.NewAmountHumanReadableFromFloat(2.0)
 	config := &xc.ChainConfig{
 		ChainIDStr:            "ChainID",
-		ChainMaxGasPrice:      2.0,
+		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(2.0),
 		TransactionActiveTime: time.Duration(500),
 	}
 	client, err := client.NewClient(config)
@@ -42,7 +43,7 @@ func TestEmptyClientConfiguration(t *testing.T) {
 
 func TestClientConfigurationMissingChainIDStr(t *testing.T) {
 	missingChainIDStr := &xc.ChainConfig{
-		ChainMaxGasPrice:      2.0,
+		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(2.0),
 		TransactionActiveTime: time.Duration(500),
 	}
 	badClient, err := client.NewClient(missingChainIDStr)
@@ -53,27 +54,27 @@ func TestClientConfigurationMissingChainIDStr(t *testing.T) {
 func TestClientConfigurationBadMaxFee(t *testing.T) {
 	negativeMaxFee := &xc.ChainConfig{
 		ChainIDStr:            "Some chain id",
-		ChainMaxGasPrice:      -1.1,
+		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(-1.1),
 		TransactionActiveTime: time.Duration(500),
 	}
 	badClient, err := client.NewClient(negativeMaxFee)
 	require.Nil(t, badClient)
-	require.ErrorContains(t, err, "chain-max-gas-price")
+	require.ErrorContains(t, err, "gas-budget-default")
 
 	zeroMaxFee := &xc.ChainConfig{
 		ChainIDStr:            "ChainID",
-		ChainMaxGasPrice:      0.0,
+		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.0),
 		TransactionActiveTime: time.Duration(500),
 	}
 	client, err := client.NewClient(zeroMaxFee)
 	require.Nil(t, client)
-	require.ErrorContains(t, err, "chain-max-gas-price")
+	require.ErrorContains(t, err, "chain gas-budget-default")
 }
 
 func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
 	missingTransactionActiveTime := &xc.ChainConfig{
 		ChainIDStr:       "Some chain id",
-		ChainMaxGasPrice: 2.0,
+		GasBudgetDefault: xc.NewAmountHumanReadableFromFloat(2.0),
 	}
 	badClient, err := client.NewClient(missingTransactionActiveTime)
 	require.Nil(t, badClient)
@@ -82,14 +83,14 @@ func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
 
 func TestMainnetConfiguration(t *testing.T) {
 	mainnetConfig := chains.Mainnet["xlm"]
-	require.Greater(t, mainnetConfig.ChainMaxGasPrice, 0.0)
+	require.Greater(t, mainnetConfig.GasBudgetDefault.Decimal().InexactFloat64(), 0.0)
 	require.NotZero(t, mainnetConfig.ChainIDStr)
 	require.NotZero(t, mainnetConfig.TransactionActiveTime)
 }
 
 func TestTestnetConfiguration(t *testing.T) {
 	testnetConfig := chains.Testnet["xlm"]
-	require.Greater(t, testnetConfig.ChainMaxGasPrice, 0.0)
+	require.Greater(t, testnetConfig.GasBudgetDefault.Decimal().InexactFloat64(), 0.0)
 	require.NotZero(t, testnetConfig.TransactionActiveTime)
 }
 
@@ -109,7 +110,7 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			name: "Test valid Tx input",
 			asset: &xc.ChainConfig{
-				ChainMaxGasPrice:      0.00001,
+				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
 				TransactionActiveTime: txActiveTime,
 				ChainIDStr:            "Test SDF Network ; September 2015",
 			},
@@ -148,7 +149,7 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			name: "Check fee greater than balance",
 			asset: &xc.ChainConfig{
-				ChainMaxGasPrice:      5.00000,
+				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(5.00000),
 				TransactionActiveTime: txActiveTime,
 				ChainIDStr:            "Test SDF Network ; September 2015",
 			},
@@ -188,7 +189,7 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			name: "Check balance lower than tx amount",
 			asset: &xc.ChainConfig{
-				ChainMaxGasPrice:      1.00000,
+				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(1.00000),
 				TransactionActiveTime: txActiveTime,
 				ChainIDStr:            "Test SDF Network ; September 2015",
 			},
@@ -214,7 +215,7 @@ func TestFetchTxInput(t *testing.T) {
 			name: "Check fee greater token tx",
 			asset: &xc.TokenAssetConfig{
 				ChainConfig: &xc.ChainConfig{
-					ChainMaxGasPrice:      5.00000,
+					GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(5.00000),
 					TransactionActiveTime: txActiveTime,
 					ChainIDStr:            "Test SDF Network ; September 2015",
 				},
@@ -687,7 +688,7 @@ func TestSubmitTx(t *testing.T) {
 				URL:                   server.URL,
 				Decimals:              7,
 				TransactionActiveTime: txActiveTime,
-				ChainMaxGasPrice:      0.00001,
+				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
 				ChainIDStr:            "Test SDF Network ; September 2015",
 			})
 
@@ -883,14 +884,15 @@ func TestFetchTxInfo(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client, _ := client.NewClient(&xc.ChainConfig{
+		client, err := client.NewClient(&xc.ChainConfig{
 			Chain:                 "XLM",
 			URL:                   server.URL,
 			TransactionActiveTime: time.Duration(500),
 			Decimals:              7,
 			ChainIDStr:            "Test SDF Network ; September 2015",
-			ChainMaxGasPrice:      0.00001,
+			GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
 		})
+		require.NoError(t, err)
 		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.hash))
 		if vector.err != "" {
 			require.Equal(t, xclient.TxInfo{}, txInfo)
@@ -1031,20 +1033,22 @@ func TestFetchBalance(t *testing.T) {
 			TransactionActiveTime: time.Duration(500),
 			Decimals:              7,
 			ChainIDStr:            "Test SDF Network ; September 2015",
-			ChainMaxGasPrice:      0.00001,
+			GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
 		}
 
 		var cl *client.Client
+		var err error
 		if vector.assetID != "XLM" {
 			assetConfig := &xc.TokenAssetConfig{
 				Contract:    vector.assetID,
 				ChainConfig: defaultConfig,
 			}
 
-			cl, _ = client.NewClient(assetConfig)
+			cl, err = client.NewClient(assetConfig)
 		} else {
-			cl, _ = client.NewClient(defaultConfig)
+			cl, err = client.NewClient(defaultConfig)
 		}
+		require.NoError(t, err)
 
 		balance, err := cl.FetchBalance(context.Background(), xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
 		if vector.err != "" {

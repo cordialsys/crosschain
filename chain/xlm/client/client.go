@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -36,8 +38,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		return nil, fmt.Errorf("stellar configuration is missing chain-id-str")
 	}
 
-	if cfg.ChainMaxGasPrice <= 0 {
-		return nil, fmt.Errorf("chain-max-gas-price should be set to value greater than 0.0")
+	if cfg.GasBudgetDefault.Decimal().InexactFloat64() <= 0 {
+		return nil, fmt.Errorf("chain gas-budget-default should be set to value greater than 0.0")
+	}
+	budget := cfg.GasBudgetDefault.ToBlockchain(cfg.Decimals).Uint64()
+	if budget >= math.MaxUint32 {
+		return nil, fmt.Errorf("gas-budget-default exceeds uint32 type for XLM")
 	}
 
 	if cfg.TransactionActiveTime == 0 {
@@ -91,13 +97,12 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	// Stellar requires the MaxFee specification, which defines the maximum amount
 	// we are willing to spend on the transaction fee.
-	maxFee := xc.NewAmountHumanReadableFromFloat(config.ChainMaxGasPrice)
-	blockchainFee := maxFee.ToBlockchain(config.Decimals)
+	maxFee := config.GasBudgetDefault.ToBlockchain(config.Decimals)
 
 	// If balance is greater than blockchainFee, we can safely use specified MaxFee
 	// Use remaining balance as a max fee otherwise
-	if remainingBalance.Cmp(&blockchainFee) == 1 {
-		txInput.MaxFee = uint32(blockchainFee.Int().Uint64())
+	if remainingBalance.Cmp(&maxFee) > 0 {
+		txInput.MaxFee = uint32(maxFee.Uint64())
 	} else {
 		txInput.MaxFee = uint32(remainingBalance.Uint64())
 	}
@@ -195,7 +200,7 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 
 	block := xclient.NewBlock(chain, uint64(transaction.Ledger), ledger.Hash, time)
 	var errMsg *string
-	if transaction.Successful != true {
+	if !transaction.Successful {
 		msg := "transaction failed"
 		errMsg = &msg
 	}
@@ -290,6 +295,26 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 				pathPaymentReceive.SendMax,
 				pathPaymentReceive.DestAmount)
 		}
+	}
+	// cast the memo param to a simple string
+	memo := ""
+	if text, ok := envelope.Memo().GetText(); ok {
+		memo = text
+	} else if id, ok := envelope.Memo().GetId(); ok {
+		memo = fmt.Sprintf("%d", id)
+	} else if hash, ok := envelope.Memo().GetHash(); ok {
+		memo = hex.EncodeToString(hash[:])
+	} else if hash, ok := envelope.Memo().GetRetHash(); ok {
+		memo = hex.EncodeToString(hash[:])
+	}
+
+	for _, movement := range txInfo.Movements {
+		movement.Memo = memo
+	}
+
+	if txInfo.Error != nil && *txInfo.Error != "" {
+		// clear the movements, as they are rolled back if transaction fails
+		txInfo.Movements = []*xclient.Movement{}
 	}
 
 	// Add Fee movement
@@ -440,7 +465,7 @@ func ProcessPayment(txInfo *xclient.TxInfo, asset xc.NativeAsset, source xdr.Mux
 
 	movement := xclient.NewMovement(xc.NativeAsset(asset), "")
 	xcAmount, ok := xc.NewAmountBlockchainFromInt64(int64(amount))
-	if ok == false {
+	if !ok {
 		return fmt.Errorf("failed to construct new blockchain amount from: %v", int64(amount))
 	}
 	movement.AddSource(xc.Address(sourceAccount), xcAmount, nil)
@@ -467,7 +492,7 @@ func ProcessPathPayment(txInfo *xclient.TxInfo, sourceAsset xc.NativeAsset, dest
 	}
 
 	xcSourceAmount, ok := xc.NewAmountBlockchainFromInt64(int64(sourceAmount))
-	if ok == false {
+	if !ok {
 		return fmt.Errorf("failed to construct new blockchain amount from: %v", int64(sourceAmount))
 	}
 	sourceMovement := xclient.NewMovement(sourceAsset, "")
@@ -475,7 +500,7 @@ func ProcessPathPayment(txInfo *xclient.TxInfo, sourceAsset xc.NativeAsset, dest
 	txInfo.AddMovement(sourceMovement)
 
 	xcDestinationAmount, ok := xc.NewAmountBlockchainFromInt64(int64(destinationAmount))
-	if ok == false {
+	if !ok {
 		return fmt.Errorf("failed to construct new blockchain amount from: %v", int64(destinationAmount))
 	}
 	destinationMovement := xclient.NewMovement(destinationAsset, "")
