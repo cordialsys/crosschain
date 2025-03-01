@@ -1,12 +1,10 @@
 package client
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -43,38 +41,46 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 const MethodPost string = "POST"
 
-func (client *Client) FetchBaseInput(ctx context.Context, args xcbuilder.TransferArgs) (xrptxinput.TxInput, error) {
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := xrptxinput.NewTxInput()
 
 	account := args.GetFrom()
 
-	currentSequence, err := client.getNextValidSeqNumber(account)
+	accountInfo, err := client.getAccountInfo(account)
 	if err != nil {
-		return xrptxinput.TxInput{}, err
+		return nil, err
 	}
-	currentSequencePtr := *currentSequence
+	currentSequencePtr := accountInfo.Result.AccountData.Sequence
 	txInput.Sequence = currentSequencePtr
 
 	ledger, err := client.getLatestLedger(false)
 	if err != nil {
-		return xrptxinput.TxInput{}, err
+		return nil, err
 	}
 	ledgerSequencePtr := ledger.Result.LedgerCurrentIndex
 	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
 	txInput.LastLedgerSequence = lastLedgerSequence
 
-	return *txInput, nil
-}
-
-// FetchTransferInput returns tx input for a Template tx
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	txInput, err := client.FetchBaseInput(ctx, args)
+	feeInfo, err := client.getFee()
 	if err != nil {
 		return nil, err
 	}
+	bz, _ := json.MarshalIndent(feeInfo, "", "  ")
+	fmt.Println(string(bz))
 
-	return &txInput, nil
+	// XRP has very confusing method of going about prioritization.
+	// But fee itself is at least a simple fixed fee.
+	// Current approach:
+	// - Use the median fee, based on recent ledger
+	// - Use the minimum base fee IFF it's greater than the median fee, as a sanity check
+	txInput.Fee = feeInfo.Result.Drops.MedianFee
+	if feeInfo.Result.Drops.BaseFee.Cmp(&txInput.Fee) > 0 {
+		// Somehow the median is less than the base fee -> use the base fee
+		txInput.Fee = feeInfo.Result.Drops.BaseFee
+	}
+
+	return txInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
@@ -99,17 +105,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	serializedTxInputHex := hex.EncodeToString(serializedTxInputBytes)
 	serializedTxInputHexBytes := []byte(serializedTxInputHex)
 
-	submitRequest := &types.SubmitRequest{
-		Method: "submit",
-		Params: []types.SubmitParamEntry{
-			{
-				TxBlob: string(serializedTxInputHexBytes),
-			},
-		},
-	}
-
-	var submitResponse types.SubmitResponse
-	err = client.Send(MethodPost, submitRequest, &submitResponse)
+	_, err = client.postSubmit(serializedTxInputHexBytes)
 	if err != nil {
 		return err
 	}
@@ -267,19 +263,7 @@ func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Addre
 // FetchNativeBalance fetches account native balance for a XRP address
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
-
-	request := types.AccountInfoRequest{
-		Method: "account_info",
-		Params: []types.AccountInfoParamEntry{
-			{
-				Account:     address,
-				LedgerIndex: types.Validated,
-			},
-		},
-	}
-
-	var accountInfoResponse types.AccountInfoResponse
-	err := client.Send(MethodPost, request, &accountInfoResponse)
+	accountInfoResponse, err := client.getAccountInfo(address)
 	if err != nil {
 		return zero, err
 	}
@@ -301,17 +285,7 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 		return zero, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
 
-	request := types.AccountLinesRequest{
-		Method: "account_lines",
-		Params: []types.AccountLinesParamEntry{
-			{
-				Account: address,
-			},
-		},
-	}
-
-	var accountLinesResponse types.AccountLinesResponse
-	err = client.Send(MethodPost, request, &accountLinesResponse)
+	accountLinesResponse, err := client.getAccountLines(address)
 	if err != nil {
 		return zero, err
 	}
@@ -332,126 +306,6 @@ func (client *Client) fetchContractBalance(ctx context.Context, address xc.Addre
 		return zero, fmt.Errorf("failed to parse balance for account: %s", address)
 	}
 	return humanReadbleBalance.ToBlockchain(types.TRUSTLINE_DECIMALS), nil
-}
-
-type XrpError struct {
-	Result struct {
-		ErrorStatus  string `json:"error"`
-		ErrorMessage string `json:"error_message"`
-		ErrorCode    int    `json:"error_code"`
-	} `json:"result"`
-}
-
-func (err *XrpError) Error() string {
-	return fmt.Sprintf("%s: %s (code: %d)", err.Result.ErrorStatus, err.Result.ErrorMessage, err.Result.ErrorCode)
-}
-
-func (client *Client) Send(method string, requestBody any, response any) error {
-
-	jsonPayload, err := json.Marshal(requestBody)
-	if err != nil {
-		return fmt.Errorf("failed to marshal request payload: %w", err)
-	}
-
-	request, err := http.NewRequest(method, client.Url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return fmt.Errorf("failed to create new HTTP request: %w", err)
-	}
-	request.Header.Set("Content-Type", "application/json")
-	logrus.WithField("method", method).WithField("params", string(jsonPayload)).Debug("request")
-
-	resp, err := client.HttpClient.Do(request)
-	if err != nil {
-		return fmt.Errorf("failed to execute HTTP request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
-	}
-	bz, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var errMaybe XrpError
-	_ = json.Unmarshal(bz, &errMaybe)
-	if errMaybe.Result.ErrorStatus != "" || errMaybe.Result.ErrorMessage != "" {
-		return &errMaybe
-	}
-
-	logrus.WithField("body", string(bz)).Debug("response")
-	err = json.Unmarshal(bz, response)
-	if err != nil {
-		return fmt.Errorf("failed to decode response body: %w", err)
-	}
-
-	return nil
-}
-
-func (client *Client) getNextValidSeqNumber(address xc.Address) (*int64, error) {
-	request := types.AccountInfoRequest{
-		Method: "account_info",
-		Params: []types.AccountInfoParamEntry{
-			{
-				Account:     address,
-				LedgerIndex: types.Validated,
-			},
-		},
-	}
-
-	var accountInfoResponse types.AccountInfoResponse
-	err := client.Send(MethodPost, request, &accountInfoResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	sequence := accountInfoResponse.Result.AccountData.Sequence
-	return &sequence, nil
-}
-
-func (client *Client) getLedger(index types.LedgerIndex, transactions bool) (*types.LedgerResponse, error) {
-	ledgerRequest := types.LedgerRequest{
-		Method: "ledger",
-		Params: []types.LedgerParamEntry{
-			{
-				LedgerIndex:  index,
-				Transactions: transactions,
-			},
-		},
-	}
-
-	var ledgerResponse types.LedgerResponse
-	err := client.Send(MethodPost, ledgerRequest, &ledgerResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ledgerResponse, nil
-}
-
-func (client *Client) getLedgerData(index types.LedgerIndex) (*types.LedgerDataResponse, error) {
-	ledgerRequest := types.LedgerDataRequest{
-		Method: "ledger_data",
-		Params: []types.LedgerDataParams{
-			{
-				LedgerIndex: index,
-				Limit:       1,
-			},
-		},
-	}
-
-	var ledgerResponse types.LedgerDataResponse
-	err := client.Send(MethodPost, ledgerRequest, &ledgerResponse)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ledgerResponse, nil
-}
-
-func (client *Client) getLatestLedger(transactions bool) (*types.LedgerResponse, error) {
-	return client.getLedger(types.Current, transactions)
 }
 
 // Pretty simple for XRP as it's always fixed.

@@ -33,6 +33,7 @@ func TestFetchTxInput(t *testing.T) {
 		asset           xc.ITask
 		accountInfoResp interface{}
 		ledgerResp      interface{}
+		feeResp         interface{}
 		err             string
 		expectedTxInput xrptxinput.TxInput
 	}{
@@ -50,6 +51,14 @@ func TestFetchTxInput(t *testing.T) {
 					LedgerCurrentIndex: 1221001,
 				},
 			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+			},
 			expectedTxInput: xrptxinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
@@ -57,6 +66,7 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           861823,
 				LastLedgerSequence: 1221021,
 				LegacyMemo:         "",
+				Fee:                xc.NewAmountBlockchainFromUint64(100),
 				PublicKey:          []uint8(nil),
 			},
 		},
@@ -72,6 +82,15 @@ func TestFetchTxInput(t *testing.T) {
 					LedgerCurrentIndex: 1221001,
 				},
 			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						// should take base fee since it's higher than median fee
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(1),
+					},
+				},
+			},
 			expectedTxInput: xrptxinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
@@ -79,6 +98,7 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           0,
 				LastLedgerSequence: 1221021,
 				LegacyMemo:         "",
+				Fee:                xc.NewAmountBlockchainFromUint64(10),
 				PublicKey:          []uint8(nil),
 			},
 		},
@@ -88,6 +108,14 @@ func TestFetchTxInput(t *testing.T) {
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
 						Sequence: 861823,
+					},
+				},
+			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
 					},
 				},
 			},
@@ -101,6 +129,7 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           861823,
 				LastLedgerSequence: 20,
 				LegacyMemo:         "",
+				Fee:                xc.NewAmountBlockchainFromUint64(100),
 				PublicKey:          []uint8(nil),
 			},
 		},
@@ -118,6 +147,8 @@ func TestFetchTxInput(t *testing.T) {
 			} else if method == "ledger" {
 				// Respond with LedgerResponse
 				json.NewEncoder(w).Encode(vector.ledgerResp)
+			} else if method == "fee" {
+				json.NewEncoder(w).Encode(vector.feeResp)
 			} else {
 				t.Errorf("unexpected method: %s", method)
 			}
