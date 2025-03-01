@@ -27,22 +27,27 @@ func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 	}, nil
 }
 
-// Implements xcbuilder/Transfer interface
 func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return builder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
 
-// Implements xc.TxBuilder interface
-func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 	sourceAccount, err := common.MuxedAccountFromAddress(from)
 	if err != nil {
 		return &xlmtx.Tx{}, fmt.Errorf("invalid `from` address: %w", err)
 	}
-	// TODO max fee
 
 	preconditions := xlm.Preconditions{
 		TimeBounds: xlm.NewTimeout(txInput.TransactionActiveTime),
+	}
+
+	xdrMemo := xdr.Memo{}
+	if memo, ok := args.GetMemo(); ok {
+		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, memo)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to create memo: %w", err)
+		}
 	}
 
 	txe := xdr.TransactionV1Envelope{
@@ -50,9 +55,10 @@ func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.A
 			SourceAccount: sourceAccount,
 			// We can skip fee * operation_count multiplication because the transfer is a single
 			// `Payment` operation
-			Fee:    xdr.Uint32(50000000),
+			Fee:    xdr.Uint32(txInput.MaxFee),
 			SeqNum: xdr.SequenceNumber(txInput.Sequence),
 			Cond:   preconditions.BuildXDR(),
+			Memo:   xdrMemo,
 		},
 	}
 
