@@ -194,10 +194,15 @@ func (amount AmountHumanReadable) Div(x AmountHumanReadable) AmountHumanReadable
 var _ json.Marshaler = AmountHumanReadable{}
 var _ json.Unmarshaler = &AmountHumanReadable{}
 var _ yaml.Unmarshaler = &AmountHumanReadable{}
-var _ yaml.Marshaler = &AmountHumanReadable{}
+var _ yaml.Marshaler = AmountHumanReadable{}
+var _ yaml.IsZeroer = AmountHumanReadable{}
 
 func (b AmountHumanReadable) MarshalYAML() (interface{}, error) {
 	return b.String(), nil
+}
+
+func (b AmountHumanReadable) IsZero() bool {
+	return decimal.Decimal(b).IsZero()
 }
 
 func (b *AmountHumanReadable) UnmarshalYAML(node *yaml.Node) error {

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/shopspring/decimal"
@@ -57,6 +58,22 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	input.GasPrice, _ = multiplier.Mul(decimal.NewFromFloat(input.GasPrice)).Float64()
 	return nil
 }
+
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	gasPrice := decimal.NewFromFloat(input.GasPrice)
+	// Use big int to avoid casting uint64 to int64
+	gasLimitInt := big.NewInt(0)
+	gasLimitInt.SetUint64(input.GasLimit)
+	gasLimit := decimal.NewFromBigInt(gasLimitInt, 0)
+
+	// gasPrice * gasLimit
+	totalSpend := gasPrice.Mul(gasLimit)
+	totalSpendInt := xc.AmountBlockchain(*totalSpend.BigInt())
+
+	// TODO: consider alt assets fees in cosmos
+	return totalSpendInt, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if cosmosOther, ok := other.(*TxInput); ok {

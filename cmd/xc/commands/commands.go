@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -195,6 +196,11 @@ func CmdTxTransfer() *cobra.Command {
 				return err
 			}
 
+			priorityStr, err := cmd.Flags().GetString("priority")
+			if err != nil {
+				return err
+			}
+
 			if decimalsStr == "" && contract != "" {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
@@ -254,21 +260,19 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			logrus.WithField("address", from).Info("sending from")
 
-			maxFees := []*builder.MaxFee{
-				builder.NewNativeMaxFee(
-					chainConfig.MaxFee.ToBlockchain(chainConfig.Decimals),
-				),
-			}
-			for _, na := range chainConfig.AdditionalNativeAssets {
-				maxFees = append(maxFees, builder.NewMaxFee(na.AssetId, na.MaxFee.ToBlockchain(na.Decimals)))
-			}
-
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
-				builder.OptionMaxFees(maxFees...),
 			}
 			if memo != "" {
 				tfOptions = append(tfOptions, builder.OptionMemo(memo))
+			}
+
+			if priorityStr != "" {
+				priority, err := xc.NewPriority(priorityStr)
+				if err != nil {
+					return fmt.Errorf("invalid priority: %v", err)
+				}
+				tfOptions = append(tfOptions, builder.OptionPriority(priority))
 			}
 
 			tfArgs, err := builder.NewTransferArgs(from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
@@ -283,7 +287,16 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
-			input = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+			input, err = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+			if err != nil {
+				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
+			}
+
+			err = CheckMaxFeeLimit(input, chainConfig)
+			if err != nil {
+				return err
+			}
+
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
@@ -339,8 +352,18 @@ func CmdTxTransfer() *cobra.Command {
 					time.Sleep(3 * time.Second)
 					continue
 				}
-				fmt.Println(asJson(info))
-				return nil
+
+				if info.Confirmations < 1 {
+					if logrus.GetLevel() >= logrus.DebugLevel {
+						fmt.Fprintln(os.Stderr, asJson(info))
+					}
+					logrus.Info("waiting for confirmation...")
+					time.Sleep(3 * time.Second)
+					continue
+				} else {
+					fmt.Println(asJson(info))
+					return nil
+				}
 			}
 
 			return fmt.Errorf("could not find transaction that we submitted by hash %s", tx.Hash())
@@ -349,6 +372,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
 	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "set a memo for the transfer.")
+	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	return cmd
 }

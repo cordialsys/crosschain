@@ -7,6 +7,7 @@ import (
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory"
+	"github.com/cordialsys/crosschain/normalize"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
@@ -124,6 +125,13 @@ func TestNativeAssetConfigs(t *testing.T) {
 
 				for _, na := range chain.AdditionalNativeAssets {
 					require.NotEmpty(na.AssetId, fmt.Sprintf("%s additional asset %s should have an asset id", chain.Chain, na.AssetId))
+
+					normalizedAssetId := normalize.NormalizeAddressString(string(na.AssetId), chain.Chain)
+					require.Equal(
+						normalizedAssetId, string(na.AssetId),
+						fmt.Sprintf("%s additional asset-id '%s' is not in a normalized format", chain.Chain, na.AssetId),
+					)
+
 					if slices.Contains(valid0DecimalAssets, string(na.AssetId)) {
 						// valid 0-decimal native asset
 					} else {

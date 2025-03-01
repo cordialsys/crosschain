@@ -30,7 +30,7 @@ func TestNewTransfer(t *testing.T) {
 		GasPremium: xc.NewAmountBlockchainFromStr("250000"),
 	}
 
-	tf, err := builder1.Transfer(buildertest.DefaultTransferOpts(from, to, amount), input)
+	tf, err := builder1.Transfer(buildertest.MustNewTransferArgs(from, to, amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, tf)
 }

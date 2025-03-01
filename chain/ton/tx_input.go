@@ -80,6 +80,10 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return input.EstimatedMaxFee, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if evmOther, ok := other.(*TxInput); ok {

@@ -9,6 +9,7 @@ type TxInput interface {
 	GetDriver() Driver
 	TxInputConflicts
 	TxInputGasFeeMultiplier
+	TxInputGetMaxPossibleFee
 }
 
 // TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
@@ -35,6 +36,16 @@ type TxInputWithUnix interface {
 
 type TxInputGasFeeMultiplier interface {
 	SetGasFeePriority(priority GasFeePriority) error
+}
+
+type TxInputGetMaxPossibleFee interface {
+	// Get the maximum possible fee that could occur for this transaction.
+	// This is used to guard against "griefing" attacks where a user is charged way more than they intended.
+	// The contract address may be "" when the fee is for the native asset, as is often the case..
+	//
+	// Note: The caller/user should check this after TxInput has been populated with all other fields, as they can influence
+	// what the ultimate max fee is.
+	GetMaxFee() (AmountBlockchain, ContractAddress)
 }
 
 // This interface determines whether if different tx inputs conflict with one another.

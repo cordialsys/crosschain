@@ -35,6 +35,8 @@ type TxInput struct {
 	UnspentOutputs  []Output            `json:"unspent_outputs"`
 	FromPublicKey   []byte              `json:"from_pubkey"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
+	// Estimated size in bytes, per utxo that gets spent
+	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
 }
 
 func init() {
@@ -96,9 +98,26 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	return true
 }
 
+func (txInput *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	byteLengthEstimate := xc.NewAmountBlockchainFromUint64(
+		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),
+	)
+	maxFee := txInput.GasPricePerByte.Mul(&byteLengthEstimate)
+	return maxFee, ""
+}
+
 func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {
 	return txInput.GasPricePerByte
 }
+
+func (txInput *TxInput) GetEstimatedSizePerSpentUtxo() uint64 {
+	if txInput.EstimatedSizePerSpentUtxo == 0 {
+		log.WithField("driver", txInput.GetDriver()).Warn("estimated size per spent utxo not set")
+		return 255
+	}
+	return txInput.EstimatedSizePerSpentUtxo
+}
+
 func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
 	txInput.FromPublicKey = publicKeyBytes
 	return nil
@@ -234,4 +253,12 @@ func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte) []Outpu
 		res = append(res, output)
 	}
 	return res
+}
+
+func PerUtxoSizeEstimate(chain *xc.ChainConfig) uint64 {
+	if chain.Chain == xc.BCH || chain.Driver == xc.DriverBitcoinCash {
+		// bitcoin cash is less efficient
+		return 300
+	}
+	return 255
 }

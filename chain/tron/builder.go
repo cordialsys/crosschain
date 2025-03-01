@@ -166,12 +166,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	tx := &core.Transaction{}
 	tx.RawData = i.ToRawData(contract)
 	// set limit for token contracts
-	// TODO max fee
-	maxPrice := int64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
-	tx.RawData.FeeLimit = maxPrice
+	tx.RawData.FeeLimit = int64(i.MaxFee.Uint64())
 	if tx.RawData.FeeLimit == 0 {
-		// 2k tron sanity limit
-		tx.RawData.FeeLimit = 2000000000
+		logrus.Warn("tron max-fee missing from tx-input")
+		// 200 tron sanity limit
+		tx.RawData.FeeLimit = 200_000_000
 	}
 
 	return &Tx{

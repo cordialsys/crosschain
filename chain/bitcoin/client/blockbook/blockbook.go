@@ -318,6 +318,8 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 		return input, err
 	}
 
+	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
+
 	return input, nil
 }
 

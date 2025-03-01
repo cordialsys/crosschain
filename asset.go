@@ -398,7 +398,7 @@ type ChainConfig struct {
 	// Additional native assets that may be used to pay fees on the chain.
 	AdditionalNativeAssets []*AdditionalNativeAsset `yaml:"additional_native_assets,omitempty"`
 	// If true, then the `.Chain` does not represent any native asset (i.e. no chain-coin, no decimals).
-	NoNativeAsset bool `yaml:"no_native_asset"`
+	NoNativeAsset bool `yaml:"no_native_asset,omitempty"`
 
 	// If necessary, specific which asset to use to spend for gas.
 	GasCoin string `yaml:"gas_coin,omitempty"`
@@ -422,7 +422,9 @@ type ChainConfig struct {
 	Staking StakingConfig `yaml:"staking,omitempty"`
 
 	// Maximum fee limit
-	MaxFee AmountHumanReadable `yaml:"max_fee"`
+	MaxFee AmountHumanReadable `yaml:"max_fee,omitempty"`
+	// Default gas budget to use for client gas estimation
+	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
 
 	// Optional settings around the gas, if needed.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
@@ -464,9 +466,9 @@ type ChainConfig struct {
 	// Rate limit setting on RPC requests for client, in requests/second.
 	RateLimit rate.Limit `yaml:"rate_limit,omitempty"`
 	// Period between requests (alternative to `rate_limit`)
-	PeriodLimit time.Duration `yaml:"period_limit"`
+	PeriodLimit time.Duration `yaml:"period_limit,omitempty"`
 	// Number of requests to permit in burst
-	Burst int `yaml:"burst"`
+	Burst int `yaml:"burst,omitempty"`
 
 	// Rate limiter configured from `rate_limit`, `period_limit`, `burst` (requires calling .Configure after loading from config)
 	Limiter *rate.Limiter `yaml:"-" mapstructure:"-"`

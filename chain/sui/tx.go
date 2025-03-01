@@ -50,6 +50,11 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	maxBudget := xc.NewAmountBlockchainFromUint64(input.GasBudget)
+	return maxBudget, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if suiOther, ok := other.(*TxInput); ok {
 		// if epoch changed, means independence as one txInput expired

@@ -48,6 +48,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 func (input *TxInput) SafeFromDoubleSend(other ...xc.TxInput) (independent bool) {
 	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other...)
 }
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return ((*evminput.TxInput)(input)).GetMaxFee()
+}
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	evmClient, err := evmclient.NewClient(cfgI)

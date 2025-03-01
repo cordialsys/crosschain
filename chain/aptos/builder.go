@@ -25,31 +25,28 @@ func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok {
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-	}
-	return txBuilder.NewNativeTransfer(from, to, amount, input)
-}
-
-// NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	var local_input *tx_input.TxInput
 	var ok bool
 	if local_input, ok = (input.(*tx_input.TxInput)); !ok {
 		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
 	}
+
+	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok {
+		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
+	}
+	return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
+}
+
+// NewNativeTransfer creates a new transfer for a native asset
+func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput) (xc.Tx, error) {
+
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	copy(from_addr[:], mustDecodeHex(string(from)))
 	copy(to_addr[:], mustDecodeHex(string(to)))
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
 
-	chain_id := local_input.ChainId
+	chain_id := input.ChainId
 	moduleName, err := transactionbuilder.NewModuleIdFromString("0x1::aptos_account")
 	if err != nil {
 		return &Tx{}, err
@@ -66,26 +63,21 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	return &Tx{
 		tx: transactionbuilder.RawTransaction{
 			Sender:         from_addr,
-			SequenceNumber: local_input.SequenceNumber,
+			SequenceNumber: input.SequenceNumber,
 			Payload:        payload,
-			MaxGasAmount:   local_input.GasLimit,
-			GasUnitPrice:   local_input.GasPrice,
+			MaxGasAmount:   input.GasLimit,
+			GasUnitPrice:   input.GasPrice,
 			// ~1 hour expiration
-			ExpirationTimestampSecs: local_input.Timestamp + 60*60,
+			ExpirationTimestampSecs: input.Timestamp + 60*60,
 			ChainId:                 uint8(chain_id),
 		},
-		Input: local_input,
+		Input: input,
 	}, nil
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	var local_input *tx_input.TxInput
-	var ok bool
-	// Either ptr or full type is okay.
-	if local_input, ok = input.(*tx_input.TxInput); !ok {
-		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
-	}
+func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput) (xc.Tx, error) {
+
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	copy(from_addr[:], mustDecodeHex(string(from)))
@@ -99,7 +91,7 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 		return nil, err
 	}
 
-	chain_id := local_input.ChainId
+	chain_id := input.ChainId
 	moduleName, err := transactionbuilder.NewModuleIdFromString("0x1::coin")
 	if err != nil {
 		return &Tx{}, err
@@ -116,14 +108,14 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 	return &Tx{
 		tx: transactionbuilder.RawTransaction{
 			Sender:         from_addr,
-			SequenceNumber: local_input.SequenceNumber,
+			SequenceNumber: input.SequenceNumber,
 			Payload:        payload,
-			MaxGasAmount:   local_input.GasLimit,
-			GasUnitPrice:   local_input.GasPrice,
+			MaxGasAmount:   input.GasLimit,
+			GasUnitPrice:   input.GasPrice,
 			// ~1 hour expiration
-			ExpirationTimestampSecs: local_input.Timestamp + 60*60,
+			ExpirationTimestampSecs: input.Timestamp + 60*60,
 			ChainId:                 uint8(chain_id),
 		},
-		Input: local_input,
+		Input: input,
 	}, nil
 }

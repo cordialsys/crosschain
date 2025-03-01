@@ -67,6 +67,21 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	input.GasPrice = xc.AmountBlockchain(*multipliedLegacyGasPrice)
 	return nil
 }
+
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	gasLimit := xc.NewAmountBlockchainFromUint64(input.GasLimit)
+
+	legacyMaxFeeSpend := input.GasPrice.Mul(&gasLimit)
+	dynamicMaxFeeSpend := input.GasFeeCap.Mul(&gasLimit)
+
+	// use larger of the two
+	if legacyMaxFeeSpend.Cmp(&dynamicMaxFeeSpend) > 0 {
+		return legacyMaxFeeSpend, ""
+	} else {
+		return dynamicMaxFeeSpend, ""
+	}
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if evmOther, ok := other.(*TxInput); ok {

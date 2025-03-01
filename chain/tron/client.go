@@ -45,6 +45,8 @@ type TxInput struct {
 	Expiration int64 `json:"expiration,omitempty"`
 	// Transaction creation time (seconds)
 	Timestamp int64 `json:"timestamp,omitempty"`
+	// Max fee budget
+	MaxFee xc.AmountBlockchain `json:"max_fee,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -74,6 +76,10 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	// tron doesn't do prioritization
 	_ = multiplier
 	return nil
+}
+
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return input.MaxFee, ""
 }
 
 func (input *TxInput) SetUnix(unix int64) {
@@ -118,9 +124,11 @@ func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.Trans
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 
+	if cfg.GasBudgetDefault.Decimal().InexactFloat64() <= 0 {
+		return nil, fmt.Errorf("chain gas-budget-default should be set to value greater than 0.0")
+	}
+
 	client, err := httpclient.NewHttpClient(cfg.URL)
-	// client := client.NewGrpcClient(cfg.URL)
-	// err := client.Start(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +155,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// set timeout period
 	input.Timestamp = time.Now().Unix()
 	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
+
+	maxFee := client.chain.GasBudgetDefault.ToBlockchain(client.chain.Decimals)
+	input.MaxFee = maxFee
 
 	return input, nil
 }

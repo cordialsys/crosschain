@@ -57,7 +57,6 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		}
 	}
 	net := txBuilder.Asset.GetChain().Net
-	// TODO consider mapping this 0.2 TON to the input max fee
 
 	toAddr, err := tonaddress.ParseAddress(to, net)
 	if err != nil {
@@ -86,6 +85,10 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		remainingTonBal := txInput.TonBalance.Sub(&txInput.EstimatedMaxFee)
 		if maxJettonFee.Cmp(&remainingTonBal) > 0 && remainingTonBal.Cmp(&Zero) > 0 {
 			maxJettonFee = remainingTonBal
+		}
+		// If the estimated max fee is greater, then we should use that.
+		if txInput.EstimatedMaxFee.Cmp(&maxJettonFee) > 0 {
+			maxJettonFee = txInput.EstimatedMaxFee
 		}
 
 		tfMsg, err := BuildJettonTransfer(uint64(txInput.Timestamp), fromAddr, tokenAddr, toAddr, amountTlb, tlb.FromNanoTON(maxJettonFee.Int()), txInput.Memo)

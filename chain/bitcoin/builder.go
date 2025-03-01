@@ -79,11 +79,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	totalSpend := local_input.SumUtxo()
 
 	gasPrice := local_input.GasPricePerByte
-	// 255 for bitcoin, 300 for bch
-	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(uint64(255 * len(local_input.UnspentOutputs)))
-	if xc.NativeAsset(txBuilder.Asset.GetChain().Chain) == xc.BCH {
-		estimatedTxBytesLength = xc.NewAmountBlockchainFromUint64(uint64(300 * len(local_input.UnspentOutputs)))
-	}
+	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
+		local_input.GetEstimatedSizePerSpentUtxo() * uint64(len(local_input.UnspentOutputs)),
+	)
 	fee := gasPrice.Mul(&estimatedTxBytesLength)
 
 	transferAmountAndFee := amount.Add(&fee)
