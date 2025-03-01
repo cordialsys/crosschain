@@ -306,7 +306,7 @@ chains:
     decimals: 6
     max_fee: "100.0"
     # 200 tron fee limit
-    chain_max_gas_price: 2000000000
+    gas_budget_default: "200.0"
   TON:
     chain: TON
     driver: ton
@@ -359,9 +359,7 @@ chains:
     decimals: 7
     max_fee: "100.0"
     transaction_active_time: "2h"
-    # Defines the maximum amount we are willing to spend on the transaction fee.
-    # Specified in "XLM"
-    chain_max_gas_price: 1.0
+    gas_budget_default: "1.0"
     # Stellar network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
     chain_id_str: "Test SDF Network ; September 2015"

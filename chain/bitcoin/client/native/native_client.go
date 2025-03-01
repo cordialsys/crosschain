@@ -114,6 +114,7 @@ func (client *NativeClient) FetchTransferInput(ctx context.Context, args xcbuild
 	if err != nil {
 		return input, err
 	}
+	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
 	return input, nil
 }

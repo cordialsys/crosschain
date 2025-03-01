@@ -187,7 +187,7 @@ func TestFetchTxInput(t *testing.T) {
 		client, err := client.NewClient(asset)
 		require.NoError(t, err)
 		amount := xc.NewAmountBlockchainFromUint64(1)
-		input, err := client.FetchTransferInput(context.Background(), buildertest.DefaultTransferOpts(xc.Address(fromAddr), "", amount))
+		input, err := client.FetchTransferInput(context.Background(), buildertest.MustNewTransferArgs(xc.Address(fromAddr), "", amount))
 		require.NoError(t, err)
 		if v.err != "" {
 			require.Equal(t, tx_input.TxInput{}, input)

@@ -2,7 +2,6 @@ package builder
 
 import (
 	xc "github.com/cordialsys/crosschain"
-	"github.com/sirupsen/logrus"
 )
 
 // All possible builder arguments go in here, privately available.
@@ -12,7 +11,6 @@ type builderOptions struct {
 	timestamp      *int64
 	gasFeePriority *xc.GasFeePriority
 	// avoiding use of map to ensure determinism in iteration and thread safety
-	maxFees   []*MaxFee
 	publicKey *[]byte
 
 	validator    *string
@@ -22,22 +20,6 @@ type builderOptions struct {
 
 func newBuilderOptions() builderOptions {
 	return builderOptions{}
-}
-
-type MaxFee struct {
-	assetId xc.ContractAddress
-	amount  xc.AmountBlockchain
-}
-
-func NewNativeMaxFee(amount xc.AmountBlockchain) *MaxFee {
-	return NewMaxFee("", amount)
-}
-
-func NewMaxFee(assetId xc.ContractAddress, amount xc.AmountBlockchain) *MaxFee {
-	return &MaxFee{
-		assetId: assetId,
-		amount:  amount,
-	}
 }
 
 // All ArgumentBuilders should provide base arguments for transactions
@@ -68,21 +50,6 @@ func (opts *builderOptions) GetPublicKey() ([]byte, bool)           { return get
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
 func (opts *builderOptions) GetStakeOwner() (xc.Address, bool) { return get(opts.stakeOwner) }
 func (opts *builderOptions) GetStakeAccount() (string, bool)   { return get(opts.stakeAccount) }
-func (opts *builderOptions) GetMaxFee() xc.AmountBlockchain {
-	// "" means native asset -- most chains use single asset for fees
-	maxFee, _ := opts.GetMaxFeeFor("")
-	return maxFee
-}
-
-func (opts *builderOptions) GetMaxFeeFor(assetId xc.ContractAddress) (xc.AmountBlockchain, bool) {
-	// for chains that may use multiple assets for fees
-	for _, fee := range opts.maxFees {
-		if fee.assetId == assetId {
-			return fee.amount, true
-		}
-	}
-	return xc.AmountBlockchain{}, false
-}
 
 type BuilderOption func(opts *builderOptions) error
 
@@ -131,23 +98,16 @@ func OptionStakeAccount(account string) BuilderOption {
 	}
 }
 
-func OptionMaxFees(maxFees ...*MaxFee) BuilderOption {
-	return func(opts *builderOptions) error {
-		opts.maxFees = append(opts.maxFees, maxFees...)
-		return nil
-	}
-}
-
 // Previously the crosschain abstraction would require callers to set options
 // directly on the transaction input, if the interface was implemented on the input type.
 // However, wasn't very clear or easy to use.  This function bridges the gap, to allow
 // callers to use a more natural interface with options.  Chain transaction builders can
 // call this to safely set provided options on the old transaction input setters.
-func WithTxInputOptions(txInput xc.TxInput, amount xc.AmountBlockchain, options TransactionOptions) xc.TxInput {
+func WithTxInputOptions(txInput xc.TxInput, amount xc.AmountBlockchain, options TransactionOptions) (xc.TxInput, error) {
 	if priority, ok := options.GetPriority(); ok && priority != "" {
 		err := txInput.SetGasFeePriority(priority)
 		if err != nil {
-			logrus.WithError(err).Error("failed to set gas fee priority")
+			return nil, err
 		}
 	}
 	if pubkey, ok := options.GetPublicKey(); ok {
@@ -169,5 +129,5 @@ func WithTxInputOptions(txInput xc.TxInput, amount xc.AmountBlockchain, options 
 			withUnix.SetUnix(timeStamp)
 		}
 	}
-	return txInput
+	return txInput, nil
 }

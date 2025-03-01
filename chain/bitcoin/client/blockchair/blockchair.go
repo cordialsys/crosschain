@@ -175,6 +175,7 @@ func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcb
 	if err != nil {
 		return input, err
 	}
+	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
 	return input, nil
 }

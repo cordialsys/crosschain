@@ -57,6 +57,8 @@ func (s *CrosschainTestSuite) TestChainUnmarshal() {
 
 	bz, err := yaml.Marshal(&cfg)
 	require.NoError(err)
+	fmt.Println("re-marshaled:")
+	fmt.Println(string(bz))
 	cfg = factoryconfig.Config{}
 	err = yaml.Unmarshal(bz, &cfg)
 	require.NoError(err)

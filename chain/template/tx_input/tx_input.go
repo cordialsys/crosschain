@@ -38,6 +38,11 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	// get the max possible fee that could be spent on this transaction
+	return xc.NewAmountBlockchainFromUint64(0), ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
 	// default false

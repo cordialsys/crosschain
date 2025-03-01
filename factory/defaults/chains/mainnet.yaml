@@ -717,8 +717,7 @@ chains:
     chain_name: Tron
     decimals: 6
     max_fee: "500.0"
-    # 200 tron fee limit
-    chain_max_gas_price: 2000000000
+    gas_budget_default: "200.0"
     confirmations_final: 20
     external:
       dti: 993D8X1FB
@@ -780,12 +779,10 @@ chains:
     driver: xlm
     chain_name: xlm
     decimals: 7
-    max_fee: "50.0"
+    max_fee: "100.0"
     confirmations_final: 1
     transaction_active_time: "2h"
-    # Defines the maximum amount we are willing to spend on the transaction fee.
-    # Specified in "XLM"
-    chain_max_gas_price: 1.0
+    gas_budget_default: "5.0"
     # Network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
     chain_id_str: "Public Global Stellar Network ; September 2015"

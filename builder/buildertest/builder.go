@@ -7,22 +7,6 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 )
 
-func DefaultTransferOpts(
-	from xc.Address,
-	to xc.Address,
-	amount xc.AmountBlockchain,
-	options ...builder.BuilderOption,
-) builder.TransferArgs {
-	opts := []builder.BuilderOption{
-		// set a max fee bigger than any amount used in tests (effectively disabling by default)
-		builder.OptionMaxFees(
-			builder.NewNativeMaxFee(xc.NewAmountBlockchainFromStr("10000000000000000000000000000")),
-		),
-	}
-	opts = append(opts, options...)
-	return MustNewTransferArgs(from, to, amount, opts...)
-}
-
 func MustNewTransferArgs(
 	from xc.Address,
 	to xc.Address,
@@ -34,22 +18,6 @@ func MustNewTransferArgs(
 		panic(err)
 	}
 	return args
-}
-
-func DefaultStakingOpts(
-	chain xc.NativeAsset,
-	from xc.Address,
-	amount xc.AmountBlockchain,
-	options ...builder.BuilderOption,
-) builder.StakeArgs {
-	opts := []builder.BuilderOption{
-		// set a max fee bigger than any amount used in tests (effectively disabling by default)
-		builder.OptionMaxFees(
-			builder.NewNativeMaxFee(xc.NewAmountBlockchainFromStr("10000000000000000000000000000")),
-		),
-	}
-	opts = append(opts, options...)
-	return MustNewStakingArgs(chain, from, amount, opts...)
 }
 
 func MustNewStakingArgs(

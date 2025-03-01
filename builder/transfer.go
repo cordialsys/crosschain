@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"fmt"
-
 	xc "github.com/cordialsys/crosschain"
 )
 
@@ -40,9 +38,6 @@ func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain,
 		if err != nil {
 			return args, err
 		}
-	}
-	if len(args.options.maxFees) == 0 {
-		return args, fmt.Errorf("max_fee is a required argument for transactions")
 	}
 
 	return args, nil

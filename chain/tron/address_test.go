@@ -1,30 +1,33 @@
-package tron
+package tron_test
 
 import (
 	"encoding/hex"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/tron"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestNewAddressBuilder() {
-	require := s.Require()
-	builder, err := NewAddressBuilder(&xc.ChainConfig{})
+func TestNewAddressBuilder(t *testing.T) {
+	require := require.New(t)
+	builder, err := tron.NewAddressBuilder(&xc.ChainConfig{})
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
-	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
+func TestGetAddressFromPublicKey(t *testing.T) {
+	require := require.New(t)
+	builder, _ := tron.NewAddressBuilder(&xc.ChainConfig{})
 	bytes, _ := hex.DecodeString("0404B604296010A55D40000B798EE8454ECCC1F8900E70B1ADF47C9887625D8BAE3866351A6FA0B5370623268410D33D345F63344121455849C9C28F9389ED9731")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(err)
 	require.Equal(xc.Address("TDpBe64DqirkKWj6HWuR1pWgmnhw2wDacE"), address)
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKeyErr() {
-	require := s.Require()
-	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
+func TestGetAddressFromPublicKeyErr(t *testing.T) {
+	require := require.New(t)
+	builder, _ := tron.NewAddressBuilder(&xc.ChainConfig{})
 
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(xc.Address(""), address)

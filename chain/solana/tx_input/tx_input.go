@@ -70,6 +70,15 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	// Maximum compute units used by a transaction can be 1.4M
+	// https://solana.com/docs/core/fees#compute-units-and-limits
+	const MaxComputeUnits = 1_400_000
+	gasLimit := xc.NewAmountBlockchainFromUint64(MaxComputeUnits)
+	maxSpend := gasLimit.Mul(&input.PrioritizationFee)
+	return maxSpend, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// no conflicts on solana as txs are easily parallelizeable through
 	// the recent-block-hash mechanism.

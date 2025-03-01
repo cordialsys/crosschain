@@ -31,8 +31,6 @@ func (p GasFeePriority) IsEnum() bool {
 	return false
 }
 
-var max = decimal.NewFromInt(10)
-
 func (p GasFeePriority) AsCustom() (decimal.Decimal, error) {
 	if p.IsEnum() {
 		return decimal.Decimal{}, errors.New("not a custom enum")
@@ -41,9 +39,7 @@ func (p GasFeePriority) AsCustom() (decimal.Decimal, error) {
 	if err != nil {
 		return dec, fmt.Errorf("invalid decimal: %v", err)
 	}
-	if dec.GreaterThan(max) {
-		return dec, fmt.Errorf("exceeds custom multiplier: %s > %s", dec.String(), max.String())
-	}
+
 	return dec, nil
 }
 
