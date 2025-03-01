@@ -3,17 +3,20 @@ package tx_input
 import (
 	"encoding/base64"
 	"encoding/hex"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/shopspring/decimal"
 )
 
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Sequence           int64  `json:"Sequence"`
-	LastLedgerSequence int64  `json:"LastLedgerSequence"`
-	LegacyMemo         string `json:"Memo,omitempty"`
-	PublicKey          []byte
+	Sequence           int64               `json:"Sequence"`
+	LastLedgerSequence int64               `json:"LastLedgerSequence"`
+	LegacyMemo         string              `json:"Memo,omitempty"`
+	PublicKey          []byte              `json:"public_key,omitempty"`
+	Fee                xc.AmountBlockchain `json:"fee,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -77,9 +80,14 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	if err != nil {
 		return err
 	}
-	// multiply the gas price using the default, or apply a strategy according to the enum
-	_ = multiplier
+
+	product := multiplier.Mul(decimal.NewFromBigInt(input.Fee.Int(), 0)).BigInt()
+	input.Fee = xc.AmountBlockchain(*product)
 	return nil
+}
+
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return input.Fee, ""
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
