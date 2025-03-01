@@ -166,6 +166,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	tx := &core.Transaction{}
 	tx.RawData = i.ToRawData(contract)
 	// set limit for token contracts
+	// TODO max fee
 	maxPrice := int64(txBuilder.Asset.GetChain().ChainMaxGasPrice)
 	tx.RawData.FeeLimit = maxPrice
 	if tx.RawData.FeeLimit == 0 {

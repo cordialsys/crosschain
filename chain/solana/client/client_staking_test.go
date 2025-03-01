@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
@@ -102,14 +103,13 @@ func TestFetchStakingInput(t *testing.T) {
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
-			args, err := builder.NewStakeArgs(
+			args := buildertest.DefaultStakingOpts(
 				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(1000),
 				builder.OptionValidator(v.validator),
 			)
 
-			require.NoError(t, err)
 			input, err := client.FetchStakingInput(context.Background(), args)
 
 			if v.err != "" {
@@ -216,14 +216,13 @@ func TestFetchUnstakingInput(t *testing.T) {
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
-			args, err := builder.NewStakeArgs(
+			args := buildertest.DefaultStakingOpts(
 				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(100000000),
 				builder.OptionValidator(v.validator),
 			)
 
-			require.NoError(t, err)
 			input, err := client.FetchUnstakingInput(context.Background(), args)
 
 			if v.err != "" {
@@ -312,14 +311,13 @@ func TestFetchWithdrawInput(t *testing.T) {
 				options = append(options, builder.OptionValidator(v.validator))
 			}
 
-			args, err := builder.NewStakeArgs(
+			args := buildertest.DefaultStakingOpts(
 				xc.SOL,
 				from,
 				xc.NewAmountBlockchainFromUint64(100000000),
 				options...,
 			)
 
-			require.NoError(t, err)
 			input, err := client.FetchWithdrawInput(context.Background(), args)
 
 			if v.err != "" {

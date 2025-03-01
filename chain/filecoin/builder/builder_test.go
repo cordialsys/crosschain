@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/filecoin/builder"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
 	"github.com/test-go/testify/require"
@@ -29,7 +30,7 @@ func TestNewTransfer(t *testing.T) {
 		GasPremium: xc.NewAmountBlockchainFromStr("250000"),
 	}
 
-	tf, err := builder1.NewTransfer(from, to, amount, input)
-	require.NotNil(t, tf)
+	tf, err := builder1.Transfer(buildertest.DefaultTransferOpts(from, to, amount), input)
 	require.NoError(t, err)
+	require.NotNil(t, tf)
 }

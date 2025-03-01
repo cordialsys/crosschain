@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,8 +12,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain"
-	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -96,6 +95,7 @@ func CmdRpcBalance() *cobra.Command {
 
 func CmdTxInput() *cobra.Command {
 	var addressTo string
+	var amount string
 	var contract string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
@@ -116,8 +116,11 @@ func CmdTxInput() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			input, err := client.FetchLegacyTxInput(context.Background(), fromAddress, xc.Address(addressTo))
+			tfArgs, err := builder.NewTransferArgs(fromAddress, xc.Address(addressTo), xc.NewAmountBlockchainFromStr(amount))
+			if err != nil {
+				return fmt.Errorf("could not create transfer args: %v", err)
+			}
+			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction input: %v", err)
 			}
@@ -129,6 +132,7 @@ func CmdTxInput() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
+	cmd.Flags().StringVar(&amount, "amount", "", "blockchain amount to transfer")
 	return cmd
 }
 
@@ -250,42 +254,51 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			logrus.WithField("address", from).Info("sending from")
 
-			input, err := client.FetchLegacyTxInput(context.Background(), from, xc.Address(toWalletAddress))
+			maxFees := []*builder.MaxFee{
+				builder.NewNativeMaxFee(
+					chainConfig.MaxFee.ToBlockchain(chainConfig.Decimals),
+				),
+			}
+			for _, na := range chainConfig.AdditionalNativeAssets {
+				maxFees = append(maxFees, builder.NewMaxFee(na.AssetId, na.MaxFee.ToBlockchain(na.Decimals)))
+			}
+
+			tfOptions := []builder.BuilderOption{
+				builder.OptionTimestamp(time.Now().Unix()),
+				builder.OptionMaxFees(maxFees...),
+			}
+			if memo != "" {
+				tfOptions = append(tfOptions, builder.OptionMemo(memo))
+			}
+
+			tfArgs, err := builder.NewTransferArgs(from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
+			if err != nil {
+				return fmt.Errorf("invalid transfer args: %v", err)
+			}
+
+			// Get input from RPC
+			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch transfer input: %v", err)
 			}
 
-			if inputWithPublicKey, ok := input.(xc.TxInputWithPublicKey); ok {
-				inputWithPublicKey.SetPublicKey(publicKey)
-				logrus.WithField("public_key", hex.EncodeToString(publicKey)).Debug("added public key to transfer input")
-			}
-
-			if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
-				inputWithAmount.SetAmount(amountBlockchain)
-			}
-
-			if memo != "" {
-				if txInputWithMemo, ok := input.(xc.TxInputWithMemo); ok {
-					txInputWithMemo.SetMemo(memo)
-				} else {
-					return fmt.Errorf("cannot set memo; chain driver currently does not support memos")
-				}
-			}
+			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
+			input = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			// create tx
-			// (no network, no private key needed)
 			builder, err := xcFactory.NewTxBuilder(assetConfig(chainConfig, contract, decimals))
 			if err != nil {
 				return fmt.Errorf("could not load tx-builder: %v", err)
 			}
 
-			tx, err := builder.NewTransfer(from, xc.Address(toWalletAddress), amountBlockchain, input)
+			// create tx (no network, no private key needed)
+			tx, err := builder.Transfer(tfArgs, input)
 			if err != nil {
 				return fmt.Errorf("could not build transfer: %v", err)
 			}
 
+			// serialize tx for signing
 			sighashes, err := tx.Sighashes()
 			if err != nil {
 				return fmt.Errorf("could not create payloads to sign: %v", err)
@@ -309,8 +322,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
 
-			// submit the tx, wait a bit, fetch the tx info
-			// (network needed)
+			// submit the tx, wait a bit, fetch the tx info (network needed)
 			err = client.SubmitTx(context.Background(), tx)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
@@ -476,13 +488,7 @@ func CmdDecimals() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientWithDecimals, ok := client.(xcclient.ClientWithDecimals)
-			if !ok {
-				return fmt.Errorf("not implemented for %s", chainConfig.Chain)
-			}
-
-			// address := xcFactory.MustAddress(chainConfig, addressRaw)
-			decimals, err := clientWithDecimals.FetchDecimals(context.Background(), xc.ContractAddress(contract))
+			decimals, err := client.FetchDecimals(context.Background(), xc.ContractAddress(contract))
 			if err != nil {
 				return fmt.Errorf("could not fetch decimals for %s: %v", contract, err)
 			}

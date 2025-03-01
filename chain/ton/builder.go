@@ -27,7 +27,6 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
@@ -58,6 +57,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		}
 	}
 	net := txBuilder.Asset.GetChain().Net
+	// TODO consider mapping this 0.2 TON to the input max fee
 
 	toAddr, err := tonaddress.ParseAddress(to, net)
 	if err != nil {

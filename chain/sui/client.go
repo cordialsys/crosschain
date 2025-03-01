@@ -36,8 +36,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, err
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 const GAS_BUDGET_PER_COIN = uint64(20_000_000)
 

@@ -14,7 +14,7 @@ type MockedClient struct {
 	mock.Mock
 }
 
-var _ xclient.FullClient = &MockedClient{}
+var _ xclient.Client = &MockedClient{}
 
 // FetchTransferInput fetches tx input, mocked
 func (m *MockedClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {

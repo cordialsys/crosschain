@@ -61,6 +61,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 			to_addr[:], toAmountBytes,
 		},
 	}
+	// TODO validate max fee
 
 	return &Tx{
 		tx: transactionbuilder.RawTransaction{
@@ -111,6 +112,7 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 			to_addr[:], toAmountBytes,
 		},
 	}
+	// TODO validate max fee
 	return &Tx{
 		tx: transactionbuilder.RawTransaction{
 			Sender:         from_addr,

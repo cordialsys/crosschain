@@ -28,8 +28,7 @@ type Client struct {
 	Asset      xc.ITask
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the XRP node
 func NewClient(cfgI xc.ITask) (*Client, error) {

@@ -37,7 +37,6 @@ type TxBuilder struct {
 	// Legacy bool
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
 
@@ -68,9 +67,10 @@ func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) TxBuilder {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
+	// TODO validate max fee
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)

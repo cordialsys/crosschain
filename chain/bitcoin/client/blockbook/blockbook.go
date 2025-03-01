@@ -36,8 +36,7 @@ type BlockbookClient struct {
 	decoder    address.AddressDecoder
 }
 
-var _ xclient.FullClient = &BlockbookClient{}
-var _ xclient.ClientWithDecimals = &BlockbookClient{}
+var _ xclient.Client = &BlockbookClient{}
 var _ address.WithAddressDecoder = &BlockbookClient{}
 
 func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {

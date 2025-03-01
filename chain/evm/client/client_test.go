@@ -8,6 +8,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
@@ -185,7 +186,8 @@ func TestFetchTxInput(t *testing.T) {
 		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
 		client, err := client.NewClient(asset)
 		require.NoError(t, err)
-		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(fromAddr), xc.Address(""))
+		amount := xc.NewAmountBlockchainFromUint64(1)
+		input, err := client.FetchTransferInput(context.Background(), buildertest.DefaultTransferOpts(xc.Address(fromAddr), "", amount))
 		require.NoError(t, err)
 		if v.err != "" {
 			require.Equal(t, tx_input.TxInput{}, input)

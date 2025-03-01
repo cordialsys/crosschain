@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
@@ -31,24 +32,24 @@ func TestTransferSetsMaxTipCap(t *testing.T) {
 	input := tx_input.NewTxInput()
 
 	input.GasTipCap = builder.GweiToWei(builder.DefaultMaxTipCapGwei - 1)
-	trans, err := b.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	trans, err := b.Transfer(buildertest.DefaultTransferOpts(xc.Address(from), xc.Address(to), amount), input)
 	require.NoError(t, err)
 	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei-1).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
 
 	input.GasTipCap = builder.GweiToWei(builder.DefaultMaxTipCapGwei + 1)
-	trans, err = b.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	trans, err = b.Transfer(buildertest.DefaultTransferOpts(xc.Address(from), xc.Address(to), amount), input)
 	require.NoError(t, err)
 	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
 
 	// increase the max
 	b, _ = builder.NewTxBuilder(&xc.ChainConfig{ChainMaxGasPrice: 100})
-	trans, _ = b.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	trans, _ = b.Transfer(buildertest.DefaultTransferOpts(xc.Address(from), xc.Address(to), amount), input)
 	// now DefaultMaxTipCapGwei + 1 is used
 	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei+1).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
 
 	// 100 is used instead of 1000
 	input.GasTipCap = builder.GweiToWei(1000)
-	trans, _ = b.NewTransfer(xc.Address(from), xc.Address(to), amount, input)
+	trans, _ = b.Transfer(buildertest.DefaultTransferOpts(xc.Address(from), xc.Address(to), amount), input)
 	require.EqualValues(t, builder.GweiToWei(100).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
 }
 

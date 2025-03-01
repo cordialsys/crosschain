@@ -75,7 +75,6 @@ type NativeClient struct {
 }
 
 var _ xclient.Client = &NativeClient{}
-var _ xclient.ClientWithDecimals = &NativeClient{}
 var _ address.WithAddressDecoder = &NativeClient{}
 
 // NewClient returns a new Bitcoin Client

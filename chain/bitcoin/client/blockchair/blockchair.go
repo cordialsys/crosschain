@@ -35,8 +35,7 @@ type BlockchairClient struct {
 	addressDecoder address.AddressDecoder
 }
 
-var _ xclient.FullClient = &BlockchairClient{}
-var _ xclient.ClientWithDecimals = &BlockchairClient{}
+var _ xclient.Client = &BlockchairClient{}
 var _ address.WithAddressDecoder = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client

@@ -13,7 +13,7 @@ import (
 	vestexported "github.com/cosmos/cosmos-sdk/x/auth/vesting/exported"
 	vesttypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // for pretty purpose

@@ -18,8 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 const TX_TIMEOUT = 2 * time.Hour

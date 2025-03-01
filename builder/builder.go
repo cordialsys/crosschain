@@ -4,7 +4,6 @@ import xc "github.com/cordialsys/crosschain"
 
 type FullTransferBuilder interface {
 	Transfer
-	xc.TxBuilder
 }
 type FullBuilder interface {
 	FullTransferBuilder

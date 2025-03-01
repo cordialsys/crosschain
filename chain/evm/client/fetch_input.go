@@ -120,7 +120,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}
-	exampleTf, err := builder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), txInput)
+	exampleTf, err := builder.Transfer(args, txInput)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}
@@ -131,12 +131,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	txInput.GasLimit = gasLimit
 	return txInput, nil
-}
-
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return client.FetchTransferInput(ctx, args)
 }
 
 // FetchLegacyTxInput returns tx input for a EVM tx
