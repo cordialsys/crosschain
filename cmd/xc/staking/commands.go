@@ -83,7 +83,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain)
+			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain.Base())
 			if err != nil {
 				return err
 			}
@@ -143,7 +143,7 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain)
+			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain.Base())
 			if err != nil {
 				return err
 			}
@@ -226,7 +226,7 @@ func CmdWithdraw() *cobra.Command {
 				return err
 			}
 
-			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain)
+			stakingBuilder, err := xcFactory.NewStakingTxBuilder(chain.Base())
 			if err != nil {
 				return err
 			}

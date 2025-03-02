@@ -16,14 +16,14 @@ var DefaultMaxTotalTipHuman, _ = xc.NewAmountHumanReadableFromStr("2")
 
 // TxBuilder for Template
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
 	}, nil
@@ -31,30 +31,21 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	if _, ok := args.GetContract(); ok {
+		return nil, fmt.Errorf("token transfers not supported on substrate")
+	}
 	txInput := input.(*tx_input.TxInput)
-	switch asset := txBuilder.Asset.(type) {
-	case *xc.ChainConfig:
-		// ok
-	case *xc.TokenAssetConfig:
-		return nil, fmt.Errorf("NewTransfer not implemented for tokens on substrate yet")
-	default:
-		return nil, fmt.Errorf("NewTransfer not implemented for %T", asset)
-	}
-	sender, err := address.DecodeMulti(from)
+
+	sender, err := address.DecodeMulti(args.GetFrom())
 	if err != nil {
 		return &tx.Tx{}, err
 	}
-	receiver, err := address.DecodeMulti(to)
+	receiver, err := address.DecodeMulti(args.GetTo())
 	if err != nil {
 		return &tx.Tx{}, err
 	}
 
-	call, err := tx_input.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompact(amount.Int()))
+	call, err := tx_input.NewCall(&txInput.Meta, "Balances.transfer_keep_alive", receiver, types.NewUCompact(args.GetAmount().Int()))
 	if err != nil {
 		return &tx.Tx{}, err
 	}

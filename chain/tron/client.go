@@ -28,8 +28,7 @@ type Client struct {
 	// client *client.GrpcClient
 	client *httpclient.Client
 
-	contract xc.ContractAddress
-	chain    *xc.ChainConfig
+	chain *xc.ChainConfig
 }
 
 // TxInput for Template
@@ -135,7 +134,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 	return &Client{
 		client,
-		xc.ContractAddress(cfgI.GetContract()),
 		cfg,
 	}, nil
 }
@@ -261,13 +259,16 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 	return xclient.TxInfoFromLegacy(client.chain, legacyTx, xclient.Account), nil
 }
 
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	a, err := client.client.ReadTrc20Balance(string(address), string(client.contract))
-	if err != nil {
-		return xc.AmountBlockchain{}, err
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		a, err := client.client.ReadTrc20Balance(string(args.Address()), string(contract))
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
+		return xc.NewAmountBlockchainFromStr(a.String()), nil
+	} else {
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
-
-	return xc.NewAmountBlockchainFromStr(a.String()), nil
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

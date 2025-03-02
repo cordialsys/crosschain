@@ -18,6 +18,7 @@ func (m *Dagger) TestChain(
 	source *dagger.Directory,
 	// +optional
 	network string,
+	// +optional
 	algorithm string,
 ) (string, error) {
 	nodeService := dag.Container().

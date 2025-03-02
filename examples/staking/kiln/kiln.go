@@ -74,7 +74,7 @@ func CmdStake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			txBuilder, err := xcFactory.NewTxBuilder(chain)
+			txBuilder, err := xcFactory.NewTxBuilder(chain.Base())
 			if err != nil {
 				return err
 			}
@@ -95,7 +95,7 @@ func CmdStake() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
-			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chain.Base(), privateKeyInput)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -104,7 +104,7 @@ func CmdStake() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chain)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chain.Base())
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
@@ -211,7 +211,7 @@ func CmdUnstake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			txBuilder, err := xcFactory.NewTxBuilder(chain)
+			txBuilder, err := xcFactory.NewTxBuilder(chain.Base())
 			if err != nil {
 				return err
 			}
@@ -232,7 +232,7 @@ func CmdUnstake() *cobra.Command {
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
-			signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+			signer, err := xcFactory.NewSigner(chain.Base(), privateKeyInput)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -241,7 +241,7 @@ func CmdUnstake() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chain)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chain.Base())
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}

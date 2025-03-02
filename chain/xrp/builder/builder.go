@@ -12,12 +12,11 @@ import (
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/shopspring/decimal"
-	"github.com/sirupsen/logrus"
 )
 
 // TxBuilder for Template
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
@@ -26,7 +25,7 @@ type TxInput = xrptxinput.TxInput
 type Tx = xrptx.Tx
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
 	}, nil
@@ -34,28 +33,15 @@ func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
 
-// NewTransfer creates a new transfer for an Asset, either native or token
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	switch asset := txBuilder.Asset.(type) {
-	case *xc.ChainConfig:
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
+
+	if contract, ok := args.GetContract(); ok {
+		return txBuilder.NewTokenTransfer(from, to, amount, contract, input)
+	} else {
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
-	case *xc.TokenAssetConfig:
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-	default:
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("new transfer for unknown asset type")
-		if contract != "" {
-			return txBuilder.NewTokenTransfer(from, to, amount, input)
-		} else {
-			return txBuilder.NewNativeTransfer(from, to, amount, input)
-		}
 	}
 }
 
@@ -86,16 +72,10 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	asset := txBuilder.Asset
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, assetId xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
-	assetContract := asset.GetContract()
-	if assetContract == "" {
-		return nil, fmt.Errorf("asset does not have a contract")
-	}
-
-	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetContract)
+	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}

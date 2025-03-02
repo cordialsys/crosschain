@@ -9,8 +9,10 @@ import (
 	"github.com/coming-chat/go-sui/v2/move_types"
 	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/shopspring/decimal"
 )
@@ -240,21 +242,21 @@ func (s *CrosschainTestSuite) TestTransfers() {
 	to := "0xaa8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de6600"
 
 	vectors := []struct {
+		name string
 		// in SUI, not mist.
-		name      string
-		amount    string
-		token     *xc.TokenAssetConfig
-		resp      interface{}
-		inputs    []bcs.CallArg
-		commands  []bcs.Command
-		gasBudget uint64
-		err       error
+		amount        string
+		tokenContract xc.ContractAddress
+		resp          interface{}
+		inputs        []bcs.CallArg
+		commands      []bcs.Command
+		gasBudget     uint64
+		err           error
 	}{
 		// Test with 2 sui coins
 		{
 			"Test_with_2_sui_coin",
 			"1.5",
-			nil,
+			xc.ContractAddress(""),
 			[]string{
 				// get coins
 				`{"data":[
@@ -311,7 +313,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_with_many_sui_coin",
 			"3",
-			nil,
+			xc.ContractAddress(""),
 			[]string{
 				// get coins
 				`{"data":[
@@ -389,7 +391,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_with_1_sui_coin",
 			"1.0",
-			nil,
+			xc.ContractAddress(""),
 			[]string{
 				// get coins
 				`{"data":[
@@ -435,7 +437,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_with_no_balance",
 			"10.0",
-			nil,
+			xc.ContractAddress(""),
 			[]string{
 				// get coins
 				`{"data":[
@@ -459,7 +461,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_gas_budget_remainder",
 			"95.0",
-			nil,
+			xc.ContractAddress(""),
 			[]string{
 				// get coins
 				` {"data":[
@@ -533,11 +535,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_1_usdc_coin",
 			"3.0",
-			&xc.TokenAssetConfig{
-				Asset:    "USDC",
-				Decimals: 9,
-				Contract: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-			},
+			xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
 			[]string{
 				// suix_getCoins (token)
 				`{"data":[
@@ -586,11 +584,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 		{
 			"Test_many_usdc_coin",
 			"1500.0",
-			&xc.TokenAssetConfig{
-				Asset:    "USDC",
-				Decimals: 9,
-				Contract: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-			},
+			xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
 			[]string{
 				// suix_getCoins
 				`{"data":[
@@ -672,19 +666,24 @@ func (s *CrosschainTestSuite) TestTransfers() {
 
 	for _, v := range vectors {
 		fmt.Println("=== Running ", v.name)
+		amount_human_dec, err := decimal.NewFromString(v.amount)
+		require.NoError(err)
+		amount_machine := xc.AmountHumanReadable(amount_human_dec).ToBlockchain(9)
+
 		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
 		defer close()
 		nativeAsset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
 		nativeAsset.URL = server.URL
-		var asset xc.ITask = nativeAsset
-		if v.token != nil {
-			v.token.ChainConfig = nativeAsset
-			asset = v.token
-			// asset =
-		}
-		client, err := NewClient(asset)
+
+		client, err := NewClient(nativeAsset)
 		require.NoError(err)
-		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(from), xc.Address(to))
+
+		args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine)
+		if v.tokenContract != "" {
+			args.SetContract(v.tokenContract)
+		}
+
+		input, err := client.FetchTransferInput(context.Background(), args)
 		require.NoError(err)
 		local_input := input.(*TxInput)
 		local_input.SetPublicKeyFromStr(from_pk)
@@ -695,11 +694,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 			require.NotEqualValues(coin.CoinObjectId, local_input.GasCoin.CoinObjectId)
 		}
 
-		builder, err := NewTxBuilder(asset)
+		builder, err := NewTxBuilder(nativeAsset.GetChain().Base())
 		require.NoError(err)
-		amount_human_dec, err := decimal.NewFromString(v.amount)
-		require.NoError(err)
-		amount_machine := xc.AmountHumanReadable(amount_human_dec).ToBlockchain(9)
 
 		tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), amount_machine, input)
 		if v.err == nil {
@@ -800,7 +796,8 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		client, err := NewClient(asset)
 		require.NoError(err)
 
-		bal, err := client.FetchBalance(ctx, xc.Address(from))
+		args := xclient.NewBalanceArgs(xc.Address(from))
+		bal, err := client.FetchBalance(ctx, args)
 
 		if v.err != nil {
 			require.ErrorContains(err, v.err.Error())

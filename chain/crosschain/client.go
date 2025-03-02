@@ -74,17 +74,11 @@ func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, servic
 	return client, nil
 }
 
-func (client *Client) apiAsset() *types.AssetReq {
+func (client *Client) apiAsset(contractMaybe xc.ContractAddress) *types.AssetReq {
 	native := client.Asset.GetChain()
-	contract := client.Asset.GetContract()
-	decimals := client.Asset.GetDecimals()
-	assetSymbol := client.Asset.GetAssetSymbol()
-
 	return &types.AssetReq{
 		ChainReq: &types.ChainReq{Chain: string(native.Chain)},
-		Asset:    assetSymbol,
-		Contract: contract,
-		Decimals: strconv.FormatInt(int64(decimals), 10),
+		Contract: string(contractMaybe),
 	}
 }
 
@@ -178,8 +172,9 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 
 // FetchLegacyTxInput returns tx input from a Crosschain endpoint
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	contract, _ := args.GetContract()
 	res, err := client.legacyApiCall(ctx, "/input", &types.TxInputReq{
-		AssetReq: client.apiAsset(),
+		AssetReq: client.apiAsset(contract),
 		From:     string(args.GetFrom()),
 		To:       string(args.GetTo()),
 	})
@@ -228,7 +223,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 // FetchLegacyTxInfo returns tx info from a Crosschain endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	res, err := client.legacyApiCall(ctx, "/info", &types.TxInfoReq{
-		AssetReq: client.apiAsset(),
+		AssetReq: client.apiAsset(""),
 		TxHash:   string(txHash),
 	})
 	if err != nil {
@@ -257,7 +252,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
-	var assetReq = client.apiAsset()
+	var assetReq = client.apiAsset("")
 	assetReq.Asset = ""
 	assetReq.Contract = ""
 	assetReq.Decimals = ""
@@ -275,11 +270,12 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 }
 
 // FetchBalance fetches token balance from a Crosschain endpoint
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
+	contract, _ := args.Contract()
 	res, err := client.legacyApiCall(ctx, "/balance", &types.BalanceReq{
-		AssetReq: client.apiAsset(),
-		Address:  string(address),
+		AssetReq: client.apiAsset(contract),
+		Address:  string(args.Address()),
 	})
 	if err != nil {
 		return zero, err

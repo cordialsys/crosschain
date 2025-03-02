@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/xrp/builder"
 	"github.com/cordialsys/crosschain/chain/xrp/tx"
 	"github.com/cordialsys/crosschain/chain/xrp/tx_input"
@@ -15,14 +16,14 @@ type Tx = tx.Tx
 
 func TestNewTxBuilder(t *testing.T) {
 
-	txBuilder, err := builder.NewTxBuilder(xc.NewChainConfig("XRP"))
+	txBuilder, err := builder.NewTxBuilder(xc.NewChainConfig("XRP").Base())
 	require.NotNil(t, txBuilder)
 	require.Nil(t, err)
 }
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
@@ -39,16 +40,17 @@ func TestNewNativeTransfer(t *testing.T) {
 func TestNewTokenTransfer(t *testing.T) {
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
-	txBuilder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
-		Contract:    contract,
-		Decimals:    16,
-		ChainConfig: xc.NewChainConfig(""),
-	})
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12000000000000000)
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
+	)
+
 	input := &TxInput{}
-	tt, err := txBuilder.NewTokenTransfer(from, to, amount, input)
+	tt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tt)
 	xrpTx := tt.(*Tx).XRPTx
@@ -59,12 +61,15 @@ func TestNewTokenTransfer(t *testing.T) {
 
 func TestNewTransfer(t *testing.T) {
 
-	txBuilder1, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &TxInput{}
-	tnt, err := txBuilder1.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+	)
+	tnt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tnt)
 	xrpTx := tnt.(*Tx).XRPTx
@@ -74,12 +79,12 @@ func TestNewTransfer(t *testing.T) {
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
 	amount2 := xc.NewAmountBlockchainFromUint64(12000000000000000)
-	txBuilder2, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
-		Contract:    contract,
-		Decimals:    15,
-		ChainConfig: xc.NewChainConfig(""),
-	})
-	tnt, err = txBuilder2.NewTransfer(from, to, amount2, input)
+
+	args = buildertest.MustNewTransferArgs(
+		from, to, amount2,
+		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
+	)
+	tnt, err = txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tnt)
 	xrpTx = tnt.(*Tx).XRPTx

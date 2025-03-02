@@ -14,14 +14,13 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 )
 
 var DefaultMaxTipCapGwei uint64 = 5
 
 type GethTxBuilder interface {
-	BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, input xc.TxInput) (xc.Tx, error)
+	BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address, value xc.AmountBlockchain, data []byte, input xc.TxInput) (xc.Tx, error)
 }
 
 // supports evm after london merge
@@ -32,7 +31,7 @@ var _ GethTxBuilder = &EvmTxBuilder{}
 
 // TxBuilder for EVM
 type TxBuilder struct {
-	Asset         xc.ITask
+	Asset         *xc.ChainBaseConfig
 	gethTxBuilder GethTxBuilder
 	// Legacy bool
 }
@@ -45,7 +44,7 @@ func NewEvmTxBuilder() *EvmTxBuilder {
 }
 
 // NewTxBuilder creates a new EVM TxBuilder
-func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset:         asset,
 		gethTxBuilder: &EvmTxBuilder{},
@@ -70,44 +69,28 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	from := args.GetFrom()
 	to := args.GetTo()
 	amount := args.GetAmount()
-	switch asset := txBuilder.Asset.(type) {
-	case *xc.ChainConfig:
+	if contract, ok := args.GetContract(); ok {
+		return txBuilder.NewTokenTransfer(from, to, amount, contract, input)
+	} else {
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
-
-	case *xc.TokenAssetConfig:
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-
-	default:
-		// TODO this should return error
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("new transfer for unknown asset type")
-		if contract != "" {
-			return txBuilder.NewTokenTransfer(from, to, amount, input)
-		} else {
-			return txBuilder.NewNativeTransfer(from, to, amount, input)
-		}
 	}
+
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), to, amount, []byte{}, input)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset, to, amount, []byte{}, input)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	contract := txBuilder.Asset.GetContract()
 	payload, err := BuildERC20Payload(to, amount)
 	if err != nil {
 		return nil, err
 	}
-	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), zero, payload, input)
+	return txBuilder.gethTxBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), zero, payload, input)
 }
 
 func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
@@ -135,7 +118,7 @@ func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error
 	return data, nil
 }
 
-func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
+func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
 	address, err := address.FromHex(to)
 	if err != nil {
 		return nil, err
@@ -195,12 +178,12 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTx
 		for i := range credentials {
 			credentials[i] = withdrawCred[:]
 		}
-		data, err := stake_batch_deposit.Serialize(txBuilder.Asset.GetChain(), input.PublicKeys, credentials, input.Signatures)
+		data, err := stake_batch_deposit.Serialize(txBuilder.Asset, input.PublicKeys, credentials, input.Signatures)
 		if err != nil {
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
-		contract := txBuilder.Asset.GetChain().Staking.StakeContract
-		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
+		contract := txBuilder.Asset.Staking.StakeContract
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
 		}
@@ -226,9 +209,9 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 		if err != nil {
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
-		contract := txBuilder.Asset.GetChain().Staking.UnstakeContract
+		contract := txBuilder.Asset.Staking.UnstakeContract
 		zero := xc.NewAmountBlockchainFromUint64(0)
-		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset.GetChain(), xc.Address(contract), zero, data, &input.TxInput)
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), zero, data, &input.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
 		}

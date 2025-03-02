@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +59,8 @@ func TestAccountBalance(t *testing.T) {
 
 		client, _ := client.NewClient(xc.NewChainConfig("").WithUrl(server.URL))
 		from := xc.Address("0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B")
-		balance, err := client.FetchBalance(context.Background(), from)
+		args := xclient.NewBalanceArgs(from)
+		balance, err := client.FetchBalance(context.Background(), args)
 
 		if v.err != "" {
 			require.Equal(t, "0", balance.String())

@@ -7,7 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-func GetParams(cfg *xc.ChainConfig) (*chaincfg.Params, error) {
+func GetParams(cfg *xc.ChainBaseConfig) (*chaincfg.Params, error) {
 	switch xc.NativeAsset(cfg.Chain) {
 	case xc.BTC, xc.BCH:
 		return BtcNetworks.GetParams(cfg.Net), nil

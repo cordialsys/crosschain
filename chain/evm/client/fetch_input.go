@@ -18,11 +18,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (client *Client) DefaultGasLimit() uint64 {
+func (client *Client) DefaultGasLimit(smartContract bool) uint64 {
 	// Set absolute gas limits for safety
 	gasLimit := uint64(90_000)
 	native := client.Asset.GetChain()
-	if client.Asset.GetContract() != "" {
+	if smartContract {
 		// token
 		gasLimit = 500_000
 	}
@@ -47,6 +47,7 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		Data:       trans.EthTx.Data(),
 		AccessList: types.AccessList{},
 	}
+	isSmartContract := len(msg.Data) > 0
 	// we should not include both gas pricing, need to pick one.
 	if client.Asset.GetChain().Driver == xc.DriverEVMLegacy {
 		msg.GasPrice = zero
@@ -69,7 +70,7 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		gasLimit, err = client.EthClient.EstimateGas(ctx, msg)
 	} else if err != nil && strings.Contains(err.Error(), "less than the block's baseFeePerGas") {
 		// this estimate does not work with hardhat -> use defaults
-		return client.DefaultGasLimit(), nil
+		return client.DefaultGasLimit(isSmartContract), nil
 	}
 	if err != nil {
 		return 0, fmt.Errorf("could not simulate tx: %v", err)
@@ -92,7 +93,7 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 	}
 
 	if gasLimit == 0 {
-		gasLimit = client.DefaultGasLimit()
+		gasLimit = client.DefaultGasLimit(isSmartContract)
 	}
 	return gasLimit, nil
 }
@@ -116,7 +117,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return txInput, err
 	}
-	builder, err := builder.NewTxBuilder(client.Asset)
+	builder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}

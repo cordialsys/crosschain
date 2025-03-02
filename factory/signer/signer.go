@@ -52,7 +52,7 @@ func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, er
 		if len(privateKeyOrMnemonic) < 16 {
 			return nil, errors.New("invalid mnemonic")
 		}
-		encoding, err := cosmostypes.MakeCosmosConfig(xc.NewChainConfig("").WithChainPrefix("any"))
+		encoding, err := cosmostypes.MakeCosmosConfig(xc.NewChainConfig("").WithChainPrefix("any").Base())
 		if err != nil {
 			return PrivateKey{}, err
 		}
@@ -94,7 +94,7 @@ func fromString(secret string, hdNumMaybe uint32) ([]byte, error) {
 	return bz, nil
 }
 
-func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainConfig, options ...address.AddressOption) (*Signer, error) {
+func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options ...address.AddressOption) (*Signer, error) {
 	hdNum := uint32(118)
 	if cfgMaybe != nil {
 		hdNum = cfgMaybe.ChainCoinHDPath

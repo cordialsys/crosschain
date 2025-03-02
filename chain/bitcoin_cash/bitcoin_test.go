@@ -35,7 +35,7 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset)
-		builder, err := NewAddressBuilder(chain)
+		builder, err := NewAddressBuilder(chain.Base())
 		require.NotNil(builder)
 		require.NoError(err)
 	}
@@ -45,7 +45,7 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset).WithNet("testnet")
-		builder, err := NewAddressBuilder(chain)
+		builder, err := NewAddressBuilder(chain.Base())
 		require.NoError(err)
 		_, err = base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
 		require.NoError(err)
@@ -70,7 +70,7 @@ func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset)
-		builder, err := NewTxBuilder(chain)
+		builder, err := NewTxBuilder(chain.Base())
 		require.NotNil(builder)
 		require.NoError(err)
 	}
@@ -88,7 +88,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 			xc.BCH,
 		} {
 			chain := xc.NewChainConfig(native_asset).WithNet("testnet")
-			builder, _ := NewTxBuilder(chain)
+			builder, _ := NewTxBuilder(chain.Base())
 			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 			to := xc.Address(addr)
 			amount := xc.NewAmountBlockchainFromUint64(1)
@@ -135,7 +135,7 @@ func (s *CrosschainTestSuite) TestTxHash() {
 	require := s.Require()
 
 	chain := xc.NewChainConfig(xc.BTC).WithNet("testnet")
-	builder, _ := NewTxBuilder(chain)
+	builder, _ := NewTxBuilder(chain.Base())
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
 	amount := xc.NewAmountBlockchainFromUint64(1)

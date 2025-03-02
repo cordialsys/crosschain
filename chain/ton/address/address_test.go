@@ -10,13 +10,13 @@ import (
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := address.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	bytes, _ := hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -24,7 +24,7 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 }
 
 func TestParseAddress(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	bytes, _ := hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
 	derivedAddr, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestParseAddress(t *testing.T) {
 }
 
 func TestParseTestnetAddress(t *testing.T) {
-	chain := xc.NewChainConfig(xc.TON).WithNet("testnet")
+	chain := xc.NewChainConfig(xc.TON).WithNet("testnet").Base()
 	builder, _ := address.NewAddressBuilder(chain)
 	bytes, _ := hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
 	derivedAddr, err := builder.GetAddressFromPublicKey(bytes)

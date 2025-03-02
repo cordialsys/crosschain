@@ -111,7 +111,7 @@ func TestTaoEvents(t *testing.T) {
 	require.NoError(t, err)
 
 	chain := crosschain.NewChainConfig(crosschain.TAO).WithChainPrefix("42")
-	addressBuilder, err := address.NewAddressBuilder(chain)
+	addressBuilder, err := address.NewAddressBuilder(chain.Base())
 	require.NoError(t, err)
 
 	var eventsI = []api.EventI{}
@@ -124,11 +124,13 @@ func TestTaoEvents(t *testing.T) {
 	require.Len(t, dests, 0)
 
 	stakes, _, err := api.ParseStakingEvents(addressBuilder, chain.Chain, eventsI)
+	require.NoError(t, err)
 	require.Len(t, stakes, 1)
 	require.Equal(t, stakes[0].Validator, "5HjBSeeoz52CLfvDWDkzupqrYLHz1oToDPHjdmJjc4TF68LQ")
 	require.Equal(t, stakes[0].Balance.String(), "3250000")
 
 	_, fee, ok, err := api.ParseFee(addressBuilder, eventsI)
+	require.NoError(t, err)
 	require.True(t, ok, "has fee")
 	require.Equal(t, fee.String(), "1234")
 }

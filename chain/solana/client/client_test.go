@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	xcsolana "github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
@@ -73,7 +75,8 @@ curl https://api.devnet.solana.com -X POST -H "Content-Type: application/json" -
 func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
-		asset             xc.ITask
+		asset             *xc.ChainConfig
+		contract          xc.ContractAddress
 		resp              interface{}
 		blockHash         string
 		toIsATA           bool
@@ -92,7 +95,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -114,7 +118,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -136,7 +141,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -159,7 +165,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -181,7 +188,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -215,7 +223,8 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "rpc.GetLatestBlockhashResult",
 		},
 		{
-			asset: &xc.TokenAssetConfig{Contract: "invalid-contract"},
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("invalid-contract"),
 			resp: []string{
 				// valid blockhash
 				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -264,16 +273,16 @@ func TestFetchTxInput(t *testing.T) {
 			defer close()
 			fmt.Println("ASSET", v.asset)
 			server.ForceError = v.forceError
-			if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = xc.NewChainConfig(xc.SOL).WithUrl(server.URL)
-			} else {
-				v.asset.(*xc.ChainConfig).URL = server.URL
-			}
+			v.asset.URL = server.URL
 
 			client, _ := client.NewClient(v.asset)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 			to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+			args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+			if v.contract != "" {
+				args.SetContract(v.contract)
+			}
+			input, err := client.FetchTransferInput(context.Background(), args)
 
 			if v.err != "" {
 				require.Nil(t, input)
@@ -412,12 +421,13 @@ func TestTokenBalance(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
 
-			client, _ := client.NewClient(&xc.TokenAssetConfig{
-				ChainConfig: xc.NewChainConfig("").WithUrl(server.URL),
-				Contract:    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-			})
+			client, _ := client.NewClient(xc.NewChainConfig("").WithUrl(server.URL))
 			from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-			balance, err := client.FetchBalance(context.Background(), from)
+			args := xclient.NewBalanceArgs(
+				from,
+				xclient.OptionContract(xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")),
+			)
+			balance, err := client.FetchBalance(context.Background(), args)
 
 			if v.err != "" {
 				require.Equal(t, "0", balance.String())

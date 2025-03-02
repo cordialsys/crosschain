@@ -10,13 +10,13 @@ import (
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := address.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	bytes, _ := hex.DecodeString("ed1ed5f392e6110d4fd534a67494d0d4e63cf808baadd3c9e66f9049a5775475b1")
 	addressFromPubKey, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)

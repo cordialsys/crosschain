@@ -45,8 +45,8 @@ func (m *MockedClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // FetchBalance fetches balance, mocked
-func (m *MockedClient) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	args := m.Called(ctx, address)
+func (m *MockedClient) FetchBalance(ctx context.Context, balanceArgs *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	args := m.Called(ctx, balanceArgs)
 	return args.Get(0).(xc.AmountBlockchain), args.Error(1)
 }
 

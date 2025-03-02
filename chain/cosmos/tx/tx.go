@@ -19,7 +19,7 @@ import (
 
 // Tx for Cosmos
 type Tx struct {
-	ChainCfg        *xc.ChainConfig
+	ChainCfg        *xc.ChainBaseConfig
 	Input           tx_input.TxInput
 	Msgs            []types.Msg
 	Fees            types.Coins
@@ -29,7 +29,7 @@ type Tx struct {
 	signatures [][]byte
 }
 
-func NewTx(chain *xc.ChainConfig, input tx_input.TxInput, msgs []types.Msg, fees types.Coins, senderPubkey []byte, memo string) *Tx {
+func NewTx(chain *xc.ChainBaseConfig, input tx_input.TxInput, msgs []types.Msg, fees types.Coins, senderPubkey []byte, memo string) *Tx {
 	signatures := [][]byte{}
 	return &Tx{
 		chain, input, msgs, fees, senderPubkey, memo, signatures,
@@ -121,7 +121,7 @@ func (tx Tx) Serialize() ([]byte, error) {
 	return serialized, nil
 }
 
-func GetSighash(asset *xc.ChainConfig, sigData []byte) []byte {
+func GetSighash(asset *xc.ChainBaseConfig, sigData []byte) []byte {
 	if address.IsEVMOS(asset) {
 		return crypto.Keccak256(sigData)
 	}
