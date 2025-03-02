@@ -19,7 +19,8 @@ func (s *AptosTestSuite) TestNewClient() {
 	server, close := testtypes.MockHTTP(s.T(), resp, 200)
 	defer close()
 
-	client, err := NewClient(&xc.ChainConfig{URL: server.URL})
+	cfg := xc.NewChainConfig(xc.APTOS).WithUrl(server.URL)
+	client, err := NewClient(cfg)
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -35,7 +36,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 		err   string
 	}{
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -54,7 +55,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 			err: "",
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -109,7 +110,8 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	}, 200)
 	server.StatusCodes = []int{200, 200, 400}
 	defer close()
-	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet", URL: server.URL}
+	asset := xc.NewChainConfig(xc.APTOS).WithUrl(server.URL).WithNet("devnet")
+
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -277,7 +279,7 @@ func TestFetchTxInfo(t *testing.T) {
 			resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 			server, close := testtypes.MockHTTP(t, resp, 0)
 
-			asset := &xc.ChainConfig{Net: "devnet", Chain: "APTOS", ChainCoin: "0x1::aptos_coin::AptosCoin"}
+			asset := xc.NewChainConfig("APTOS").WithNet("devnet").WithChainCoin("0x1::aptos_coin::AptosCoin")
 			asset.URL = server.URL
 			client, _ := NewClient(asset)
 			server.StatusCodes = v.httpStatusCodes
@@ -307,14 +309,14 @@ func (s *AptosTestSuite) TestFetchBalance() {
 		err   string
 	}{
 		{
-			&xc.ChainConfig{},
+			xc.NewChainConfig(""),
 			`{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
 			"1000000",
 			"",
 		},
 		{
 			// TODO I can't find any tokens on aptos
-			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: &xc.ChainConfig{Chain: xc.APTOS}},
+			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: xc.NewChainConfig(xc.APTOS)},
 			[]string{
 				`{}`,
 				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
@@ -323,7 +325,7 @@ func (s *AptosTestSuite) TestFetchBalance() {
 			"failed to parse",
 		},
 		{
-			&xc.ChainConfig{},
+			xc.NewChainConfig(""),
 			`null`,
 			"0",
 			"",
@@ -361,7 +363,7 @@ func (s *AptosTestSuite) TestFetchBalance() {
 func (s *AptosTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
-	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
+	asset := xc.NewChainConfig("APTOS").WithNet("devnet")
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
@@ -400,7 +402,7 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
-	native_asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
+	native_asset := xc.NewChainConfig("APTOS").WithNet("devnet")
 	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", ChainConfig: native_asset}
 	builder, _ := NewTxBuilder(asset)
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")

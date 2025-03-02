@@ -20,7 +20,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	client, err := client.NewClient(&xc.ChainConfig{})
+	client, err := client.NewClient(xc.NewChainConfig(""))
 	require.NotNil(t, client)
 	require.NoError(t, err)
 }
@@ -195,14 +195,14 @@ func TestFetchTxInput(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, _ := client.NewClient(&xc.ChainConfig{
-				URL:              server.URL,
-				Driver:           "filecoin",
-				Net:              "mainnet",
-				ChainGasTip:      v.maxGasLimit,
-				ChainMaxGasPrice: v.maxGasFeeCap,
-				Decimals:         18,
-			})
+			client, _ := client.NewClient(
+				xc.NewChainConfig(xc.FIL, xc.DriverFilecoin).
+					WithUrl(server.URL).
+					WithNet("mainnet").
+					WithGasPriceMultiplier(v.maxGasFeeCap).
+					WithMaxGasPrice(v.maxGasFeeCap).
+					WithDecimals(18),
+			)
 			from := xc.Address("f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy")
 			to := xc.Address("")
 			if v.provide_to {
@@ -280,11 +280,7 @@ func TestSubmitTx(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, _ := client.NewClient(&xc.ChainConfig{
-				URL:    server.URL,
-				Driver: "filecoin",
-				Net:    "mainnet",
-			})
+			client, _ := client.NewClient(xc.NewChainConfig(xc.FIL, xc.DriverFilecoin).WithUrl(server.URL).WithNet("mainnet"))
 			err := client.SubmitTx(context.Background(), v.tx)
 			if err != nil {
 				require.Error(t, err)
@@ -421,13 +417,12 @@ func TestFetchTxInfo(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client, _ := client.NewClient(&xc.ChainConfig{
-				Chain:    "FIL",
-				URL:      server.URL,
-				Driver:   "filecoin",
-				Net:      "mainnet",
-				Decimals: 18,
-			})
+			client, _ := client.NewClient(
+				xc.NewChainConfig(xc.FIL, xc.DriverFilecoin).
+					WithUrl(server.URL).
+					WithNet("mainnet").
+					WithDecimals(18),
+			)
 
 			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.hash))
 			if v.err != "" {

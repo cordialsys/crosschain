@@ -179,7 +179,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		)
 	}
 	// apply multiplier
-	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain())
+	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain().Client())
 
 	return txInput, nil
 }

@@ -27,7 +27,7 @@ func TestNewTxBuilder(t *testing.T) {
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -43,7 +43,7 @@ func TestNewNativeTransfer(t *testing.T) {
 
 func TestNewNativeTransferErr(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 
 	from := xc.Address("from") // fails on parsing from
 	to := xc.Address("to")
@@ -66,7 +66,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	builder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
 		Contract:    contract,
 		Decimals:    6,
-		ChainConfig: &xc.ChainConfig{},
+		ChainConfig: xc.NewChainConfig(""),
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
@@ -146,7 +146,7 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 	builder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
 		Contract:    contract,
 		Decimals:    6,
-		ChainConfig: &xc.ChainConfig{},
+		ChainConfig: xc.NewChainConfig(""),
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
@@ -223,7 +223,7 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 func TestNewTokenTransferErr(t *testing.T) {
 
 	// invalid asset
-	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -262,7 +262,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 
 func TestNewTransfer(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -287,7 +287,7 @@ func TestNewTransferAsToken(t *testing.T) {
 	builder, _ := builder.NewTxBuilder(&xc.TokenAssetConfig{
 		Contract:    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 		Decimals:    6,
-		ChainConfig: &xc.ChainConfig{},
+		ChainConfig: xc.NewChainConfig(""),
 	})
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")

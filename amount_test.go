@@ -73,19 +73,19 @@ func (s *CrosschainTestSuite) TestLegacyGasCalculation() {
 	// Multiplier should default to 1
 	require.EqualValues(
 		1000,
-		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{}).Uint64(),
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainClientConfig{}).Uint64(),
 	)
 	require.EqualValues(
 		1200,
-		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: 1.2}).Uint64(),
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainClientConfig{ChainGasMultiplier: 1.2}).Uint64(),
 	)
 	require.EqualValues(
 		500,
-		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: .5}).Uint64(),
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainClientConfig{ChainGasMultiplier: .5}).Uint64(),
 	)
 	require.EqualValues(
 		1500,
-		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainConfig{ChainGasMultiplier: 1.5}).Uint64(),
+		NewAmountBlockchainFromUint64(1000).ApplyGasPriceMultiplier(&ChainClientConfig{ChainGasMultiplier: 1.5}).Uint64(),
 	)
 }
 

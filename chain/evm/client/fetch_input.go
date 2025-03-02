@@ -171,7 +171,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 		}
 		result.GasFeeCap = xc.AmountBlockchain(*latestHeader.BaseFee)
 		// should only multiply one cap, not both.
-		result.GasTipCap = xc.AmountBlockchain(*gasTipCap).ApplyGasPriceMultiplier(client.Asset.GetChain())
+		result.GasTipCap = xc.AmountBlockchain(*gasTipCap).ApplyGasPriceMultiplier(client.Asset.GetChain().Client())
 
 		if result.GasFeeCap.Cmp(&result.GasTipCap) < 0 {
 			// increase max fee cap to accomodate tip if needed

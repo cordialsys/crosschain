@@ -37,7 +37,7 @@ func reserialize(tx *xcclient.TxInfo) *xcclient.TxInfo {
 
 func TestFetchTxInput(t *testing.T) {
 
-	chain := xc.ChainConfig{Decimals: 9, Chain: xc.TON}
+	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
 	vectors := []struct {
 		asset      xc.ITask
 		desc       string
@@ -47,7 +47,7 @@ func TestFetchTxInput(t *testing.T) {
 		httpStatus int
 	}{
 		{
-			asset: &chain,
+			asset: chain,
 			resp: []string{
 				// get account
 				`{"balance":"587833680","code":"te6cckEBAQEAcQAA3v8AIN0gggFMl7ohggEznLqxn3Gw7UTQ0x/THzHXC//jBOCk8mCDCNcYINMf0x/TH/gjE7vyY+1E0NMf0x/T/9FRMrryoVFEuvKiBPkBVBBV+RDyo/gAkyDXSpbTB9QC+wDo0QGkyMsfyx/L/8ntVBC9ba0=","data":"te6cckEBAQEAKgAAUAAAABEpqaMXwRcreSYRbSo5a9fWm5iAzAZX6LotufYrTCEMUYMhyLF+KRtN","last_transaction_lt":"23693722000001","last_transaction_hash":"mVuNwFVC4eIWjS+lIAkfinkXUQz8k1lqFZ+lQqvAZK8=","frozen_hash":null,"status":"active"}`,
@@ -69,7 +69,7 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			asset: &chain,
+			asset: chain,
 			desc:  "no_public_key_uninit",
 			resp: []string{
 				// get account
@@ -95,7 +95,7 @@ func TestFetchTxInput(t *testing.T) {
 			desc: "fetch_token_info",
 			asset: &xc.TokenAssetConfig{
 				Chain:       chain.Chain,
-				ChainConfig: &chain,
+				ChainConfig: chain,
 				Decimals:    9,
 				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
 			},
@@ -127,7 +127,7 @@ func TestFetchTxInput(t *testing.T) {
 			desc: "fetch_token_info_missing_token_wallet",
 			asset: &xc.TokenAssetConfig{
 				Chain:       chain.Chain,
-				ChainConfig: &chain,
+				ChainConfig: chain,
 				Decimals:    9,
 				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
 			},
@@ -145,7 +145,7 @@ func TestFetchTxInput(t *testing.T) {
 			desc: "reports_error",
 			asset: &xc.TokenAssetConfig{
 				Chain:       chain.Chain,
-				ChainConfig: &chain,
+				ChainConfig: chain,
 				Decimals:    9,
 				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
 			},
@@ -167,7 +167,7 @@ func TestFetchTxInput(t *testing.T) {
 			defer close()
 			chain.URL = server.URL
 			if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = &chain
+				token.ChainConfig = chain
 			} else {
 				v.asset.(*xc.ChainConfig).URL = server.URL
 			}
@@ -193,7 +193,7 @@ func TestFetchTxInput(t *testing.T) {
 
 func TestFetchTxInfo(t *testing.T) {
 
-	chain := xc.ChainConfig{Decimals: 9, Chain: xc.TON}
+	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
 	vectors := []struct {
 		hash       string
 		desc       string
@@ -375,7 +375,7 @@ func TestFetchTxInfo(t *testing.T) {
 			chain.URL = server.URL
 			chain.Limiter = rate.NewLimiter(rate.Inf, 1)
 
-			client, err := ton.NewClient(&chain)
+			client, err := ton.NewClient(chain)
 			require.NoError(t, err)
 			info, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.hash))
 

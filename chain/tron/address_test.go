@@ -11,14 +11,14 @@ import (
 
 func TestNewAddressBuilder(t *testing.T) {
 	require := require.New(t)
-	builder, err := tron.NewAddressBuilder(&xc.ChainConfig{})
+	builder, err := tron.NewAddressBuilder(xc.NewChainConfig(""))
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
 	require := require.New(t)
-	builder, _ := tron.NewAddressBuilder(&xc.ChainConfig{})
+	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig(""))
 	bytes, _ := hex.DecodeString("0404B604296010A55D40000B798EE8454ECCC1F8900E70B1ADF47C9887625D8BAE3866351A6FA0B5370623268410D33D345F63344121455849C9C28F9389ED9731")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(err)
@@ -27,7 +27,7 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 
 func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require := require.New(t)
-	builder, _ := tron.NewAddressBuilder(&xc.ChainConfig{})
+	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig(""))
 
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(xc.Address(""), address)
@@ -40,7 +40,7 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestGetAllPossibleAddressesFromPublicKey() {
 // 	require := s.Require()
-// 	builder, _ := NewAddressBuilder(&xc.ChainConfig{})
+// 	builder, _ := NewAddressBuilder(xc.NewChainConfig(""))
 // 	bytes, _ := hex.DecodeString("04760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1b01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d")
 // 	addresses, err := builder.GetAllPossibleAddressesFromPublicKey(bytes)
 // 	require.Nil(err)

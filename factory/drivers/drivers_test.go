@@ -55,10 +55,8 @@ func TestExampleTestSuite(t *testing.T) {
 }
 
 func createChainFor(driver xc.Driver) *xc.ChainConfig {
-	fakeAsset := &xc.ChainConfig{
-		// URL:         server.URL,
-		Driver: driver,
-	}
+	fakeAsset := xc.NewChainConfig("", driver)
+
 	if driver == xc.DriverBitcoin {
 		fakeAsset.Chain = "BTC"
 		fakeAsset.Auth2 = "env:SECRET_X"

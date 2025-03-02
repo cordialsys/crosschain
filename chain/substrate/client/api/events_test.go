@@ -110,10 +110,7 @@ func TestTaoEvents(t *testing.T) {
 	err := json.Unmarshal([]byte(respRaw), resp)
 	require.NoError(t, err)
 
-	chain := &crosschain.ChainConfig{
-		Chain:       crosschain.TAO,
-		ChainPrefix: "42",
-	}
+	chain := crosschain.NewChainConfig(crosschain.TAO).WithChainPrefix("42")
 	addressBuilder, err := address.NewAddressBuilder(chain)
 	require.NoError(t, err)
 
