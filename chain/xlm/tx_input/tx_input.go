@@ -1,6 +1,8 @@
 package tx_input
 
 import (
+	"fmt"
+	"math"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -77,8 +79,17 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 	}
 
 	multipliedFee := multiplier.Mul(decimal.NewFromInt(int64(input.MaxFee)))
-	input.MaxFee = uint32(multipliedFee.BigInt().Uint64())
+	asInt := multipliedFee.IntPart()
+	if asInt > math.MaxUint32 {
+		return fmt.Errorf("multiplied (x%s) max fee exceeds XLM limit, consider decreasing fee priority", multiplier.String())
+	}
+
+	input.MaxFee = uint32(asInt)
 	return nil
+}
+
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return xc.NewAmountBlockchainFromUint64(uint64(input.MaxFee)), ""
 }
 
 // SetMemo implements xc.TxInputWithMemo.SetMemo

@@ -26,7 +26,7 @@ func (args *TransferArgs) GetPriority() (xc.GasFeePriority, bool) { return args.
 func (args *TransferArgs) GetPublicKey() ([]byte, bool)           { return args.options.GetPublicKey() }
 
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
-	builderOptions := builderOptions{}
+	builderOptions := newBuilderOptions()
 	args := TransferArgs{
 		builderOptions,
 		from,
@@ -39,5 +39,6 @@ func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain,
 			return args, err
 		}
 	}
+
 	return args, nil
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
@@ -123,7 +124,8 @@ func (s *AptosTestSuite) TestSubmitTx() {
 		ChainId:         1,
 		Pubkey:          pubkey,
 	}
-	tf, err := builder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
 	hash := tf.Hash()
@@ -374,7 +376,8 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 		ChainId:         1,
 		Pubkey:          pubkey,
 	}
-	tf, err := builder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
 	hash := tf.Hash()

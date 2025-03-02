@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/xlm/builder"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	"github.com/cordialsys/crosschain/chain/xlm/tx"
@@ -27,7 +28,8 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
-	nt, err := txBuilder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	nt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
 
@@ -56,7 +58,8 @@ func TestNewTokenTransfer(t *testing.T) {
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
-	nt, err := txBuilder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	nt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
 
@@ -89,6 +92,7 @@ func TestInvalidTokenTransfer(t *testing.T) {
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
 
-	_, err := txBuilder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	_, err := txBuilder.Transfer(args, input)
 	require.Error(t, err)
 }

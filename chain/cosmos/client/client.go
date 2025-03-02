@@ -47,8 +47,7 @@ type Client struct {
 // At roughly 5s/block this is a ~12 hour timeout.
 const TimeoutInBlocks = 10_000
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 
 func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
@@ -483,7 +482,7 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	}
 
 	if denom == "" {
-		return zero, fmt.Errorf("failed to account balance: no denom on asset %s", asset.ID())
+		return zero, fmt.Errorf("failed to account balance: no denom on asset")
 	}
 
 	queryClient := banktypes.NewQueryClient(client.Ctx)

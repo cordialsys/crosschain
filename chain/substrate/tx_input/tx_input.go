@@ -50,6 +50,12 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	// very simple, just tip!
+	maxSpend := xc.NewAmountBlockchainFromUint64(input.Tip)
+	return maxSpend, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if substrateOther, ok := other.(*TxInput); ok {

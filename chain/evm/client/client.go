@@ -51,9 +51,7 @@ type Client struct {
 	Interceptor *utils.HttpInterceptor
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientV2 = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 // Ethereum does not support full delegated staking, so we can only report balance information.
 // A 3rd party 'staking provider' is required to do the rest.

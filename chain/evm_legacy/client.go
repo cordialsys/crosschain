@@ -17,8 +17,7 @@ type Client struct {
 	EvmClient *evmclient.Client
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 type TxInput evminput.TxInput
 
@@ -48,6 +47,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 func (input *TxInput) SafeFromDoubleSend(other ...xc.TxInput) (independent bool) {
 	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other...)
+}
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	return ((*evminput.TxInput)(input)).GetMaxFee()
 }
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -94,7 +96,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
-	tf, err := builder.NewTransfer(args.GetFrom(), args.GetTo(), xc.NewAmountBlockchainFromUint64(1), result)
+	tf, err := builder.Transfer(args, result)
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}

@@ -9,8 +9,8 @@ import (
 
 // Client is a client that can fetch data and submit tx to a public blockchain
 type Client interface {
-	// Fetch the basic transaction input for any new transaction
-	FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error)
+	// Fetch transaction input for a transfer
+	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
 
 	// Broadcast a signed transaction to the chain
 	SubmitTx(ctx context.Context, tx xc.Tx) error
@@ -32,18 +32,6 @@ type Client interface {
 
 	// Fetch a specific block or the latest block
 	FetchBlock(ctx context.Context, args *BlockArgs) (*BlockWithTransactions, error)
-}
-type ClientV2 interface {
-	// Improved signature replacement of `FetchLegacyTxInput`
-	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
-}
-type ClientWithDecimals interface {
-	FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error)
-}
-
-type FullClient interface {
-	Client
-	ClientV2
 }
 
 type StakingClient interface {

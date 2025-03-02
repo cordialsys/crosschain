@@ -35,8 +35,7 @@ type BlockchairClient struct {
 	addressDecoder address.AddressDecoder
 }
 
-var _ xclient.FullClient = &BlockchairClient{}
-var _ xclient.ClientWithDecimals = &BlockchairClient{}
+var _ xclient.Client = &BlockchairClient{}
 var _ address.WithAddressDecoder = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
@@ -176,6 +175,7 @@ func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcb
 	if err != nil {
 		return input, err
 	}
+	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
 	return input, nil
 }

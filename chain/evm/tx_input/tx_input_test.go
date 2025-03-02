@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/test-go/testify/require"
 )
@@ -94,4 +95,19 @@ func TestTxInputGasMultiplier(t *testing.T) {
 			require.Equal(t, v.result, uint64(v.input.GasPrice.Uint64()), desc)
 		}
 	}
+}
+
+func TestMaxFee(t *testing.T) {
+	input := tx_input.NewTxInput()
+	input.GasLimit = 21_000
+	input.GasFeeCap = builder.GweiToWei(10)
+	input.GasPrice = builder.GweiToWei(1)
+
+	maxFee, _ := input.GetMaxFee()
+	require.EqualValues(t, builder.GweiToWei(210_000).String(), maxFee.String())
+
+	// use gas-price if it's higher
+	input.GasPrice = builder.GweiToWei(20)
+	maxFee, _ = input.GetMaxFee()
+	require.EqualValues(t, builder.GweiToWei(420_000).String(), maxFee.String())
 }

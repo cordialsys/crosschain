@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/cosmos/gogoproto/jsonpb"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )

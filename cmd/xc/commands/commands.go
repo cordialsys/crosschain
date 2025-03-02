@@ -3,18 +3,18 @@ package commands
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain"
-	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -96,6 +96,7 @@ func CmdRpcBalance() *cobra.Command {
 
 func CmdTxInput() *cobra.Command {
 	var addressTo string
+	var amount string
 	var contract string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
@@ -116,8 +117,11 @@ func CmdTxInput() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			input, err := client.FetchLegacyTxInput(context.Background(), fromAddress, xc.Address(addressTo))
+			tfArgs, err := builder.NewTransferArgs(fromAddress, xc.Address(addressTo), xc.NewAmountBlockchainFromStr(amount))
+			if err != nil {
+				return fmt.Errorf("could not create transfer args: %v", err)
+			}
+			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction input: %v", err)
 			}
@@ -129,6 +133,7 @@ func CmdTxInput() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
+	cmd.Flags().StringVar(&amount, "amount", "", "blockchain amount to transfer")
 	return cmd
 }
 
@@ -187,6 +192,11 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			timeout, err := cmd.Flags().GetDuration("timeout")
+			if err != nil {
+				return err
+			}
+
+			priorityStr, err := cmd.Flags().GetString("priority")
 			if err != nil {
 				return err
 			}
@@ -250,42 +260,59 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			logrus.WithField("address", from).Info("sending from")
 
-			input, err := client.FetchLegacyTxInput(context.Background(), from, xc.Address(toWalletAddress))
+			tfOptions := []builder.BuilderOption{
+				builder.OptionTimestamp(time.Now().Unix()),
+				builder.OptionPublicKey(publicKey),
+			}
+			if memo != "" {
+				tfOptions = append(tfOptions, builder.OptionMemo(memo))
+			}
+
+			if priorityStr != "" {
+				priority, err := xc.NewPriority(priorityStr)
+				if err != nil {
+					return fmt.Errorf("invalid priority: %v", err)
+				}
+				tfOptions = append(tfOptions, builder.OptionPriority(priority))
+			}
+
+			tfArgs, err := builder.NewTransferArgs(from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
+			if err != nil {
+				return fmt.Errorf("invalid transfer args: %v", err)
+			}
+
+			// Get input from RPC
+			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch transfer input: %v", err)
 			}
 
-			if inputWithPublicKey, ok := input.(xc.TxInputWithPublicKey); ok {
-				inputWithPublicKey.SetPublicKey(publicKey)
-				logrus.WithField("public_key", hex.EncodeToString(publicKey)).Debug("added public key to transfer input")
+			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
+			input, err = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+			if err != nil {
+				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
 			}
 
-			if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
-				inputWithAmount.SetAmount(amountBlockchain)
+			err = xc.CheckMaxFeeLimit(input, chainConfig)
+			if err != nil {
+				return err
 			}
 
-			if memo != "" {
-				if txInputWithMemo, ok := input.(xc.TxInputWithMemo); ok {
-					txInputWithMemo.SetMemo(memo)
-				} else {
-					return fmt.Errorf("cannot set memo; chain driver currently does not support memos")
-				}
-			}
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			// create tx
-			// (no network, no private key needed)
 			builder, err := xcFactory.NewTxBuilder(assetConfig(chainConfig, contract, decimals))
 			if err != nil {
 				return fmt.Errorf("could not load tx-builder: %v", err)
 			}
 
-			tx, err := builder.NewTransfer(from, xc.Address(toWalletAddress), amountBlockchain, input)
+			// create tx (no network, no private key needed)
+			tx, err := builder.Transfer(tfArgs, input)
 			if err != nil {
 				return fmt.Errorf("could not build transfer: %v", err)
 			}
 
+			// serialize tx for signing
 			sighashes, err := tx.Sighashes()
 			if err != nil {
 				return fmt.Errorf("could not create payloads to sign: %v", err)
@@ -309,8 +336,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
 
-			// submit the tx, wait a bit, fetch the tx info
-			// (network needed)
+			// submit the tx, wait a bit, fetch the tx info (network needed)
 			err = client.SubmitTx(context.Background(), tx)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
@@ -327,8 +353,18 @@ func CmdTxTransfer() *cobra.Command {
 					time.Sleep(3 * time.Second)
 					continue
 				}
-				fmt.Println(asJson(info))
-				return nil
+
+				if info.Confirmations < 1 {
+					if logrus.GetLevel() >= logrus.DebugLevel {
+						fmt.Fprintln(os.Stderr, asJson(info))
+					}
+					logrus.Info("waiting for confirmation...")
+					time.Sleep(3 * time.Second)
+					continue
+				} else {
+					fmt.Println(asJson(info))
+					return nil
+				}
 			}
 
 			return fmt.Errorf("could not find transaction that we submitted by hash %s", tx.Hash())
@@ -337,6 +373,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
 	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "set a memo for the transfer.")
+	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	return cmd
 }
@@ -476,13 +513,7 @@ func CmdDecimals() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			clientWithDecimals, ok := client.(xcclient.ClientWithDecimals)
-			if !ok {
-				return fmt.Errorf("not implemented for %s", chainConfig.Chain)
-			}
-
-			// address := xcFactory.MustAddress(chainConfig, addressRaw)
-			decimals, err := clientWithDecimals.FetchDecimals(context.Background(), xc.ContractAddress(contract))
+			decimals, err := client.FetchDecimals(context.Background(), xc.ContractAddress(contract))
 			if err != nil {
 				return fmt.Errorf("could not fetch decimals for %s: %v", contract, err)
 			}

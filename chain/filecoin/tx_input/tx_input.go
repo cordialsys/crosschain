@@ -49,6 +49,12 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
+func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+	gasLimit := xc.NewAmountBlockchainFromUint64(input.GasLimit)
+	maxFeeSpend := input.GasFeeCap.Mul(&gasLimit)
+	return maxFeeSpend, ""
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if emvOther, ok := other.(*TxInput); ok {
 		return emvOther.Nonce != input.Nonce

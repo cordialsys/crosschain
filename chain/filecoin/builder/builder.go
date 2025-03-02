@@ -27,21 +27,12 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(xcFrom xc.Address, xcTo xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	transferArgs, err := xcbuilder.NewTransferArgs(xcFrom, xcTo, amount)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create transfer args: %w", err)
-	}
 	txInput, ok := input.(*TxInput)
 	if !ok {
 		return nil, fmt.Errorf("invalid input type")
 	}
 
 	return &tx.Tx{
-		Message: tx.NewMessage(transferArgs, *txInput),
+		Message: tx.NewMessage(args, *txInput),
 	}, nil
 }

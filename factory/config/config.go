@@ -60,7 +60,7 @@ func (cfg *Config) GetChains() []*xc.ChainConfig {
 	slice := slices.Collect(maps.Values(cfg.Chains))
 	sort.Slice(slice, func(i, j int) bool {
 		// need to be sorted deterministically
-		return slice[i].ID() < slice[j].ID()
+		return slice[i].Chain < slice[j].Chain
 	})
 	return slice
 }

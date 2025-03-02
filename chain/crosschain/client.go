@@ -31,9 +31,8 @@ type Client struct {
 	ServiceApiKey   string
 }
 
-var _ xclient.FullClient = &Client{}
+var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
 
 const ServiceApiKeyHeader = "x-service-api-key"
 

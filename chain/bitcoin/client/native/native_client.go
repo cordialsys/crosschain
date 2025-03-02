@@ -75,7 +75,6 @@ type NativeClient struct {
 }
 
 var _ xclient.Client = &NativeClient{}
-var _ xclient.ClientWithDecimals = &NativeClient{}
 var _ address.WithAddressDecoder = &NativeClient{}
 
 // NewClient returns a new Bitcoin Client
@@ -115,6 +114,7 @@ func (client *NativeClient) FetchTransferInput(ctx context.Context, args xcbuild
 	if err != nil {
 		return input, err
 	}
+	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
 	return input, nil
 }

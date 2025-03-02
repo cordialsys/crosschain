@@ -108,3 +108,12 @@ func TestTxInputGasMultiplier(t *testing.T) {
 		}
 	}
 }
+
+func TestMaxFee(t *testing.T) {
+	input := tx_input.NewTxInput()
+	input.GasLimit = 21_000
+	input.GasPrice = 1000
+
+	maxFee, _ := input.GetMaxFee()
+	require.EqualValues(t, 21_000_000, maxFee.Uint64())
+}

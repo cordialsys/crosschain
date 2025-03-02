@@ -21,17 +21,15 @@ import (
 
 // Client for Filecoin
 type Client struct {
-	Url          string
-	HttpClient   *http.Client
-	Asset        xc.ITask
-	Logger       *log.Entry
-	MaxGasFeeCap xc.AmountBlockchain
-	MaxGasLimit  uint64
+	Url        string
+	HttpClient *http.Client
+	Asset      xc.ITask
+	Logger     *log.Entry
 }
 
 const DefaultGasLimit = 15_000_000
 
-var _ xclient.FullClient = &Client{}
+var _ xclient.Client = &Client{}
 var DefaultMaxGasPrice = xc.NewAmountBlockchainFromUint64(10_000_000)
 
 // NewClient returns a new Filecoin Client
@@ -58,12 +56,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	logger.Infof("using MaxGasLimit: %v", gasLimit)
 
 	return &Client{
-		Url:          cfg.URL,
-		HttpClient:   http.DefaultClient,
-		Asset:        cfgI,
-		Logger:       logger,
-		MaxGasFeeCap: xcMaxGasPrice,
-		MaxGasLimit:  gasLimit,
+		Url:        cfg.URL,
+		HttpClient: http.DefaultClient,
+		Asset:      cfgI,
+		Logger:     logger,
 	}, nil
 }
 
@@ -133,13 +129,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	msgWithFees := gasEstimateMessageGasResponse.Result
 
 	gasFeeCap := xc.NewAmountBlockchainFromStr(msgWithFees.GasFeeCap)
-	if gasFeeCap.Cmp(&client.MaxGasFeeCap) == 1 {
-		gasFeeCap = client.MaxGasFeeCap
-	}
 	gasPremium := xc.NewAmountBlockchainFromStr(msgWithFees.GasPremium)
-	if msgWithFees.GasLimit > client.MaxGasLimit {
-		msgWithFees.GasLimit = client.MaxGasLimit
-	}
+
 	return &tx_input.TxInput{
 		Nonce:      nonce,
 		GasLimit:   msgWithFees.GasLimit,
@@ -251,7 +242,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		XChain:        chain,
 		Hash:          sHash,
 		Block:         block,
-		Confirmations: chainHeadHeight - block.Height,
+		Confirmations: chainHeadHeight - block.Height.Uint64(),
 	}
 
 	if msgState.Receipt.ExitCode != 0 {

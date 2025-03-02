@@ -27,7 +27,6 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
@@ -86,6 +85,10 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		remainingTonBal := txInput.TonBalance.Sub(&txInput.EstimatedMaxFee)
 		if maxJettonFee.Cmp(&remainingTonBal) > 0 && remainingTonBal.Cmp(&Zero) > 0 {
 			maxJettonFee = remainingTonBal
+		}
+		// If the estimated max fee is greater, then we should use that.
+		if txInput.EstimatedMaxFee.Cmp(&maxJettonFee) > 0 {
+			maxJettonFee = txInput.EstimatedMaxFee
 		}
 
 		tfMsg, err := BuildJettonTransfer(uint64(txInput.Timestamp), fromAddr, tokenAddr, toAddr, amountTlb, tlb.FromNanoTON(maxJettonFee.Int()), txInput.Memo)

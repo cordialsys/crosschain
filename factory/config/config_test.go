@@ -12,7 +12,7 @@ import (
 	factoryconfig "github.com/cordialsys/crosschain/factory/config"
 	"github.com/cordialsys/crosschain/factory/defaults"
 	"github.com/stretchr/testify/suite"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type CrosschainTestSuite struct {
@@ -25,13 +25,13 @@ func TestFactoryConfig(t *testing.T) {
 	suite.Run(t, new(CrosschainTestSuite))
 }
 
-func (s *CrosschainTestSuite) TestAssetUnmarshal() {
+func (s *CrosschainTestSuite) TestChainUnmarshal() {
 	require := s.Require()
 	var cfg factoryconfig.Config
 	err := yaml.Unmarshal([]byte(`
   chains:
     ATOM:
-      asset: ATOM
+      chain: ATOM
       driver: cosmos
       net: testnet
       url: 'myurl'
@@ -42,19 +42,23 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
       chain_name: Cosmos
       explorer_url: 'myexplorer'
       decimals: 6
+      max_fee: "0.0001"
     SOL:
-      asset: SOL
+      chain: SOL
       driver: solana
       net: mainnet
       url: 'https://api.devnet.solana.com'
       chain_name: Solana
       explorer_url: 'https://explorer.solana.com'
       decimals: 9
+      max_fee: "100.0"
 `), &cfg)
 	require.NoError(err)
 
 	bz, err := yaml.Marshal(&cfg)
 	require.NoError(err)
+	fmt.Println("re-marshaled:")
+	fmt.Println(string(bz))
 	cfg = factoryconfig.Config{}
 	err = yaml.Unmarshal(bz, &cfg)
 	require.NoError(err)
@@ -67,9 +71,11 @@ func (s *CrosschainTestSuite) TestAssetUnmarshal() {
 	// is case sensitive.
 	require.Equal(xc.ATOM, cfg.Chains["ATOM"].Chain)
 	require.Equal("Cosmos", cfg.Chains["ATOM"].ChainName)
+	require.Equal("0.0001", cfg.Chains["ATOM"].MaxFee.String())
+
 	require.Equal(xc.SOL, cfg.Chains["SOL"].Chain)
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
-
+	require.Equal("100", cfg.Chains["SOL"].MaxFee.String())
 }
 
 type ConfigWrapper struct {
@@ -271,9 +277,9 @@ func (s *CrosschainTestSuite) TestSorted() {
 		}
 		chains := cfg.GetChains()
 		require.Len(chains, 3)
-		require.Equal("AAA", string(chains[0].ID()))
-		require.Equal("BBB", string(chains[1].ID()))
-		require.Equal("CCC", string(chains[2].ID()))
+		require.EqualValues("AAA", string(chains[0].Chain))
+		require.EqualValues("BBB", string(chains[1].Chain))
+		require.EqualValues("CCC", string(chains[2].Chain))
 
 	}
 }

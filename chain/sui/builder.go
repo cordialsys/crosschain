@@ -13,7 +13,6 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxTokenBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder

@@ -4,13 +4,13 @@ package ci
 
 import (
 	"context"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"testing"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -80,23 +80,30 @@ func TestTransfer(t *testing.T) {
 	toAddress := deriveAddress(t, xcFactory, chainConfig, toPrivateKey)
 	fmt.Println("sending from ", from, " to ", toAddress)
 
-	input, err := client.FetchLegacyTxInput(context.Background(), from, toAddress)
+	tfOptions := []builder.BuilderOption{
+		builder.OptionTimestamp(time.Now().Unix()),
+		builder.OptionPublicKey(publicKey),
+	}
+
+	tfArgs, err := builder.NewTransferArgs(from, toAddress, transferAmountBlockchain, tfOptions...)
 	require.NoError(t, err)
 
-	if inputWithPublicKey, ok := input.(xc.TxInputWithPublicKey); ok {
-		inputWithPublicKey.SetPublicKey(publicKey)
-		fmt.Println("added public key = ", hex.EncodeToString(publicKey))
-	}
+	input, err := client.FetchTransferInput(context.Background(), tfArgs)
+	require.NoError(t, err)
 
-	if inputWithAmount, ok := input.(xc.TxInputWithAmount); ok {
-		inputWithAmount.SetAmount(transferAmountBlockchain)
-	}
+	// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
+	input, err = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+	require.NoError(t, err)
+
 	fmt.Println("transfer input: ", asJson(input))
+
+	err = xc.CheckMaxFeeLimit(input, chainConfig)
+	require.NoError(t, err)
 
 	builder, err := xcFactory.NewTxBuilder(chainConfig)
 	require.NoError(t, err)
 
-	tx, err := builder.NewTransfer(from, toAddress, transferAmountBlockchain, input)
+	tx, err := builder.Transfer(tfArgs, input)
 	require.NoError(t, err)
 
 	sighashes, err := tx.Sighashes()
