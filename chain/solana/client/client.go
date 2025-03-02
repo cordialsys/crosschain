@@ -66,20 +66,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, err
 	}
 
-	asset := client.Asset
-	contract := asset.GetContract()
+	contract, _ := args.GetContract()
 	if contract == "" {
-		if _, ok := asset.(*xc.ChainConfig); !ok {
-			logrus.WithFields(logrus.Fields{
-				"chain":      asset.GetChain().Chain,
-				"asset_type": fmt.Sprintf("%T", asset),
-			}).Warn("no associated contract but not native asset")
-		}
 		// native transfer
 		return txInput, nil
 	}
 
-	mint, err := solana.PublicKeyFromBase58(contract)
+	mint, err := solana.PublicKeyFromBase58(string(contract))
 	if err != nil {
 		return nil, fmt.Errorf("invalid mint address: %s: %v", contract, err)
 	}
@@ -109,7 +102,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// for tokens, get ata account info
 	ataTo := accountTo
 	if !txInput.ToIsATA {
-		ataToStr, err := types.FindAssociatedTokenAddress(string(args.GetTo()), contract, mintInfo.Value.Owner)
+		ataToStr, err := types.FindAssociatedTokenAddress(string(args.GetTo()), string(contract), mintInfo.Value.Owner)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +116,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	// Fetch all token accounts as if they are utxo
 	if contract != "" {
-		tokenAccounts, err := client.GetTokenAccountsByOwner(ctx, string(args.GetFrom()), contract)
+		tokenAccounts, err := client.GetTokenAccountsByOwner(ctx, string(args.GetFrom()), string(contract))
 		if err != nil {
 			return nil, err
 		}
@@ -182,12 +175,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain().Client())
 
 	return txInput, nil
-}
-
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return client.FetchTransferInput(ctx, args)
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
@@ -539,25 +526,16 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 }
 
 // FetchBalance fetches token balance for a Solana address
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalanceForAsset(ctx, address, client.Asset)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	return client.FetchBalanceForAsset(ctx, args)
 }
 
-// FetchBalanceForAsset fetches a specific token balance which may not be the asset configured for the client
-func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.ITask) (xc.AmountBlockchain, error) {
-	switch asset := client.Asset.(type) {
-	case *xc.ChainConfig:
-		return client.FetchNativeBalance(ctx, address)
-	case *xc.TokenAssetConfig:
-		return client.fetchContractBalance(ctx, address, asset.Contract)
-	default:
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("fetching balance for unknown asset type")
-		return client.fetchContractBalance(ctx, address, contract)
+func (client *Client) FetchBalanceForAsset(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+
+	if contract, ok := args.Contract(); ok {
+		return client.fetchContractBalance(ctx, args.Address(), string(contract))
+	} else {
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
 }
 

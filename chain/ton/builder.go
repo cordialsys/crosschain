@@ -24,13 +24,13 @@ var Zero = xc.NewAmountBlockchainFromUint64(0)
 
 // TxBuilder for Template
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
 	}, nil
@@ -38,11 +38,10 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
 
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
 	var stateInit *tlb.StateInit
@@ -56,7 +55,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 			return nil, err
 		}
 	}
-	net := txBuilder.Asset.GetChain().Net
+	net := txBuilder.Asset.Net
 
 	toAddr, err := tonaddress.ParseAddress(to, net)
 	if err != nil {
@@ -67,14 +66,15 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		return nil, fmt.Errorf("invalid TON address %s: %v", to, err)
 	}
 
-	amountTlb, err := tlb.FromNano((*big.Int)(&amount), int(txBuilder.Asset.GetDecimals()))
+	amountTlb, err := tlb.FromNano((*big.Int)(&amount), int(txBuilder.Asset.Decimals))
 	if err != nil {
 		return nil, err
 	}
 
 	msgs := []*wallet.Message{}
-	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok || txBuilder.Asset.GetContract() != "" {
+	if _, ok := args.GetContract(); ok {
 		// Token transfer
+		// TODO does TON have a way to derive the token wallet?
 		tokenAddr, err := tonaddress.ParseAddress(txInput.TokenWallet, net)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TON token address %s: %v", txInput.TokenWallet, err)
@@ -109,7 +109,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	logrus.WithFields(logrus.Fields{
 		"messages":   len(msgs),
 		"state-init": stateInit != nil,
-		"chain":      txBuilder.Asset.GetChain().Chain,
+		"chain":      txBuilder.Asset.Chain,
 	}).Debug("building tx")
 
 	cellBuilder, err := BuildV3UnsignedMessage(txInput, msgs)
@@ -118,16 +118,6 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	}
 
 	return tontx.NewTx(fromAddr, cellBuilder, stateInit), nil
-}
-
-// NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(from, to, amount, input)
-}
-
-// NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(from, to, amount, input)
 }
 
 func BuildTransfer(to *address.Address, amount tlb.Coins, bounce bool, comment string) (_ *wallet.Message, err error) {

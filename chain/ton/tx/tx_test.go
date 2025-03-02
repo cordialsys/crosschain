@@ -4,22 +4,28 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/cordialsys/crosschain"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNativeTx(t *testing.T) {
 	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
-	builder, err := ton.NewTxBuilder(chain)
+	builder, err := ton.NewTxBuilder(chain.Base())
 	require.NoError(t, err)
 
 	from := "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2"
 	to := "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"
 	input := ton.NewTxInput()
 	input.PublicKey, _ = hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
-	tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(10), input)
+	args := buildertest.MustNewTransferArgs(
+		xc.Address(from),
+		xc.Address(to),
+		xc.NewAmountBlockchainFromUint64(10),
+	)
+
+	tx, err := builder.Transfer(args, input)
 	require.NoError(t, err)
 
 	hashes, err := tx.Sighashes()
@@ -51,20 +57,28 @@ func TestNativeTx(t *testing.T) {
 
 func TestTokenTx(t *testing.T) {
 	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
-	builder, err := ton.NewTxBuilder(&crosschain.TokenAssetConfig{Chain: xc.TON, Decimals: 9, Contract: "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di", ChainConfig: chain})
+	builder, err := ton.NewTxBuilder(chain.Base())
 	require.NoError(t, err)
 
 	from := "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2"
 	to := "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"
+	args := buildertest.MustNewTransferArgs(
+		xc.Address(from),
+		xc.Address(to),
+		xc.NewAmountBlockchainFromUint64(10),
+		buildertest.OptionContractAddress(xc.ContractAddress("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di")),
+	)
+
 	input := ton.NewTxInput()
 	input.PublicKey, _ = hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
 	input.TokenWallet = "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2"
-	tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(10), input)
+	tx, err := builder.Transfer(args, input)
 	require.NoError(t, err)
 
 	// Should be an error if token wallet is not set
 	input.TokenWallet = ""
-	_, err = builder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(10), input)
+	_, err = builder.Transfer(args, input)
+
 	require.Error(t, err)
 
 	hashes, err := tx.Sighashes()

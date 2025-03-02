@@ -271,13 +271,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	return txInfo, nil
 }
 
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalance(ctx, address)
-}
-
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	params := types.NewParams(types.MethodWalletBallance, types.WalletBalance{
-		Address: string(address),
+		Address: string(args.Address()),
 	})
 
 	response := types.NewResponse[string]()

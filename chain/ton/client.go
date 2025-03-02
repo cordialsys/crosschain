@@ -152,7 +152,7 @@ func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contr
 	// .BeginParse()
 	getTokenWalletResponse := &api.GetMethodResponse{}
 	err = client.post("api/v3/runGetMethod", &api.GetMethodRequest{
-		Address: string(client.Asset.GetContract()),
+		Address: string(contract),
 		Method:  api.GetWalletAddressMethod,
 		Stack: []api.StackItem{
 			{
@@ -248,12 +248,12 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		TonBalance:      xc.NewAmountBlockchainFromStr(acc.Balance),
 	}
 
-	if client.Asset.GetContract() != "" {
-		input.TokenWallet, err = client.GetTokenWallet(ctx, args.GetFrom(), xc.ContractAddress(client.Asset.GetContract()))
+	if contract, ok := args.GetContract(); ok {
+		input.TokenWallet, err = client.GetTokenWallet(ctx, args.GetFrom(), contract)
 		if err != nil {
 			return input, err
 		}
-		maxFee, err := client.EstimateMaxFee(ctx, input.TokenWallet, args.GetTo(), client.Asset.GetContract())
+		maxFee, err := client.EstimateMaxFee(ctx, input.TokenWallet, args.GetTo(), string(contract))
 		if err != nil {
 			return input, err
 		}
@@ -279,11 +279,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	return input, nil
-}
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return client.FetchTransferInput(ctx, args)
 }
 
 // SubmitTx submits a Template tx
@@ -587,21 +582,23 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.NewAmountBlockchainFromStr(resp.Balance), nil
 }
 
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if client.Asset.GetContract() == "" {
-		return client.FetchNativeBalance(ctx, address)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		resp := &api.JettonWalletsResponse{}
+		err := client.get(fmt.Sprintf("/api/v3/jetton/wallets?owner_address=%s&jetton_address=%s", args.Address(), contract), resp)
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
+		sum := xc.NewAmountBlockchainFromUint64(0)
+		for _, wallet := range resp.JettonWallets {
+			bal := xc.NewAmountBlockchainFromStr(wallet.Balance)
+			sum = sum.Add(&bal)
+		}
+		return sum, nil
+	} else {
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
-	resp := &api.JettonWalletsResponse{}
-	err := client.get(fmt.Sprintf("/api/v3/jetton/wallets?owner_address=%s&jetton_address=%s", address, client.Asset.GetContract()), resp)
-	if err != nil {
-		return xc.AmountBlockchain{}, err
-	}
-	sum := xc.NewAmountBlockchainFromUint64(0)
-	for _, wallet := range resp.JettonWallets {
-		bal := xc.NewAmountBlockchainFromStr(wallet.Balance)
-		sum = sum.Add(&bal)
-	}
-	return sum, nil
+
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

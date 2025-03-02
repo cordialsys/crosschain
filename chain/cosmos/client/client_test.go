@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
@@ -237,7 +238,7 @@ func TestFetchTxInput(t *testing.T) {
 func TestSubmitTxErr(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
-	tx := &tx.Tx{ChainCfg: xc.NewChainConfig("")}
+	tx := &tx.Tx{ChainCfg: xc.NewChainConfig("").Base()}
 	err := client.SubmitTx(context.Background(), tx)
 	require.ErrorContains(t, err, "no Host in request URL")
 }
@@ -524,35 +525,37 @@ func TestFetchTxInfo(t *testing.T) {
 func TestFetchBalance(t *testing.T) {
 
 	vectors := []struct {
-		asset   xc.ITask
-		address string
-		resp    interface{}
-		val     string
-		err     string
+		asset    xc.ITask
+		contract xc.ContractAddress
+		address  string
+		resp     interface{}
+		val      string
+		err      string
 	}{
 		{
 			// Terra
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			`{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "ChAKBXVsdW5hEgc0OTc5MDYz","proofOps": null,"height": "2803726","codespace": ""}}`,
-			"4979063",
-			"",
+			asset:   xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			address: "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			resp:    `{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "ChAKBXVsdW5hEgc0OTc5MDYz","proofOps": null,"height": "2803726","codespace": ""}}`,
+			val:     "4979063",
+			err:     "",
 		},
 		{
 			// XPLA
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			`{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "Ch0KBWF4cGxhEhQ5OTY0ODQwMDAwMDAwMDAwMDAwMA==","proofOps": null,"height": "1329788","codespace": ""}}`,
-			"99648400000000000000",
-			"",
+			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
+			address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			resp:    `{"response": {"code": 0,"log": "","info": "","index": "0","key": null,"value": "Ch0KBWF4cGxhEhQ5OTY0ODQwMDAwMDAwMDAwMDAwMA==","proofOps": null,"height": "1329788","codespace": ""}}`,
+			val:     "99648400000000000000",
+			err:     "",
 		},
 		{
 			// Injective peggy asset
-			&xc.TokenAssetConfig{Asset: "USDT", Contract: "peggy0x3506424F91fD33084466F402d5D97f05F8e3b4AF", Decimals: 6,
-				ChainConfig: xc.NewChainConfig(xc.INJ).WithChainCoin("uinj").WithChainPrefix("inj"),
-			},
-			"inj162x3ax7z6ksquhshlqh6d498kr60qdx7wqf9we",
-			`{
+			// asset: &xc.TokenAssetConfig{Asset: "USDT", Contract: "peggy0x3506424F91fD33084466F402d5D97f05F8e3b4AF", Decimals: 6,
+			// },
+			asset:    xc.NewChainConfig(xc.INJ).WithChainCoin("uinj").WithChainPrefix("inj"),
+			contract: "peggy0x3506424F91fD33084466F402d5D97f05F8e3b4AF",
+			address:  "inj162x3ax7z6ksquhshlqh6d498kr60qdx7wqf9we",
+			resp: `{
 				"jsonrpc": "2.0",
 				"id": 0,
 				"result": {
@@ -569,50 +572,51 @@ func TestFetchBalance(t *testing.T) {
 				  }
 				}
 			  }`,
-			"37456742899925000000000",
-			"",
+			val: "37456742899925000000000",
+			err: "",
 		},
 		{
 			// Terra cw20 asset
-			&xc.TokenAssetConfig{Asset: "USDC", Contract: "terra1pepwcav40nvj3kh60qqgrk8k07ydmc00xyat06", Decimals: 6,
-				ChainConfig: xc.NewChainConfig(xc.LUNC).WithChainCoin("uluna").WithChainPrefix("terra"),
-			},
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			[]string{
+			// asset: &xc.TokenAssetConfig{Asset: "USDC", Contract: "terra1pepwcav40nvj3kh60qqgrk8k07ydmc00xyat06", Decimals: 6,
+			asset: xc.NewChainConfig(xc.LUNC).WithChainCoin("uluna").WithChainPrefix("terra"),
+			// },
+			contract: "terra1pepwcav40nvj3kh60qqgrk8k07ydmc00xyat06",
+			address:  "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			resp: []string{
 				// first response fails because not a bank asset.
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":1,"log":"denom does not exist","info":"","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
 			},
-			"43984127",
-			"",
+			val: "43984127",
+			err: "",
 		},
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
-			"xpla-invalid",
-			`null`,
-			"0",
-			"bad address",
+			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
+			address: "xpla-invalid",
+			resp:    `null`,
+			val:     "0",
+			err:     "bad address",
 		},
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			`null`,
-			"0",
-			"failed to get account balance",
+			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
+			address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			resp:    `null`,
+			val:     "0",
+			err:     "failed to get account balance",
 		},
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			`{}`,
-			"0",
-			"failed to get account balance",
+			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
+			address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			resp:    `{}`,
+			val:     "0",
+			err:     "failed to get account balance",
 		},
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
-			"",
-			"custom RPC error",
+			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
+			address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			resp:    errors.New(`{"message": "custom RPC error", "code": 123}`),
+			val:     "",
+			err:     "custom RPC error",
 		},
 	}
 
@@ -624,9 +628,17 @@ func TestFetchBalance(t *testing.T) {
 		asset := v.asset
 		asset.GetChain().URL = server.URL
 		v.asset.GetChain().Limiter = rate.NewLimiter(rate.Inf, 1)
+
+		args := xclient.NewBalanceArgs(xc.Address(v.address))
+		if v.contract != "" {
+			args = xclient.NewBalanceArgs(
+				xc.Address(v.address),
+				xclient.OptionContract(xc.ContractAddress(v.contract)),
+			)
+		}
 		client, _ := client.NewClient(asset)
-		from := xc.Address(v.address)
-		balance, err := client.FetchBalance(context.Background(), from)
+
+		balance, err := client.FetchBalance(context.Background(), args)
 
 		if v.err != "" {
 			require.Equal(t, "0", balance.String())

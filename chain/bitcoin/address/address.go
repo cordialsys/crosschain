@@ -24,7 +24,7 @@ const (
 // AddressBuilder for Bitcoin
 type AddressBuilder struct {
 	params    *chaincfg.Params
-	asset     xc.ITask
+	asset     *xc.ChainBaseConfig
 	algorithm xc.SignatureType
 }
 
@@ -51,13 +51,13 @@ func NewAddressDecoder() *BtcAddressDecoder {
 }
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
-func NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
+func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
 	opts, err := xcaddress.NewAddressOptions(options...)
 	if err != nil {
 		return AddressBuilder{}, err
 	}
 
-	params, err := params.GetParams(asset.GetChain())
+	params, err := params.GetParams(asset)
 	if err != nil {
 		return AddressBuilder{}, err
 	}
@@ -69,7 +69,7 @@ func NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.A
 			return AddressBuilder{}, fmt.Errorf("unsupported address type: %s", algorithm)
 		}
 	} else {
-		algorithm = asset.GetChain().Driver.SignatureAlgorithm()
+		algorithm = asset.Driver.SignatureAlgorithm()
 	}
 
 	log.Debugf("New bitcoin address builder with algorithm: %s", algorithm)
@@ -86,7 +86,7 @@ func (ab AddressBuilder) GetAddressType() (AddressType, error) {
 	}
 
 	if ab.algorithm == "" || ab.algorithm == xc.K256Sha256 {
-		if ab.asset.GetChain().Driver == xc.DriverBitcoinLegacy {
+		if ab.asset.Driver == xc.DriverBitcoinLegacy {
 			return AddressTypeLegacy, nil
 		} else {
 			return AddressTypeSegWit, nil

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -53,7 +54,7 @@ func TestTransferWithTax(t *testing.T) {
 
 		amount := xc.NewAmountBlockchainFromUint64(tc.Amount)
 
-		builder, err := builder.NewTxBuilder(asset)
+		builder, err := builder.NewTxBuilder(asset.Base())
 		require.NoError(t, err)
 
 		addr1 := "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg"
@@ -61,7 +62,10 @@ func TestTransferWithTax(t *testing.T) {
 		input := tx_input.NewTxInput()
 		input.AssetType = tx_input.BANK
 
-		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
+		args, err := xcbuilder.NewTransferArgs(xc.Address(addr1), xc.Address(addr2), amount)
+		require.NoError(t, err)
+
+		xcTx, err := builder.Transfer(args, input)
 		require.NoError(t, err)
 		fee := xcTx.(*tx.Tx).Fees
 		// should only be one fee (tax and normal fee should be added)
@@ -71,7 +75,7 @@ func TestTransferWithTax(t *testing.T) {
 
 		// change the gas coin
 		asset.GasCoin = "uusd"
-		xcTx, err = builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
+		xcTx, err = builder.Transfer(args, input)
 		require.NoError(t, err)
 		fee = xcTx.(*tx.Tx).Fees
 		// should now be two fees: 1 normal fee in gas goin, 1 tax fee in transfer coin
@@ -111,7 +115,7 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
 
-		builder, err := builder.NewTxBuilder(asset)
+		builder, err := builder.NewTxBuilder(asset.Base())
 		require.NoError(t, err)
 
 		addr1 := "terra18pptupzy59ulkvn0eyrawuuxspc93w6a9ctp9j"
@@ -120,7 +124,9 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 		input.GasPrice = tc.inputPrice
 		input.AssetType = tx_input.BANK
 
-		xcTx, err := builder.NewTransfer(xc.Address(addr1), xc.Address(addr2), amount, input)
+		args, err := xcbuilder.NewTransferArgs(xc.Address(addr1), xc.Address(addr2), amount)
+		require.NoError(t, err)
+		xcTx, err := builder.Transfer(args, input)
 		require.NoError(t, err)
 		fee := xcTx.(*tx.Tx).Fees
 		require.Len(t, fee, 1)

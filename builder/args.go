@@ -16,6 +16,9 @@ type builderOptions struct {
 	validator    *string
 	stakeOwner   *xc.Address
 	stakeAccount *string
+	// asset contract address
+	contract *xc.ContractAddress
+	decimals *int
 }
 
 func newBuilderOptions() builderOptions {
@@ -41,15 +44,25 @@ func get[T any](arg *T) (T, bool) {
 }
 
 // Transaction options
-func (opts *builderOptions) GetMemo() (string, bool)                { return get(opts.memo) }
-func (opts *builderOptions) GetTimestamp() (int64, bool)            { return get(opts.timestamp) }
-func (opts *builderOptions) GetPriority() (xc.GasFeePriority, bool) { return get(opts.gasFeePriority) }
-func (opts *builderOptions) GetPublicKey() ([]byte, bool)           { return get(opts.publicKey) }
+func (opts *builderOptions) GetMemo() (string, bool)                 { return get(opts.memo) }
+func (opts *builderOptions) GetTimestamp() (int64, bool)             { return get(opts.timestamp) }
+func (opts *builderOptions) GetPriority() (xc.GasFeePriority, bool)  { return get(opts.gasFeePriority) }
+func (opts *builderOptions) GetPublicKey() ([]byte, bool)            { return get(opts.publicKey) }
+func (opts *builderOptions) GetContract() (xc.ContractAddress, bool) { return get(opts.contract) }
+func (opts *builderOptions) GetDecimals() (int, bool)                { return get(opts.decimals) }
 
 // Other options
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
 func (opts *builderOptions) GetStakeOwner() (xc.Address, bool) { return get(opts.stakeOwner) }
 func (opts *builderOptions) GetStakeAccount() (string, bool)   { return get(opts.stakeAccount) }
+
+func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
+	opts.contract = &contract
+}
+
+func (opts *builderOptions) SetDecimals(decimals int) {
+	opts.decimals = &decimals
+}
 
 type BuilderOption func(opts *builderOptions) error
 
@@ -74,6 +87,21 @@ func OptionPriority(priority xc.GasFeePriority) BuilderOption {
 func OptionPublicKey(publicKey []byte) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.publicKey = &publicKey
+		return nil
+	}
+}
+func OptionContractAddress(contract xc.ContractAddress, decimalsMaybe ...int) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.contract = &contract
+		if len(decimalsMaybe) > 0 {
+			opts.decimals = &decimalsMaybe[0]
+		}
+		return nil
+	}
+}
+func OptionContractDecimals(decimals int) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.decimals = &decimals
 		return nil
 	}
 }

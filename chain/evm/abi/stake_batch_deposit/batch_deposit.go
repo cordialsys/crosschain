@@ -73,7 +73,7 @@ func CalculateDepositDataRoot(amount xc.AmountBlockchain, publicKey []byte, cred
 	return depositDataHash, nil
 }
 
-func Serialize(chainCfg *xc.ChainConfig, publicKeys [][]byte, creds [][]byte, sigs [][]byte) ([]byte, error) {
+func Serialize(chainCfg *xc.ChainBaseConfig, publicKeys [][]byte, creds [][]byte, sigs [][]byte) ([]byte, error) {
 	dataHashes := make([][32]byte, len(publicKeys))
 	publicKeysBz := make([]byte, len(publicKeys)*PublicKeyLen)
 	credentialsBz := make([]byte, len(creds)*CredentialLen)

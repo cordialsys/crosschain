@@ -43,7 +43,7 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := http.Client{}
-	params, err := params.GetParams(cfg)
+	params, err := params.GetParams(cfg.Base())
 	if err != nil {
 		return &BlockchairClient{}, err
 	}
@@ -136,8 +136,8 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, addr xc.Addr
 	return outputs, nil
 }
 
-func (client *BlockchairClient) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, address)
+func (client *BlockchairClient) FetchBalance(ctx context.Context, address *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, address.Address())
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if err != nil {
 		return amount, err
@@ -146,10 +146,6 @@ func (client *BlockchairClient) FetchBalance(ctx context.Context, address xc.Add
 		amount = amount.Add(&unspent.Value)
 	}
 	return amount, nil
-}
-
-func (client *BlockchairClient) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalance(ctx, address)
 }
 
 func (client *BlockchairClient) EstimateGasFee(ctx context.Context, numBlocks int64) (float64, error) {

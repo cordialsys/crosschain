@@ -21,7 +21,7 @@ const TxVersion int32 = 2
 
 // TxBuilder for Bitcoin
 type TxBuilder struct {
-	Asset          xc.ITask
+	Asset          *xc.ChainBaseConfig
 	Params         *chaincfg.Params
 	AddressDecoder address.AddressDecoder
 	// isBch  bool
@@ -30,9 +30,8 @@ type TxBuilder struct {
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
-	native := cfgI.GetChain()
-	params, err := params.GetParams(native)
+func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
+	params, err := params.GetParams(cfgI)
 	if err != nil {
 		return TxBuilder{}, err
 	}
@@ -50,19 +49,11 @@ func (txBuilder TxBuilder) WithAddressDecoder(decoder address.AddressDecoder) Tx
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	switch asset := txBuilder.Asset.(type) {
-	case *xc.ChainConfig:
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
-	case *xc.TokenAssetConfig:
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-	default:
-		return nil, fmt.Errorf("NewTransfer not implemented for %T", asset)
+	if _, ok := args.GetContract(); ok {
+		return nil, fmt.Errorf("token transfers are not supported on %s", txBuilder.Asset.Chain)
 	}
+
+	return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
@@ -117,7 +108,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		if value < 0 {
 			diff := local_input.SumUtxo().Sub(&amount)
 			return nil, fmt.Errorf("not enough funds for fees, estimated fee is %s but only %s is left after transfer",
-				fee.ToHuman(txBuilder.Asset.GetDecimals()).String(), diff.ToHuman(txBuilder.Asset.GetDecimals()).String(),
+				fee.ToHuman(txBuilder.Asset.Decimals).String(), diff.ToHuman(txBuilder.Asset.Decimals).String(),
 			)
 		}
 		msgTx.AddTxOut(wire.NewTxOut(value, script))
@@ -134,9 +125,4 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		Recipients: recipients,
 	}
 	return &tx, nil
-}
-
-// NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return nil, errors.New("not implemented")
 }

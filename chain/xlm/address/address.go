@@ -15,7 +15,7 @@ type AddressBuilder struct{}
 
 var _ xc.AddressBuilder = AddressBuilder{}
 
-func NewAddressBuilder(cfg xc.ITask) (xc.AddressBuilder, error) {
+func NewAddressBuilder(cfg *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
 

@@ -20,7 +20,7 @@ type TxBuilder evmbuilder.TxBuilder
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new EVM TxBuilder
-func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	builder, err := evmbuilder.NewTxBuilder(asset)
 	if err != nil {
 		return TxBuilder{}, err
@@ -47,7 +47,7 @@ func parseInput(input xc.TxInput) (*TxInput, error) {
 	}
 }
 
-func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
+func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
 	address, err := evmaddress.FromHex(to)
 	if err != nil {
 		return nil, err

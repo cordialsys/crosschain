@@ -11,14 +11,14 @@ import (
 
 func TestNewAddressBuilder(t *testing.T) {
 	require := require.New(t)
-	builder, err := tron.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, err := tron.NewAddressBuilder(xc.NewChainConfig("").Base())
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
 	require := require.New(t)
-	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig("").Base())
 	bytes, _ := hex.DecodeString("0404B604296010A55D40000B798EE8454ECCC1F8900E70B1ADF47C9887625D8BAE3866351A6FA0B5370623268410D33D345F63344121455849C9C28F9389ED9731")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(err)
@@ -27,7 +27,7 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 
 func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require := require.New(t)
-	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig(""))
+	builder, _ := tron.NewAddressBuilder(xc.NewChainConfig("").Base())
 
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(xc.Address(""), address)

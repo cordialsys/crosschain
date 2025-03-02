@@ -19,14 +19,14 @@ import (
 // FactoryContext is the main Factory interface
 type FactoryContext interface {
 	NewClient(asset ITask) (xclient.Client, error)
-	NewTxBuilder(asset ITask) (builder.FullTransferBuilder, error)
-	NewSigner(asset ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error)
-	NewAddressBuilder(asset ITask, options ...xcaddress.AddressOption) (AddressBuilder, error)
+	NewTxBuilder(asset *ChainBaseConfig) (builder.FullTransferBuilder, error)
+	NewSigner(asset *ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error)
+	NewAddressBuilder(asset *ChainBaseConfig, options ...xcaddress.AddressOption) (AddressBuilder, error)
 
 	MarshalTxInput(input TxInput) ([]byte, error)
 	UnmarshalTxInput(data []byte) (TxInput, error)
 
-	GetAddressFromPublicKey(asset ITask, publicKey []byte, options ...xcaddress.AddressOption) (Address, error)
+	GetAddressFromPublicKey(asset *ChainBaseConfig, publicKey []byte, options ...xcaddress.AddressOption) (Address, error)
 
 	MustAmountBlockchain(asset ITask, humanAmountStr string) AmountBlockchain
 	MustAddress(asset ITask, addressStr string) Address
@@ -34,8 +34,6 @@ type FactoryContext interface {
 	ConvertAmountToHuman(asset ITask, blockchainAmount AmountBlockchain) (AmountHumanReadable, error)
 	ConvertAmountToBlockchain(asset ITask, humanAmount AmountHumanReadable) (AmountBlockchain, error)
 	ConvertAmountStrToBlockchain(asset ITask, humanAmountStr string) (AmountBlockchain, error)
-
-	EnrichAssetConfig(partialCfg *TokenAssetConfig, nativeAsset NativeAsset) (*TokenAssetConfig, error)
 
 	GetChain(nativeAsset NativeAsset) (*ChainConfig, bool)
 	GetConfig() config.Config
@@ -74,18 +72,6 @@ func (f *Factory) GetConfig() config.Config {
 	return *f.Config
 }
 
-func (f *Factory) EnrichAssetConfig(partialCfg *TokenAssetConfig, nativeAsset NativeAsset) (*TokenAssetConfig, error) {
-	chainCfg, found := f.GetChain(nativeAsset)
-	if !found {
-		return partialCfg, fmt.Errorf("unsupported chain: %s", nativeAsset)
-	}
-	// make copy so edits do not persist to local store
-	partialCfg.ChainConfig = chainCfg
-	partialCfg.Chain = nativeAsset
-
-	return partialCfg, nil
-}
-
 // NewClient creates a new Client
 func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	chainConfig := cfg.GetChain()
@@ -122,29 +108,29 @@ func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITas
 }
 
 // NewTxBuilder creates a new TxBuilder
-func (f *Factory) NewTxBuilder(cfg ITask) (builder.FullTransferBuilder, error) {
+func (f *Factory) NewTxBuilder(cfg *ChainBaseConfig) (builder.FullTransferBuilder, error) {
 	return drivers.NewTxBuilder(cfg)
 }
 
-func (f *Factory) NewStakingTxBuilder(cfg ITask) (builder.Staking, error) {
+func (f *Factory) NewStakingTxBuilder(cfg *ChainBaseConfig) (builder.Staking, error) {
 	txBuilder, err := f.NewTxBuilder(cfg)
 	if err != nil {
 		return nil, err
 	}
 	stakingBuilder, ok := txBuilder.(builder.Staking)
 	if !ok {
-		return nil, fmt.Errorf("currently staking transactions for %s is not supported", cfg.GetChain().Driver)
+		return nil, fmt.Errorf("currently staking transactions for %s is not supported", cfg.Driver)
 	}
 	return stakingBuilder, nil
 }
 
 // NewSigner creates a new Signer
-func (f *Factory) NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+func (f *Factory) NewSigner(cfg *ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	return drivers.NewSigner(cfg, secret, options...)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
-func (f *Factory) NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBuilder, error) {
+func (f *Factory) NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption) (AddressBuilder, error) {
 	return drivers.NewAddressBuilder(cfg, options...)
 }
 
@@ -159,7 +145,7 @@ func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
-func (f *Factory) GetAddressFromPublicKey(cfg ITask, publicKey []byte, options ...xcaddress.AddressOption) (Address, error) {
+func (f *Factory) GetAddressFromPublicKey(cfg *ChainBaseConfig, publicKey []byte, options ...xcaddress.AddressOption) (Address, error) {
 	return getAddressFromPublicKey(
 		cfg,
 		publicKey,
@@ -244,7 +230,7 @@ func (f *Factory) GetNetworkSelector() NetworkSelector {
 	return NotMainnets
 }
 
-func getAddressFromPublicKey(cfg ITask, publicKey []byte, options ...address.AddressOption) (Address, error) {
+func getAddressFromPublicKey(cfg *ChainBaseConfig, publicKey []byte, options ...address.AddressOption) (Address, error) {
 	builder, err := drivers.NewAddressBuilder(cfg, options...)
 	if err != nil {
 		return "", err

@@ -7,6 +7,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/substrate/builder"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	"github.com/stretchr/testify/require"
@@ -14,25 +15,26 @@ import (
 
 func TestNewTxBuilder(t *testing.T) {
 	require := require.New(t)
-	builder, err := builder.NewTxBuilder(xc.NewChainConfig(""))
+	builder, err := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
 func TestNewTransferFail(t *testing.T) {
 	require := require.New(t)
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
 	input := &tx_input.TxInput{} // missing metadata
-	_, err := builder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	_, err := builder.Transfer(args, input)
 	require.Error(err)
 }
 
 func TestNewTransfer(t *testing.T) {
 	require := require.New(t)
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").WithDecimals(10))
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").WithDecimals(10).Base())
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
@@ -50,7 +52,8 @@ func TestNewTransfer(t *testing.T) {
 	input := &tx_input.TxInput{}
 	err := json.Unmarshal([]byte(inputBz), input)
 	require.NoError(err)
-	tx, err := builder.NewTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(from, to, amount)
+	tx, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tx)
 
