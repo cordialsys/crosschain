@@ -67,7 +67,7 @@ func ReplaceIncompatiableCosmosResponses(body []byte) []byte {
 }
 
 func NewClientFrom(chain xc.NativeAsset, chainId string, chainPrefix string, rpcUrl string) (*Client, error) {
-	nativeAsset := xc.NewChainConfig(chain).WithDriver(xc.DriverCosmos).WithUrl(rpcUrl).WithChainPrefix(chainPrefix).WithChainIDStr(chainId)
+	nativeAsset := xc.NewChainConfig(chain).WithDriver(xc.DriverCosmos).WithUrl(rpcUrl).WithChainPrefix(chainPrefix).WithChainID(chainId)
 	return NewClient(nativeAsset)
 }
 
@@ -112,7 +112,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		WithLegacyAmino(cosmosCfg.Amino).
 		WithInterfaceRegistry(cosmosCfg.InterfaceRegistry).
 		WithBroadcastMode("sync").
-		WithChainID(string(cfg.ChainIDStr))
+		WithChainID(string(cfg.ChainID))
 
 	return &Client{
 		Asset:     asset,

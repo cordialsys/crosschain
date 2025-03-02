@@ -26,7 +26,7 @@ import (
 func TestValidClientConfiguration(t *testing.T) {
 	xc.NewAmountHumanReadableFromFloat(2.0)
 	chain := xc.NewChainConfig(xc.XLM).
-		WithChainIDStr("ChainID").
+		WithChainID("ChainID").
 		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(2.0)).
 		WithTransactionActiveTime(time.Duration(500))
 
@@ -48,12 +48,12 @@ func TestClientConfigurationMissingChainIDStr(t *testing.T) {
 
 	badClient, err := client.NewClient(missingChainIDStr)
 	require.Nil(t, badClient)
-	require.ErrorContains(t, err, "chain-id-str")
+	require.ErrorContains(t, err, "chain-id")
 }
 
 func TestClientConfigurationBadMaxFee(t *testing.T) {
 	negativeMaxFee := xc.NewChainConfig(xc.XLM).
-		WithChainIDStr("Some chain id").
+		WithChainID("Some chain id").
 		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(-1.1)).
 		WithTransactionActiveTime(time.Duration(500))
 
@@ -62,7 +62,7 @@ func TestClientConfigurationBadMaxFee(t *testing.T) {
 	require.ErrorContains(t, err, "gas-budget-default")
 
 	zeroMaxFee := xc.NewChainConfig(xc.XLM).
-		WithChainIDStr("ChainID").
+		WithChainID("ChainID").
 		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.0)).
 		WithTransactionActiveTime(time.Duration(500))
 	client, err := client.NewClient(zeroMaxFee)
@@ -72,7 +72,7 @@ func TestClientConfigurationBadMaxFee(t *testing.T) {
 
 func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
 	missingTransactionActiveTime := xc.NewChainConfig(xc.XLM).
-		WithChainIDStr("Some chain id").
+		WithChainID("Some chain id").
 		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(2.0))
 	badClient, err := client.NewClient(missingTransactionActiveTime)
 	require.Nil(t, badClient)
@@ -82,7 +82,7 @@ func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
 func TestMainnetConfiguration(t *testing.T) {
 	mainnetConfig := chains.Mainnet["xlm"]
 	require.Greater(t, mainnetConfig.GasBudgetDefault.Decimal().InexactFloat64(), 0.0)
-	require.NotZero(t, mainnetConfig.ChainIDStr)
+	require.NotZero(t, mainnetConfig.ChainID)
 	require.NotZero(t, mainnetConfig.TransactionActiveTime)
 }
 
@@ -111,7 +111,7 @@ func TestFetchTxInput(t *testing.T) {
 			asset: xc.NewChainConfig(xc.XLM).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001)).
 				WithTransactionActiveTime(txActiveTime).
-				WithChainIDStr("Test SDF Network ; September 2015"),
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -149,7 +149,7 @@ func TestFetchTxInput(t *testing.T) {
 			asset: xc.NewChainConfig(xc.XLM).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
 				WithTransactionActiveTime(txActiveTime).
-				WithChainIDStr("Test SDF Network ; September 2015"),
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -188,7 +188,7 @@ func TestFetchTxInput(t *testing.T) {
 			asset: xc.NewChainConfig(xc.XLM).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(1.00000)).
 				WithTransactionActiveTime(txActiveTime).
-				WithChainIDStr("Test SDF Network ; September 2015"),
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(50000000),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -212,7 +212,7 @@ func TestFetchTxInput(t *testing.T) {
 			asset: xc.NewChainConfig(xc.XLM).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
 				WithTransactionActiveTime(txActiveTime).
-				WithChainIDStr("Test SDF Network ; September 2015"),
+				WithChainID("Test SDF Network ; September 2015"),
 			contract: xc.ContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
 			amount:   xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
@@ -680,7 +680,7 @@ func TestSubmitTx(t *testing.T) {
 				WithDecimals(7).
 				WithTransactionActiveTime(txActiveTime).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001)).
-				WithChainIDStr("Test SDF Network ; September 2015"),
+				WithChainID("Test SDF Network ; September 2015"),
 			)
 
 			err = client.SubmitTx(context.Background(), vector.txInput)
@@ -879,7 +879,7 @@ func TestFetchTxInfo(t *testing.T) {
 			WithUrl(server.URL).
 			WithTransactionActiveTime(time.Duration(500)).
 			WithDecimals(7).
-			WithChainIDStr("Test SDF Network ; September 2015").
+			WithChainID("Test SDF Network ; September 2015").
 			WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001))
 
 		client, err := client.NewClient(chain)
@@ -1022,7 +1022,7 @@ func TestFetchBalance(t *testing.T) {
 			WithUrl(server.URL).
 			WithTransactionActiveTime(time.Duration(500)).
 			WithDecimals(7).
-			WithChainIDStr("Test SDF Network ; September 2015").
+			WithChainID("Test SDF Network ; September 2015").
 			WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001))
 
 		cl, err := client.NewClient(defaultConfig)

@@ -52,7 +52,8 @@ func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.A
 	if err != nil {
 		return nil, err
 	}
-	chainID := new(big.Int).SetInt64(chain.ChainID)
+	asIntChainID, _ := chain.ChainID.AsInt()
+	chainID := new(big.Int).SetUint64(asIntChainID)
 	input, err := parseInput(inputRaw)
 	if err != nil {
 		return nil, err

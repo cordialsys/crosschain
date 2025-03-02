@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/config"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -432,14 +433,8 @@ func (chain *ChainConfig) WithAuth(auth config.Secret) *ChainConfig {
 	return chain
 }
 
-func (chain *ChainConfig) WithChainID(chainID int64) *ChainConfig {
-	chain.ChainID = chainID
-	return chain
-}
-
-// TODO refactor chainID + chainIDstr to be same field
-func (chain *ChainConfig) WithChainIDStr(chainIDStr string) *ChainConfig {
-	chain.ChainIDStr = chainIDStr
+func (chain *ChainConfig) WithChainID(chainID string) *ChainConfig {
+	chain.ChainID = StringOrInt(chainID)
 	return chain
 }
 
@@ -470,8 +465,7 @@ type ChainBaseConfig struct {
 	Decimals int32 `yaml:"decimals,omitempty"`
 
 	// The ChainID of the chain, either in integer or string format
-	ChainID    int64  `yaml:"chain_id,omitempty"`
-	ChainIDStr string `yaml:"chain_id_str,omitempty"`
+	ChainID StringOrInt `yaml:"chain_id,omitempty"`
 
 	// Human readable name of the chain, e.g. "Bitcoin"
 	ChainName string `yaml:"chain_name,omitempty"`
@@ -510,10 +504,17 @@ type ChainBaseConfig struct {
 
 	// Used only for deriving private keys from mnemonic phrases in local testing
 	ChainCoinHDPath uint32 `yaml:"chain_coin_hd_path,omitempty"`
+
+	// Should use `ChainID` instead
+	XChainIDStr string `yaml:"chain_id_str,omitempty"`
 }
 
 func (chain *ChainConfig) Configure() {
 	chain.ChainClientConfig.Configure()
+	if chain.XChainIDStr != "" {
+		logrus.Warnf("chain_id_str is deprecated, use chain_id instead")
+		chain.ChainID = StringOrInt(chain.XChainIDStr)
+	}
 }
 
 type ChainClientConfig struct {
@@ -592,9 +593,8 @@ func (chain *ChainClientConfig) Configure() {
 var _ ITask = &ChainConfig{}
 
 func (c ChainConfig) String() string {
-	// do NOT print AuthSecret
 	return fmt.Sprintf(
-		"NativeAssetConfig(asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
+		"NativeAssetConfig(asset=%s chainId=%s driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
 		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
 	)
 }
