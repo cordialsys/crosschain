@@ -14,14 +14,14 @@ import (
 
 func TestNewTxBuilder(t *testing.T) {
 	require := require.New(t)
-	builder, err := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, err := builder.NewTxBuilder(xc.NewChainConfig(""))
 	require.NoError(err)
 	require.NotNil(builder)
 }
 
 func TestNewTransferFail(t *testing.T) {
 	require := require.New(t)
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
@@ -32,7 +32,7 @@ func TestNewTransferFail(t *testing.T) {
 
 func TestNewTransfer(t *testing.T) {
 	require := require.New(t)
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{Decimals: 10})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").WithDecimals(10))
 	from := xc.Address("5GL7deqCmoKpgmhq3b12DXSAu62VQ3DCqN3Z7Bet6fx9qAyb")
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)

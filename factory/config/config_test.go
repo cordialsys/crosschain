@@ -264,15 +264,9 @@ func (s *CrosschainTestSuite) TestSorted() {
 	for i := 0; i < 10; i++ {
 		cfg := factoryconfig.Config{
 			Chains: map[string]*xc.ChainConfig{
-				"BBB": {
-					Chain: "BBB",
-				},
-				"AAA": {
-					Chain: "AAA",
-				},
-				"CCC": {
-					Chain: "CCC",
-				},
+				"BBB": xc.NewChainConfig("BBB"),
+				"AAA": xc.NewChainConfig("AAA"),
+				"CCC": xc.NewChainConfig("CCC"),
 			},
 		}
 		chains := cfg.GetChains()

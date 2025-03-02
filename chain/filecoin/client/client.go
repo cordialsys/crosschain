@@ -49,12 +49,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}
 	logger.Infof("using MaxGasFeeCap: %s", xcMaxGasPrice.String())
 
-	gasLimit := cfg.ChainGasTip
-	if gasLimit == 0 {
-		gasLimit = DefaultGasLimit
-	}
-	logger.Infof("using MaxGasLimit: %v", gasLimit)
-
 	return &Client{
 		Url:        cfg.URL,
 		HttpClient: http.DefaultClient,

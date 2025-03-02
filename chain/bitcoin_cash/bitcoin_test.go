@@ -34,7 +34,8 @@ func TestBitcoinTestSuite(t *testing.T) {
 func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
-		builder, err := NewAddressBuilder(&xc.ChainConfig{Chain: nativeAsset})
+		chain := xc.NewChainConfig(nativeAsset)
+		builder, err := NewAddressBuilder(chain)
 		require.NotNil(builder)
 		require.NoError(err)
 	}
@@ -43,10 +44,8 @@ func (s *CrosschainTestSuite) TestNewAddressBuilder() {
 func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
-		builder, err := NewAddressBuilder(&xc.ChainConfig{
-			Net:   "testnet",
-			Chain: nativeAsset,
-		})
+		chain := xc.NewChainConfig(nativeAsset).WithNet("testnet")
+		builder, err := NewAddressBuilder(chain)
 		require.NoError(err)
 		_, err = base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
 		require.NoError(err)
@@ -70,7 +69,8 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 func (s *CrosschainTestSuite) TestNewTxBuilder() {
 	require := s.Require()
 	for _, nativeAsset := range UXTO_ASSETS {
-		builder, err := NewTxBuilder(&xc.ChainConfig{Chain: nativeAsset})
+		chain := xc.NewChainConfig(nativeAsset)
+		builder, err := NewTxBuilder(chain)
 		require.NotNil(builder)
 		require.NoError(err)
 	}
@@ -87,8 +87,8 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 		for _, native_asset := range []xc.NativeAsset{
 			xc.BCH,
 		} {
-			asset := &xc.ChainConfig{Chain: native_asset, Net: "testnet"}
-			builder, _ := NewTxBuilder(asset)
+			chain := xc.NewChainConfig(native_asset).WithNet("testnet")
+			builder, _ := NewTxBuilder(chain)
 			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 			to := xc.Address(addr)
 			amount := xc.NewAmountBlockchainFromUint64(1)
@@ -134,8 +134,8 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 func (s *CrosschainTestSuite) TestTxHash() {
 	require := s.Require()
 
-	asset := &xc.ChainConfig{Chain: xc.BTC, Net: "testnet"}
-	builder, _ := NewTxBuilder(asset)
+	chain := xc.NewChainConfig(xc.BTC).WithNet("testnet")
+	builder, _ := NewTxBuilder(chain)
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
 	amount := xc.NewAmountBlockchainFromUint64(1)

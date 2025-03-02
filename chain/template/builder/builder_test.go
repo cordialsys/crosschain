@@ -13,14 +13,14 @@ type TxInput = tx_input.TxInput
 
 func TestNewTxBuilder(t *testing.T) {
 
-	builder1, err := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder1, err := builder.NewTxBuilder(xc.NewChainConfig(""))
 	require.NotNil(t, builder1)
 	require.EqualError(t, err, "not implemented")
 }
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -32,7 +32,7 @@ func TestNewNativeTransfer(t *testing.T) {
 
 func TestNewTokenTransfer(t *testing.T) {
 
-	builder1, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder1, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
@@ -44,7 +44,7 @@ func TestNewTokenTransfer(t *testing.T) {
 
 func TestNewTransfer(t *testing.T) {
 
-	builder1, _ := builder.NewTxBuilder(&xc.ChainConfig{})
+	builder1, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}

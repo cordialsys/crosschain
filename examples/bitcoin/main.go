@@ -12,7 +12,7 @@ import (
 )
 
 func testbitcoin(addressRaw string) error {
-	params, err := params.GetParams(&crosschain.ChainConfig{Chain: crosschain.BTC, Net: "testnet"})
+	params, err := params.GetParams(crosschain.NewChainConfig(crosschain.BTC).WithNet("testnet"))
 	if err != nil {
 		return err
 	}

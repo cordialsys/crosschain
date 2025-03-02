@@ -7,6 +7,12 @@ import (
 	"github.com/cordialsys/crosschain/factory/defaults/common"
 )
 
+//go:embed mainnet.yaml
+var mainnetData string
+
+//go:embed testnet.yaml
+var testnetData string
+
 func init() {
 	maincfg := common.Unmarshal(mainnetData)
 	testcfg := common.Unmarshal(testnetData)
@@ -37,12 +43,6 @@ func init() {
 		}
 	}
 }
-
-//go:embed mainnet.yaml
-var mainnetData string
-
-//go:embed testnet.yaml
-var testnetData string
 
 var Mainnet map[string]*xc.ChainConfig
 var Testnet map[string]*xc.ChainConfig

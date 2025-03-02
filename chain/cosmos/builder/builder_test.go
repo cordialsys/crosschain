@@ -48,12 +48,8 @@ func TestTransferWithTax(t *testing.T) {
 		},
 	} {
 
-		asset := &xc.ChainConfig{
-			Chain:            "XPLA",
-			ChainCoin:        "axpla",
-			ChainPrefix:      "xpla",
-			ChainTransferTax: tc.TaxRate,
-		}
+		asset := xc.NewChainConfig("XPLA").WithChainCoin("axpla").WithChainPrefix("xpla")
+		asset.ChainBaseConfig.ChainTransferTax = tc.TaxRate
 
 		amount := xc.NewAmountBlockchainFromUint64(tc.Amount)
 
@@ -111,12 +107,7 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 		},
 	} {
 
-		asset := &xc.ChainConfig{
-			Chain:       "LUNA",
-			ChainCoin:   "uluna",
-			ChainPrefix: "terra",
-			Decimals:    6,
-		}
+		asset := xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra").WithDecimals(6)
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
 

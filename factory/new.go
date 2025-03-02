@@ -76,6 +76,7 @@ func NewDefaultFactory() *Factory {
 
 // NewDefaultFactoryWithConfig creates a new Factory given a config map
 func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOptions) *Factory {
+	cfg.MigrateFields()
 	chainsList := cfg.GetChains()
 	if options == nil {
 		options = &FactoryOptions{}
@@ -95,7 +96,6 @@ func NewDefaultFactoryWithConfig(cfg *factoryconfig.Config, options *FactoryOpti
 			}
 		}
 		factory.AllChains = append(factory.AllChains, chain)
-		chain.Configure()
 	}
 
 	return factory

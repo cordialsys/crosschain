@@ -90,7 +90,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		if err != nil {
 			return result, err
 		}
-		result.GasPrice = xc.AmountBlockchain(*baseFee).ApplyGasPriceMultiplier(nativeAsset)
+		result.GasPrice = xc.AmountBlockchain(*baseFee).ApplyGasPriceMultiplier(nativeAsset.Client())
 	}
 	builder, err := NewTxBuilder(client.EvmClient.Asset)
 	if err != nil {

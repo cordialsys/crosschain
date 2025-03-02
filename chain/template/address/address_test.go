@@ -10,14 +10,14 @@ import (
 
 func TestNewAddressBuilder(t *testing.T) {
 
-	builder, err := address.NewAddressBuilder(&xc.ChainConfig{})
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig(""))
 	require.NotNil(t, builder)
 	require.EqualError(t, err, "not implemented")
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
 
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig(""))
 	address, err := builder.GetAddressFromPublicKey([]byte{})
 	require.Equal(t, xc.Address(""), address)
 	require.EqualError(t, err, "not implemented")

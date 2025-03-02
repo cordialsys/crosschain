@@ -11,8 +11,8 @@ import (
 )
 
 func TestNativeTx(t *testing.T) {
-
-	builder, err := ton.NewTxBuilder(&crosschain.ChainConfig{Chain: xc.TON, Decimals: 9})
+	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
+	builder, err := ton.NewTxBuilder(chain)
 	require.NoError(t, err)
 
 	from := "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2"
@@ -50,7 +50,7 @@ func TestNativeTx(t *testing.T) {
 }
 
 func TestTokenTx(t *testing.T) {
-	chain := &crosschain.ChainConfig{Chain: xc.TON, Decimals: 9}
+	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
 	builder, err := ton.NewTxBuilder(&crosschain.TokenAssetConfig{Chain: xc.TON, Decimals: 9, Contract: "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di", ChainConfig: chain})
 	require.NoError(t, err)
 
