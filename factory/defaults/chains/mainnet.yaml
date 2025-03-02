@@ -18,7 +18,6 @@ chains:
     max_fee: "10000.0"
     chain_prefix: "10"
     confirmations_final: 4
-    indexer_type: rpc
     external:
       dti:
       coin_gecko:

@@ -12,10 +12,8 @@ import (
 
 func TestTxInfoFees(t *testing.T) {
 
-	chainCfg := &xc.ChainConfig{
-		ConfirmationsFinal: 3,
-		Chain:              xc.ETH,
-	}
+	chainCfg := xc.NewChainConfig(xc.ETH)
+	chainCfg.ConfirmationsFinal = 3
 
 	tx := client.NewTxInfo(
 		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
@@ -62,10 +60,8 @@ func TestTxInfoFees(t *testing.T) {
 
 func TestTxInfoMultiLegFees(t *testing.T) {
 
-	chainCfg := &xc.ChainConfig{
-		ConfirmationsFinal: 3,
-		Chain:              xc.BTC,
-	}
+	chainCfg := xc.NewChainConfig(xc.BTC)
+	chainCfg.ConfirmationsFinal = 3
 	tx := client.NewTxInfo(
 		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
@@ -90,10 +86,8 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 // This is like `TestTxInfoMultiLegFees`, but we add every balance change as an
 // independent transfer, and test we can coalesce them into 1 transfer again.
 func TestTxInfoMultiLegCoalesce(t *testing.T) {
-	chainCfg := &xc.ChainConfig{
-		ConfirmationsFinal: 3,
-		Chain:              xc.BTC,
-	}
+	chainCfg := xc.NewChainConfig(xc.BTC)
+	chainCfg.ConfirmationsFinal = 3
 	tx := client.NewTxInfo(
 		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
@@ -126,10 +120,8 @@ func TestTxInfoMultiLegCoalesce(t *testing.T) {
 }
 
 func TestTxInfoState(t *testing.T) {
-	chainCfg := &xc.ChainConfig{
-		ConfirmationsFinal: 3,
-		Chain:              xc.BTC,
-	}
+	chainCfg := xc.NewChainConfig(xc.BTC)
+	chainCfg.ConfirmationsFinal = 3
 
 	// succeeded, final
 	tx := client.NewTxInfo(

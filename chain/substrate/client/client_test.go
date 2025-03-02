@@ -41,7 +41,7 @@ var RPC_META_RESPONSE string
 
 func TestNewClient(t *testing.T) {
 	require := require.New(t)
-	_, err := client.NewClient(&xc.ChainConfig{})
+	_, err := client.NewClient(xc.NewChainConfig(""))
 	require.Error(err)
 }
 
@@ -116,16 +116,15 @@ func TestBalance(t *testing.T) {
 		os.Setenv("SUBSTRATE_AAA", "AAA")
 		defer os.Unsetenv("SUBSTRATE_AAA")
 
-		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:       "DOT",
-			Driver:      "substrate",
-			URL:         rpc.URL,
-			IndexerType: client.IndexerSubScan,
-			IndexerUrl:  "subscan",
-			Auth2:       "env:SUBSTRATE_AAA",
-			Decimals:    10,
-			ChainID:     0,
-		})
+		chain := xc.NewChainConfig(xc.DOT, "substrate").
+			WithUrl(rpc.URL).
+			WithIndexer(client.IndexerSubScan, "subscan").
+			WithAuth("env:SUBSTRATE_AAA").
+			WithChainPrefix("0").
+			WithDecimals(10).
+			WithChainID(0)
+
+		client, err := client.NewClient(chain)
 		require.NoError(err)
 		require.NotNil(client.DotClient)
 
@@ -339,17 +338,15 @@ func TestFetchTxInfo(t *testing.T) {
 			os.Setenv("SUBSTRATE_AAA", "AAA")
 			defer os.Unsetenv("SUBSTRATE_AAA")
 
-			client, err := client.NewClient(&xc.ChainConfig{
-				Chain:       tc.expectedTx.XChain,
-				Driver:      "substrate",
-				URL:         rpc.URL,
-				IndexerUrl:  http.URL,
-				IndexerType: tc.indexerType,
-				Auth2:       "env:SUBSTRATE_AAA",
-				ChainPrefix: "0",
-				Decimals:    10,
-				ChainID:     0,
-			})
+			chain := xc.NewChainConfig(tc.expectedTx.XChain, "substrate").
+				WithUrl(rpc.URL).
+				WithIndexer(tc.indexerType, http.URL).
+				WithAuth("env:SUBSTRATE_AAA").
+				WithChainPrefix("0").
+				WithDecimals(10).
+				WithChainID(0)
+
+			client, err := client.NewClient(chain)
 			require.NoError(err)
 			require.NotNil(client)
 
@@ -487,16 +484,14 @@ func TestFetchTxInput(t *testing.T) {
 		defer rpcClose()
 		os.Setenv("SUBSTRATE_AAA", "AAA")
 		defer os.Unsetenv("SUBSTRATE_AAA")
-		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:       "DOT",
-			Driver:      "substrate",
-			URL:         rpc.URL,
-			IndexerUrl:  "aaa",
-			Auth2:       "env:SUBSTRATE_AAA",
-			ChainPrefix: "0",
-			Decimals:    10,
-			ChainID:     0,
-		})
+		chain := xc.NewChainConfig("DOT", "substrate").
+			WithUrl(rpc.URL).
+			WithIndexer("", "aaa").
+			WithAuth("env:SUBSTRATE_AAA").
+			WithChainPrefix("0").
+			WithDecimals(10).
+			WithChainID(0)
+		client, err := client.NewClient(chain)
 		require.NoError(err)
 		require.NotNil(client)
 
@@ -563,15 +558,13 @@ func TestEstimateTip(t *testing.T) {
 
 		os.Setenv("SUBSTRATE_AAA", "AAA")
 		defer os.Unsetenv("SUBSTRATE_AAA")
-		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:      "DOT",
-			Driver:     "substrate",
-			IndexerUrl: "subscan",
-			Auth2:      "env:SUBSTRATE_AAA",
-			URL:        rpc.URL,
-			Decimals:   10,
-			ChainID:    0,
-		})
+		chain := xc.NewChainConfig("DOT", "substrate").
+			WithUrl(rpc.URL).
+			WithIndexer("", "subscan").
+			WithAuth("env:SUBSTRATE_AAA").
+			WithDecimals(10).
+			WithChainID(0)
+		client, err := client.NewClient(chain)
 		require.NoError(err)
 		amt, err := client.EstimateTip(context.Background())
 		require.NoError(err)

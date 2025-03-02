@@ -52,7 +52,7 @@ func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, er
 		if len(privateKeyOrMnemonic) < 16 {
 			return nil, errors.New("invalid mnemonic")
 		}
-		encoding, err := cosmostypes.MakeCosmosConfig(&xc.ChainConfig{ChainPrefix: "any"})
+		encoding, err := cosmostypes.MakeCosmosConfig(xc.NewChainConfig("").WithChainPrefix("any"))
 		if err != nil {
 			return PrivateKey{}, err
 		}

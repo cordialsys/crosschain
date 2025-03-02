@@ -17,13 +17,15 @@ type TxInput = tx_input.TxInput
 type Tx = tx.Tx
 
 func TestNewTxBuilder(t *testing.T) {
-	txBuilder, err := builder.NewTxBuilder(&xc.ChainConfig{Chain: "XLM"})
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, err := builder.NewTxBuilder(chain)
 	require.NotNil(t, txBuilder)
 	require.Nil(t, err)
 }
 
 func TestNewNativeTransfer(t *testing.T) {
-	txBuilder, _ := builder.NewTxBuilder(&xc.ChainConfig{Chain: "XLM"})
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, _ := builder.NewTxBuilder(chain)
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
@@ -48,10 +50,8 @@ func TestNewNativeTransfer(t *testing.T) {
 func TestNewTokenTransfer(t *testing.T) {
 	txBuilder, _ := builder.NewTxBuilder(
 		&xc.TokenAssetConfig{
-			Contract: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			ChainConfig: &xc.ChainConfig{
-				Chain: "XLM",
-			},
+			Contract:    "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			ChainConfig: xc.NewChainConfig(xc.XLM),
 		},
 	)
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
@@ -81,10 +81,8 @@ func TestInvalidTokenTransfer(t *testing.T) {
 	txBuilder, _ := builder.NewTxBuilder(
 		&xc.TokenAssetConfig{
 			// Asset code is too long
-			Contract: "USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			ChainConfig: &xc.ChainConfig{
-				Chain: "XLM",
-			},
+			Contract:    "USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+			ChainConfig: xc.NewChainConfig("XLM"),
 		},
 	)
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")

@@ -9,16 +9,16 @@ import (
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := address.NewAddressBuilder(&xc.ChainConfig{Driver: "filecoin"})
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("", xc.DriverFilecoin))
 	require.NotNil(t, builder)
 	require.NoError(t, err)
 }
 
 func TestGetMainnetAddressFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{
-		Net:    "mainnet",
-		Driver: "filecoin",
-	})
+	builder, _ := address.NewAddressBuilder(
+		xc.NewChainConfig("", xc.DriverFilecoin).
+			WithNet("mainnet"),
+	)
 
 	address, err := builder.GetAddressFromPublicKey([]byte{
 		4, 227, 218, 207, 254, 226, 131, 203, 251, 86,
@@ -34,10 +34,7 @@ func TestGetMainnetAddressFromPublicKey(t *testing.T) {
 }
 
 func TestGetTestnetAddressFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{
-		Net:    "testnet",
-		Driver: "filecoin",
-	})
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("", xc.DriverFilecoin).WithNet("testnet"))
 
 	address, err := builder.GetAddressFromPublicKey([]byte{
 		4, 227, 218, 207, 254, 226, 131, 203, 251, 86,

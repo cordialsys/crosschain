@@ -106,7 +106,7 @@ func (amount *AmountBlockchain) ToHuman(decimals int32) AmountHumanReadable {
 	return AmountHumanReadable(dec)
 }
 
-func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainConfig) AmountBlockchain {
+func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainClientConfig) AmountBlockchain {
 	if chain.ChainGasMultiplier > 0.01 {
 		return MultiplyByFloat(amount, chain.ChainGasMultiplier)
 	}

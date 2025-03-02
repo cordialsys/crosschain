@@ -23,7 +23,7 @@ import (
 type TxInput = tx_input.TxInput
 
 func TestNewClient(t *testing.T) {
-	client, err := client.NewClient(&xc.ChainConfig{})
+	client, err := client.NewClient(xc.NewChainConfig(""))
 	require.NotNil(t, client)
 	require.NoError(t, err)
 }
@@ -83,7 +83,7 @@ func TestFetchTxInput(t *testing.T) {
 		forceError        int
 	}{
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			// valid blockhash
 			resp:            `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
@@ -204,7 +204,7 @@ func TestFetchTxInput(t *testing.T) {
 			err:               "",
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			resp: []string{
 				// invalid blockhash
 				`{"context":{"slot":83986105},"value":{"blockhash":"error","feeCalculator":{"lamportsPerSignature":5000}}}`,
@@ -233,7 +233,7 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "decode: invalid base58 digit",
 		},
 		{
-			asset:           &xc.ChainConfig{},
+			asset:           xc.NewChainConfig(""),
 			resp:            `null`,
 			blockHash:       "",
 			toIsATA:         false,
@@ -241,7 +241,7 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "error fetching latest blockhash",
 		},
 		{
-			asset:           &xc.ChainConfig{},
+			asset:           xc.NewChainConfig(""),
 			resp:            `{}`,
 			blockHash:       "",
 			toIsATA:         false,
@@ -249,7 +249,7 @@ func TestFetchTxInput(t *testing.T) {
 			err:             "error fetching latest blockhash",
 		},
 		{
-			asset:           &xc.ChainConfig{},
+			asset:           xc.NewChainConfig(""),
 			resp:            fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			blockHash:       "",
 			toIsATA:         false,
@@ -265,10 +265,7 @@ func TestFetchTxInput(t *testing.T) {
 			fmt.Println("ASSET", v.asset)
 			server.ForceError = v.forceError
 			if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = &xc.ChainConfig{
-					URL:   server.URL,
-					Chain: "SOL",
-				}
+				token.ChainConfig = xc.NewChainConfig(xc.SOL).WithUrl(server.URL)
 			} else {
 				v.asset.(*xc.ChainConfig).URL = server.URL
 			}
@@ -313,7 +310,7 @@ func TestSubmitTxSuccess(t *testing.T) {
 
 	server, close := testtypes.MockJSONRPC(t, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
-	client, _ := client.NewClient(&xc.ChainConfig{Chain: xc.SOL, URL: server.URL})
+	client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
 	err = client.SubmitTx(context.Background(), &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 		Signatures:         []xc.TxSignature{{1, 2, 3, 4}},
@@ -322,7 +319,7 @@ func TestSubmitTxSuccess(t *testing.T) {
 }
 func TestSubmitTxErr(t *testing.T) {
 
-	client, _ := client.NewClient(&xc.ChainConfig{})
+	client, _ := client.NewClient(xc.NewChainConfig(""))
 	tx := &tx.Tx{
 		SolTx:       &solana.Transaction{},
 		ParsedSolTx: &rpc.ParsedTransaction{},
@@ -364,7 +361,7 @@ func TestAccountBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
 		from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 		balance, err := client.FetchNativeBalance(context.Background(), from)
 
@@ -416,10 +413,8 @@ func TestTokenBalance(t *testing.T) {
 			defer close()
 
 			client, _ := client.NewClient(&xc.TokenAssetConfig{
-				ChainConfig: &xc.ChainConfig{
-					URL: server.URL,
-				},
-				Contract: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+				ChainConfig: xc.NewChainConfig("").WithUrl(server.URL),
+				Contract:    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 			})
 			from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 			balance, err := client.FetchBalance(context.Background(), from)
@@ -634,7 +629,7 @@ func TestFetchTxInfo(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
 		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 		if v.err != "" {

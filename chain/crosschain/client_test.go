@@ -20,7 +20,7 @@ type CrosschainTestSuite struct {
 
 func (s *CrosschainTestSuite) SetupTest() {
 	s.Ctx = context.Background()
-	s.Asset = &xc.ChainConfig{}
+	s.Asset = xc.NewChainConfig("")
 }
 
 func TestExampleTestSuite(t *testing.T) {

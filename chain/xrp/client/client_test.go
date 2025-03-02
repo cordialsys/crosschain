@@ -22,7 +22,7 @@ import (
 
 func TestNewClient(t *testing.T) {
 
-	client, err := xrpClient.NewClient(&xc.ChainConfig{})
+	client, err := xrpClient.NewClient(xc.NewChainConfig(""))
 	require.NotNil(t, client)
 	require.Nil(t, err)
 }
@@ -38,7 +38,7 @@ func TestFetchTxInput(t *testing.T) {
 		expectedTxInput xrptxinput.TxInput
 	}{
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -71,7 +71,7 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{},
@@ -103,7 +103,7 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -156,10 +156,8 @@ func TestFetchTxInput(t *testing.T) {
 		defer server.Close()
 
 		if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-			token.ChainConfig = &xc.ChainConfig{
-				URL:   server.URL,
-				Chain: "XRP",
-			}
+			token.ChainConfig = xc.NewChainConfig(xc.XRP).
+				WithUrl(server.URL)
 		} else {
 			vector.asset.(*xc.ChainConfig).URL = server.URL
 		}
@@ -232,7 +230,7 @@ func TestSubmitTx(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, vector.submitResp)
 		defer close()
 
-		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
 		err := client.SubmitTx(context.Background(), vector.txInput)
 		require.NoError(t, err)
@@ -250,7 +248,7 @@ func TestFetchTxInfo(t *testing.T) {
 		err            string
 	}{
 		{
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 			txResp: `{
 			  "result": {
@@ -379,7 +377,7 @@ func TestFetchTxInfo(t *testing.T) {
 			err: "",
 		},
 		{
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 			txResp: `
 			{
@@ -653,7 +651,7 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 		{
 			// test error
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 			txResp: `{
 			  "result": {
@@ -737,10 +735,8 @@ func TestFetchTxInfo(t *testing.T) {
 			defer server.Close()
 
 			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = &xc.ChainConfig{
-					URL:   server.URL,
-					Chain: "XRP",
-				}
+				token.ChainConfig = xc.NewChainConfig(xc.XRP).
+					WithUrl(server.URL)
 			} else {
 				vector.asset.(*xc.ChainConfig).URL = server.URL
 			}
@@ -795,7 +791,7 @@ func TestFetchNativeBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
 		address := xc.Address("r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59")
 
@@ -845,12 +841,12 @@ func TestFetchCBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		chain := xc.ChainConfig{URL: server.URL}
+		chain := xc.NewChainConfig(xc.XRP).WithUrl(server.URL)
 
 		client, _ := xrpClient.NewClient(&xc.TokenAssetConfig{
 			Contract:    "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB",
 			Chain:       chain.Chain,
-			ChainConfig: &chain,
+			ChainConfig: chain,
 			Decimals:    0,
 		})
 
