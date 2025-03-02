@@ -562,7 +562,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
 			server.ForceError = v.forceError
-			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID(5)
+			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID("5")
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)
@@ -727,7 +727,7 @@ func TestFetchTxInfo(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, v.name), func(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
-			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID(5).WithDecimals(18)
+			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID("5").WithDecimals(18)
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)

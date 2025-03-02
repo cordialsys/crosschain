@@ -7,7 +7,9 @@ import (
 	"flag"
 	"fmt"
 	"testing"
+	"time"
 
+	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/stretchr/testify/require"
@@ -44,12 +46,19 @@ func TestBalance(t *testing.T) {
 	fundWallet(t, chainConfig, walletAddress, "1")
 
 	balanceArgs := xcclient.NewBalanceArgs(walletAddress)
-	walletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
-	require.NoError(t, err, "Failed to fetch balance")
+	var walletBalance xc.AmountBlockchain
 
-	require.NoError(t, err, "Failed to retrieve wallet balance")
-
-	fmt.Println("Wallet Balance:", walletBalance)
+	// Tolerate ~30s to get the target balance, as the faucet for a devnet node isn't always syncronous
+	for attempts := range 30 {
+		walletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
+		fmt.Println("Wallet Balance: ", walletBalance)
+		asHuman := walletBalance.ToHuman(chainConfig.Decimals).String()
+		if asHuman == "1" {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	require.Equal(t, "1", walletBalance.ToHuman(chainConfig.Decimals).String())
 }

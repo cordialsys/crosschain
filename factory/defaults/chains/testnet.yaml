@@ -13,7 +13,7 @@ chains:
   ATOM:
     chain: ATOM
     driver: cosmos
-    chain_id_str: theta-testnet-001
+    chain_id: theta-testnet-001
     chain_name: Cosmos (Theta Testnet)
     chain_prefix: cosmos
     chain_coin: uatom
@@ -179,7 +179,7 @@ chains:
   INJ:
     chain: INJ
     driver: evmos
-    chain_id_str: injective-888
+    chain_id: injective-888
     chain_name: Injective (Testnet)
     chain_prefix: inj
     chain_coin: inj
@@ -190,7 +190,7 @@ chains:
   LUNA:
     chain: LUNA
     driver: cosmos
-    chain_id_str: pisco-1
+    chain_id: pisco-1
     chain_name: Terra (Testnet)
     chain_prefix: terra
     chain_coin: uluna
@@ -200,7 +200,7 @@ chains:
   LUNC:
     chain: LUNC
     driver: cosmos
-    chain_id_str: bombay-12
+    chain_id: bombay-12
     chain_name: Terra Classic (Testnet)
     chain_prefix: terra
     chain_coin: uluna
@@ -231,7 +231,7 @@ chains:
   SEI:
     chain: SEI
     driver: cosmos
-    chain_id_str: atlantic-2
+    chain_id: atlantic-2
     chain_name: Sei
     chain_prefix: sei
     chain_coin: usei
@@ -244,7 +244,7 @@ chains:
     driver: cosmos
     chain_name: Celestia
     chain_prefix: celestia
-    chain_id_str: mocha-4
+    chain_id: mocha-4
     chain_coin: utia
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
@@ -269,7 +269,7 @@ chains:
   XPLA:
     chain: XPLA
     driver: cosmos
-    chain_id_str: cube_47-5
+    chain_id: cube_47-5
     chain_name: XPLA (Testnet)
     chain_prefix: xpla
     chain_coin: axpla
@@ -279,7 +279,7 @@ chains:
   HASH:
     chain: HASH
     driver: cosmos
-    chain_id_str: pio-testnet-1
+    chain_id: pio-testnet-1
     chain_name: Provenance (Testnet)
     chain_prefix: tp
     chain_coin: nhash
@@ -362,12 +362,11 @@ chains:
     gas_budget_default: "1.0"
     # Stellar network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
-    chain_id_str: "Test SDF Network ; September 2015"
+    chain_id: "Test SDF Network ; September 2015"
   SeiEVM:
     chain: SeiEVM
     driver: evm
     chain_id: 1328
-    chain_id_str: atlantis-2
     chain_name: Sei
     chain_prefix: sei
     chain_coin: sei

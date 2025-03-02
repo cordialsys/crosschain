@@ -33,9 +33,9 @@ var _ xclient.Client = &Client{}
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
-	networkPassphrase := cfg.ChainIDStr
+	networkPassphrase := cfg.ChainID.AsString()
 	if networkPassphrase == "" {
-		return nil, fmt.Errorf("stellar configuration is missing chain-id-str")
+		return nil, fmt.Errorf("stellar configuration is missing chain-id")
 	}
 
 	if cfg.GasBudgetDefault.Decimal().InexactFloat64() <= 0 {
@@ -60,7 +60,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 // FetchTransferInput returns tx input for a Stellar tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	config := client.Asset.GetChain()
-	txInput := xlminput.NewTxInput(config.ChainIDStr)
+	txInput := xlminput.NewTxInput(config.ChainID.AsString())
 	account := args.GetFrom()
 	accountDetails, err := client.FetchAccountDetails(account)
 	if err != nil {

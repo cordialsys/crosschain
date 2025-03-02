@@ -121,8 +121,7 @@ func TestBalance(t *testing.T) {
 			WithIndexer(client.IndexerSubScan, "subscan").
 			WithAuth("env:SUBSTRATE_AAA").
 			WithChainPrefix("0").
-			WithDecimals(10).
-			WithChainID(0)
+			WithDecimals(10)
 
 		client, err := client.NewClient(chain)
 		require.NoError(err)
@@ -344,8 +343,7 @@ func TestFetchTxInfo(t *testing.T) {
 				WithIndexer(tc.indexerType, http.URL).
 				WithAuth("env:SUBSTRATE_AAA").
 				WithChainPrefix("0").
-				WithDecimals(10).
-				WithChainID(0)
+				WithDecimals(10)
 
 			client, err := client.NewClient(chain)
 			require.NoError(err)
@@ -490,8 +488,8 @@ func TestFetchTxInput(t *testing.T) {
 			WithIndexer("", "aaa").
 			WithAuth("env:SUBSTRATE_AAA").
 			WithChainPrefix("0").
-			WithDecimals(10).
-			WithChainID(0)
+			WithDecimals(10)
+
 		client, err := client.NewClient(chain)
 		require.NoError(err)
 		require.NotNil(client)
@@ -563,8 +561,8 @@ func TestEstimateTip(t *testing.T) {
 			WithUrl(rpc.URL).
 			WithIndexer("", "subscan").
 			WithAuth("env:SUBSTRATE_AAA").
-			WithDecimals(10).
-			WithChainID(0)
+			WithDecimals(10)
+
 		client, err := client.NewClient(chain)
 		require.NoError(err)
 		amt, err := client.EstimateTip(context.Background())

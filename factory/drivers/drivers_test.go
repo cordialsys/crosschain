@@ -73,7 +73,7 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 		fakeAsset.ChainPrefix = "0"
 	}
 	if driver == xc.DriverXlm {
-		fakeAsset.ChainIDStr = "Test SDF Network ; September 2015"
+		fakeAsset.ChainID = "Test SDF Network ; September 2015"
 		fakeAsset.TransactionActiveTime = time.Duration(500)
 		fakeAsset.GasBudgetDefault = xc.NewAmountHumanReadableFromFloat(2.0)
 	}

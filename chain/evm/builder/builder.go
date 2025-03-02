@@ -74,7 +74,6 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	} else {
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
 	}
-
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
@@ -127,7 +126,8 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address
 	input := inputRaw.(*tx_input.TxInput)
 	var chainId *big.Int = input.ChainId.Int()
 	if input.ChainId.Uint64() == 0 {
-		chainId = new(big.Int).SetInt64(chain.ChainID)
+		chainIdInt, _ := chain.ChainID.AsInt()
+		chainId = new(big.Int).SetUint64(chainIdInt)
 	}
 
 	return &tx.Tx{

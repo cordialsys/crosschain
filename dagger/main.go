@@ -28,7 +28,7 @@ func (m *Dagger) TestChain(
 		AsService()
 
 	goPaths := "/root/go/bin:/usr/local/go/bin"
-	goVersion := "1.23.3"
+	goVersion := "1.24.0"
 	arch := runtime.GOARCH
 	arch = strings.Replace(arch, "x86_64", "amd64", 1)
 	arch = strings.Replace(arch, "aarch64", "arm64", 1)
