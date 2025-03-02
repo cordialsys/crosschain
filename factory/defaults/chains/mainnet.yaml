@@ -47,7 +47,7 @@ chains:
   ATOM:
     chain: ATOM
     driver: cosmos
-    chain_id_str: cosmoshub-4
+    chain_id: cosmoshub-4
     chain_name: Cosmos
     chain_prefix: cosmos
     chain_coin: uatom
@@ -372,7 +372,7 @@ chains:
   HASH:
     chain: HASH
     driver: cosmos
-    chain_id_str: pio-mainnet-1
+    chain_id: pio-mainnet-1
     chain_name: Provenance
     chain_prefix: pb
     chain_coin: nhash
@@ -389,7 +389,7 @@ chains:
   INJ:
     chain: INJ
     driver: evmos
-    chain_id_str: injective-1
+    chain_id: injective-1
     chain_name: Injective
     chain_prefix: inj
     chain_coin: inj
@@ -468,7 +468,7 @@ chains:
   LUNA:
     chain: LUNA
     driver: cosmos
-    chain_id_str: phoenix-1
+    chain_id: phoenix-1
     chain_name: Terra
     chain_prefix: terra
     chain_coin: uluna
@@ -486,7 +486,7 @@ chains:
   LUNC:
     chain: LUNC
     driver: cosmos
-    chain_id_str: columbus-5
+    chain_id: columbus-5
     chain_name: Terra Classic
     chain_prefix: terra
     chain_coin: uluna
@@ -592,7 +592,7 @@ chains:
   SEI:
     chain: SEI
     driver: cosmos
-    chain_id_str: pacific-1
+    chain_id: pacific-1
     chain_name: Sei
     chain_prefix: sei
     chain_coin: usei
@@ -612,7 +612,6 @@ chains:
     chain: SeiEVM
     driver: evm
     chain_id: 1329
-    chain_id_str: pacific-1
     chain_name: Sei
     chain_prefix: sei
     chain_coin: sei
@@ -681,7 +680,7 @@ chains:
     driver: cosmos
     chain_name: Celestia
     chain_prefix: celestia
-    chain_id_str: celestia
+    chain_id: celestia
     chain_coin: utia
     chain_coin_hd_path: 118
     chain_gas_price_default: 0.1
@@ -745,7 +744,7 @@ chains:
   XPLA:
     chain: XPLA
     driver: cosmos
-    chain_id_str: dimension_37-1
+    chain_id: dimension_37-1
     chain_name: XPLA Chain
     chain_prefix: xpla
     chain_coin: axpla
@@ -784,7 +783,7 @@ chains:
     gas_budget_default: "5.0"
     # Network passphrase
     # Passphrases can be found here: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
-    chain_id_str: "Public Global Stellar Network ; September 2015"
+    chain_id: "Public Global Stellar Network ; September 2015"
     external:
       coin_market_cap:
         asset_id: "512"

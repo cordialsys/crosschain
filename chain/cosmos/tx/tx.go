@@ -172,7 +172,7 @@ func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 
 	chainId := tx.Input.ChainId
 	if chainId == "" {
-		chainId = tx.ChainCfg.ChainIDStr
+		chainId = tx.ChainCfg.ChainID.AsString()
 	}
 	all := sdktx.SignDoc{
 		BodyBytes:     bodyBytes,
