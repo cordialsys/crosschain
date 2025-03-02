@@ -57,3 +57,44 @@ func (p GasFeePriority) GetDefault() (decimal.Decimal, error) {
 	}
 	return p.AsCustom()
 }
+
+// Check against the max-fee defaults in the configuration.
+// Custody products should have a way to override max-fee limits.
+func CheckMaxFeeLimit(input TxInput, chainConfig *ChainConfig) error {
+	// Protect against fee griefing
+	maxFeeSpend, feeAssetId := input.GetMaxFee()
+	if feeAssetId == "" || feeAssetId == ContractAddress(chainConfig.Chain) {
+		maxFeeLimit := chainConfig.MaxFee.ToBlockchain(chainConfig.Decimals)
+		if maxFeeSpend.Cmp(&maxFeeLimit) > 0 {
+			maxFeeSpendHuman := maxFeeSpend.ToHuman(chainConfig.Decimals)
+			return fmt.Errorf(
+				"transaction fee may cost up to %s %s, which is greater than the current limit of %s",
+				maxFeeSpendHuman.String(),
+				chainConfig.Chain,
+				chainConfig.MaxFee.String(),
+			)
+		}
+	} else {
+		var additionalAsset *AdditionalNativeAsset
+		for _, asset := range chainConfig.AdditionalNativeAssets {
+			if asset.AssetId == feeAssetId {
+				additionalAsset = asset
+				break
+			}
+		}
+		if additionalAsset == nil {
+			return fmt.Errorf("fee is in asset '%s', but there is no max-limit configured for this asset", feeAssetId)
+		}
+		maxFeeLimit := additionalAsset.MaxFee.ToBlockchain(additionalAsset.Decimals)
+		maxFeeSpendHuman := maxFeeSpend.ToHuman(additionalAsset.Decimals)
+		if maxFeeSpend.Cmp(&maxFeeLimit) > 0 {
+			return fmt.Errorf(
+				"transaction fee may cost up to %s %s, which is greater than the current limit of %s",
+				maxFeeSpendHuman.String(),
+				additionalAsset.AssetId,
+				additionalAsset.MaxFee.String(),
+			)
+		}
+	}
+	return nil
+}

@@ -112,45 +112,6 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			name:       "CappedLimitAndFeeCap",
-			amount:     xc.NewAmountBlockchainFromStr("1"),
-			provide_to: false,
-			getChainHeadResult: `{"result":{
-              "Cids": [
-                {
-                  "/": "bafy2bzacea7kciha7midmmnermmx5dtaj3gjo2lghjkozd5t6diclbwngvnka"
-                },
-                {
-                  "/": "bafy2bzaceaflojujuuu5gzh4jmlnf4dgtrgyxugv4eechwwdh4huwre3mvj2q"
-                }
-              ],
-              "Height": 2441564
-            }}`,
-			getNonceResult: `{"result": 21}`,
-			estimateGasFeesResult: `{"result": {
-			    "CID":{"/":"bafy2bzacedlpdofjj2aturtq42bk4j6qgmrvcs7lkmtn6x7goqgf3n4pvqx7o"},
-			    "From":"f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
-			    "GasFeeCap":"100542",
-			    "GasLimit":1518203,
-			    "GasPremium":"99488",
-			    "Method":0,
-			    "Nonce":21,
-			    "Params":null,
-			    "To":"f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
-			    "Value":"1",
-			    "Version":42
-			  }
-			}`,
-			expectedInput: &tx_input.TxInput{
-				Nonce:      21,
-				GasLimit:   100_000,                                 // Capped by `maxGasLimit`
-				GasFeeCap:  xc.NewAmountBlockchainFromStr("100000"), // Capped by `maxGasFeeCap`
-				GasPremium: xc.NewAmountBlockchainFromStr("99488"),
-			},
-			maxGasLimit:  100_000,
-			maxGasFeeCap: 0.000_000_000_000_100_000,
-		},
-		{
 			name:           "MissingGetChainHead",
 			amount:         xc.NewAmountBlockchainFromStr("1"),
 			getNonceResult: `{"result": 21}`,

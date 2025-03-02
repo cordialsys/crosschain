@@ -262,6 +262,7 @@ func CmdTxTransfer() *cobra.Command {
 
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
+				builder.OptionPublicKey(publicKey),
 			}
 			if memo != "" {
 				tfOptions = append(tfOptions, builder.OptionMemo(memo))
@@ -292,7 +293,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
 			}
 
-			err = CheckMaxFeeLimit(input, chainConfig)
+			err = xc.CheckMaxFeeLimit(input, chainConfig)
 			if err != nil {
 				return err
 			}

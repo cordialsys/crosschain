@@ -40,7 +40,6 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 		Asset:          cfgI,
 		Params:         params,
 		AddressDecoder: &address.BtcAddressDecoder{},
-		// isBch:  native.Chain == xc.BCH,
 	}, nil
 }
 
@@ -68,8 +67,6 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	// TODO validate max fee
-
 	var local_input *tx_input.TxInput
 	var ok bool
 	if local_input, ok = (input.(*tx_input.TxInput)); !ok {

@@ -6,7 +6,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
@@ -21,36 +20,6 @@ func TestNewTxBuilder(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, b)
 	require.Equal(t, "USDC", b.Asset.(*xc.TokenAssetConfig).Asset)
-}
-
-func TestTransferSetsMaxTipCap(t *testing.T) {
-	b, _ := builder.NewTxBuilder(&xc.ChainConfig{})
-
-	from := "0x724435CC1B2821362c2CD425F2744Bd7347bf299"
-	to := "0x3ad57b83B2E3dC5648F32e98e386935A9B10bb9F"
-	amount := xc.NewAmountBlockchainFromUint64(100)
-	input := tx_input.NewTxInput()
-
-	input.GasTipCap = builder.GweiToWei(builder.DefaultMaxTipCapGwei - 1)
-	trans, err := b.Transfer(buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount), input)
-	require.NoError(t, err)
-	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei-1).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
-
-	input.GasTipCap = builder.GweiToWei(builder.DefaultMaxTipCapGwei + 1)
-	trans, err = b.Transfer(buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount), input)
-	require.NoError(t, err)
-	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
-
-	// increase the max
-	b, _ = builder.NewTxBuilder(&xc.ChainConfig{ChainMaxGasPrice: 100})
-	trans, _ = b.Transfer(buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount), input)
-	// now DefaultMaxTipCapGwei + 1 is used
-	require.EqualValues(t, builder.GweiToWei(builder.DefaultMaxTipCapGwei+1).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
-
-	// 100 is used instead of 1000
-	input.GasTipCap = builder.GweiToWei(1000)
-	trans, _ = b.Transfer(buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount), input)
-	require.EqualValues(t, builder.GweiToWei(100).Uint64(), trans.(*tx.Tx).EthTx.GasTipCap().Uint64())
 }
 
 func TestStakingTxUsesCredential(t *testing.T) {
