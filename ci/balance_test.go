@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	xc "github.com/cordialsys/crosschain"
+	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/stretchr/testify/require"
 )
@@ -43,7 +43,8 @@ func TestBalance(t *testing.T) {
 
 	fundWallet(t, chainConfig, walletAddress, "1")
 
-	walletBalance, err := client.FetchBalance(context.Background(), xc.Address(walletAddress))
+	balanceArgs := xcclient.NewBalanceArgs(walletAddress)
+	walletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
 	require.NoError(t, err, "Failed to fetch balance")
 
 	require.NoError(t, err, "Failed to retrieve wallet balance")

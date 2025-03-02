@@ -122,8 +122,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }
 
-func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
-	switch Driver(cfg.GetChain().Driver) {
+func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
+	switch Driver(cfg.Driver) {
 	case DriverEVM:
 		return evmbuilder.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
@@ -153,16 +153,15 @@ func NewTxBuilder(cfg ITask) (xcbuilder.FullTransferBuilder, error) {
 	case DriverFilecoin:
 		return filbuilder.NewTxBuilder(cfg)
 	}
-	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.GetChain().Chain))
+	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
 
-func NewSigner(cfg ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
-	chain := cfg.GetChain()
+func NewSigner(chain *ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	return signer.New(chain.Driver, secret, chain, options...)
 }
 
-func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBuilder, error) {
-	switch Driver(cfg.GetChain().Driver) {
+func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption) (AddressBuilder, error) {
+	switch Driver(cfg.Driver) {
 	case DriverEVM:
 		return evmaddress.NewAddressBuilder(cfg)
 	case DriverEVMLegacy:
@@ -192,7 +191,7 @@ func NewAddressBuilder(cfg ITask, options ...xcaddress.AddressOption) (AddressBu
 	case DriverXlm:
 		return xlmaddress.NewAddressBuilder(cfg)
 	}
-	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.GetChain().Chain))
+	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
 
 func CheckError(driver Driver, err error) errors.Status {

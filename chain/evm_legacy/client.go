@@ -92,7 +92,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 		result.GasPrice = xc.AmountBlockchain(*baseFee).ApplyGasPriceMultiplier(nativeAsset.Client())
 	}
-	builder, err := NewTxBuilder(client.EvmClient.Asset)
+	builder, err := NewTxBuilder(client.EvmClient.Asset.GetChain().Base())
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate legacy: %v", err)
 	}
@@ -131,8 +131,8 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return client.EvmClient.FetchNativeBalance(ctx, address)
 }
 
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.EvmClient.FetchBalance(ctx, address)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	return client.EvmClient.FetchBalance(ctx, args)
 }
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	return client.EvmClient.FetchDecimals(ctx, contract)

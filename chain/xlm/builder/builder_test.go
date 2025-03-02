@@ -18,14 +18,14 @@ type Tx = tx.Tx
 
 func TestNewTxBuilder(t *testing.T) {
 	chain := xc.NewChainConfig(xc.XLM)
-	txBuilder, err := builder.NewTxBuilder(chain)
+	txBuilder, err := builder.NewTxBuilder(chain.Base())
 	require.NotNil(t, txBuilder)
 	require.Nil(t, err)
 }
 
 func TestNewNativeTransfer(t *testing.T) {
 	chain := xc.NewChainConfig(xc.XLM)
-	txBuilder, _ := builder.NewTxBuilder(chain)
+	txBuilder, _ := builder.NewTxBuilder(chain.Base())
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
@@ -48,17 +48,17 @@ func TestNewNativeTransfer(t *testing.T) {
 }
 
 func TestNewTokenTransfer(t *testing.T) {
-	txBuilder, _ := builder.NewTxBuilder(
-		&xc.TokenAssetConfig{
-			Contract:    "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			ChainConfig: xc.NewChainConfig(xc.XLM),
-		},
-	)
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, _ := builder.NewTxBuilder(chain.Base())
+
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		buildertest.OptionContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
+	)
 	nt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
@@ -78,19 +78,18 @@ func TestNewTokenTransfer(t *testing.T) {
 }
 
 func TestInvalidTokenTransfer(t *testing.T) {
-	txBuilder, _ := builder.NewTxBuilder(
-		&xc.TokenAssetConfig{
-			// Asset code is too long
-			Contract:    "USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			ChainConfig: xc.NewChainConfig("XLM"),
-		},
-	)
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, _ := builder.NewTxBuilder(chain.Base())
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
 
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		// Asset code is too long
+		buildertest.OptionContractAddress("USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
+	)
 	_, err := txBuilder.Transfer(args, input)
 	require.Error(t, err)
 }

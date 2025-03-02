@@ -32,3 +32,15 @@ func MustNewStakingArgs(
 	}
 	return args
 }
+
+// Re-export for convenience
+var OptionContractAddress = builder.OptionContractAddress
+var OptionContractDecimals = builder.OptionContractDecimals
+var OptionValidator = builder.OptionValidator
+var OptionStakeOwner = builder.OptionStakeOwner
+var OptionStakeAccount = builder.OptionStakeAccount
+var OptionTimestamp = builder.OptionTimestamp
+var OptionPriority = builder.OptionPriority
+var OptionPublicKey = builder.OptionPublicKey
+var OptionMemo = builder.OptionMemo
+var OptionTxInput = builder.WithTxInputOptions

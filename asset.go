@@ -589,19 +589,7 @@ func (chain *ChainClientConfig) Configure() {
 	chain.Limiter = chain.NewClientLimiter()
 }
 
-type TokenAssetConfig struct {
-	Asset    string      `yaml:"asset,omitempty"`
-	Chain    NativeAsset `yaml:"chain,omitempty"`
-	Decimals int32       `yaml:"decimals,omitempty"`
-	Contract string      `yaml:"contract,omitempty"`
-
-	// Token configs are joined with a chain config upon loading.
-	// If there is no matching native asset config, there will be a loading error.
-	ChainConfig *ChainConfig `yaml:"-"`
-}
-
 var _ ITask = &ChainConfig{}
-var _ ITask = &TokenAssetConfig{}
 
 func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
@@ -641,31 +629,4 @@ func (native *ChainConfig) ClientURL() (string, Driver) {
 
 func (native *ChainConfig) IsChain(contract ContractAddress) bool {
 	return contract == "" || native.Chain == NativeAsset(contract)
-}
-
-func (c *TokenAssetConfig) String() string {
-	net := ""
-	native := c.GetChain()
-	if native != nil {
-		net = native.Net
-	}
-	return fmt.Sprintf(
-		"TokenAssetConfig(asset=%s chain=%s net=%s decimals=%d contract=%s)",
-		c.Asset, c.Chain, net, c.Decimals, c.Contract,
-	)
-}
-
-func (asset *TokenAssetConfig) GetChain() *ChainConfig {
-	return asset.ChainConfig
-}
-
-func (asset *TokenAssetConfig) GetDecimals() int32 {
-	return asset.Decimals
-}
-
-func (token *TokenAssetConfig) GetContract() string {
-	return token.Contract
-}
-func (token *TokenAssetConfig) GetAssetSymbol() string {
-	return token.Asset
 }

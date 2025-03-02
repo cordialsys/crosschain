@@ -13,13 +13,13 @@ import (
 type TxInput = tx_input.TxInput
 
 func TestNewTxBuilder(t *testing.T) {
-	builder1, err := builder.NewTxBuilder(xc.NewChainConfig(xc.FIL))
+	builder1, err := builder.NewTxBuilder(xc.NewChainConfig(xc.FIL).Base())
 	require.NotNil(t, builder1)
 	require.NoError(t, err)
 }
 
 func TestNewTransfer(t *testing.T) {
-	builder1, _ := builder.NewTxBuilder(xc.NewChainConfig(""))
+	builder1, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
 	from := xc.Address("f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy")
 	to := xc.Address("f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q")
 	amount := xc.NewAmountBlockchainFromStr("1")

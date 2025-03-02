@@ -87,7 +87,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	// Validate the amount and deduct it from the balance if the input
 	// pertains to a native transaction
-	if _, ok := client.Asset.(*xc.ChainConfig); ok {
+	if _, ok := args.GetContract(); !ok {
 		amount := args.GetAmount()
 		if remainingBalance.Cmp(&amount) == -1 {
 			return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), remainingBalance.String())
@@ -337,11 +337,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalanceByAsset(address, true, "XLM")
+	return client.FetchBalanceByAsset(address, "XLM")
 }
 
 // Fetch asset balance by asset code
-func (client *Client) FetchBalanceByAsset(address xc.Address, fetchNative bool, assetID string) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalanceByAsset(address xc.Address, assetID string) (xc.AmountBlockchain, error) {
 	url := fmt.Sprintf("%s/accounts/%s", client.Url, string(address))
 	var response types.GetAccountResult
 	if err := client.Get(url, &response); err != nil {
@@ -382,11 +382,11 @@ func (client *Client) FetchAccountDetails(address xc.Address) (types.GetAccountR
 	return response, nil
 }
 
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if tk, ok := client.Asset.(*xc.TokenAssetConfig); ok {
-		return client.FetchBalanceByAsset(address, true, tk.Contract)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		return client.FetchBalanceByAsset(args.Address(), string(contract))
 	} else {
-		return client.FetchBalanceByAsset(address, true, "XLM")
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
 }
 

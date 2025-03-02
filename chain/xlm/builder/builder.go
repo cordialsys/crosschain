@@ -13,7 +13,7 @@ import (
 )
 
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
@@ -21,7 +21,7 @@ var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 type TxInput = xlminput.TxInput
 type Tx = xlmtx.Tx
 
-func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
 	}, nil
@@ -78,8 +78,8 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 	xdrAmount := xdr.Int64(amount.Int().Int64())
 
 	var xdrAsset xdr.Asset
-	if tokenConfig, ok := builder.Asset.(*xc.TokenAssetConfig); ok {
-		contractDetails, err := common.GetAssetAndIssuerFromContract(tokenConfig.Contract)
+	if contract, ok := args.GetContract(); ok {
+		contractDetails, err := common.GetAssetAndIssuerFromContract(string(contract))
 		if err != nil {
 			return &xlmtx.Tx{}, fmt.Errorf("failed to get contract details: %w", err)
 		}

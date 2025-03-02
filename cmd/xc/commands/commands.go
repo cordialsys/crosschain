@@ -15,6 +15,7 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain"
+	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -31,7 +32,7 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 	if privateKeyInput == "" {
 		return "", fmt.Errorf("must provide [address] as input, set env %s for it to be derived", signer.EnvPrivateKey)
 	}
-	signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput)
+	signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
 	if err != nil {
 		return "", fmt.Errorf("could not import private key: %v", err)
 	}
@@ -40,7 +41,7 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 	if err != nil {
 		return "", fmt.Errorf("could not create public key: %v", err)
 	}
-	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
 	if err != nil {
 		return "", fmt.Errorf("could not create address builder: %v", err)
 	}
@@ -75,12 +76,17 @@ func CmdRpcBalance() *cobra.Command {
 				return err
 			}
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
+			rpcClient, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return err
 			}
+			options := []client.GetBalanceOption{}
+			if contract != "" {
+				options = append(options, client.OptionContract(xc.ContractAddress(contract)))
+			}
+			balanceArgs := client.NewBalanceArgs(address, options...)
 
-			balance, err := client.FetchBalance(context.Background(), address)
+			balance, err := rpcClient.FetchBalance(context.Background(), balanceArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
 			}
@@ -113,14 +119,25 @@ func CmdTxInput() *cobra.Command {
 				return err
 			}
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
+			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return err
 			}
-			tfArgs, err := builder.NewTransferArgs(fromAddress, xc.Address(addressTo), xc.NewAmountBlockchainFromStr(amount))
+
+			tfOptions := []builder.BuilderOption{}
+			if contract != "" {
+				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
+			}
+			tfArgs, err := builder.NewTransferArgs(
+				fromAddress,
+				xc.Address(addressTo),
+				xc.NewAmountBlockchainFromStr(amount),
+				tfOptions...,
+			)
 			if err != nil {
 				return fmt.Errorf("could not create transfer args: %v", err)
 			}
+
 			input, err := client.FetchTransferInput(context.Background(), tfArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch transaction input: %v", err)
@@ -148,7 +165,7 @@ func CmdTxInfo() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			hash := args[0]
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, "", 0))
+			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
@@ -227,7 +244,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, decimals))
+			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
@@ -239,7 +256,7 @@ func CmdTxTransfer() *cobra.Command {
 
 			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, addressArgs...)
+			signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -249,7 +266,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig, addressArgs...)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
@@ -266,6 +283,12 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			if memo != "" {
 				tfOptions = append(tfOptions, builder.OptionMemo(memo))
+			}
+			if contract != "" {
+				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
+			}
+			if decimalsStr != "" {
+				tfOptions = append(tfOptions, builder.OptionContractDecimals(int(decimals)))
 			}
 
 			if priorityStr != "" {
@@ -301,7 +324,7 @@ func CmdTxTransfer() *cobra.Command {
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			builder, err := xcFactory.NewTxBuilder(assetConfig(chainConfig, contract, decimals))
+			builder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
 			if err != nil {
 				return fmt.Errorf("could not load tx-builder: %v", err)
 			}
@@ -397,7 +420,7 @@ func CmdAddress() *cobra.Command {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
-			signer, err := xcFactory.NewSigner(chainConfig, privateKeyInput, addressArgs...)
+			signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -407,7 +430,7 @@ func CmdAddress() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig, addressArgs...)
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
@@ -435,7 +458,7 @@ func CmdChains() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chain := setup.UnwrapChain(cmd.Context())
 
-			cli, err := xcFactory.NewClient(assetConfig(chain, "", 0))
+			cli, err := xcFactory.NewClient(chain)
 			if err != nil {
 				return err
 			}
@@ -509,7 +532,7 @@ func CmdDecimals() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
+			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return err
 			}
@@ -594,18 +617,4 @@ func CmdFund() *cobra.Command {
 	cmd.Flags().StringVar(&api, "api", "http://127.0.0.1:10001", "API url to use for faucet.")
 	cmd.Flags().StringVar(&amountHuman, "amount", "1", "Decimal-adjusted amount of funds to request.")
 	return cmd
-}
-
-func assetConfig(chain *xc.ChainConfig, contractMaybe string, decimals int32) xc.ITask {
-	if contractMaybe != "" {
-		token := xc.TokenAssetConfig{
-			Contract:    contractMaybe,
-			Chain:       chain.Chain,
-			ChainConfig: chain,
-			Decimals:    decimals,
-		}
-		return &token
-	} else {
-		return chain
-	}
 }

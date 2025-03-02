@@ -10,6 +10,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	xcclient "github.com/cordialsys/crosschain/client"
@@ -39,7 +40,8 @@ func TestFetchTxInput(t *testing.T) {
 
 	chain := xc.NewChainConfig(xc.TON).WithDecimals(9)
 	vectors := []struct {
-		asset      xc.ITask
+		asset      *xc.ChainConfig
+		contract   xc.ContractAddress
 		desc       string
 		resp       interface{}
 		txInput    *ton.TxInput
@@ -92,13 +94,9 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			desc: "fetch_token_info",
-			asset: &xc.TokenAssetConfig{
-				Chain:       chain.Chain,
-				ChainConfig: chain,
-				Decimals:    9,
-				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
-			},
+			desc:     "fetch_token_info",
+			asset:    chain,
+			contract: xc.ContractAddress("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di"),
 			resp: []string{
 				// get account
 				`{"balance":"587833680","code":"te6cckEBAQEAcQAA3v8AIN0gggFMl7ohggEznLqxn3Gw7UTQ0x/THzHXC//jBOCk8mCDCNcYINMf0x/TH/gjE7vyY+1E0NMf0x/T/9FRMrryoVFEuvKiBPkBVBBV+RDyo/gAkyDXSpbTB9QC+wDo0QGkyMsfyx/L/8ntVBC9ba0=","data":"te6cckEBAQEAKgAAUAAAABEpqaMXwRcreSYRbSo5a9fWm5iAzAZX6LotufYrTCEMUYMhyLF+KRtN","last_transaction_lt":"23693722000001","last_transaction_hash":"mVuNwFVC4eIWjS+lIAkfinkXUQz8k1lqFZ+lQqvAZK8=","frozen_hash":null,"status":"uninit"}`,
@@ -124,13 +122,9 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			desc: "fetch_token_info_missing_token_wallet",
-			asset: &xc.TokenAssetConfig{
-				Chain:       chain.Chain,
-				ChainConfig: chain,
-				Decimals:    9,
-				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
-			},
+			desc:     "fetch_token_info_missing_token_wallet",
+			asset:    chain,
+			contract: xc.ContractAddress("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di"),
 			resp: []string{
 				// get account
 				`{"balance":"587833680","code":"te6cckEBAQEAcQAA3v8AIN0gggFMl7ohggEznLqxn3Gw7UTQ0x/THzHXC//jBOCk8mCDCNcYINMf0x/TH/gjE7vyY+1E0NMf0x/T/9FRMrryoVFEuvKiBPkBVBBV+RDyo/gAkyDXSpbTB9QC+wDo0QGkyMsfyx/L/8ntVBC9ba0=","data":"te6cckEBAQEAKgAAUAAAABEpqaMXwRcreSYRbSo5a9fWm5iAzAZX6LotufYrTCEMUYMhyLF+KRtN","last_transaction_lt":"23693722000001","last_transaction_hash":"mVuNwFVC4eIWjS+lIAkfinkXUQz8k1lqFZ+lQqvAZK8=","frozen_hash":null,"status":"uninit"}`,
@@ -142,13 +136,10 @@ func TestFetchTxInput(t *testing.T) {
 			err: "could not lookup token wallet for",
 		},
 		{
-			desc: "reports_error",
-			asset: &xc.TokenAssetConfig{
-				Chain:       chain.Chain,
-				ChainConfig: chain,
-				Decimals:    9,
-				Contract:    "kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di",
-			},
+			desc:     "reports_error",
+			asset:    chain,
+			contract: xc.ContractAddress("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di"),
+
 			resp: []string{
 				// get account
 				`{"error":"bad stuff"}`,
@@ -166,18 +157,21 @@ func TestFetchTxInput(t *testing.T) {
 			server, close := testtypes.MockHTTP(t, v.resp, httpStatus)
 			defer close()
 			chain.URL = server.URL
-			if token, ok := v.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = chain
-			} else {
-				v.asset.(*xc.ChainConfig).URL = server.URL
-			}
+			v.asset.URL = server.URL
 			v.asset.GetChain().Limiter = rate.NewLimiter(rate.Inf, 1)
 
 			client, err := ton.NewClient(v.asset)
 			require.NoError(t, err)
 			from := xc.Address("EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2")
 			to := xc.Address("0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm")
-			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+
+			amount := xc.NewAmountBlockchainFromUint64(1)
+			args := buildertest.MustNewTransferArgs(from, to, amount)
+			if v.contract != "" {
+				args.SetContract(v.contract)
+			}
+
+			input, err := client.FetchTransferInput(context.Background(), args)
 
 			if v.err != "" {
 				require.ErrorContains(t, err, v.err)

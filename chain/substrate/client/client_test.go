@@ -128,7 +128,8 @@ func TestBalance(t *testing.T) {
 		require.NoError(err)
 		require.NotNil(client.DotClient)
 
-		res, err := client.FetchBalance(context.Background(), "1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
+		args := xclient.NewBalanceArgs("1598AR2pgoJCWHn3UA2FTemJ74hBWgp7GLyNB4oSkt6vqMno")
+		res, err := client.FetchBalance(context.Background(), args)
 		fmt.Println("testcase ", i)
 		require.NoError(err)
 		require.EqualValues(tc.expectedBal, res.Uint64())

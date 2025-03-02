@@ -10,13 +10,13 @@ import (
 )
 
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
 	}, nil

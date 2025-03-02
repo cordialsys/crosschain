@@ -52,14 +52,14 @@ var _ xc.AddressBuilder = AddressBuilder{}
 
 // NewAddressBuilder creates a new address builder and validate provided algorithm.
 // Default algorithm is specified in `Driver.SignatureAlgorithm()`
-func NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
+func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
 	opts, err := xcaddress.NewAddressOptions(options...)
 	if err != nil {
 		return AddressBuilder{}, err
 	}
 
-	algorithm := asset.GetChain().Driver.SignatureAlgorithm()
-	if alg, ok := opts.GetAlgorithmType(); ok == true {
+	algorithm := asset.Driver.SignatureAlgorithm()
+	if alg, ok := opts.GetAlgorithmType(); ok {
 		algorithm = alg
 	}
 	if algorithm != xc.K256Sha256 {
@@ -67,7 +67,7 @@ func NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.A
 	}
 
 	return AddressBuilder{
-		network:   asset.GetChain().Net,
+		network:   asset.Net,
 		alghoritm: algorithm,
 	}, nil
 }

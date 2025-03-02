@@ -54,7 +54,7 @@ var ModuleBasics = module.NewManager(
 	authzmodule.AppModule{},
 )
 
-func NewEncodingConfig(chainCfg *xc.ChainConfig) (EncodingConfig, error) {
+func NewEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	amino := codec.NewLegacyAmino()
 
 	interfaceRegistry, err := codectypes.NewInterfaceRegistryWithOptions(codectypes.InterfaceRegistryOptions{
@@ -88,7 +88,7 @@ func NewEncodingConfig(chainCfg *xc.ChainConfig) (EncodingConfig, error) {
 var legacyCodecRegistered = false
 
 // MakeEncodingConfig creates an EncodingConfig for testing
-func MakeEncodingConfig(chainCfg *xc.ChainConfig) (EncodingConfig, error) {
+func MakeEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	encodingConfig, err := NewEncodingConfig(chainCfg)
 	if err != nil {
 		return encodingConfig, err
@@ -109,7 +109,7 @@ func MakeEncodingConfig(chainCfg *xc.ChainConfig) (EncodingConfig, error) {
 	return encodingConfig, nil
 }
 
-func MakeCosmosConfig(chainCfg *xc.ChainConfig) (EncodingConfig, error) {
+func MakeCosmosConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	cosmosCfg, err := MakeEncodingConfig(chainCfg)
 	if err != nil {
 		return cosmosCfg, err

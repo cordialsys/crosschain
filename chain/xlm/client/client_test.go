@@ -98,7 +98,8 @@ func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
 		name                  string
-		asset                 xc.ITask
+		asset                 *xc.ChainConfig
+		contract              xc.ContractAddress
 		amount                xc.AmountBlockchain
 		getAccountResult      types.GetAccountResult
 		getLatestLedgerResult types.GetLatestLedgerResult
@@ -208,14 +209,12 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "Check fee greater token tx",
-			asset: &xc.TokenAssetConfig{
-				ChainConfig: xc.NewChainConfig(xc.XLM).
-					WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
-					WithTransactionActiveTime(txActiveTime).
-					WithChainIDStr("Test SDF Network ; September 2015"),
-				Contract: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			},
-			amount: xc.NewAmountBlockchainFromUint64(100),
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainIDStr("Test SDF Network ; September 2015"),
+			contract: xc.ContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
+			amount:   xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
 				Balances: []types.Balance{
@@ -264,18 +263,16 @@ func TestFetchTxInput(t *testing.T) {
 			}))
 			defer server.Close()
 
-			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig.URL = server.URL
-				token.ChainConfig.Decimals = 7
-			} else {
-				vector.asset.(*xc.ChainConfig).URL = server.URL
-				vector.asset.(*xc.ChainConfig).Decimals = 7
-			}
+			vector.asset.URL = server.URL
+			vector.asset.Decimals = 7
 
 			client, _ := client.NewClient(vector.asset)
 			from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 			to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 			args, _ := builder.NewTransferArgs(from, to, vector.amount)
+			if vector.contract != "" {
+				args.SetContract(vector.contract)
+			}
 			input, err := client.FetchTransferInput(
 				context.Background(),
 				args,
@@ -1027,21 +1024,16 @@ func TestFetchBalance(t *testing.T) {
 			WithDecimals(7).
 			WithChainIDStr("Test SDF Network ; September 2015").
 			WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001))
-		var cl *client.Client
-		var err error
-		if vector.assetID != "XLM" {
-			assetConfig := &xc.TokenAssetConfig{
-				Contract:    vector.assetID,
-				ChainConfig: defaultConfig,
-			}
 
-			cl, err = client.NewClient(assetConfig)
-		} else {
-			cl, err = client.NewClient(defaultConfig)
-		}
+		cl, err := client.NewClient(defaultConfig)
 		require.NoError(t, err)
 
-		balance, err := cl.FetchBalance(context.Background(), xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
+		args := xclient.NewBalanceArgs(xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
+		if vector.assetID != "XLM" {
+			args.SetContract(xc.ContractAddress(vector.assetID))
+		}
+
+		balance, err := cl.FetchBalance(context.Background(), args)
 		if vector.err != "" {
 			require.ErrorContains(t, err, vector.err)
 		} else {

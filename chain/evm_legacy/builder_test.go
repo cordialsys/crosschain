@@ -14,7 +14,7 @@ import (
 func TestBuilderLegacyTransfer(t *testing.T) {
 	// EVM legacy re-uses the EVM builder, but uses a different tx-input.
 	// This ensures that the builder properly typecasts/converts to the evm input, avoiding any panic.
-	b, _ := evm_legacy.NewTxBuilder(xc.NewChainConfig(""))
+	b, _ := evm_legacy.NewTxBuilder(xc.NewChainConfig("").Base())
 
 	from := "0x724435CC1B2821362c2CD425F2744Bd7347bf299"
 	to := "0x3ad57b83B2E3dC5648F32e98e386935A9B10bb9F"

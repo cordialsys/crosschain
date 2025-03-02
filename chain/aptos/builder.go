@@ -11,13 +11,13 @@ import (
 
 // TxBuilder for Template
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: asset,
 	}, nil
@@ -31,10 +31,11 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
 	}
 
-	if _, ok := txBuilder.Asset.(*xc.TokenAssetConfig); ok {
-		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
+	if contract, ok := args.GetContract(); ok {
+		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, local_input)
+	} else {
+		return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
 	}
-	return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
@@ -58,7 +59,6 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 			to_addr[:], toAmountBytes,
 		},
 	}
-	// TODO validate max fee
 
 	return &Tx{
 		tx: transactionbuilder.RawTransaction{
@@ -76,17 +76,14 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput) (xc.Tx, error) {
+func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input *tx_input.TxInput) (xc.Tx, error) {
 
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	copy(from_addr[:], mustDecodeHex(string(from)))
 	copy(to_addr[:], mustDecodeHex(string(to)))
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
-
-	contract := txb.Asset.GetContract()
-
-	typeTag, err := transactionbuilder.NewTypeTagStructFromString(contract)
+	typeTag, err := transactionbuilder.NewTypeTagStructFromString(string(contract))
 	if err != nil {
 		return nil, err
 	}

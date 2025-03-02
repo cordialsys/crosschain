@@ -8,6 +8,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
+	xcclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -239,7 +240,8 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	client.URL = server.URL
 
 	address := xc.Address("address")
-	balance, err := client.FetchBalance(s.Ctx, address)
+	balanceArgs := xcclient.NewBalanceArgs(address)
+	balance, err := client.FetchBalance(s.Ctx, balanceArgs)
 	require.Nil(err)
 	require.Equal(expectedBalance, balance)
 
@@ -258,7 +260,8 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	client.URL = server.URL
 
 	address := xc.Address("address")
-	_, err := client.FetchBalance(s.Ctx, address)
+	balanceArgs := xcclient.NewBalanceArgs(address)
+	_, err := client.FetchBalance(s.Ctx, balanceArgs)
 	require.EqualError(err, "api-error")
 
 	_, err = client.FetchNativeBalance(s.Ctx, address)

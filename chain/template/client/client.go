@@ -48,11 +48,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	return xclient.TxInfo{}, errors.New("not implemented")
 }
 
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return xc.AmountBlockchain{}, errors.New("not implemented")
-}
-
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	return xc.AmountBlockchain{}, errors.New("not implemented")
 }
 

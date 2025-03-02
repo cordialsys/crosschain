@@ -101,7 +101,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	cosmosCfg, err := localcodectypes.MakeCosmosConfig(cfg)
+	cosmosCfg, err := localcodectypes.MakeCosmosConfig(cfg.Base())
 	if err != nil {
 		return nil, err
 	}
@@ -123,14 +123,15 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom())
+	contract, _ := args.GetContract()
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), contract)
 	if err != nil {
 		return nil, err
 	}
 	return baseTxInput, nil
 }
 
-func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*tx_input.TxInput, error) {
+func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
@@ -169,7 +170,7 @@ func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address) (*t
 		txInput.GasPrice = gasPrice
 	}
 
-	_, assetType, err := client.fetchBalanceAndType(ctx, from)
+	_, assetType, err := client.fetchBalanceAndType(ctx, from, contractMaybe)
 	if err != nil {
 		return txInput, err
 	}
@@ -390,19 +391,20 @@ func (client *Client) GetAccount(ctx context.Context, address xc.Address) (clien
 }
 
 // FetchBalance fetches balance for input asset for a Cosmos address
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	bal, _, err := client.fetchBalanceAndType(ctx, address)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	contract, _ := args.Contract()
+	bal, _, err := client.fetchBalanceAndType(ctx, args.Address(), contract)
 	return bal, err
 }
 
-func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address) (xc.AmountBlockchain, tx_input.CosmoAssetType, error) {
+func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address, contractMaybe xc.ContractAddress) (xc.AmountBlockchain, tx_input.CosmoAssetType, error) {
 	// attempt getting the x/bank module balance first.
-	bal, bankErr := client.fetchBankModuleBalance(ctx, address, client.Asset)
+	bal, bankErr := client.fetchBankModuleBalance(ctx, address, contractMaybe, client.Asset)
 	if bankErr == nil {
 		if bal.Uint64() == 0 {
 			// sometimes x/bank will incorrectly return 0 balance for invalid bank assets (like on terra chain).
 			// so if there's 0 bal, we double check if there's an cw20 balance.
-			bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
+			bal, cw20Err := client.FetchCw20Balance(ctx, address, string(contractMaybe))
 			if cw20Err == nil && bal.Uint64() > 0 {
 				return bal, tx_input.CW20, nil
 			}
@@ -411,7 +413,7 @@ func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Addres
 	}
 
 	// attempt getting the cw20 balance.
-	bal, cw20Err := client.FetchCw20Balance(ctx, address, client.Asset.GetContract())
+	bal, cw20Err := client.FetchCw20Balance(ctx, address, string(contractMaybe))
 	if cw20Err == nil {
 		return bal, tx_input.CW20, nil
 	}
@@ -451,14 +453,9 @@ func (client *Client) FetchCw20Balance(ctx context.Context, address xc.Address, 
 	return balance, nil
 }
 
-// FetchNativeBalance fetches account balance for a Cosmos address
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.fetchBankModuleBalance(ctx, address, client.Asset.GetChain())
-}
-
 // Cosmos chains can have multiple native assets.  This helper is necessary to query the
 // native bank module for a given asset.
-func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Address, asset xc.ITask) (xc.AmountBlockchain, error) {
+func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Address, contractMaybe xc.ContractAddress, asset xc.ITask) (xc.AmountBlockchain, error) {
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
@@ -468,7 +465,7 @@ func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Add
 	}
 	denom := ""
 	// denom should be the contract if it's set.
-	denom = client.Asset.GetContract()
+	denom = string(contractMaybe)
 	if denom == "" {
 		// use the default chain coin (should be set for cosmos chains)
 		denom = client.Asset.GetChain().ChainCoin
