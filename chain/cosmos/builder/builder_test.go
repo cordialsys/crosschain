@@ -4,6 +4,7 @@ import (
 
 	// "github.com/cosmos/cosmos-sdk/types/tx"
 
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -92,35 +93,29 @@ func TestTransferWithTax(t *testing.T) {
 
 func TestTransferWithMaxGasPrice(t *testing.T) {
 	type testcase struct {
-		max        float64
 		inputPrice float64
 		totalFee   uint64
 	}
 	for _, tc := range []testcase{
 		{
-			max:        10,
 			inputPrice: 100,
-			totalFee:   gas.NativeTransferGasLimit * 10,
+			totalFee:   gas.NativeTransferGasLimit * 100,
 		},
 		{
-			max:        10,
 			inputPrice: 5,
 			totalFee:   gas.NativeTransferGasLimit * 5,
 		},
 		{
-			max:        0,
 			inputPrice: 10000,
-			// 2 "human units" is the default max
-			totalFee: builder.DefaultMaxTotalFeeHuman.ToBlockchain(6).Uint64(),
+			totalFee:   gas.NativeTransferGasLimit * 10000,
 		},
 	} {
 
 		asset := &xc.ChainConfig{
-			Chain:            "LUNA",
-			ChainCoin:        "uluna",
-			ChainPrefix:      "terra",
-			ChainMaxGasPrice: tc.max,
-			Decimals:         6,
+			Chain:       "LUNA",
+			ChainCoin:   "uluna",
+			ChainPrefix: "terra",
+			Decimals:    6,
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(100)
@@ -138,7 +133,8 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 		require.NoError(t, err)
 		fee := xcTx.(*tx.Tx).Fees
 		require.Len(t, fee, 1)
-		require.EqualValues(t, tc.totalFee, fee.AmountOf("uluna").Uint64())
+
+		require.EqualValues(t, fmt.Sprintf("%d", tc.totalFee), fee.AmountOf("uluna").String())
 
 	}
 }

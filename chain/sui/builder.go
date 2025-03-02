@@ -37,7 +37,6 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if len(local_input.Pubkey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
 	}
-	// TODO max fee SUI should be on the input.GasBudget
 
 	// from = xc.Address(strings.Replace(string(from), "0x", "", 1))
 	// to = xc.Address(strings.Replace(string(to), "0x", "", 1))

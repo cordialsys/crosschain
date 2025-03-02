@@ -21,8 +21,6 @@ import (
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 )
 
-var DefaultMaxTotalFeeHuman, _ = xc.NewAmountHumanReadableFromStr("2")
-
 // TxBuilder for Cosmos
 type TxBuilder struct {
 	Asset          xc.ITask
@@ -44,26 +42,9 @@ func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
 	}, nil
 }
 
-func DefaultMaxGasPrice(nativeAsset *xc.ChainConfig) float64 {
-	// Don't spend more than e.g. 2 LUNA on a transaction
-	maxFee := DefaultMaxTotalFeeHuman.ToBlockchain(nativeAsset.Decimals)
-	return gas.TotalFeeToFeePerGas(maxFee.String(), gas.NativeTransferGasLimit)
-}
-
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	// TODO validate max fee
 	txInput := input.(*tx_input.TxInput)
-	native := txBuilder.Asset.GetChain()
-	max := native.ChainMaxGasPrice
-	if max <= 0 {
-		max = DefaultMaxGasPrice(native)
-	}
-	// enforce a maximum gas price
-	if txInput.GasPrice > max {
-		txInput.GasPrice = max
-	}
-
 	// cosmos is unique in that:
 	// - the native asset is in one of the native modules, x/bank
 	// - x/bank can have multiple assets, all of which can typically pay for gas

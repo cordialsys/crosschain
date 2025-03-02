@@ -78,15 +78,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		return nil, err
 	}
 	input := txInput.(*TxInput)
-	// TODO validate max fee
 
-	// txLog := map[string]string{
-	// 	"type":      "system.Transfer",
-	// 	"lamports":  amount.String(),
-	// 	"funding":   accountFrom.String(),
-	// 	"recipient": accountTo.String(),
-	// }
-	// log.Print(txLog)
 	instructions := []solana.Instruction{
 		system.NewTransferInstruction(
 			amount.Uint64(),
@@ -94,7 +86,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 			accountTo,
 		).Build(),
 	}
-	priorityFee := input.GetLimitedPrioritizationFee(txBuilder.Asset.GetChain())
+	priorityFee := input.GetPrioritizationFee()
 	if priorityFee > 0 {
 		instructions = append(instructions,
 			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),
@@ -234,7 +226,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	// add priority fee last
-	priorityFee := txInput.GetLimitedPrioritizationFee(txBuilder.Asset.GetChain())
+	priorityFee := txInput.GetPrioritizationFee()
 	if priorityFee > 0 {
 		instructions = append(instructions,
 			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),

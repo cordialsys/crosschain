@@ -61,8 +61,6 @@ func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Addre
 	if !input.ChainId.IsZero() {
 		chainID = input.ChainId.Int()
 	}
-	// Protection from setting very high gas tip
-	// TODO
 
 	return &Tx{
 		EthTx: types.NewTransaction(

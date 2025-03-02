@@ -65,8 +65,7 @@ func TestPriority(t *testing.T) {
 			input:   "11.0",
 			custom:  true,
 			decimal: decimal.NewFromFloat(11.0),
-			err:     "exceeds custom multiplier",
-			valid:   false,
+			valid:   true,
 		},
 	}
 
