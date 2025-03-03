@@ -38,15 +38,24 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	to := args.GetTo()
 	amount := args.GetAmount()
 
+	destinationTag := int64(0)
+	var err error
+	if memo, ok := args.GetMemo(); ok {
+		destinationTag, err = strconv.ParseInt(memo, 0, 64)
+		if err != nil {
+			return nil, fmt.Errorf("XRP memo must be a valid integer, got %s", memo)
+		}
+	}
+
 	if contract, ok := args.GetContract(); ok {
-		return txBuilder.NewTokenTransfer(from, to, amount, contract, input)
+		return txBuilder.NewTokenTransfer(from, to, amount, contract, destinationTag, input)
 	} else {
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
+		return txBuilder.NewNativeTransfer(from, to, amount, destinationTag, input)
 	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
 	XRPAmount := xrptx.AmountBlockchain{
@@ -57,6 +66,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		Account:            from,
 		Amount:             XRPAmount,
 		Destination:        to,
+		DestinationTag:     destinationTag,
 		Fee:                txInput.Fee.String(),
 		Flags:              0,
 		LastLedgerSequence: txInput.LastLedgerSequence,
@@ -72,7 +82,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, assetId xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, assetId xc.ContractAddress, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
 	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetId)
@@ -89,14 +99,6 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 			Issuer:   tokenContract,
 			Value:    tokenAmountValue.String(),
 		},
-	}
-
-	var destinationTag int64
-	if txInput.LegacyMemo != "" {
-		destinationTag, err = strconv.ParseInt(txInput.LegacyMemo, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("error converting destinationTag to int64: %v", err)
-		}
 	}
 
 	// We permit spending an additional amount (10%) in order to send the target amount.
