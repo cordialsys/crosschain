@@ -78,6 +78,7 @@ func TestMaxFeeConfigured(t *testing.T) {
 						_, err := decimal.NewFromString(na.MaxFee.String())
 						require.NoError(err, fmt.Sprintf("%s additional asset %s (%s) max fee should be a valid decimal", chain.Chain, na.AssetId, xcf.Config.Network))
 						f, _ := na.MaxFee.Decimal().Float64()
+						// paranoid non-zero check to account for floating point error
 						require.True(f > 0.000000001, fmt.Sprintf("%s additional asset %s (%s) max fee should be non-zero", chain.Chain, na.AssetId, xcf.Config.Network))
 					}
 				} else {
@@ -85,6 +86,7 @@ func TestMaxFeeConfigured(t *testing.T) {
 					require.NoError(err, "max fee is required and should be a valid decimal")
 
 					f, _ := chain.MaxFee.Decimal().Float64()
+					// paranoid non-zero check to account for floating point error
 					require.True(f > 0.000000001, "max fee should be non-zero")
 				}
 			})

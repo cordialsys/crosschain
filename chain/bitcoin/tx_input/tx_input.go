@@ -98,7 +98,7 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	return true
 }
 
-func (txInput *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	byteLengthEstimate := xc.NewAmountBlockchainFromUint64(
 		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),
 	)

@@ -86,7 +86,7 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
-func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return input.Fee, ""
 }
 

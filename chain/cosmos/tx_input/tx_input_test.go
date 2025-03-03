@@ -114,6 +114,6 @@ func TestMaxFee(t *testing.T) {
 	input.GasLimit = 21_000
 	input.GasPrice = 1000
 
-	maxFee, _ := input.GetMaxFee()
+	maxFee, _ := input.GetFeeLimit()
 	require.EqualValues(t, 21_000_000, maxFee.Uint64())
 }

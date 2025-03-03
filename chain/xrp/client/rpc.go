@@ -30,13 +30,14 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal request payload: %w", err)
 	}
+	log := logrus.WithField("method", method)
 
 	request, err := http.NewRequest(method, client.Url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return fmt.Errorf("failed to create new HTTP request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
-	logrus.WithField("method", method).WithField("params", string(jsonPayload)).Debug("request")
+	log.WithField("params", string(jsonPayload)).Debug("request")
 
 	resp, err := client.HttpClient.Do(request)
 	if err != nil {
@@ -58,7 +59,7 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 		return &errMaybe
 	}
 
-	logrus.WithField("body", string(bz)).Debug("response")
+	log.WithField("body", string(bz)).Debug("response")
 	err = json.Unmarshal(bz, response)
 	if err != nil {
 		return fmt.Errorf("failed to decode response body: %w", err)
