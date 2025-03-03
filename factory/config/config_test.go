@@ -137,9 +137,9 @@ crosschain:
 	count := 0
 	for _, chain := range xcf.AllChains {
 		count += 1
-		require.NotEqual(chain.Net, "testnet")
-		require.NotEqual(chain.Net, "")
-		require.NotEqual(chain.Net, "devnet")
+		require.NotEqual(chain.Network, "testnet")
+		require.NotEqual(chain.Network, "")
+		require.NotEqual(chain.Network, "devnet")
 	}
 	require.Equal(expectedChainCount, count)
 }

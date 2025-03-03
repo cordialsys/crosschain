@@ -38,7 +38,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	logger := log.WithFields(log.Fields{
 		"chain":   cfg.Chain,
 		"rpc":     cfg.URL,
-		"network": cfg.Net,
+		"network": cfg.Network,
 	})
 
 	maxGasPrice := cfg.ChainMaxGasPrice

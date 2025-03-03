@@ -67,7 +67,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 	}
 
 	return AddressBuilder{
-		network:   asset.Net,
+		network:   asset.Network,
 		alghoritm: algorithm,
 	}, nil
 }

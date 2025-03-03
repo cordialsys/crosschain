@@ -410,7 +410,6 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
 	native_asset := xc.NewChainConfig("APTOS").WithNet("devnet")
-	// asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", ChainConfig: native_asset}
 	builder, _ := NewTxBuilder(native_asset.Base())
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")

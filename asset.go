@@ -394,7 +394,7 @@ func (chain *ChainConfig) WithUrl(url string) *ChainConfig {
 	return chain
 }
 func (chain *ChainConfig) WithNet(net string) *ChainConfig {
-	chain.ChainBaseConfig.Net = net
+	chain.ChainBaseConfig.Network = net
 	return chain
 }
 func (chain *ChainConfig) WithChainCoin(chainCoin string) *ChainConfig {
@@ -460,7 +460,7 @@ type ChainBaseConfig struct {
 	// The driver to use for the chain
 	Driver Driver `yaml:"driver,omitempty"`
 	// The network selector, if necessary (e.g. select mainnet, testnet, or devnet for bitcoin chains)
-	Net string `yaml:"net,omitempty"`
+	Network string `yaml:"net,omitempty"`
 	// Decimals for the chain's native asset (if it has one).
 	Decimals int32 `yaml:"decimals,omitempty"`
 
@@ -538,14 +538,14 @@ type ChainClientConfig struct {
 	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
 	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
 
-	// PollingPeriod string `yaml:"polling_period,omitempty"`
 	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
 
 	// Default gas budget to use for client gas estimation
 	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
-	// Optional settings around the gas, if needed.
+	// A default for clients to gas price if there's not better way to estimate.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
-	ChainGasMultiplier   float64 `yaml:"chain_gas_multiplier,omitempty"`
+	// A local multiplier for client to apply to gas estimation, if it's important/needed.
+	ChainGasMultiplier float64 `yaml:"chain_gas_multiplier,omitempty"`
 	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
 	// This should be in the blockchain amount.
 	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
@@ -593,9 +593,14 @@ func (chain *ChainClientConfig) Configure() {
 var _ ITask = &ChainConfig{}
 
 func (c ChainConfig) String() string {
+	secretRef := string(c.Auth2)
+	if !config.HasTypePrefix(secretRef) || strings.HasPrefix(secretRef, string(config.Raw)) {
+		secretRef = "<REDACTED>"
+	}
+
 	return fmt.Sprintf(
 		"NativeAssetConfig(asset=%s chainId=%s driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
+		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Network, c.URL, secretRef, c.Provider,
 	)
 }
 

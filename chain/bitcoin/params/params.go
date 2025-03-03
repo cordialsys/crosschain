@@ -10,11 +10,11 @@ import (
 func GetParams(cfg *xc.ChainBaseConfig) (*chaincfg.Params, error) {
 	switch xc.NativeAsset(cfg.Chain) {
 	case xc.BTC, xc.BCH:
-		return BtcNetworks.GetParams(cfg.Net), nil
+		return BtcNetworks.GetParams(cfg.Network), nil
 	case xc.DOGE:
-		return DogeNetworks.GetParams(cfg.Net), nil
+		return DogeNetworks.GetParams(cfg.Network), nil
 	case xc.LTC:
-		return LtcNetworks.GetParams(cfg.Net), nil
+		return LtcNetworks.GetParams(cfg.Network), nil
 	}
 	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Chain))
 }
