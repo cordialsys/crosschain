@@ -43,7 +43,7 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 				}
 			}
 			if override.Network != "" {
-				chain.Net = override.Network
+				chain.Network = override.Network
 			}
 		}
 	}

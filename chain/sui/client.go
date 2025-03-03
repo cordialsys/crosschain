@@ -297,11 +297,15 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 
 	// native asset SUI
-	native := "0x2::sui::SUI"
-	contract := native
-	if token, ok := c.Asset.(*xc.TokenAssetConfig); ok {
-		contract = NormalizeCoinContract(token.Contract)
+	native := c.Asset.GetChain().ChainCoin
+	if native == "" {
+		native = "0x2::sui::SUI"
 	}
+	contract := native
+	if contractInput, ok := args.GetContract(); ok {
+		contract = string(contractInput)
+	}
+	contract = NormalizeCoinContract(contract)
 
 	all_coins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), contract)
 	if err != nil {
@@ -361,11 +365,6 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 
 	return input, nil
 }
-func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return c.FetchTransferInput(ctx, args)
-}
 
 // SubmitTx submits a Sui tx
 func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
@@ -407,17 +406,18 @@ func (c *Client) FetchBalanceFor(ctx context.Context, address xc.Address, contra
 
 	return total, nil
 }
-func (c *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	// native asset SUI
-	contract := "0x2::sui::SUI"
-	if token, ok := c.Asset.(*xc.TokenAssetConfig); ok {
-		contract = token.Contract
+func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	// native asset SUI should be something like "0x2::sui::SUI"
+	contractToUse := c.Asset.GetChain().ChainCoin
+	if contractToUse == "" {
+		contractToUse = "0x2::sui::SUI"
 	}
-	return c.FetchBalanceFor(ctx, address, contract)
-}
 
-func (c *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return c.FetchBalanceFor(ctx, address, "0x2::sui::SUI")
+	if contract, ok := args.Contract(); ok {
+		contractToUse = string(contract)
+	}
+
+	return c.FetchBalanceFor(ctx, args.Address(), contractToUse)
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

@@ -16,7 +16,6 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/sirupsen/logrus"
 )
 
 // Client for XRP
@@ -239,24 +238,11 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 }
 
 // FetchBalance fetches token balance for a XRP address
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalanceForAsset(ctx, address, client.Asset)
-}
-
-func (client *Client) FetchBalanceForAsset(ctx context.Context, address xc.Address, assetCfg xc.ITask) (xc.AmountBlockchain, error) {
-	switch asset := assetCfg.(type) {
-	case *xc.ChainConfig:
-		return client.FetchNativeBalance(ctx, address)
-	case *xc.TokenAssetConfig:
-		return client.fetchContractBalance(ctx, address, asset.Contract)
-	default:
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("fetching balance for unknown asset type")
-		return client.fetchContractBalance(ctx, address, contract)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		return client.fetchContractBalance(ctx, args.Address(), contract)
+	} else {
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
 }
 
@@ -277,7 +263,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 }
 
 // fetchContractBalance fetches a specific token balance based on received contract for an XRP address
-func (client *Client) fetchContractBalance(ctx context.Context, address xc.Address, assetContract string) (xc.AmountBlockchain, error) {
+func (client *Client) fetchContractBalance(ctx context.Context, address xc.Address, assetContract xc.ContractAddress) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
 	asset, contract, err := contract.ExtractAssetAndContract(assetContract)

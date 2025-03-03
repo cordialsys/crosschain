@@ -12,9 +12,9 @@ func NewContract(symbol string, issuerAddress string) (contract xc.ContractAddre
 	return xc.ContractAddress(fmt.Sprintf("%s-%s", symbol, issuerAddress))
 }
 
-func ExtractAssetAndContract(assetContract string) (asset string, contract string, err error) {
+func ExtractAssetAndContract(assetContractT xc.ContractAddress) (asset string, contract string, err error) {
 	var separator string
-
+	assetContract := string(assetContractT)
 	switch {
 	case strings.Contains(assetContract, "."):
 		separator = "."

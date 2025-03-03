@@ -95,11 +95,9 @@ func TestFetchStakingInput(t *testing.T) {
 		t.Run(fmt.Sprintf("%d - %s", i, v.description), func(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
-			chainCfg := &xc.ChainConfig{
-				URL:      server.URL,
-				Chain:    "SOL",
-				Decimals: 9,
-			}
+			chainCfg := xc.NewChainConfig(xc.SOL).
+				WithUrl(server.URL).
+				WithDecimals(9)
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
@@ -208,11 +206,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 		t.Run(fmt.Sprintf("%d - %s", i, v.description), func(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
-			chainCfg := &xc.ChainConfig{
-				URL:      server.URL,
-				Chain:    "SOL",
-				Decimals: 9,
-			}
+			chainCfg := xc.NewChainConfig("SOL").WithUrl(server.URL).WithDecimals(9)
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
@@ -298,11 +292,7 @@ func TestFetchWithdrawInput(t *testing.T) {
 		t.Run(fmt.Sprintf("%d - %s", i, v.description), func(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
-			chainCfg := &xc.ChainConfig{
-				URL:      server.URL,
-				Chain:    "SOL",
-				Decimals: 9,
-			}
+			chainCfg := xc.NewChainConfig("SOL").WithUrl(server.URL).WithDecimals(9)
 
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")

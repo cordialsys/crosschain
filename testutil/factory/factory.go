@@ -16,10 +16,10 @@ type TestFactory struct {
 	DefaultFactory factory.FactoryContext
 
 	NewClientFunc               func(asset xc.ITask) (xclient.Client, error)
-	NewTxBuilderFunc            func(asset xc.ITask) (builder.FullTransferBuilder, error)
-	NewSignerFunc               func(asset xc.ITask) (*signer.Signer, error)
-	NewAddressBuilderFunc       func(asset xc.ITask) (xc.AddressBuilder, error)
-	GetAddressFromPublicKeyFunc func(asset xc.ITask, publicKey []byte) (xc.Address, error)
+	NewTxBuilderFunc            func(asset *xc.ChainBaseConfig) (builder.FullTransferBuilder, error)
+	NewSignerFunc               func(asset *xc.ChainBaseConfig) (*signer.Signer, error)
+	NewAddressBuilderFunc       func(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error)
+	GetAddressFromPublicKeyFunc func(asset *xc.ChainBaseConfig, publicKey []byte) (xc.Address, error)
 }
 
 var _ factory.FactoryContext = &TestFactory{}
@@ -33,7 +33,7 @@ func (f *TestFactory) NewClient(asset xc.ITask) (xclient.Client, error) {
 }
 
 // NewTxBuilder creates a new TxBuilder
-func (f *TestFactory) NewTxBuilder(asset xc.ITask) (builder.FullTransferBuilder, error) {
+func (f *TestFactory) NewTxBuilder(asset *xc.ChainBaseConfig) (builder.FullTransferBuilder, error) {
 	if f.NewTxBuilderFunc != nil {
 		return f.NewTxBuilderFunc(asset)
 	}
@@ -41,15 +41,15 @@ func (f *TestFactory) NewTxBuilder(asset xc.ITask) (builder.FullTransferBuilder,
 }
 
 // NewSigner creates a new Signer
-func (f *TestFactory) NewSigner(asset xc.ITask, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+func (f *TestFactory) NewSigner(asset *xc.ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	if f.NewSignerFunc != nil {
 		return f.NewSignerFunc(asset)
 	}
-	return f.DefaultFactory.NewSigner(asset.GetChain(), secret, options...)
+	return f.DefaultFactory.NewSigner(asset, secret, options...)
 }
 
 // NewAddressBuilder creates a new AddressBuilder
-func (f *TestFactory) NewAddressBuilder(asset xc.ITask, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
+func (f *TestFactory) NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
 	if f.NewAddressBuilderFunc != nil {
 		return f.NewAddressBuilderFunc(asset)
 	}
@@ -68,7 +68,7 @@ func (f *TestFactory) UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 }
 
 // GetAddressFromPublicKey returns an Address given a public key
-func (f *TestFactory) GetAddressFromPublicKey(asset xc.ITask, publicKey []byte, options ...xcaddress.AddressOption) (xc.Address, error) {
+func (f *TestFactory) GetAddressFromPublicKey(asset *xc.ChainBaseConfig, publicKey []byte, options ...xcaddress.AddressOption) (xc.Address, error) {
 	if f.GetAddressFromPublicKeyFunc != nil {
 		return f.GetAddressFromPublicKeyFunc(asset, publicKey)
 	}
@@ -93,11 +93,6 @@ func (f *TestFactory) ConvertAmountStrToBlockchain(asset xc.ITask, humanAmountSt
 // GetAssetConfig returns an AssetConfig by asset and native asset (chain)
 func (f *TestFactory) GetChain(nativeAsset xc.NativeAsset) (*xc.ChainConfig, bool) {
 	return f.DefaultFactory.GetChain(nativeAsset)
-}
-
-// EnrichAssetConfig augments a partial AssetConfig, for example if some info is stored in a db and other in a config file
-func (f *TestFactory) EnrichAssetConfig(partialCfg *xc.TokenAssetConfig, nativeAsset xc.NativeAsset) (*xc.TokenAssetConfig, error) {
-	return f.DefaultFactory.EnrichAssetConfig(partialCfg, nativeAsset)
 }
 
 // Config returns the Config

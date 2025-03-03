@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/address"
 	"github.com/cordialsys/crosschain/chain/cosmos/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
@@ -51,7 +52,7 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 // and look at the error log.
 func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	native := client.Asset.GetChain()
-	builder, err := builder.NewTxBuilder(native)
+	builder, err := builder.NewTxBuilder(native.Base())
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +75,11 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	from, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native, fromPk.Bytes()).Address())
+	from, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native.Base(), fromPk.Bytes()).Address())
 	if err != nil {
 		return nil, err
 	}
-	to, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native, toPk.Bytes()).Address())
+	to, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native.Base(), toPk.Bytes()).Address())
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +87,8 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	input.GasLimit = gasLimit
 	input.GasPrice = 0
 	input.AssetType = tx_input.BANK
-	tx1, err := builder.NewTransfer(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1), input)
+	args, _ := xcbuilder.NewTransferArgs(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1))
+	tx1, err := builder.Transfer(args, input)
 	if err != nil {
 		return nil, err
 	}

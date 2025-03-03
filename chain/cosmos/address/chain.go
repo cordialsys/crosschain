@@ -8,11 +8,11 @@ import (
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 )
 
-func IsEVMOS(asset *xc.ChainConfig) bool {
+func IsEVMOS(asset *xc.ChainBaseConfig) bool {
 	return xc.Driver(asset.Driver) == xc.DriverCosmosEvmos
 }
 
-func GetPublicKey(asset *xc.ChainConfig, publicKeyBytes []byte) cryptotypes.PubKey {
+func GetPublicKey(asset *xc.ChainBaseConfig, publicKeyBytes []byte) cryptotypes.PubKey {
 	if asset.Chain == xc.INJ {
 		// injective has their own ethsecp256k1 type..
 		return &injethsecp256k1.PubKey{Key: publicKeyBytes}

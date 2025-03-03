@@ -115,7 +115,7 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 	}
 	stakingInput.TxInput = *partialTxInput
 
-	builder, err := builder.NewTxBuilder(cli.chain)
+	builder, err := builder.NewTxBuilder(cli.chain.Base())
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}
@@ -212,7 +212,7 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 		PublicKeys: activeValidators,
 	}
 
-	builder, err := builder.NewTxBuilder(cli.chain)
+	builder, err := builder.NewTxBuilder(cli.chain.Base())
 	if err != nil {
 		return nil, fmt.Errorf("could not prepare to simulate: %v", err)
 	}

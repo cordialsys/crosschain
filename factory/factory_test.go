@@ -149,29 +149,6 @@ func TestConvertAmountStrToBlockchainErr(t *testing.T) {
 
 // Config functions
 
-func TestEnrichAssetConfig(t *testing.T) {
-	xcf := factory.NewDefaultFactory()
-	require := require.New(t)
-
-	chainCfg, ok := xcf.GetChain("SOL")
-	require.True(ok)
-
-	// default should be crosschainapi client
-	require.NotEqual("", chainCfg.CrosschainClient.Network)
-	require.NotEqual("", chainCfg.Driver)
-	url, driver := chainCfg.ClientURL()
-	require.Equal(xc.DriverCrosschain, driver)
-	require.NotEqual("", url)
-
-	token := xc.TokenAssetConfig{}
-	_, err := xcf.EnrichAssetConfig(&token, xc.SOL)
-	require.NoError(err)
-
-	// should set both chain and NativeAsset
-	require.Equal(xc.SOL, token.Chain)
-	require.Equal(xc.SOL, token.ChainConfig.Chain)
-}
-
 func TestGetChainConfig(t *testing.T) {
 	xcf := factory.NewDefaultFactory()
 	chain, ok := xcf.GetChain("SOL")

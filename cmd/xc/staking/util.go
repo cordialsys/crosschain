@@ -18,7 +18,7 @@ func LoadPrivateKey(xcFactory *factory.Factory, chain *xc.ChainConfig) (xc.Addre
 	if privateKeyInput == "" {
 		return "", nil, fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 	}
-	signer, err := xcFactory.NewSigner(chain, privateKeyInput)
+	signer, err := xcFactory.NewSigner(chain.Base(), privateKeyInput)
 	if err != nil {
 		return "", nil, fmt.Errorf("could not import private key: %v", err)
 	}
@@ -27,7 +27,7 @@ func LoadPrivateKey(xcFactory *factory.Factory, chain *xc.ChainConfig) (xc.Addre
 		return "", nil, fmt.Errorf("could not create public key: %v", err)
 	}
 
-	addressBuilder, err := xcFactory.NewAddressBuilder(chain)
+	addressBuilder, err := xcFactory.NewAddressBuilder(chain.Base())
 	if err != nil {
 		return "", nil, fmt.Errorf("could not create address builder: %v", err)
 	}

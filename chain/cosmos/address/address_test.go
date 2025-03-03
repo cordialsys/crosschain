@@ -14,13 +14,14 @@ import (
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := address.NewAddressBuilder(&xc.ChainConfig{})
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 }
 
 func TestGetAddressFromPublicKey(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
+	chain := xc.NewChainConfig(xc.LUNA).WithChainPrefix("terra")
+	builder, _ := address.NewAddressBuilder(chain.Base())
 	bytes, _ := hex.DecodeString("02FCF724C97DFFAC2021EFA1818C2FEF3BCBB753CA22913A8DB5E79EC4A3DEE0D1")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -28,7 +29,8 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 }
 
 func TestGetAddressFromPublicKeyEvmos(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
+	chain := xc.NewChainConfig(xc.XPLA, xc.DriverCosmosEvmos).WithChainPrefix("xpla")
+	builder, _ := address.NewAddressBuilder(chain.Base())
 	bytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
 	address, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -36,7 +38,7 @@ func TestGetAddressFromPublicKeyEvmos(t *testing.T) {
 }
 
 func TestGetAddressFromPublicKeyErr(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(&xc.ChainConfig{})
+	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("").Base())
 
 	require.Panics(t, func() {
 		// cosmos-sdk panics with "length of pubkey is incorrect"
@@ -55,7 +57,8 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	require.EqualError(t, err, "prefix cannot be empty")
 
 	// cosmos-sdk doesn't check if pubkey is on the curve
-	builder, _ = address.NewAddressBuilder(&xc.ChainConfig{Chain: "LUNA", ChainPrefix: "terra"})
+	chain := xc.NewChainConfig(xc.LUNA).WithChainPrefix("terra")
+	builder, _ = address.NewAddressBuilder(chain.Base())
 	bytes, _ := hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
 	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
@@ -64,7 +67,8 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	// ethermint doesn't check if pubkey is on the curve,
 	// but it attempts to decompress the point to generate the address
 	// therefore indirectly it catches the error
-	builder, _ = address.NewAddressBuilder(&xc.ChainConfig{Chain: "XPLA", ChainPrefix: "xpla", Driver: xc.DriverCosmosEvmos})
+	chain = xc.NewChainConfig(xc.XPLA, xc.DriverCosmosEvmos).WithChainPrefix("xpla")
+	builder, _ = address.NewAddressBuilder(chain.Base())
 	bytes, _ = hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
 	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
 	require.ErrorContains(t, err, "address cannot be empty")
@@ -140,17 +144,13 @@ func TestKeyDerivation(t *testing.T) {
 		},
 	} {
 
-		asset := &xc.ChainConfig{
-			ChainCoinHDPath: uint32(tc.ChainCoinHDPath),
-			ChainPrefix:     tc.ChainPrefix,
-			Chain:           tc.NativeAsset,
-			Driver:          tc.Driver,
-		}
-		s, err := signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset)
+		asset := xc.NewChainConfig(tc.NativeAsset, tc.Driver).WithChainPrefix(tc.ChainPrefix)
+		asset.ChainBaseConfig.ChainCoinHDPath = uint32(tc.ChainCoinHDPath)
+		s, err := signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset.Base())
 		require.NoError(t, err)
 		pubkey, err := s.PublicKey()
 		require.NoError(t, err)
-		builder, err := address.NewAddressBuilder(asset)
+		builder, err := address.NewAddressBuilder(asset.Base())
 		require.NoError(t, err)
 		derivedAddress, err := builder.GetAddressFromPublicKey(pubkey)
 		require.NoError(t, err)
@@ -159,9 +159,9 @@ func TestKeyDerivation(t *testing.T) {
 			// try to discover what the derivation path is
 			for i := 0; i < 512; i++ {
 				asset.ChainCoinHDPath = uint32(i)
-				s, _ = signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset)
+				s, _ = signer.New(tc.NativeAsset.Driver(), tc.Mnemonic, asset.Base())
 				pubkey, _ = s.PublicKey()
-				builder, _ = address.NewAddressBuilder(asset)
+				builder, _ = address.NewAddressBuilder(asset.Base())
 				otherAddress, _ := builder.GetAddressFromPublicKey(pubkey)
 				if tc.Address == string(otherAddress) {
 					fmt.Println("matching chain code: ", i, "produced expected address", otherAddress)
@@ -176,26 +176,33 @@ func TestKeyDerivation(t *testing.T) {
 }
 
 func TestIsEVMOS(t *testing.T) {
-	is := address.IsEVMOS(&xc.ChainConfig{Chain: "ETH", Driver: xc.DriverEVM})
+	chain := xc.NewChainConfig(xc.ETH, xc.DriverEVM)
+	is := address.IsEVMOS(chain.Base())
 	require.False(t, is)
 
-	is = address.IsEVMOS(&xc.ChainConfig{Chain: "ATOM", Driver: xc.DriverCosmos})
+	chain = xc.NewChainConfig(xc.ATOM, xc.DriverCosmos)
+	is = address.IsEVMOS(chain.Base())
 	require.False(t, is)
 
-	is = address.IsEVMOS(&xc.ChainConfig{Chain: "LUNA", Driver: xc.DriverCosmos})
+	chain = xc.NewChainConfig(xc.LUNA, xc.DriverCosmos)
+	is = address.IsEVMOS(chain.Base())
 	require.False(t, is)
 
-	is = address.IsEVMOS(&xc.ChainConfig{Chain: "XPLA", Driver: xc.DriverCosmos})
+	chain = xc.NewChainConfig(xc.XPLA, xc.DriverCosmos)
+	is = address.IsEVMOS(chain.Base())
 	require.False(t, is)
 
-	is = address.IsEVMOS(&xc.ChainConfig{Chain: "XPLA", Driver: xc.DriverCosmosEvmos})
+	chain = xc.NewChainConfig(xc.XPLA, xc.DriverCosmosEvmos)
+	is = address.IsEVMOS(chain.Base())
 	require.True(t, is)
 }
 
 func TestGetPublicKey(t *testing.T) {
-	pubKey := address.GetPublicKey(&xc.ChainConfig{Driver: xc.DriverCosmos}, []byte{})
+	chain := xc.NewChainConfig("", xc.DriverCosmos)
+	pubKey := address.GetPublicKey(chain.Base(), []byte{})
 	require.Exactly(t, &secp256k1.PubKey{Key: []byte{}}, pubKey)
 
-	pubKey = address.GetPublicKey(&xc.ChainConfig{Driver: xc.DriverCosmosEvmos}, []byte{})
+	chain = xc.NewChainConfig("", xc.DriverCosmosEvmos)
+	pubKey = address.GetPublicKey(chain.Base(), []byte{})
 	require.Exactly(t, &ethsecp256k1.PubKey{Key: []byte{}}, pubKey)
 }

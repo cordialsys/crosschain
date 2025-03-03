@@ -137,9 +137,9 @@ crosschain:
 	count := 0
 	for _, chain := range xcf.AllChains {
 		count += 1
-		require.NotEqual(chain.Net, "testnet")
-		require.NotEqual(chain.Net, "")
-		require.NotEqual(chain.Net, "devnet")
+		require.NotEqual(chain.Network, "testnet")
+		require.NotEqual(chain.Network, "")
+		require.NotEqual(chain.Network, "devnet")
 	}
 	require.Equal(expectedChainCount, count)
 }
@@ -264,15 +264,9 @@ func (s *CrosschainTestSuite) TestSorted() {
 	for i := 0; i < 10; i++ {
 		cfg := factoryconfig.Config{
 			Chains: map[string]*xc.ChainConfig{
-				"BBB": {
-					Chain: "BBB",
-				},
-				"AAA": {
-					Chain: "AAA",
-				},
-				"CCC": {
-					Chain: "CCC",
-				},
+				"BBB": xc.NewChainConfig("BBB"),
+				"AAA": xc.NewChainConfig("AAA"),
+				"CCC": xc.NewChainConfig("CCC"),
 			},
 		}
 		chains := cfg.GetChains()

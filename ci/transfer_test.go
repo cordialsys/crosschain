@@ -57,21 +57,31 @@ func TestTransfer(t *testing.T) {
 
 	require.NoError(t, err, "Failed to fund wallet address")
 
-	initialBalance, err := client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
-	require.NoError(t, err, "Failed to fetch balance")
+	balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
+
+	var initialBalance xc.AmountBlockchain
 
 	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
-	require.NotEqualValues(t, 0, initialBalance.Uint64())
+	// Because we haven't been successful with getting the faucets on devnet nodes
+	// to be syncronous, we instead tolerate some delay in the test
+	for attempts := range 30 {
+		initialBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
+		asHuman := initialBalance.ToHuman(chainConfig.Decimals).String()
+		if asHuman == "3" {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	require.Equal(t, "3", initialBalance.ToHuman(chainConfig.Decimals).String(), "Failed to get balance over after 30 attempts")
 
-	require.Equal(t, "3", initialBalance.ToHuman(chainConfig.Decimals).String())
-
-	signer, err := xcFactory.NewSigner(chainConfig, fromPrivateKey)
+	signer, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
 	require.NoError(t, err)
 
 	publicKey, err := signer.PublicKey()
 	require.NoError(t, err)
 
-	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
 	require.NoError(t, err)
 
 	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
@@ -100,7 +110,7 @@ func TestTransfer(t *testing.T) {
 	err = xc.CheckMaxFeeLimit(input, chainConfig)
 	require.NoError(t, err)
 
-	builder, err := xcFactory.NewTxBuilder(chainConfig)
+	builder, err := xcFactory.NewTxBuilder(chainConfig.Base())
 	require.NoError(t, err)
 
 	tx, err := builder.Transfer(tfArgs, input)
@@ -141,7 +151,7 @@ func TestTransfer(t *testing.T) {
 	start := time.Now()
 
 	var txInfo xcclient.TxInfo
-	var finalWalletBalance xc.AmountBlockchain
+
 	timeout := time.Minute * 1
 	for {
 		if time.Since(start) > timeout {
@@ -157,7 +167,8 @@ func TestTransfer(t *testing.T) {
 			fmt.Printf("waiting for 1 confirmation...\n")
 			continue
 		}
-		finalWalletBalance, err = client.FetchBalance(context.Background(), xc.Address(fromWalletAddress))
+		balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
+		finalWalletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
 		require.NoError(t, err, "Failed to fetch balance")
 		if finalWalletBalance.String() == initialBalance.String() {
 			fmt.Printf("waiting for change in balance...\n")
@@ -169,21 +180,35 @@ func TestTransfer(t *testing.T) {
 		break
 	}
 
-	fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
+	var finalWalletBalance xc.AmountBlockchain
+	var remainder xc.AmountBlockchain
 
-	remainder := initialBalance
-	for _, movement := range txInfo.Movements {
-		for _, from := range movement.From {
-			if from.AddressId == fromWalletAddress {
-				// subtract
-				remainder = remainder.Sub(&from.Balance)
+	// We poll until we the "full" expected balance change, as sometimes
+	// the balance can partially update (e.g. deducts network fee first...).
+	for range 50 {
+		finalWalletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		require.NoError(t, err, "Failed to fetch balance")
+		fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
+
+		remainder = initialBalance
+		for _, movement := range txInfo.Movements {
+			for _, from := range movement.From {
+				if from.AddressId == fromWalletAddress {
+					// subtract
+					remainder = remainder.Sub(&from.Balance)
+				}
+			}
+			for _, to := range movement.To {
+				if to.AddressId == fromWalletAddress {
+					// add
+					remainder = remainder.Add(&to.Balance)
+				}
 			}
 		}
-		for _, to := range movement.To {
-			if to.AddressId == fromWalletAddress {
-				// add
-				remainder = remainder.Add(&to.Balance)
-			}
+		if finalWalletBalance.String() == remainder.String() {
+			break
+		} else {
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 

@@ -89,7 +89,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			`{"result": "0.00007998"}`,
 		}, 200)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook), ChainMinGasPrice: 15}
+		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook)).WithMinGasPrice(15)
 		client, _ := bitcoin.NewClient(asset)
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -136,7 +136,7 @@ func (s *ClientTestSuite) TestFetchTxInfo() {
 		`{"blockbook":{"coin":"Bitcoin","host":"2387762225de","version":"unknown","gitCommit":"unknown","buildTime":"unknown","syncMode":true,"initialSync":false,"inSync":true,"bestHeight":850578,"lastBlockTime":"2024-07-03T20:18:50.835054532Z","inSyncMempool":true,"lastMempoolTime":"2024-07-03T20:25:42.687082833Z","mempoolSize":55449,"decimals":8,"dbSize":499462256929,"about":"Blockbook - blockchain indexer for Trezor wallet https://trezor.io/. Do not use for any other purpose."},"backend":{"chain":"main","blocks":850578,"headers":850578,"bestBlockHash":"00000000000000000001e3bc7fc4fdf42af1968aa9f1c9d95a3089b0943efa12","difficulty":"83675262295059.91","sizeOnDisk":662338961933,"version":"270100","subversion":"/Satoshi:27.1.0/","protocolVersion":"70016"}}`,
 	}, 200)
 	defer close()
-	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook)}
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
 	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
@@ -162,7 +162,7 @@ func (s *ClientTestSuite) TestNotFoundFetchTxInfo() {
 		`{"error":"Transaction '5065d8469f4d02d58c002d234127ab6966fb36737b3fc22c08f0866c01fac38b' not found"}`,
 	}, 400)
 	defer close()
-	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Provider: string(bitcoin.Blockbook)}
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
 	_, err = client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))

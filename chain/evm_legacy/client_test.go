@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	client, err := evm_legacy.NewClient(&xc.ChainConfig{})
+	client, err := evm_legacy.NewClient(xc.NewChainConfig(""))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 }
@@ -76,7 +76,7 @@ func TestFetchTxInput(t *testing.T) {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVMLegacy, URL: server.URL, ChainGasMultiplier: v.multiplier}
+		asset := xc.NewChainConfig(xc.ETH, xc.DriverEVMLegacy).WithUrl(server.URL).WithGasPriceMultiplier(v.multiplier)
 		client, err := evm_legacy.NewClient(asset)
 		require.NoError(t, err)
 		input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(""), xc.Address(""))

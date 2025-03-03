@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/shopspring/decimal"
@@ -106,7 +107,7 @@ func (amount *AmountBlockchain) ToHuman(decimals int32) AmountHumanReadable {
 	return AmountHumanReadable(dec)
 }
 
-func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainConfig) AmountBlockchain {
+func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainClientConfig) AmountBlockchain {
 	if chain.ChainGasMultiplier > 0.01 {
 		return MultiplyByFloat(amount, chain.ChainGasMultiplier)
 	}
@@ -254,4 +255,15 @@ func (b *AmountBlockchain) UnmarshalJSON(p []byte) error {
 	}
 	*b = AmountBlockchain(z)
 	return nil
+}
+
+type StringOrInt string
+
+func (s StringOrInt) AsString() string {
+	return string(s)
+}
+
+func (s StringOrInt) AsInt() (uint64, bool) {
+	asInt, err := strconv.ParseUint(string(s), 0, 64)
+	return asInt, err == nil
 }

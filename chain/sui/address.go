@@ -21,7 +21,7 @@ type AddressBuilder struct {
 var _ xc.AddressBuilder = &AddressBuilder{}
 
 // NewAddressBuilder creates a new Template AddressBuilder
-func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
+func NewAddressBuilder(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
 

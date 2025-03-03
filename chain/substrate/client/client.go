@@ -221,7 +221,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	var tx xc.LegacyTxInfo
 
-	addressBuilder, err := address.NewAddressBuilder(client.Asset)
+	addressBuilder, err := address.NewAddressBuilder(client.Asset.GetChain().Base())
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
 	}
@@ -470,12 +470,12 @@ func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (
 }
 
 // FetchBalance fetches token balance for a Substrate address
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	contract := client.Asset.GetContract()
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	contract, _ := args.Contract()
 	if contract == "" {
-		return client.FetchNativeBalance(ctx, address)
+		return client.FetchNativeBalance(ctx, args.Address())
 	} else {
-		return xc.AmountBlockchain{}, fmt.Errorf("unsupported asset: %v", contract)
+		return xc.AmountBlockchain{}, fmt.Errorf("token balance is not supported for substrate: %v", contract)
 	}
 }
 

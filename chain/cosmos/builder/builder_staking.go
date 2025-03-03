@@ -23,8 +23,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	}
 
 	from := args.GetFrom()
-
-	denom := txBuilder.GetDenom()
+	denom := txBuilder.GetDenom("")
 	amount := args.GetAmount()
 
 	msg := &stakingtypes.MsgDelegate{
@@ -33,7 +32,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		Amount:           types.NewCoin(denom, math.NewIntFromBigInt(amount.Int())),
 	}
 
-	fees := txBuilder.calculateFees(amount, &stakeInput.TxInput, false)
+	fees := txBuilder.calculateFees(amount, "", &stakeInput.TxInput, false)
 	memo, _ := args.GetMemo()
 	pubkey, ok := args.GetPublicKey()
 	if !ok {
@@ -58,7 +57,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 
 	from := args.GetFrom()
 
-	denom := txBuilder.GetDenom()
+	denom := txBuilder.GetDenom("")
 	amount := args.GetAmount()
 
 	msg := &stakingtypes.MsgUndelegate{
@@ -67,7 +66,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		Amount:           types.NewCoin(denom, math.NewIntFromBigInt(amount.Int())),
 	}
 
-	fees := txBuilder.calculateFees(amount, &stakeInput.TxInput, false)
+	fees := txBuilder.calculateFees(amount, "", &stakeInput.TxInput, false)
 	memo, _ := args.GetMemo()
 	pubkey, ok := args.GetPublicKey()
 	if !ok {
@@ -100,7 +99,7 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 		ValidatorAddress: validatorAddress,
 	}
 
-	fees := txBuilder.calculateFees(amount, &withdrawInput.TxInput, false)
+	fees := txBuilder.calculateFees(amount, "", &withdrawInput.TxInput, false)
 	memo, _ := args.GetMemo()
 	pubkey, ok := args.GetPublicKey()
 	if !ok {

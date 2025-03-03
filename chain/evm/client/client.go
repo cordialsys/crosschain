@@ -360,27 +360,28 @@ func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (
 }
 
 // Fetch the balance of the asset that this client is configured for
-func (client *Client) FetchBalance(ctx context.Context, addr xc.Address) (xc.AmountBlockchain, error) {
-	// native
-	if _, ok := client.Asset.(*xc.ChainConfig); ok {
-		return client.FetchNativeBalance(ctx, addr)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		// token
+		zero := xc.NewAmountBlockchainFromUint64(0)
+		tokenAddress, _ := address.FromHex(xc.Address(contract))
+		instance, err := erc20.NewErc20(tokenAddress, client.EthClient)
+		if err != nil {
+			return zero, err
+		}
+
+		dstAddress, _ := address.FromHex(args.Address())
+		balance, err := instance.BalanceOf(&bind.CallOpts{}, dstAddress)
+		if err != nil {
+			return zero, err
+		}
+		return xc.AmountBlockchain(*balance), nil
+	} else {
+
+		// native
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
 
-	// token
-	contract := client.Asset.GetContract()
-	zero := xc.NewAmountBlockchainFromUint64(0)
-	tokenAddress, _ := address.FromHex(xc.Address(contract))
-	instance, err := erc20.NewErc20(tokenAddress, client.EthClient)
-	if err != nil {
-		return zero, err
-	}
-
-	dstAddress, _ := address.FromHex(addr)
-	balance, err := instance.BalanceOf(&bind.CallOpts{}, dstAddress)
-	if err != nil {
-		return zero, err
-	}
-	return xc.AmountBlockchain(*balance), nil
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

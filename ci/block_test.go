@@ -6,8 +6,10 @@ import (
 	"context"
 	"flag"
 	"testing"
+	"time"
 
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/sirupsen/logrus"
 
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/stretchr/testify/require"
@@ -32,8 +34,17 @@ func TestFetchBlock(t *testing.T) {
 	client, err := xcFactory.NewClient(chainConfig)
 	require.NoError(t, err, "Failed creating client")
 
-	// get latest
-	latest, err := client.FetchBlock(ctx, xcclient.LatestHeight())
+	// get latest (attempt multiple times, as head of chain can be flakey)
+	var latest *xcclient.BlockWithTransactions
+	for range 8 {
+		latest, err = client.FetchBlock(ctx, xcclient.LatestHeight())
+		if err != nil {
+			logrus.WithError(err).Warn("could not fetch latest block, retrying...")
+			time.Sleep(1 * time.Second)
+		} else {
+			break
+		}
+	}
 	require.NoError(t, err, "could not fetch latest block")
 
 	// get by specific height

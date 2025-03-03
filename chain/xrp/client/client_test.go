@@ -22,7 +22,7 @@ import (
 
 func TestNewClient(t *testing.T) {
 
-	client, err := xrpClient.NewClient(&xc.ChainConfig{})
+	client, err := xrpClient.NewClient(xc.NewChainConfig(""))
 	require.NotNil(t, client)
 	require.Nil(t, err)
 }
@@ -30,7 +30,7 @@ func TestNewClient(t *testing.T) {
 func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
-		asset           xc.ITask
+		asset           *xc.ChainConfig
 		accountInfoResp interface{}
 		ledgerResp      interface{}
 		feeResp         interface{}
@@ -38,7 +38,7 @@ func TestFetchTxInput(t *testing.T) {
 		expectedTxInput xrptxinput.TxInput
 	}{
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -65,13 +65,12 @@ func TestFetchTxInput(t *testing.T) {
 				},
 				Sequence:           861823,
 				LastLedgerSequence: 1221021,
-				LegacyMemo:         "",
 				Fee:                xc.NewAmountBlockchainFromUint64(100),
 				PublicKey:          []uint8(nil),
 			},
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{},
@@ -97,13 +96,12 @@ func TestFetchTxInput(t *testing.T) {
 				},
 				Sequence:           0,
 				LastLedgerSequence: 1221021,
-				LegacyMemo:         "",
 				Fee:                xc.NewAmountBlockchainFromUint64(10),
 				PublicKey:          []uint8(nil),
 			},
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -128,7 +126,6 @@ func TestFetchTxInput(t *testing.T) {
 				},
 				Sequence:           861823,
 				LastLedgerSequence: 20,
-				LegacyMemo:         "",
 				Fee:                xc.NewAmountBlockchainFromUint64(100),
 				PublicKey:          []uint8(nil),
 			},
@@ -155,14 +152,7 @@ func TestFetchTxInput(t *testing.T) {
 		}))
 		defer server.Close()
 
-		if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-			token.ChainConfig = &xc.ChainConfig{
-				URL:   server.URL,
-				Chain: "XRP",
-			}
-		} else {
-			vector.asset.(*xc.ChainConfig).URL = server.URL
-		}
+		vector.asset.URL = server.URL
 
 		client, _ := xrpClient.NewClient(vector.asset)
 		from := xc.Address("r92tsEZEjK82wra6xaDvjZocKnR78VqpEM")
@@ -175,8 +165,7 @@ func TestFetchTxInput(t *testing.T) {
 		} else {
 			require.NoError(t, err)
 			require.NotNil(t, input)
-			txInput := input.(xc.TxInput)
-			require.Equal(t, &vector.expectedTxInput, txInput)
+			require.Equal(t, &vector.expectedTxInput, input)
 		}
 	}
 }
@@ -232,7 +221,7 @@ func TestSubmitTx(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, vector.submitResp)
 		defer close()
 
-		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
 		err := client.SubmitTx(context.Background(), vector.txInput)
 		require.NoError(t, err)
@@ -242,7 +231,7 @@ func TestSubmitTx(t *testing.T) {
 func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
-		asset          xc.ITask
+		asset          *xc.ChainConfig
 		txHash         string
 		txResp         string
 		ledgerResp     types.LedgerResponse
@@ -250,7 +239,7 @@ func TestFetchTxInfo(t *testing.T) {
 		err            string
 	}{
 		{
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 			txResp: `{
 			  "result": {
@@ -379,7 +368,7 @@ func TestFetchTxInfo(t *testing.T) {
 			err: "",
 		},
 		{
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 			txResp: `
 			{
@@ -653,7 +642,7 @@ func TestFetchTxInfo(t *testing.T) {
 		},
 		{
 			// test error
-			asset:  &xc.ChainConfig{Chain: xc.XRP},
+			asset:  xc.NewChainConfig(xc.XRP),
 			txHash: "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 			txResp: `{
 			  "result": {
@@ -736,14 +725,7 @@ func TestFetchTxInfo(t *testing.T) {
 			}))
 			defer server.Close()
 
-			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig = &xc.ChainConfig{
-					URL:   server.URL,
-					Chain: "XRP",
-				}
-			} else {
-				vector.asset.(*xc.ChainConfig).URL = server.URL
-			}
+			vector.asset.URL = server.URL
 
 			client, _ := xrpClient.NewClient(vector.asset)
 			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
@@ -795,11 +777,12 @@ func TestFetchNativeBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := xrpClient.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
 		address := xc.Address("r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59")
 
-		balance, err := client.FetchBalance(context.Background(), address)
+		args := xclient.NewBalanceArgs(address)
+		balance, err := client.FetchBalance(context.Background(), args)
 
 		if v.err != "" {
 			require.Equal(t, "0", balance.String())
@@ -845,18 +828,17 @@ func TestFetchCBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		chain := xc.ChainConfig{URL: server.URL}
+		chain := xc.NewChainConfig(xc.XRP).WithUrl(server.URL)
 
-		client, _ := xrpClient.NewClient(&xc.TokenAssetConfig{
-			Contract:    "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB",
-			Chain:       chain.Chain,
-			ChainConfig: &chain,
-			Decimals:    0,
-		})
+		client, _ := xrpClient.NewClient(chain)
 
 		address := xc.Address("rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB")
 
-		balance, err := client.FetchBalance(context.Background(), address)
+		args := xclient.NewBalanceArgs(
+			address,
+			xclient.OptionContract("FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"),
+		)
+		balance, err := client.FetchBalance(context.Background(), args)
 
 		if v.err != "" {
 			require.Equal(t, "0", balance.String())

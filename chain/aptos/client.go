@@ -364,15 +364,16 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 }
 
 // FetchBalance fetches balance for an Aptos address
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	if token, ok := client.Asset.(*xc.TokenAssetConfig); ok {
-		balance, err := client.AptosClient.BalanceOf(string(address), token.Contract)
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	if contract, ok := args.Contract(); ok {
+		balance, err := client.AptosClient.BalanceOf(string(args.Address()), string(contract))
 		if err != nil {
 			return xc.NewAmountBlockchainFromUint64(0), err
 		}
 		return xc.AmountBlockchain(*balance), err
+	} else {
+		return client.FetchNativeBalance(ctx, args.Address())
 	}
-	return client.FetchNativeBalance(ctx, address)
 }
 
 // FetchNativeBalance fetches the native asset balance for an Aptos address

@@ -16,7 +16,7 @@ type AddressBuilder struct {
 }
 
 // NewAddressBuilder creates a new EVM AddressBuilder
-func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
+func NewAddressBuilder(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
 

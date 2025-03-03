@@ -43,7 +43,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := http.Client{}
-	chaincfg, err := params.GetParams(cfg)
+	chaincfg, err := params.GetParams(cfg.Base())
 	if err != nil {
 		return &BlockbookClient{}, err
 	}
@@ -290,8 +290,8 @@ func (client *BlockbookClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxH
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
 
-func (client *BlockbookClient) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, address)
+func (client *BlockbookClient) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, args.Address())
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if err != nil {
 		return amount, err
@@ -302,9 +302,6 @@ func (client *BlockbookClient) FetchBalance(ctx context.Context, address xc.Addr
 	return amount, nil
 }
 
-func (client *BlockbookClient) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalance(ctx, address)
-}
 func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
 	allUnspentOutputs, err := client.UnspentOutputs(ctx, args.GetFrom())

@@ -14,12 +14,11 @@ import (
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
-	"github.com/sirupsen/logrus"
 )
 
 // TxBuilder for Solana
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
@@ -33,38 +32,23 @@ const MaxAccountUnstakes = 20
 const MaxAccountWithdraws = 20
 
 // NewTxBuilder creates a new Solana TxBuilder
-func NewTxBuilder(asset xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: asset,
 	}, nil
 }
 
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	switch asset := txBuilder.Asset.(type) {
-	case *xc.ChainConfig:
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
-	case *xc.TokenAssetConfig:
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-	default:
-		// TODO this should return error
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("new transfer for unknown asset type")
-		if contract != "" {
-			return txBuilder.NewTokenTransfer(from, to, amount, input)
-		} else {
-			return txBuilder.NewNativeTransfer(from, to, amount, input)
-		}
-	}
-}
-
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+	if contract, ok := args.GetContract(); ok {
+		decimals, ok := args.GetDecimals()
+		if !ok {
+			return nil, fmt.Errorf("cannot send solana token transfer without knowing the decimals")
+		}
+		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, decimals, input)
+	} else {
+		return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
@@ -107,15 +91,11 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	asset := txBuilder.Asset
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, decimals int, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
-
-	contract := asset.GetContract()
 	if contract == "" {
 		return nil, errors.New("asset does not have a contract")
 	}
-	decimals := asset.GetDecimals()
 
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
@@ -250,14 +230,12 @@ func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, acco
 	}, nil
 }
 
-func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput *TxInput) (xc.Tx, error) {
-	asset := txBuilder.Asset
+func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, txInput *TxInput) (xc.Tx, error) {
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
 		return nil, err
 	}
 
-	contract := asset.GetContract()
 	ataFromStr, err := types.FindAssociatedTokenAddress(string(from), string(contract), txInput.TokenProgram)
 	if err != nil {
 		return nil, err

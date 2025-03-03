@@ -11,7 +11,7 @@ import (
 
 // TxBuilder for filecoin
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 type TxInput = filinput.TxInput
@@ -19,7 +19,7 @@ type TxInput = filinput.TxInput
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 
 // NewTxBuilder creates a new filecoin TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
 	}, nil

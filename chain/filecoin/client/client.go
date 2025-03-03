@@ -38,7 +38,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	logger := log.WithFields(log.Fields{
 		"chain":   cfg.Chain,
 		"rpc":     cfg.URL,
-		"network": cfg.Net,
+		"network": cfg.Network,
 	})
 
 	maxGasPrice := cfg.ChainMaxGasPrice
@@ -48,12 +48,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		xcMaxGasPrice = DefaultMaxGasPrice
 	}
 	logger.Infof("using MaxGasFeeCap: %s", xcMaxGasPrice.String())
-
-	gasLimit := cfg.ChainGasTip
-	if gasLimit == 0 {
-		gasLimit = DefaultGasLimit
-	}
-	logger.Infof("using MaxGasLimit: %v", gasLimit)
 
 	return &Client{
 		Url:        cfg.URL,
@@ -277,13 +271,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	return txInfo, nil
 }
 
-func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalance(ctx, address)
-}
-
-func (client *Client) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	params := types.NewParams(types.MethodWalletBallance, types.WalletBalance{
-		Address: string(address),
+		Address: string(args.Address()),
 	})
 
 	response := types.NewResponse[string]()

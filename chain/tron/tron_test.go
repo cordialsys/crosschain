@@ -24,14 +24,14 @@ func TestExampleTestSuite(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestNewTxBuilder() {
 // 	require := s.Require()
-// 	builder, err := NewTxBuilder(&xc.ChainConfig{})
+// 	builder, err := NewTxBuilder(xc.NewChainConfig(""))
 // 	require.NotNil(builder)
 // 	require.EqualError(err, "not implemented")
 // }
 
 // func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 // 	require := s.Require()
-// 	builder, _ := NewTxBuilder(&xc.ChainConfig{})
+// 	builder, _ := NewTxBuilder(xc.NewChainConfig(""))
 // 	from := xc.Address("from")
 // 	to := xc.Address("to")
 // 	amount := xc.AmountBlockchain{}
@@ -43,7 +43,7 @@ func TestExampleTestSuite(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 // 	require := s.Require()
-// 	builder, _ := NewTxBuilder(&xc.ChainConfig{})
+// 	builder, _ := NewTxBuilder(xc.NewChainConfig(""))
 // 	from := xc.Address("from")
 // 	to := xc.Address("to")
 // 	amount := xc.AmountBlockchain{}
@@ -55,7 +55,7 @@ func TestExampleTestSuite(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestNewTransfer() {
 // 	require := s.Require()
-// 	builder, _ := NewTxBuilder(&xc.ChainConfig{})
+// 	builder, _ := NewTxBuilder(xc.NewChainConfig(""))
 // 	from := xc.Address("from")
 // 	to := xc.Address("to")
 // 	amount := xc.AmountBlockchain{}
@@ -69,14 +69,14 @@ func TestExampleTestSuite(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestNewClient() {
 // 	require := s.Require()
-// 	client, err := NewClient(&xc.ChainConfig{})
+// 	client, err := NewClient(xc.NewChainConfig(""))
 // 	require.NotNil(client)
 // 	require.EqualError(err, "not implemented")
 // }
 
 // func (s *CrosschainTestSuite) TestFetchTxInput() {
 // 	require := s.Require()
-// 	client, _ := NewClient(&xc.ChainConfig{})
+// 	client, _ := NewClient(xc.NewChainConfig(""))
 // 	from := xc.Address("from")
 // 	to := xc.Address("to")
 // 	input, err := client.FetchTxInput(s.Ctx, from, to)
@@ -86,14 +86,14 @@ func TestExampleTestSuite(t *testing.T) {
 
 // func (s *CrosschainTestSuite) TestSubmitTx() {
 // 	require := s.Require()
-// 	client, _ := NewClient(&xc.ChainConfig{})
+// 	client, _ := NewClient(xc.NewChainConfig(""))
 // 	err := client.SubmitTx(s.Ctx, &Tx{})
 // 	require.EqualError(err, "not implemented")
 // }
 
 // func (s *CrosschainTestSuite) TestFetchTxInfo() {
 // 	require := s.Require()
-// 	client, _ := NewClient(&xc.ChainConfig{})
+// 	client, _ := NewClient(xc.NewChainConfig(""))
 // 	info, err := client.FetchTxInfo(s.Ctx, xc.TxHash("hash"))
 // 	require.NotNil(info)
 // 	require.EqualError(err, "not implemented")

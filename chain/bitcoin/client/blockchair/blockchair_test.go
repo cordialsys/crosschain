@@ -95,7 +95,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 		defer close()
 		os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
 		defer os.Unsetenv("_BLOCK_CHAIR_KEY")
-		asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair), ChainMinGasPrice: 12}
+		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair)).WithMinGasPrice(12)
 		client, _ := bitcoin.NewClient(asset)
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -154,7 +154,7 @@ func (s *ClientTestSuite) TestFetchTxInputUnconfirmedUtxo() {
 	defer close()
 	os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
 	defer os.Unsetenv("_BLOCK_CHAIR_KEY")
-	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair)}
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, _ := bitcoin.NewClient(asset)
 
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -171,13 +171,13 @@ func (s *ClientTestSuite) TestFetchTxInputUnconfirmedUtxo() {
 func (s *ClientTestSuite) TestNewClient() {
 	require := s.Require()
 	os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
-	asset := &xc.ChainConfig{Chain: xc.BTC, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair)}
+	asset := xc.NewChainConfig("BTC").WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, err := bitcoin.NewClient(asset)
 	require.NotNil(client)
 	require.NoError(err)
 
 	os.Unsetenv("_BLOCK_CHAIR_KEY")
-	asset = &xc.ChainConfig{Chain: xc.BTC, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair)}
+	asset = xc.NewChainConfig("BTC").WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	_, err = bitcoin.NewClient(asset)
 	require.ErrorContains(err, "could not load blockchair API key")
 }
@@ -191,7 +191,7 @@ func (s *ClientTestSuite) TestSubmitTx() {
 	defer close()
 	os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
 	defer os.Unsetenv("_BLOCK_CHAIR_KEY")
-	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair)}
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
 	err = client.SubmitTx(s.Ctx, &tx.Tx{
@@ -209,7 +209,8 @@ func (s *ClientTestSuite) TestFetchTxInfo() {
 	defer close()
 	os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
 	defer os.Unsetenv("_BLOCK_CHAIR_KEY")
-	asset := &xc.ChainConfig{Chain: xc.BTC, URL: server.URL, Net: "testnet", Auth2: "env:_BLOCK_CHAIR_KEY", Provider: string(bitcoin.Blockchair)}
+
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
 	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))

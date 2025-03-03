@@ -12,13 +12,14 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewClient(t *testing.T) {
 
-	client, err := client.NewClient(&xc.ChainConfig{})
+	client, err := client.NewClient(xc.NewChainConfig(""))
 	require.NoError(t, err)
 	require.NotNil(t, client)
 }
@@ -56,9 +57,10 @@ func TestAccountBalance(t *testing.T) {
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
 
-		client, _ := client.NewClient(&xc.ChainConfig{URL: server.URL})
+		client, _ := client.NewClient(xc.NewChainConfig("").WithUrl(server.URL))
 		from := xc.Address("0x0eC9f48533bb2A03F53F341EF5cc1B057892B10B")
-		balance, err := client.FetchBalance(context.Background(), from)
+		args := xclient.NewBalanceArgs(from)
+		balance, err := client.FetchBalance(context.Background(), args)
 
 		if v.err != "" {
 			require.Equal(t, "0", balance.String())
@@ -183,7 +185,7 @@ func TestFetchTxInput(t *testing.T) {
 		fmt.Println("testing ", v.name)
 		server, close := testtypes.MockJSONRPC(t, v.resp)
 		defer close()
-		asset := &xc.ChainConfig{Chain: xc.ETH, Driver: xc.DriverEVM, URL: server.URL, ChainGasMultiplier: v.multiplier}
+		asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithGasPriceMultiplier(v.multiplier)
 		client, err := client.NewClient(asset)
 		require.NoError(t, err)
 		amount := xc.NewAmountBlockchainFromUint64(1)
@@ -560,7 +562,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
 			server.ForceError = v.forceError
-			asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5}
+			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID("5")
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)
@@ -725,7 +727,7 @@ func TestFetchTxInfo(t *testing.T) {
 		t.Run(fmt.Sprintf("%d_%s", i, v.name), func(t *testing.T) {
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
-			asset := &xc.ChainConfig{Chain: xc.ETH, Net: "testnet", URL: server.URL, ChainID: 5, Decimals: 18}
+			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithChainID("5").WithDecimals(18)
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)

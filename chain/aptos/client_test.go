@@ -9,6 +9,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
+	"github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,8 @@ func (s *AptosTestSuite) TestNewClient() {
 	server, close := testtypes.MockHTTP(s.T(), resp, 200)
 	defer close()
 
-	client, err := NewClient(&xc.ChainConfig{URL: server.URL})
+	cfg := xc.NewChainConfig(xc.APTOS).WithUrl(server.URL)
+	client, err := NewClient(cfg)
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -35,7 +37,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 		err   string
 	}{
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -54,7 +56,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 			err: "",
 		},
 		{
-			asset: &xc.ChainConfig{},
+			asset: xc.NewChainConfig(""),
 			// valid blockhash
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -109,8 +111,9 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	}, 200)
 	server.StatusCodes = []int{200, 200, 400}
 	defer close()
-	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet", URL: server.URL}
-	builder, _ := NewTxBuilder(asset)
+	asset := xc.NewChainConfig(xc.APTOS).WithUrl(server.URL).WithNet("devnet")
+
+	builder, _ := NewTxBuilder(asset.Base())
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
@@ -277,7 +280,7 @@ func TestFetchTxInfo(t *testing.T) {
 			resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 			server, close := testtypes.MockHTTP(t, resp, 0)
 
-			asset := &xc.ChainConfig{Net: "devnet", Chain: "APTOS", ChainCoin: "0x1::aptos_coin::AptosCoin"}
+			asset := xc.NewChainConfig("APTOS").WithNet("devnet").WithChainCoin("0x1::aptos_coin::AptosCoin")
 			asset.URL = server.URL
 			client, _ := NewClient(asset)
 			server.StatusCodes = v.httpStatusCodes
@@ -301,32 +304,34 @@ func (s *AptosTestSuite) TestFetchBalance() {
 	require := s.Require()
 
 	vectors := []struct {
-		asset xc.ITask
-		resp  interface{}
-		val   string
-		err   string
+		asset    xc.ITask
+		contract xc.ContractAddress
+		resp     interface{}
+		val      string
+		err      string
 	}{
 		{
-			&xc.ChainConfig{},
-			`{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
-			"1000000",
-			"",
+			asset: xc.NewChainConfig(""),
+			resp:  `{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
+			val:   "1000000",
+			err:   "",
 		},
 		{
 			// TODO I can't find any tokens on aptos
-			&xc.TokenAssetConfig{Contract: "0x1234::coin:USDC", ChainConfig: &xc.ChainConfig{Chain: xc.APTOS}},
-			[]string{
+			asset:    xc.NewChainConfig(""),
+			contract: "0x1234::coin:USDC",
+			resp: []string{
 				`{}`,
 				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
 			},
-			"1000000",
-			"failed to parse",
+			val: "1000000",
+			err: "failed to parse",
 		},
 		{
-			&xc.ChainConfig{},
-			`null`,
-			"0",
-			"",
+			asset: xc.NewChainConfig(""),
+			resp:  `null`,
+			val:   "0",
+			err:   "",
 		},
 	}
 
@@ -337,7 +342,7 @@ func (s *AptosTestSuite) TestFetchBalance() {
 
 		asset := v.asset
 		asset.GetChain().URL = server.URL
-		client, _ := NewClient(asset)
+		rpcClient, _ := NewClient(asset)
 		if v.err != "" {
 			// errors should return 400 status code.
 			server.StatusCodes = []int{400, 400, 400}
@@ -345,7 +350,11 @@ func (s *AptosTestSuite) TestFetchBalance() {
 		server.Response = v.resp
 		from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 		fmt.Println(v.asset)
-		balance, err := client.FetchBalance(s.Ctx, from)
+		args := client.NewBalanceArgs(from)
+		if v.contract != "" {
+			args.SetContract(v.contract)
+		}
+		balance, err := rpcClient.FetchBalance(s.Ctx, args)
 
 		if v.err != "" {
 			require.Equal("0", balance.String())
@@ -361,8 +370,8 @@ func (s *AptosTestSuite) TestFetchBalance() {
 func (s *AptosTestSuite) TestNewNativeTransfer() {
 	require := s.Require()
 
-	asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
-	builder, _ := NewTxBuilder(asset)
+	asset := xc.NewChainConfig("APTOS").WithNet("devnet")
+	builder, _ := NewTxBuilder(asset.Base())
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
@@ -400,9 +409,8 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require := s.Require()
 
-	native_asset := &xc.ChainConfig{Chain: xc.APTOS, Net: "devnet"}
-	asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x1::Coin::USDC", ChainConfig: native_asset}
-	builder, _ := NewTxBuilder(asset)
+	native_asset := xc.NewChainConfig("APTOS").WithNet("devnet")
+	builder, _ := NewTxBuilder(native_asset.Base())
 	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
 	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
 	amount := xc.NewAmountBlockchainFromUint64(1)
@@ -416,7 +424,11 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 		ChainId:         1,
 		Pubkey:          pubkey,
 	}
-	tf, err := builder.NewTokenTransfer(from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		buildertest.OptionContractAddress("0x1::Coin::USDC"),
+	)
+	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
 	hash := tf.Hash()
@@ -436,8 +448,6 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require.Equal("a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", hex.EncodeToString(ser))
 
 	// use invalid contract address
-	bad_asset := &xc.TokenAssetConfig{Asset: "USDC", Contract: "0x112345", ChainConfig: native_asset}
-	builder, _ = NewTxBuilder(bad_asset)
-	_, err = builder.NewTokenTransfer(from, to, amount, input)
+	_, err = builder.NewTokenTransfer(from, to, amount, xc.ContractAddress("0x112345"), input)
 	require.ErrorContains(err, "Invalid struct tag string literal")
 }

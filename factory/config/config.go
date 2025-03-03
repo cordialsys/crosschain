@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/sirupsen/logrus"
 )
 
 type NetworkSetting string
@@ -41,9 +40,11 @@ type Config struct {
 
 func (cfg *Config) MigrateFields() {
 	for _, cfg := range cfg.Chains {
-		if cfg.XAssetDeprecated != "" && cfg.Chain == "" {
-			logrus.WithField("chain", cfg.Chain).Warn(".asset field is deprecated, please migrate to using .chain field instead")
-			cfg.Chain = cfg.XAssetDeprecated
+		if cfg.ChainBaseConfig == nil {
+			cfg.ChainBaseConfig = &xc.ChainBaseConfig{}
+		}
+		if cfg.ChainClientConfig == nil {
+			cfg.ChainClientConfig = &xc.ChainClientConfig{}
 		}
 		cfg.Configure()
 	}

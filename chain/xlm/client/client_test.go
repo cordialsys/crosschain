@@ -25,57 +25,55 @@ import (
 
 func TestValidClientConfiguration(t *testing.T) {
 	xc.NewAmountHumanReadableFromFloat(2.0)
-	config := &xc.ChainConfig{
-		ChainIDStr:            "ChainID",
-		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(2.0),
-		TransactionActiveTime: time.Duration(500),
-	}
-	client, err := client.NewClient(config)
+	chain := xc.NewChainConfig(xc.XLM).
+		WithChainID("ChainID").
+		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(2.0)).
+		WithTransactionActiveTime(time.Duration(500))
+
+	client, err := client.NewClient(chain)
 	require.NotNil(t, client)
 	require.NoError(t, err)
 }
 
 func TestEmptyClientConfiguration(t *testing.T) {
-	defaultClient, err := client.NewClient(&xc.ChainConfig{})
+	defaultClient, err := client.NewClient(xc.NewChainConfig(""))
 	require.Nil(t, defaultClient)
 	require.Error(t, err)
 }
 
 func TestClientConfigurationMissingChainIDStr(t *testing.T) {
-	missingChainIDStr := &xc.ChainConfig{
-		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(2.0),
-		TransactionActiveTime: time.Duration(500),
-	}
+	missingChainIDStr := xc.NewChainConfig(xc.XLM).
+		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(2.0)).
+		WithTransactionActiveTime(time.Duration(500))
+
 	badClient, err := client.NewClient(missingChainIDStr)
 	require.Nil(t, badClient)
-	require.ErrorContains(t, err, "chain-id-str")
+	require.ErrorContains(t, err, "chain-id")
 }
 
 func TestClientConfigurationBadMaxFee(t *testing.T) {
-	negativeMaxFee := &xc.ChainConfig{
-		ChainIDStr:            "Some chain id",
-		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(-1.1),
-		TransactionActiveTime: time.Duration(500),
-	}
+	negativeMaxFee := xc.NewChainConfig(xc.XLM).
+		WithChainID("Some chain id").
+		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(-1.1)).
+		WithTransactionActiveTime(time.Duration(500))
+
 	badClient, err := client.NewClient(negativeMaxFee)
 	require.Nil(t, badClient)
 	require.ErrorContains(t, err, "gas-budget-default")
 
-	zeroMaxFee := &xc.ChainConfig{
-		ChainIDStr:            "ChainID",
-		GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.0),
-		TransactionActiveTime: time.Duration(500),
-	}
+	zeroMaxFee := xc.NewChainConfig(xc.XLM).
+		WithChainID("ChainID").
+		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.0)).
+		WithTransactionActiveTime(time.Duration(500))
 	client, err := client.NewClient(zeroMaxFee)
 	require.Nil(t, client)
 	require.ErrorContains(t, err, "chain gas-budget-default")
 }
 
 func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
-	missingTransactionActiveTime := &xc.ChainConfig{
-		ChainIDStr:       "Some chain id",
-		GasBudgetDefault: xc.NewAmountHumanReadableFromFloat(2.0),
-	}
+	missingTransactionActiveTime := xc.NewChainConfig(xc.XLM).
+		WithChainID("Some chain id").
+		WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(2.0))
 	badClient, err := client.NewClient(missingTransactionActiveTime)
 	require.Nil(t, badClient)
 	require.ErrorContains(t, err, "transaction-active-time")
@@ -84,7 +82,7 @@ func TestClientConfigurationBadTransactionActiveTime(t *testing.T) {
 func TestMainnetConfiguration(t *testing.T) {
 	mainnetConfig := chains.Mainnet["xlm"]
 	require.Greater(t, mainnetConfig.GasBudgetDefault.Decimal().InexactFloat64(), 0.0)
-	require.NotZero(t, mainnetConfig.ChainIDStr)
+	require.NotZero(t, mainnetConfig.ChainID)
 	require.NotZero(t, mainnetConfig.TransactionActiveTime)
 }
 
@@ -100,7 +98,8 @@ func TestFetchTxInput(t *testing.T) {
 
 	vectors := []struct {
 		name                  string
-		asset                 xc.ITask
+		asset                 *xc.ChainConfig
+		contract              xc.ContractAddress
 		amount                xc.AmountBlockchain
 		getAccountResult      types.GetAccountResult
 		getLatestLedgerResult types.GetLatestLedgerResult
@@ -109,11 +108,10 @@ func TestFetchTxInput(t *testing.T) {
 	}{
 		{
 			name: "Test valid Tx input",
-			asset: &xc.ChainConfig{
-				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
-				TransactionActiveTime: txActiveTime,
-				ChainIDStr:            "Test SDF Network ; September 2015",
-			},
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -148,11 +146,10 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "Check fee greater than balance",
-			asset: &xc.ChainConfig{
-				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(5.00000),
-				TransactionActiveTime: txActiveTime,
-				ChainIDStr:            "Test SDF Network ; September 2015",
-			},
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -188,11 +185,10 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "Check balance lower than tx amount",
-			asset: &xc.ChainConfig{
-				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(1.00000),
-				TransactionActiveTime: txActiveTime,
-				ChainIDStr:            "Test SDF Network ; September 2015",
-			},
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(1.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
 			amount: xc.NewAmountBlockchainFromUint64(50000000),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
@@ -213,15 +209,12 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "Check fee greater token tx",
-			asset: &xc.TokenAssetConfig{
-				ChainConfig: &xc.ChainConfig{
-					GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(5.00000),
-					TransactionActiveTime: txActiveTime,
-					ChainIDStr:            "Test SDF Network ; September 2015",
-				},
-				Contract: "USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
-			},
-			amount: xc.NewAmountBlockchainFromUint64(100),
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
+			contract: xc.ContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
+			amount:   xc.NewAmountBlockchainFromUint64(100),
 			getAccountResult: types.GetAccountResult{
 				Sequence: "1212",
 				Balances: []types.Balance{
@@ -270,18 +263,16 @@ func TestFetchTxInput(t *testing.T) {
 			}))
 			defer server.Close()
 
-			if token, ok := vector.asset.(*xc.TokenAssetConfig); ok {
-				token.ChainConfig.URL = server.URL
-				token.ChainConfig.Decimals = 7
-			} else {
-				vector.asset.(*xc.ChainConfig).URL = server.URL
-				vector.asset.(*xc.ChainConfig).Decimals = 7
-			}
+			vector.asset.URL = server.URL
+			vector.asset.Decimals = 7
 
 			client, _ := client.NewClient(vector.asset)
 			from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 			to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 			args, _ := builder.NewTransferArgs(from, to, vector.amount)
+			if vector.contract != "" {
+				args.SetContract(vector.contract)
+			}
 			input, err := client.FetchTransferInput(
 				context.Background(),
 				args,
@@ -684,13 +675,13 @@ func TestSubmitTx(t *testing.T) {
 
 			txActiveTime, err := time.ParseDuration("2h")
 			require.NoError(t, err)
-			client, _ := client.NewClient(&xc.ChainConfig{
-				URL:                   server.URL,
-				Decimals:              7,
-				TransactionActiveTime: txActiveTime,
-				GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
-				ChainIDStr:            "Test SDF Network ; September 2015",
-			})
+			client, _ := client.NewClient(xc.NewChainConfig(xc.XLM).
+				WithUrl(server.URL).
+				WithDecimals(7).
+				WithTransactionActiveTime(txActiveTime).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001)).
+				WithChainID("Test SDF Network ; September 2015"),
+			)
 
 			err = client.SubmitTx(context.Background(), vector.txInput)
 			if err != nil {
@@ -884,14 +875,14 @@ func TestFetchTxInfo(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client, err := client.NewClient(&xc.ChainConfig{
-			Chain:                 "XLM",
-			URL:                   server.URL,
-			TransactionActiveTime: time.Duration(500),
-			Decimals:              7,
-			ChainIDStr:            "Test SDF Network ; September 2015",
-			GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
-		})
+		chain := xc.NewChainConfig(xc.XLM).
+			WithUrl(server.URL).
+			WithTransactionActiveTime(time.Duration(500)).
+			WithDecimals(7).
+			WithChainID("Test SDF Network ; September 2015").
+			WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001))
+
+		client, err := client.NewClient(chain)
 		require.NoError(t, err)
 		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.hash))
 		if vector.err != "" {
@@ -1027,30 +1018,22 @@ func TestFetchBalance(t *testing.T) {
 		}))
 		defer server.Close()
 
-		defaultConfig := &xc.ChainConfig{
-			Chain:                 "XLM",
-			URL:                   server.URL,
-			TransactionActiveTime: time.Duration(500),
-			Decimals:              7,
-			ChainIDStr:            "Test SDF Network ; September 2015",
-			GasBudgetDefault:      xc.NewAmountHumanReadableFromFloat(0.00001),
-		}
+		defaultConfig := xc.NewChainConfig(xc.XLM).
+			WithUrl(server.URL).
+			WithTransactionActiveTime(time.Duration(500)).
+			WithDecimals(7).
+			WithChainID("Test SDF Network ; September 2015").
+			WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(0.00001))
 
-		var cl *client.Client
-		var err error
-		if vector.assetID != "XLM" {
-			assetConfig := &xc.TokenAssetConfig{
-				Contract:    vector.assetID,
-				ChainConfig: defaultConfig,
-			}
-
-			cl, err = client.NewClient(assetConfig)
-		} else {
-			cl, err = client.NewClient(defaultConfig)
-		}
+		cl, err := client.NewClient(defaultConfig)
 		require.NoError(t, err)
 
-		balance, err := cl.FetchBalance(context.Background(), xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
+		args := xclient.NewBalanceArgs(xc.Address("GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF"))
+		if vector.assetID != "XLM" {
+			args.SetContract(xc.ContractAddress(vector.assetID))
+		}
+
+		balance, err := cl.FetchBalance(context.Background(), args)
 		if vector.err != "" {
 			require.ErrorContains(t, err, vector.err)
 		} else {

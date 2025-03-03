@@ -114,13 +114,13 @@ func getTestTokensFromFaucet(faucetUrl string, walletAddress xc.Address, amount 
 }
 
 func deriveAddress(t *testing.T, xcFactory *factory.Factory, chainConfig *xc.ChainConfig, privateKey string) xc.Address {
-	signer, err := xcFactory.NewSigner(chainConfig, privateKey)
+	signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKey)
 	require.NoError(t, err)
 
 	publicKey, err := signer.PublicKey()
 	require.NoError(t, err)
 
-	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig)
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
 	require.NoError(t, err)
 
 	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)

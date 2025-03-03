@@ -19,11 +19,11 @@ import (
 
 // TxBuilder for Template
 type TxBuilder struct {
-	Asset xc.ITask
+	Asset *xc.ChainBaseConfig
 }
 
 // NewTxBuilder creates a new Template TxBuilder
-func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
+func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
 	}, nil
@@ -31,32 +31,11 @@ func NewTxBuilder(cfgI xc.ITask) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
 
-// Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	switch asset := txBuilder.Asset.(type) {
-
-	case *xc.ChainConfig:
-		return txBuilder.NewNativeTransfer(from, to, amount, input)
-
-	case *xc.TokenAssetConfig:
-		return txBuilder.NewTokenTransfer(from, to, amount, input)
-
-	default:
-		// TODO this should return error
-		contract := asset.GetContract()
-		logrus.WithFields(logrus.Fields{
-			"chain":      asset.GetChain().Chain,
-			"contract":   contract,
-			"asset_type": fmt.Sprintf("%T", asset),
-		}).Warn("new transfer for unknown asset type")
-		if contract != "" {
-			return txBuilder.NewTokenTransfer(from, to, amount, input)
-		} else {
-			return txBuilder.NewNativeTransfer(from, to, amount, input)
-		}
+	if contract, ok := args.GetContract(); ok {
+		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, input)
+	} else {
+		return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 	}
 }
 
@@ -104,7 +83,7 @@ func Signature(method string) []byte {
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
 	from_bytes, _, err := base58.CheckDecode(string(from))
 	if err != nil {
 		return nil, err
@@ -115,7 +94,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		return nil, err
 	}
 
-	contract_bytes, _, err := base58.CheckDecode(txBuilder.Asset.GetContract())
+	contract_bytes, _, err := base58.CheckDecode(string(contract))
 	if err != nil {
 		return nil, err
 	}
@@ -154,17 +133,17 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	params.OwnerAddress = from_bytes
 	params.CallValue = 0
 
-	contract := &core.Transaction_Contract{}
-	contract.Type = core.Transaction_Contract_TriggerSmartContract
+	contractParam := &core.Transaction_Contract{}
+	contractParam.Type = core.Transaction_Contract_TriggerSmartContract
 	param, err := ptypes.MarshalAny(params)
 	if err != nil {
 		return nil, err
 	}
-	contract.Parameter = param
+	contractParam.Parameter = param
 
 	i := input.(*TxInput)
 	tx := &core.Transaction{}
-	tx.RawData = i.ToRawData(contract)
+	tx.RawData = i.ToRawData(contractParam)
 	// set limit for token contracts
 	tx.RawData.FeeLimit = int64(i.MaxFee.Uint64())
 	if tx.RawData.FeeLimit == 0 {

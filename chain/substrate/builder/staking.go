@@ -36,7 +36,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	}
 
 	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.GetChain().Decimals).Uint64()
+	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.Decimals).Uint64()
 	if tip > maxTip {
 		tip = maxTip
 	}
@@ -67,7 +67,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	}
 
 	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.GetChain().Decimals).Uint64()
+	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.Decimals).Uint64()
 	if tip > maxTip {
 		tip = maxTip
 	}

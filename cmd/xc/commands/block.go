@@ -29,7 +29,7 @@ func CmdRpcBlock() *cobra.Command {
 				blockArgs = xcclient.AtHeight(h.Uint64())
 			}
 
-			client, err := xcFactory.NewClient(assetConfig(chainConfig, contract, 0))
+			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return err
 			}

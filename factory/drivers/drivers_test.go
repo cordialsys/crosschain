@@ -55,10 +55,8 @@ func TestExampleTestSuite(t *testing.T) {
 }
 
 func createChainFor(driver xc.Driver) *xc.ChainConfig {
-	fakeAsset := &xc.ChainConfig{
-		// URL:         server.URL,
-		Driver: driver,
-	}
+	fakeAsset := xc.NewChainConfig("", driver)
+
 	if driver == xc.DriverBitcoin {
 		fakeAsset.Chain = "BTC"
 		fakeAsset.Auth2 = "env:SECRET_X"
@@ -75,7 +73,7 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 		fakeAsset.ChainPrefix = "0"
 	}
 	if driver == xc.DriverXlm {
-		fakeAsset.ChainIDStr = "Test SDF Network ; September 2015"
+		fakeAsset.ChainID = "Test SDF Network ; September 2015"
 		fakeAsset.TransactionActiveTime = time.Duration(500)
 		fakeAsset.GasBudgetDefault = xc.NewAmountHumanReadableFromFloat(2.0)
 	}
@@ -228,7 +226,7 @@ func (s *CrosschainTestSuite) TestAllNewTxBuilder() {
 		if driver == xc.DriverBitcoin {
 			continue
 		}
-		res, err := drivers.NewTxBuilder(createChainFor(driver))
+		res, err := drivers.NewTxBuilder(createChainFor(driver).Base())
 		require.NoError(err, "Missing driver for NewTxBuilder: "+driver)
 		require.NotNil(res)
 	}
@@ -238,7 +236,7 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 	require := s.Require()
 
 	for _, driver := range xc.SupportedDrivers {
-		res, err := drivers.NewAddressBuilder(createChainFor(driver))
+		res, err := drivers.NewAddressBuilder(createChainFor(driver).Base())
 		require.NoError(err, "Missing driver for NewAddressBuilder: "+driver)
 		require.NotNil(res)
 	}

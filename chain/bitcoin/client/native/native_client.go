@@ -84,7 +84,7 @@ func NewNativeClient(cfgI xc.ITask) (*NativeClient, error) {
 	httpClient := http.Client{}
 	httpClient.Timeout = opts.Timeout
 	opts.Host = native.URL
-	params, err := params.GetParams(native)
+	params, err := params.GetParams(native.Base())
 	if err != nil {
 		return &NativeClient{}, err
 	}
@@ -343,8 +343,8 @@ func (client *NativeClient) UnspentOutputs(ctx context.Context, minConf, maxConf
 	return outputs, nil
 }
 
-func (client *NativeClient) FetchBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, address)
+func (client *NativeClient) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, 0, 999999999, args.Address())
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if err != nil {
 		return amount, err
@@ -353,9 +353,6 @@ func (client *NativeClient) FetchBalance(ctx context.Context, address xc.Address
 		amount = amount.Add(&unspent.Value)
 	}
 	return amount, nil
-}
-func (client *NativeClient) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	return client.FetchBalance(ctx, address)
 }
 
 // Older version of estimating fee for some forks of BTC (e.g. BCH).

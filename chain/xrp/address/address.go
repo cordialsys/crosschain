@@ -3,9 +3,10 @@ package address
 import (
 	"crypto/sha256"
 	"fmt"
+	"math/big"
+
 	xc "github.com/cordialsys/crosschain"
 	"golang.org/x/crypto/ripemd160"
-	"math/big"
 )
 
 // AddressBuilder for XRP
@@ -15,7 +16,7 @@ type AddressBuilder struct {
 var _ xc.AddressBuilder = AddressBuilder{}
 
 // NewAddressBuilder creates a new XRP AddressBuilder
-func NewAddressBuilder(cfgI xc.ITask) (xc.AddressBuilder, error) {
+func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
 

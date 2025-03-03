@@ -24,6 +24,14 @@ func (args *TransferArgs) GetMemo() (string, bool)                { return args.
 func (args *TransferArgs) GetTimestamp() (int64, bool)            { return args.options.GetTimestamp() }
 func (args *TransferArgs) GetPriority() (xc.GasFeePriority, bool) { return args.options.GetPriority() }
 func (args *TransferArgs) GetPublicKey() ([]byte, bool)           { return args.options.GetPublicKey() }
+func (args *TransferArgs) GetContract() (xc.ContractAddress, bool) {
+	return args.options.GetContract()
+}
+
+// Decimals for token contract, which may be needed for token transfers on some chains
+func (args *TransferArgs) GetDecimals() (int, bool) {
+	return args.options.GetDecimals()
+}
 
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
@@ -41,4 +49,20 @@ func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain,
 	}
 
 	return args, nil
+}
+
+func (args *TransferArgs) SetAmount(amount xc.AmountBlockchain) {
+	args.amount = amount
+}
+
+func (args *TransferArgs) SetFrom(from xc.Address) {
+	args.from = from
+}
+
+func (args *TransferArgs) SetTo(to xc.Address) {
+	args.to = to
+}
+
+func (args *TransferArgs) SetContract(contract xc.ContractAddress) {
+	args.options.SetContract(contract)
 }

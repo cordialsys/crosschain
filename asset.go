@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/config"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
 
@@ -358,27 +359,113 @@ func (staking *StakingConfig) Enabled() bool {
 	return len(staking.Providers) > 0
 }
 
-// AssetConfig is the model used to represent an asset read from config file or db
+func NewChainConfig(nativeAsset NativeAsset, driverMaybe ...Driver) *ChainConfig {
+	driver := nativeAsset.Driver()
+	if len(driverMaybe) > 0 {
+		driver = driverMaybe[0]
+	}
+	cfg := &ChainConfig{
+		ChainBaseConfig: &ChainBaseConfig{
+			Chain:  nativeAsset,
+			Driver: driver,
+		},
+		ChainClientConfig: &ChainClientConfig{},
+	}
+	cfg.Configure()
+	return cfg
+}
+func (chain *ChainConfig) Base() *ChainBaseConfig {
+	return chain.ChainBaseConfig
+}
+func (chain *ChainConfig) Client() *ChainClientConfig {
+	return chain.ChainClientConfig
+}
+
+func (chain *ChainConfig) WithDriver(driver Driver) *ChainConfig {
+	chain.Driver = driver
+	return chain
+}
+func (chain *ChainConfig) WithDecimals(decimals int32) *ChainConfig {
+	chain.Decimals = decimals
+	return chain
+}
+func (chain *ChainConfig) WithUrl(url string) *ChainConfig {
+	chain.ChainClientConfig.URL = url
+	return chain
+}
+func (chain *ChainConfig) WithNet(net string) *ChainConfig {
+	chain.ChainBaseConfig.Network = net
+	return chain
+}
+func (chain *ChainConfig) WithChainCoin(chainCoin string) *ChainConfig {
+	chain.ChainBaseConfig.ChainCoin = chainCoin
+	return chain
+}
+func (chain *ChainConfig) WithChainPrefix(chainPrefix string) *ChainConfig {
+	chain.ChainBaseConfig.ChainPrefix = chainPrefix
+	return chain
+}
+
+func (chain *ChainConfig) WithProvider(provider string) *ChainConfig {
+	chain.ChainClientConfig.Provider = provider
+	return chain
+}
+
+func (chain *ChainConfig) WithMinGasPrice(minGasPrice float64) *ChainConfig {
+	chain.ChainClientConfig.ChainMinGasPrice = minGasPrice
+	return chain
+}
+func (chain *ChainConfig) WithMaxGasPrice(maxGasPrice float64) *ChainConfig {
+	chain.ChainClientConfig.ChainMinGasPrice = maxGasPrice
+	return chain
+}
+func (chain *ChainConfig) WithGasPriceMultiplier(multiplier float64) *ChainConfig {
+	chain.ChainClientConfig.ChainGasMultiplier = multiplier
+	return chain
+}
+func (chain *ChainConfig) WithGasBudgetDefault(gasBudgetDefault AmountHumanReadable) *ChainConfig {
+	chain.ChainClientConfig.GasBudgetDefault = gasBudgetDefault
+	return chain
+}
+
+func (chain *ChainConfig) WithAuth(auth config.Secret) *ChainConfig {
+	chain.ChainClientConfig.Auth2 = auth
+	return chain
+}
+
+func (chain *ChainConfig) WithChainID(chainID string) *ChainConfig {
+	chain.ChainID = StringOrInt(chainID)
+	return chain
+}
+
+func (chain *ChainConfig) WithIndexer(indexerType string, url string) *ChainConfig {
+	chain.IndexerType = indexerType
+	chain.IndexerUrl = url
+	return chain
+}
+
+func (chain *ChainConfig) WithTransactionActiveTime(transactionActiveTime time.Duration) *ChainConfig {
+	chain.TransactionActiveTime = transactionActiveTime
+	return chain
+}
+
 type ChainConfig struct {
+	*ChainBaseConfig   `yaml:",inline"`
+	*ChainClientConfig `yaml:",inline"`
+}
+
+type ChainBaseConfig struct {
 	// The crosschain symbol of the chain
 	Chain NativeAsset `yaml:"chain,omitempty"`
 	// The driver to use for the chain
 	Driver Driver `yaml:"driver,omitempty"`
 	// The network selector, if necessary (e.g. select mainnet, testnet, or devnet for bitcoin chains)
-	Net string `yaml:"net,omitempty"`
+	Network string `yaml:"net,omitempty"`
 	// Decimals for the chain's native asset (if it has one).
 	Decimals int32 `yaml:"decimals,omitempty"`
-	// RPC URL to use
-	URL string `yaml:"url,omitempty"`
-
-	CrosschainClient CrosschainClientConfig `yaml:"crosschain_client"`
-
-	// Optional configuration of the Driver.  Some chains support different kinds of RPC.
-	Provider string `yaml:"provider,omitempty"`
 
 	// The ChainID of the chain, either in integer or string format
-	ChainID    int64  `yaml:"chain_id,omitempty"`
-	ChainIDStr string `yaml:"chain_id_str,omitempty"`
+	ChainID StringOrInt `yaml:"chain_id,omitempty"`
 
 	// Human readable name of the chain, e.g. "Bitcoin"
 	ChainName string `yaml:"chain_name,omitempty"`
@@ -403,38 +490,14 @@ type ChainConfig struct {
 	// If necessary, specific which asset to use to spend for gas.
 	GasCoin string `yaml:"gas_coin,omitempty"`
 
-	// Does the chain rely on an indexer in addition to RPC?  If so, the URL and type
-	// may be set here.
-	IndexerUrl  string `yaml:"indexer_url,omitempty"`
-	IndexerType string `yaml:"indexer_type,omitempty"`
-	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
-	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
-
-	// PollingPeriod string `yaml:"polling_period,omitempty"`
-	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
 	// Indicate if this chain should not be included.
 	Disabled *bool `yaml:"disabled,omitempty"`
-
-	// How many confirmations is considered "final" for this chain?
-	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
 	// Staking configuration
 	Staking StakingConfig `yaml:"staking,omitempty"`
 
-	// Maximum fee limit
+	// Maximum total fee limit: required for caller to make use of with `TxInput.GetMaxFee()`
 	MaxFee AmountHumanReadable `yaml:"max_fee,omitempty"`
-	// Default gas budget to use for client gas estimation
-	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
-
-	// Optional settings around the gas, if needed.
-	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
-	ChainGasMultiplier   float64 `yaml:"chain_gas_multiplier,omitempty"`
-	// The gas tip is the amount of gas to pay above the gas price.
-	ChainGasTip uint64 `yaml:"chain_gas_tip,omitempty"`
-	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
-	// This should be in the blockchain amount.
-	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
-	ChainMinGasPrice float64 `yaml:"chain_min_gas_price,omitempty"`
 
 	// Transfer tax is percentage that the network takes from every transfer .. only used so far for Terra Classic
 	ChainTransferTax float64 `yaml:"chain_transfer_tax,omitempty"`
@@ -442,26 +505,59 @@ type ChainConfig struct {
 	// Used only for deriving private keys from mnemonic phrases in local testing
 	ChainCoinHDPath uint32 `yaml:"chain_coin_hd_path,omitempty"`
 
+	// Should use `ChainID` instead
+	XChainIDStr string `yaml:"chain_id_str,omitempty"`
+}
+
+func (chain *ChainConfig) Configure() {
+	chain.ChainClientConfig.Configure()
+	if chain.XChainIDStr != "" {
+		logrus.Warnf("chain_id_str is deprecated, use chain_id instead")
+		chain.ChainID = StringOrInt(chain.XChainIDStr)
+	}
+}
+
+type ChainClientConfig struct {
+	////////////////////////////////
+	///// RPC / CLIENT CONFIGURATION
+	////////////////////////////////
+
+	URL string `yaml:"url,omitempty"`
+
 	// Set a secret reference, see config/secret.go.  Used for setting an API keys.
 	Auth2 config.Secret `yaml:"auth,omitempty"`
 
-	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
-	External External `yaml:"external,omitempty"`
+	// Optional configuration of the Driver.  Some chains support different kinds of RPC.
+	Provider         string                 `yaml:"provider,omitempty"`
+	CrosschainClient CrosschainClientConfig `yaml:"crosschain_client"`
 
-	// Unused deprecated fields
-	XAssetDeprecated NativeAsset  `yaml:"asset,omitempty"`
-	XExplorerUrls    ExplorerUrls `yaml:"explorer_urls,omitempty"`
+	// Does the chain rely on an indexer in addition to RPC?  If so, the URL and type
+	// may be set here.
+	IndexerUrl  string `yaml:"indexer_url,omitempty"`
+	IndexerType string `yaml:"indexer_type,omitempty"`
+	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
+	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
 
-	XDti             string `yaml:"dti,omitempty"`
-	XCoinGeckoId     string `yaml:"coingecko_id,omitempty"`
-	XCoinMarketCapId string `yaml:"coinmarketcap_id,omitempty"`
+	NoGasFees bool `yaml:"no_gas_fees,omitempty"`
 
+	// Default gas budget to use for client gas estimation
+	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
+	// A default for clients to gas price if there's not better way to estimate.
+	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
+	// A local multiplier for client to apply to gas estimation, if it's important/needed.
+	ChainGasMultiplier float64 `yaml:"chain_gas_multiplier,omitempty"`
+	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
+	// This should be in the blockchain amount.
+	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
+	ChainMinGasPrice float64 `yaml:"chain_min_gas_price,omitempty"`
 	// TransactionActiveTime specifies the duration for which a transaction remains valid after being submitted.
 	// The value is represented as a `time.Duration` string.
 	// This field is currently used only by the Stellar network.
 	//
 	// Example format: "30s" (30 seconds), "2m" (2 minutes), "1h" (1 hour).
 	TransactionActiveTime time.Duration `yaml:"transaction_active_time,omitempty"`
+	// How many confirmations is considered "final" for this chain?
+	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
 
 	// Rate limit setting on RPC requests for client, in requests/second.
 	RateLimit rate.Limit `yaml:"rate_limit,omitempty"`
@@ -472,9 +568,12 @@ type ChainConfig struct {
 
 	// Rate limiter configured from `rate_limit`, `period_limit`, `burst` (requires calling .Configure after loading from config)
 	Limiter *rate.Limiter `yaml:"-" mapstructure:"-"`
+
+	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
+	External External `yaml:"external,omitempty"`
 }
 
-func (chain *ChainConfig) NewClientLimiter() *rate.Limiter {
+func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
 	// default no limit
 	burst := chain.Burst
 	var limiter = rate.NewLimiter(rate.Inf, burst)
@@ -487,42 +586,21 @@ func (chain *ChainConfig) NewClientLimiter() *rate.Limiter {
 	return limiter
 }
 
-func (chain *ChainConfig) Configure() {
-	// rename deprecated fields
+func (chain *ChainClientConfig) Configure() {
 	chain.Limiter = chain.NewClientLimiter()
-	if chain.XDti != "" {
-		chain.External.Dti = chain.XDti
-		chain.XDti = ""
-	}
-	if chain.XCoinGeckoId != "" {
-		chain.External.CoinGecko.AssetId = chain.XCoinGeckoId
-		chain.XCoinGeckoId = ""
-	}
-	if chain.XCoinMarketCapId != "" {
-		chain.External.CoinMarketCap.ChainId = chain.XCoinMarketCapId
-		chain.XCoinMarketCapId = ""
-	}
-}
-
-type TokenAssetConfig struct {
-	Asset    string      `yaml:"asset,omitempty"`
-	Chain    NativeAsset `yaml:"chain,omitempty"`
-	Decimals int32       `yaml:"decimals,omitempty"`
-	Contract string      `yaml:"contract,omitempty"`
-
-	// Token configs are joined with a chain config upon loading.
-	// If there is no matching native asset config, there will be a loading error.
-	ChainConfig *ChainConfig `yaml:"-"`
 }
 
 var _ ITask = &ChainConfig{}
-var _ ITask = &TokenAssetConfig{}
 
 func (c ChainConfig) String() string {
-	// do NOT print AuthSecret
+	secretRef := string(c.Auth2)
+	if !config.HasTypePrefix(secretRef) || strings.HasPrefix(secretRef, string(config.Raw)) {
+		secretRef = "<REDACTED>"
+	}
+
 	return fmt.Sprintf(
-		"NativeAssetConfig(asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
+		"NativeAssetConfig(asset=%s chainId=%s driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
+		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Network, c.URL, secretRef, c.Provider,
 	)
 }
 
@@ -556,31 +634,4 @@ func (native *ChainConfig) ClientURL() (string, Driver) {
 
 func (native *ChainConfig) IsChain(contract ContractAddress) bool {
 	return contract == "" || native.Chain == NativeAsset(contract)
-}
-
-func (c *TokenAssetConfig) String() string {
-	net := ""
-	native := c.GetChain()
-	if native != nil {
-		net = native.Net
-	}
-	return fmt.Sprintf(
-		"TokenAssetConfig(asset=%s chain=%s net=%s decimals=%d contract=%s)",
-		c.Asset, c.Chain, net, c.Decimals, c.Contract,
-	)
-}
-
-func (asset *TokenAssetConfig) GetChain() *ChainConfig {
-	return asset.ChainConfig
-}
-
-func (asset *TokenAssetConfig) GetDecimals() int32 {
-	return asset.Decimals
-}
-
-func (token *TokenAssetConfig) GetContract() string {
-	return token.Contract
-}
-func (token *TokenAssetConfig) GetAssetSymbol() string {
-	return token.Asset
 }

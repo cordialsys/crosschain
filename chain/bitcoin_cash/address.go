@@ -18,7 +18,7 @@ import (
 // AddressBuilder for Bitcoin
 type AddressBuilder struct {
 	params *chaincfg.Params
-	asset  xc.ITask
+	asset  *xc.ChainBaseConfig
 }
 
 var _ xc.AddressBuilder = &AddressBuilder{}
@@ -61,8 +61,8 @@ var (
 )
 
 // NewAddressBuilder creates a new Bitcoin AddressBuilder
-func NewAddressBuilder(asset xc.ITask) (xc.AddressBuilder, error) {
-	params, err := params.GetParams(asset.GetChain())
+func NewAddressBuilder(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
+	params, err := params.GetParams(asset)
 	if err != nil {
 		return AddressBuilder{}, err
 	}
