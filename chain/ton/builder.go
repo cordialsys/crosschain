@@ -55,7 +55,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 			return nil, err
 		}
 	}
-	net := txBuilder.Asset.Net
+	net := txBuilder.Asset.Network
 
 	toAddr, err := tonaddress.ParseAddress(to, net)
 	if err != nil {

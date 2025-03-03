@@ -141,7 +141,6 @@ func GetTaxFrom(amount xc.AmountBlockchain, tax float64) xc.AmountBlockchain {
 }
 
 func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, contractMaybe xc.ContractAddress, input *tx_input.TxInput, includeTax bool) types.Coins {
-	// amount := args.GetAmount()
 	asset := txBuilder.Asset
 	gasDenom := asset.GasCoin
 	if gasDenom == "" {

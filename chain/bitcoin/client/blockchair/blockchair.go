@@ -136,8 +136,8 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, addr xc.Addr
 	return outputs, nil
 }
 
-func (client *BlockchairClient) FetchBalance(ctx context.Context, address *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
-	allUnspentOutputs, err := client.UnspentOutputs(ctx, address.Address())
+func (client *BlockchairClient) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	allUnspentOutputs, err := client.UnspentOutputs(ctx, args.Address())
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	if err != nil {
 		return amount, err

@@ -23,7 +23,7 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	}, nil
 }
 
-// NewTransfer creates a new transfer for an Asset, either native or token
+// Transfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	var local_input *tx_input.TxInput
 	var ok bool

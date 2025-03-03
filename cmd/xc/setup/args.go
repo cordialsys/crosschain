@@ -116,7 +116,7 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 	if args.NotMainnet {
 		chain.CrosschainClient.Network = "!mainnet"
 		// needed for bitcoin chains
-		chain.Net = "testnet"
+		chain.Network = "testnet"
 	}
 	if args.Provider != "" {
 		chain.Provider = args.Provider
@@ -131,7 +131,7 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 		}
 	}
 	if args.Network != "" {
-		chain.Net = args.Network
+		chain.Network = args.Network
 	}
 }
 

@@ -143,7 +143,7 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 	}
 }
 func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contract xc.ContractAddress) (xc.Address, error) {
-	net := client.Asset.GetChain().Net
+	net := client.Asset.GetChain().Network
 	ownerAddr, err := tonaddress.ParseAddress(from, net)
 	if err != nil {
 		return "", err
@@ -184,7 +184,7 @@ func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contr
 }
 
 func (client *Client) EstimateMaxFee(ctx context.Context, from xc.Address, to xc.Address, contract string) (uint64, error) {
-	net := client.Asset.GetChain().Net
+	net := client.Asset.GetChain().Network
 	fromAddr, _ := tonaddress.ParseAddress(from, net)
 	toAddr, _ := tonaddress.ParseAddress(to, net)
 	amount, _ := tlb.FromNano(big.NewInt(1), int(client.Asset.GetDecimals()))
@@ -312,7 +312,7 @@ func (client *Client) LookupTransferForTokenWallet(tokenWallet string) (*api.Jet
 }
 
 func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, book api.AddressBook) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint, bool, error) {
-	net := client.Asset.GetChain().Net
+	net := client.Asset.GetChain().Network
 	jettonTfMaybe := &jetton.TransferPayload{}
 	err := tlb.LoadFromCell(jettonTfMaybe, c.BeginParse())
 	if err != nil {
@@ -451,7 +451,7 @@ func (client *Client) FetchTonTxByHash(ctx context.Context, txHash xc.TxHash) (a
 // an address from, as addresses are also based on various metadata fields (testnet, bounce, version, etc).  Thus it's necessary to use the substitution
 // table provided in API responses to figure out the correct address.
 func (client *Client) substituteOrParse(book api.AddressBook, rawAddr string) (*address.Address, error) {
-	net := client.Asset.GetChain().Net
+	net := client.Asset.GetChain().Network
 	if realAddr, ok := book[rawAddr]; ok {
 		return tonaddress.ParseAddress(xc.Address(realAddr.UserFriendly), net)
 	}
