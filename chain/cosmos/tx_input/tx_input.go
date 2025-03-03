@@ -59,7 +59,7 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
-func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	gasPrice := decimal.NewFromFloat(input.GasPrice)
 	// Use big int to avoid casting uint64 to int64
 	gasLimitInt := big.NewInt(0)

@@ -62,7 +62,7 @@ func (p GasFeePriority) GetDefault() (decimal.Decimal, error) {
 // Custody products should have a way to override max-fee limits.
 func CheckMaxFeeLimit(input TxInput, chainConfig *ChainConfig) error {
 	// Protect against fee griefing
-	maxFeeSpend, feeAssetId := input.GetMaxFee()
+	maxFeeSpend, feeAssetId := input.GetFeeLimit()
 	if feeAssetId == "" || feeAssetId == ContractAddress(chainConfig.Chain) {
 		maxFeeLimit := chainConfig.MaxFee.ToBlockchain(chainConfig.Decimals)
 		if maxFeeSpend.Cmp(&maxFeeLimit) > 0 {

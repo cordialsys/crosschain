@@ -60,7 +60,7 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
-func (input *TxInput) GetMaxFee() (xc.AmountBlockchain, xc.ContractAddress) {
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	// Maximum compute units used by a transaction can be 1.4M
 	// https://solana.com/docs/core/fees#compute-units-and-limits
 	const MaxComputeUnits = 1_400_000

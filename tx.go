@@ -45,7 +45,7 @@ type TxInputGetMaxPossibleFee interface {
 	//
 	// Note: The caller/user should check this after TxInput has been populated with all other fields, as they can influence
 	// what the ultimate max fee is.
-	GetMaxFee() (AmountBlockchain, ContractAddress)
+	GetFeeLimit() (AmountBlockchain, ContractAddress)
 }
 
 // This interface determines whether if different tx inputs conflict with one another.

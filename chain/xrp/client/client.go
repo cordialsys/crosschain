@@ -73,7 +73,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// But fee itself is at least a simple fixed fee.
 	// Current approach:
 	// - Use the median fee, based on recent ledger
-	// - Use the minimum base fee IFF it's greater than the median fee, as a sanity check
+	// - Use the minimum base fee if it's greater than the median fee, as a sanity check
 	txInput.Fee = feeInfo.Result.Drops.MedianFee
 	if feeInfo.Result.Drops.BaseFee.Cmp(&txInput.Fee) > 0 {
 		// Somehow the median is less than the base fee -> use the base fee

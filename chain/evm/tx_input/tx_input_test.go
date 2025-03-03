@@ -103,11 +103,11 @@ func TestMaxFee(t *testing.T) {
 	input.GasFeeCap = builder.GweiToWei(10)
 	input.GasPrice = builder.GweiToWei(1)
 
-	maxFee, _ := input.GetMaxFee()
+	maxFee, _ := input.GetFeeLimit()
 	require.EqualValues(t, builder.GweiToWei(210_000).String(), maxFee.String())
 
 	// use gas-price if it's higher
 	input.GasPrice = builder.GweiToWei(20)
-	maxFee, _ = input.GetMaxFee()
+	maxFee, _ = input.GetFeeLimit()
 	require.EqualValues(t, builder.GweiToWei(420_000).String(), maxFee.String())
 }
