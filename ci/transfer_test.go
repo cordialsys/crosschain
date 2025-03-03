@@ -151,7 +151,7 @@ func TestTransfer(t *testing.T) {
 	start := time.Now()
 
 	var txInfo xcclient.TxInfo
-	var finalWalletBalance xc.AmountBlockchain
+
 	timeout := time.Minute * 1
 	for {
 		if time.Since(start) > timeout {
@@ -168,7 +168,7 @@ func TestTransfer(t *testing.T) {
 			continue
 		}
 		balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
-		finalWalletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		finalWalletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
 		require.NoError(t, err, "Failed to fetch balance")
 		if finalWalletBalance.String() == initialBalance.String() {
 			fmt.Printf("waiting for change in balance...\n")
@@ -180,21 +180,35 @@ func TestTransfer(t *testing.T) {
 		break
 	}
 
-	fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
+	var finalWalletBalance xc.AmountBlockchain
+	var remainder xc.AmountBlockchain
 
-	remainder := initialBalance
-	for _, movement := range txInfo.Movements {
-		for _, from := range movement.From {
-			if from.AddressId == fromWalletAddress {
-				// subtract
-				remainder = remainder.Sub(&from.Balance)
+	// We poll until we the "full" expected balance change, as sometimes
+	// the balance can partially update (e.g. deducts network fee first...).
+	for range 50 {
+		finalWalletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		require.NoError(t, err, "Failed to fetch balance")
+		fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
+
+		remainder = initialBalance
+		for _, movement := range txInfo.Movements {
+			for _, from := range movement.From {
+				if from.AddressId == fromWalletAddress {
+					// subtract
+					remainder = remainder.Sub(&from.Balance)
+				}
+			}
+			for _, to := range movement.To {
+				if to.AddressId == fromWalletAddress {
+					// add
+					remainder = remainder.Add(&to.Balance)
+				}
 			}
 		}
-		for _, to := range movement.To {
-			if to.AddressId == fromWalletAddress {
-				// add
-				remainder = remainder.Add(&to.Balance)
-			}
+		if finalWalletBalance.String() == remainder.String() {
+			break
+		} else {
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 
