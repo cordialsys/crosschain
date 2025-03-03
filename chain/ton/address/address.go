@@ -32,7 +32,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	if err != nil {
 		return "", err
 	}
-	if ab.Asset.Net == "testnet" {
+	if ab.Asset.Network == "testnet" {
 		addr.SetTestnetOnly(true)
 	}
 	return xc.Address(addr.String()), nil

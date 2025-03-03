@@ -47,7 +47,7 @@ func (txBuilder TxBuilder) WithAddressDecoder(decoder address.AddressDecoder) Tx
 	return txBuilder
 }
 
-// NewTransfer creates a new transfer for an Asset, either native or token
+// Transfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	if _, ok := args.GetContract(); ok {
 		return nil, fmt.Errorf("token transfers are not supported on %s", txBuilder.Asset.Chain)
