@@ -105,6 +105,8 @@ func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, er
 	if err != nil {
 		return 0, fmt.Errorf("bad to address '%v': %v", from, err)
 	}
+	// Use "NonceAt", which gets state from the latest block.
+	// This allows the transaction replace any pending transaction, e.g. if there is a retry.
 	nonce, err := client.EthClient.NonceAt(ctx, fromAddr, nil)
 	if err != nil {
 		return 0, err
