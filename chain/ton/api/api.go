@@ -120,6 +120,7 @@ type GetMethod string
 var GetPublicKeyMethod GetMethod = "get_public_key"
 var GetSequenceMethod GetMethod = "seqno"
 var GetWalletAddressMethod GetMethod = "get_wallet_address"
+var GetJettonDataMethod GetMethod = "get_jetton_data"
 
 type GetMethodRequest struct {
 	Address string      `json:"address"`

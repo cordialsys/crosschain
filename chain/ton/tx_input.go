@@ -16,14 +16,15 @@ import (
 type TxInput struct {
 	xc.TxInputEnvelope
 	// MasterChainInfo api.MasterChainInfo `json:"master_chain_info"`
-	AccountStatus   api.AccountStatus   `json:"account_status"`
-	Sequence        uint64              `json:"sequence"`
-	PublicKey       []byte              `json:"public_key,omitempty"`
-	Memo            string              `json:"memo,omitempty"`
-	Timestamp       int64               `json:"timestamp"`
-	TokenWallet     xc.Address          `json:"token_wallet"`
-	EstimatedMaxFee xc.AmountBlockchain `json:"estimated_max_fee"`
-	TonBalance      xc.AmountBlockchain `json:"ton_balance"`
+	AccountStatus    api.AccountStatus   `json:"account_status"`
+	Sequence         uint64              `json:"sequence"`
+	PublicKey        []byte              `json:"public_key,omitempty"`
+	Memo             string              `json:"memo,omitempty"`
+	Timestamp        int64               `json:"timestamp"`
+	TokenWallet      xc.Address          `json:"token_wallet"`
+	JettonWalletCode []byte              `json:"jetton_wallet_code"`
+	EstimatedMaxFee  xc.AmountBlockchain `json:"estimated_max_fee"`
+	TonBalance       xc.AmountBlockchain `json:"ton_balance"`
 }
 
 var _ xc.TxInput = &TxInput{}
