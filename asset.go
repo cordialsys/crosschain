@@ -288,10 +288,6 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	return ""
 }
 
-// AssetID is an internal identifier for each asset (legacy/deprecated)
-// Examples: ETH, USDC, USDC.SOL - see tests for details
-type AssetID string
-
 // Network selector is used by crosschain client to select which network of a blockchain to select.
 type NetworkSelector string
 
@@ -344,6 +340,15 @@ type StakingConfig struct {
 	Providers []StakingProvider `yaml:"providers,omitempty"`
 }
 
+type AdditionalNativeAsset struct {
+	// Tyically the contract address of the asset
+	AssetId ContractAddress `yaml:"asset_id,omitempty"`
+	// Decimals for the assets
+	Decimals int32 `yaml:"decimals,omitempty"`
+	// Maximum fee limit
+	MaxFee AmountHumanReadable `yaml:"max_fee"`
+}
+
 type CrosschainClientConfig struct {
 	Url     string          `yaml:"url"`
 	Network NetworkSelector `yaml:"network,omitempty"`
@@ -390,6 +395,10 @@ type ChainConfig struct {
 	// - HASH has nhash
 	// - LUNA has uluna
 	ChainCoin string `yaml:"chain_coin,omitempty"`
+	// Additional native assets that may be used to pay fees on the chain.
+	AdditionalNativeAssets []*AdditionalNativeAsset `yaml:"additional_native_assets,omitempty"`
+	// If true, then the `.Chain` does not represent any native asset (i.e. no chain-coin, no decimals).
+	NoNativeAsset bool `yaml:"no_native_asset,omitempty"`
 
 	// If necessary, specific which asset to use to spend for gas.
 	GasCoin string `yaml:"gas_coin,omitempty"`
@@ -411,6 +420,11 @@ type ChainConfig struct {
 
 	// Staking configuration
 	Staking StakingConfig `yaml:"staking,omitempty"`
+
+	// Maximum fee limit
+	MaxFee AmountHumanReadable `yaml:"max_fee,omitempty"`
+	// Default gas budget to use for client gas estimation
+	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
 
 	// Optional settings around the gas, if needed.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
@@ -452,9 +466,9 @@ type ChainConfig struct {
 	// Rate limit setting on RPC requests for client, in requests/second.
 	RateLimit rate.Limit `yaml:"rate_limit,omitempty"`
 	// Period between requests (alternative to `rate_limit`)
-	PeriodLimit time.Duration `yaml:"period_limit"`
+	PeriodLimit time.Duration `yaml:"period_limit,omitempty"`
 	// Number of requests to permit in burst
-	Burst int `yaml:"burst"`
+	Burst int `yaml:"burst,omitempty"`
 
 	// Rate limiter configured from `rate_limit`, `period_limit`, `burst` (requires calling .Configure after loading from config)
 	Limiter *rate.Limiter `yaml:"-" mapstructure:"-"`
@@ -501,23 +515,15 @@ type TokenAssetConfig struct {
 	ChainConfig *ChainConfig `yaml:"-"`
 }
 
-// type AssetMetadataConfig struct {
-// 	PriceUSD AmountHumanReadable `yaml:"-"`
-// }
-
 var _ ITask = &ChainConfig{}
 var _ ITask = &TokenAssetConfig{}
 
 func (c ChainConfig) String() string {
 	// do NOT print AuthSecret
 	return fmt.Sprintf(
-		"NativeAssetConfig(id=%s asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
-		c.ID(), c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
+		"NativeAssetConfig(asset=%s chainId=%d driver=%s chainCoin=%s prefix=%s net=%s url=%s auth=%s provider=%s)",
+		c.Chain, c.ChainID, c.Driver, c.ChainCoin, c.ChainPrefix, c.Net, c.URL, c.Auth2, c.Provider,
 	)
-}
-
-func (asset *ChainConfig) ID() AssetID {
-	return GetAssetIDFromAsset("", asset.Chain)
 }
 
 func (asset *ChainConfig) GetDecimals() int32 {
@@ -559,22 +565,15 @@ func (c *TokenAssetConfig) String() string {
 		net = native.Net
 	}
 	return fmt.Sprintf(
-		"TokenAssetConfig(id=%s asset=%s chain=%s net=%s decimals=%d contract=%s)",
-		c.ID(), c.Asset, c.Chain, net, c.Decimals, c.Contract,
+		"TokenAssetConfig(asset=%s chain=%s net=%s decimals=%d contract=%s)",
+		c.Asset, c.Chain, net, c.Decimals, c.Contract,
 	)
-}
-
-func (asset *TokenAssetConfig) ID() AssetID {
-	return GetAssetIDFromAsset(asset.Asset, asset.Chain)
 }
 
 func (asset *TokenAssetConfig) GetChain() *ChainConfig {
 	return asset.ChainConfig
 }
 
-//	func (asset *TokenAssetConfig) GetDriver() Driver {
-//		return Driver(asset.GetNativeAsset().Driver)
-//	}
 func (asset *TokenAssetConfig) GetDecimals() int32 {
 	return asset.Decimals
 }
@@ -584,71 +583,4 @@ func (token *TokenAssetConfig) GetContract() string {
 }
 func (token *TokenAssetConfig) GetAssetSymbol() string {
 	return token.Asset
-}
-
-// func (asset *TokenAssetConfig) GetAssetConfig() *AssetConfig {
-// 	asset.AssetConfig.Asset = asset.Asset
-// 	asset.AssetConfig.Chain = asset.Chain
-// 	asset.AssetConfig.Net = asset.Net
-// 	asset.AssetConfig.Decimals = asset.Decimals
-// 	asset.AssetConfig.Contract = asset.Contract
-// 	asset.AssetConfig.Type = asset.Type
-// 	return &asset.AssetConfig
-// }
-
-// func (asset *TokenAssetConfig) GetTask() *TaskConfig {
-// 	return nil
-// }
-
-func LegacyParseAssetAndNativeAsset(asset string, nativeAsset string) (string, NativeAsset) {
-	if asset == "" && nativeAsset == "" {
-		return "", ""
-	}
-	if asset == "" && nativeAsset != "" {
-		asset = nativeAsset
-	}
-
-	assetSplit := strings.Split(asset, ".")
-	if len(assetSplit) == 2 && NativeAsset(assetSplit[1]).IsValid() {
-		asset = assetSplit[0]
-		if nativeAsset == "" {
-			nativeAsset = assetSplit[1]
-		}
-	}
-	validNative := NativeAsset(asset).IsValid()
-
-	if nativeAsset == "" {
-		if validNative {
-			nativeAsset = asset
-		} else {
-			nativeAsset = "ETH"
-		}
-	}
-
-	return asset, NativeAsset(nativeAsset)
-}
-
-// GetAssetIDFromAsset return the canonical AssetID given two input strings asset, nativeAsset.
-// Input can come from user input.
-// Examples:
-// - GetAssetIDFromAsset("USDC", "") -> "USDC.ETH"
-// - GetAssetIDFromAsset("USDC", "ETH") -> "USDC.ETH"
-// - GetAssetIDFromAsset("USDC", "SOL") -> "USDC.SOL"
-// - GetAssetIDFromAsset("USDC.SOL", "") -> "USDC.SOL"
-// See tests for more examples.
-func GetAssetIDFromAsset(asset string, nativeAsset NativeAsset) AssetID {
-	// id is SYMBOL for ERC20 and SYMBOL.CHAIN for others
-	// e.g. BTC, ETH, USDC, SOL, USDC.SOL
-	asset, nativeAsset = LegacyParseAssetAndNativeAsset(asset, string(nativeAsset))
-	validNative := NativeAsset(asset).IsValid()
-
-	// native asset, e.g. BTC, ETH, SOL
-	if asset == string(nativeAsset) {
-		return AssetID(asset)
-	}
-	if nativeAsset == "ETH" && !validNative {
-		return AssetID(asset + ".ETH")
-	}
-	// token, e.g. USDC, USDC.SOL
-	return AssetID(asset + "." + string(nativeAsset))
 }

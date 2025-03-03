@@ -18,8 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 const TX_TIMEOUT = 2 * time.Hour
@@ -46,6 +45,8 @@ type TxInput struct {
 	Expiration int64 `json:"expiration,omitempty"`
 	// Transaction creation time (seconds)
 	Timestamp int64 `json:"timestamp,omitempty"`
+	// Max fee budget
+	MaxFee xc.AmountBlockchain `json:"max_fee,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -75,6 +76,10 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	// tron doesn't do prioritization
 	_ = multiplier
 	return nil
+}
+
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	return input.MaxFee, ""
 }
 
 func (input *TxInput) SetUnix(unix int64) {
@@ -119,9 +124,11 @@ func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.Trans
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 
+	if cfg.GasBudgetDefault.Decimal().InexactFloat64() <= 0 {
+		return nil, fmt.Errorf("chain gas-budget-default should be set to value greater than 0.0")
+	}
+
 	client, err := httpclient.NewHttpClient(cfg.URL)
-	// client := client.NewGrpcClient(cfg.URL)
-	// err := client.Start(grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
@@ -148,6 +155,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// set timeout period
 	input.Timestamp = time.Now().Unix()
 	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
+
+	maxFee := client.chain.GasBudgetDefault.ToBlockchain(client.chain.Decimals)
+	input.MaxFee = maxFee
 
 	return input, nil
 }

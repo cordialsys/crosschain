@@ -34,8 +34,7 @@ type Client struct {
 	ApiKey string
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
 func NewClient(cfgI xc.ITask) (*Client, error) {

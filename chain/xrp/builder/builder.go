@@ -20,7 +20,6 @@ type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 type TxInput = xrptxinput.TxInput
@@ -72,7 +71,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		Account:            from,
 		Amount:             XRPAmount,
 		Destination:        to,
-		Fee:                "10",
+		Fee:                txInput.Fee.String(),
 		Flags:              0,
 		LastLedgerSequence: txInput.LastLedgerSequence,
 		Sequence:           txInput.Sequence,
@@ -139,7 +138,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		Amount:             XRPAmount,
 		SendMax:            sendMax,
 		Destination:        to,
-		Fee:                "10",
+		Fee:                txInput.Fee.String(),
 		Flags:              0,
 		LastLedgerSequence: txInput.LastLedgerSequence,
 		Sequence:           txInput.Sequence,

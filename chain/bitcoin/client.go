@@ -20,7 +20,7 @@ var Blockchair BitcoinClient = "blockchair"
 var Blockbook BitcoinClient = "blockbook"
 
 type BtcClient interface {
-	client.FullClient
+	client.Client
 	address.WithAddressDecoder
 }
 

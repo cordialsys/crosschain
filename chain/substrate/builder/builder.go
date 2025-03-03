@@ -59,11 +59,5 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		return &tx.Tx{}, err
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(txBuilder.Asset.GetChain().Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }

@@ -45,18 +45,8 @@ const SafetyTimeoutMargin = (5 * time.Minute)
 
 // Returns the microlamports to set the compute budget unit price.
 // It will not go about the max price amount for safety concerns.
-func (input *TxInput) GetLimitedPrioritizationFee(chain *xc.ChainConfig) uint64 {
+func (input *TxInput) GetPrioritizationFee() uint64 {
 	fee := input.PrioritizationFee.Uint64()
-	max := uint64(chain.ChainMaxGasPrice)
-	if max == 0 {
-		// set default max price to spend max 1 SOL on a transaction
-		// 1 SOL = (1 * 10 ** 9) * 10 ** 6 microlamports
-		// /200_000 compute units
-		max = 5_000_000_000
-	}
-	if fee > max {
-		fee = max
-	}
 	return fee
 }
 
@@ -68,6 +58,15 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	multipliedFee := multiplier.Mul(decimal.NewFromBigInt(input.PrioritizationFee.Int(), 0)).BigInt()
 	input.PrioritizationFee = xc.AmountBlockchain(*multipliedFee)
 	return nil
+}
+
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	// Maximum compute units used by a transaction can be 1.4M
+	// https://solana.com/docs/core/fees#compute-units-and-limits
+	const MaxComputeUnits = 1_400_000
+	gasLimit := xc.NewAmountBlockchainFromUint64(MaxComputeUnits)
+	maxSpend := gasLimit.Mul(&input.PrioritizationFee)
+	return maxSpend, ""
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

@@ -3,20 +3,19 @@ package builder
 import (
 	"fmt"
 
-	"github.com/cordialsys/crosschain/chain/xlm"
-	"github.com/stellar/go/xdr"
-	common "github.com/cordialsys/crosschain/chain/xlm/common"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/cordialsys/crosschain/chain/xlm"
+	common "github.com/cordialsys/crosschain/chain/xlm/common"
 	xlmtx "github.com/cordialsys/crosschain/chain/xlm/tx"
+	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/stellar/go/xdr"
 )
 
 type TxBuilder struct {
 	Asset xc.ITask
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
 type TxInput = xlminput.TxInput
@@ -28,13 +27,11 @@ func NewTxBuilder(asset xc.ITask) (*TxBuilder, error) {
 	}, nil
 }
 
-// Implements xcbuilder/Transfer interface
 func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return builder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
 
-// Implements xc.TxBuilder interface
-func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 	sourceAccount, err := common.MuxedAccountFromAddress(from)
 	if err != nil {
@@ -45,20 +42,32 @@ func (builder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.A
 		TimeBounds: xlm.NewTimeout(txInput.TransactionActiveTime),
 	}
 
+	xdrMemo := xdr.Memo{}
+	if memo, ok := args.GetMemo(); ok {
+		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, memo)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to create memo: %w", err)
+		}
+	}
+
 	txe := xdr.TransactionV1Envelope{
 		Tx: xdr.Transaction{
 			SourceAccount: sourceAccount,
 			// We can skip fee * operation_count multiplication because the transfer is a single
 			// `Payment` operation
-			Fee:    xdr.Uint32(50000000),
+			Fee:    xdr.Uint32(txInput.MaxFee),
 			SeqNum: xdr.SequenceNumber(txInput.Sequence),
 			Cond:   preconditions.BuildXDR(),
+			Memo:   xdrMemo,
 		},
 	}
 
 	if txInput.Memo != "" {
 		var xdrMemo xdr.Memo
 		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, txInput.Memo)
+		if err != nil {
+			return &xlmtx.Tx{}, fmt.Errorf("failed to create memo: %w", err)
+		}
 		txe.Tx.Memo = xdrMemo
 	}
 

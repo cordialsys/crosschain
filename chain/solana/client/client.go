@@ -30,9 +30,8 @@ type Client struct {
 	Asset     xc.ITask
 }
 
-var _ xclient.FullClient = &Client{}
+var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI xc.ITask) (*Client, error) {

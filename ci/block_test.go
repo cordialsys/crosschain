@@ -37,7 +37,7 @@ func TestFetchBlock(t *testing.T) {
 	require.NoError(t, err, "could not fetch latest block")
 
 	// get by specific height
-	block, err := client.FetchBlock(ctx, xcclient.AtHeight(latest.Height))
+	block, err := client.FetchBlock(ctx, xcclient.AtHeight(latest.Height.Uint64()))
 	require.NoError(t, err, "could not fetch specific block")
 
 	require.NotEqualValues(t, 0, block.Height)

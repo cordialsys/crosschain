@@ -26,8 +26,7 @@ type Client struct {
 	interceptor *utils.HttpInterceptor
 }
 
-var _ xclient.FullClient = &Client{}
-var _ xclient.ClientWithDecimals = &Client{}
+var _ xclient.Client = &Client{}
 
 // Some APTOS responses are incompatible for our current APTOS library.
 // The differences are minor, but hard to accomodate in the library.  An issue opened, but

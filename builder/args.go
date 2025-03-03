@@ -2,7 +2,6 @@ package builder
 
 import (
 	xc "github.com/cordialsys/crosschain"
-	"github.com/sirupsen/logrus"
 )
 
 // All possible builder arguments go in here, privately available.
@@ -11,11 +10,16 @@ type builderOptions struct {
 	memo           *string
 	timestamp      *int64
 	gasFeePriority *xc.GasFeePriority
-	publicKey      *[]byte
+	// avoiding use of map to ensure determinism in iteration and thread safety
+	publicKey *[]byte
 
 	validator    *string
 	stakeOwner   *xc.Address
 	stakeAccount *string
+}
+
+func newBuilderOptions() builderOptions {
+	return builderOptions{}
 }
 
 // All ArgumentBuilders should provide base arguments for transactions
@@ -96,14 +100,14 @@ func OptionStakeAccount(account string) BuilderOption {
 
 // Previously the crosschain abstraction would require callers to set options
 // directly on the transaction input, if the interface was implemented on the input type.
-// However, this is very clear or easy to use.  This function bridges the gap, to allow
+// However, wasn't very clear or easy to use.  This function bridges the gap, to allow
 // callers to use a more natural interface with options.  Chain transaction builders can
 // call this to safely set provided options on the old transaction input setters.
-func SetTxInputOptions(txInput xc.TxInput, options TransactionOptions, amount xc.AmountBlockchain) {
+func WithTxInputOptions(txInput xc.TxInput, amount xc.AmountBlockchain, options TransactionOptions) (xc.TxInput, error) {
 	if priority, ok := options.GetPriority(); ok && priority != "" {
 		err := txInput.SetGasFeePriority(priority)
 		if err != nil {
-			logrus.WithError(err).Error("failed to set gas fee priority")
+			return nil, err
 		}
 	}
 	if pubkey, ok := options.GetPublicKey(); ok {
@@ -125,4 +129,5 @@ func SetTxInputOptions(txInput xc.TxInput, options TransactionOptions, amount xc
 			withUnix.SetUnix(timeStamp)
 		}
 	}
+	return txInput, nil
 }

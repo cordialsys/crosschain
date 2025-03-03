@@ -37,7 +37,6 @@ type TxBuilder struct {
 	// Legacy bool
 }
 
-var _ xc.TxBuilder = &TxBuilder{}
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
 
@@ -68,9 +67,9 @@ func (txBuilder TxBuilder) WithTxBuilder(buider GethTxBuilder) TxBuilder {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
-}
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
 	switch asset := txBuilder.Asset.(type) {
 	case *xc.ChainConfig:
 		return txBuilder.NewNativeTransfer(from, to, amount, input)
@@ -148,24 +147,11 @@ func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainConfig, to xc.Address, va
 		chainId = new(big.Int).SetInt64(chain.ChainID)
 	}
 
-	// Protection from setting very high gas tip
-	maxTipGwei := uint64(chain.ChainMaxGasPrice)
-	if maxTipGwei == 0 {
-		maxTipGwei = DefaultMaxTipCapGwei
-	}
-	maxTipWei := GweiToWei(maxTipGwei)
-	gasTipCap := input.GasTipCap
-
-	if gasTipCap.Cmp(&maxTipWei) > 0 {
-		// limit to max
-		gasTipCap = maxTipWei
-	}
-
 	return &tx.Tx{
 		EthTx: types.NewTx(&types.DynamicFeeTx{
 			ChainID:   chainId,
 			Nonce:     input.Nonce,
-			GasTipCap: gasTipCap.Int(),
+			GasTipCap: input.GasTipCap.Int(),
 			GasFeeCap: input.GasFeeCap.Int(),
 			Gas:       input.GasLimit,
 			To:        &address,
