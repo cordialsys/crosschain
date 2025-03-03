@@ -72,13 +72,28 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	}
 
 	msgs := []*wallet.Message{}
-	if _, ok := args.GetContract(); ok {
-		// Token transfer
-		// TODO does TON have a way to derive the token wallet?
+	// Token transfer
+	if contract, ok := args.GetContract(); ok {
 		tokenAddr, err := tonaddress.ParseAddress(txInput.TokenWallet, net)
 		if err != nil {
 			return nil, fmt.Errorf("invalid TON token address %s: %v", txInput.TokenWallet, err)
 		}
+		// Derive the token wallet address to protect from spending the wrong token
+		walletAddresses, err := tonaddress.CalculatePossibleTokenWalletAddresses(from, contract, txInput.JettonWalletCode)
+		if err != nil {
+			return nil, fmt.Errorf("could not calcuate jetton wallet address for %s: %v", contract, err)
+		}
+
+		matches := false
+		for _, possibleTokenAddr := range walletAddresses {
+			if xc.Address(tokenAddr.String()) == possibleTokenAddr {
+				matches = true
+			}
+		}
+		if !matches {
+			return nil, fmt.Errorf("could not validate token wallet address %s", txInput.TokenWallet)
+		}
+
 		// Spend max 0.2 TON per Jetton transfer.  If we don't have 0.2 TON, we should
 		// lower the max to our balance less max-fees.
 		maxJettonFee := xc.NewAmountBlockchainFromUint64(200000000)

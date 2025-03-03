@@ -142,6 +142,31 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 		return &errorResponse
 	}
 }
+
+func (client *Client) GetJettonWalletCode(ctx context.Context, contract xc.ContractAddress) ([]byte, error) {
+	getDataResponse := &api.GetMethodResponse{}
+	err := client.post("api/v3/runGetMethod", &api.GetMethodRequest{
+		Address: string(contract),
+		Method:  api.GetJettonDataMethod,
+		Stack:   []api.StackItem{},
+	}, getDataResponse)
+	if err != nil {
+		return nil, err
+	}
+	if getDataResponse.ExitCode != 0 || len(getDataResponse.Stack) == 0 {
+		return nil, fmt.Errorf("could not lookup jetton wallet code for %s (%d)", contract, getDataResponse.ExitCode)
+	}
+
+	rawWalletCodeBoc := getDataResponse.Stack[4].Value
+	walletCodeBoc, err := base64.StdEncoding.DecodeString(rawWalletCodeBoc)
+	if err != nil {
+
+		return nil, fmt.Errorf("invalid encoding for token-wallet: %v", err)
+	}
+
+	return walletCodeBoc, nil
+}
+
 func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contract xc.ContractAddress) (xc.Address, error) {
 	net := client.Asset.GetChain().Network
 	ownerAddr, err := tonaddress.ParseAddress(from, net)
@@ -168,7 +193,7 @@ func (client *Client) GetTokenWallet(ctx context.Context, from xc.Address, contr
 		return "", fmt.Errorf("could not lookup token wallet for %s (%d)", from, getTokenWalletResponse.ExitCode)
 	}
 	rawBoc := getTokenWalletResponse.Stack[0].Value
-	boc, err := base64.RawStdEncoding.DecodeString(rawBoc)
+	boc, err := base64.StdEncoding.DecodeString(rawBoc)
 	if err != nil {
 		return "", fmt.Errorf("invalid encoding for token-wallet: %v", err)
 	}
@@ -249,6 +274,12 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	if contract, ok := args.GetContract(); ok {
+		walletCode, err := client.GetJettonWalletCode(ctx, contract)
+		if err != nil {
+			return input, err
+		}
+		input.JettonWalletCode = walletCode
+
 		input.TokenWallet, err = client.GetTokenWallet(ctx, args.GetFrom(), contract)
 		if err != nil {
 			return input, err
