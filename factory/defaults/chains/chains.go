@@ -31,7 +31,12 @@ func init() {
 			chain.CrosschainClient.Network = xc.Mainnets
 		}
 	}
-	for _, chain := range Testnet {
+	for key, chain := range Testnet {
+		if chain.MaxFee.String() == "0" {
+			// clone the mainnet value
+			chain.MaxFee, _ = xc.NewAmountHumanReadableFromStr(Mainnet[key].MaxFee.String())
+		}
+
 		if chain.Network == "" {
 			chain.Network = string(testcfg.Network)
 		}
