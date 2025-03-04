@@ -17,6 +17,10 @@ func (m *Dagger) TestChain(
 	image string,
 	source *dagger.Directory,
 	// +optional
+	contract string,
+	// +optional
+	decimals string,
+	// +optional
 	network string,
 	// +optional
 	algorithm string,
@@ -35,6 +39,26 @@ func (m *Dagger) TestChain(
 
 	cache := dag.CacheVolume("cache")
 	modules := dag.CacheVolume("modules")
+	if contract != "" && decimals == "" {
+		panic("decimals is required when contract is provided")
+	}
+
+	testBalance := []string{
+		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance",
+		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
+	}
+	testTransfer := []string{
+		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer",
+		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
+	}
+	testBlock := []string{
+		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestFetchBlock",
+		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
+	}
+	if contract != "" {
+		testBalance = append(testBalance, "--decimals", decimals)
+		testTransfer = append(testTransfer, "--decimals", decimals)
+	}
 
 	return dag.Container().
 		From("alpine:latest").
@@ -57,9 +81,10 @@ func (m *Dagger) TestChain(
 		// Add node service
 		WithServiceBinding("node-service", nodeService).
 		WithEnvVariable("cache-bust", time.Now().String()).
+
 		// Run tests
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
-		WithExec([]string{"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestFetchBlock", "--chain", chain, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm}).
+		WithExec(testBalance).
+		WithExec(testTransfer).
+		WithExec(testBlock).
 		Stdout(ctx)
 }

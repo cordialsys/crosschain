@@ -1,4 +1,4 @@
-//go:build ci
+//go:build !not_ci
 
 package ci
 
@@ -15,12 +15,12 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/normalize"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTransfer(t *testing.T) {
 	flag.Parse()
-
 	validateCLIInputs(t)
 
 	fromPrivateKey := "93a4def9eb501965b9f5f3079fab53284ea6a557e48e8affa817ab0258908bbc"
@@ -40,6 +40,11 @@ func TestTransfer(t *testing.T) {
 	chainConfig, err := setup.LoadChain(xcFactory, rpcArgs.Chain)
 	require.NoError(t, err, "Failed loading chain config")
 
+	decimals := chainConfig.GetDecimals()
+	if decimalsInput != nil {
+		decimals = int32(*decimalsInput)
+	}
+
 	client, err := xcFactory.NewClient(chainConfig)
 	require.NoError(t, err, "Failed creating client")
 
@@ -48,32 +53,19 @@ func TestTransfer(t *testing.T) {
 	fmt.Println("Wallet Address:", fromWalletAddress)
 	transferAmount, err := xc.NewAmountHumanReadableFromStr("0.1")
 	require.NoError(t, err)
-	transferAmountBlockchain := transferAmount.ToBlockchain(chainConfig.Decimals)
+	transferAmountBlockchain := transferAmount.ToBlockchain(decimals)
 
 	// fund multiple times, which results in multiple UTXO on utxo chains.
-	fundWallet(t, chainConfig, fromWalletAddress, "0.8")
-	fundWallet(t, chainConfig, fromWalletAddress, "1")
-	fundWallet(t, chainConfig, fromWalletAddress, "1.2")
+	fundWallet(t, chainConfig, fromWalletAddress, "0.8", contract, decimals)
+	fundWallet(t, chainConfig, fromWalletAddress, "1", contract, decimals)
+	fundWallet(t, chainConfig, fromWalletAddress, "1.2", contract, decimals)
+
+	if contract != "" {
+		// a bit for gas
+		fundWallet(t, chainConfig, fromWalletAddress, "0.1", "", chainConfig.Decimals)
+	}
 
 	require.NoError(t, err, "Failed to fund wallet address")
-
-	balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
-
-	var initialBalance xc.AmountBlockchain
-
-	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
-	// Because we haven't been successful with getting the faucets on devnet nodes
-	// to be syncronous, we instead tolerate some delay in the test
-	for attempts := range 30 {
-		initialBalance, err = client.FetchBalance(context.Background(), balanceArgs)
-		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
-		asHuman := initialBalance.ToHuman(chainConfig.Decimals).String()
-		if asHuman == "3" {
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
-	require.Equal(t, "3", initialBalance.ToHuman(chainConfig.Decimals).String(), "Failed to get balance over after 30 attempts")
 
 	signer, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
 	require.NoError(t, err)
@@ -95,8 +87,34 @@ func TestTransfer(t *testing.T) {
 		builder.OptionPublicKey(publicKey),
 	}
 
+	balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
+	assetId := string(chainConfig.Chain)
+	if contract != "" {
+		tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
+		tfOptions = append(tfOptions, builder.OptionContractDecimals(int(decimals)))
+		assetId = normalize.NormalizeAddressString(contract, chainConfig.Chain)
+
+		balanceArgs.SetContract(xc.ContractAddress(contract))
+	}
+
 	tfArgs, err := builder.NewTransferArgs(from, toAddress, transferAmountBlockchain, tfOptions...)
 	require.NoError(t, err)
+
+	var initialBalance xc.AmountBlockchain
+
+	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
+	// Because we haven't been successful with getting the faucets on devnet nodes
+	// to be syncronous, we instead tolerate some delay in the test
+	for attempts := range 30 {
+		initialBalance, err = client.FetchBalance(context.Background(), balanceArgs)
+		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
+		asHuman := initialBalance.ToHuman(decimals).String()
+		if asHuman == "3" {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	require.Equal(t, "3", initialBalance.ToHuman(decimals).String(), "Failed to get balance over after 30 attempts")
 
 	input, err := client.FetchTransferInput(context.Background(), tfArgs)
 	require.NoError(t, err)
@@ -167,7 +185,6 @@ func TestTransfer(t *testing.T) {
 			fmt.Printf("waiting for 1 confirmation...\n")
 			continue
 		}
-		balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
 		finalWalletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
 		require.NoError(t, err, "Failed to fetch balance")
 		if finalWalletBalance.String() == initialBalance.String() {
@@ -192,6 +209,10 @@ func TestTransfer(t *testing.T) {
 
 		remainder = initialBalance
 		for _, movement := range txInfo.Movements {
+			if movement.AssetId != xc.ContractAddress(assetId) {
+				// skip movements not matching the asset we transferred
+				continue
+			}
 			for _, from := range movement.From {
 				if from.AddressId == fromWalletAddress {
 					// subtract

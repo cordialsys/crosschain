@@ -1,4 +1,4 @@
-//go:build ci
+//go:build !not_ci
 
 package ci
 
@@ -17,7 +17,6 @@ import (
 
 func TestBalance(t *testing.T) {
 	flag.Parse()
-
 	validateCLIInputs(t)
 
 	privateKey := "715a5f0e6adff28fb7aee4082d3763e1182a7f93c65bb407028f70b07fc2b0f9"
@@ -42,23 +41,30 @@ func TestBalance(t *testing.T) {
 	walletAddress := deriveAddress(t, xcFactory, chainConfig, privateKey)
 
 	fmt.Println("Wallet Address:", walletAddress)
+	decimals := chainConfig.GetDecimals()
+	if decimalsInput != nil {
+		decimals = int32(*decimalsInput)
+	}
 
-	fundWallet(t, chainConfig, walletAddress, "1")
+	fundWallet(t, chainConfig, walletAddress, "1", contract, decimals)
 
 	balanceArgs := xcclient.NewBalanceArgs(walletAddress)
 	var walletBalance xc.AmountBlockchain
+	if contract != "" {
+		balanceArgs.SetContract(xc.ContractAddress(contract))
+	}
 
 	// Tolerate ~30s to get the target balance, as the faucet for a devnet node isn't always syncronous
 	for attempts := range 30 {
 		walletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
 		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
 		fmt.Println("Wallet Balance: ", walletBalance)
-		asHuman := walletBalance.ToHuman(chainConfig.Decimals).String()
+		asHuman := walletBalance.ToHuman(decimals).String()
 		if asHuman == "1" {
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 
-	require.Equal(t, "1", walletBalance.ToHuman(chainConfig.Decimals).String())
+	require.Equal(t, "1", walletBalance.ToHuman(decimals).String())
 }
