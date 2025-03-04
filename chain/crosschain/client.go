@@ -74,14 +74,6 @@ func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, servic
 	return client, nil
 }
 
-func (client *Client) apiAsset(contractMaybe xc.ContractAddress) *types.AssetReq {
-	native := client.Asset.GetChain()
-	return &types.AssetReq{
-		ChainReq: &types.ChainReq{Chain: string(native.Chain)},
-		Contract: string(contractMaybe),
-	}
-}
-
 func (client *Client) legacyApiCall(ctx context.Context, path string, data interface{}) ([]byte, error) {
 	// Create HTTP POST request
 	apiURL := fmt.Sprintf("%s/v1/__crosschain%s", client.URL, path)
@@ -173,8 +165,16 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 // FetchLegacyTxInput returns tx input from a Crosschain endpoint
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
+	decimalsStr := ""
+	if decimals, ok := args.GetDecimals(); ok {
+		decimalsStr = strconv.FormatInt(int64(decimals), 10)
+	}
+
 	res, err := client.legacyApiCall(ctx, "/input", &types.TxInputReq{
-		AssetReq: client.apiAsset(contract),
+		Chain:    client.Asset.GetChain().Chain,
+		Contract: string(contract),
+		Balance:  args.GetAmount().String(),
+		Decimals: decimalsStr,
 		From:     string(args.GetFrom()),
 		To:       string(args.GetTo()),
 	})
@@ -195,7 +195,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits via a Crosschain endpoint
 func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	chain := string(client.Asset.GetChain().Chain)
+	chain := client.Asset.GetChain().Chain
 	data, err := txInput.Serialize()
 	if err != nil {
 		return err
@@ -207,7 +207,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	}
 
 	res, err := client.legacyApiCall(ctx, "/submit", &types.SubmitTxReq{
-		ChainReq:     &types.ChainReq{Chain: chain},
+		Chain:        chain,
 		TxData:       data,
 		TxSignatures: signatures,
 	})
@@ -223,8 +223,8 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 // FetchLegacyTxInfo returns tx info from a Crosschain endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
 	res, err := client.legacyApiCall(ctx, "/info", &types.TxInfoReq{
-		AssetReq: client.apiAsset(""),
-		TxHash:   string(txHash),
+		Chain:  client.Asset.GetChain().Chain,
+		TxHash: string(txHash),
 	})
 	if err != nil {
 		return xc.LegacyTxInfo{}, err
@@ -252,12 +252,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
-	var assetReq = client.apiAsset("")
-	assetReq.Asset = ""
-	assetReq.Contract = ""
-	assetReq.Decimals = ""
 	res, err := client.legacyApiCall(ctx, "/balance", &types.BalanceReq{
-		AssetReq: assetReq,
+		Chain:    client.Asset.GetChain().Chain,
+		Contract: "",
 		Address:  string(address),
 	})
 	if err != nil {
@@ -266,7 +263,8 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
-	return r.BalanceRaw, err
+
+	return r.GetBalance(), err
 }
 
 // FetchBalance fetches token balance from a Crosschain endpoint
@@ -274,7 +272,8 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	contract, _ := args.Contract()
 	res, err := client.legacyApiCall(ctx, "/balance", &types.BalanceReq{
-		AssetReq: client.apiAsset(contract),
+		Chain:    client.Asset.GetChain().Chain,
+		Contract: string(contract),
 		Address:  string(args.Address()),
 	})
 	if err != nil {
@@ -283,7 +282,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 	var r types.BalanceRes
 	err = json.Unmarshal(res, &r)
-	return r.BalanceRaw, err
+	return r.GetBalance(), err
 }
 
 // FetchBalance fetches token balance from a Crosschain endpoint

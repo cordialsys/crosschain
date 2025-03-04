@@ -14,33 +14,35 @@ type Status status.Status
 
 type ApiResponse interface{}
 
-type ChainReq struct {
-	Chain string `json:"chain"`
-}
-
-type AssetReq struct {
-	*ChainReq
-	Asset    string `json:"asset,omitempty"`
-	Contract string `json:"contract,omitempty"`
-	Decimals string `json:"decimals,omitempty"`
-}
-
 type BalanceReq struct {
-	*AssetReq
-	Address string `json:"address"`
+	Chain    xc.NativeAsset `json:"chain"`
+	Contract string         `json:"contract,omitempty"`
+	Address  string         `json:"address"`
 }
 
 type BalanceRes struct {
 	*BalanceReq
-	Balance    xc.AmountHumanReadable `json:"balance"`
-	BalanceRaw xc.AmountBlockchain    `json:"balance_raw"`
+	Balance xc.AmountBlockchain `json:"balance"`
+	// legacy field for backwards compatibility, should use `.balance`
+	XBalanceRaw xc.AmountBlockchain `json:"balance_raw"`
+}
+
+func (b *BalanceRes) GetBalance() xc.AmountBlockchain {
+	// Use the legacy field if it's set
+	if b.XBalanceRaw.Cmp(&b.Balance) > 0 {
+		return b.XBalanceRaw
+	}
+	// otherwise use the new field
+	return b.Balance
 }
 
 type TxInputReq struct {
-	*AssetReq
-	From    string `json:"from"`
-	To      string `json:"to"`
-	Balance string `json:"balance"`
+	Chain    xc.NativeAsset `json:"chain"`
+	Contract string         `json:"contract,omitempty"`
+	Decimals string         `json:"decimals,omitempty"`
+	From     string         `json:"from"`
+	To       string         `json:"to"`
+	Balance  string         `json:"balance"`
 }
 
 type StakingInputReq struct {
@@ -63,8 +65,8 @@ type TxInputRes struct {
 }
 
 type TxInfoReq struct {
-	*AssetReq
-	TxHash string `json:"tx_hash"`
+	Chain  xc.NativeAsset `json:"chain"`
+	TxHash string         `json:"tx_hash"`
 }
 
 type TxLegacyInfoRes struct {
@@ -77,9 +79,9 @@ type TransactionInfoRes struct {
 }
 
 type SubmitTxReq struct {
-	*ChainReq
-	TxData       []byte   `json:"tx_data"`
-	TxSignatures [][]byte `json:"tx_signatures"`
+	Chain        xc.NativeAsset `json:"chain"`
+	TxData       []byte         `json:"tx_data"`
+	TxSignatures [][]byte       `json:"tx_signatures"`
 }
 
 type SubmitTxRes struct {
