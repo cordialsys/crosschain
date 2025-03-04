@@ -321,7 +321,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:   "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				Name:   "chains/XRP/transactions/3f27c0af1993af63e3438ba903b981aa095b6c81ab23976a9729b44ab39719ba",
 				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 				XChain: "XRP",
 				Block: &xclient.Block{
@@ -575,7 +575,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:   "chains/XRP/transactions/9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
+				Name:   "chains/XRP/transactions/9d4d9cb01f4ffb12ca6262966311936b182e325a80461645e78ef54c11d2751b",
 				Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 				XChain: "XRP",
 				Block: &xclient.Block{
@@ -687,7 +687,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 			},
 			expectedTxInfo: xclient.TxInfo{
-				Name:   "chains/XRP/transactions/3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
+				Name:   "chains/XRP/transactions/3f27c0af1993af63e3438ba903b981aa095b6c81ab23976a9729b44ab39719ba",
 				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 				XChain: "XRP",
 				Error:  testtypes.Ref("transaction failed: tecPATH_PARTIAL"),
