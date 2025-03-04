@@ -2,7 +2,7 @@ FROM debian:bookworm-slim
 WORKDIR /root
 
 RUN apt update
-RUN apt install -y python3 python3-pip git npm
+RUN apt install -y python3 python3-pip git npm netcat-openbsd
 
 WORKDIR /root/
 RUN pip3 install --break-system-packages flask requests

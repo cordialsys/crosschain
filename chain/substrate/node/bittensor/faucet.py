@@ -26,14 +26,19 @@ def run_tao_faucet():
             time.sleep(0.5)
             continue
         break
+    # This will mine 1000 TAO for each success, then stop.
+    # we stop mining, because otherwise it will conflict with the faucet transactions
+    successes = 2
     for i in range(0,100):
         try:
             print("requesting from faucet")
-            system(f"btcli wallet faucet --wallet.name xc --subtensor.chain_endpoint ws://localhost:{RPC_PORT} --max-successes 1 -y")
+            system(f"btcli wallet faucet --wallet.name xc --subtensor.chain_endpoint ws://localhost:{RPC_PORT} --max-successes {successes} -y")
+            time.sleep(1)
             DID_PoW = True
+            break
         except Exception as e:
             print("could not mine from faucet", e)
-        time.sleep(1)
+            time.sleep(1)
 
 def system(cmd: str):
     print("running:\n"+cmd)
@@ -60,9 +65,7 @@ def fund(chain_id:str, contract: str):
     password = os.getenv("PASSWORD", "")
 
     system(f"btcli wallet transfer --amount {tao} --destination {address} -y --wallet-name xc --subtensor.chain_endpoint ws://localhost:{RPC_PORT}")
-    # Wait 4x block time(12) because the test is really flacky
-    time.sleep(4*12)
-
+    # block time is ~12s
     return {
     }
 
