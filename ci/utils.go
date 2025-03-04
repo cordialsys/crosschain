@@ -1,4 +1,4 @@
-//go:build ci
+//go:build !not_ci
 
 package ci
 
@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -19,10 +20,13 @@ import (
 )
 
 var (
-	chain     string
-	rpc       string
-	network   string
-	algorithm string
+	chain         string
+	rpc           string
+	network       string
+	algorithm     string
+	contract      string
+	decimalsStr   string
+	decimalsInput *int
 )
 
 func init() {
@@ -30,6 +34,8 @@ func init() {
 	flag.StringVar(&rpc, "rpc", "", "RPC endpoint")
 	flag.StringVar(&network, "network", "", "Bitcoin network, if relevant")
 	flag.StringVar(&algorithm, "algorithm", "", "Used to override signature algorithm. Bitcoin only")
+	flag.StringVar(&contract, "contract", "", "Contract address for token")
+	flag.StringVar(&decimalsStr, "decimals", "", "Decimals used for token")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }
@@ -41,14 +47,21 @@ func validateCLIInputs(t *testing.T) {
 	if rpc == "" {
 		t.Fatal("--rpc is required")
 	}
+	if decimalsStr != "" {
+		asInt, err := strconv.Atoi(decimalsStr)
+		if err != nil {
+			panic(err)
+		}
+		decimalsInput = &asInt
+	}
 }
 
-func fundWallet(t *testing.T, chainConfig *xc.ChainConfig, walletAddress xc.Address, amount string) {
+func fundWallet(t *testing.T, chainConfig *xc.ChainConfig, walletAddress xc.Address, amount string, contractMaybe string, decimals int32) {
 	require.NotNil(t, chainConfig)
 
 	amountHuman, err := xc.NewAmountHumanReadableFromStr(amount)
 	require.NoError(t, err)
-	amountBlockchain := amountHuman.ToBlockchain(chainConfig.GetDecimals())
+	amountBlockchain := amountHuman.ToBlockchain(int32(decimals))
 
 	// The RPC host is the same as the faucet host
 	parsedURL, err := url.Parse(chainConfig.URL)
@@ -59,7 +72,12 @@ func fundWallet(t *testing.T, chainConfig *xc.ChainConfig, walletAddress xc.Addr
 	host := parsedURL.Hostname()
 	require.NotEmpty(t, host)
 
-	faucetUrl := fmt.Sprintf("http://%s:10001/chains/%s/assets/%s", host, chainConfig.Chain, chainConfig.Chain)
+	assetId := string(chainConfig.Chain)
+	if contractMaybe != "" {
+		assetId = contractMaybe
+	}
+
+	faucetUrl := fmt.Sprintf("http://%s:10001/chains/%s/assets/%s", host, chainConfig.Chain, assetId)
 	require.NoError(t, err)
 
 	err = getTestTokensFromFaucet(faucetUrl, walletAddress, amountBlockchain)

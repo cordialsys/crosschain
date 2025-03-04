@@ -1,4 +1,4 @@
-//go:build ci
+//go:build !not_ci
 
 package ci
 
@@ -18,6 +18,7 @@ import (
 func TestFetchBlock(t *testing.T) {
 	ctx := context.Background()
 	flag.Parse()
+	validateCLIInputs(t)
 
 	rpcArgs := &setup.RpcArgs{
 		Chain:     chain,
