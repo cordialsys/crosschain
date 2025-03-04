@@ -22,32 +22,41 @@ def fund(chain_id:str, contract: str):
     address = content['address']
     rpc_url = f"http://127.0.0.1:{RPC_PORT}"
 
-    # read the current balance
-    r = requests.post(rpc_url, json={
-        "jsonrpc": "2.0",
-        "method": "eth_getBalance",
-        "params": [address, "latest"],
-        "id": 1
-    })
-    current_balance_wei = int(r.json()['result'], 16)
+    if contract.lower() == "0x5FbDB2315678afecb367f032d93F642f64180aa3".lower():
+        system(f"bash -c 'CONTRACT={contract} AMOUNT={amount} TO={address} npx hardhat run scripts/transfer-token.js --network localhost'")
+        return {}
+    elif chain_id == contract:
 
-    # add to our current balance
-    new_balance = current_balance_wei + int(amount)
+        # read the current balance
+        r = requests.post(rpc_url, json={
+            "jsonrpc": "2.0",
+            "method": "eth_getBalance",
+            "params": [address, "latest"],
+            "id": 1
+        })
+        current_balance_wei = int(r.json()['result'], 16)
 
-    # https://hardhat.org/hardhat-network/docs/reference#hardhat_setbalance
-    r = requests.post(rpc_url, json={
-        "method":"hardhat_setBalance",
-        "params":[address, hex(int(new_balance))],
-        "id":1,
-        "jsonrpc":"2.0",
-    })
-    print("response content:\n",r.content, flush=True)
-    if 'error' in r.json():
+        # add to our current balance
+        new_balance = current_balance_wei + int(amount)
+
+        # https://hardhat.org/hardhat-network/docs/reference#hardhat_setbalance
+        r = requests.post(rpc_url, json={
+            "method":"hardhat_setBalance",
+            "params":[address, hex(int(new_balance))],
+            "id":1,
+            "jsonrpc":"2.0",
+        })
+        print("response content:\n",r.content, flush=True)
+        if 'error' in r.json():
+            print("FAILED", flush=True)
+            return {}, 500
+
+        return {}, r.status_code
+    else:
         print("FAILED", flush=True)
-        return {}, 500
+        return {"message": "asset not supported"}, 400
 
-    return {
-    }, r.status_code
+
 
 
 if __name__ == "__main__":
