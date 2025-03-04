@@ -312,8 +312,7 @@ type ExplorerUrls struct {
 
 // External ID's used by other vendors for the given chain
 type External struct {
-	Dti          string       `yaml:"dti,omitempty"`
-	ExplorerUrls ExplorerUrls `yaml:"explorer_urls,omitempty"`
+	Dti string `yaml:"dti,omitempty"`
 
 	CoinMarketCap struct {
 		// CoinMarketCap's ID for the chain
@@ -348,6 +347,14 @@ type AdditionalNativeAsset struct {
 	Decimals int32 `yaml:"decimals,omitempty"`
 	// Maximum fee limit
 	MaxFee AmountHumanReadable `yaml:"max_fee"`
+}
+
+func NewAdditionalNativeAsset(assetId ContractAddress, decimals int32, maxFee AmountHumanReadable) *AdditionalNativeAsset {
+	return &AdditionalNativeAsset{
+		assetId,
+		decimals,
+		maxFee,
+	}
 }
 
 type CrosschainClientConfig struct {
@@ -571,6 +578,8 @@ type ChainClientConfig struct {
 
 	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
 	External External `yaml:"external,omitempty"`
+	// Informational URLs for the chain explorers.
+	ExplorerUrls ExplorerUrls `yaml:"explorer_urls,omitempty"`
 }
 
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {

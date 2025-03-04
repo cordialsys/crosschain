@@ -228,8 +228,9 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 
 	expectedBalance := xc.NewAmountBlockchainFromUint64(1234567)
 	resObj := types.BalanceRes{
-		BalanceReq: &types.BalanceReq{},
-		BalanceRaw: expectedBalance,
+		BalanceReq:  &types.BalanceReq{},
+		XBalanceRaw: expectedBalance,
+		Balance:     expectedBalance,
 	}
 	res, _ := json.Marshal(resObj)
 
