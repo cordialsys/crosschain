@@ -6,8 +6,10 @@ echo "hardhat version:"
 npx hardhat --version
 
 npx hardhat node --hostname 0.0.0.0 --port ${RPC_PORT} &
-# deploy some tokens
 
+while ! nc -z localhost ${RPC_PORT}; do sleep .25; echo waiting for port to open; done
+
+# deploy some tokens
 # First run deploys contract with address 0x5FbDB2315678afecb367f032d93F642f64180aa3
 npx hardhat run scripts/deploy.js --network localhost
 
