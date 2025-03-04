@@ -17,7 +17,7 @@ module.exports = {
       url: `http://127.0.0.1:${port}`,
     },
     hardhat: {
-      chainId: chainId,
+      chainId: parseInt(chainId),
       hardfork: 'shanghai',
       baseFeePerGas: "0",
       mining: {
