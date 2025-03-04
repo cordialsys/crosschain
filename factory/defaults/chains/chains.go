@@ -32,9 +32,9 @@ func init() {
 		}
 	}
 	for key, chain := range Testnet {
-		if chain.MaxFee.String() == "0" {
+		if chain.FeeLimit.String() == "0" {
 			// clone the mainnet value
-			chain.MaxFee, _ = xc.NewAmountHumanReadableFromStr(Mainnet[key].MaxFee.String())
+			chain.FeeLimit, _ = xc.NewAmountHumanReadableFromStr(Mainnet[key].FeeLimit.String())
 		}
 
 		if chain.Network == "" {

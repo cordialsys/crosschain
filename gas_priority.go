@@ -60,18 +60,18 @@ func (p GasFeePriority) GetDefault() (decimal.Decimal, error) {
 
 // Check against the max-fee defaults in the configuration.
 // Custody products should have a way to override max-fee limits.
-func CheckMaxFeeLimit(input TxInput, chainConfig *ChainConfig) error {
+func CheckFeeLimit(input TxInput, chainConfig *ChainConfig) error {
 	// Protect against fee griefing
-	maxFeeSpend, feeAssetId := input.GetFeeLimit()
+	FeeLimitSpend, feeAssetId := input.GetFeeLimit()
 	if feeAssetId == "" || feeAssetId == ContractAddress(chainConfig.Chain) {
-		maxFeeLimit := chainConfig.MaxFee.ToBlockchain(chainConfig.Decimals)
-		if maxFeeSpend.Cmp(&maxFeeLimit) > 0 {
-			maxFeeSpendHuman := maxFeeSpend.ToHuman(chainConfig.Decimals)
+		FeeLimitLimit := chainConfig.FeeLimit.ToBlockchain(chainConfig.Decimals)
+		if FeeLimitSpend.Cmp(&FeeLimitLimit) > 0 {
+			FeeLimitSpendHuman := FeeLimitSpend.ToHuman(chainConfig.Decimals)
 			return fmt.Errorf(
 				"transaction fee may cost up to %s %s, which is greater than the current limit of %s",
-				maxFeeSpendHuman.String(),
+				FeeLimitSpendHuman.String(),
 				chainConfig.Chain,
-				chainConfig.MaxFee.String(),
+				chainConfig.FeeLimit.String(),
 			)
 		}
 	} else {
@@ -85,14 +85,14 @@ func CheckMaxFeeLimit(input TxInput, chainConfig *ChainConfig) error {
 		if additionalAsset == nil {
 			return fmt.Errorf("fee is in asset '%s', but there is no max-limit configured for this asset", feeAssetId)
 		}
-		maxFeeLimit := additionalAsset.MaxFee.ToBlockchain(additionalAsset.Decimals)
-		maxFeeSpendHuman := maxFeeSpend.ToHuman(additionalAsset.Decimals)
-		if maxFeeSpend.Cmp(&maxFeeLimit) > 0 {
+		FeeLimitLimit := additionalAsset.FeeLimit.ToBlockchain(additionalAsset.Decimals)
+		FeeLimitSpendHuman := FeeLimitSpend.ToHuman(additionalAsset.Decimals)
+		if FeeLimitSpend.Cmp(&FeeLimitLimit) > 0 {
 			return fmt.Errorf(
 				"transaction fee may cost up to %s %s, which is greater than the current limit of %s",
-				maxFeeSpendHuman.String(),
+				FeeLimitSpendHuman.String(),
 				additionalAsset.AssetId,
-				additionalAsset.MaxFee.String(),
+				additionalAsset.FeeLimit.String(),
 			)
 		}
 	}

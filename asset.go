@@ -346,14 +346,14 @@ type AdditionalNativeAsset struct {
 	// Decimals for the assets
 	Decimals int32 `yaml:"decimals,omitempty"`
 	// Maximum fee limit
-	MaxFee AmountHumanReadable `yaml:"max_fee"`
+	FeeLimit AmountHumanReadable `yaml:"fee_limit"`
 }
 
-func NewAdditionalNativeAsset(assetId ContractAddress, decimals int32, maxFee AmountHumanReadable) *AdditionalNativeAsset {
+func NewAdditionalNativeAsset(assetId ContractAddress, decimals int32, feeLimit AmountHumanReadable) *AdditionalNativeAsset {
 	return &AdditionalNativeAsset{
 		assetId,
 		decimals,
-		maxFee,
+		feeLimit,
 	}
 }
 
@@ -503,8 +503,8 @@ type ChainBaseConfig struct {
 	// Staking configuration
 	Staking StakingConfig `yaml:"staking,omitempty"`
 
-	// Maximum total fee limit: required for caller to make use of with `TxInput.GetMaxFee()`
-	MaxFee AmountHumanReadable `yaml:"max_fee,omitempty"`
+	// Maximum total fee limit: required for caller to make use of with `TxInput.GetFeeLimit()`
+	FeeLimit AmountHumanReadable `yaml:"fee_limit,omitempty"`
 
 	// Transfer tax is percentage that the network takes from every transfer .. only used so far for Terra Classic
 	ChainTransferTax float64 `yaml:"chain_transfer_tax,omitempty"`

@@ -125,7 +125,7 @@ func TestTransfer(t *testing.T) {
 
 	fmt.Println("transfer input: ", asJson(input))
 
-	err = xc.CheckMaxFeeLimit(input, chainConfig)
+	err = xc.CheckFeeLimit(input, chainConfig)
 	require.NoError(t, err)
 
 	builder, err := xcFactory.NewTxBuilder(chainConfig.Base())
