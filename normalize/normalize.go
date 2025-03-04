@@ -82,10 +82,6 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 	if nativeAsset == "" && strings.HasPrefix(address, "0x") {
 		nativeAsset = xc.ETH
 	}
-	options := &NormalizeOptions{
-		NoPrefix: false,
-		ZeroPad:  false,
-	}
 
 	address = strings.TrimSpace(address)
 	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
@@ -96,13 +92,9 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 			address = strings.TrimPrefix(address, prefix)
 			prefix = "xdc"
 		}
-		if options.ZeroPad {
-			address = zeroPadHex(prefix, address, 40)
-		}
+
 		address = strings.TrimPrefix(address, prefix)
-		if !options.NoPrefix {
-			address = prefix + address
-		}
+		address = prefix + address
 		address = strings.ToLower(address)
 
 	case xc.DriverBitcoinCash, xc.DriverBitcoin:
@@ -112,19 +104,22 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		}
 	case xc.DriverAptos, xc.DriverSui:
 		address = NormalizeMoveAddress(address)
-		if options.NoPrefix {
-			address = strings.TrimPrefix(address, "0x")
-		}
 	case xc.DriverCosmos:
 		// nothing to do, bech32
 
 	case xc.DriverSolana:
 		// nothing to do, base58
 	case xc.DriverTron:
-		// TODO
+		// Base58 encoding, case sensitive
 	case xc.DriverTon:
 		// convert the "0:1234" format to base64 if needed
 		address, _ = tonaddress.Normalize(address)
+	case xc.DriverXlm:
+		// nothing to do, case sensitive
+	case xc.DriverXrp:
+		// nothing to do, base58
+	case xc.DriverFilecoin:
+		// nothing to do, bech32
 	default:
 	}
 	return address
@@ -149,7 +144,6 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 		}
 		hash = zeroPadHex(prefix, hash, 64)
 
-		// TODO should we include 0x prefix?
 		hash = strings.TrimPrefix(hash, prefix)
 		hash = prefix + hash
 		hash = strings.ToLower(hash)
@@ -174,9 +168,24 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 	case xc.DriverSolana:
 		// nothing to do, base58
 	case xc.DriverTron:
-		// TODO
+		// must be lowercase hex
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
 	case xc.DriverTon:
 		return tontx.Normalize(hash)
+	case xc.DriverXlm:
+		// must be lowercase hex
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
+	case xc.DriverXrp:
+		// XRP works with upper and lower hex, we pick lowercase as with other chains
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
+	case xc.DriverFilecoin:
+		// nothing to do, bech32
 	default:
 	}
 	return hash
