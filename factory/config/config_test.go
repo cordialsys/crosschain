@@ -42,7 +42,7 @@ func (s *CrosschainTestSuite) TestChainUnmarshal() {
       chain_name: Cosmos
       explorer_url: 'myexplorer'
       decimals: 6
-      max_fee: "0.0001"
+      fee_limit: "0.0001"
     SOL:
       chain: SOL
       driver: solana
@@ -51,7 +51,7 @@ func (s *CrosschainTestSuite) TestChainUnmarshal() {
       chain_name: Solana
       explorer_url: 'https://explorer.solana.com'
       decimals: 9
-      max_fee: "100.0"
+      fee_limit: "100.0"
 `), &cfg)
 	require.NoError(err)
 
@@ -71,11 +71,11 @@ func (s *CrosschainTestSuite) TestChainUnmarshal() {
 	// is case sensitive.
 	require.Equal(xc.ATOM, cfg.Chains["ATOM"].Chain)
 	require.Equal("Cosmos", cfg.Chains["ATOM"].ChainName)
-	require.Equal("0.0001", cfg.Chains["ATOM"].MaxFee.String())
+	require.Equal("0.0001", cfg.Chains["ATOM"].FeeLimit.String())
 
 	require.Equal(xc.SOL, cfg.Chains["SOL"].Chain)
 	require.Equal("Solana", cfg.Chains["SOL"].ChainName)
-	require.Equal("100", cfg.Chains["SOL"].MaxFee.String())
+	require.Equal("100", cfg.Chains["SOL"].FeeLimit.String())
 }
 
 type ConfigWrapper struct {

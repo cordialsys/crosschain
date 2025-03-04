@@ -60,7 +60,7 @@ func (s *CrosschainTestSuite) TestChainType() {
 	require.False(NativeAsset("unknown").IsValid())
 }
 
-func TestMaxFeeConfigured(t *testing.T) {
+func TestFeeLimitConfigured(t *testing.T) {
 	xcf1 := factory.NewDefaultFactory()
 	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
 	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
@@ -68,24 +68,24 @@ func TestMaxFeeConfigured(t *testing.T) {
 			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
 				require := require.New(t)
 				chain := chain.GetChain()
-				if chain.MaxFee.Decimal().IsZero() {
+				if chain.FeeLimit.Decimal().IsZero() {
 					if len(chain.AdditionalNativeAssets) == 0 {
 						require.Fail(
 							"Max fee is required, or additional native assets must be configured (e.g. Noble chain)",
 						)
 					}
 					for _, na := range chain.AdditionalNativeAssets {
-						_, err := decimal.NewFromString(na.MaxFee.String())
+						_, err := decimal.NewFromString(na.FeeLimit.String())
 						require.NoError(err, fmt.Sprintf("%s additional asset %s (%s) max fee should be a valid decimal", chain.Chain, na.AssetId, xcf.Config.Network))
-						f, _ := na.MaxFee.Decimal().Float64()
+						f, _ := na.FeeLimit.Decimal().Float64()
 						// paranoid non-zero check to account for floating point error
 						require.True(f > 0.000000001, fmt.Sprintf("%s additional asset %s (%s) max fee should be non-zero", chain.Chain, na.AssetId, xcf.Config.Network))
 					}
 				} else {
-					_, err := decimal.NewFromString(chain.MaxFee.String())
+					_, err := decimal.NewFromString(chain.FeeLimit.String())
 					require.NoError(err, "max fee is required and should be a valid decimal")
 
-					f, _ := chain.MaxFee.Decimal().Float64()
+					f, _ := chain.FeeLimit.Decimal().Float64()
 					// paranoid non-zero check to account for floating point error
 					require.True(f > 0.000000001, "max fee should be non-zero")
 				}
@@ -140,7 +140,7 @@ func TestNativeAssetConfigs(t *testing.T) {
 						require.NotZero(na.Decimals, fmt.Sprintf("%s additional asset %s should have decimals set", chain.Chain, na.AssetId))
 					}
 					require.GreaterOrEqual(int(na.Decimals), 0, fmt.Sprintf("%s additional asset %s should have positive decimals", chain.Chain, na.AssetId))
-					require.NotEmpty(na.MaxFee, fmt.Sprintf("%s additional asset %s should have a max fee", chain.Chain, na.AssetId))
+					require.NotEmpty(na.FeeLimit, fmt.Sprintf("%s additional asset %s should have a max fee", chain.Chain, na.AssetId))
 				}
 			})
 		}

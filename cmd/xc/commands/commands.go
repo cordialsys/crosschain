@@ -316,7 +316,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
 			}
 
-			err = xc.CheckMaxFeeLimit(input, chainConfig)
+			err = xc.CheckFeeLimit(input, chainConfig)
 			if err != nil {
 				return err
 			}
