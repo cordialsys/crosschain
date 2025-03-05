@@ -535,10 +535,11 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		{
 			input := json.RawMessage(`{"token_info": {}}`)
 			type TokenInfoResponse struct {
-				Name        string `json:"name"`
-				Symbol      string `json:"symbol"`
-				Decimals    int64  `json:"decimals"`
-				TotalSupply int64  `json:"total_supply"`
+				Name   string `json:"name"`
+				Symbol string `json:"symbol"`
+				// tolerate int being encoded number or string
+				Decimals    xc.AmountBlockchain `json:"decimals"`
+				TotalSupply xc.AmountBlockchain `json:"total_supply"`
 			}
 			var tokenInfo TokenInfoResponse
 
@@ -554,7 +555,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 				if err != nil {
 					return 0, fmt.Errorf("failed to parse cw20 token info: '%v': %v", contract, err)
 				}
-				return int(tokenInfo.Decimals), nil
+				return int(tokenInfo.Decimals.Uint64()), nil
 			}
 		}
 		// Try lookup injective peggy asset
