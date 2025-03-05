@@ -511,8 +511,21 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().Decimals), nil
 	}
+	// check chain-coin if it's set
+	chainCfg := client.Asset.GetChain()
+	if chainCfg.ChainCoin == string(contract) {
+		return int(chainCfg.Decimals), nil
+	}
+	// check additional native assets
+	for _, asset := range chainCfg.AdditionalNativeAssets {
+		if asset.AssetId == contract {
+			return int(asset.Decimals), nil
+		}
+	}
+
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	queryClient := banktypes.NewQueryClient(client.Ctx)
+
 	denomMetaResponse, bankErr := queryClient.DenomMetadata(ctx, &banktypes.QueryDenomMetadataRequest{
 		Denom: string(contract),
 	})
