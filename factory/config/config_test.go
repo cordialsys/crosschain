@@ -35,7 +35,7 @@ func (s *CrosschainTestSuite) TestChainUnmarshal() {
       driver: cosmos
       net: testnet
       url: 'myurl'
-      chain_id_str: 'theta-testnet-001'
+      chain_id: 'theta-testnet-001'
       chain_prefix: 'cosmos'
       chain_coin: 'uatom'
       chain_coin_hd_path: 118

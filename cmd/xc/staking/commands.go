@@ -2,6 +2,7 @@ package staking
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -102,6 +103,8 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			inputBz, _ := json.MarshalIndent(stakingInput, "", "  ")
+			logrus.WithField("input", string(inputBz)).Debug("input")
 
 			tx, err := stakingBuilder.Stake(stakingArgs, stakingInput)
 			if err != nil {
