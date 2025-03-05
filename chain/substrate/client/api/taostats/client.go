@@ -118,3 +118,18 @@ func (client *Client) GetEvents(ctx context.Context, ext *Extrinsic) ([]*Event, 
 	}
 	return extResponse.Data, nil
 }
+
+func (client *Client) GetAccount(ctx context.Context, address string) (*AccountData, error) {
+	// use the ID and not the hash
+	url := fmt.Sprintf("%s/api/account/latest/v1?address=%s", client.baseUrl, address)
+
+	var response AccountResponse
+	err := client.Get(ctx, url, &response)
+	if err != nil {
+		return nil, fmt.Errorf("could not lookup account %s: %v", address, err)
+	}
+	if len(response.Data) == 0 {
+		return nil, fmt.Errorf("TAO address %s not found", address)
+	}
+	return &response.Data[0], nil
+}

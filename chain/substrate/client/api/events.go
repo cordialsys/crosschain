@@ -105,12 +105,18 @@ var SupportedStakingEvents = []EventDescriptor{
 			{
 				Name:  "from",
 				Index: 0,
+				Bind:  BindFrom,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "validator",
+				Index: 1,
 				Bind:  BindValidator,
 				Type:  EventAddress,
 			},
 			{
 				Name:  "amount",
-				Index: 1,
+				Index: 2,
 				Bind:  BindAmount,
 				Type:  EventInteger,
 			},
@@ -281,6 +287,7 @@ func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []Eve
 			continue
 		}
 		var validator xc.Address
+		var from xc.Address
 		var amount xc.AmountBlockchain
 		for _, attr := range desc.Attributes {
 			param, ok := ev.GetParam(attr.Name, attr.Index)
@@ -299,7 +306,14 @@ func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []Eve
 				if !ok {
 					return nil, nil, err
 				}
-				validator = xcAddr
+				switch attr.Bind {
+				case BindFrom:
+					from = xcAddr
+				case BindValidator:
+					validator = xcAddr
+				default:
+					return nil, nil, fmt.Errorf("substrate event %s attribute %s has invalid bind configured: %s", handle, attr.Name, attr.Bind)
+				}
 
 			case EventInteger:
 				asString := fmt.Sprint(param)
@@ -316,11 +330,13 @@ func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []Eve
 			stakes = append(stakes, &xcclient.Stake{
 				Validator: string(validator),
 				Balance:   amount,
+				Address:   string(from),
 			})
 		} else {
 			unstakes = append(unstakes, &xcclient.Unstake{
 				Validator: string(validator),
 				Balance:   amount,
+				Address:   string(from),
 			})
 		}
 

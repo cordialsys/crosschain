@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/substrate/client/api/taostats"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -15,26 +14,46 @@ import (
 // Fetch staked balances accross different possible states
 func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalanceArgs) ([]*xclient.StakedBalance, error) {
 	if client.Asset.GetChain().Chain == xc.TAO {
-		// zero := xc.NewAmountBlockchainFromUint64(0)
-		meta, err := client.DotClient.RPC.State.GetMetadataLatest()
-		if err != nil {
-			return nil, err
+		if client.Asset.GetChain().IndexerType != IndexerTaostats {
+			return nil, fmt.Errorf("client not configured to get TAO staked balances")
 		}
 
-		key, err := types.CreateStorageKey(meta, "SubtensorModule", "TotalColdkeyStake", base58.Decode(string(args.GetFrom()))[1:33])
+		taoStatsClient := taostats.NewClient(client.indexerUrl, client.apiKey, client.Asset.GetChain().Limiter)
+		account, err := taoStatsClient.GetAccount(ctx, string(args.GetFrom()))
 		if err != nil {
-			return nil, err
-		}
-
-		var bal types.U64
-		ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &bal)
-		if err != nil || !ok {
 			return nil, err
 		}
 
 		return []*xclient.StakedBalance{
-			xclient.NewStakedBalance(xc.NewAmountBlockchainFromUint64(uint64(bal)), xclient.Active, "", ""),
+			xclient.NewStakedBalance(
+				xc.NewAmountBlockchainFromStr(account.BalanceStaked),
+				xclient.Active,
+				// unfortunately, cannot get validator + netuid
+				"",
+				"",
+			),
 		}, nil
+		// Not longer works:
+		// TAO now has a much more complex way to query staked balances.  Using TAOStats API instead for now.
+		// meta, err := client.DotClient.RPC.State.GetMetadataLatest()
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// key, err := types.CreateStorageKey(meta, "SubtensorModule", "TotalColdkeyStake", base58.Decode(string(args.GetFrom()))[1:33])
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		// var bal types.U64
+		// ok, err := client.DotClient.RPC.State.GetStorageLatest(key, &bal)
+		// if err != nil || !ok {
+		// 	return nil, err
+		// }
+
+		// return []*xclient.StakedBalance{
+		// 	xclient.NewStakedBalance(xc.NewAmountBlockchainFromUint64(uint64(bal)), xclient.Active, "", ""),
+		// }, nil
 	}
 
 	return nil, fmt.Errorf("not implemented for generic substrate chains")
