@@ -6,6 +6,7 @@
 # external.coin_gecko.asset_id: Take from CoinGecko page for the asset.
 # external.coin_market_cap.asset_id: Take from CoinMarketCap page for the asset.
 # IndexingCo IDs can be found at https://jiti.indexing.co/networks
+# Substrate chain prefixes can be found at https://polkadot.subscan.io/tools/format_transform
 
 network: "mainnet"
 chains:
@@ -63,6 +64,22 @@ chains:
         asset_id: "3794"
       coin_gecko:
         asset_id: cosmos
+  ASTR:
+    chain: ASTR
+    driver: substrate
+    indexer_url: "https://astar.api.subscan.io"
+    indexer_type: subscan
+    decimals: 18
+    fee_limit: "500"
+    chain_name: Astar
+    chain_prefix: "5"
+    confirmations_final: 3
+    external:
+      dti: P5B46MFPP
+      coin_market_cap:
+        asset_id: "12885"
+      coin_gecko:
+        asset_id: astar
   AVAX:
     chain: AVAX
     driver: evm

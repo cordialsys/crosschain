@@ -29,6 +29,7 @@ const (
 	ACA    = NativeAsset("ACA")    // Acala
 	APTOS  = NativeAsset("APTOS")  // APTOS
 	ArbETH = NativeAsset("ArbETH") // Arbitrum
+	ASTR   = NativeAsset("ASTR")   // Astar
 	ATOM   = NativeAsset("ATOM")   // Cosmos
 	AurETH = NativeAsset("AurETH") // Aurora
 	AVAX   = NativeAsset("AVAX")   // Avalanche
@@ -84,6 +85,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ACA,
 	APTOS,
 	ArbETH,
+	ASTR,
 	ATOM,
 	AurETH,
 	AVAX,
@@ -241,7 +243,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSui
 	case SOL:
 		return DriverSolana
-	case DOT, TAO, KSM, ENJ, KAR:
+	case DOT, TAO, KSM, ENJ, KAR, ASTR:
 		return DriverSubstrate
 	case TRX:
 		return DriverTron

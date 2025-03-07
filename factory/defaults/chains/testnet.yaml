@@ -18,6 +18,15 @@ chains:
     chain_coin: uatom
     chain_coin_hd_path: 118
     decimals: 6
+  ASTR:
+    chain: ASTR
+    driver: substrate
+    indexer_url: "https://shibuya.api.subscan.io"
+    indexer_type: subscan
+    decimals: 18
+    chain_name: Shibuya
+    chain_prefix: "5"
+    confirmations_final: 3
   AVAX:
     chain: AVAX
     driver: evm
