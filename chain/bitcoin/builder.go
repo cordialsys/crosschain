@@ -63,14 +63,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	if local_input, ok = (input.(*tx_input.TxInput)); !ok {
 		return &tx.Tx{}, errors.New("xc.TxInput is not from a bitcoin chain")
 	}
-	// Only need to save min utxo for the transfer.
 	totalSpend := local_input.SumUtxo()
-
-	gasPrice := local_input.GasPricePerByte
-	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
-		local_input.GetEstimatedSizePerSpentUtxo() * uint64(len(local_input.UnspentOutputs)),
-	)
-	fee := gasPrice.Mul(&estimatedTxBytesLength)
+	// the fee limit is also just the fee on bitcoin (there's no variable gas / cost of execution)
+	fee, _ := local_input.GetFeeLimit()
 
 	transferAmountAndFee := amount.Add(&fee)
 	unspentAmountMinusTransferAndFee := totalSpend.Sub(&transferAmountAndFee)
@@ -79,10 +74,13 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 			To:    to,
 			Value: amount,
 		},
-		{
+	}
+	// send remaining funds back to sender if any
+	if !unspentAmountMinusTransferAndFee.IsZero() {
+		recipients = append(recipients, tx.Recipient{
 			To:    from,
 			Value: unspentAmountMinusTransferAndFee,
-		},
+		})
 	}
 
 	msgTx := wire.NewMsgTx(TxVersion)
