@@ -130,6 +130,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		GasLimit:   msgWithFees.GasLimit,
 		GasFeeCap:  gasFeeCap,
 		GasPremium: gasPremium,
+
+		XNonce:      nonce,
+		XGasLimit:   msgWithFees.GasLimit,
+		XGasFeeCap:  gasFeeCap,
+		XGasPremium: gasPremium,
 	}, nil
 }
 

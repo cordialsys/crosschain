@@ -9,14 +9,20 @@ import (
 type TxInput struct {
 	xc.TxInputEnvelope
 	// Nonce of the account, incremented for each transaction
-	Nonce uint64
+	Nonce uint64 `json:"nonce"`
 	// GasLimit is the maximum amount of gas that can be used for the transaction
-	GasLimit uint64
+	GasLimit uint64 `json:"gas_limit"`
 	// GasFeeCap is the maximum amount of gas fee that user is willing to pay
-	GasFeeCap xc.AmountBlockchain
+	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap"`
 	// GasPremium is the amount of gas fee that user is willing to pay
 	// per unit of gas
-	GasPremium xc.AmountBlockchain
+	GasPremium xc.AmountBlockchain `json:"gas_premium,omitempty"`
+
+	// renamed to snake_case 03/10/2025, should delete later
+	XNonce      uint64              `json:"Nonce,omitempty"`
+	XGasLimit   uint64              `json:"GasLimit,omitempty"`
+	XGasFeeCap  xc.AmountBlockchain `json:"GasFeeCap,omitempty"`
+	XGasPremium xc.AmountBlockchain `json:"GasPremium,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
