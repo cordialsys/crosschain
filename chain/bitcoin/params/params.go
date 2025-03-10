@@ -33,6 +33,12 @@ type NetworkTriple struct {
 }
 
 func init() {
+	if err := chaincfg.Register(BtcNetworks.Mainnet); err != nil {
+	}
+	if err := chaincfg.Register(BtcNetworks.Testnet); err != nil {
+	}
+	if err := chaincfg.Register(BtcNetworks.Regtest); err != nil {
+	}
 	// TODO re-enable panic'ing on registration error
 	if err := chaincfg.Register(DogeNetworks.Mainnet); err != nil {
 		// panic(err)
@@ -70,7 +76,19 @@ func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
 
 var BtcNetworks *NetworkTriple = &NetworkTriple{
 	Mainnet: &chaincfg.MainNetParams,
-	Testnet: &chaincfg.TestNet3Params,
+	// testnet4 is the upgrade to testnet3
+	// https://github.com/bitcoin/bitcoin/blob/45719390a1434ad7377a5ed05dcd73028130cf2d/src/kernel/chainparams.cpp
+	Testnet: &chaincfg.Params{
+		Name: "testnet",
+		Net:  0x283f161c,
+
+		PubKeyHashAddrID: 111,
+		ScriptHashAddrID: 196,
+		PrivateKeyID:     239,
+		HDPublicKeyID:    [4]byte{0x04, 0x35, 0x87, 0xCF},
+		HDPrivateKeyID:   [4]byte{0x04, 0x35, 0x83, 0x94},
+		Bech32HRPSegwit:  "tb",
+	},
 	Regtest: &chaincfg.RegressionNetParams,
 }
 
