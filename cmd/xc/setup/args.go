@@ -159,13 +159,14 @@ type RpcArgs struct {
 }
 
 const DefaultApiRef = "env:API_KEY"
+const DefaultTreasuryApiRef = "env:TREASURY_API_KEY"
 
 func AddRpcArgs(cmd *cobra.Command) {
 	// cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
 	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
 	cmd.PersistentFlags().String("algorithm", "", "Override default signing algorithm. Optional, used only by bitcoin.")
-	cmd.PersistentFlags().String("api-key", DefaultApiRef, "Secret reference for API key to use for RPC client.")
+	cmd.PersistentFlags().String("api-key", DefaultApiRef, fmt.Sprintf("Secret reference for API key to use for RPC client (may also set %s).", DefaultTreasuryApiRef))
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
 	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
@@ -192,6 +193,14 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	apikey, _ := cmd.Flags().GetString("api-key")
 	if apikey != "" && len(strings.Split(apikey, ":")) == 0 {
 		return nil, fmt.Errorf("api-key must not be passed directly on command, instead you should use a reference (default is %s)", DefaultApiRef)
+	}
+	if apikey == DefaultApiRef {
+		if val, _ := config.Secret(apikey).Load(); val == "" {
+			if val, _ := config.Secret(DefaultTreasuryApiRef).Load(); val != "" {
+				// use TREASURY_API_KEY if API_KEY is not set
+				apikey = DefaultTreasuryApiRef
+			}
+		}
 	}
 
 	network, err := cmd.Flags().GetString("network")
