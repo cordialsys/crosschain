@@ -214,6 +214,11 @@ func TestFetchTxInput(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, input)
+
+				input.(*tx_input.TxInput).XGasFeeCap = xc.AmountBlockchain{}
+				input.(*tx_input.TxInput).XGasPremium = xc.AmountBlockchain{}
+				input.(*tx_input.TxInput).XGasLimit = 0
+				input.(*tx_input.TxInput).XNonce = 0
 				require.Equal(t, v.expectedInput, input)
 			}
 		})

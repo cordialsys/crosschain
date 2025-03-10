@@ -34,6 +34,8 @@ type BlockbookClient struct {
 	Chaincfg   *chaincfg.Params
 	Url        string
 	decoder    address.AddressDecoder
+
+	skipAmountFilter bool
 }
 
 var _ xclient.Client = &BlockbookClient{}
@@ -57,6 +59,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		chaincfg,
 		url,
 		decoder,
+		false,
 	}, nil
 }
 
@@ -317,11 +320,21 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 
 	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
+	if !client.skipAmountFilter {
+		// filter the UTXO set needed
+		input.SetAmount(args.GetAmount())
+	}
+
 	return input, nil
 }
 
 func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount, and we cannot
+	// estimate the fee accurately without knowing the number of utxo we need to spend to satisfy the amount.
+	client.skipAmountFilter = true
+	defer func() {
+		client.skipAmountFilter = false
+	}()
 	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
 	return client.FetchTransferInput(ctx, args)
 }

@@ -99,11 +99,12 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 }
 
 func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	byteLengthEstimate := xc.NewAmountBlockchainFromUint64(
+	gasPrice := txInput.GasPricePerByte
+	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
 		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),
 	)
-	maxFee := txInput.GasPricePerByte.Mul(&byteLengthEstimate)
-	return maxFee, ""
+	fee := gasPrice.Mul(&estimatedTxBytesLength)
+	return fee, ""
 }
 
 func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {

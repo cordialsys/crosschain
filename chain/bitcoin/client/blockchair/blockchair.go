@@ -27,12 +27,13 @@ import (
 // Client for Bitcoin
 type BlockchairClient struct {
 	// opts            ClientOptions
-	httpClient     http.Client
-	Asset          xc.ITask
-	Chaincfg       *chaincfg.Params
-	Url            string
-	ApiKey         string
-	addressDecoder address.AddressDecoder
+	httpClient       http.Client
+	Asset            xc.ITask
+	Chaincfg         *chaincfg.Params
+	Url              string
+	ApiKey           string
+	addressDecoder   address.AddressDecoder
+	skipAmountFilter bool
 }
 
 var _ xclient.Client = &BlockchairClient{}
@@ -57,12 +58,13 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	}
 
 	return &BlockchairClient{
-		ApiKey:         apiKey,
-		Url:            cfg.URL,
-		Chaincfg:       params,
-		httpClient:     httpClient,
-		Asset:          asset,
-		addressDecoder: &address.BtcAddressDecoder{},
+		ApiKey:           apiKey,
+		Url:              cfg.URL,
+		Chaincfg:         params,
+		httpClient:       httpClient,
+		Asset:            asset,
+		addressDecoder:   &address.BtcAddressDecoder{},
+		skipAmountFilter: false,
 	}, nil
 }
 
@@ -172,12 +174,20 @@ func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcb
 		return input, err
 	}
 	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
+	if !client.skipAmountFilter {
+		input.SetAmount(args.GetAmount())
+	}
 
 	return input, nil
 }
 
 func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount, and we cannot
+	// estimate the fee accurately without knowing the number of utxo we need to spend to satisfy the amount.
+	client.skipAmountFilter = true
+	defer func() {
+		client.skipAmountFilter = false
+	}()
 	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
 	return client.FetchTransferInput(ctx, args)
 }
