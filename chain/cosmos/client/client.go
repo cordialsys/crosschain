@@ -11,6 +11,7 @@ import (
 	comettypes "github.com/cometbft/cometbft/rpc/core/types"
 	jsonrpcclient "github.com/cometbft/cometbft/rpc/jsonrpc/client"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/client/localtypes"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -30,6 +31,7 @@ import (
 	injectiveexchangetypes "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/modules/exchange/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/utils"
+	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
 
 	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
 
@@ -128,7 +130,55 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
+	res, err := client.SimulateTransfer(ctx, args, baseTxInput)
+	if err != nil {
+		return nil, err
+	}
+	if res.GasInfo.GasUsed > 0 {
+		baseTxInput.GasLimit = res.GasInfo.GasUsed
+		// cosmos is like always a bit off from simulation and prod,
+		// so we need to increase the gas limit slightly
+		baseTxInput.GasLimit = (baseTxInput.GasLimit * 110) / 100
+
+		logrus.WithFields(logrus.Fields{
+			"gas_used": res.GasInfo.GasUsed,
+			"from":     args.GetFrom(),
+			"contract": contract,
+		}).Debug("simulated tx")
+	}
+
 	return baseTxInput, nil
+}
+
+func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.TransferArgs, input *tx_input.TxInput) (*cosmostx.SimulateResponse, error) {
+	builder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+	if err != nil {
+		return nil, err
+	}
+	cosmosTxI, err := builder.Transfer(args, input)
+	if err != nil {
+		return nil, err
+	}
+	cosmosTx := cosmosTxI.(*tx.Tx)
+	sig := make([]byte, 64)
+	err = cosmosTx.AddSignatures(sig)
+	if err != nil {
+		return nil, err
+	}
+
+	txBz, err := cosmosTx.Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize tx: %v", err)
+	}
+
+	txClient := cosmostx.NewServiceClient(client.Ctx)
+	res, err := txClient.Simulate(ctx, &cosmostx.SimulateRequest{
+		TxBytes: txBz,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to simulate tx: %v", err)
+	}
+	return res, nil
 }
 
 func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
