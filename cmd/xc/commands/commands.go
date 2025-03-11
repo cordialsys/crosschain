@@ -3,12 +3,14 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -104,6 +106,7 @@ func CmdTxInput() *cobra.Command {
 	var addressTo string
 	var amount string
 	var contract string
+	var publicKeyHex string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input"},
@@ -128,6 +131,27 @@ func CmdTxInput() *cobra.Command {
 			if contract != "" {
 				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
 			}
+			if publicKeyHex != "" {
+				publicKey, err := hex.DecodeString(strings.TrimPrefix(publicKeyHex, "0x"))
+				if err != nil {
+					return fmt.Errorf("could not decode public key: %v", err)
+				}
+				tfOptions = append(tfOptions, builder.OptionPublicKey(publicKey))
+			} else {
+				privateKeyInput := signer.ReadPrivateKeyEnv()
+				if privateKeyInput != "" {
+					signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
+					if err != nil {
+						return fmt.Errorf("could not import private key: %v", err)
+					}
+					publicKey, err := signer.PublicKey()
+					if err != nil {
+						return fmt.Errorf("could not create public key: %v", err)
+					}
+					tfOptions = append(tfOptions, builder.OptionPublicKey(publicKey))
+				}
+			}
+
 			tfArgs, err := builder.NewTransferArgs(
 				fromAddress,
 				xc.Address(addressTo),
@@ -151,6 +175,10 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
 	cmd.Flags().StringVar(&amount, "amount", "", "blockchain amount to transfer")
+	cmd.Flags().StringVar(&publicKeyHex, "public-key", "",
+		fmt.Sprintf("Public key in hex of the sender address (will use %s if set)", signer.EnvPrivateKey),
+	)
+
 	return cmd
 }
 

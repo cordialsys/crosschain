@@ -2,6 +2,8 @@ package aptos
 
 import (
 	"context"
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -57,9 +59,7 @@ func ReplaceIncompatiableTxResponses(body []byte) []byte {
 		data["transactions"] = bz
 	}
 	// - consider Transaction.signature
-	if _, ok := data["signature"]; ok {
-		delete(data, "signature")
-	}
+	delete(data, "signature")
 
 	newBody, err := json.Marshal(data)
 	if err != nil {
@@ -109,16 +109,80 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return &tx_input.TxInput{}, err
 	}
 
-	return &tx_input.TxInput{
+	builder, err := NewTxBuilder(client.Asset.GetChain().Base())
+	if err != nil {
+		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
+	}
+	defaultGasLimit := 1000
+	if client.Asset.GetChain().GasLimitDefault > 0 {
+		defaultGasLimit = client.Asset.GetChain().GasLimitDefault
+	}
+	input := &tx_input.TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
 			Type: xc.DriverAptos,
 		},
 		SequenceNumber: acc.SequenceNumber,
 		ChainId:        ledger.ChainId,
-		GasLimit:       2000,
+		GasLimit:       uint64(defaultGasLimit),
 		Timestamp:      ledger.LedgerTimestamp,
 		GasPrice:       gas_price.Uint64(),
-	}, nil
+	}
+
+	// If the public key is set, we can simulate the tx and get
+	// an accurate gas limit.
+	if pubkey, ok := args.GetPublicKey(); ok {
+		zero := [32]byte{}
+		privateKey := ed25519.NewKeyFromSeed(zero[:])
+		privateKey.Public()
+		input.Pubkey = pubkey
+
+		txI, err := builder.Transfer(args, input)
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not create tx: %v", err)
+		}
+		tx := txI.(*Tx)
+
+		hashes, err := tx.Sighashes()
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not get sighashes: %v", err)
+		}
+		signatureData := ed25519.Sign(privateKey, hashes[0])
+		tx.AddSignatures(signatureData)
+
+		serialized, err := tx.Serialize()
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not serialize tx: %v", err)
+		}
+
+		output, err := client.AptosClient.SimulateSignedBCSTransaction(serialized)
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
+		}
+		log := logrus.WithFields(logrus.Fields{
+			"gas_limit":  input.GasLimit,
+			"public_key": hex.EncodeToString(pubkey),
+			"from":       args.GetFrom(),
+		})
+		var success bool
+		if len(output) > 0 {
+			success = output[0].Success
+			log = log.WithField("status", output[0].VmStatus)
+			if success {
+				input.GasLimit = output[0].GasUsed
+				if _, ok := args.GetContract(); ok {
+					// increase limit by ~10% for 3rd party tokens
+					input.GasLimit = (input.GasLimit * 1100) / 1000
+				}
+			}
+		}
+		log.WithField("success", success).Debug("simulated tx")
+	} else {
+		logrus.WithFields(logrus.Fields{
+			"from": args.GetFrom(),
+		}).Debug("cannot simulate tx, public key is not known")
+	}
+
+	return input, nil
 }
 
 // FetchLegacyTxInput returns tx input for a Aptos tx
