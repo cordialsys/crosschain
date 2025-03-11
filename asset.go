@@ -559,6 +559,8 @@ type ChainClientConfig struct {
 	// This should be in the blockchain amount.
 	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
 	ChainMinGasPrice float64 `yaml:"chain_min_gas_price,omitempty"`
+	// Default gas limit for transactions
+	GasLimitDefault int `yaml:"gas_limit_default,omitempty"`
 	// TransactionActiveTime specifies the duration for which a transaction remains valid after being submitted.
 	// The value is represented as a `time.Duration` string.
 	// This field is currently used only by the Stellar network.
