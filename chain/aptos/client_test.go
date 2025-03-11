@@ -48,7 +48,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 			input: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
-				GasLimit:        2000,
+				GasLimit:        1000,
 				GasPrice:        100,
 				Timestamp:       1683057860656414,
 				ChainId:         58,
