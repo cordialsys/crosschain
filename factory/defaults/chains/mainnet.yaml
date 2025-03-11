@@ -80,6 +80,8 @@ chains:
         asset_id: "3794"
       coin_gecko:
         asset_id: cosmos
+      indexing_co:
+        chain_id: cosmos
   ASTR:
     chain: ASTR
     driver: substrate
@@ -323,6 +325,8 @@ chains:
         asset_id: "1321"
       coin_gecko:
         asset_id: ethereum-classic
+      indexing_co:
+        chain_id: ethereum_classic
   ETH:
     chain: ETH
     driver: evm
@@ -360,6 +364,8 @@ chains:
         asset_id: "21296"
       coin_gecko:
         asset_id: ethereumpow
+      indexing_co:
+        chain_id: ethereum_pow
   EmROSE:
     chain: EmROSE
     driver: evm-legacy
@@ -387,6 +393,8 @@ chains:
         asset_id: "23149"
       coin_gecko:
         asset_id: filecoin
+      indexing_co:
+        chain_id: filecoin
   FTM:
     chain: FTM
     driver: evm-legacy
@@ -419,6 +427,8 @@ chains:
     external:
       coin_market_cap:
         asset_id: "19960"
+      indexing_co:
+        chain_id: provenance
   INJ:
     chain: INJ
     driver: evmos
@@ -516,6 +526,8 @@ chains:
         asset_id: "20314"
       coin_gecko:
         asset_id: terra-2
+        indexing_co:
+          chain_id: terra
   LUNC:
     chain: LUNC
     driver: cosmos
@@ -538,6 +550,8 @@ chains:
         asset_id: "4172"
       coin_gecko:
         asset_id: terra
+      indexing_co:
+        chain_id: terra_classic
   MATIC:
     chain: MATIC
     driver: evm
@@ -621,7 +635,6 @@ chains:
         asset_id: optimistic-ethereum
       indexing_co:
         chain_id: optimism
-
   SEI:
     chain: SEI
     driver: cosmos
@@ -641,6 +654,8 @@ chains:
         asset_id: "23149"
       coin_gecko:
         asset_id: sei-network
+      indexing_co:
+        chain_id: sei
   SeiEVM:
     chain: SeiEVM
     driver: evm
@@ -725,6 +740,8 @@ chains:
         asset_id: "22861"
       coin_gecko:
         asset_id: celestia
+      indexing_co:
+        chain_id: terra_classic
   TON:
     chain: TON
     driver: ton
@@ -790,6 +807,8 @@ chains:
         asset_id: "22359"
       coin_gecko:
         asset_id: xpla
+      indexing_co:
+        chain_id: xpla
   XRP:
     chain: XRP
     driver: xrp
