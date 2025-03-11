@@ -362,6 +362,47 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	input.GasBudget = input.GasBudget + GAS_BUDGET_PER_COIN*uint64(len(input.Coins))
 
 	input.ExcludeGasCoin()
+	inputSim := *input
+	inputSim.Pubkey = make([]byte, 32)
+
+	builder, err := NewTxBuilder(c.Asset.GetChain().Base())
+	if err != nil {
+		return input, fmt.Errorf("could not create tx builder: %v", err)
+	}
+
+	txI, err := builder.Transfer(args, &inputSim)
+	if err != nil {
+		return input, fmt.Errorf("could not build tx: %v", err)
+	}
+	tx := txI.(*Tx)
+	serialized, err := tx.Serialize()
+	if err != nil {
+		return input, fmt.Errorf("could not serialize tx: %v", err)
+	}
+	dryRun, err := c.SuiClient.DryRunTransaction(ctx, lib.Base64Data(serialized))
+	if err != nil {
+		return input, fmt.Errorf("could not dry run tx: %v", err)
+	}
+	log := logrus.WithField("from", args.GetFrom())
+	if dryRun.Effects.Data.V1 == nil {
+		log.Error("dry run returned nil effects")
+	} else {
+		log = log.WithField("status", dryRun.Effects.Data.V1.Status.Status)
+		log = log.WithField("error", dryRun.Effects.Data.V1.Status.Error)
+		if dryRun.Effects.Data.V1.Status.Status == "success" {
+			gasUsed := dryRun.Effects.Data.V1.GasUsed
+			// https://docs.sui.io/concepts/tokenomics/gas-in-sui
+			gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64() - gasUsed.StorageRebate.Uint64()
+			if contract != native {
+				// increase budget by 10% for 3rd party coins
+				log = log.WithField("contract", contract)
+				gasFee = (gasFee * 110) / 100
+			}
+			input.GasBudget = gasFee
+			log = log.WithField("gas_budget", gasFee)
+		}
+		log.Debug("simulated tx")
+	}
 
 	return input, nil
 }
