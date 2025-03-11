@@ -27,6 +27,7 @@ type NativeAsset string
 // List of supported NativeAsset
 const (
 	ACA    = NativeAsset("ACA")    // Acala
+	AKT    = NativeAsset("AKT")    // Akash
 	APTOS  = NativeAsset("APTOS")  // APTOS
 	ArbETH = NativeAsset("ArbETH") // Arbitrum
 	ASTR   = NativeAsset("ASTR")   // Astar
@@ -78,6 +79,7 @@ const (
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
+	AKT,
 	BCH,
 	BTC,
 	DOGE,
@@ -237,7 +239,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT:
 		return DriverCosmos
 	case SUI:
 		return DriverSui

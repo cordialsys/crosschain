@@ -15,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txsigning "github.com/cosmos/cosmos-sdk/types/tx/signing"
+	"github.com/sirupsen/logrus"
 )
 
 // EstimateGas estimates gas price for a Cosmos chain
@@ -39,11 +40,20 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 	}
 	minFeeRaw, err := gas.ParseMinGasError(res, denoms)
 	if err != nil {
-		defaultGas := client.Asset.GetChain().ChainGasPriceDefault
-		return defaultGas, nil
+		logrus.WithField("chain", native.Chain).WithField("error", err).Error("could not parse min gas error")
+		defaultBudgetHuman := client.Asset.GetChain().GasBudgetDefault
+		defaultBudget := defaultBudgetHuman.ToBlockchain(client.Asset.GetChain().Decimals)
+		return gas.TotalFeeToFeePerGas(defaultBudget.String(), gasLimitForEstimate), nil
 	}
+
 	// Need to convert total fee into gas price (cost per gas)
-	return gas.TotalFeeToFeePerGas(minFeeRaw.Amount.String(), gasLimitForEstimate), nil
+	perGas := gas.TotalFeeToFeePerGas(
+		minFeeRaw.Amount.String(),
+		// credit 1% gas to prevent off-by-one errors
+		// (gasLimitForEstimate*99)/100,
+		gasLimitForEstimate,
+	)
+	return perGas, nil
 }
 
 // There is no way to estimate gas on cosmos chains.

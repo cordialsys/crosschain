@@ -9,6 +9,17 @@ chains:
     net: devnet
     chain_name: Aptos (Devnet)
     decimals: 8
+  AKT:
+    chain: AKT
+    driver: cosmos
+    chain_id: akashnet-2
+    chain_name: Akash
+    chain_prefix: akash
+    decimals: 6
+    chain_coin: uakt
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    disabled: true
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -172,7 +183,7 @@ chains:
     chain_prefix: inj
     chain_coin: inj
     chain_coin_hd_path: 60
-    chain_gas_price_default: 5e+08
+    gas_budget_default: "0.10"
     decimals: 18
   LUNA:
     chain: LUNA
@@ -218,7 +229,7 @@ chains:
     chain_prefix: sei
     chain_coin: usei
     chain_coin_hd_path: 118
-    chain_gas_price_default: 0.1
+    gas_budget_default: "0.1"
     decimals: 6
   TIA:
     chain: TIA
@@ -228,7 +239,7 @@ chains:
     chain_id: mocha-4
     chain_coin: utia
     chain_coin_hd_path: 118
-    chain_gas_price_default: 0.1
+    gas_budget_default: "0.1"
     decimals: 6
   SOL:
     chain: SOL
@@ -341,5 +352,5 @@ chains:
     chain_prefix: sei
     chain_coin: sei
     chain_coin_hd_path: 118
-    chain_gas_price_default: 0.1
+    gas_budget_default: "0.1"
     decimals: 18
