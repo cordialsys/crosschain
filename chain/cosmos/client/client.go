@@ -33,8 +33,6 @@ import (
 	"github.com/cordialsys/crosschain/utils"
 	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
 
-	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
-
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
 )
 
@@ -95,7 +93,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	if err != nil {
 		panic(err)
 	}
-	_ = httpClient
 
 	// Instantiate also a raw RPC client as we need to re-implement some methods
 	// on behalf of special cosmos-sdk chains.
@@ -449,7 +446,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 func (client *Client) fetchBalanceAndType(ctx context.Context, address xc.Address, contractMaybe xc.ContractAddress) (xc.AmountBlockchain, tx_input.CosmoAssetType, error) {
 	// attempt getting the x/bank module balance first.
-	bal, bankErr := client.fetchBankModuleBalance(ctx, address, contractMaybe, client.Asset)
+	bal, bankErr := client.fetchBankModuleBalance(ctx, address, contractMaybe)
 	if bankErr == nil {
 		if bal.Uint64() == 0 {
 			// sometimes x/bank will incorrectly return 0 balance for invalid bank assets (like on terra chain).
@@ -505,7 +502,7 @@ func (client *Client) FetchCw20Balance(ctx context.Context, address xc.Address, 
 
 // Cosmos chains can have multiple native assets.  This helper is necessary to query the
 // native bank module for a given asset.
-func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Address, contractMaybe xc.ContractAddress, asset xc.ITask) (xc.AmountBlockchain, error) {
+func (client *Client) fetchBankModuleBalance(ctx context.Context, address xc.Address, contractMaybe xc.ContractAddress) (xc.AmountBlockchain, error) {
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	zero := xc.NewAmountBlockchainFromUint64(0)
 

@@ -14,6 +14,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	"github.com/cosmos/cosmos-sdk/types"
+	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
@@ -28,6 +30,34 @@ func TestNewClient(t *testing.T) {
 
 func ignoreError(val []byte, err error) []byte {
 	return val
+}
+
+func makeSimulateResponse(gasUsed uint64, gasRequested uint64) string {
+	response := cosmostx.SimulateResponse{
+		GasInfo: &types.GasInfo{
+			GasUsed:   gasUsed,
+			GasWanted: gasRequested,
+		},
+		Result: &types.Result{},
+	}
+	responseBz, err := response.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	jsonRpcResult := fmt.Sprintf(`{"response": {
+		"code":0,
+		"log":"",
+		"info":"",
+		"index":"0",
+		"key":null,
+		"value":"%s",
+		"proofOps":null,
+		"height":"13534747",
+		"codespace":""}
+	}
+	`, base64.StdEncoding.EncodeToString(responseBz))
+	return jsonRpcResult
 }
 func TestFetchTxInput(t *testing.T) {
 
@@ -51,6 +81,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
 				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get tx simulate
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			// `{"uluna": "0.015"}`,
 			&TxInput{
@@ -58,7 +90,7 @@ func TestFetchTxInput(t *testing.T) {
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR")),
 				AccountNumber:       17241,
 				Sequence:            3,
-				GasLimit:            gas.NativeTransferGasLimit,
+				GasLimit:            (50_000 * 110) / 100,
 				GasPrice:            0.015,
 				LegacyMemo:          "",
 				TimeoutHeight:       client.TimeoutInBlocks + 123,
@@ -78,13 +110,15 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
 				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get tx simulate
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			&TxInput{
 				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:       1442,
 				Sequence:            4,
-				GasLimit:            gas.NativeTransferGasLimit,
+				GasLimit:            (50_000 * 110) / 100,
 				TimeoutHeight:       client.TimeoutInBlocks,
 				GasPrice:            850000,
 				LegacyMemo:          "",
@@ -107,13 +141,15 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get x/wasm cw20 balance
 				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get tx simulate
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			&TxInput{
 				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:       1442,
 				Sequence:            4,
-				GasLimit:            gas.NativeTransferGasLimit,
+				GasLimit:            (50_000 * 110) / 100,
 				TimeoutHeight:       client.TimeoutInBlocks,
 				GasPrice:            850000,
 				LegacyMemo:          "",

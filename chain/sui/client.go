@@ -387,12 +387,25 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if dryRun.Effects.Data.V1 == nil {
 		log.Error("dry run returned nil effects")
 	} else {
+		// outBz, _ := json.MarshalIndent(dryRun, "", "  ")
+		// fmt.Println(string(outBz))
 		log = log.WithField("status", dryRun.Effects.Data.V1.Status.Status)
 		log = log.WithField("error", dryRun.Effects.Data.V1.Status.Error)
 		if dryRun.Effects.Data.V1.Status.Status == "success" {
 			gasUsed := dryRun.Effects.Data.V1.GasUsed
 			// https://docs.sui.io/concepts/tokenomics/gas-in-sui
-			gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64() - gasUsed.StorageRebate.Uint64()
+			gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64()
+			gasRebate := gasUsed.StorageRebate.Uint64()
+			// use the min gas budget for SUI
+			if gasRebate > gasFee {
+				gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
+				if gasFee == 0 {
+					gasFee = 2000000
+				}
+			} else {
+				gasFee = gasFee - gasRebate
+			}
+
 			if contract != native {
 				// increase budget by 10% for 3rd party coins
 				log = log.WithField("contract", contract)

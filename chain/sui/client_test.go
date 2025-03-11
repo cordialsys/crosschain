@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
 
 	"github.com/coming-chat/go-sui/v2/lib"
 	"github.com/coming-chat/go-sui/v2/move_types"
@@ -15,6 +16,7 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/require"
 )
 
 func mustCoinToObject(coin *types.Coin) *bcs.ObjectArg__ImmOrOwnedObject {
@@ -234,9 +236,14 @@ func suiCoin(id string, digest string, amount uint64, version int) *types.Coin {
 	return coinObject("0x2::sui::SUI", id, digest, amount, version)
 }
 
-func (s *CrosschainTestSuite) TestTransfers() {
-	require := s.Require()
+func DryRunResponse(computationCost int, storageCost int, rebate int) string {
+	return fmt.Sprintf(
+		`{"effects":{"messageVersion":"v1","status":{"status":"success"},"executedEpoch":"699","gasUsed":{"computationCost":"%d","storageCost":"%d","storageRebate":"%d","nonRefundableStorageFee":"9880"},"modifiedAtVersions":[{"objectId":"0x1332bb5f4502d65564b9ad75ad7a88c3a4db35a19e68c6ee6992e8a31685d296","sequenceNumber":"505271721"}],"transactionDigest":"8mYS9KTTChUUN3kgna31455KorzQLUaq2RY3PCKYETvN","created":[{"owner":{"AddressOwner":"0x7046621c3a15ee541d750b1dc76d820fdc0b163f0d85c53b0b08c97e2be99a50"},"reference":{"objectId":"0xe4b4a4e7ddfced6be7f4f4e5fb7ce4c66b23f1564ecc2392b6db2488926fbbda","version":505271722,"digest":"Fmkc6ALmeZFiTWNfmZtAsWktnzBXt3ysNqjQDj5i4rS"}}],"mutated":[{"owner":{"AddressOwner":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409"},"reference":{"objectId":"0x1332bb5f4502d65564b9ad75ad7a88c3a4db35a19e68c6ee6992e8a31685d296","version":505271722,"digest":"8BWDVq1Tfdm7xcqoB9dDk4ymDNkV1hjybC35UXMeWWWj"}}],"gasObject":{"owner":{"AddressOwner":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409"},"reference":{"objectId":"0x1332bb5f4502d65564b9ad75ad7a88c3a4db35a19e68c6ee6992e8a31685d296","version":505271722,"digest":"8BWDVq1Tfdm7xcqoB9dDk4ymDNkV1hjybC35UXMeWWWj"}},"dependencies":["FgXCsTNM3EqbbQNbJTXtVemi9TrhgfzqYbEyot5QRLVw"]},"events":[],"objectChanges":[{"type":"mutated","sender":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409","owner":{"AddressOwner":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409"},"objectType":"0x2::coin::Coin<0x2::sui::SUI>","objectId":"0x1332bb5f4502d65564b9ad75ad7a88c3a4db35a19e68c6ee6992e8a31685d296","version":"505271722","previousVersion":"505271721","digest":"8BWDVq1Tfdm7xcqoB9dDk4ymDNkV1hjybC35UXMeWWWj"},{"type":"created","sender":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409","owner":{"AddressOwner":"0x7046621c3a15ee541d750b1dc76d820fdc0b163f0d85c53b0b08c97e2be99a50"},"objectType":"0x2::coin::Coin<0x2::sui::SUI>","objectId":"0xe4b4a4e7ddfced6be7f4f4e5fb7ce4c66b23f1564ecc2392b6db2488926fbbda","version":"505271722","digest":"Fmkc6ALmeZFiTWNfmZtAsWktnzBXt3ysNqjQDj5i4rS"}],"balanceChanges":[{"owner":{"AddressOwner":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409"},"coinType":"0x2::sui::SUI","amount":"-1742880"}],"input":{"messageVersion":"v1","transaction":{"kind":"ProgrammableTransaction","inputs":[{"type":"pure","valueType":"u64","value":"0"},{"type":"pure","valueType":"address","value":"0x7046621c3a15ee541d750b1dc76d820fdc0b163f0d85c53b0b08c97e2be99a50"}],"transactions":[{"SplitCoins":["GasCoin",[{"Input":0}]]},{"TransferObjects":[[{"Result":0}],{"Input":1}]}]},"sender":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409","gasData":{"payment":[{"objectId":"0x1332bb5f4502d65564b9ad75ad7a88c3a4db35a19e68c6ee6992e8a31685d296","version":505271721,"digest":"2RH5M9AcN3EfVXtWaPp6KozW2b6wJNeaPyBBsu3jrpA7"}],"owner":"0x1c65e18ccc0815a26340a3fb5bc1065bd4473448223b722ae905e332aee58409","price":"745","budget":"2701240"}}}`,
+		computationCost, storageCost, rebate,
+	)
+}
 
+func TestTransfers(t *testing.T) {
 	from := "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9"
 	from_pk := "6a03aadd27a3753c3af2d676591528f3d8209f337b9506163479bc5e61f67ebd"
 	to := "0xaa8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de6600"
@@ -267,13 +274,14 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
 				//reference gas
 				"1000",
+				DryRunResponse(1000000, 2964000, 1956240),
 				// submit tx
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split (gas coin balance - gas budget)
-				U64ToPure(28969157920 - (2_000_000_000 + GAS_BUDGET_PER_COIN*2)),
+				U64ToPure(28969157920 - (1000000 + 2964000 - 1956240)),
 				// merged coins after gas coin
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6", "u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo", 2001904720, 1852477))},
 				// split amt (transfer amount)
@@ -305,7 +313,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(3),
 				},
 			},
-			2_000_000_000 + GAS_BUDGET_PER_COIN*2,
+			1000000 + 2964000 - 1956240,
 			nil,
 		},
 
@@ -331,13 +339,15 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"epoch":"21","sequenceNumber":"2212095","digest":"3Gfav3tbk6vgpLp456y6MynYTAzoar6wodfNq5Ahw1M9","networkTotalTransactions":"5173764","previousDigest":"6iVUW6jom9Z8jUdDbseW6q2ESiaVcVGddtKwZX9i7yNt","epochRollingGasCostSummary":{"computationCost":"3402552000","storageCost":"19937429600","storageRebate":"18713346696","nonRefundableStorageFee":"189023704"},"timestampMs":"1683324797581","transactions":["9o478feJK21ao7Z9GUq51WC6jFWmNjj8MKzDcjzAkVvk"],"checkpointCommitments":[],"validatorSignature":"q5LhcNeDArLCUy2kTP8jpwj/vexiFaKnXR/v1UtzVujHzna6SIgrGWsENOebd3+z"}],"nextCursor":"2212095","hasNextPage":true}`,
 				//reference gas
 				"1000",
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// submit tx
 				`{"digest":"BzJbzapMeyC1QrdC5Q7H4okbxyZQJ9MntWaTBHesi3cW","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
 			[]bcs.CallArg{
-				// remainder split
-				U64ToPure(3000000000 - GAS_BUDGET_PER_COIN*9),
+				// remainder split (gas_coin - gas_budget)
+				U64ToPure(5000000000 - (4000000 + 3000000 - 2000000)),
 				// merged coins after gas coin (sorted by value)
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0xc587db1fbe680b769c1a562a09f2c871a087bafa542c7cb73db6064e2b791bdf", "7Y2zjQxn2wj5jhrvS5NBKCFJDzWHZ4UMG7XJNNioNgTS", 1897841920, 1852477))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x87bae5d7376e857106f7908eab6f7106ea3f7c2a1b3349f99925bb12631b1ff0", "9GeMg1yw4J9ck62XR3KHXi72kfVVeuqfAcK5rL3hRdVK", 1500000000, 1852477))},
@@ -383,7 +393,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(10),
 				},
 			},
-			2_000_000_000 + GAS_BUDGET_PER_COIN*9,
+			(4000000 + 3000000 - 2000000),
 			// 2_000_000_000,
 			nil,
 		},
@@ -401,6 +411,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
 				//reference gas
 				"1000",
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// submit tx
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
@@ -428,9 +440,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(1),
 				},
 			},
-			// this gas budget is lower because we don't have 2 sui.
-			// so it should be the leftover.
-			1845686480 - 1_000_000_000,
+			(4000000 + 3000000 - 2000000),
 			nil,
 		},
 		// Test with 1 sui coin, no balance
@@ -447,6 +457,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
 				//reference gas
 				"1000",
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// submit tx
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
@@ -477,13 +489,15 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
 				//reference gas
 				"1000",
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// submit tx
 				`{"digest":"5NVoZeHas2s7go1wiSMXtM2g1KitDwu2eksvEt1jRcWj","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
 			[]bcs.CallArg{
 				// remainder split
-				U64ToPure(33002007760),
+				U64ToPure(33827025240 - (4000000 + 3000000 - 2000000)),
 				// merged coins after gas coin (sorted by value)
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x3150377d1db0395abfd3b19cfeca94eaf5987a12b95a0aab431195e77399f092", "7xvFhTk5r3RCLQPcybUeTuwAUKAy8ozXN5EbKsnvp9Qb", 10000000000, 1852505))},
 				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x5a23ee6e22faa7017b11ad24e7c8ced1d33465cfd06656bc028eb21c6f4cad97", "67APB8hNkhBWmARr49RRXwQGgCC3A8VMxcLKbftUiYQF", 10000000000, 1852505))},
@@ -527,7 +541,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(9),
 				},
 			},
-			825017480,
+			4000000 + 3000000 - 2000000,
 			nil,
 		},
 
@@ -547,6 +561,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207737","digest":"ACRr1x7hC7CRfPu9a7gecLkStHdu6eGNK81SqvCGVJM1","balance":"6892967516","previousTransaction":"HhCq8usSNk4DTmaKCR17AZC4dbwEw1rSFFuFTchm61iF"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getReferenceGasPrice
 				`"1000"`,
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// sui_executeTransactionBlock
 				`{"digest":"HAKa4YPcFYT4M1LkYvUE6u8nLjgJX6cwmyR4LHGNXqYe","confirmedLocalExecution":true}`,
 			},
@@ -576,7 +592,7 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(2),
 				},
 			},
-			2_000_000_000 + GAS_BUDGET_PER_COIN*1,
+			((4000000 + 3000000 - 2000000) * 110) / 100,
 			nil,
 		},
 
@@ -599,6 +615,8 @@ func (s *CrosschainTestSuite) TestTransfers() {
 				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207746","digest":"xZ3CBnj1N7VrfZMDs6151tUnbWrqjEkDKAGJTGULZQH","balance":"3890508188","previousTransaction":"648EuGHEB2dmLsVgCU6NS7HEts67A6UCu2kGGFHverpB"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getReferenceGasPrice
 				`"1000"`,
+				// gas sim
+				DryRunResponse(4000000, 3000000, 2000000),
 				// sui_executeTransactionBlock
 				`{"digest":"7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP","confirmedLocalExecution":true}`,
 			},
@@ -659,95 +677,102 @@ func (s *CrosschainTestSuite) TestTransfers() {
 					Field1: ArgumentInput(5),
 				},
 			},
-			2_000_000_000 + GAS_BUDGET_PER_COIN*4,
+			((4000000 + 3000000 - 2000000) * 110) / 100,
 			nil,
 		},
 	}
 
 	for _, v := range vectors {
 		fmt.Println("=== Running ", v.name)
-		amount_human_dec, err := decimal.NewFromString(v.amount)
-		require.NoError(err)
-		amount_machine := xc.AmountHumanReadable(amount_human_dec).ToBlockchain(9)
-
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
-		defer close()
-		nativeAsset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
-		nativeAsset.URL = server.URL
-
-		client, err := NewClient(nativeAsset)
-		require.NoError(err)
-
-		args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine)
-		if v.tokenContract != "" {
-			args.SetContract(v.tokenContract)
-		}
-
-		input, err := client.FetchTransferInput(context.Background(), args)
-		require.NoError(err)
-		local_input := input.(*TxInput)
-		local_input.SetPublicKeyFromStr(from_pk)
-
-		// check that the gas coin was not also included in
-		// the list of coins to spend.
-		for _, coin := range local_input.Coins {
-			require.NotEqualValues(coin.CoinObjectId, local_input.GasCoin.CoinObjectId)
-		}
-
-		builder, err := NewTxBuilder(nativeAsset.GetChain().Base())
-		require.NoError(err)
-
-		tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), amount_machine, input)
-		if v.err == nil {
+		t.Run(v.name, func(t *testing.T) {
+			require := require.New(t)
+			amount_human_dec, err := decimal.NewFromString(v.amount)
 			require.NoError(err)
-		} else {
-			require.ErrorContains(err, v.err.Error())
-			continue
-		}
-		suiTx := tx.(*Tx).Tx
-		// check various properties of the sui tx
-		fromData, _ := HexToAddress(string(from))
-		expiration := bcs.TransactionExpiration__Epoch(21)
-		gasObjectId, _ := HexToObjectID(local_input.GasCoin.CoinObjectId.String())
-		gasDigest, _ := Base58ToObjectDigest(local_input.GasCoin.Digest.String())
-		gasVersion := local_input.GasCoin.Version.Uint64()
+			amount_machine := xc.AmountHumanReadable(amount_human_dec).ToBlockchain(9)
 
-		gasCoin := ObjectRef{
-			Field0: gasObjectId,
-			Field1: bcs.SequenceNumber(gasVersion),
-			Field2: gasDigest,
-		}
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			nativeAsset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
+			nativeAsset.URL = server.URL
 
-		require.EqualValues(suiTx.Value.Expiration, &expiration)
+			client, err := NewClient(nativeAsset)
+			require.NoError(err)
 
-		require.EqualValues(suiTx.Value.GasData.Budget, v.gasBudget)
-		require.EqualValues(suiTx.Value.GasData.Price, 1_000)
-		require.EqualValues(suiTx.Value.GasData.Owner, fromData)
-		require.EqualValues(suiTx.Value.GasData.Payment, []struct {
-			Field0 bcs.ObjectID
-			Field1 bcs.SequenceNumber
-			Field2 bcs.ObjectDigest
-		}{
-			gasCoin,
+			args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine)
+			if v.tokenContract != "" {
+				args.SetContract(v.tokenContract)
+			}
+
+			input, err := client.FetchTransferInput(context.Background(), args)
+			if v.err != nil {
+				require.ErrorContains(err, v.err.Error())
+				return
+			}
+			require.NoError(err)
+			local_input := input.(*TxInput)
+			local_input.SetPublicKeyFromStr(from_pk)
+
+			// check that the gas coin was not also included in
+			// the list of coins to spend.
+			for _, coin := range local_input.Coins {
+				require.NotEqualValues(coin.CoinObjectId, local_input.GasCoin.CoinObjectId)
+			}
+
+			builder, err := NewTxBuilder(nativeAsset.GetChain().Base())
+			require.NoError(err)
+
+			tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), amount_machine, input)
+			if v.err == nil {
+				require.NoError(err)
+			} else {
+				require.ErrorContains(err, v.err.Error())
+				return
+			}
+			suiTx := tx.(*Tx).Tx
+			// check various properties of the sui tx
+			fromData, _ := HexToAddress(string(from))
+			expiration := bcs.TransactionExpiration__Epoch(21)
+			gasObjectId, _ := HexToObjectID(local_input.GasCoin.CoinObjectId.String())
+			gasDigest, _ := Base58ToObjectDigest(local_input.GasCoin.Digest.String())
+			gasVersion := local_input.GasCoin.Version.Uint64()
+
+			gasCoin := ObjectRef{
+				Field0: gasObjectId,
+				Field1: bcs.SequenceNumber(gasVersion),
+				Field2: gasDigest,
+			}
+
+			require.EqualValues(suiTx.Value.Expiration, &expiration)
+
+			require.EqualValues(suiTx.Value.GasData.Budget, v.gasBudget)
+			require.EqualValues(suiTx.Value.GasData.Price, 1_000)
+			require.EqualValues(suiTx.Value.GasData.Owner, fromData)
+			require.EqualValues(suiTx.Value.GasData.Payment, []struct {
+				Field0 bcs.ObjectID
+				Field1 bcs.SequenceNumber
+				Field2 bcs.ObjectDigest
+			}{
+				gasCoin,
+			})
+
+			commands := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Commands
+			inputs := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Inputs
+
+			require.Len(commands, len(v.commands))
+			require.Len(inputs, len(v.inputs))
+			for i, cmd := range v.commands {
+				fmt.Println("checking command", i)
+				require.Equal(cmd, commands[i])
+			}
+
+			for i, inp := range v.inputs {
+				fmt.Println("checking input ", i)
+				require.Equal(inp, inputs[i])
+			}
+
+			err = client.SubmitTx(context.Background(), tx)
+			require.NoError(err)
 		})
-
-		commands := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Commands
-		inputs := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Inputs
-
-		require.Len(commands, len(v.commands))
-		require.Len(inputs, len(v.inputs))
-		for i, cmd := range v.commands {
-			fmt.Println("checking command", i)
-			require.Equal(cmd, commands[i])
-		}
-
-		for i, inp := range v.inputs {
-			fmt.Println("checking input ", i)
-			require.Equal(inp, inputs[i])
-		}
-
-		err = client.SubmitTx(context.Background(), tx)
-		require.NoError(err)
 	}
 }
 
