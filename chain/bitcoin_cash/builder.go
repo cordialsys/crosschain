@@ -4,6 +4,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
+	bitcointx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 )
 
 // TxBuilder for Bitcoin
@@ -25,5 +26,9 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 }
 
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.TxBuilder.Transfer(args, input)
+	tx, err := txBuilder.TxBuilder.Transfer(args, input)
+	if err != nil {
+		return nil, err
+	}
+	return NewTx(tx.(*bitcointx.Tx)), nil
 }
