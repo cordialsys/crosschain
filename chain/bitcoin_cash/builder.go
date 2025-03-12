@@ -32,3 +32,11 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	}
 	return NewTx(tx.(*bitcointx.Tx)), nil
 }
+
+func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	tx, err := txBuilder.TxBuilder.NewNativeTransfer(from, to, amount, input)
+	if err != nil {
+		return nil, err
+	}
+	return NewTx(tx.(*bitcointx.Tx)), nil
+}

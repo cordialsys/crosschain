@@ -1,6 +1,7 @@
 package bitcoin_cash_test
 
 import (
+	"encoding/hex"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -38,4 +39,26 @@ func TestTransfer(t *testing.T) {
 	btcTx, ok := tx.(*bitcoin_cash.Tx)
 	require.True(t, ok)
 	require.NotNil(t, btcTx)
+
+	sighashes, err := btcTx.Sighashes()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(sighashes))
+	require.Equal(t,
+		// will have to update if anything changes in BCH
+		"b2e256dc39726ed6b0b5f85f393187eefcf9bcbf2d27ddc0695920d320ce061b",
+		hex.EncodeToString(sighashes[0]),
+	)
+
+	signature := make([]byte, 64)
+	err = btcTx.AddSignatures(signature)
+	require.NoError(t, err)
+
+	serialized, err := btcTx.Serialize()
+	require.NoError(t, err)
+
+	require.Equal(t,
+		// will have to update if anything changes in BCH
+		"02000000010000000000000000000000000000000000000000000000000000000000000000000000000b0930060201000201004100ffffffff0200e1f505000000001976a914737969aa6b52a0ad754a5346e78a74bcdbc06a1a88ac00e1f505000000001976a914d1356b260315ff935787ce7f58eb04bab40dff7288ac00000000",
+		hex.EncodeToString(serialized),
+	)
 }
