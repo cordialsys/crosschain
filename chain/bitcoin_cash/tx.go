@@ -16,6 +16,10 @@ type Tx struct {
 	*tx.Tx
 }
 
+func NewTx(tx *tx.Tx) *Tx {
+	return &Tx{Tx: tx}
+}
+
 var _ xc.Tx = &tx.Tx{}
 
 // Sighashes returns the tx payload to sign, aka sighash
