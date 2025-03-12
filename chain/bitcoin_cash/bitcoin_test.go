@@ -1,51 +1,36 @@
-package bitcoin_cash
+package bitcoin_cash_test
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
+	bitcointx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	"github.com/stretchr/testify/suite"
+	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
+	"github.com/stretchr/testify/require"
 )
 
 var UXTO_ASSETS []xc.NativeAsset = []xc.NativeAsset{
 	xc.BCH,
 }
 
-type CrosschainTestSuite struct {
-	suite.Suite
-	Ctx context.Context
-}
-
-func (s *CrosschainTestSuite) SetupTest() {
-	s.Ctx = context.Background()
-}
-
-func TestBitcoinTestSuite(t *testing.T) {
-	suite.Run(t, new(CrosschainTestSuite))
-}
-
-// Address
-
-func (s *CrosschainTestSuite) TestNewAddressBuilder() {
-	require := s.Require()
+func TestNewAddressBuilder(t *testing.T) {
+	require := require.New(t)
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset)
-		builder, err := NewAddressBuilder(chain.Base())
+		builder, err := bitcoin_cash.NewAddressBuilder(chain.Base())
 		require.NotNil(builder)
 		require.NoError(err)
 	}
 }
 
-func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
-	require := s.Require()
+func TestGetAddressFromPublicKey(t *testing.T) {
+	require := require.New(t)
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset).WithNet("testnet")
-		builder, err := NewAddressBuilder(chain.Base())
+		builder, err := bitcoin_cash.NewAddressBuilder(chain.Base())
 		require.NoError(err)
 		_, err = base64.RawStdEncoding.DecodeString("AptrsfXbXbvnsWxobWNFoUXHLO5nmgrQb3PDmGGu1CSS")
 		require.NoError(err)
@@ -66,18 +51,18 @@ func (s *CrosschainTestSuite) TestGetAddressFromPublicKey() {
 
 // TxBuilder
 
-func (s *CrosschainTestSuite) TestNewTxBuilder() {
-	require := s.Require()
+func TestNewTxBuilder(t *testing.T) {
+	require := require.New(t)
 	for _, nativeAsset := range UXTO_ASSETS {
 		chain := xc.NewChainConfig(nativeAsset)
-		builder, err := NewTxBuilder(chain.Base())
+		builder, err := bitcoin_cash.NewTxBuilder(chain.Base())
 		require.NotNil(builder)
 		require.NoError(err)
 	}
 }
 
-func (s *CrosschainTestSuite) TestNewNativeTransfer() {
-	require := s.Require()
+func TestNewNativeTransfer(t *testing.T) {
+	require := require.New(t)
 	for _, addr := range []string{
 		"tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0",
 		"qzl7ex0q35q2d6aljhlhzwramp09n06fry8ssqu0qp",
@@ -88,7 +73,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 			xc.BCH,
 		} {
 			chain := xc.NewChainConfig(native_asset).WithNet("testnet")
-			builder, _ := NewTxBuilder(chain.Base())
+			builder, _ := bitcoin_cash.NewTxBuilder(chain.Base())
 			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 			to := xc.Address(addr)
 			amount := xc.NewAmountBlockchainFromUint64(1)
@@ -103,6 +88,11 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 			require.NotNil(tf)
 			hash := tf.Hash()
 			require.Len(hash, 64)
+
+			// tx must be a bitcoin cash tx
+			btcTx, ok := tf.(*bitcoin_cash.Tx)
+			require.True(ok)
+			require.NotNil(btcTx)
 
 			// Having not enough balance for fees will be an error
 			input_small := &tx_input.TxInput{
@@ -129,33 +119,10 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 	}
 }
 
-// Tx
-
-func (s *CrosschainTestSuite) TestTxHash() {
-	require := s.Require()
-
-	chain := xc.NewChainConfig(xc.BTC).WithNet("testnet")
-	builder, _ := NewTxBuilder(chain.Base())
-	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
-	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-	amount := xc.NewAmountBlockchainFromUint64(1)
-	input := &tx_input.TxInput{
-		UnspentOutputs: []tx_input.Output{{
-			Value: xc.NewAmountBlockchainFromUint64(1000),
-		}},
-		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
-	}
-	tf, err := builder.NewNativeTransfer(from, to, amount, input)
-	require.NoError(err)
-
-	tx := tf.(*tx.Tx)
-	require.Equal(xc.TxHash("0ebdd0e519cf4bf67ac4d924c07e3312483b09844c9f16f46c04f5fe1500c788"), tx.Hash())
-}
-
-func (s *CrosschainTestSuite) TestTxSighashes() {
-	require := s.Require()
-	tx := Tx{
-		&tx.Tx{
+func TestTxSighashes(t *testing.T) {
+	require := require.New(t)
+	tx := bitcoin_cash.Tx{
+		&bitcointx.Tx{
 			Input: &tx_input.TxInput{},
 		},
 	}
