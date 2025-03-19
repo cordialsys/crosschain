@@ -166,7 +166,7 @@ chains:
     chain_name: Bitcoin Cash
     fee_limit: "1.0"
     decimals: 8
-    confirmations_final: 15
+    confirmations_final: 5
     external:
       dti: J9K583ZGG
       coin_market_cap:
