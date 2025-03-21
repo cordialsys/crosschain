@@ -88,7 +88,12 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset: xc.NewChainConfig(""),
 			// valid blockhash
-			resp:            `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+			resp: []string{
+				// valid blockhash
+				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
+			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: false,
@@ -111,6 +116,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.17","slot":205924180},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD","state":"initialized","tokenAmount":{"amount":"55010000","decimals":6,"uiAmount":55.01,"uiAmountString":"55.01"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361},"pubkey":"Hrb916EihPAN4T6xad9aVbrd5PfYmiJpvwLKA9XmgcGV"}]}`,
 				// priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
@@ -134,6 +141,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.17","slot":205924180},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD","state":"initialized","tokenAmount":{"amount":"55010000","decimals":6,"uiAmount":55.01,"uiAmountString":"55.01"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361},"pubkey":"Hrb916EihPAN4T6xad9aVbrd5PfYmiJpvwLKA9XmgcGV"}]}`,
 				// priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
@@ -158,6 +167,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.17","slot":205924180},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD","state":"initialized","tokenAmount":{"amount":"55010000","decimals":6,"uiAmount":55.01,"uiAmountString":"55.01"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361},"pubkey":"Hrb916EihPAN4T6xad9aVbrd5PfYmiJpvwLKA9XmgcGV"}]}`,
 				// priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         true,
@@ -181,6 +192,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.17","slot":205924180},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD","state":"initialized","tokenAmount":{"amount":"55010000","decimals":6,"uiAmount":55.01,"uiAmountString":"55.01"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":361},"pubkey":"Hrb916EihPAN4T6xad9aVbrd5PfYmiJpvwLKA9XmgcGV"}]}`,
 				// 0 priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 0,"slot": 252519673},{"prioritizationFee": 0,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
@@ -204,6 +217,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.20","slot":205932194},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"MYiaXnRnaRCinBxK1usPhLeVA1Bfae4aepdT1pcPeNx","state":"initialized","tokenAmount":{"amount":"5000","decimals":6,"uiAmount":0.005,"uiAmountString":"0.005"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0},"pubkey":"4j6aPPP22iB7q4NZjfdNBQHd6dvEnfM5PH6XxdzfURph"},{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"MYiaXnRnaRCinBxK1usPhLeVA1Bfae4aepdT1pcPeNx","state":"initialized","tokenAmount":{"amount":"3000","decimals":6,"uiAmount":0.003,"uiAmountString":"0.003"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0},"pubkey":"HmmCAv8mBn6piJBbAeHfMDajNzg8H8boKv7gQRijST9J"},{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"MYiaXnRnaRCinBxK1usPhLeVA1Bfae4aepdT1pcPeNx","state":"initialized","tokenAmount":{"amount":"6000","decimals":6,"uiAmount":0.006,"uiAmountString":"0.006"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0},"pubkey":"4Nd1Ufsc3gBARS3iHus5RT65kX6LDvJPHsuVPEwxpWwD"}]}`,
 				// priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:         "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:           false,
@@ -235,6 +250,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
 				// priority fee
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
@@ -278,7 +295,7 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(v.asset)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 			to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-			args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+			args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1), buildertest.OptionContractDecimals(6))
 			if v.contract != "" {
 				args.SetContract(v.contract)
 			}

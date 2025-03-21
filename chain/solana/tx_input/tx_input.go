@@ -19,6 +19,10 @@ type TxInput struct {
 	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
 	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
 	Timestamp           int64               `json:"timestamp,omitempty"`
+	// The base fee is applied for every signature on the transaction
+	BaseFee xc.AmountBlockchain `json:"base_fee,omitempty"`
+	// The estimated compute units used by the transaction (basically the gas usage)
+	UnitsConsumed uint64 `json:"units_consumed,omitempty"`
 }
 
 type TokenAccount struct {
@@ -61,11 +65,27 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 }
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	// Maximum compute units used by a transaction can be 1.4M
-	// https://solana.com/docs/core/fees#compute-units-and-limits
-	const MaxComputeUnits = 1_400_000
-	gasLimit := xc.NewAmountBlockchainFromUint64(MaxComputeUnits)
+	// https://solana.com/docs/core/fees#key-points
+	var computeUnits uint64
+	if input.UnitsConsumed == 0 && input.PrioritizationFee.Uint64() > 0 {
+		// assume the worst case scenario if there's no estimated compute usage
+		// https://solana.com/docs/core/fees#compute-units-and-limits
+		computeUnits = 1_400_000
+	} else {
+		computeUnits = input.UnitsConsumed
+	}
+
+	// calculate the max spend for the tx: (compute units * priority fee)
+	gasLimit := xc.NewAmountBlockchainFromUint64(computeUnits)
 	maxSpend := gasLimit.Mul(&input.PrioritizationFee)
+
+	// calculate the base fee (# of signatures * base fee)
+	feePerSignature := input.BaseFee
+	numSignatures := xc.NewAmountBlockchainFromUint64(1)
+	totalBaseFee := feePerSignature.Mul(&numSignatures)
+
+	// prioritization + base fees
+	maxSpend = maxSpend.Add(&totalBaseFee)
 	return maxSpend, ""
 }
 

@@ -65,6 +65,7 @@ func asJson(data any) string {
 
 func CmdRpcBalance() *cobra.Command {
 	var contract string
+	var decimal bool
 	cmd := &cobra.Command{
 		Use:   "balance [address]",
 		Short: "Check balance of an asset.  Reported as big integer, not accounting for any decimals.",
@@ -92,13 +93,22 @@ func CmdRpcBalance() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
 			}
-
-			fmt.Println(balance.String())
+			if decimal {
+				decimals, err := rpcClient.FetchDecimals(context.Background(), xc.ContractAddress(contract))
+				if err != nil {
+					return fmt.Errorf("could not fetch decimals for contract %s: %v", contract, err)
+				}
+				amount := balance.ToHuman(int32(decimals))
+				fmt.Println(amount.String())
+			} else {
+				fmt.Println(balance.String())
+			}
 
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
+	cmd.Flags().BoolVar(&decimal, "decimal", false, "Report balance as a decimal.  If set, the decimals will be looked up.")
 	return cmd
 }
 
@@ -107,6 +117,7 @@ func CmdTxInput() *cobra.Command {
 	var amount string
 	var contract string
 	var publicKeyHex string
+	var decimals int
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input"},
@@ -121,6 +132,9 @@ func CmdTxInput() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if contract != "" && decimals == -1 {
+				return fmt.Errorf("must set --decimals if using --contract")
+			}
 
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
@@ -130,6 +144,7 @@ func CmdTxInput() *cobra.Command {
 			tfOptions := []builder.BuilderOption{}
 			if contract != "" {
 				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
+				tfOptions = append(tfOptions, builder.OptionContractDecimals(decimals))
 			}
 			if publicKeyHex != "" {
 				publicKey, err := hex.DecodeString(strings.TrimPrefix(publicKeyHex, "0x"))
@@ -152,10 +167,21 @@ func CmdTxInput() *cobra.Command {
 				}
 			}
 
+			humanAmount, err := xc.NewAmountHumanReadableFromStr(amount)
+			if err != nil {
+				return fmt.Errorf("could parse amount: %v", err)
+			}
+			var amountBlockchain xc.AmountBlockchain
+			if decimals >= 0 {
+				amountBlockchain = humanAmount.ToBlockchain(int32(decimals))
+			} else {
+				amountBlockchain = humanAmount.ToBlockchain(int32(chainConfig.GetDecimals()))
+			}
+
 			tfArgs, err := builder.NewTransferArgs(
 				fromAddress,
 				xc.Address(addressTo),
-				xc.NewAmountBlockchainFromStr(amount),
+				amountBlockchain,
 				tfOptions...,
 			)
 			if err != nil {
@@ -173,8 +199,9 @@ func CmdTxInput() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
+	cmd.Flags().IntVar(&decimals, "decimals", -1, "Optional decimals of the token asset")
 	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
-	cmd.Flags().StringVar(&amount, "amount", "", "blockchain amount to transfer")
+	cmd.Flags().StringVar(&amount, "amount", "", "human amount to transfer")
 	cmd.Flags().StringVar(&publicKeyHex, "public-key", "",
 		fmt.Sprintf("Public key in hex of the sender address (will use %s if set)", signer.EnvPrivateKey),
 	)
@@ -212,6 +239,7 @@ func CmdTxInfo() *cobra.Command {
 }
 
 func CmdTxTransfer() *cobra.Command {
+	var inclusiveFee bool
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
 		Aliases: []string{"tf"},
@@ -344,6 +372,23 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
 			}
 
+			if inclusiveFee {
+				fee, feeAssetId := input.GetFeeLimit()
+				if contract != "" && feeAssetId != xc.ContractAddress(contract) {
+					return fmt.Errorf("cannot include fee of asset %s in transfer of asset %s", feeAssetId, contract)
+				}
+				if contract == "" {
+					if feeAssetId == "" {
+						feeAssetId = xc.ContractAddress(chainConfig.Chain)
+					}
+					if feeAssetId != xc.ContractAddress(chainConfig.Chain) {
+						return fmt.Errorf("cannot include fee of asset %s in transfer of asset %s", feeAssetId, chainConfig.Chain)
+					}
+				}
+				amount := tfArgs.GetAmount()
+				tfArgs.SetAmount(amount.Sub(&fee))
+			}
+
 			err = xc.CheckFeeLimit(input, chainConfig)
 			if err != nil {
 				return err
@@ -426,6 +471,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("memo", "", "set a memo for the transfer.")
 	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
+	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	return cmd
 }
 

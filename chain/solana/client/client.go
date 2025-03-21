@@ -55,6 +55,9 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 		return nil, fmt.Errorf("error fetching latest blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
+	// fixed 5000 lamports
+	// https://solana.com/docs/core/fees#key-points
+	txInput.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
 
 	return txInput, nil
 }
@@ -69,7 +72,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	contract, _ := args.GetContract()
 	if contract == "" {
 		// native transfer
-		return txInput, nil
+		return client.WithTransferSimulation(ctx, args, txInput)
 	}
 
 	mint, err := solana.PublicKeyFromBase58(string(contract))
@@ -174,6 +177,37 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// apply multiplier
 	txInput.PrioritizationFee = txInput.PrioritizationFee.ApplyGasPriceMultiplier(client.Asset.GetChain().Client())
 
+	return client.WithTransferSimulation(ctx, args, txInput)
+}
+
+func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder.TransferArgs, txInput *tx_input.TxInput) (xc.TxInput, error) {
+	builder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+	if err != nil {
+		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
+	}
+	txI, err := builder.Transfer(args, txInput)
+	if err != nil {
+		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
+	}
+	tx := txI.(*tx.Tx)
+	tx.SolTx.Signatures = []solana.Signature{
+		// one signature for solana transfers (note: staking txs use multiple)
+		{},
+	}
+
+	sim, err := client.SolClient.SimulateTransactionWithOpts(ctx, tx.SolTx, &rpc.SimulateTransactionOpts{
+		SigVerify: false,
+	})
+
+	// sim, err := client.SolClient.SimulateTransaction(ctx, tx.SolTx)
+	if err != nil {
+		return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
+	}
+	// simBz, _ := json.MarshalIndent(sim, "", "  ")
+	// fmt.Println(string(simBz))
+	if sim.Value != nil && sim.Value.UnitsConsumed != nil {
+		txInput.UnitsConsumed = *sim.Value.UnitsConsumed
+	}
 	return txInput, nil
 }
 
