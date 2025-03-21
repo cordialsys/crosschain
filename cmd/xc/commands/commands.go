@@ -167,15 +167,18 @@ func CmdTxInput() *cobra.Command {
 				}
 			}
 
-			humanAmount, err := xc.NewAmountHumanReadableFromStr(amount)
-			if err != nil {
-				return fmt.Errorf("could parse amount: %v", err)
-			}
-			var amountBlockchain xc.AmountBlockchain
-			if decimals >= 0 {
-				amountBlockchain = humanAmount.ToBlockchain(int32(decimals))
-			} else {
-				amountBlockchain = humanAmount.ToBlockchain(int32(chainConfig.GetDecimals()))
+			// default to smallest possible amount
+			amountBlockchain := xc.NewAmountBlockchainFromUint64(1)
+			if amount != "" {
+				humanAmount, err := xc.NewAmountHumanReadableFromStr(amount)
+				if err != nil {
+					return fmt.Errorf("could parse amount: %v", err)
+				}
+				if decimals >= 0 {
+					amountBlockchain = humanAmount.ToBlockchain(int32(decimals))
+				} else {
+					amountBlockchain = humanAmount.ToBlockchain(int32(chainConfig.GetDecimals()))
+				}
 			}
 
 			tfArgs, err := builder.NewTransferArgs(

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -170,13 +171,20 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		decimalsStr = strconv.FormatInt(int64(decimals), 10)
 	}
 
+	publicKeyMaybe, _ := args.GetPublicKey()
+	memoMaybe, _ := args.GetMemo()
+	priorityMaybe, _ := args.GetPriority()
+
 	res, err := client.legacyApiCall(ctx, "/input", &types.TxInputReq{
-		Chain:    client.Asset.GetChain().Chain,
-		Contract: string(contract),
-		Balance:  args.GetAmount().String(),
-		Decimals: decimalsStr,
-		From:     string(args.GetFrom()),
-		To:       string(args.GetTo()),
+		Chain:     client.Asset.GetChain().Chain,
+		Contract:  string(contract),
+		Balance:   args.GetAmount().String(),
+		Decimals:  decimalsStr,
+		PublicKey: hex.EncodeToString(publicKeyMaybe),
+		From:      string(args.GetFrom()),
+		To:        string(args.GetTo()),
+		Memo:      memoMaybe,
+		Priority:  string(priorityMaybe),
 	})
 	if err != nil {
 		return nil, err
