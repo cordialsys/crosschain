@@ -40,9 +40,16 @@ type TxInputReq struct {
 	Chain    xc.NativeAsset `json:"chain"`
 	Contract string         `json:"contract,omitempty"`
 	Decimals string         `json:"decimals,omitempty"`
-	From     string         `json:"from"`
-	To       string         `json:"to"`
-	Balance  string         `json:"balance"`
+
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Balance string `json:"balance"`
+
+	// Optional transfer parameters:
+	// public key of the signing address, in hex
+	PublicKey string `json:"public_key,omitempty"`
+	Memo      string `json:"memo,omitempty"`
+	Priority  string `json:"priority,omitempty"`
 }
 
 type StakingInputReq struct {
