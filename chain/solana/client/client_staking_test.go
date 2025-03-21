@@ -54,6 +54,7 @@ func TestFetchStakingInput(t *testing.T) {
 					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
 				},
 				ValidatorVoteAccount: solana.MustPublicKeyFromBase58("3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"),
 			},
@@ -73,6 +74,7 @@ func TestFetchStakingInput(t *testing.T) {
 					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
 				},
 				ValidatorVoteAccount: solana.MustPublicKeyFromBase58("3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"),
 			},
@@ -177,6 +179,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
@@ -269,6 +272,7 @@ func TestFetchWithdrawInput(t *testing.T) {
 					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
