@@ -322,7 +322,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	// detect from, to, amount
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
-	for _, out := range data.Outputs {
+	for i, out := range data.Outputs {
 		endpoint := &xc.LegacyTxInfoEndpoint{
 			Address:     xc.Address(out.Recipient),
 			Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
@@ -333,7 +333,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 			// legacy endpoint drops 'change' movements
 			destinations = append(destinations, endpoint)
 		} else {
-			txWithInfo.AddDroppedDestination(endpoint)
+			txWithInfo.AddDroppedDestination(i, endpoint)
 		}
 	}
 
@@ -361,8 +361,9 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHashStr xc.Tx
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 
 	// add back the change movements
-	legacyTx.Destinations = append(legacyTx.Destinations, legacyTx.GetDroppedBtcDestinations()...)
-
+	for index, droppedDest := range legacyTx.GetDroppedBtcDestinations() {
+		legacyTx.InsertDestinationAtIndex(index, droppedDest)
+	}
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
