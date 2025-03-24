@@ -245,7 +245,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	// detect from, to, amount
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
-	for _, out := range data.Vout {
+	for i, out := range data.Vout {
 		if len(out.Addresses) > 0 {
 			addr := out.Addresses[0]
 			endpoint := &xc.LegacyTxInfoEndpoint{
@@ -258,7 +258,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 				// legacy endpoint drops 'change' movements
 				destinations = append(destinations, endpoint)
 			} else {
-				txWithInfo.AddDroppedDestination(endpoint)
+				txWithInfo.AddDroppedDestination(i, endpoint)
 			}
 		}
 	}
@@ -287,7 +287,9 @@ func (client *BlockbookClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxH
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 
 	// add back the change movements
-	legacyTx.Destinations = append(legacyTx.Destinations, legacyTx.GetDroppedBtcDestinations()...)
+	for index, droppedDest := range legacyTx.GetDroppedBtcDestinations() {
+		legacyTx.InsertDestinationAtIndex(index, droppedDest)
+	}
 
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
