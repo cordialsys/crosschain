@@ -345,17 +345,20 @@ type StakingConfig struct {
 }
 
 type AdditionalNativeAsset struct {
-	// Tyically the contract address of the asset
-	AssetId ContractAddress `yaml:"asset_id,omitempty"`
-	// Decimals for the assets
+	// The asset ID of the asset to use
+	AssetId string `yaml:"asset_id,omitempty"`
+	// The on-chain contract ID of the asset
+	ContractId ContractAddress `yaml:"contract_id,omitempty"`
+	// Decimals for the asset
 	Decimals int32 `yaml:"decimals,omitempty"`
 	// Maximum fee limit
 	FeeLimit AmountHumanReadable `yaml:"fee_limit"`
 }
 
-func NewAdditionalNativeAsset(assetId ContractAddress, decimals int32, feeLimit AmountHumanReadable) *AdditionalNativeAsset {
+func NewAdditionalNativeAsset(assetId string, contractId ContractAddress, decimals int32, feeLimit AmountHumanReadable) *AdditionalNativeAsset {
 	return &AdditionalNativeAsset{
 		assetId,
+		contractId,
 		decimals,
 		feeLimit,
 	}
@@ -494,7 +497,7 @@ type ChainBaseConfig struct {
 	// - LUNA has uluna
 	ChainCoin string `yaml:"chain_coin,omitempty"`
 	// Additional native assets that may be used to pay fees on the chain.
-	AdditionalNativeAssets []*AdditionalNativeAsset `yaml:"additional_native_assets,omitempty"`
+	NativeAssets []*AdditionalNativeAsset `yaml:"native_assets,omitempty"`
 	// If true, then the `.Chain` does not represent any native asset (i.e. no chain-coin, no decimals).
 	NoNativeAsset bool `yaml:"no_native_asset,omitempty"`
 

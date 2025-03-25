@@ -69,12 +69,12 @@ func TestFeeLimitConfigured(t *testing.T) {
 				require := require.New(t)
 				chain := chain.GetChain()
 				if chain.FeeLimit.Decimal().IsZero() {
-					if len(chain.AdditionalNativeAssets) == 0 {
+					if len(chain.NativeAssets) == 0 {
 						require.Fail(
 							"Max fee is required, or additional native assets must be configured (e.g. Noble chain)",
 						)
 					}
-					for _, na := range chain.AdditionalNativeAssets {
+					for _, na := range chain.NativeAssets {
 						_, err := decimal.NewFromString(na.FeeLimit.String())
 						require.NoError(err, fmt.Sprintf("%s additional asset %s (%s) max fee should be a valid decimal", chain.Chain, na.AssetId, xcf.Config.Network))
 						f, _ := na.FeeLimit.Decimal().Float64()
@@ -115,7 +115,7 @@ func TestNativeAssetConfigs(t *testing.T) {
 
 				if chain.NoNativeAsset {
 					// no decimals if no native asset
-					require.Greater(len(chain.AdditionalNativeAssets), 0, fmt.Sprintf("%s should have additional-native-assets (for paying fees) if no new native asset is configured", chain.Chain))
+					require.Greater(len(chain.NativeAssets), 0, fmt.Sprintf("%s should have additional-native-assets (for paying fees) if no new native asset is configured", chain.Chain))
 				} else {
 					if slices.Contains(valid0DecimalAssets, string(chain.Chain)) {
 						// valid 0-decimal native asset
@@ -125,13 +125,20 @@ func TestNativeAssetConfigs(t *testing.T) {
 				}
 				require.GreaterOrEqual(int(chain.Decimals), 0, fmt.Sprintf("%s should have positive decimals (%d)", chain.Chain, chain.Decimals))
 
-				for _, na := range chain.AdditionalNativeAssets {
+				for _, na := range chain.NativeAssets {
 					require.NotEmpty(na.AssetId, fmt.Sprintf("%s additional asset %s should have an asset id", chain.Chain, na.AssetId))
+					require.NotEmpty(na.ContractId, fmt.Sprintf("%s additional asset %s should have a contract id", chain.Chain, na.AssetId))
 
 					normalizedAssetId := normalize.NormalizeAddressString(string(na.AssetId), chain.Chain)
 					require.Equal(
 						normalizedAssetId, string(na.AssetId),
 						fmt.Sprintf("%s additional asset-id '%s' is not in a normalized format", chain.Chain, na.AssetId),
+					)
+
+					normalizedContractId := normalize.NormalizeAddressString(string(na.ContractId), chain.Chain)
+					require.Equal(
+						normalizedContractId, string(na.ContractId),
+						fmt.Sprintf("%s additional contract-id '%s' is not in a normalized format", chain.Chain, na.ContractId),
 					)
 
 					if slices.Contains(valid0DecimalAssets, string(na.AssetId)) {
@@ -141,6 +148,50 @@ func TestNativeAssetConfigs(t *testing.T) {
 					}
 					require.GreaterOrEqual(int(na.Decimals), 0, fmt.Sprintf("%s additional asset %s should have positive decimals", chain.Chain, na.AssetId))
 					require.NotEmpty(na.FeeLimit, fmt.Sprintf("%s additional asset %s should have a max fee", chain.Chain, na.AssetId))
+				}
+
+				// AssetId and ContractId should be unique
+				for i, na1 := range chain.NativeAssets {
+					for j, na2 := range chain.NativeAssets {
+						if i == j {
+							continue
+						}
+						require.NotEqual(na1.AssetId, na2.AssetId, fmt.Sprintf("%s additional asset %s and %s should have unique asset ids", chain.Chain, na1.AssetId, na2.AssetId))
+						require.NotEqual(na1.ContractId, na2.ContractId, fmt.Sprintf("%s additional asset %s and %s should have unique contract ids", chain.Chain, na1.AssetId, na2.AssetId))
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestLegacyChainCoinConfig(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				require := require.New(t)
+				if chain.ChainCoin != "" {
+					// there should be a native-asset-config with the corresponding chain_coin as the contract_id
+					m := map[ContractAddress]*AdditionalNativeAsset{}
+					for _, na := range chain.NativeAssets {
+						m[na.ContractId] = na
+					}
+					_, ok := m[ContractAddress(chain.ChainCoin)]
+					require.True(ok, fmt.Sprintf(
+						"%s should have a native-asset-config with the corresponding chain_coin '%s' as the contract_id",
+						chain.Chain,
+						chain.ChainCoin,
+					))
+
+					na := m[ContractAddress(chain.ChainCoin)]
+					if na.AssetId == string(chain.Chain) {
+						require.Equal(na.Decimals, chain.Decimals, fmt.Sprintf(
+							"chain %s decimals does not match native asset %s decimals",
+							chain.Chain, na.AssetId,
+						))
+					}
 				}
 			})
 		}

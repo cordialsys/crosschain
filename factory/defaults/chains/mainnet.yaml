@@ -38,6 +38,11 @@ chains:
     chain_coin_hd_path: 118
     # Akash needs 1% multiplier, seems they have some off-by-one difference with their min fee
     chain_gas_multiplier: 1.01
+    native_assets:
+      - asset_id: "AKT"
+        contract_id: "uakt"
+        decimals: 6
+        fee_limit: "100.0"
     external:
       dti:
       coin_gecko:
@@ -53,6 +58,11 @@ chains:
     chain_coin: "0x1::aptos_coin::AptosCoin"
     decimals: 8
     fee_limit: "10.0"
+    native_assets:
+      - asset_id: "APTOS"
+        contract_id: "0x1::aptos_coin::AptosCoin"
+        decimals: 8
+        fee_limit: "10.0"
     external:
       dti: SSFZXXTDD
       coin_gecko:
@@ -73,6 +83,11 @@ chains:
     chain_coin_hd_path: 118
     decimals: 6
     fee_limit: "100.0"
+    native_assets:
+      - asset_id: "ATOM"
+        contract_id: "uatom"
+        decimals: 6
+        fee_limit: "100.0"
     external:
       dti: J51DXB76N
       coin_market_cap:
@@ -424,6 +439,11 @@ chains:
     chain_gas_multiplier: 10.0
     # translates to roughly max 50 HASH in gas per tx
     chain_max_gas_price: 125000.0
+    native_assets:
+      - asset_id: "HASH"
+        contract_id: "nhash"
+        decimals: 9
+        fee_limit: "200.0"
     external:
       coin_market_cap:
         asset_id: "19960"
@@ -441,6 +461,11 @@ chains:
     gas_budget_default: "0.10"
     decimals: 18
     fee_limit: "100.0"
+    native_assets:
+      - asset_id: "INJ"
+        contract_id: "inj"
+        decimals: 18
+        fee_limit: "100.0"
     external:
       dti: WFQSW1L5L
       coin_market_cap:
@@ -519,6 +544,11 @@ chains:
     confirmations_final: 30
     decimals: 6
     fee_limit: "200.0"
+    native_assets:
+      - asset_id: "LUNA"
+        contract_id: "uluna"
+        decimals: 6
+        fee_limit: "200.0"
     external:
       dti: NGXHD2ZFQ
       coin_market_cap:
@@ -543,6 +573,15 @@ chains:
     confirmations_final: 30
     decimals: 6
     fee_limit: "25000000.0"
+    native_assets:
+      - asset_id: "LUNC"
+        contract_id: "uluna"
+        decimals: 6
+        fee_limit: "25000000.0"
+      - asset_id: "USTC"
+        contract_id: "uusd"
+        decimals: 6
+        fee_limit: "25000000.0"
     external:
       dti: NGXHD2ZFQ
       coin_market_cap:
@@ -592,18 +631,26 @@ chains:
     # Noble does NOT have a canonical/native asset.
     # To support assets on noble, tokens must be added separately
     chain_coin: "uusdc"
-    additional_native_assets:
+    native_assets:
       # https://www.mintscan.io/noble/assets
-      - asset_id: "uusdc"
+      - asset_id: "USDC"
+        contract_id: "uusdc"
         decimals: 6
         fee_limit: "20.0"
-      - asset_id: "ausdy"
+      - asset_id: "USDY"
+        contract_id: "ausdy"
         decimals: 18
         fee_limit: "20.0"
-      - asset_id: "ueure"
+      - asset_id: "EURe"
+        contract_id: "ueure"
         decimals: 6
         fee_limit: "20.0"
-      - asset_id: "uusyc"
+      - asset_id: "USYC"
+        contract_id: "uusyc"
+        decimals: 6
+        fee_limit: "20.0"
+      - asset_id: "USDN"
+        contract_id: "uusdn"
         decimals: 6
         fee_limit: "20.0"
 
@@ -647,6 +694,11 @@ chains:
     confirmations_final: 15
     decimals: 6
     fee_limit: "500.0"
+    native_assets:
+      - asset_id: "SEI"
+        contract_id: "usei"
+        decimals: 6
+        fee_limit: "500.0"
     external:
       dti: P4JBC8R50
       coin_market_cap:
@@ -661,8 +713,6 @@ chains:
     driver: evm
     chain_id: 1329
     chain_name: Sei
-    chain_prefix: sei
-    chain_coin: sei
     chain_coin_hd_path: 118
     gas_budget_default: "0.1"
     confirmations_final: 15
@@ -699,6 +749,11 @@ chains:
     decimals: 9
     fee_limit: "2.0"
     confirmations_final: 1
+    native_assets:
+      - asset_id: "SUI"
+        contract_id: "0x2::sui::SUI"
+        decimals: 9
+        fee_limit: "2.0"
     external:
       dti: 90KLX8GQX
       coin_market_cap:
@@ -735,6 +790,11 @@ chains:
     decimals: 6
     fee_limit: "25.0"
     confirmations_final: 6
+    native_assets:
+      - asset_id: "TIA"
+        contract_id: "utia"
+        decimals: 6
+        fee_limit: "25.0"
     external:
       coin_market_cap:
         asset_id: "22861"
@@ -802,6 +862,11 @@ chains:
     gas_budget_default: "0.1"
     decimals: 18
     fee_limit: "5000.0"
+    native_assets:
+      - asset_id: "XPLA"
+        contract_id: "axpla"
+        decimals: 18
+        fee_limit: "5000.0"
     external:
       coin_market_cap:
         asset_id: "22359"
