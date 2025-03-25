@@ -9,6 +9,10 @@ chains:
     net: devnet
     chain_name: Aptos (Devnet)
     decimals: 8
+    native_assets:
+      - asset_id: "APTOS"
+        contract_id: "0x1::aptos_coin::AptosCoin"
+        decimals: 8
   AKT:
     chain: AKT
     driver: cosmos
@@ -20,6 +24,10 @@ chains:
     chain_coin_hd_path: 118
     chain_gas_multiplier: 1.01
     disabled: true
+    native_assets:
+      - asset_id: "AKT"
+        contract_id: "uakt"
+        decimals: 6
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -29,6 +37,10 @@ chains:
     chain_coin: uatom
     chain_coin_hd_path: 118
     decimals: 6
+    native_assets:
+      - asset_id: "ATOM"
+        contract_id: "uatom"
+        decimals: 6
   ASTR:
     chain: ASTR
     driver: substrate
@@ -185,6 +197,10 @@ chains:
     chain_coin_hd_path: 60
     gas_budget_default: "0.10"
     decimals: 18
+    native_assets:
+      - asset_id: "INJ"
+        contract_id: "inj"
+        decimals: 18
   LUNA:
     chain: LUNA
     driver: cosmos
@@ -194,6 +210,10 @@ chains:
     chain_coin: uluna
     chain_coin_hd_path: 330
     decimals: 6
+    native_assets:
+      - asset_id: "LUNA"
+        contract_id: "uluna"
+        decimals: 6
   LUNC:
     chain: LUNC
     driver: cosmos
@@ -203,6 +223,13 @@ chains:
     chain_coin: uluna
     chain_coin_hd_path: 330
     decimals: 6
+    native_assets:
+      - asset_id: "LUNC"
+        contract_id: "uluna"
+        decimals: 6
+      - asset_id: "USTC"
+        contract_id: "uusd"
+        decimals: 6
   MATIC:
     chain: MATIC
     driver: evm
@@ -231,6 +258,10 @@ chains:
     chain_coin_hd_path: 118
     gas_budget_default: "0.1"
     decimals: 6
+    native_assets:
+      - asset_id: "SEI"
+        contract_id: "usei"
+        decimals: 6
   TIA:
     chain: TIA
     driver: cosmos
@@ -241,6 +272,10 @@ chains:
     chain_coin_hd_path: 118
     gas_budget_default: "0.1"
     decimals: 6
+    native_assets:
+      - asset_id: "TIA"
+        contract_id: "utia"
+        decimals: 6
   SOL:
     chain: SOL
     driver: solana
@@ -255,6 +290,10 @@ chains:
     chain_coin: "0x2::sui::SUI"
     chain_name: Sui (Devnet)
     decimals: 9
+    native_assets:
+      - asset_id: "SUI"
+        contract_id: "0x2::sui::SUI"
+        decimals: 9
   XPLA:
     chain: XPLA
     driver: cosmos
@@ -264,6 +303,10 @@ chains:
     chain_coin: axpla
     chain_coin_hd_path: 60
     decimals: 18
+    native_assets:
+      - asset_id: "XPLA"
+        contract_id: "axpla"
+        decimals: 18
   HASH:
     chain: HASH
     driver: cosmos
@@ -276,6 +319,10 @@ chains:
     chain_gas_multiplier: 10.0
     # translates to roughly max 50 HASH in gas per tx
     chain_max_gas_price: 125000.0
+    native_assets:
+      - asset_id: "HASH"
+        contract_id: "nhash"
+        decimals: 9
   TAO:
     chain: TAO
     driver: substrate
@@ -322,16 +369,20 @@ chains:
     no_native_asset: true
     additional_native_assets:
       # https://www.mintscan.io/noble/assets
-      - asset_id: "uusdc"
+      - asset_id: "USDC"
+        contract_id: "uusdc"
         decimals: 6
         max_fee: "20.0"
-      - asset_id: "ausdy"
+      - asset_id: "USDY"
+        contract_id: "ausdy"
         decimals: 18
         max_fee: "20.0"
-      - asset_id: "ueure"
+      - asset_id: "EURe"
+        contract_id: "ueure"
         decimals: 6
         max_fee: "20.0"
-      - asset_id: "uusyc"
+      - asset_id: "USYC"
+        contract_id: "uusyc"
         decimals: 6
         max_fee: "20.0"
   XLM:
@@ -349,8 +400,6 @@ chains:
     driver: evm
     chain_id: 1328
     chain_name: Sei
-    chain_prefix: sei
-    chain_coin: sei
     chain_coin_hd_path: 118
     gas_budget_default: "0.1"
     decimals: 18

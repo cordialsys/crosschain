@@ -564,8 +564,8 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return int(chainCfg.Decimals), nil
 	}
 	// check additional native assets
-	for _, asset := range chainCfg.AdditionalNativeAssets {
-		if asset.AssetId == contract {
+	for _, asset := range chainCfg.NativeAssets {
+		if asset.AssetId == string(contract) || asset.ContractId == contract {
 			return int(asset.Decimals), nil
 		}
 	}

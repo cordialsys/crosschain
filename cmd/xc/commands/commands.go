@@ -94,6 +94,9 @@ func CmdRpcBalance() *cobra.Command {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
 			}
 			if decimal {
+				if contract == "" {
+					contract = string(chainConfig.Chain)
+				}
 				decimals, err := rpcClient.FetchDecimals(context.Background(), xc.ContractAddress(contract))
 				if err != nil {
 					return fmt.Errorf("could not fetch decimals for contract %s: %v", contract, err)

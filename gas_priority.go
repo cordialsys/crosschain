@@ -76,8 +76,8 @@ func CheckFeeLimit(input TxInput, chainConfig *ChainConfig) error {
 		}
 	} else {
 		var additionalAsset *AdditionalNativeAsset
-		for _, asset := range chainConfig.AdditionalNativeAssets {
-			if asset.AssetId == feeAssetId {
+		for _, asset := range chainConfig.NativeAssets {
+			if asset.ContractId == feeAssetId {
 				additionalAsset = asset
 				break
 			}
