@@ -127,7 +127,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
-	res, err := client.SimulateTransfer(ctx, args, baseTxInput)
+	res, err := client.SimulateTransfer(ctx, args, *baseTxInput)
 	if err != nil {
 		return nil, err
 	}
@@ -135,47 +135,73 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		baseTxInput.GasLimit = res.GasInfo.GasUsed
 		// cosmos is like always a bit off from simulation and prod,
 		// so we need to increase the gas limit slightly
-		baseTxInput.GasLimit = (baseTxInput.GasLimit * 110) / 100
+		gasLimitMultiplier := 1.1
+		if client.Asset.GetChain().ChainGasLimitMultiplier > 0.001 {
+			gasLimitMultiplier = client.Asset.GetChain().ChainGasLimitMultiplier
+		}
+		baseTxInput.GasLimit = uint64(float64(baseTxInput.GasLimit) * gasLimitMultiplier)
 
 		logrus.WithFields(logrus.Fields{
-			"gas_used": res.GasInfo.GasUsed,
-			"from":     args.GetFrom(),
-			"contract": contract,
+			"gas_limit_multiplier": gasLimitMultiplier,
+			"gas_used":             res.GasInfo.GasUsed,
+			"from":                 args.GetFrom(),
+			"contract":             contract,
 		}).Debug("simulated tx")
 	}
 
 	return baseTxInput, nil
 }
 
-func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.TransferArgs, input *tx_input.TxInput) (*cosmostx.SimulateResponse, error) {
+func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.TransferArgs, input tx_input.TxInput) (*cosmostx.SimulateResponse, error) {
 	builder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
 	if err != nil {
 		return nil, err
 	}
-	cosmosTxI, err := builder.Transfer(args, input)
-	if err != nil {
-		return nil, err
-	}
-	cosmosTx := cosmosTxI.(*tx.Tx)
-	sig := make([]byte, 64)
-	err = cosmosTx.AddSignatures(sig)
-	if err != nil {
-		return nil, err
-	}
+	var simErr error
+	for _, gasPrice := range []float64{
+		// Try simulation with gas price, as this will produce a more accurate gas limit
+		input.GasPrice,
+		// simulate without gas price to avoid out-of-balance error
+		0,
+	} {
+		// Note: interestingly, if 0, this will cause the gas limit to lower by 16k gas or 20%
+		input.GasPrice = gasPrice
+		cosmosTxI, err := builder.Transfer(args, &input)
+		if err != nil {
+			return nil, err
+		}
+		cosmosTx := cosmosTxI.(*tx.Tx)
+		sig := make([]byte, 64)
+		err = cosmosTx.AddSignatures(sig)
+		if err != nil {
+			return nil, err
+		}
 
-	txBz, err := cosmosTx.Serialize()
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize tx: %v", err)
-	}
+		txBz, err := cosmosTx.Serialize()
+		if err != nil {
+			return nil, fmt.Errorf("failed to serialize tx: %v", err)
+		}
 
-	txClient := cosmostx.NewServiceClient(client.Ctx)
-	res, err := txClient.Simulate(ctx, &cosmostx.SimulateRequest{
-		TxBytes: txBz,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to simulate tx: %v", err)
+		txClient := cosmostx.NewServiceClient(client.Ctx)
+		res, err := txClient.Simulate(ctx, &cosmostx.SimulateRequest{
+			TxBytes: txBz,
+		})
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"gas_price": gasPrice,
+				"error":     err,
+			}).Warn("failed to simulate tx")
+			simErr = err
+			continue
+		}
+		// bump up the gas limit by ~21%, as this is experiementally
+		// what I've found to be the difference when omitted gas price.
+		if gasPrice == 0 {
+			res.GasInfo.GasUsed = uint64(float64(res.GasInfo.GasUsed) * 1.21)
+		}
+		return res, nil
 	}
-	return res, nil
+	return nil, simErr
 }
 
 func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {

@@ -39,6 +39,7 @@ chains:
     fee_limit: "200.0"
     chain_coin_hd_path: 118
     chain_gas_multiplier: 1.01
+    chain_gas_limit_multiplier: 1.15
     native_assets:
       - asset_id: "BAND"
         contract_id: "uband"
