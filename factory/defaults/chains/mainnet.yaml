@@ -49,6 +49,28 @@ chains:
         asset_id: akash-network
       coin_market_cap:
         asset_id: "7431"
+  BAND:
+    chain: BAND
+    driver: cosmos
+    chain_id: laozi-mainnet
+    chain_name: Band
+    chain_prefix: band
+    decimals: 6
+    chain_coin: uband
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    native_assets:
+      - asset_id: "BAND"
+        contract_id: "uband"
+        decimals: 6
+        fee_limit: "200.0"
+    external:
+      dti:
+      coin_gecko:
+        asset_id: band-protocol
+      coin_market_cap:
+        asset_id: "4679"
   APTOS:
     chain: APTOS
     driver: aptos
@@ -908,3 +930,25 @@ chains:
         asset_id: stellar
       indexing_co:
         chain_id: stellar
+  ZETA:
+    chain: ZETA
+    driver: evmos
+    chain_id: zetachain_7000-1
+    chain_name: ZetaChain
+    chain_prefix: zeta
+    decimals: 18
+    chain_coin: azeta
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    native_assets:
+      - asset_id: "ZETA"
+        contract_id: "azeta"
+        decimals: 18
+        fee_limit: "200.0"
+    external:
+      dti:
+      coin_gecko:
+        asset_id: zetachain
+      coin_market_cap:
+        asset_id: "21259"

@@ -34,6 +34,7 @@ const (
 	ATOM   = NativeAsset("ATOM")   // Cosmos
 	AurETH = NativeAsset("AurETH") // Aurora
 	AVAX   = NativeAsset("AVAX")   // Avalanche
+	BAND   = NativeAsset("BAND")   // Band
 	BASE   = NativeAsset("BASE")   // BASE
 	BERA   = NativeAsset("BERA")   // Berachain
 	BCH    = NativeAsset("BCH")    // Bitcoin Cash
@@ -76,10 +77,12 @@ const (
 	SeiEVM = NativeAsset("SeiEVM") // SeiEVM
 	XRP    = NativeAsset("XRP")    // XRP
 	XLM    = NativeAsset("XLM")    // XLM
+	ZETA   = NativeAsset("ZETA")   // ZetaChain
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
 	AKT,
+	BAND,
 	BCH,
 	BTC,
 	DOGE,
@@ -129,6 +132,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	BASE,
 	NOBLE,
 	XLM,
+	ZETA,
 }
 
 // Driver is the type of a chain
@@ -239,7 +243,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA:
 		return DriverCosmos
 	case SUI:
 		return DriverSui
