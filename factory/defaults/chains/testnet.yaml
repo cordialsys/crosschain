@@ -28,6 +28,22 @@ chains:
       - asset_id: "AKT"
         contract_id: "uakt"
         decimals: 6
+  BAND:
+    chain: BAND
+    driver: cosmos
+    chain_id: laozi-testnet
+    chain_name: Band
+    chain_prefix: band
+    decimals: 6
+    chain_coin: uband
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    native_assets:
+      - asset_id: "BAND"
+        contract_id: "uband"
+        decimals: 6
+        fee_limit: "200.0"
   ATOM:
     chain: ATOM
     driver: cosmos
@@ -403,3 +419,19 @@ chains:
     chain_coin_hd_path: 118
     gas_budget_default: "0.1"
     decimals: 18
+  ZETA:
+    chain: ZETA
+    driver: evmos
+    chain_id: athens_7001-1
+    chain_name: ZetaChain
+    chain_prefix: zeta
+    decimals: 18
+    chain_coin: azeta
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    native_assets:
+      - asset_id: "ZETA"
+        contract_id: "azeta"
+        decimals: 18
+        fee_limit: "200.0"
