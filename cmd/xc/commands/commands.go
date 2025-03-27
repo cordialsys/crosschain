@@ -120,6 +120,7 @@ func CmdTxInput() *cobra.Command {
 	var amount string
 	var contract string
 	var publicKeyHex string
+	var memo string
 	var decimals int
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
@@ -169,6 +170,9 @@ func CmdTxInput() *cobra.Command {
 					tfOptions = append(tfOptions, builder.OptionPublicKey(publicKey))
 				}
 			}
+			if memo != "" {
+				tfOptions = append(tfOptions, builder.OptionMemo(memo))
+			}
 
 			// default to smallest possible amount
 			amountBlockchain := xc.NewAmountBlockchainFromUint64(1)
@@ -208,6 +212,7 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().IntVar(&decimals, "decimals", -1, "Optional decimals of the token asset")
 	cmd.Flags().StringVar(&addressTo, "to", "", "Optional destination address")
 	cmd.Flags().StringVar(&amount, "amount", "", "human amount to transfer")
+	cmd.Flags().StringVar(&memo, "memo", "", "Optional memo for the transaction")
 	cmd.Flags().StringVar(&publicKeyHex, "public-key", "",
 		fmt.Sprintf("Public key in hex of the sender address (will use %s if set)", signer.EnvPrivateKey),
 	)

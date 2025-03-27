@@ -566,6 +566,8 @@ type ChainClientConfig struct {
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
 	// A local multiplier for client to apply to gas estimation, if it's important/needed.
 	ChainGasMultiplier float64 `yaml:"chain_gas_multiplier,omitempty"`
+	// for gas estimation of gas limit, for somechains the simulation may be flaky and need a multiplier
+	ChainGasLimitMultiplier float64 `yaml:"chain_gas_limit_multiplier,omitempty"`
 	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
 	// This should be in the blockchain amount.
 	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`
