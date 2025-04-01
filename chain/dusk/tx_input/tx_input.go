@@ -74,14 +74,24 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
-	// default false
+	// different sequence means independence
+	if evmOther, ok := other.(*TxInput); ok {
+		return evmOther.Nonce != input.Nonce
+	}
 	return
 }
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	// safe from double send ?
-	// default false
-	return
+	if !xc.SameTxInputTypes(input, others...) {
+		return false
+	}
+	// all same sequence means no double send
+	for _, other := range others {
+		if input.IndependentOf(other) {
+			return false
+		}
+	}
+	// sequence all same - we're safe
+	return true
 }
 
 func EstimateFeeLimit(feeLimit xc.AmountBlockchain, gasPrice xc.AmountBlockchain) xc.AmountBlockchain {
