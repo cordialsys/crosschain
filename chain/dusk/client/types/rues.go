@@ -11,6 +11,7 @@ const (
 	TARGET_ACCOUNT      = "account"
 	TARGET_GRAPHQL      = "graphql"
 	TARGET_TRANSACTIONS = "transactions"
+	TOPIC_CHAIN_ID      = "chain_id"
 	TOPIC_STATUS        = "status"
 	TOPIC_QUERY         = "query"
 	TOPIC_PROPAGATE     = "propagate"
@@ -156,4 +157,7 @@ type SpentTransaction struct {
 
 type GetTransactionResult struct {
 	SpentTransaction *SpentTransaction `json:"tx,omitempty"`
+}
+
+type GetChainIdParams struct {
 }

@@ -56,6 +56,19 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, err
 	}
 
+	chainIdRequest := types.RuesRequest{
+		Method: types.POST,
+		Target: types.TARGET_CONTRACT,
+		Topic:  types.TOPIC_CHAIN_ID,
+		Entity: types.TRANSFER_CONTRACT,
+		Params: []byte{},
+	}
+	var chainId []byte
+	err = Request(client, chainIdRequest, &chainId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chain id: %w", err)
+	}
+
 	// Calculate default fee_limit
 	maxFee := client.Asset.GetChain().FeeLimit.ToBlockchain(client.Asset.GetDecimals())
 	gasPrice := xc.NewAmountBlockchainFromUint64(tx_input.DEFAULT_GAS_PRICE)
@@ -66,6 +79,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		GasLimit:      gasLimit.Uint64(),
 		GasPrice:      gasPrice.Uint64(),
 		RefundAccount: args.GetFrom(),
+		ChainId:       chainId[0],
 	}, nil
 }
 
@@ -309,6 +323,9 @@ func Request(client *Client, rr types.RuesRequest, resp interface{}) error {
 	switch resp.(type) {
 	case string:
 		resp = string(buff)
+	case *[]byte:
+		respBuff := resp.(*[]byte)
+		*respBuff = buff
 	default:
 		err = json.Unmarshal(buff, resp)
 		if err != nil {
