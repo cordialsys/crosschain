@@ -359,6 +359,8 @@ chains:
     external:
       coin_market_cap:
         asset_id: "4092"
+      coin_gecko:
+        asset_id: dusk-network
   ETC:
     chain: ETC
     driver: evm-legacy
