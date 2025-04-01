@@ -26,7 +26,6 @@ func TestTxHash(t *testing.T) {
 		Nonce:           10,
 		GasLimit:        2_500_000,
 		GasPrice:        1,
-		RefundAccount:   from,
 		ChainId:         1,
 	})
 	require.NoError(t, err)
@@ -52,7 +51,6 @@ func TestTxMemoHash(t *testing.T) {
 		Nonce:           10,
 		GasLimit:        2_500_000,
 		GasPrice:        1,
-		RefundAccount:   from,
 		ChainId:         1,
 	})
 	require.NoError(t, err)
