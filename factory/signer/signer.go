@@ -148,6 +148,15 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 		}
 		return &Signer{driver, secretBz, alg}, nil
 	case xc.Bls12_381G2Blake2:
+		if len(secretBz) != 32 {
+			return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
+		}
+		var privKey bls.PrivateKey[bls.G2]
+		err := privKey.UnmarshalBinary(secretBz)
+		if err != nil && strings.Contains(err.Error(), "value out of range") {
+			logrus.Warn("scalar is not on bls12-381 curve, truncating first byte")
+			secretBz[0] = 0
+		}
 		return &Signer{driver, secretBz, alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
@@ -185,6 +194,7 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		if err != nil {
 			return nil, err
 		}
+		// bls.
 
 		// Hash the data
 		scalar, err := dusk.Blake2bScalarReduce(data)
