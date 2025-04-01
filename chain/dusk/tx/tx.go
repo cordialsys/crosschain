@@ -68,7 +68,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 		return Tx{}, errors.New("failed to get public key from receiver address")
 	}
 
-	refoundKey, err := address.GetPublicKeyFromAddress(input.RefundAccount)
+	refundKey, err := address.GetPublicKeyFromAddress(args.GetFrom())
 	if err != nil {
 		return Tx{}, errors.New("failed to get public key from refund address")
 	}
@@ -87,7 +87,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 			Fee: Fee{
 				GasLimit:      input.GasLimit,
 				GasPrice:      input.GasPrice,
-				RefundAddress: refoundKey,
+				RefundAddress: refundKey,
 			},
 			Nonce: input.Nonce,
 			Memo:  []byte(memo),
