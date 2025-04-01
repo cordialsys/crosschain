@@ -147,7 +147,7 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 			return nil, err
 		}
 		return &Signer{driver, secretBz, alg}, nil
-	case xc.Bls:
+	case xc.Bls12_381G2Blake2:
 		return &Signer{driver, secretBz, alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
@@ -179,7 +179,7 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 			return nil, err
 		}
 		return signature.Serialize(), nil
-	case xc.Bls:
+	case xc.Bls12_381G2Blake2:
 		var privKey bls.PrivateKey[bls.G2]
 		err := privKey.UnmarshalBinary(s.privateKey)
 		if err != nil {
@@ -244,7 +244,7 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 		default:
 			return crypto.FromECDSAPub(&ecdsaKey.PublicKey), nil
 		}
-	case xc.Bls:
+	case xc.Bls12_381G2Blake2:
 		var blsKey bls.PrivateKey[bls.G2]
 		blsKey.UnmarshalBinary(s.privateKey)
 		return blsKey.PublicKey().MarshalBinary()
