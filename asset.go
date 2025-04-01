@@ -18,6 +18,9 @@ const (
 	K256Sha256 = SignatureType("k256-sha256")
 	Ed255      = SignatureType("ed255")
 	Schnorr    = SignatureType("schnorr")
+
+	// TODO: Bls12_381G2Blake2
+	Bls = SignatureType("bls")
 )
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
@@ -45,6 +48,7 @@ const (
 	CHZ2   = NativeAsset("CHZ2")   // Chiliz 2.0
 	DOGE   = NativeAsset("DOGE")   // Dogecoin
 	DOT    = NativeAsset("DOT")    // Polkadot
+	DUSK   = NativeAsset("DUSK")   // Dusk
 	ENJ    = NativeAsset("ENJ")    // Enjin
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
@@ -100,6 +104,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	CHZ,
 	CHZ2,
 	DOT,
+	DUSK,
 	ENJ,
 	ETC,
 	ETH,
@@ -146,6 +151,7 @@ const (
 	DriverBitcoinLegacy = Driver("bitcoin-legacy")
 	DriverCosmos        = Driver("cosmos")
 	DriverCosmosEvmos   = Driver("evmos")
+	DriverDusk          = Driver("dusk")
 	DriverEVM           = Driver("evm")
 	DriverEVMLegacy     = Driver("evm-legacy")
 	DriverFilecoin      = Driver("filecoin")
@@ -261,6 +267,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverXlm
 	case FIL:
 		return DriverFilecoin
+	case DUSK:
+		return DriverDusk
 	}
 	return ""
 }
@@ -273,6 +281,8 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Keccak
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm:
 		return Ed255
+	case DriverDusk:
+		return Bls
 	}
 	return ""
 }

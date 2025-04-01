@@ -65,6 +65,7 @@ require (
 	cosmossdk.io/x/slashing v0.2.0-rc.1
 	cosmossdk.io/x/staking v0.0.0-20241218110910-47409028a73d
 	filippo.io/edwards25519 v1.1.0
+	github.com/cloudflare/circl v1.6.0
 	github.com/fxamacker/cbor v1.5.1
 	golang.org/x/time v0.5.0
 )

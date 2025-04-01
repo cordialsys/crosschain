@@ -17,6 +17,10 @@ import (
 	cosmosaddress "github.com/cordialsys/crosschain/chain/cosmos/address"
 	cosmosbuilder "github.com/cordialsys/crosschain/chain/cosmos/builder"
 	cosmosclient "github.com/cordialsys/crosschain/chain/cosmos/client"
+	dusk "github.com/cordialsys/crosschain/chain/dusk"
+	duskaddress "github.com/cordialsys/crosschain/chain/dusk/address"
+	duskbuilder "github.com/cordialsys/crosschain/chain/dusk/builder"
+	duskclient "github.com/cordialsys/crosschain/chain/dusk/client"
 	"github.com/cordialsys/crosschain/chain/evm"
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
@@ -82,6 +86,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return xrpclient.NewClient(cfg)
 	case DriverXlm:
 		return xlmclient.NewClient(cfg)
+	case DriverDusk:
+		return duskclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -152,6 +158,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return xlmbuilder.NewTxBuilder(cfg)
 	case DriverFilecoin:
 		return filbuilder.NewTxBuilder(cfg)
+	case DriverDusk:
+		return duskbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -162,6 +170,8 @@ func NewSigner(chain *ChainBaseConfig, secret string, options ...xcaddress.Addre
 
 func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption) (AddressBuilder, error) {
 	switch Driver(cfg.Driver) {
+	case DriverDusk:
+		return duskaddress.NewAddressBuilder(cfg)
 	case DriverEVM:
 		return evmaddress.NewAddressBuilder(cfg)
 	case DriverEVMLegacy:
@@ -199,6 +209,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return err.Status
 	}
 	switch driver {
+	case DriverDusk:
+		return dusk.CheckError(err)
 	case DriverEVM:
 		return evm.CheckError(err)
 	case DriverEVMLegacy:

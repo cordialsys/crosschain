@@ -3,6 +3,7 @@ package signer_test
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -102,5 +103,103 @@ func TestSign(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, v.pub, hex.EncodeToString(pub))
 		})
+	}
+}
+
+// mac computes a + (b * c) + carry, returning the result and the new carry over.
+func mac(a, b, c, carry uint64) (uint64, uint64) {
+	// Create big.Int instances for the inputs
+	bigA := new(big.Int).SetUint64(a)
+	bigB := new(big.Int).SetUint64(b)
+	bigC := new(big.Int).SetUint64(c)
+	bigCarry := new(big.Int).SetUint64(carry)
+
+	// Perform the multiplication and addition
+	product := new(big.Int).Mul(bigB, bigC)
+	sum := new(big.Int).Add(bigA, product)
+	sum.Add(sum, bigCarry)
+
+	// Extract the lower 64 bits and the higher 64 bits
+	lower64 := sum.Uint64()
+	upper64 := new(big.Int).Rsh(sum, 64).Uint64()
+
+	return lower64, upper64
+}
+
+func TestMacNoCarry(t *testing.T) {
+	result, carry := mac(1, 2, 3, 0)
+	if result != 7 || carry != 0 {
+		t.Errorf("Expected (7, 0), got (%d, %d)", result, carry)
+	}
+}
+
+func TestMacWithCarry(t *testing.T) {
+	result, carry := mac(1, 2, 3, 4)
+	if result != 11 || carry != 0 {
+		t.Errorf("Expected (11, 0), got (%d, %d)", result, carry)
+	}
+}
+
+func TestMacLargeValues(t *testing.T) {
+	result, carry := mac(^uint64(0), ^uint64(0), ^uint64(0), ^uint64(0))
+	if result != 18446744073709551615 || carry != 18446744073709551615 {
+		t.Errorf("Expected (18446744073709551615, 18446744073709551615), got (%d, %d)", result, carry)
+	}
+}
+
+func TestMacOverflow(t *testing.T) {
+	result, carry := mac(^uint64(0), ^uint64(0), 2, 0)
+	if result != 18446744073709551613 || carry != 2 {
+		t.Errorf("Expected (18446744073709551614, 18446744073709551615), got (%d, %d)", result, carry)
+	}
+}
+
+func TestMacZeroValues(t *testing.T) {
+	result, carry := mac(0, 0, 0, 0)
+	if result != 0 || carry != 0 {
+		t.Errorf("Expected (0, 0), got (%d, %d)", result, carry)
+	}
+}
+
+// adc computes a + b + carry, returning the result and the new carry over.
+func adc(a, b, carry uint64) (uint64, uint64) {
+	bigA := new(big.Int).SetUint64(a)
+	bigB := new(big.Int).SetUint64(b)
+	bigCarry := new(big.Int).SetUint64(carry)
+
+	sum := new(big.Int).Add(bigA, bigB)
+	sum.Add(sum, bigCarry)
+
+	result := sum.Uint64()
+	carryOut := new(big.Int).Rsh(sum, 64).Uint64()
+
+	return result, carryOut
+}
+
+func TestAdcNoCarry(t *testing.T) {
+	result, carry := adc(1, 2, 0)
+	if result != 3 || carry != 0 {
+		t.Errorf("adc(1, 2, 0) = (%d, %d); want (3, 0)", result, carry)
+	}
+}
+
+func TestAdcWithCarry(t *testing.T) {
+	result, carry := adc(^uint64(0), 1, 0)
+	if result != 0 || carry != 1 {
+		t.Errorf("adc(^uint64(0), 1, 0) = (%d, %d); want (0, 1)", result, carry)
+	}
+}
+
+func TestAdcWithInitialCarry(t *testing.T) {
+	result, carry := adc(1, 1, 1)
+	if result != 3 || carry != 0 {
+		t.Errorf("adc(1, 1, 1) = (%d, %d); want (3, 0)", result, carry)
+	}
+}
+
+func TestAdcWithAllMaxValues(t *testing.T) {
+	result, carry := adc(^uint64(0), ^uint64(0), ^uint64(0))
+	if result != ^uint64(0)-2 || carry != 2 {
+		t.Errorf("adc(^uint64(0), ^uint64(0), ^uint64(0)) = (%d, %d); want (%d, 2)", result, carry, ^uint64(0)-2)
 	}
 }

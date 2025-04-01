@@ -349,6 +349,16 @@ chains:
         asset_id: "2130"
       coin_gecko:
         asset_id: enjincoin
+  DUSK:
+    chain: DUSK
+    driver: dusk
+    decimals: 9
+    fee_limit: "1.0"
+    chain_name: Dusk
+    confirmations_final: 1
+    external:
+      coin_market_cap:
+        asset_id: "4092"
   ETC:
     chain: ETC
     driver: evm-legacy
