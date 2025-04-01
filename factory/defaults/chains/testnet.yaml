@@ -135,6 +135,12 @@ chains:
     chain_prefix: "42"
     indexer_url: "https://rococo.api.subscan.io"
     indexer_type: subscan
+  DUSK:
+    chain: DUSK
+    driver: dusk
+    decimals: 9
+    chain_name: Dusk
+    confirmations_final: 1
   LTC:
     chain: LTC
     driver: bitcoin-legacy
