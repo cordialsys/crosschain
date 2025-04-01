@@ -110,6 +110,9 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	var verifyResponse string
 	err = Request(client, verifyRequest, &verifyResponse)
 	if err != nil {
+		if strings.Contains(err.Error(), "this transaction exists in the mempool") {
+			return errors.TransactionExistsf("%v", err)
+		}
 		return fmt.Errorf("failed to submit tx: %w", err)
 	}
 	if verifyResponse != "" {
@@ -129,7 +132,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		if strings.Contains(err.Error(), "this transaction exists in the mempool") {
 			return errors.TransactionExistsf("%v", err)
 		}
-		return fmt.Errorf("failed to submit tx: %w", err)
+		return fmt.Errorf("failed to propagate tx: %w", err)
 	}
 
 	return nil
