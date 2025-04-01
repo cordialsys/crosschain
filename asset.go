@@ -14,13 +14,11 @@ import (
 type SignatureType string
 
 const (
-	K256Keccak = SignatureType("k256-keccak")
-	K256Sha256 = SignatureType("k256-sha256")
-	Ed255      = SignatureType("ed255")
-	Schnorr    = SignatureType("schnorr")
-
-	// TODO: Bls12_381G2Blake2
-	Bls = SignatureType("bls")
+	K256Keccak        = SignatureType("k256-keccak")
+	K256Sha256        = SignatureType("k256-sha256")
+	Ed255             = SignatureType("ed255")
+	Schnorr           = SignatureType("schnorr")
+	Bls12_381G2Blake2 = SignatureType("bls12-381-g2-blake2")
 )
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
@@ -282,7 +280,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm:
 		return Ed255
 	case DriverDusk:
-		return Bls
+		return Bls12_381G2Blake2
 	}
 	return ""
 }
