@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	types "github.com/cordialsys/crosschain/chain/dusk/client/types"
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/stellar/go/support/time"
 )
@@ -110,6 +110,9 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	var propagateResponse string
 	err = Request(client, propagateRequest, &propagateResponse)
 	if err != nil {
+		if strings.Contains(err.Error(), "this transaction exists in the mempool") {
+			return errors.TransactionExistsf("%v", err)
+		}
 		return fmt.Errorf("failed to submit tx: %w", err)
 	}
 
@@ -118,7 +121,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 // Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	return xc.LegacyTxInfo{}, errors.New("not implemented")
+	return xc.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
 // Returns transaction info - new endpoint

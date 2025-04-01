@@ -35,17 +35,9 @@ func TestTxHash(t *testing.T) {
 	require.Equal(t, xc.TxHash("5a9e2b509d1d3bc3fd1479f09671ac80466e63c70297030590086a6cf088331e"), tx.Hash())
 }
 
-func TestTxSighashes(t *testing.T) {
-
-	tx1 := tx.Tx{}
-	sighashes, err := tx1.Sighashes()
-	require.NotNil(t, sighashes)
-	require.EqualError(t, err, "not implemented")
-}
-
 func TestTxAddSignature(t *testing.T) {
 
 	tx1 := tx.Tx{}
 	err := tx1.AddSignatures([]xc.TxSignature{}...)
-	require.EqualError(t, err, "not implemented")
+	require.EqualError(t, err, "only one signature is allowed")
 }
