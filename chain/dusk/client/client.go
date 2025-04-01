@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"strings"
+	"time"
+	"unicode/utf8"
 
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,7 +20,6 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	log "github.com/sirupsen/logrus"
-	"github.com/stellar/go/support/time"
 )
 
 // Client for Dusk
@@ -159,9 +161,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	}
 
 	chain := client.Asset.GetChain().Chain
-	blockTime := time.MillisFromInt64(response.SpentTransaction.BlockTimestamp)
-	block := xclient.NewBlock(chain, response.SpentTransaction.BlockHeight, response.SpentTransaction.BlockHash, blockTime.ToTime())
-	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), response.SpentTransaction.ID, latestHeight-block.Height.Uint64(), &response.SpentTransaction.Err)
+	blockTime := time.Unix(response.SpentTransaction.BlockTimestamp, 0)
+	block := xclient.NewBlock(chain, response.SpentTransaction.BlockHeight, response.SpentTransaction.BlockHash, blockTime)
+	confirmations := uint64(0)
+	// sometimes the latest height is 1 behind the tx height
+	if latestHeight > block.Height.Uint64() {
+		confirmations = latestHeight - block.Height.Uint64()
+	}
+	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), response.SpentTransaction.ID, confirmations, &response.SpentTransaction.Err)
 
 	transaction, err := response.SpentTransaction.Tx.GetTransaction()
 	if err != nil {
@@ -173,6 +180,17 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	movement := xclient.NewMovement(chain, "")
 	movement.AddSource(sourceAddress, amount, nil)
 	movement.AddDestination(destinationAddress, amount, nil)
+	if transaction.Memo != "" {
+		utf8Maybe, err := hex.DecodeString(strings.TrimPrefix(transaction.Memo, "0x"))
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to decode memo=%s: %w", transaction.Memo, err)
+		}
+		if utf8.Valid(utf8Maybe) {
+			movement.SetMemo(string(utf8Maybe))
+		} else {
+			// Should we report hex-encoded memos as a fallback?
+		}
+	}
 	txInfo.AddMovement(movement)
 
 	gasPrice := xc.NewAmountBlockchainFromStr(transaction.Fee.GasPrice)
@@ -257,8 +275,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}
 
 	block := response.Block
-	blockTimestamp := time.MillisFromInt64(block.Header.Timestamp)
-	xBlock := xclient.NewBlock(client.Asset.GetChain().Chain, block.Header.Height, block.Header.Hash, blockTimestamp.ToTime())
+	blockTimestamp := time.Unix(block.Header.Timestamp, 0)
+	xBlock := xclient.NewBlock(client.Asset.GetChain().Chain, block.Header.Height, block.Header.Hash, blockTimestamp)
 	transactions := make([]string, 0, len(block.Transactions))
 	for _, tx := range block.Transactions {
 		transactions = append(transactions, tx.Id)
