@@ -23,12 +23,10 @@ type TxInput struct {
 	GasPrice uint64
 	// Refund account
 	RefundAccount xc.Address
-	Memo          string
 	ChainId       uint8
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithMemo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -86,10 +84,6 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	// safe from double send ?
 	// default false
 	return
-}
-
-func (input *TxInput) SetMemo(memo string) {
-	input.Memo = memo
 }
 
 func EstimateFeeLimit(feeLimit xc.AmountBlockchain, gasPrice xc.AmountBlockchain) xc.AmountBlockchain {
