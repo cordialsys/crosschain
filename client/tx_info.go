@@ -218,7 +218,7 @@ func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmation
 	name := NewTransactionName(chainCfg.Chain, hash)
 
 	state := Succeeded
-	if err != nil {
+	if err != nil && *err != "" {
 		state = Failed
 	} else if block.Height.Uint64() == 0 {
 		state = Mining

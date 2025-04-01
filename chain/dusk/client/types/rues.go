@@ -132,6 +132,8 @@ type Transaction struct {
 	Receiver string `json:"receiver"`
 	Value    uint64 `json:"value"`
 	Fee      Fee    `json:"fee"`
+	// This is hex encoded (encodes ascii potentially)
+	Memo string `json:"memo"`
 }
 
 type TransactionJson struct {

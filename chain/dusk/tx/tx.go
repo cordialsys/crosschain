@@ -13,6 +13,15 @@ import (
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
 )
 
+type PayloadType uint8
+
+const (
+	// https://github.com/dusk-network/rusk/blob/master/core/src/transfer/moonlight.rs#L402-L417
+	PayloadTypeCall   PayloadType = 1
+	PayloadTypeDeploy PayloadType = 2
+	PayloadTypeMemo   PayloadType = 3
+)
+
 // Tx for Dusk
 type Tx struct {
 	Payload   Payload
@@ -63,6 +72,10 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 	if err != nil {
 		return Tx{}, errors.New("failed to get public key from refund address")
 	}
+	memo := ""
+	if inputMemo, ok := args.GetMemo(); ok {
+		memo = inputMemo
+	}
 
 	tx := Tx{
 		Payload: Payload{
@@ -77,7 +90,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 				RefundAddress: refoundKey,
 			},
 			Nonce: input.Nonce,
-			Memo:  []byte(input.Memo),
+			Memo:  []byte(memo),
 		},
 	}
 
@@ -112,44 +125,6 @@ func (tx Tx) Hash() xc.TxHash {
 	return xc.TxHash(hash)
 }
 
-func (tx Tx) SighashBase() ([]byte, error) {
-	bytes := make([]byte, 0)
-	bytes = append(bytes, tx.Payload.ChainId)
-
-	senderBytes, err := tx.Payload.Sender.MarshalBinary()
-	if err != nil {
-		return []byte{}, errors.New("failed to marshal sender")
-	}
-	bytes = append(bytes, senderBytes...)
-	if tx.Payload.Receiver != tx.Payload.Sender {
-		receiverBytes, err := tx.Payload.Receiver.MarshalBinary()
-		if err != nil {
-			return []byte{}, errors.New("failed to marshal receiver")
-		}
-		bytes = append(bytes, receiverBytes...)
-	}
-
-	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Value)
-	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Deposit)
-	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Fee.GasLimit)
-	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Fee.GasPrice)
-	if tx.Payload.Fee.RefundAddress != tx.Payload.Sender {
-		refundAddressBytes, err := tx.Payload.Fee.RefundAddress.MarshalBinary()
-		if err != nil {
-			return []byte{}, errors.New("failed to marshal refund address")
-		}
-		bytes = append(bytes, refundAddressBytes...)
-	}
-	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Nonce)
-
-	if len(tx.Payload.Memo) > 0 {
-		bytes = append(bytes, tx.Payload.Memo...)
-	}
-
-	return bytes, nil
-
-}
-
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	bytes := make([]byte, 0)
@@ -182,6 +157,8 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	bytes = binary.LittleEndian.AppendUint64(bytes, tx.Payload.Nonce)
 
 	if len(tx.Payload.Memo) > 0 {
+		// Note that this is different from how it's serialized
+		// https://github.com/dusk-network/rusk/blob/master/core/src/transfer/moonlight.rs#L516-L532
 		bytes = append(bytes, tx.Payload.Memo...)
 	}
 
@@ -211,7 +188,7 @@ func (tx *Tx) GetSignatures() []xc.TxSignature {
 
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
-	payload := make([]byte, 0, 0)
+	payload := make([]byte, 0)
 
 	payload = append(payload, tx.Payload.ChainId)
 	senderBytes, err := tx.Payload.Sender.MarshalBinary()
@@ -249,6 +226,9 @@ func (tx Tx) Serialize() ([]byte, error) {
 
 	payload = binary.LittleEndian.AppendUint64(payload, tx.Payload.Nonce)
 	if len(tx.Payload.Memo) > 0 {
+		// https://github.com/dusk-network/rusk/blob/master/core/src/transfer/moonlight.rs#L402-L417
+		payload = append(payload, 3)
+		payload = binary.LittleEndian.AppendUint64(payload, uint64(len(tx.Payload.Memo)))
 		payload = append(payload, tx.Payload.Memo...)
 	} else {
 		payload = append(payload, 0)
