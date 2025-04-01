@@ -5,20 +5,31 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+
 	"os"
 	"strings"
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
 	"github.com/btcsuite/btcutil/base58"
+
+	"github.com/cloudflare/circl/ecc/bls12381"
+	"github.com/cloudflare/circl/sign/bls"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
 	cosmostypes "github.com/cordialsys/crosschain/chain/cosmos/types"
+	"github.com/cordialsys/crosschain/chain/dusk"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	dstG1      = "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
+	dstG2      = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
+	ScalarSize = 32
 )
 
 // Reference implementation to sign transactions - not meant to be used for production
@@ -136,6 +147,8 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 			return nil, err
 		}
 		return &Signer{driver, secretBz, alg}, nil
+	case xc.Bls:
+		return &Signer{driver, secretBz, alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
 	}
@@ -153,7 +166,6 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		}
 		return xc.TxSignature(signatureRaw), nil
 	case xc.K256Keccak, xc.K256Sha256:
-		// return xc.TxSignature(s.privateKey), nil
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))
 		if err != nil {
 			return []byte{}, err
@@ -167,6 +179,29 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 			return nil, err
 		}
 		return signature.Serialize(), nil
+	case xc.Bls:
+		var privKey bls.PrivateKey[bls.G2]
+		err := privKey.UnmarshalBinary(s.privateKey)
+		if err != nil {
+			return nil, err
+		}
+
+		// Hash the data
+		scalar, err := dusk.Blake2bScalarReduce(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get scalar from sighash: %v", err)
+		}
+		bytes, err := scalar.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal scalar: %v", err)
+		}
+
+		Q := bls12381.G1Generator()
+		Q = dusk.ScalarMultShort(bytes, Q)
+		Q = dusk.ScalarMultShort(s.privateKey, Q)
+		signBytes := Q.BytesCompressed()
+
+		return xc.TxSignature(signBytes), nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg for driver: %v", s.driver)
 	}
@@ -209,9 +244,12 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 		default:
 			return crypto.FromECDSAPub(&ecdsaKey.PublicKey), nil
 		}
-
+	case xc.Bls:
+		var blsKey bls.PrivateKey[bls.G2]
+		blsKey.UnmarshalBinary(s.privateKey)
+		return blsKey.PublicKey().MarshalBinary()
 	default:
-		return nil, fmt.Errorf("unsupported alg for driver: %v", s.driver)
+		return nil, fmt.Errorf("unsupported alg %v for driver: %v", s.algorithm, s.driver)
 	}
 }
 func (s *Signer) MustPublicKey() PublicKey {
