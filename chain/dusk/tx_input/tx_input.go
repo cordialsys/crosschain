@@ -16,14 +16,12 @@ const DEFAULT_GAS_PRICE = 1
 // `GasUsed` is the gas cost of the transaction.
 type TxInput struct {
 	xc.TxInputEnvelope
-	Nonce uint64
+	Nonce uint64 `json:"nonce"`
 	// GasLimit is the maximum amount of gas that can be used for the transaction
-	GasLimit uint64
+	GasLimit uint64 `json:"gas_limit"`
 	// GasPrice is the amount of gas fee that user is willing to pay per gas
-	GasPrice uint64
-	// Refund account
-	RefundAccount xc.Address
-	ChainId       uint8
+	GasPrice uint64 `json:"gas_price"`
+	ChainId  uint8  `json:"chain_id"`
 }
 
 var _ xc.TxInput = &TxInput{}

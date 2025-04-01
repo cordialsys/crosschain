@@ -77,11 +77,10 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	gasLimit := tx_input.EstimateFeeLimit(maxFee, gasPrice)
 
 	return &tx_input.TxInput{
-		Nonce:         accountStatus.Nonce + 1,
-		GasLimit:      gasLimit.Uint64(),
-		GasPrice:      gasPrice.Uint64(),
-		RefundAccount: args.GetFrom(),
-		ChainId:       chainId[0],
+		Nonce:    accountStatus.Nonce + 1,
+		GasLimit: gasLimit.Uint64(),
+		GasPrice: gasPrice.Uint64(),
+		ChainId:  chainId[0],
 	}, nil
 }
 
