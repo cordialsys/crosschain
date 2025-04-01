@@ -66,7 +66,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 
 	tx := Tx{
 		Payload: Payload{
-			ChainId:  1,
+			ChainId:  input.ChainId,
 			Sender:   senderKey,
 			Receiver: receiverKey,
 			Value:    args.GetAmount().Int().Uint64(),
