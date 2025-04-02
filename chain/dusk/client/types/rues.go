@@ -33,7 +33,7 @@ type RuesRequest struct {
 	Params []byte
 }
 
-func NewGraphQlRequest(params []byte, ruskSessionId string) RuesRequest {
+func NewGraphQlRequest(params []byte) RuesRequest {
 	return RuesRequest{
 		Method: POST,
 		Target: TARGET_GRAPHQL,

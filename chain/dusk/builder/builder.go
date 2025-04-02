@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -35,14 +34,4 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 	tx, err := tx.NewTx(args, *txInput)
 	return &tx, err
-}
-
-// NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return nil, errors.New("not implemented")
-}
-
-// NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
-	return nil, fmt.Errorf("token transfers are not supported for %s", txBuilder.Asset.Chain)
 }
