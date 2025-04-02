@@ -152,7 +152,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	params := types.GetTransactionParams{
 		Id: string(txHash),
 	}
-	request := types.NewGraphQlRequest(params.ToBytesParams(), "5d20d802b7a574c3316a103c02bb58b7")
+	request := types.NewGraphQlRequest(params.ToBytesParams())
 	var response types.GetTransactionResult
 	err = Request(client, request, &response)
 	if err != nil {
@@ -201,6 +201,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	txInfo.AddFee(sourceAddress, "", feePrice, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	if response.SpentTransaction.Err != "" {
+		txInfo.Error = &response.SpentTransaction.Err
+	} else {
+		txInfo.Error = nil
+	}
 
 	return *txInfo, nil
 }
@@ -239,7 +244,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 
 func (client *Client) FetchLatestBlockHeight() (uint64, error) {
 	params := &types.GetLastBlockParams{}
-	request := types.NewGraphQlRequest(params.ToBytesParams(), "5d20d802b7a574c3316a103c02bb58b7")
+	request := types.NewGraphQlRequest(params.ToBytesParams())
 	var response types.LastBlockPairResult
 	err := Request(client, request, &response)
 	if err != nil {
@@ -269,7 +274,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	params := &types.GetBlockParams{
 		Height: height,
 	}
-	request := types.NewGraphQlRequest(params.ToBytesParams(), "5d20d802b7a574c3316a103c02bb58b7")
+	request := types.NewGraphQlRequest(params.ToBytesParams())
 	var response types.GetBlockResult
 	err := Request(client, request, &response)
 	if err != nil {

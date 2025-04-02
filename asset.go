@@ -442,7 +442,11 @@ func (chain *ChainConfig) WithMinGasPrice(minGasPrice float64) *ChainConfig {
 	return chain
 }
 func (chain *ChainConfig) WithMaxGasPrice(maxGasPrice float64) *ChainConfig {
-	chain.ChainClientConfig.ChainMinGasPrice = maxGasPrice
+	chain.ChainClientConfig.ChainMaxGasPrice = maxGasPrice
+	return chain
+}
+func (chain *ChainConfig) WithFeeLimit(feeLimit AmountHumanReadable) *ChainConfig {
+	chain.FeeLimit = feeLimit
 	return chain
 }
 func (chain *ChainConfig) WithGasPriceMultiplier(multiplier float64) *ChainConfig {

@@ -67,8 +67,41 @@ func TestTxMemoHash(t *testing.T) {
 }
 
 func TestTxAddSignature(t *testing.T) {
-
-	tx1 := tx.Tx{}
-	err := tx1.AddSignatures([]xc.TxSignature{}...)
+	tx := tx.Tx{}
+	err := tx.AddSignatures([]xc.TxSignature{}...)
 	require.EqualError(t, err, "only one signature is allowed")
+
+	signatures := []xc.TxSignature{xc.TxSignature{}, xc.TxSignature{}}
+	err = tx.AddSignatures(signatures...)
+	require.EqualError(t, err, "only one signature is allowed")
+
+	validSignatures := []xc.TxSignature{xc.TxSignature{}}
+	err = tx.AddSignatures(validSignatures...)
+	require.NoError(t, err)
+}
+
+func TestTxSighashes(t *testing.T) {
+	from := xc.Address("2293LeWtYGpsBA99HRg2AfMm9oYhikZ83GSW5NP6QtQxDvkBTAdU8LfQj9fXvDt1rK1baqBcf3gQKsLXpw3LUjpdkSMRMrTsfuTo5Yri1xvUDnVcMMpgTG4o7ThCjZuLMp9L")
+	to := xc.Address("26nbWp93it1FF8ChyBUmV2zrXMqsv6xR41UUfcyq37abhoYvvEW4C8MgJPdKnzfQhfa6t1VtVj2QUeDK1aP98TGGtumV897Gtv3M7mh2qZBNK6C4LqvP6GyTeHvC7kPncVvg")
+	args, err := builder.NewTransferArgs(
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(5_000_000),
+	)
+	require.NoError(t, err)
+
+	tx, err := tx.NewTx(args, tx_input.TxInput{
+		TxInputEnvelope: xc.TxInputEnvelope{},
+		Nonce:           10,
+		GasLimit:        2_500_000,
+		GasPrice:        1,
+		ChainId:         1,
+	})
+	sighashes, err := tx.Sighashes()
+	require.NoError(t, err)
+	if len(sighashes) != 1 {
+		t.Errorf("expected only one sighash")
+	}
+
+	require.Equal(t, sighashes[0], xc.TxDataToSign{1, 171, 173, 120, 172, 251, 40, 146, 34, 146, 117, 120, 193, 28, 248, 42, 251, 9, 132, 119, 117, 185, 53, 45, 65, 109, 60, 173, 87, 208, 217, 120, 148, 18, 1, 96, 102, 130, 217, 165, 163, 115, 64, 3, 59, 203, 41, 164, 134, 14, 66, 146, 90, 63, 210, 16, 148, 224, 181, 74, 149, 165, 149, 236, 79, 105, 168, 0, 208, 132, 70, 222, 211, 136, 71, 164, 161, 214, 237, 106, 139, 215, 239, 33, 85, 170, 116, 200, 212, 204, 87, 228, 148, 89, 137, 135, 79, 185, 43, 78, 21, 106, 5, 164, 108, 112, 150, 226, 145, 220, 213, 232, 22, 185, 168, 148, 244, 62, 227, 28, 53, 87, 161, 206, 156, 109, 17, 31, 117, 200, 178, 212, 13, 211, 15, 215, 91, 143, 28, 196, 56, 217, 118, 76, 142, 20, 134, 148, 30, 204, 49, 196, 49, 5, 110, 179, 32, 189, 248, 113, 44, 226, 226, 105, 15, 171, 5, 84, 245, 138, 98, 230, 216, 99, 185, 80, 31, 18, 108, 47, 225, 135, 224, 123, 122, 148, 144, 124, 249, 107, 33, 55, 225, 64, 75, 76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 160, 37, 38, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0})
 }
