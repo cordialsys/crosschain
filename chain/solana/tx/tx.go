@@ -167,6 +167,13 @@ func (tx Tx) GetTokenTransfers() []*token.Transfer {
 	)
 }
 
+func (tx Tx) GetCloseTokenAccounts() []*token.CloseAccount {
+	return append(
+		getall[*token.CloseAccount](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
+		getall[*token.CloseAccount](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
+	)
+}
+
 type CreateAccountLikeInstruction struct {
 	NewAccount solana.PublicKey
 	Lamports   uint64

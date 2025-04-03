@@ -380,6 +380,28 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			ContractAddress: contract,
 		})
 	}
+
+	for _, instr := range tx.GetCloseTokenAccounts() {
+		from := instr.GetOwnerAccount().PublicKey.String()
+		to := instr.GetDestinationAccount().PublicKey.String()
+		// The balance is the minimum balance for rent.
+		// Technically this min amount could change, so this could be inaccurate for historical tx.
+		// https://spl.solana.com/token
+		const tokenProgramSize = 165
+		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, tokenProgramSize, rpc.CommitmentFinalized)
+		if err != nil {
+			return result, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
+		}
+		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(from),
+			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
+		})
+		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+			Address: xc.Address(to),
+			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
+		})
+	}
+
 	for _, instr := range tx.GetDelegateStake() {
 		xcStake := &xclient.Stake{
 			Account:   instr.GetStakeAccount().PublicKey.String(),
