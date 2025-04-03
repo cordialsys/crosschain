@@ -322,7 +322,8 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 
 	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 
-	if !client.skipAmountFilter {
+	// Filter the UTXO only if the amount is explicitly passed (otherwise we return all UTXOs)
+	if !client.skipAmountFilter && args.GetAmount().Uint64() > 1 {
 		// filter the UTXO set needed
 		input.SetAmount(args.GetAmount())
 	}
