@@ -80,6 +80,7 @@ const (
 	XRP    = NativeAsset("XRP")    // XRP
 	XLM    = NativeAsset("XLM")    // XLM
 	ZETA   = NativeAsset("ZETA")   // ZetaChain
+	NIL    = NativeAsset("NIL")    // Nillion
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -136,6 +137,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	NOBLE,
 	XLM,
 	ZETA,
+	NIL,
 }
 
 // Driver is the type of a chain
@@ -247,7 +249,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL:
 		return DriverCosmos
 	case SUI:
 		return DriverSui
