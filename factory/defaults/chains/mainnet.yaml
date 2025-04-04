@@ -656,7 +656,25 @@ chains:
     fee_limit: "250.0"
     chain_max_gas_price: 120
     confirmations_final: 250
-
+  NIL:
+    chain: NIL
+    driver: cosmos
+    chain_id: nillion-1
+    chain_name: Nillion
+    chain_prefix: nillion
+    decimals: 6
+    chain_coin: unil
+    fee_limit: "100.0"
+    native_assets:
+      - asset_id: "NIL"
+        contract_id: "unil"
+        decimals: 6
+        fee_limit: "100.0"
+    external:
+      coin_gecko:
+        asset_id: nillion
+      coin_market_cap:
+        asset_id: "35702"
   NOBLE:
     chain: NOBLE
     driver: cosmos
