@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -171,8 +172,21 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return xc.LegacyTxInfo{}, errors.New("not implemented")
 }
 
+// Call `Filecoin.EthGetMessageCidByTransactionHash` to convert EVM hash to CID
+func (client *Client) ConvertEvmHashToCid(txHash xc.TxHash) (xc.TxHash, error) {
+	evmHashToCid := types.NewParams(types.MethodEthGetMessageCidByTransactionHash, types.EthGetMessageCidByTransactionHash(txHash))
+	evmHashToCidResponse := types.NewEvmTxHashToCidResponse()
+	err := Post(client, evmHashToCid, evmHashToCidResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert EVM hash to CID: %w", err)
+	}
+
+	return xc.TxHash(evmHashToCidResponse.Result.Value), nil
+}
+
 // Fetch Filecoin transaction info
 // Because of how Filecoin works, we need to fetch multiple data points to get the transaction info:
+// 0. Covert provided txHash to CID if it is an EVM transaction hash
 // 1. `ChainGetMessage` - get gas info
 // 2. `StateSearchMsg` - get used gas
 // 3. `ChainGetBlock` - get block data
@@ -186,6 +200,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 // There is a small penalty for overestimating the gas limit, which is not included in calculations
 // at the moment
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+	isEvmHash := strings.HasPrefix(string(txHash), "0x")
+	if isEvmHash {
+		cid, err := client.ConvertEvmHashToCid(txHash)
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to convert EVM hash to CID: %w", err)
+		}
+		txHash = cid
+	}
+
 	messageCid := types.NewCid(string(txHash))
 	chainGetMessageParams := types.NewParams(types.MethodChainGetMessage, types.ChainGetMessage{
 		Cid: messageCid,
