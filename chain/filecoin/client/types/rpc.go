@@ -6,17 +6,18 @@ import (
 )
 
 const (
-	MethodChainGetBlock             = "Filecoin.ChainGetBlock"
-	MethodChainGetMessage           = "Filecoin.ChainGetMessage"
-	MethodChainGetParentMessages    = "Filecoin.ChainGetParentMessages"
-	MethodChainGetTipSet            = "Filecoin.ChainGetTipSet"
-	MethodChainGetTipSetAfterHeight = "Filecoin.ChainGetTipSetAfterHeight"
-	MethodChainHead                 = "Filecoin.ChainHead"
-	MethodGasEstimateMessageGas     = "Filecoin.GasEstimateMessageGas"
-	MethodMpoolGetNonce             = "Filecoin.MpoolGetNonce"
-	MethodMpoolPush                 = "Filecoin.MpoolPush"
-	MethodStateSearchMsg            = "Filecoin.StateSearchMsg"
-	MethodWalletBallance            = "Filecoin.WalletBalance"
+	MethodChainGetBlock                     = "Filecoin.ChainGetBlock"
+	MethodChainGetMessage                   = "Filecoin.ChainGetMessage"
+	MethodChainGetParentMessages            = "Filecoin.ChainGetParentMessages"
+	MethodChainGetTipSet                    = "Filecoin.ChainGetTipSet"
+	MethodChainGetTipSetAfterHeight         = "Filecoin.ChainGetTipSetAfterHeight"
+	MethodChainHead                         = "Filecoin.ChainHead"
+	MethodEthGetMessageCidByTransactionHash = "Filecoin.EthGetMessageCidByTransactionHash"
+	MethodGasEstimateMessageGas             = "Filecoin.GasEstimateMessageGas"
+	MethodMpoolGetNonce                     = "Filecoin.MpoolGetNonce"
+	MethodMpoolPush                         = "Filecoin.MpoolPush"
+	MethodStateSearchMsg                    = "Filecoin.StateSearchMsg"
+	MethodWalletBallance                    = "Filecoin.WalletBalance"
 )
 
 func NewEmptyParams(method string) Params[[]byte] {
@@ -287,4 +288,17 @@ type ChainGetParentMessagesResponse []CidMessage
 
 func NewChainGetParentMessagesResponse() *Response[ChainGetParentMessagesResponse] {
 	return NewResponse[ChainGetParentMessagesResponse]()
+}
+
+type EthGetMessageCidByTransactionHash string
+
+func (hash *EthGetMessageCidByTransactionHash) MarshalJSON() ([]byte, error) {
+	wrapped := []string{string(*hash)}
+	return json.Marshal(wrapped)
+}
+
+type EvmTxHashToCidResponse Cid
+
+func NewEvmTxHashToCidResponse() *Response[EvmTxHashToCidResponse] {
+	return NewResponse[EvmTxHashToCidResponse]()
 }
