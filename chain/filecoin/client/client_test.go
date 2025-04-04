@@ -302,6 +302,7 @@ func TestFetchTxInfo(t *testing.T) {
 	vectors := []struct {
 		name                    string
 		hash                    string
+		evmHashToCidResponse    string
 		chainGetMessageResponse string
 		stateSearchMsgResponse  string
 		chainGetBlockResponse   string
@@ -314,6 +315,101 @@ func TestFetchTxInfo(t *testing.T) {
 			hash: "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
 			chainGetMessageResponse: `{"result":{
 			  "CID":{"/":"bafy2bzacea5vwrckqz2lin5snjrvuihwdfwumu6hqaibnxwl7dkjwfrntchhi"},
+			  "From":"f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+			  "GasFeeCap":"101183",
+			  "GasLimit":1518203,
+			  "GasPremium":"100129",
+			  "Method":0,
+			  "Nonce":16,
+			  "Params":null,
+			  "To":"f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy",
+			  "Value":"100000000000000000",
+			  "Version":0
+			}}`,
+			stateSearchMsgResponse: `{"result":{
+			  "Height":2440037,
+			  "Message":{"/":"bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc"},
+			  "Receipt":{
+			    "EventsRoot":null,
+			    "ExitCode":0,
+			    "GasUsed":1227563,
+			    "Return":null
+			  },
+			  "TipSet":[
+			    {"/":"bafy2bzacectazjjqvph7rf552wthajzstqy7ylugrstmrloq2m7a6gpri3py6"},
+			    {"/":"bafy2bzacebg3wk2cr62qcfovmrslxtgm23h5v3la7bztimm2iltyke3hgebkg"}
+			  ]
+			}}`,
+			chainGetBlockResponse: `{"result":{
+			  "ParentBaseFee":"100",
+			  "Timestamp":1740527490,
+			  "Height":2440037
+			}}`,
+			chainGetHeadResponse: `{"result":{
+			  "Cids":[
+			    {"/":"bafy2bzaceaoat7pamoo65dedvdyr63ilpilma6q6u3zi4aktkrhndrg7ehxju"},
+			    {"/":"bafy2bzacebgtznsyyctrlhivrscqoqqj6z23fwmtlwdsnqtenbtn2ia2muek6"},
+			    {"/":"bafy2bzacecviu3uzrpvkxcpcekskffs4d6turxs5p3ehyb2gfbynmxomzi7ku"}
+			  ],
+			  "Height":2441667
+			}}`,
+			expectedInfo: xclient.TxInfo{
+				Name:   xclient.TransactionName("chains/FIL/transactions/bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc"),
+				Hash:   "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
+				XChain: xc.NativeAsset("FIL"),
+				Final:  true,
+				Block: &xclient.Block{
+					Chain:  xc.NativeAsset("FIL"),
+					Height: xc.NewAmountBlockchainFromUint64(2440037),
+					Hash:   "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
+					Time:   MustParseTime("1970-01-21T03:28:47.49Z"),
+				},
+				Movements: []*xclient.Movement{
+					NewMovement(
+						"FIL",
+						"FIL",
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(100000000000000000),
+								XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+								AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+							},
+						},
+						[]*xclient.BalanceChange{{
+							Balance:   xc.NewAmountBlockchainFromUint64(100000000000000000),
+							XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+							AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+						}},
+					),
+					NewMovement(
+						"FIL",
+						"FIL",
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(152138904487),
+								XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+								AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+							},
+						},
+						[]*xclient.BalanceChange{},
+					),
+				},
+				Fees: []*xclient.Balance{
+					{
+						Asset:    "chains/FIL/assets/FIL",
+						Contract: "FIL",
+						Balance:  xc.NewAmountBlockchainFromUint64(152138904487),
+					},
+				},
+				Confirmations: 1630,
+			},
+		},
+		{
+			name:                 "ValidTxEvmHash",
+			hash:                 "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
+			evmHashToCidResponse: `{ "result": { "/": "bafy2bzacea5vwrckqz2lin5snjrvuihwdfwumu6hqaibnxwl7dkjwfrntchhi" }}`,
+			chainGetMessageResponse: `{"result":{
+			  "CID":{"/":"bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc"},
 			  "From":"f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
 			  "GasFeeCap":"101183",
 			  "GasLimit":1518203,
@@ -416,6 +512,8 @@ func TestFetchTxInfo(t *testing.T) {
 					w.Write([]byte(v.stateSearchMsgResponse))
 				} else if strings.Contains(rawReq, types.MethodChainGetBlock) {
 					w.Write([]byte(v.chainGetBlockResponse))
+				} else if strings.Contains(rawReq, types.MethodEthGetMessageCidByTransactionHash) {
+					w.Write([]byte(v.evmHashToCidResponse))
 				} else {
 					w.Write([]byte(v.chainGetHeadResponse))
 				}
