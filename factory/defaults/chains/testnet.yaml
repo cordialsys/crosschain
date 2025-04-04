@@ -265,6 +265,20 @@ chains:
     chain_id: 10143
     chain_name: Monad
     decimals: 18
+  NIL:
+    chain: NIL
+    driver: cosmos
+    chain_id: nillion-chain-testnet-1
+    chain_name: Nillion
+    chain_prefix: nillion
+    decimals: 6
+    chain_coin: unil
+    fee_limit: "100.0"
+    native_assets:
+      - asset_id: "NIL"
+        contract_id: "unil"
+        decimals: 6
+        fee_limit: "100.0"
   EmROSE:
     chain: EmROSE
     driver: evm-legacy
