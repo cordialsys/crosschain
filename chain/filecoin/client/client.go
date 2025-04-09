@@ -360,6 +360,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 			return &xclient.BlockWithTransactions{}, errors.New("tipset contains no blocks")
 		}
 		blockCid = chainGetHeadResponse.Result.TipsetKey[0]
+		height = chainGetHeadResponse.Result.Height
 	}
 
 	chainGetParentMessagesParams := types.NewParams(types.MethodChainGetParentMessages, types.ChainGetParentMessages{
