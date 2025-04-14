@@ -29,9 +29,9 @@ func (m *MockedClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, 
 }
 
 // FetchTxInfo fetches tx info, mocked
-func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	args := m.Called(ctx, txHash)
-	return args.Get(0).(xc.LegacyTxInfo), args.Error(1)
+	return args.Get(0).(xclient.LegacyTxInfo), args.Error(1)
 }
 func (m *MockedClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
 	args := m.Called(ctx, txHash)

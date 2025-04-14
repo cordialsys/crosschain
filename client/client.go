@@ -16,7 +16,7 @@ type Client interface {
 	SubmitTx(ctx context.Context, tx xc.Tx) error
 
 	// Fetching transaction info - legacy endpoint
-	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (LegacyTxInfo, error)
 
 	// Fetching transaction info
 	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (TxInfo, error)

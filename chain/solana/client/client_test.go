@@ -463,7 +463,7 @@ func TestFetchTxInfo(t *testing.T) {
 	vectors := []struct {
 		tx   string
 		resp interface{}
-		val  xc.LegacyTxInfo
+		val  xclient.LegacyTxInfo
 		err  string
 	}{
 		{
@@ -473,7 +473,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"blockTime":1650017168,"meta":{"err":null,"fee":5000,"innerInstructions":[],"loadedAddresses":{"readonly":[],"writable":[]},"logMessages":["Program 11111111111111111111111111111111 invoke [1]","Program 11111111111111111111111111111111 success"],"postBalances":[19921026477997237,1869985000,1],"postTokenBalances":[],"preBalances":[19921027478002237,869985000,1],"preTokenBalances":[],"rewards":[],"status":{"Ok":null}},"slot":128184605,"transaction":["Ad9f9FfCzdIyQqsm7dCzCNeEmfKMbUPhhRScrNuIs12xcfF3nkjOIiTMgLm5zkbdgHWDGQaLCOrjSxTcLNBwqwABAAEDeXJtpS2Z1gsH6tc7L28L9gg8yFx3qU401pHXj4vK/sn8iAhjIZAIQGI1+kyPuyqG09p7Z2Lqw5MjsqHYxASkFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkyu+8VadWPShFvQQKPdmQ5srpSxowzCLu+orIeRxb2cBAgIAAQwCAAAAAMqaOwAAAAA=","base64"]}`,
 				`{"context":{"slot":128184606},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 				From:            "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g",
 				To:              "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
@@ -484,8 +484,8 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      128184605,
 				BlockTime:       1650017168,
 				Confirmations:   1,
-				Sources:         []*xc.LegacyTxInfoEndpoint{{Address: "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
 			},
 			"",
 		},
@@ -496,7 +496,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"blockTime":1645123751,"meta":{"err":null,"fee":5000,"innerInstructions":[],"loadedAddresses":{"readonly":[],"writable":[]},"logMessages":["Program 11111111111111111111111111111111 invoke [1]","Program 11111111111111111111111111111111 success"],"postBalances":[879990000,1420000000,1],"postTokenBalances":[],"preBalances":[999995000,1300000000,1],"preTokenBalances":[],"rewards":[],"status":{"Ok":null}},"slot":115310825,"transaction":["AX5EBZa5UnMbHNgzEDz8dn1mcrTjLwLsLC3Ph3tMgQshAb2hEkbkkUQleXVJqmcTYmxnnw3jIXOjfR3lGvw8pQoBAAED/IgIYyGQCEBiNfpMj7sqhtPae2di6sOTI7Kh2MQEpBR3FzzGpO7sbgIIhX1XFeQKpFBxBTrVYewdaBjV/jf96AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3rYIt4WDe4pwTzQI6YOAbSxt/Orf5UkTzqKqXN1KMoBAgIAAQwCAAAAAA4nBwAAAAA=","base64"]}`,
 				`{"context":{"slot":115310827},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "3XRGeupw3XacNQ4op3TQdWJsX3VvSnzQdjBvQDjGHaTCZs1eJzbuVn67RThFXEBSDBvoCXT5eX7rU1frQLni5AKb",
 				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				To:              "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh",
@@ -507,8 +507,8 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      115310825,
 				BlockTime:       1645123751,
 				Confirmations:   2,
-				Sources:         []*xc.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{{Address: "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
 				Status:          0,
 			},
 			"",
@@ -522,15 +522,15 @@ func TestFetchTxInfo(t *testing.T) {
 				// `{"context":{"apiVersion":"1.13.2","slot":169710435},"value":{"data":["O0Qss5EhV/E6kz0BNCgtAytf/s0Botvxt3kGCN8ALqf8iAhjIZAIQGI1+kyPuyqG09p7Z2Lqw5MjsqHYxASkFAA1DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","base64"],"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":371}}`,
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.17","slot":205923735},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA","state":"initialized","tokenAmount":{"amount":"100","decimals":6,"uiAmount":0.001,"uiAmountString":"0.001"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0}},"id":1}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "ZJaJTB5oLfPrzEsFE2cEa94KdNb6SGvqMgaLdtqoYFnaqo4zAncVPjkpDqPbVPv85S68zNcaTyYobDcPJuRfhrX",
 				From:            "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
 				To:              "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 				Amount:          xc.NewAmountBlockchainFromUint64(1000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(5000),
-				Sources:         []*xc.LegacyTxInfoEndpoint{{Address: "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{{Address: "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
 				BlockIndex:      115302132,
 				BlockTime:       1645120351,
 				Confirmations:   3,
@@ -545,14 +545,14 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"context":{"slot":115305248},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.17","slot":205923735},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw","state":"initialized","tokenAmount":{"amount":"20","decimals":6,"uiAmount":0.0002,"uiAmountString":"0.0002"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0}},"id":1}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "5ZrG8iS4RxLXDRQEWkAoddWHzkS1fA1m6ppxaAekgGzskhcFqjkw1ZaFCsLorbhY5V4YUUkjE3SLY2JNLyVanxrM",
 				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				To:              "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 				Amount:          xc.NewAmountBlockchainFromUint64(200000),
-				Sources:         []*xc.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{{Address: "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
 				Fee:             xc.NewAmountBlockchainFromUint64(5000),
 				BlockIndex:      115305244,
 				BlockTime:       1645121566,
@@ -569,14 +569,14 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"context":{"apiVersion":"1.14.20","slot":207847505},"value":{"blockhash":"9xWSgdL1GkwydD5uHX2WwKFSC9U2mqZiSXe4LSCa9ciR","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				`{"context":{"apiVersion":"1.14.20","slot":207847505},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263","owner":"GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq","state":"initialized","tokenAmount":{"amount":"31087540303300000","decimals":5,"uiAmount":310875403033.0,"uiAmountString":"310875403033"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "66iwZvSCQc1br36ddj7keyLtSXb3yuPzDdMSk3qpkYJUAiiy3thmpzut1WzEWjnubr8oQV19wkhvH3X9j45kPZzx",
 				From:            "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2",
 				To:              "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq",
 				ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
 				Amount:          xc.NewAmountBlockchainFromUint64(3170652014400000),
-				Sources:         []*xc.LegacyTxInfoEndpoint{{Address: "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{{Address: "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
 				Fee:             xc.NewAmountBlockchainFromUint64(10000),
 				BlockIndex:      207121234,
 				BlockTime:       1690153132,
@@ -591,7 +591,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"blockTime":1645123751,"meta":{"err":{"InsufficientFundsForRent":{"account_index":1}},"fee":5000,"innerInstructions":[],"loadedAddresses":{"readonly":[],"writable":[]},"logMessages":["Program 11111111111111111111111111111111 invoke [1]","Program 11111111111111111111111111111111 success"],"postBalances":[879990000,1420000000,1],"postTokenBalances":[],"preBalances":[999995000,1300000000,1],"preTokenBalances":[],"rewards":[],"status":{"Ok":null}},"slot":115310825,"transaction":["AX5EBZa5UnMbHNgzEDz8dn1mcrTjLwLsLC3Ph3tMgQshAb2hEkbkkUQleXVJqmcTYmxnnw3jIXOjfR3lGvw8pQoBAAED/IgIYyGQCEBiNfpMj7sqhtPae2di6sOTI7Kh2MQEpBR3FzzGpO7sbgIIhX1XFeQKpFBxBTrVYewdaBjV/jf96AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3rYIt4WDe4pwTzQI6YOAbSxt/Orf5UkTzqKqXN1KMoBAgIAAQwCAAAAAA4nBwAAAAA=","base64"]}`,
 				`{"context":{"slot":115310827},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "3XRGeupw3XacNQ4op3TQdWJsX3VvSnzQdjBvQDjGHaTCZs1eJzbuVn67RThFXEBSDBvoCXT5eX7rU1frQLni5AKb",
 				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 				To:              "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh",
@@ -612,31 +612,31 @@ func TestFetchTxInfo(t *testing.T) {
 		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 			`{}`,
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"invalid transaction in response",
 		},
 		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 			`null`,
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"TransactionNotFound: not found",
 		},
 		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"custom RPC error",
 		},
 		{
 			"",
 			"",
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"zero length string",
 		},
 		{
 			"invalid-sig",
 			"",
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"invalid base58 digit",
 		},
 		{
@@ -646,7 +646,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"blockTime":1650017168,"meta":{"err":null,"fee":5000,"innerInstructions":[],"loadedAddresses":{"readonly":[],"writable":[]},"logMessages":["Program 11111111111111111111111111111111 invoke [1]","Program 11111111111111111111111111111111 success"],"postBalances":[19921026477997237,1869985000,1],"postTokenBalances":[],"preBalances":[19921027478002237,869985000,1],"preTokenBalances":[],"rewards":[],"status":{"Ok":null}},"slot":128184605,"transaction":["invalid-binary","base64"]}`,
 				`{"context":{"slot":128184606},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 			},
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"illegal base64 data",
 		},
 	}
@@ -660,7 +660,7 @@ func TestFetchTxInfo(t *testing.T) {
 		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 		if v.err != "" {
-			require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+			require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
 			require.ErrorContains(t, err, v.err)
 		} else {
 			require.NoError(t, err)

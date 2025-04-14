@@ -119,7 +119,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return client.EvmClient.SubmitTx(ctx, txInput)
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	return client.EvmClient.FetchLegacyTxInfo(ctx, txHash)
 }
 

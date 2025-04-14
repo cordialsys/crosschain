@@ -69,6 +69,7 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 		3,
 		nil,
 	)
+
 	tf := client.NewMovement(tx.XChain, "")
 	for i := 0; i < 10; i++ {
 		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)

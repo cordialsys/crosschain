@@ -216,7 +216,7 @@ func ParseFee(ab xc.AddressBuilder, events []EventI) (xc.Address, xc.AmountBlock
 	// no fee detected
 	return "", xc.AmountBlockchain{}, false, nil
 }
-func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*xc.LegacyTxInfoEndpoint, destinations []*xc.LegacyTxInfoEndpoint, err error) {
+func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*xcclient.LegacyTxInfoEndpoint, destinations []*xcclient.LegacyTxInfoEndpoint, err error) {
 	for _, ev := range events {
 		handle := eventHandle(ev.GetModule(), ev.GetEvent())
 		desc, ok := supportedEventMap[handle]
@@ -262,14 +262,14 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 		}
 
 		if from != "" {
-			sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			sources = append(sources, &xcclient.LegacyTxInfoEndpoint{
 				Address:     from,
 				NativeAsset: chain,
 				Amount:      amount,
 			})
 		}
 		if to != "" {
-			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+			destinations = append(destinations, &xcclient.LegacyTxInfoEndpoint{
 				Address:     to,
 				NativeAsset: chain,
 				Amount:      amount,

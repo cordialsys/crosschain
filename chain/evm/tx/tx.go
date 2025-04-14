@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -32,8 +33,8 @@ type Tx struct {
 var _ xc.Tx = &Tx{}
 
 type SourcesAndDests struct {
-	Sources      []*xc.LegacyTxInfoEndpoint
-	Destinations []*xc.LegacyTxInfoEndpoint
+	Sources      []*xclient.LegacyTxInfoEndpoint
+	Destinations []*xclient.LegacyTxInfoEndpoint
 }
 
 // Hash returns the tx hash or id
@@ -82,8 +83,8 @@ func (tx Tx) Serialize() ([]byte, error) {
 
 // ParseTransfer parses a tx and extracts higher-level transfer information
 func ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
-	loggedSources := []*xc.LegacyTxInfoEndpoint{}
-	loggedDestinations := []*xc.LegacyTxInfoEndpoint{}
+	loggedSources := []*xclient.LegacyTxInfoEndpoint{}
+	loggedDestinations := []*xclient.LegacyTxInfoEndpoint{}
 	for _, log := range receipt.Logs {
 		if len(log.Topics) == 0 {
 			continue
@@ -99,17 +100,20 @@ func ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesA
 				logrus.WithError(err).WithField("index", log.Index).Warn("could not parse log")
 				continue
 			}
-			loggedDestinations = append(loggedDestinations, &xc.LegacyTxInfoEndpoint{
+			eventMeta := xclient.NewEventFromIndex(uint64(log.Index), xclient.MovementVariantToken)
+			loggedDestinations = append(loggedDestinations, &xclient.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.To.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),
 				NativeAsset:     nativeAsset,
+				Event:           eventMeta,
 			})
-			loggedSources = append(loggedSources, &xc.LegacyTxInfoEndpoint{
+			loggedSources = append(loggedSources, &xclient.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.From.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),
 				NativeAsset:     nativeAsset,
+				Event:           eventMeta,
 			})
 		}
 	}

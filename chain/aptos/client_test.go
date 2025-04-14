@@ -10,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/cordialsys/crosschain/client"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/require"
 )
@@ -159,7 +160,7 @@ func TestFetchTxInfo(t *testing.T) {
 	vectors := []struct {
 		tx              string
 		resp            interface{}
-		val             xc.LegacyTxInfo
+		val             xclient.LegacyTxInfo
 		err             string
 		httpStatusCodes []int
 	}{
@@ -172,7 +173,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			val: xc.LegacyTxInfo{
+			val: xclient.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
@@ -184,14 +185,14 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Sources: []*xc.LegacyTxInfoEndpoint{{
+				Sources: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 					Amount:          xc.NewAmountBlockchainFromUint64(123400000),
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
 					NativeAsset:     "APTOS",
 				}},
-				Destinations: []*xc.LegacyTxInfoEndpoint{{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 					Amount:          xc.NewAmountBlockchainFromUint64(123400000),
 					ContractAddress: "APTOS",
@@ -206,7 +207,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"chain_id":58,"epoch":"61","ledger_version":"3532090","oldest_ledger_version":"0","ledger_timestamp":"1683058921700697","node_role":"full_node","oldest_block_height":"0","block_height":"1320608","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"message":"Transaction not found by Transaction hash(0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3221)","error_code":"transaction_not_found","vm_error_code":null}`,
 			},
-			val:             xc.LegacyTxInfo{},
+			val:             xclient.LegacyTxInfo{},
 			err:             "TransactionNotFound: Transaction not found by Transaction",
 			httpStatusCodes: []int{404, 404, 404, 404, 404},
 		},
@@ -219,7 +220,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"67467400","block_hash":"0x65a99fc435368aef999ebd6ce962347ae15adb659de5a5e4f4fd3e5736eead70","block_timestamp":"1688879042654550","first_version":"176278669","last_version":"176278675","transactions":null}`,
 				`{"chain_id":1,"epoch":"3257","ledger_version":"177862741","oldest_ledger_version":"0","ledger_timestamp":"1689016648102542","node_role":"full_node","oldest_block_height":"0","block_height":"68013901","git_hash":"f43ce082abbdaa3a8b38ac07d928feed4248eb73"}`,
 			},
-			val: xc.LegacyTxInfo{
+			val: xclient.LegacyTxInfo{
 				TxID:            "0x06a6c25f3601895a3d3330f6ba4696fb8e677973aa56aa7b0ea362915bcff39c",
 				BlockHash:       "176278674",
 				From:            "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
@@ -231,14 +232,14 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      67467400,
 				BlockTime:       1688879042,
 				Confirmations:   546501,
-				Sources: []*xc.LegacyTxInfoEndpoint{{
+				Sources: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
 					Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
 					NativeAsset:     "APTOS",
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
 				}},
-				Destinations: []*xc.LegacyTxInfoEndpoint{{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
 					Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
 					NativeAsset:     "APTOS",
@@ -257,7 +258,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			val: xc.LegacyTxInfo{
+			val: xclient.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
@@ -268,8 +269,8 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Sources:         []*xc.LegacyTxInfoEndpoint{},
-				Destinations:    []*xc.LegacyTxInfoEndpoint{},
+				Sources:         []*xclient.LegacyTxInfoEndpoint{},
+				Destinations:    []*xclient.LegacyTxInfoEndpoint{},
 				Error:           "transaction failed",
 			},
 		},
@@ -288,7 +289,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 			if v.err != "" {
-				require.Equal(xc.LegacyTxInfo{}, txInfo)
+				require.Equal(xclient.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(err, v.err)
 			} else {
 				require.Nil(err)

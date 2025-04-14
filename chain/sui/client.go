@@ -119,7 +119,7 @@ func isMissingTransactionErr(err error) bool {
 	return false
 }
 
-func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	opts := types.SuiTransactionBlockResponseOptions{
 		ShowInput:          true,
 		ShowEffects:        true,
@@ -130,32 +130,32 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 	}
 	txHashBz, err := lib.NewBase58(string(txHash))
 	if err != nil || txHashBz == nil || len(*txHashBz) == 0 {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %v", err)
 	}
 
 	resp, err := c.SuiClient.GetTransactionBlock(ctx, *txHashBz, opts)
 	if err != nil {
 		if isMissingTransactionErr(err) {
-			return xc.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+			return xclient.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 		}
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %v", err)
 	}
 
 	// get latest checkpoint so we can compute our confirmations
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %v", err)
 	}
 	if resp.Checkpoint == nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
+		return xclient.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %v", resp.Checkpoint.Uint64(), err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %v", resp.Checkpoint.Uint64(), err)
 	}
 	// latestCheckpoint.Epoch
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	destinations := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	destinations := []*xclient.LegacyTxInfoEndpoint{}
 
 	from := ""
 	to := ""
@@ -190,7 +190,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 			if isSui {
 				totalSuiSent = totalSuiSent.Add(&abs)
 			}
-			sources = append(sources, &xc.LegacyTxInfoEndpoint{
+			sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
@@ -203,7 +203,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 			if isSui {
 				totalSuiReceived = totalSuiReceived.Add(&amt)
 			}
-			destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+			destinations = append(destinations, &xclient.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
@@ -226,7 +226,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.Le
 		status = xc.TxStatusFailure
 	}
 
-	return xc.LegacyTxInfo{
+	return xclient.LegacyTxInfo{
 		BlockHash:       txCheckpoint.Digest,
 		TxID:            resp.Digest.String(),
 		From:            xc.Address(from),
