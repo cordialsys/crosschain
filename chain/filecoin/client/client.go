@@ -168,8 +168,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	return xc.LegacyTxInfo{}, errors.New("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	return xclient.LegacyTxInfo{}, errors.New("not implemented")
 }
 
 // Call `Filecoin.EthGetMessageCidByTransactionHash` to convert EVM hash to CID

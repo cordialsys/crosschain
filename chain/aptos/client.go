@@ -253,27 +253,27 @@ func parseContractAddress(typeString string) string {
 }
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	client.interceptor.Enable()
 	defer client.interceptor.Disable()
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
 		if aptosErr, ok := err.(*aptostypes.RestError); ok {
 			if aptosErr.Code == http.StatusNotFound {
-				return xc.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+				return xclient.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 			}
 		}
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 	client.interceptor.Disable()
 
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	tx_height := block.BlockHeight
@@ -291,13 +291,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		changeInner := AptosChangeInner{}
 		err := reserializeJson(ch.Data, &changeInner)
 		if err != nil {
-			return xc.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
+			return xclient.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
 		}
 		if strings.HasPrefix(changeInner.Type, "0x1::coin::CoinStore") {
 			change := &CoinStoreChange{}
 			err := json.Unmarshal(changeInner.Data, change)
 			if err != nil {
-				return xc.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
+				return xclient.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
 			}
 			changeAndEvents := ChangeAndEvents{
 				Change: changeInner,
@@ -315,8 +315,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			coinChanges = append(coinChanges, changeAndEvents)
 		}
 	}
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	destinations := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	destinations := []*xclient.LegacyTxInfoEndpoint{}
 
 	for _, coinChange := range coinChanges {
 		for _, ev := range coinChange.Events {
@@ -335,7 +335,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					"address":  xc.Address(ev.Guid.AccountAddress),
 					"amount":   withdraw.Amount,
 				}).Debug("withdraw-event")
-				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+				sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 					ContractAddress: contract,
 					NativeAsset:     client.Asset.GetChain().Chain,
 					Address:         xc.Address(ev.Guid.AccountAddress),
@@ -355,7 +355,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					"address":  xc.Address(ev.Guid.AccountAddress),
 					"amount":   deposit.Amount,
 				}).Debug("deposit-event")
-				destinations = append(destinations, &xc.LegacyTxInfoEndpoint{
+				destinations = append(destinations, &xclient.LegacyTxInfoEndpoint{
 					ContractAddress: contract,
 					NativeAsset:     client.Asset.GetChain().Chain,
 					Address:         xc.Address(ev.Guid.AccountAddress),
@@ -399,7 +399,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		errMsg = "transaction failed"
 	}
 
-	return xc.LegacyTxInfo{
+	return xclient.LegacyTxInfo{
 		To:            to,
 		From:          xc.Address(tx.Sender),
 		Amount:        amount,

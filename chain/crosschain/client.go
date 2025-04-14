@@ -229,13 +229,13 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info from a Crosschain endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	res, err := client.legacyApiCall(ctx, "/info", &types.TxInfoReq{
 		Chain:  client.Asset.GetChain().Chain,
 		TxHash: string(txHash),
 	})
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	var r types.TxLegacyInfoRes

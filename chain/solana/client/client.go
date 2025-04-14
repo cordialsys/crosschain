@@ -229,8 +229,8 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Solana tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	result := xc.LegacyTxInfo{}
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	result := xclient.LegacyTxInfo{}
 
 	txSig, err := solana.SignatureFromBase58(string(txHash))
 	if err != nil {
@@ -286,18 +286,18 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	result.TxID = string(txHash)
 
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	dests := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	dests := []*xclient.LegacyTxInfoEndpoint{}
 
 	for _, instr := range tx.GetSystemTransfers() {
 		from := instr.GetFundingAccount().PublicKey.String()
 		to := instr.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 		})
@@ -306,11 +306,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		from := instr.GetWithdrawAuthorityAccount().PublicKey.String()
 		to := instr.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 		})
@@ -319,11 +319,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		from := instr.GetStakeAccount().PublicKey.String()
 		to := instr.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 		})
@@ -342,12 +342,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
@@ -369,12 +369,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
@@ -392,11 +392,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			return result, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
 		}
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
 		})
-		dests = append(dests, &xc.LegacyTxInfoEndpoint{
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
 		})

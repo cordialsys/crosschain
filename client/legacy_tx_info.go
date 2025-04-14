@@ -1,33 +1,38 @@
-package crosschain
+package client
+
+import xc "github.com/cordialsys/crosschain"
 
 // LegacyTxInfoEndpoint is a unified view of an endpoint (source or destination) in a TxInfo.
 type LegacyTxInfoEndpoint struct {
-	Address         Address          `json:"address"`
-	ContractAddress ContractAddress  `json:"contract,omitempty"`
-	Amount          AmountBlockchain `json:"amount"`
-	NativeAsset     NativeAsset      `json:"chain"`
-	Asset           string           `json:"asset,omitempty"`
-	Memo            string           `json:"memo,omitempty"`
+	Address         xc.Address          `json:"address"`
+	ContractAddress xc.ContractAddress  `json:"contract,omitempty"`
+	Amount          xc.AmountBlockchain `json:"amount"`
+	NativeAsset     xc.NativeAsset      `json:"chain"`
+	Asset           string              `json:"asset,omitempty"`
+	Memo            string              `json:"memo,omitempty"`
 
 	// Set only when there's a contract ID for native asset (and conflicts with our chosen identifier)
-	ContractId ContractAddress `json:"contract_id,omitempty"`
+	ContractId xc.ContractAddress `json:"contract_id,omitempty"`
+
+	// event details, if known
+	Event *Event `json:"event,omitempty"`
 }
 
 // LegacyTxInfo is a unified view of common tx info across multiple blockchains. Use it as an example to build your own.
 type LegacyTxInfo struct {
 	BlockHash       string                  `json:"block_hash"`
 	TxID            string                  `json:"tx_id"`
-	From            Address                 `json:"from"`
-	To              Address                 `json:"to"`
-	ToAlt           Address                 `json:"to_alt,omitempty"`
-	ContractAddress ContractAddress         `json:"contract,omitempty"`
-	Amount          AmountBlockchain        `json:"amount"`
-	Fee             AmountBlockchain        `json:"fee"`
-	FeeContract     ContractAddress         `json:"fee_contract,omitempty"`
+	From            xc.Address              `json:"from"`
+	To              xc.Address              `json:"to"`
+	ToAlt           xc.Address              `json:"to_alt,omitempty"`
+	ContractAddress xc.ContractAddress      `json:"contract,omitempty"`
+	Amount          xc.AmountBlockchain     `json:"amount"`
+	Fee             xc.AmountBlockchain     `json:"fee"`
+	FeeContract     xc.ContractAddress      `json:"fee_contract,omitempty"`
 	BlockIndex      int64                   `json:"block_index,omitempty"`
 	BlockTime       int64                   `json:"block_time,omitempty"`
 	Confirmations   int64                   `json:"confirmations,omitempty"`
-	Status          TxStatus                `json:"status"`
+	Status          xc.TxStatus             `json:"status"`
 	Sources         []*LegacyTxInfoEndpoint `json:"sources,omitempty"`
 	Destinations    []*LegacyTxInfoEndpoint `json:"destinations,omitempty"`
 	Time            int64                   `json:"time,omitempty"`
@@ -38,9 +43,10 @@ type LegacyTxInfo struct {
 	droppedBtcDestinations map[int]*LegacyTxInfoEndpoint
 	stakeEvents            []StakeEvent
 }
-type StakeEvent interface {
-	GetValidator() string
-}
+
+// type StakeEvent interface {
+// 	GetValidator() string
+// }
 
 func (info *LegacyTxInfo) InsertDestinationAtIndex(index int, value *LegacyTxInfoEndpoint) {
 	if index < 0 || index > len(info.Destinations) {

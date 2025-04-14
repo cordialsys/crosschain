@@ -87,7 +87,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 type TxInfoClient interface {
 	// Fetching transaction info - legacy endpoint
-	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error)
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error)
 	// Fetching transaction info
 	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error)
 }
@@ -218,12 +218,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Substrate tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	var tx xc.LegacyTxInfo
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	var tx xclient.LegacyTxInfo
 
 	addressBuilder, err := address.NewAddressBuilder(client.Asset.GetChain().Base())
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 	chain := client.Asset.GetChain().Chain
 	var eventsI = []api.EventI{}
@@ -240,16 +240,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var response graphql.SubqueryExtrinsicResponse
 		err := graphql.Post(ctx, client.indexerUrl, []byte(extrinsicQuery), &response, args)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 
 		if len(response.Data.Extrinsics.Nodes) == 0 {
-			return xc.LegacyTxInfo{}, fmt.Errorf("no transaction found by hash %s", txHash)
+			return xclient.LegacyTxInfo{}, fmt.Errorf("no transaction found by hash %s", txHash)
 		}
 		ext := response.Data.Extrinsics.Nodes[0]
 		height, offset, err := ext.ID.Parse()
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 		eventsQuery := fmt.Sprintf(
 			`{"query":"query {      events(first: 100, offset: 0, filter: {blockHeight:{equalTo:\"%d\"} extrinsicId:{equalTo: %d}}, orderBy: ID_DESC) { nodes { module event data } } blocks(first: 1, offset: 0, filter: {height:{equalTo:\"%d\"} }, orderBy: ID_DESC) { nodes { timestamp hash } } } "}`,
@@ -258,16 +258,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var eventsResponse graphql.SubqueryEventResponse
 		err = graphql.Post(ctx, client.indexerUrl, []byte(eventsQuery), &eventsResponse, args)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 		if len(eventsResponse.Data.Blocks.Nodes) == 0 {
-			return xc.LegacyTxInfo{}, fmt.Errorf("no block found at height %d", height)
+			return xclient.LegacyTxInfo{}, fmt.Errorf("no block found at height %d", height)
 		}
 		block := eventsResponse.Data.Blocks.Nodes[0]
 		for _, ev := range eventsResponse.Data.Events.Nodes {
 			_, err := ev.ParseParams()
 			if err != nil {
-				return xc.LegacyTxInfo{}, err
+				return xclient.LegacyTxInfo{}, err
 			}
 			eventsI = append(eventsI, ev)
 		}
@@ -280,17 +280,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		taostatClient := taostats.NewClient(client.indexerUrl, client.apiKey, client.Asset.GetChain().Limiter)
 		ext, err := taostatClient.GetTransaction(ctx, string(txHash))
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 
 		block, err := taostatClient.GetBlock(ctx, ext.BlockNumber)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 
 		events, err := taostatClient.GetEvents(ctx, ext)
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 
 		for _, event := range events {
@@ -325,16 +325,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var txInfoResp subscan.SubscanExtrinsicResponse
 		err = subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, args)
 		if err != nil {
-			return xc.LegacyTxInfo{}, fmt.Errorf("failed to lookup extrinsic: %v", err)
+			return xclient.LegacyTxInfo{}, fmt.Errorf("failed to lookup extrinsic: %v", err)
 		}
 		if len(txInfoResp.Data.BlockHash) == 0 {
-			return xc.LegacyTxInfo{}, fmt.Errorf("not found")
+			return xclient.LegacyTxInfo{}, fmt.Errorf("not found")
 		}
 
 		for _, ev := range txInfoResp.Data.Event {
 			_, err := ev.ParseParams()
 			if err != nil {
-				return xc.LegacyTxInfo{}, fmt.Errorf("could not parse event params: %v", err)
+				return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse event params: %v", err)
 			}
 			eventsI = append(eventsI, ev)
 		}
@@ -356,7 +356,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.Asset.GetChain().Limiter)
 		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
-			return xc.LegacyTxInfo{}, err
+			return xclient.LegacyTxInfo{}, err
 		}
 		eventsI = txInfo.Events
 		tx.TxID = "0x" + hex.EncodeToString(txInfo.ExtrinsicHash)
@@ -385,12 +385,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	tx.Sources, tx.Destinations, err = api.ParseEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not parse events: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse events: %v", err)
 	}
 
 	stakes, unstakes, err := api.ParseStakingEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not staking events: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not staking events: %v", err)
 	}
 	for _, ev := range stakes {
 		tx.AddStakeEvent(ev)
@@ -410,7 +410,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		// check for fee from events
 		from, fee, ok, err := api.ParseFee(addressBuilder, eventsI)
 		if err != nil {
-			return xc.LegacyTxInfo{}, fmt.Errorf("could not parse fee: %v", err)
+			return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse fee: %v", err)
 		}
 		if ok {
 			if tx.From == "" {

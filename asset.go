@@ -37,6 +37,7 @@ const (
 	AVAX   = NativeAsset("AVAX")   // Avalanche
 	BAND   = NativeAsset("BAND")   // Band
 	BASE   = NativeAsset("BASE")   // BASE
+	BABY   = NativeAsset("BABY")   // Babylon
 	BERA   = NativeAsset("BERA")   // Berachain
 	BCH    = NativeAsset("BCH")    // Bitcoin Cash
 	BNB    = NativeAsset("BNB")    // Binance Coin

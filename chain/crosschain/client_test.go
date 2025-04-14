@@ -9,6 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
+	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
 )
@@ -102,7 +103,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
-	txInfo := xc.LegacyTxInfo{
+	txInfo := xclient.LegacyTxInfo{
 		BlockHash:     "block-hash",
 		BlockIndex:    2,
 		TxID:          "tx-hash",

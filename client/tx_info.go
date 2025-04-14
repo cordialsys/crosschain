@@ -17,6 +17,20 @@ type TransactionName string
 type AssetName string
 type AddressName string
 
+type MovementVariant string
+
+const (
+	// For transferring native asset
+	MovementVariantNative MovementVariant = "native"
+	// For transferring tokens
+	MovementVariantToken MovementVariant = "token"
+	// For transferring native asset internally in a smart contract, in a way that
+	// is different from tokens.
+	MovementVariantInternal MovementVariant = "internal"
+	// For separate fee payment
+	MovementVariantFee MovementVariant = "fee"
+)
+
 func NewTransactionName(chain xc.NativeAsset, txHash string) TransactionName {
 	txHash = normalize.TransactionHash(txHash, chain)
 	name := filepath.Join("chains", string(chain), "transactions", txHash)
@@ -82,6 +96,26 @@ type BalanceChange struct {
 	XAddress  AddressName             `json:"address"`    // deprecated
 	AddressId xc.Address              `json:"address_id"` // replaces address
 }
+
+type Event struct {
+	Id      string          `json:"id"`
+	Variant MovementVariant `json:"variant"`
+}
+
+func NewEventFromIndex(index uint64, variant MovementVariant) *Event {
+	return &Event{
+		Id:      fmt.Sprintf("%d", index),
+		Variant: variant,
+	}
+}
+
+func NewEvent(id string, variant MovementVariant) *Event {
+	return &Event{
+		Id:      id,
+		Variant: variant,
+	}
+}
+
 type Movement struct {
 	XAsset    AssetName          `json:"asset"`    // deprecated
 	XContract xc.ContractAddress `json:"contract"` // deprecated
@@ -97,6 +131,9 @@ type Movement struct {
 	To []*BalanceChange `json:"to"`
 
 	Memo string `json:"memo,omitempty"`
+
+	// Details of the event in the transaction that contributed to this movement being reported.
+	Event *Event `json:"event,omitempty"`
 
 	chain xc.NativeAsset
 }
@@ -244,18 +281,19 @@ func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmation
 		err,
 	}
 }
-func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int, memo string) {
-
+func (info *TxInfo) AddSimpleTransfer(from xc.Address, to xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int, memo string) *Movement {
 	tf := NewMovement(info.XChain, contract)
 	tf.SetMemo(memo)
 	tf.AddSource(from, balance, decimals)
 	tf.AddDestination(to, balance, decimals)
 	info.Movements = append(info.Movements, tf)
+	return tf
 }
 
 func (info *TxInfo) AddFee(from xc.Address, contract xc.ContractAddress, balance xc.AmountBlockchain, decimals *int) {
 	tf := NewMovement(info.XChain, contract)
 	tf.AddSource(from, balance, decimals)
+	tf.AddEventMeta(NewEventFromIndex(0, MovementVariantFee))
 	// no destination
 	info.Movements = append(info.Movements, tf)
 }
@@ -338,12 +376,19 @@ func NewMovement(chain xc.NativeAsset, contract xc.ContractAddress) *Movement {
 	assetId := contract
 	xcontract := contract
 
-	return &Movement{xasset, xcontract, assetId, contractId, from, to, memo, chain}
+	var event *Event = nil
+
+	return &Movement{xasset, xcontract, assetId, contractId, from, to, memo, event, chain}
 }
 
 func (tf *Movement) AddSource(from xc.Address, balance xc.AmountBlockchain, decimals *int) {
 	tf.From = append(tf.From, NewBalanceChange(tf.chain, from, balance, decimals))
 }
+
+func (tf *Movement) AddEventMeta(event *Event) {
+	tf.Event = event
+}
+
 func (tf *Movement) AddDestination(to xc.Address, balance xc.AmountBlockchain, decimals *int) {
 	tf.To = append(tf.To, NewBalanceChange(tf.chain, to, balance, decimals))
 }
@@ -379,7 +424,7 @@ type LegacyTxInfoMappingType string
 var Utxo LegacyTxInfoMappingType = "utxo"
 var Account LegacyTxInfoMappingType = "account"
 
-func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx xc.LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
+func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingType LegacyTxInfoMappingType) TxInfo {
 	chain := chainCfg.Chain
 	var errMsg *string
 	if legacyTx.Status == xc.TxStatusFailure {
@@ -403,11 +448,17 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx xc.LegacyTxInfo, mappin
 		for _, source := range legacyTx.Sources {
 			tf := NewMovement(chain, source.ContractAddress)
 			tf.AddSource(source.Address, source.Amount, nil)
+			if source.Event != nil {
+				tf.AddEventMeta(source.Event)
+			}
 			tfs = append(tfs, tf)
 		}
 
 		for _, dest := range legacyTx.Destinations {
 			tf := NewMovement(chain, dest.ContractAddress)
+			if dest.Event != nil {
+				tf.AddEventMeta(dest.Event)
+			}
 			tf.AddDestination(dest.Address, dest.Amount, nil)
 			tfs = append(tfs, tf)
 		}
@@ -420,10 +471,17 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx xc.LegacyTxInfo, mappin
 		// map as one-to-one
 		for i, dest := range legacyTx.Destinations {
 			fromAddr := legacyTx.From
+			eventMeta := dest.Event
 			if i < len(legacyTx.Sources) {
 				fromAddr = legacyTx.Sources[i].Address
+				if eventMeta == nil {
+					eventMeta = legacyTx.Sources[i].Event
+				}
 			}
-			txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil, dest.Memo)
+			movement := txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil, dest.Memo)
+			if eventMeta != nil {
+				movement.AddEventMeta(eventMeta)
+			}
 		}
 	}
 	zero := big.NewInt(0)

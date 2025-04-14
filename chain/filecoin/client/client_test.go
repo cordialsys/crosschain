@@ -380,6 +380,7 @@ func TestFetchTxInfo(t *testing.T) {
 							XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
 							AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
 						}},
+						nil,
 					),
 					NewMovement(
 						"FIL",
@@ -392,6 +393,7 @@ func TestFetchTxInfo(t *testing.T) {
 							},
 						},
 						[]*xclient.BalanceChange{},
+						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
 					),
 				},
 				Fees: []*xclient.Balance{
@@ -475,6 +477,7 @@ func TestFetchTxInfo(t *testing.T) {
 							XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
 							AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
 						}},
+						nil,
 					),
 					NewMovement(
 						"FIL",
@@ -487,6 +490,7 @@ func TestFetchTxInfo(t *testing.T) {
 							},
 						},
 						[]*xclient.BalanceChange{},
+						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
 					),
 				},
 				Fees: []*xclient.Balance{
@@ -552,10 +556,11 @@ func NewMovement(
 	contract string,
 	from []*xclient.BalanceChange,
 	to []*xclient.BalanceChange,
+	event *xclient.Event,
 ) *xclient.Movement {
 	movement := xclient.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
 	movement.From = from
 	movement.To = to
-
+	movement.Event = event
 	return movement
 }

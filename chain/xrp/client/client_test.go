@@ -731,7 +731,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
 
 			if vector.err != "" {
-				require.Equal(t, xc.LegacyTxInfo{}, txInfo)
+				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(t, err, vector.err)
 			} else {
 				require.NoError(t, err)

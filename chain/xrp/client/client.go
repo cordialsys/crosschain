@@ -122,8 +122,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	return txInfo, nil
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	return xc.LegacyTxInfo{}, fmt.Errorf("unimplemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	return xclient.LegacyTxInfo{}, fmt.Errorf("unimplemented")
 }
 
 func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {

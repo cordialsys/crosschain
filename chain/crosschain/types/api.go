@@ -78,7 +78,7 @@ type TxInfoReq struct {
 
 type TxLegacyInfoRes struct {
 	*TxInfoReq
-	xc.LegacyTxInfo `json:"tx_info,omitempty"`
+	xclient.LegacyTxInfo `json:"tx_info,omitempty"`
 }
 
 type TransactionInfoRes struct {
