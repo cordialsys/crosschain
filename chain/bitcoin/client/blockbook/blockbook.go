@@ -149,9 +149,9 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockc
 	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
 }
 
-func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	var data TransactionResponse
-	txWithInfo := &xc.LegacyTxInfo{
+	txWithInfo := &xclient.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
 		Fee:    xc.NewAmountBlockchainFromUint64(0),
 	}
@@ -187,8 +187,8 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	}
 	txWithInfo.TxID = string(txHash)
 
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	destinations := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	destinations := []*xclient.LegacyTxInfoEndpoint{}
 
 	// build Tx
 	txObject := &tx.Tx{
@@ -222,7 +222,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		}
 		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
@@ -248,7 +248,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	for i, out := range data.Vout {
 		if len(out.Addresses) > 0 {
 			addr := out.Addresses[0]
-			endpoint := &xc.LegacyTxInfoEndpoint{
+			endpoint := &xclient.LegacyTxInfoEndpoint{
 				Address:     xc.Address(addr),
 				Amount:      xc.NewAmountBlockchainFromStr(out.Value),
 				NativeAsset: xc.NativeAsset(asset),

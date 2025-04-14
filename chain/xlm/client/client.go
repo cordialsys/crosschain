@@ -149,8 +149,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	return xc.LegacyTxInfo{}, fmt.Errorf("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	return xclient.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
 func (client *Client) FetchLatestLedgerInfo() (types.GetLedgerResult, error) {

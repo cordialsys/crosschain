@@ -281,8 +281,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Cosmos tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
-	result := xc.LegacyTxInfo{
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	result := xclient.LegacyTxInfo{
 		Fee:           xc.AmountBlockchain{},
 		BlockIndex:    0,
 		BlockTime:     0,
@@ -371,13 +371,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			altContractId = contract
 			contract = string(chainCfg.Chain)
 		}
-		result.Sources = append(result.Sources, &xc.LegacyTxInfoEndpoint{
+		result.Sources = append(result.Sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Sender),
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
 		})
-		result.Destinations = append(result.Destinations, &xc.LegacyTxInfoEndpoint{
+		result.Destinations = append(result.Destinations, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Recipient),
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),

@@ -285,7 +285,7 @@ func TestFetchTxInfo(t *testing.T) {
 		asset xc.ITask
 		tx    string
 		resp  interface{}
-		val   xc.LegacyTxInfo
+		val   xclient.LegacyTxInfo
 		err   string
 	}{
 		{
@@ -300,7 +300,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"terra","version":"v2.2.0","last_block_height":"2803726","last_block_app_hash":"Ds7V/wiEMX5P06kXiX6Ye1G08MfLPJhdTXl95lBydZ0="}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				To:              "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
@@ -312,7 +312,7 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1668891362,
 				Confirmations:   48860,
 				Status:          0,
-				Sources: []*xc.LegacyTxInfoEndpoint{
+				Sources: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 						ContractAddress: "LUNA",
@@ -320,7 +320,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 					},
 				},
-				Destinations: []*xc.LegacyTxInfoEndpoint{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 						ContractAddress: "LUNA",
@@ -344,7 +344,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"1359640","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
@@ -356,7 +356,7 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1669849454,
 				Confirmations:   107,
 				Status:          0,
-				Sources: []*xc.LegacyTxInfoEndpoint{
+				Sources: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 						ContractAddress: "XPLA",
@@ -364,7 +364,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 					},
 				},
-				Destinations: []*xc.LegacyTxInfoEndpoint{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 						ContractAddress: "XPLA",
@@ -387,7 +387,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"4855889","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 				From:            "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 				To:              "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
@@ -399,7 +399,7 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1669849454,
 				Confirmations:   198,
 				Status:          0,
-				Sources: []*xc.LegacyTxInfoEndpoint{
+				Sources: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
@@ -426,7 +426,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
 					},
 				},
-				Destinations: []*xc.LegacyTxInfoEndpoint{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
@@ -473,7 +473,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"1359640","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xc.LegacyTxInfo{
+			xclient.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
@@ -495,35 +495,35 @@ func TestFetchTxInfo(t *testing.T) {
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`{}`,
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`null`,
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			errors.New(`{"message": "custom RPC error", "code": 123}`),
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"custom RPC error",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"",
 			"",
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"error unmarshalling: invalid character",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"invalid-sig",
 			"",
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"encoding/hex: invalid byte",
 		},
 		{
@@ -531,7 +531,7 @@ func TestFetchTxInfo(t *testing.T) {
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			errors.New(`{"message": "RPC error -32603 - Internal error: tx (E97DB7DB40A02F0773EFE3AA5328292EDB27BEB089DF0972A26E8683068BCFA7) not found"}`),
-			xc.LegacyTxInfo{},
+			xclient.LegacyTxInfo{},
 			"TransactionNotFound:",
 		},
 	}

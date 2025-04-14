@@ -133,12 +133,12 @@ func (client *Client) SubmitTx(ctx context.Context, trans xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a EVM tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.LegacyTxInfo, error) {
 	nativeAsset := client.Asset.GetChain()
 	txHashHex := address.TrimPrefixes(string(txHashStr))
 	txHash := common.HexToHash(txHashHex)
 
-	result := xc.LegacyTxInfo{
+	result := xclient.LegacyTxInfo{
 		TxID: txHashHex,
 	}
 
@@ -232,15 +232,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 		if from != "" && amount.Cmp(zero) > 0 {
 			ethMovements = tx.SourcesAndDests{
-				Sources: []*xc.LegacyTxInfoEndpoint{{
+				Sources: []*xclient.LegacyTxInfoEndpoint{{
 					Address:     xc.Address(from),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
+					Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 				}},
-				Destinations: []*xc.LegacyTxInfoEndpoint{{
+				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:     xc.Address(to),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
+					Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 				}},
 			}
 		}

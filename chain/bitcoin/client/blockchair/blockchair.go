@@ -244,9 +244,9 @@ func (client *BlockchairClient) send(ctx context.Context, resp interface{}, meth
 	return &apiData.Context, err
 }
 
-func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	var data blockchairTransactionData
-	txWithInfo := &xc.LegacyTxInfo{
+	txWithInfo := &xclient.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
 		Fee:    xc.NewAmountBlockchainFromUint64(0),
 	}
@@ -269,8 +269,8 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	}
 	txWithInfo.TxID = data.Transaction.Hash
 
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	destinations := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	destinations := []*xclient.LegacyTxInfoEndpoint{}
 
 	// build Tx
 	txObject := &tx.Tx{
@@ -301,7 +301,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 		}
 		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
-		sources = append(sources, &xc.LegacyTxInfoEndpoint{
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
@@ -323,7 +323,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for i, out := range data.Outputs {
-		endpoint := &xc.LegacyTxInfoEndpoint{
+		endpoint := &xclient.LegacyTxInfoEndpoint{
 			Address:     xc.Address(out.Recipient),
 			Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 			NativeAsset: xc.NativeAsset(asset),

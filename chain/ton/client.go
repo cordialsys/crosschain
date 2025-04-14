@@ -342,7 +342,7 @@ func (client *Client) LookupTransferForTokenWallet(tokenWallet string) (*api.Jet
 	// return xc.ContractAddress(masterAddr.String()), nil
 }
 
-func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, book api.AddressBook) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint, bool, error) {
+func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, book api.AddressBook) ([]*xclient.LegacyTxInfoEndpoint, []*xclient.LegacyTxInfoEndpoint, bool, error) {
 	net := client.Asset.GetChain().Network
 	jettonTfMaybe := &jetton.TransferPayload{}
 	err := tlb.LoadFromCell(jettonTfMaybe, c.BeginParse())
@@ -386,7 +386,7 @@ func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, bo
 
 	chain := client.Asset.GetChain().Chain
 	amount := xc.AmountBlockchain(*jettonTfMaybe.Amount.Nano())
-	sources := []*xc.LegacyTxInfoEndpoint{
+	sources := []*xclient.LegacyTxInfoEndpoint{
 		{
 			// this is the token wallet of the sender/owner
 			Address:         xc.Address(ownerAddr.String()),
@@ -397,7 +397,7 @@ func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, bo
 		},
 	}
 
-	dests := []*xc.LegacyTxInfoEndpoint{
+	dests := []*xclient.LegacyTxInfoEndpoint{
 		{
 			// The destination uses the owner account already
 			Address:         xc.Address(jettonTfMaybe.Destination.String()),
@@ -412,7 +412,7 @@ func (client *Client) ParseJetton(c *cell.Cell, tokenWallet *address.Address, bo
 
 // This detects any JettonMessage in the nest of "InternalMessage"
 // This may need to be expanded as Jetton transfer could be nested deeper in more 'InternalMessages'
-func (client *Client) DetectJettonMovements(tx *api.Transaction, book api.AddressBook) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint, error) {
+func (client *Client) DetectJettonMovements(tx *api.Transaction, book api.AddressBook) ([]*xclient.LegacyTxInfoEndpoint, []*xclient.LegacyTxInfoEndpoint, error) {
 	boc, err := base64.StdEncoding.DecodeString(tx.InMsg.MessageContent.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid base64: %v", err)
@@ -490,20 +490,20 @@ func (client *Client) substituteOrParse(book api.AddressBook, rawAddr string) (*
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	chainInfo := &api.MasterChainInfo{}
 	err := client.get("/api/v3/masterchainInfo", chainInfo)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	tx, addrBook, err := client.FetchTonTxByHash(ctx, txHash)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
-	sources := []*xc.LegacyTxInfoEndpoint{}
-	dests := []*xc.LegacyTxInfoEndpoint{}
+	sources := []*xclient.LegacyTxInfoEndpoint{}
+	dests := []*xclient.LegacyTxInfoEndpoint{}
 	chain := client.Asset.GetChain().Chain
 
 	totalFee := xc.NewAmountBlockchainFromStr(tx.TotalFees)
@@ -519,10 +519,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			if msg.Destination != nil && *msg.Destination != "" && msg.Value != nil {
 				addr, err := client.substituteOrParse(addrBook, *msg.Destination)
 				if err != nil {
-					return xc.LegacyTxInfo{}, fmt.Errorf("invalid address %s: %v", *msg.Destination, err)
+					return xclient.LegacyTxInfo{}, fmt.Errorf("invalid address %s: %v", *msg.Destination, err)
 				}
 				value := xc.NewAmountBlockchainFromStr(*msg.Value)
-				dests = append(dests, &xc.LegacyTxInfoEndpoint{
+				dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 					Address:         xc.Address(addr.String()),
 					ContractAddress: "",
 					Amount:          value,
@@ -533,10 +533,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			if msg.Source != nil && *msg.Source != "" && msg.Value != nil {
 				addr, err := client.substituteOrParse(addrBook, *msg.Source)
 				if err != nil {
-					return xc.LegacyTxInfo{}, fmt.Errorf("invalid address %s: %v", *msg.Source, err)
+					return xclient.LegacyTxInfo{}, fmt.Errorf("invalid address %s: %v", *msg.Source, err)
 				}
 				value := xc.NewAmountBlockchainFromStr(*msg.Value)
-				sources = append(sources, &xc.LegacyTxInfoEndpoint{
+				sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 					Address:         xc.Address(addr.String()),
 					ContractAddress: "",
 					Amount:          value,
@@ -550,12 +550,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	jettonSources, jettonDests, err := client.DetectJettonMovements(&tx, addrBook)
 	if err != nil {
-		return xc.LegacyTxInfo{}, fmt.Errorf("could not detect jetton movements: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not detect jetton movements: %v", err)
 	}
 	sources = append(sources, jettonSources...)
 	dests = append(dests, jettonDests...)
 	blockId := NewBlockId(tx.BlockRef.Workchain, tx.BlockRef.Shard, tx.BlockRef.Seqno)
-	info := xc.LegacyTxInfo{
+	info := xclient.LegacyTxInfo{
 		// use the workchain ID as the blockhash
 		BlockHash: blockId,
 		// use the master chain block height as our height

@@ -179,20 +179,20 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return err
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xc.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	tx, err := client.client.GetTransactionByID(string(txHash))
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	info, err := client.client.GetTransactionInfoByID(string(txHash))
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	block, err := client.client.GetBlockByNum(info.BlockNumber)
 	if err != nil {
-		return xc.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	var from xc.Address
@@ -205,13 +205,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			logrus.WithError(err).Warn("unknown transaction")
 		} else {
-			source := new(xc.LegacyTxInfoEndpoint)
+			source := new(xclient.LegacyTxInfoEndpoint)
 			source.Address = from
 			source.Amount = amount
 			source.Asset = string(client.chain.Chain)
 			source.NativeAsset = client.chain.Chain
 
-			destination := new(xc.LegacyTxInfoEndpoint)
+			destination := new(xclient.LegacyTxInfoEndpoint)
 			destination.Address = to
 			destination.Amount = amount
 			destination.Asset = string(client.chain.Chain)
@@ -222,7 +222,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
-	txInfo := xc.LegacyTxInfo{
+	txInfo := xclient.LegacyTxInfo{
 		BlockHash:       block.BlockId,
 		TxID:            string(txHash),
 		From:            from,
@@ -280,13 +280,13 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	return xc.NewAmountBlockchainFromUint64(uint64(resp.Balance)), nil
 }
 
-func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xc.LegacyTxInfoEndpoint, []*xc.LegacyTxInfoEndpoint) {
-	sources := make([]*xc.LegacyTxInfoEndpoint, 0)
-	destinations := make([]*xc.LegacyTxInfoEndpoint, 0)
+func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xclient.LegacyTxInfoEndpoint, []*xclient.LegacyTxInfoEndpoint) {
+	sources := make([]*xclient.LegacyTxInfoEndpoint, 0)
+	destinations := make([]*xclient.LegacyTxInfoEndpoint, 0)
 
 	for _, event := range log {
-		source := new(xc.LegacyTxInfoEndpoint)
-		destination := new(xc.LegacyTxInfoEndpoint)
+		source := new(xclient.LegacyTxInfoEndpoint)
+		destination := new(xclient.LegacyTxInfoEndpoint)
 		source.NativeAsset = xc.TRX
 		destination.NativeAsset = xc.TRX
 
