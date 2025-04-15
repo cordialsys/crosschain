@@ -290,48 +290,57 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	dests := []*xclient.LegacyTxInfoEndpoint{}
 
 	for _, instr := range tx.GetSystemTransfers() {
-		from := instr.GetFundingAccount().PublicKey.String()
-		to := instr.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		from := instr.Instruction.GetFundingAccount().PublicKey.String()
+		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
+			Event:   event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
+			Event:   event,
 		})
 	}
 	for _, instr := range tx.GetVoteWithdraws() {
-		from := instr.GetWithdrawAuthorityAccount().PublicKey.String()
-		to := instr.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		from := instr.Instruction.GetWithdrawAuthorityAccount().PublicKey.String()
+		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
+			Event:   event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
+			Event:   event,
 		})
 	}
 	for _, instr := range tx.GetStakeWithdraws() {
-		from := instr.GetStakeAccount().PublicKey.String()
-		to := instr.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Lamports)
+		from := instr.Instruction.GetStakeAccount().PublicKey.String()
+		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
+			Event:   event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
+			Event:   event,
 		})
 	}
 	for _, instr := range tx.GetTokenTransferCheckeds() {
-		from := instr.GetOwnerAccount().PublicKey.String()
-		toTokenAccount := instr.GetDestinationAccount().PublicKey
-		contract := xc.ContractAddress(instr.GetMintAccount().PublicKey.String())
+		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
+		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
+		contract := xc.ContractAddress(instr.Instruction.GetMintAccount().PublicKey.String())
 		to := xc.Address(toTokenAccount.String())
 		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
 		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
@@ -341,21 +350,24 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
 		}
 
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
+			Event:           event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
+			Event:           event,
 		})
 	}
 	for _, instr := range tx.GetTokenTransfers() {
-		from := instr.GetOwnerAccount().PublicKey.String()
-		toTokenAccount := instr.GetDestinationAccount().PublicKey
+		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
+		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
 		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
 
 		to := xc.Address(toTokenAccount.String())
@@ -368,22 +380,25 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
 		}
 
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Amount)
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
+			Event:           event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
+			Event:           event,
 		})
 	}
 
 	for _, instr := range tx.GetCloseTokenAccounts() {
-		from := instr.GetOwnerAccount().PublicKey.String()
-		to := instr.GetDestinationAccount().PublicKey.String()
+		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
+		to := instr.Instruction.GetDestinationAccount().PublicKey.String()
 		// The balance is the minimum balance for rent.
 		// Technically this min amount could change, so this could be inaccurate for historical tx.
 		// https://spl.solana.com/token
@@ -392,27 +407,30 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			return result, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
 		}
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
+			Event:   event,
 		})
 		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
+			Event:   event,
 		})
 	}
 
 	for _, instr := range tx.GetDelegateStake() {
 		xcStake := &xclient.Stake{
-			Account:   instr.GetStakeAccount().PublicKey.String(),
-			Validator: instr.GetVoteAccount().PublicKey.String(),
-			Address:   instr.GetStakeAuthority().PublicKey.String(),
+			Account:   instr.Instruction.GetStakeAccount().PublicKey.String(),
+			Validator: instr.Instruction.GetVoteAccount().PublicKey.String(),
+			Address:   instr.Instruction.GetStakeAuthority().PublicKey.String(),
 			// Needs to be looked up from separate instruction
 			Balance: xc.AmountBlockchain{},
 		}
 		for _, createAccount := range tx.GetCreateAccounts() {
-			if createAccount.NewAccount.Equals(instr.GetStakeAccount().PublicKey) {
-				xcStake.Balance = xc.NewAmountBlockchainFromUint64(createAccount.Lamports)
+			if createAccount.Instruction.NewAccount.Equals(instr.Instruction.GetStakeAccount().PublicKey) {
+				xcStake.Balance = xc.NewAmountBlockchainFromUint64(createAccount.Instruction.Lamports)
 			}
 		}
 
@@ -420,14 +438,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	for _, instr := range tx.GetDeactivateStakes() {
 		xcStake := &xclient.Unstake{
-			Account: instr.GetStakeAccount().PublicKey.String(),
-			Address: instr.GetStakeAuthority().PublicKey.String(),
+			Account: instr.Instruction.GetStakeAccount().PublicKey.String(),
+			Address: instr.Instruction.GetStakeAuthority().PublicKey.String(),
 
 			// Needs to be looked up
 			Balance:   xc.AmountBlockchain{},
 			Validator: "",
 		}
-		stakeAccountInfo, err := client.LookupStakeAccount(ctx, instr.GetStakeAccount().PublicKey)
+		stakeAccountInfo, err := client.LookupStakeAccount(ctx, instr.Instruction.GetStakeAccount().PublicKey)
 		if err != nil {
 			logrus.WithError(err).Warn("failed to lookup stake account")
 		} else {
