@@ -376,12 +376,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
+			Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
 		})
 		result.Destinations = append(result.Destinations, &xclient.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Recipient),
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
+			Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
 		})
 	}
 	for _, ev := range events.Delegates {

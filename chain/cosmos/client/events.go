@@ -9,13 +9,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/types"
 )
 
+type EventIndex struct {
+	Index int
+}
+
 type TransferEvent struct {
+	EventIndex
 	Recipient string
 	Sender    string
 	Amount    xc.AmountBlockchain
 	Contract  string
 }
 type WithdrawRewardsEvent struct {
+	EventIndex
 	Validator string
 	Delegator string
 	Amount    xc.AmountBlockchain
@@ -23,6 +29,7 @@ type WithdrawRewardsEvent struct {
 }
 
 type DelegateEvent struct {
+	EventIndex
 	Validator string
 	Delegator string
 	Amount    xc.AmountBlockchain
@@ -30,6 +37,7 @@ type DelegateEvent struct {
 }
 
 type UnbondEvent struct {
+	EventIndex
 	Validator string
 	Delegator string
 	Amount    xc.AmountBlockchain
@@ -37,6 +45,7 @@ type UnbondEvent struct {
 }
 
 type Fee struct {
+	EventIndex
 	Amount xc.AmountBlockchain
 	// Contract address of asset (may be chain coin)
 	Contract string
@@ -103,7 +112,7 @@ func ParseEvents(events []comettypes.Event) ParsedEvents {
 func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 	parseEvents := ParsedMsgEvents{}
 	foundMsgEvent := false
-	for _, event := range events {
+	for i, event := range events {
 		if event.Type == "message" {
 			foundMsgEvent = true
 		}
@@ -123,10 +132,11 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 				for _, amountValue := range amountParts {
 					coin, _ := types.ParseCoinNormalized(amountValue)
 					amounts = append(amounts, TransferEvent{
-						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
-						Contract:  coin.Denom,
-						Recipient: getEventOrZero(event, "recipient"),
-						Sender:    getEventOrZero(event, "sender"),
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:   coin.Denom,
+						Recipient:  getEventOrZero(event, "recipient"),
+						Sender:     getEventOrZero(event, "sender"),
 					})
 				}
 			}
@@ -140,10 +150,11 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 				for _, amountValue := range amountParts {
 					coin, _ := types.ParseCoinNormalized(amountValue)
 					amounts = append(amounts, WithdrawRewardsEvent{
-						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
-						Contract:  coin.Denom,
-						Validator: getEventOrZero(event, "validator"),
-						Delegator: getEventOrZero(event, "delegator"),
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:   coin.Denom,
+						Validator:  getEventOrZero(event, "validator"),
+						Delegator:  getEventOrZero(event, "delegator"),
 					})
 				}
 			}
@@ -157,10 +168,11 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 				for _, amountValue := range amountParts {
 					coin, _ := types.ParseCoinNormalized(amountValue)
 					amounts = append(amounts, DelegateEvent{
-						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
-						Contract:  coin.Denom,
-						Validator: getEventOrZero(event, "validator"),
-						Delegator: getEventOrZero(event, "delegator"),
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:   coin.Denom,
+						Validator:  getEventOrZero(event, "validator"),
+						Delegator:  getEventOrZero(event, "delegator"),
 					})
 				}
 			}
@@ -174,10 +186,11 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 				for _, amountValue := range amountParts {
 					coin, _ := types.ParseCoinNormalized(amountValue)
 					amounts = append(amounts, UnbondEvent{
-						Amount:    xc.AmountBlockchain(*coin.Amount.BigInt()),
-						Contract:  coin.Denom,
-						Validator: getEventOrZero(event, "validator"),
-						Delegator: getEventOrZero(event, "delegator"),
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:   coin.Denom,
+						Validator:  getEventOrZero(event, "validator"),
+						Delegator:  getEventOrZero(event, "delegator"),
 					})
 				}
 			}
@@ -193,10 +206,11 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 				amountParts := strings.Split(amountValue, ",")
 				for _, amountValue := range amountParts {
 					tf := TransferEvent{
-						Amount:    xc.NewAmountBlockchainFromStr(amountValue),
-						Contract:  getEventOrZero(event, "contract_address"),
-						Recipient: getEventOrZero(event, "to"),
-						Sender:    getEventOrZero(event, "from"),
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.NewAmountBlockchainFromStr(amountValue),
+						Contract:   getEventOrZero(event, "contract_address"),
+						Recipient:  getEventOrZero(event, "to"),
+						Sender:     getEventOrZero(event, "from"),
 					}
 					if tf.Contract == "" {
 						tf.Contract = getEventOrZero(event, "_contract_address")
@@ -214,7 +228,7 @@ func parseMsgEvents(events []comettypes.Event) ParsedMsgEvents {
 func parseTxEvents(events []comettypes.Event) ParsedTxEvents {
 	parseEvents := ParsedTxEvents{}
 
-	for _, event := range events {
+	for i, event := range events {
 
 		if event.Type == "tx" {
 			var fees []Fee
@@ -225,9 +239,10 @@ func parseTxEvents(events []comettypes.Event) ParsedTxEvents {
 				for _, amountValue := range amountParts {
 					coin, _ := types.ParseCoinNormalized(amountValue)
 					fee := Fee{
-						Amount:   xc.AmountBlockchain(*coin.Amount.BigInt()),
-						Contract: coin.Denom,
-						Payer:    feePayer,
+						EventIndex: EventIndex{Index: i},
+						Amount:     xc.AmountBlockchain(*coin.Amount.BigInt()),
+						Contract:   coin.Denom,
+						Payer:      feePayer,
 					}
 					fees = append(fees, fee)
 				}
