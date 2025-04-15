@@ -44,12 +44,12 @@ func TestNewStakingTransfer(t *testing.T) {
 	require.Len(t, stakes, 1)
 
 	// new account initialized with the amount
-	require.Equal(t, amount.Uint64(), createAccounts[0].Lamports)
-	require.Equal(t, stakeKey.PublicKey(), createAccounts[0].NewAccount)
+	require.Equal(t, amount.Uint64(), createAccounts[0].Instruction.Lamports)
+	require.Equal(t, stakeKey.PublicKey(), createAccounts[0].Instruction.NewAccount)
 
 	// delegated to validator
-	require.Equal(t, input.ValidatorVoteAccount, stakes[0].GetVoteAccount().PublicKey)
-	require.Equal(t, stakeKey.PublicKey(), stakes[0].GetStakeAccount().PublicKey)
+	require.Equal(t, input.ValidatorVoteAccount, stakes[0].Instruction.GetVoteAccount().PublicKey)
+	require.Equal(t, stakeKey.PublicKey(), stakes[0].Instruction.GetStakeAccount().PublicKey)
 }
 
 func TestNewUnstakeTransfer(t *testing.T) {
@@ -102,14 +102,14 @@ func TestNewUnstakeTransfer(t *testing.T) {
 
 	deactivates := tx.(*Tx).GetDeactivateStakes()
 	require.Len(t, deactivates, 3)
-	require.Equal(t, input.EligibleStakes[0].StakeAccount, deactivates[0].GetStakeAccount().PublicKey)
-	require.Equal(t, input.EligibleStakes[1].StakeAccount, deactivates[1].GetStakeAccount().PublicKey)
-	require.Equal(t, input.EligibleStakes[2].StakeAccount, deactivates[2].GetStakeAccount().PublicKey)
+	require.Equal(t, input.EligibleStakes[0].StakeAccount, deactivates[0].Instruction.GetStakeAccount().PublicKey)
+	require.Equal(t, input.EligibleStakes[1].StakeAccount, deactivates[1].Instruction.GetStakeAccount().PublicKey)
+	require.Equal(t, input.EligibleStakes[2].StakeAccount, deactivates[2].Instruction.GetStakeAccount().PublicKey)
 
 	splits := tx.(*Tx).GetSplitStakes()
 	require.Len(t, splits, 1)
 	// 5 SOL remainder to be split (along with the inactive stakes)
-	require.EqualValues(t, 5_000_000_000+2282880*3, *splits[0].Lamports)
+	require.EqualValues(t, 5_000_000_000+2282880*3, *splits[0].Instruction.Lamports)
 
 }
 func TestNewWithdrawTransfer(t *testing.T) {
@@ -151,9 +151,9 @@ func TestNewWithdrawTransfer(t *testing.T) {
 
 	withdrawals := tx.(*Tx).GetStakeWithdraws()
 	require.Len(t, withdrawals, 2)
-	require.Equal(t, input.EligibleStakes[0].StakeAccount, withdrawals[0].GetStakeAccount().PublicKey)
-	require.Equal(t, input.EligibleStakes[1].StakeAccount, withdrawals[1].GetStakeAccount().PublicKey)
-	total := (*withdrawals[0].Lamports) + (*withdrawals[1].Lamports)
+	require.Equal(t, input.EligibleStakes[0].StakeAccount, withdrawals[0].Instruction.GetStakeAccount().PublicKey)
+	require.Equal(t, input.EligibleStakes[1].StakeAccount, withdrawals[1].Instruction.GetStakeAccount().PublicKey)
+	total := (*withdrawals[0].Instruction.Lamports) + (*withdrawals[1].Instruction.Lamports)
 	fmt.Println(amount.Uint64())
 	fmt.Println(total)
 	require.EqualValues(t, amount.Uint64(), total)

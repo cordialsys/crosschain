@@ -3,6 +3,7 @@ package tx
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
 
@@ -97,18 +98,23 @@ type SolanaInstruction interface {
 	Obtain(def *bin.VariantDefinition) (typeID bin.TypeID, typeName string, impl interface{})
 }
 
+type instructionAtIndex[T any] struct {
+	Instruction T
+	ID          string
+}
+
 func getall[T any, Y SolanaInstruction](
 	decoder func(accounts []*solana.AccountMeta, data []byte) (Y, error),
 	solanaProgram solana.PublicKey,
 	solTx *solana.Transaction,
-) []T {
-	results := []T{}
+) []instructionAtIndex[T] {
+	results := []instructionAtIndex[T]{}
 	if solTx == nil {
-		return []T{}
+		return []instructionAtIndex[T]{}
 	}
 	message := solTx.Message
 
-	for _, instruction := range message.Instructions {
+	for i, instruction := range message.Instructions {
 		program, err := message.ResolveProgramIDIndex(instruction.ProgramIDIndex)
 		if err != nil {
 			continue
@@ -129,7 +135,10 @@ func getall[T any, Y SolanaInstruction](
 		if !ok {
 			continue
 		}
-		results = append(results, castedInst)
+		// instructions are numbered starting at 1
+		// on the explorers
+		instructionNumber := strconv.Itoa(i + 1)
+		results = append(results, instructionAtIndex[T]{Instruction: castedInst, ID: instructionNumber})
 	}
 	return results
 }
@@ -145,29 +154,29 @@ func (tx Tx) RecentBlockhash() string {
 	return ""
 }
 
-func (tx Tx) GetVoteWithdraws() []*vote.Withdraw {
+func (tx Tx) GetVoteWithdraws() []instructionAtIndex[*vote.Withdraw] {
 	return getall[*vote.Withdraw](vote.DecodeInstruction, solana.VoteProgramID, tx.SolTx)
 }
 
-func (tx Tx) GetSystemTransfers() []*system.Transfer {
+func (tx Tx) GetSystemTransfers() []instructionAtIndex[*system.Transfer] {
 	return getall[*system.Transfer](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
 }
 
-func (tx Tx) GetTokenTransferCheckeds() []*token.TransferChecked {
+func (tx Tx) GetTokenTransferCheckeds() []instructionAtIndex[*token.TransferChecked] {
 	return append(
 		getall[*token.TransferChecked](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
 		getall[*token.TransferChecked](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
 	)
 }
 
-func (tx Tx) GetTokenTransfers() []*token.Transfer {
+func (tx Tx) GetTokenTransfers() []instructionAtIndex[*token.Transfer] {
 	return append(
 		getall[*token.Transfer](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
 		getall[*token.Transfer](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
 	)
 }
 
-func (tx Tx) GetCloseTokenAccounts() []*token.CloseAccount {
+func (tx Tx) GetCloseTokenAccounts() []instructionAtIndex[*token.CloseAccount] {
 	return append(
 		getall[*token.CloseAccount](token.DecodeInstruction, solana.TokenProgramID, tx.SolTx),
 		getall[*token.CloseAccount](token.DecodeInstruction, solana.Token2022ProgramID, tx.SolTx)...,
@@ -179,38 +188,44 @@ type CreateAccountLikeInstruction struct {
 	Lamports   uint64
 }
 
-func (tx Tx) GetCreateAccounts() []*CreateAccountLikeInstruction {
-	results := []*CreateAccountLikeInstruction{}
+func (tx Tx) GetCreateAccounts() []instructionAtIndex[CreateAccountLikeInstruction] {
+	results := []instructionAtIndex[CreateAccountLikeInstruction]{}
 	creates := getall[*system.CreateAccount](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
 	seeds := getall[*system.CreateAccountWithSeed](system.DecodeInstruction, solana.SystemProgramID, tx.SolTx)
 	for _, acc := range creates {
-		results = append(results, &CreateAccountLikeInstruction{
-			NewAccount: acc.GetNewAccount().PublicKey,
-			Lamports:   *acc.Lamports,
+		results = append(results, instructionAtIndex[CreateAccountLikeInstruction]{
+			Instruction: CreateAccountLikeInstruction{
+				NewAccount: acc.Instruction.GetNewAccount().PublicKey,
+				Lamports:   *acc.Instruction.Lamports,
+			},
+			ID: acc.ID,
 		})
 	}
 	for _, acc := range seeds {
-		results = append(results, &CreateAccountLikeInstruction{
-			NewAccount: acc.GetCreatedAccount().PublicKey,
-			Lamports:   *acc.Lamports,
+		results = append(results, instructionAtIndex[CreateAccountLikeInstruction]{
+			Instruction: CreateAccountLikeInstruction{
+				NewAccount: acc.Instruction.GetCreatedAccount().PublicKey,
+				Lamports:   *acc.Instruction.Lamports,
+			},
+			ID: acc.ID,
 		})
 	}
 	return results
 }
 
-func (tx Tx) GetDelegateStake() []*stake.DelegateStake {
+func (tx Tx) GetDelegateStake() []instructionAtIndex[*stake.DelegateStake] {
 	return getall[*stake.DelegateStake](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
-func (tx Tx) GetDeactivateStakes() []*stake.Deactivate {
+func (tx Tx) GetDeactivateStakes() []instructionAtIndex[*stake.Deactivate] {
 	return getall[*stake.Deactivate](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
-func (tx Tx) GetSplitStakes() []*stake.Split {
+func (tx Tx) GetSplitStakes() []instructionAtIndex[*stake.Split] {
 	return getall[*stake.Split](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 
-func (tx Tx) GetStakeWithdraws() []*stake.Withdraw {
+func (tx Tx) GetStakeWithdraws() []instructionAtIndex[*stake.Withdraw] {
 	return getall[*stake.Withdraw](stake.DecodeInstruction, solana.StakeProgramID, tx.SolTx)
 }
 

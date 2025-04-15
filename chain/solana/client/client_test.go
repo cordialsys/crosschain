@@ -484,8 +484,17 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      128184605,
 				BlockTime:       1650017168,
 				Confirmations:   1,
-				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(1000000000)}},
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address: "9B5XszUGdMaxCZ7uSQhPzdks5ZQSmWxrmzCSvtJ6Ns6g",
+						Amount:  xc.NewAmountBlockchainFromUint64(1000000000),
+						Event:   xclient.NewEvent("1", xclient.MovementVariantNative),
+					}},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
+						Amount: xc.NewAmountBlockchainFromUint64(1000000000),
+						Event:  xclient.NewEvent("1", xclient.MovementVariantNative),
+					}},
 			},
 			"",
 		},
@@ -507,9 +516,21 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      115310825,
 				BlockTime:       1645123751,
 				Confirmations:   2,
-				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh", Amount: xc.NewAmountBlockchainFromUint64(120000000)}},
-				Status:          0,
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
+						Amount:  xc.NewAmountBlockchainFromUint64(120000000),
+						Event:   xclient.NewEvent("1", xclient.MovementVariantNative),
+					},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address: "91t4uSdtBiftqsB24W2fRXFCXjUyc6xY3WMGFedAaTHh",
+						Amount:  xc.NewAmountBlockchainFromUint64(120000000),
+						Event:   xclient.NewEvent("1", xclient.MovementVariantNative),
+					},
+				},
+				Status: 0,
 			},
 			"",
 		},
@@ -529,11 +550,24 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 				Amount:          xc.NewAmountBlockchainFromUint64(1000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(5000),
-				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(1000000)}},
-				BlockIndex:      115302132,
-				BlockTime:       1645120351,
-				Confirmations:   3,
+				Sources: []*xclient.LegacyTxInfoEndpoint{{
+					Address:         "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
+					ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+					Amount:          xc.NewAmountBlockchainFromUint64(1000000),
+					Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
+				},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
+						ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+						Amount:          xc.NewAmountBlockchainFromUint64(1000000),
+						Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
+					},
+				},
+				BlockIndex:    115302132,
+				BlockTime:     1645120351,
+				Confirmations: 3,
 			},
 			"",
 		},
@@ -551,12 +585,26 @@ func TestFetchTxInfo(t *testing.T) {
 				To:              "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 				Amount:          xc.NewAmountBlockchainFromUint64(200000),
-				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw", ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", Amount: xc.NewAmountBlockchainFromUint64(200000)}},
-				Fee:             xc.NewAmountBlockchainFromUint64(5000),
-				BlockIndex:      115305244,
-				BlockTime:       1645121566,
-				Confirmations:   4,
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
+						ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+						Amount:          xc.NewAmountBlockchainFromUint64(200000),
+						Event:           xclient.NewEvent("1", xclient.MovementVariantNative),
+					},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
+						ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+						Amount:          xc.NewAmountBlockchainFromUint64(200000),
+						Event:           xclient.NewEvent("1", xclient.MovementVariantNative),
+					},
+				},
+				Fee:           xc.NewAmountBlockchainFromUint64(5000),
+				BlockIndex:    115305244,
+				BlockTime:     1645121566,
+				Confirmations: 4,
 			},
 			"",
 		},
@@ -575,12 +623,26 @@ func TestFetchTxInfo(t *testing.T) {
 				To:              "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq",
 				ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
 				Amount:          xc.NewAmountBlockchainFromUint64(3170652014400000),
-				Sources:         []*xclient.LegacyTxInfoEndpoint{{Address: "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{{Address: "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq", ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", Amount: xc.NewAmountBlockchainFromUint64(3170652014400000)}},
-				Fee:             xc.NewAmountBlockchainFromUint64(10000),
-				BlockIndex:      207121234,
-				BlockTime:       1690153132,
-				Confirmations:   726271,
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "AC5RDfQFmDS1deWZos921JfqscXdByf8BKHs5ACWjtW2",
+						ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+						Amount:          xc.NewAmountBlockchainFromUint64(3170652014400000),
+						Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
+					},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "GtxgnRiSfBzahR9xb7hvYbWq3Uzez7hpCz2BJbCLxKdq",
+						ContractAddress: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+						Amount:          xc.NewAmountBlockchainFromUint64(3170652014400000),
+						Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
+					},
+				},
+				Fee:           xc.NewAmountBlockchainFromUint64(10000),
+				BlockIndex:    207121234,
+				BlockTime:     1690153132,
+				Confirmations: 726271,
 			},
 			"",
 		},
@@ -652,20 +714,22 @@ func TestFetchTxInfo(t *testing.T) {
 	}
 
 	for i, v := range vectors {
-		fmt.Println("test case ", i)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
+		t.Run(fmt.Sprintf("test_case_%d", i), func(t *testing.T) {
+			fmt.Println("test case ", i)
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
 
-		client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
-		txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
+			client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
+			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
-		if v.err != "" {
-			require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(t, err, v.err)
-		} else {
-			require.NoError(t, err)
-			require.NotNil(t, txInfo)
-			require.Equal(t, v.val, txInfo)
-		}
+			if v.err != "" {
+				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, txInfo)
+				require.Equal(t, v.val, txInfo)
+			}
+		})
 	}
 }
