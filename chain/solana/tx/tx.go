@@ -3,6 +3,7 @@ package tx
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
@@ -69,6 +70,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	}
 	tx.SolTx.Signatures = solSignatures
 	tx.inputSignatures = signatures
+	slices.Reverse(tx.SolTx.Signatures)
 
 	// add transient signers
 	for _, transient := range tx.transientSigners {

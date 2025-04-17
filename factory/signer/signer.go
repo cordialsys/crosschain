@@ -48,6 +48,7 @@ type PublicKey []byte
 const EnvEd25519ScalarSigning = "XC_SIGN_WITH_SCALAR"
 
 const EnvPrivateKey = "XC_PRIVATE_KEY"
+const EnvPrivateKeyFeePayer = "XC_PRIVATE_KEY_FEE_PAYER"
 
 func ReadPrivateKeyEnv() string {
 	val := os.Getenv(EnvPrivateKey)
@@ -56,6 +57,15 @@ func ReadPrivateKeyEnv() string {
 	}
 	// fallback to old PRIVATE_KEY
 	return os.Getenv("PRIVATE_KEY")
+}
+
+func ReadPrivateKeyFeePayerEnv() string {
+	val := os.Getenv(EnvPrivateKeyFeePayer)
+	if val != "" {
+		return val
+	}
+	// fallback to old PRIVATE_KEY
+	return os.Getenv("PRIVATE_KEY_FEE_PAYER")
 }
 
 func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, error) {
