@@ -172,7 +172,9 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 		}
 		cosmosTx := cosmosTxI.(*tx.Tx)
 		sig := make([]byte, 64)
-		err = cosmosTx.AddSignatures(sig)
+		err = cosmosTx.AddSignatures(&xc.SignatureResponse{
+			Signature: sig,
+		})
 		if err != nil {
 			return nil, err
 		}

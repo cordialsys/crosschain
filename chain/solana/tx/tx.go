@@ -3,7 +3,6 @@ package tx
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
@@ -24,9 +23,14 @@ type Tx struct {
 	parsedTransfer   interface{}
 	inputSignatures  []xc.TxSignature
 	transientSigners []solana.PrivateKey
+	extraFeePayer    xc.Address
 }
 
 var _ xc.Tx = &Tx{}
+
+func (tx *Tx) SetExtraFeePayerSigner(extraFeePayer xc.Address) {
+	tx.extraFeePayer = extraFeePayer
+}
 
 // Hash returns the tx hash or id, for Solana it's signature
 func (tx Tx) Hash() xc.TxHash {
@@ -38,7 +42,7 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighashes
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	if tx.SolTx == nil {
 		return nil, errors.New("transaction not initialized")
 	}
@@ -46,7 +50,19 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to encode message for signing: %w", err)
 	}
-	return []xc.TxDataToSign{messageContent}, nil
+	if tx.extraFeePayer != "" {
+		return []*xc.SignatureRequest{
+			// first signature from extra fee payer
+			xc.NewSignatureRequest(messageContent, tx.extraFeePayer),
+			// then the main address signature
+			xc.NewSignatureRequest(messageContent),
+		}, nil
+	} else {
+		// single signature from main address
+		return []*xc.SignatureRequest{
+			xc.NewSignatureRequest(messageContent),
+		}, nil
+	}
 }
 
 // Some instructions on solana require new accounts to sign the transaction
@@ -57,20 +73,20 @@ func (tx *Tx) AddTransientSigner(transientSigner solana.PrivateKey) {
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx.SolTx == nil {
 		return errors.New("transaction not initialized")
 	}
+	tx.inputSignatures = []xc.TxSignature{}
 	solSignatures := make([]solana.Signature, len(signatures))
 	for i, signature := range signatures {
-		if len(signature) != solana.SignatureLength {
-			return fmt.Errorf("invalid signature (%d): %x", len(signature), signature)
+		if len(signature.Signature) != solana.SignatureLength {
+			return fmt.Errorf("invalid signature (%d): %x", len(signature.Signature), signature.Signature)
 		}
-		copy(solSignatures[i][:], signature)
+		copy(solSignatures[i][:], signature.Signature)
+		tx.inputSignatures = append(tx.inputSignatures, xc.TxSignature(signature.Signature))
 	}
 	tx.SolTx.Signatures = solSignatures
-	tx.inputSignatures = signatures
-	slices.Reverse(tx.SolTx.Signatures)
 
 	// add transient signers
 	for _, transient := range tx.transientSigners {
@@ -80,7 +96,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 			return fmt.Errorf("unable to sign with transient signer: %v", err)
 		}
 		tx.SolTx.Signatures = append(tx.SolTx.Signatures, sig)
-		tx.inputSignatures = append(tx.inputSignatures, sig[:])
+		tx.inputSignatures = append(tx.inputSignatures, xc.TxSignature(sig[:]))
 	}
 	return nil
 }

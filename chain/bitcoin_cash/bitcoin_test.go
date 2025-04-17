@@ -109,7 +109,9 @@ func TestNewNativeTransfer(t *testing.T) {
 			for i := 0; i < 65; i++ {
 				sig = append(sig, byte(i))
 			}
-			err = tf.AddSignatures(xc.TxSignature(sig))
+			err = tf.AddSignatures(&xc.SignatureResponse{
+				Signature: sig,
+			})
 			require.NoError(err)
 
 			ser, err := tf.Serialize()

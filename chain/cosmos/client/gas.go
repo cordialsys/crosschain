@@ -106,11 +106,13 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	sig, _, err := kb.Sign("from", toSign[0], txsigning.SignMode_SIGN_MODE_DIRECT)
+	sig, _, err := kb.Sign("from", toSign[0].Payload, txsigning.SignMode_SIGN_MODE_DIRECT)
 	if err != nil {
 		return nil, err
 	}
-	err = tx1.AddSignatures(sig)
+	err = tx1.AddSignatures(&xc.SignatureResponse{
+		Signature: sig,
+	})
 	if err != nil {
 		return nil, err
 	}

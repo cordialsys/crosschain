@@ -24,26 +24,26 @@ func TestTxSighashesErr(t *testing.T) {
 
 func TestTxAddSignatureErr(t *testing.T) {
 	tx1 := tx.Tx{}
-	err := tx1.AddSignatures([]xc.TxSignature{}...)
+	err := tx1.AddSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "transaction not initialized")
 
-	err = tx1.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
+	err = tx1.AddSignatures(&xc.SignatureResponse{Signature: []byte{1, 2, 3}})
 	require.EqualError(t, err, "transaction not initialized")
 
 	bytes := make([]byte, 64)
-	err = tx1.AddSignatures([]xc.TxSignature{bytes}...)
+	err = tx1.AddSignatures(&xc.SignatureResponse{Signature: bytes})
 	require.EqualError(t, err, "transaction not initialized")
 
 	tx1 = tx.Tx{SolTx: &solana.Transaction{}}
-	err = tx1.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
+	err = tx1.AddSignatures(&xc.SignatureResponse{Signature: []byte{1, 2, 3}})
 	require.EqualError(t, err, "invalid signature (3): 010203")
 
 	bytes = make([]byte, 64)
-	err = tx1.AddSignatures([]xc.TxSignature{bytes}...)
+	err = tx1.AddSignatures(&xc.SignatureResponse{Signature: bytes})
 	require.NoError(t, err)
 	require.Equal(t, 1, len(tx1.SolTx.Signatures))
 
-	err = tx1.AddSignatures([]xc.TxSignature{}...)
+	err = tx1.AddSignatures([]*xc.SignatureResponse{}...)
 	require.NoError(t, err)
 	require.Equal(t, 0, len(tx1.SolTx.Signatures))
 }

@@ -122,7 +122,7 @@ func TestTxSighashes(t *testing.T) {
 
 	type testcase struct {
 		tx              tx.Tx
-		expectedSigHash []xc.TxDataToSign
+		expectedSigHash []*xc.SignatureRequest
 		err             string
 	}
 
@@ -151,12 +151,14 @@ func TestTxSighashes(t *testing.T) {
 					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
 				},
 			},
-			expectedSigHash: []xc.TxDataToSign{
+			expectedSigHash: []*xc.SignatureRequest{
 				{
-					0xee, 0xc0, 0x76, 0x5f, 0x60, 0xdc, 0x4, 0x2f,
-					0x5e, 0x59, 0x4d, 0xa7, 0x61, 0xfe, 0xe2, 0xc2,
-					0xbc, 0xff, 0xb4, 0x78, 0xb0, 0x14, 0x43, 0xa6,
-					0xf, 0x33, 0x25, 0x3a, 0xc2, 0x77, 0x75, 0x61,
+					Payload: []byte{
+						0xee, 0xc0, 0x76, 0x5f, 0x60, 0xdc, 0x4, 0x2f,
+						0x5e, 0x59, 0x4d, 0xa7, 0x61, 0xfe, 0xe2, 0xc2,
+						0xbc, 0xff, 0xb4, 0x78, 0xb0, 0x14, 0x43, 0xa6,
+						0xf, 0x33, 0x25, 0x3a, 0xc2, 0x77, 0x75, 0x61,
+					},
 				},
 			},
 			err: "",
@@ -188,12 +190,14 @@ func TestTxSighashes(t *testing.T) {
 					TxnSignature:       "304402200b92d0b3a651877e89ec2904691637116e06ccacfeeafe47e901d4d6fa91b4c302207dcd149e8226a46b3c15baa6509fe423eb9ce27c0f136bbacd1988bd0c988c1b",
 				},
 			},
-			expectedSigHash: []xc.TxDataToSign{
+			expectedSigHash: []*xc.SignatureRequest{
 				{
-					0x30, 0x2, 0x9, 0xdf, 0x98, 0x89, 0x7e, 0xac,
-					0x1a, 0x90, 0xcd, 0x67, 0xb0, 0x1b, 0xe0, 0xd3,
-					0x5d, 0x62, 0x4f, 0x9d, 0xe9, 0x8b, 0xbd, 0xdf,
-					0xe0, 0x72, 0x49, 0x69, 0x34, 0x36, 0xca, 0x6b,
+					Payload: []byte{
+						0x30, 0x2, 0x9, 0xdf, 0x98, 0x89, 0x7e, 0xac,
+						0x1a, 0x90, 0xcd, 0x67, 0xb0, 0x1b, 0xe0, 0xd3,
+						0x5d, 0x62, 0x4f, 0x9d, 0xe9, 0x8b, 0xbd, 0xdf,
+						0xe0, 0x72, 0x49, 0x69, 0x34, 0x36, 0xca, 0x6b,
+					},
 				},
 			},
 			err: "",
@@ -215,17 +219,17 @@ func TestTxAddSignature(t *testing.T) {
 	tx1 := tx.Tx{
 		TransactionSignature: []xc.TxSignature{},
 	}
-	err := tx1.AddSignatures([]xc.TxSignature{}...)
+	err := tx1.AddSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "transaction already signed")
 
 	tx2 := tx.Tx{}
-	err = tx2.AddSignatures([]xc.TxSignature{{1, 2, 3}}...)
+	err = tx2.AddSignatures([]*xc.SignatureResponse{{Signature: []byte{1, 2, 3}}}...)
 	require.EqualError(t, err, "signature must be 64 or 65 length serialized bytestring of r,s, and recovery byte")
 
 	bytes := make([]byte, 64)
 	tx3 := tx.Tx{
 		XRPTx: &tx.XRPTransaction{},
 	}
-	err = tx3.AddSignatures([]xc.TxSignature{bytes}...)
+	err = tx3.AddSignatures([]*xc.SignatureResponse{{Signature: bytes}}...)
 	require.Nil(t, err)
 }

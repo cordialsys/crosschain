@@ -71,16 +71,16 @@ func TestTxHash(t *testing.T) {
 
 func TestTxSighashes(t *testing.T) {
 	vectors := []struct {
-		testName        string
-		tx              tx.Tx
-		expectedSighash xc.TxDataToSign
-		err             string
+		testName           string
+		tx                 tx.Tx
+		expectedSigRequest []*xc.SignatureRequest
+		err                string
 	}{
 		{
-			testName:        "EmptyMessage",
-			tx:              tx.Tx{},
-			expectedSighash: xc.TxDataToSign{},
-			err:             "something??",
+			testName:           "EmptyMessage",
+			tx:                 tx.Tx{},
+			expectedSigRequest: []*xc.SignatureRequest{},
+			err:                "something??",
 		},
 		{
 			testName: "MalformedAddress",
@@ -102,8 +102,8 @@ func TestTxSighashes(t *testing.T) {
 					Data: []byte("btOGs/+MfKwi02EQIdhvPdj8fw6xizsfCN6nMWCaR9YTSm8+ZjqYP5ggE8GzW0UrJd1zDgc1FNEwJYT6cxWElgE=\\"),
 				},
 			},
-			expectedSighash: xc.TxDataToSign{},
-			err:             "invalid address",
+			expectedSigRequest: []*xc.SignatureRequest{},
+			err:                "invalid address",
 		},
 		{
 			testName: "SignedMessage",
@@ -125,11 +125,15 @@ func TestTxSighashes(t *testing.T) {
 					Data: []byte("btOGs/+MfKwi02EQIdhvPdj8fw6xizsfCN6nMWCaR9YTSm8+ZjqYP5ggE8GzW0UrJd1zDgc1FNEwJYT6cxWElgE=\\"),
 				},
 			},
-			expectedSighash: xc.TxDataToSign{
-				248, 226, 214, 252, 199, 182, 133, 94, 80, 22,
-				238, 8, 136, 168, 155, 138, 97, 14, 211, 19,
-				51, 240, 77, 100, 27, 53, 29, 147, 142, 139,
-				65, 46,
+			expectedSigRequest: []*xc.SignatureRequest{
+				{
+					Payload: []byte{
+						248, 226, 214, 252, 199, 182, 133, 94, 80, 22,
+						238, 8, 136, 168, 155, 138, 97, 14, 211, 19,
+						51, 240, 77, 100, 27, 53, 29, 147, 142, 139,
+						65, 46,
+					},
+				},
 			},
 			err: "",
 		},
@@ -149,11 +153,15 @@ func TestTxSighashes(t *testing.T) {
 					Params:     []byte{},
 				},
 			},
-			expectedSighash: xc.TxDataToSign{
-				248, 226, 214, 252, 199, 182, 133, 94, 80, 22,
-				238, 8, 136, 168, 155, 138, 97, 14, 211, 19,
-				51, 240, 77, 100, 27, 53, 29, 147, 142, 139,
-				65, 46,
+			expectedSigRequest: []*xc.SignatureRequest{
+				{
+					Payload: []byte{
+						248, 226, 214, 252, 199, 182, 133, 94, 80, 22,
+						238, 8, 136, 168, 155, 138, 97, 14, 211, 19,
+						51, 240, 77, 100, 27, 53, 29, 147, 142, 139,
+						65, 46,
+					},
+				},
 			},
 			err: "",
 		},
@@ -164,7 +172,7 @@ func TestTxSighashes(t *testing.T) {
 			if len(v.err) > 0 {
 				require.Error(t, err)
 			} else {
-				require.Equal(t, []xc.TxDataToSign{v.expectedSighash}, actualSighash)
+				require.Equal(t, v.expectedSigRequest, actualSighash)
 			}
 
 		})
@@ -173,7 +181,7 @@ func TestTxSighashes(t *testing.T) {
 
 func TestTxAddSignature(t *testing.T) {
 	emptytx := tx.Tx{}
-	err := emptytx.AddSignatures([]xc.TxSignature{}...)
+	err := emptytx.AddSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "only one signature is allowed")
 
 	signedTx := tx.Tx{
@@ -182,6 +190,6 @@ func TestTxAddSignature(t *testing.T) {
 			Data: []byte("signature"),
 		},
 	}
-	err = signedTx.AddSignatures([]xc.TxSignature{[]byte("asdf")}...)
+	err = signedTx.AddSignatures(&xc.SignatureResponse{Signature: []byte("asdf")})
 	require.EqualError(t, err, "transaction already signed")
 }
