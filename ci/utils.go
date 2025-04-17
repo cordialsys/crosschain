@@ -26,6 +26,7 @@ var (
 	algorithm     string
 	contract      string
 	decimalsStr   string
+	feePayer      bool
 	decimalsInput *int
 )
 
@@ -36,6 +37,7 @@ func init() {
 	flag.StringVar(&algorithm, "algorithm", "", "Used to override signature algorithm. Bitcoin only")
 	flag.StringVar(&contract, "contract", "", "Contract address for token")
 	flag.StringVar(&decimalsStr, "decimals", "", "Decimals used for token")
+	flag.BoolVar(&feePayer, "fee-payer", false, "Use fee payer for transactions")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }
@@ -62,6 +64,8 @@ func fundWallet(t *testing.T, chainConfig *xc.ChainConfig, walletAddress xc.Addr
 	amountHuman, err := xc.NewAmountHumanReadableFromStr(amount)
 	require.NoError(t, err)
 	amountBlockchain := amountHuman.ToBlockchain(int32(decimals))
+
+	fmt.Printf("funding wallet %s with %s %s\n", walletAddress, amountBlockchain, contractMaybe)
 
 	// The RPC host is the same as the faucet host
 	parsedURL, err := url.Parse(chainConfig.URL)

@@ -96,6 +96,25 @@ func TestNewTokenTransfer(t *testing.T) {
 	require.Equal(t, uint16(0x8), solTx.Message.Instructions[1].ProgramIDIndex)
 	require.Equal(t, ataTo, solTx.Message.AccountKeys[1])
 
+	// transfer to non-existing ATA & fee payer used: create using fee payer money
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	input = &TxInput{ShouldCreateATA: true}
+	feePayerArgs := args
+	feePayerArgs.SetFeePayer(feePayer)
+	tx, err = builder.Transfer(feePayerArgs, input)
+	require.NoError(t, err)
+	require.NotNil(t, tx)
+	solTx = tx.(*Tx).SolTx
+	require.Equal(t, 0, len(solTx.Signatures))
+	require.Equal(t, 2, len(solTx.Message.Instructions))
+	require.Equal(t, uint16(0x8), solTx.Message.Instructions[0].ProgramIDIndex)
+	require.Equal(t, uint16(0x9), solTx.Message.Instructions[1].ProgramIDIndex)
+	// The create-ATA instruction should reference the fee payer as the account creator
+	require.Equal(t, uint16(0), solTx.Message.Instructions[0].Accounts[0])
+	require.Equal(t, ataTo.String(), solTx.Message.AccountKeys[2].String())
+	// The fee payer should be the fee-payer address.
+	require.EqualValues(t, feePayer, solTx.Message.AccountKeys[0].String())
+
 	// transfer directly to ATA
 	args = buildertest.MustNewTransferArgs(
 		args.GetFrom(),
