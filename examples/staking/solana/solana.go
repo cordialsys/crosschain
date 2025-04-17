@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
@@ -154,7 +155,10 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			sig1, err := signer.Sign(signBody)
+			sig1, err := signer.Sign(&xc.SignatureRequest{
+				Payload: signBody,
+				Signer:  from,
+			})
 			if err != nil {
 				return err
 			}
@@ -162,12 +166,12 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			tx.Signatures = append(tx.Signatures, solana.Signature(sig1), sig2)
+			tx.Signatures = append(tx.Signatures, solana.Signature(sig1.Signature), sig2)
 			tzBz, err := tx.MarshalBinary()
 			if err != nil {
 				return err
 			}
-			fmt.Println("submitting hash ", solana.Signature(sig1).String(), "...")
+			fmt.Println("submitting hash ", solana.Signature(sig1.Signature).String(), "...")
 
 			err = client.SubmitTx(context.Background(), xctypes.NewBinaryTx(tzBz, nil))
 			if err != nil {

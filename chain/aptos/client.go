@@ -146,8 +146,12 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		if err != nil {
 			return &tx_input.TxInput{}, fmt.Errorf("could not get sighashes: %v", err)
 		}
-		signatureData := ed25519.Sign(privateKey, hashes[0])
-		tx.AddSignatures(signatureData)
+		signatureData := ed25519.Sign(privateKey, hashes[0].Payload)
+		tx.AddSignatures(&xc.SignatureResponse{
+			Signature: signatureData,
+			PublicKey: pubkey,
+			Address:   args.GetFrom(),
+		})
 
 		serialized, err := tx.Serialize()
 		if err != nil {

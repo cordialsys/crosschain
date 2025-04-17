@@ -70,8 +70,8 @@ func (tx *Tx) txHashNormalBytes() []byte {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	sighashes := make([]xc.TxDataToSign, len(tx.Input.UnspentOutputs))
+func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
+	sighashes := make([]*xc.SignatureRequest, len(tx.Input.UnspentOutputs))
 	if len(tx.Input.UnspentOutputs) == 0 {
 		return sighashes, nil
 	}
@@ -129,10 +129,10 @@ func (tx *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		}
 
 		if err != nil {
-			return []xc.TxDataToSign{}, err
+			return []*xc.SignatureRequest{}, err
 		}
 
-		sighashes[i] = hash
+		sighashes[i] = xc.NewSignatureRequest(hash)
 	}
 
 	return sighashes, nil
@@ -163,10 +163,15 @@ func DecodeEcdsaSignature(signature xc.TxSignature) (btcec.ModNScalar, btcec.Mod
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if tx.Signed {
 		return fmt.Errorf("already signed")
 	}
+	signatures := make([]xc.TxSignature, len(signatureResponses))
+	for i, signatureResponse := range signatureResponses {
+		signatures[i] = signatureResponse.Signature
+	}
+
 	tx.Signatures = signatures
 	if len(signatures) != len(tx.MsgTx.TxIn) {
 		return fmt.Errorf("expected %v signatures, got %v signatures", len(tx.MsgTx.TxIn), len(signatures))

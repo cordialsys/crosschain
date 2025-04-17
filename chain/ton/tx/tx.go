@@ -57,18 +57,21 @@ func (tx Tx) Hash() xc.TxHash {
 	return xc.TxHash(hex.EncodeToString(hash))
 }
 
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	hash := tx.CellBuilder.EndCell().Hash()
-	return []xc.TxDataToSign{hash}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 }
 
-func (tx *Tx) AddSignatures(sigs ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(sigs ...*xc.SignatureResponse) error {
 	if tx.ExternalMessage.Body != nil {
 		return fmt.Errorf("already signed TON tx")
 	}
 
-	tx.signatures = sigs
-	msg := cell.BeginCell().MustStoreSlice(sigs[0], 512).MustStoreBuilder(tx.CellBuilder).EndCell()
+	tx.signatures = make([]xc.TxSignature, len(sigs))
+	for i, sig := range sigs {
+		tx.signatures[i] = sig.Signature
+	}
+	msg := cell.BeginCell().MustStoreSlice(tx.signatures[0], 512).MustStoreBuilder(tx.CellBuilder).EndCell()
 	tx.ExternalMessage.Body = msg
 	return nil
 }

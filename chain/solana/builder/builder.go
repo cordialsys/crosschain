@@ -72,10 +72,6 @@ func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Addres
 	if err != nil {
 		return nil, err
 	}
-	accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
-	if err != nil {
-		return nil, err
-	}
 	input := txInput.(*TxInput)
 
 	instructions := []solana.Instruction{
@@ -92,17 +88,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Addres
 		)
 	}
 
-	tx1, err := solana.NewTransaction(
-		instructions,
-		input.RecentBlockHash,
-		solana.TransactionPayer(accountFeePayer),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &tx.Tx{
-		SolTx: tx1,
-	}, nil
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, input)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
@@ -121,11 +107,6 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address
 	if err != nil {
 		return nil, err
 	}
-	accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
-	if err != nil {
-		return nil, err
-	}
-
 	accountTo, err := solana.PublicKeyFromBase58(string(to))
 	if err != nil {
 		return nil, err
@@ -232,21 +213,30 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address
 		)
 	}
 
-	return txBuilder.buildSolanaTx(instructions, accountFeePayer, txInput)
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, txInput)
 }
 
-func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, feePayer solana.PublicKey, txInput *TxInput) (*tx.Tx, error) {
+func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, instructions []solana.Instruction, txInput *TxInput) (*tx.Tx, error) {
+	accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
+	if err != nil {
+		return nil, err
+	}
+
 	tx1, err := solana.NewTransaction(
 		instructions,
 		txInput.RecentBlockHash,
-		solana.TransactionPayer(feePayer),
+		solana.TransactionPayer(accountFeePayer),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &tx.Tx{
+	tx := &tx.Tx{
 		SolTx: tx1,
-	}, nil
+	}
+	if feePayer != from {
+		tx.SetExtraFeePayerSigner(feePayer)
+	}
+	return tx, nil
 }
 
 func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, txInput *TxInput) (xc.Tx, error) {
@@ -267,5 +257,5 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 		token.NewCloseAccountInstruction(ataFrom, accountFrom, accountFrom, nil).Build(),
 	}
 
-	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
+	return txBuilder.buildSolanaTx(from, from, instructions, txInput)
 }

@@ -210,7 +210,7 @@ func (tx Tx) Hash() xc.TxHash {
 	hash_b58 := base58.Encode(hash[:])
 	return xc.TxHash(hash_b58)
 }
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	bytes, err := tx.Serialize()
 	// 0 = transaction data, 0 = V0 intent version, 0 = sui
 	// https://github.com/MystenLabs/sui/blob/a78b9e3f8a212924848f540da5a2587526525853/sdk/typescript/src/utils/intent.ts#L26
@@ -219,15 +219,15 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	hash := blake2b.Sum256(msg)
 
 	if err != nil {
-		return []xc.TxDataToSign{}, err
+		return []*xc.SignatureRequest{}, err
 	}
-	return []xc.TxDataToSign{hash[:]}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash[:])}, nil
 }
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	for _, sig := range signatures {
 		// sui expects signature to be {0, signature, public_key}
 		sui_sig := []byte{0}
-		sui_sig = append(sui_sig, sig...)
+		sui_sig = append(sui_sig, sig.Signature...)
 		sui_sig = append(sui_sig, tx.public_key...)
 		tx.signatures = append(tx.signatures, sui_sig)
 	}

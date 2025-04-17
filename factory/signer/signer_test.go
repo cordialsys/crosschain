@@ -94,10 +94,12 @@ func TestSign(t *testing.T) {
 			s, err := signer.New(v.alg, v.pri, nil, address.OptionAlgorithm(xc.SignatureType(v.algOverride)))
 			require.NoError(t, err)
 			bytesMsg, _ := hex.DecodeString(v.msg)
-			sig, err := s.Sign(xc.TxDataToSign(bytesMsg))
+			sig, err := s.Sign(&xc.SignatureRequest{
+				Payload: bytesMsg,
+			})
 			require.NoError(t, err)
 			require.NotNil(t, sig)
-			require.Equal(t, v.sig, hex.EncodeToString(sig))
+			require.Equal(t, v.sig, hex.EncodeToString(sig.Signature))
 
 			pub, err := s.PublicKey()
 			require.NoError(t, err)

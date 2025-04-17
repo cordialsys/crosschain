@@ -35,13 +35,15 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	msg, err := tx.tx.GetSigningMessage()
-	return []xc.TxDataToSign{[]byte(msg[:])}, err
+	return []*xc.SignatureRequest{
+		xc.NewSignatureRequest([]byte(msg[:])),
+	}, err
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	msg, err := tx.tx.GetSigningMessage()
 	if err != nil {
 		return err
@@ -50,7 +52,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		return errors.New("expecting 1 signature")
 	}
 	tx.tx_signing_message = msg
-	tx.tx_signature = signatures[0]
+	tx.tx_signature = signatures[0].Signature
 	serialized, err := tx.Serialize()
 	if err != nil {
 		return err

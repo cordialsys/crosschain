@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
 	"github.com/stretchr/testify/require"
 )
@@ -67,10 +68,11 @@ func TestTransfer(t *testing.T) {
 
 	require.NoError(t, err, "Failed to fund wallet address")
 
-	signer, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
+	mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
 	require.NoError(t, err)
+	collection := signer.NewCollection()
 
-	publicKey, err := signer.PublicKey()
+	publicKey, err := mainSigner.PublicKey()
 	require.NoError(t, err)
 
 	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
@@ -78,6 +80,8 @@ func TestTransfer(t *testing.T) {
 
 	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
 	require.NoError(t, err)
+
+	collection.AddMainSigner(mainSigner, from)
 
 	toAddress := deriveAddress(t, xcFactory, chainConfig, toPrivateKey)
 	fmt.Println("sending from ", from, " to ", toAddress)
@@ -137,10 +141,10 @@ func TestTransfer(t *testing.T) {
 	sighashes, err := tx.Sighashes()
 	require.NoError(t, err)
 
-	signatures := []xc.TxSignature{}
+	signatures := []*xc.SignatureResponse{}
 	for _, sighash := range sighashes {
 		// sign the tx sighash(es)
-		signature, err := signer.Sign(sighash)
+		signature, err := collection.Sign(sighash.Signer, sighash.Payload)
 		if err != nil {
 			panic(err)
 		}
