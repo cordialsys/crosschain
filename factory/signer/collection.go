@@ -64,5 +64,6 @@ func (s *Collection) Sign(address xc.Address, payload []byte) (*xc.SignatureResp
 	if err != nil {
 		return nil, err
 	}
+	signature.Address = address
 	return signature, nil
 }
