@@ -253,10 +253,6 @@ func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
 	var feePayer bool
 
-	type signerObj struct {
-		signer  *signer.Signer
-		address xc.Address
-	}
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
 		Aliases: []string{"tf"},
@@ -353,8 +349,17 @@ func CmdTxTransfer() *cobra.Command {
 			signerCollection := signer.NewCollection()
 			signerCollection.AddMainSigner(mainSigner, from)
 
+			txBuilder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
+			if err != nil {
+				return fmt.Errorf("could not load tx-builder: %v", err)
+			}
+
 			logrus.WithField("address", from).Info("sending from")
 			if feePayer {
+				_, ok := txBuilder.(builder.BuilderSupportsFeePayer)
+				if !ok {
+					return fmt.Errorf("support for fee payer on chain %s is not implemented", chainConfig.Chain)
+				}
 				feePayerPrivateKey := signer.ReadPrivateKeyFeePayerEnv()
 				if feePayerPrivateKey == "" {
 					return fmt.Errorf("must set env %s", signer.EnvPrivateKeyFeePayer)
@@ -436,13 +441,8 @@ func CmdTxTransfer() *cobra.Command {
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			builder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
-			if err != nil {
-				return fmt.Errorf("could not load tx-builder: %v", err)
-			}
-
 			// create tx (no network, no private key needed)
-			tx, err := builder.Transfer(tfArgs, input)
+			tx, err := txBuilder.Transfer(tfArgs, input)
 			if err != nil {
 				return fmt.Errorf("could not build transfer: %v", err)
 			}

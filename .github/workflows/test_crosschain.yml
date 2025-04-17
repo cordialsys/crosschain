@@ -28,6 +28,11 @@ jobs:
             image: us-docker.pkg.dev/cordialsys/crosschain/solana:latest
             contract: "So11111111111111111111111111111111111111112"
             decimals: 9
+          - chain: SOL
+            image: us-docker.pkg.dev/cordialsys/crosschain/solana:latest
+            contract: "So11111111111111111111111111111111111111112"
+            decimals: 9
+            fee-payer: true
           - chain: ETH
             image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
           - chain: ETH
@@ -61,3 +66,4 @@ jobs:
           --algorithm "${{matrix.chain.algorithm}}"
           --contract "${{matrix.chain.contract}}"
           --decimals "${{matrix.chain.decimals}}"
+          --fee-payer "${{matrix.chain.fee-payer}}"

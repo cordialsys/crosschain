@@ -140,8 +140,17 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address
 
 	instructions := []solana.Instruction{}
 	if txInput.ShouldCreateATA {
+		// fee payer should pay for the ATA creation, if used.
+		accountCreatorPayer := accountFrom
+		if feePayer != from {
+			accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
+			if err != nil {
+				return nil, err
+			}
+			accountCreatorPayer = accountFeePayer
+		}
 		createAta := ata.NewCreateInstruction(
-			accountFrom,
+			accountCreatorPayer,
 			accountTo,
 			accountContract,
 		).Build()
