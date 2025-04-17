@@ -23,8 +23,8 @@ func NewTx(tx *tx.Tx) *Tx {
 var _ xc.Tx = &tx.Tx{}
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (txObj *Tx) Sighashes() ([]xc.TxDataToSign, error) {
-	sighashes := make([]xc.TxDataToSign, len(txObj.Input.UnspentOutputs))
+func (txObj *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
+	sighashes := make([]*xc.SignatureRequest, len(txObj.Input.UnspentOutputs))
 
 	for i, utxo := range txObj.Input.UnspentOutputs {
 		pubKeyScript := utxo.PubKeyScript
@@ -37,22 +37,23 @@ func (txObj *Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		log.Debugf("Sighashes params: IsPayToWitnessPubKeyHash(pubKeyScript)=%t", txscript.IsPayToWitnessPubKeyHash(pubKeyScript))
 		hash = CalculateBchBip143Sighash(pubKeyScript, txscript.NewTxSigHashes(txObj.MsgTx, fetcher), txscript.SigHashAll, txObj.MsgTx, i, int64(value))
 
-		sighashes[i] = hash
+		sighashes[i] = xc.NewSignatureRequest(hash)
 	}
 
 	return sighashes, nil
 }
 
 // AddSignatures adds a signature to Tx
-func (txObj *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (txObj *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if txObj.Signed {
 		return fmt.Errorf("already signed")
 	}
-	if len(signatures) != len(txObj.MsgTx.TxIn) {
-		return fmt.Errorf("expected %v signatures, got %v signatures", len(txObj.MsgTx.TxIn), len(signatures))
+	if len(signatureResponses) != len(txObj.MsgTx.TxIn) {
+		return fmt.Errorf("expected %v signatures, got %v signatures", len(txObj.MsgTx.TxIn), len(signatureResponses))
 	}
 
-	for i, rsvBytes := range signatures {
+	for i, signatureResponse := range signatureResponses {
+		rsvBytes := signatureResponse.Signature
 		r, s, err := tx.DecodeEcdsaSignature(rsvBytes)
 		if err != nil {
 			return err

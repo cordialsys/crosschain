@@ -92,7 +92,7 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	bytes, err := tx.Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize tx: %v", err)
@@ -110,11 +110,11 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	h, err = blake2b.New(txHashSize, nil)
 	h.Write(cid)
 	sum = h.Sum(nil)
-	return []xc.TxDataToSign{sum}, err
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(sum)}, err
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if len(signatures) != 1 {
 		return errors.New("only one signature is allowed")
 	}
@@ -122,12 +122,12 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	if len(tx.XcSignatures) > 0 || tx.Signature.Data != nil {
 		return errors.New("transaction already signed")
 	}
-	tx.XcSignatures = signatures
+	tx.XcSignatures = []xc.TxSignature{signatures[0].Signature}
 
 	signature := signatures[0]
 	tx.Signature = Signature{
 		Type: address.ProtocolSecp256k1,
-		Data: signature,
+		Data: signature.Signature,
 	}
 
 	return nil

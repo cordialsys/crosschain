@@ -61,7 +61,7 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	signDoc, err := tx.BuildUnsigned()
 	if err != nil {
 		return nil, err
@@ -72,20 +72,20 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	}
 
 	sighash := GetSighash(tx.ChainCfg, signDocBytes)
-	return []xc.TxDataToSign{sighash}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
-	if len(signatures) == 0 {
+func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
+	if len(signatureResponses) == 0 {
 		return fmt.Errorf("invalid signatures size")
 	}
-	for _, signature := range signatures {
-		sig := signature[:]
+	for _, signatureResponse := range signatureResponses {
+		sig := signatureResponse.Signature[:]
 		if len(sig) > 64 {
 			sig = sig[:64]
 		}
-		if len(signature) == 0 {
+		if len(sig) == 0 {
 			return fmt.Errorf("invalid signature size")
 		}
 		tx.signatures = append(tx.signatures, sig)

@@ -15,10 +15,10 @@ var _ xc.Tx = &MockXcTx{}
 func (tx *MockXcTx) Hash() xc.TxHash {
 	panic("not supported")
 }
-func (tx *MockXcTx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx *MockXcTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	panic("not supported")
 }
-func (tx *MockXcTx) AddSignatures(...xc.TxSignature) error {
+func (tx *MockXcTx) AddSignatures(...*xc.SignatureResponse) error {
 	panic("not supported")
 }
 func (tx *MockXcTx) GetSignatures() []xc.TxSignature {

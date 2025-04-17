@@ -81,7 +81,7 @@ func HashTransactionV1(transaction xdr.Transaction, passphrase string) ([]byte, 
 	return hash[:], nil
 }
 
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	var hash []byte
 	var err error
 
@@ -90,7 +90,7 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		return nil, fmt.Errorf("failed to hash envelope: %w", err)
 	}
 
-	return []xc.TxDataToSign{hash}, err
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, err
 }
 
 // NewDecoratedSignature creates a new xdr.DecoratedSignature, which combines a signature
@@ -107,7 +107,7 @@ func NewDecoratedSignature(signature xc.TxSignature, pub_key []byte) (xdr.Decora
 	}, nil
 }
 
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx == nil {
 		return errors.New("invalid transaction")
 	}
@@ -121,13 +121,13 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	}
 
 	pubKey, ok := tx.TxEnvelope.SourceAccount().GetEd25519()
-	if ok != true {
+	if !ok {
 		return errors.New("failed to retrieve public key from source account")
 	}
 
 	xlmSignatures := make([]xdr.DecoratedSignature, len(signatures))
 	for i, signature := range signatures {
-		decoratedSig, err := NewDecoratedSignature(signature, pubKey[:])
+		decoratedSig, err := NewDecoratedSignature(signature.Signature, pubKey[:])
 		if err != nil {
 			return fmt.Errorf("failed to create decorated signature: %w", err)
 		}
@@ -135,7 +135,10 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		xlmSignatures[i] = decoratedSig
 	}
 
-	tx.Signatures = signatures
+	tx.Signatures = make([]xc.TxSignature, len(signatures))
+	for i, sig := range signatures {
+		tx.Signatures[i] = sig.Signature
+	}
 	tx.TxEnvelope.V1.Signatures = xlmSignatures
 
 	return nil

@@ -26,7 +26,7 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	rawData, err := proto.Marshal(tx.tronTx.GetRawData())
 	if err != nil {
 		return nil, errors.New("unable to get raw data")
@@ -35,14 +35,14 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	hasher := sha256.New()
 	hasher.Write(rawData)
 
-	return []xc.TxDataToSign{hasher.Sum(nil)}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(hasher.Sum(nil))}, nil
 
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	for _, sig := range signatures {
-		tx.tronTx.Signature = append(tx.tronTx.Signature, sig)
+		tx.tronTx.Signature = append(tx.tronTx.Signature, sig.Signature)
 	}
 	return nil
 }

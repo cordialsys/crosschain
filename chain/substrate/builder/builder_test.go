@@ -57,7 +57,7 @@ func TestNewTransfer(t *testing.T) {
 	require.NoError(err)
 	require.NotNil(tx)
 
-	err = tx.AddSignatures(make([]byte, 64))
+	err = tx.AddSignatures(&xc.SignatureResponse{Signature: make([]byte, 64)})
 	require.NoError(err)
 
 	require.NotEmpty(tx.Hash())

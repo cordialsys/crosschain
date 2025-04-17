@@ -269,7 +269,9 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 				for i := 0; i < 65; i++ {
 					sig = append(sig, byte(i))
 				}
-				err = tf.AddSignatures(xc.TxSignature(sig))
+				err = tf.AddSignatures(&xc.SignatureResponse{
+					Signature: sig,
+				})
 				require.NoError(err)
 
 				ser, err := tf.Serialize()
@@ -370,29 +372,40 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	require.NoError(err)
 
 	txObject := tf.(*tx.Tx)
-	err = txObject.AddSignatures([]xc.TxSignature{
-		[]byte{1, 2, 3, 4},
+	err = txObject.AddSignatures([]*xc.SignatureResponse{
+		{
+			Signature: []byte{1, 2, 3, 4},
+		},
 	}...)
 	require.ErrorContains(err, "signature must be 64 or 65 length")
 	sig := []byte{}
 	for i := 0; i < 65; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = txObject.AddSignatures([]xc.TxSignature{
-		sig,
+	err = txObject.AddSignatures([]*xc.SignatureResponse{
+		{
+			Signature: sig,
+		},
 	}...)
 	require.NoError(err)
 
 	// can't sign multiple times in a row
-	err = txObject.AddSignatures([]xc.TxSignature{
-		sig,
+	err = txObject.AddSignatures([]*xc.SignatureResponse{
+		{
+			Signature: sig,
+		},
 	}...)
 	require.ErrorContains(err, "already signed")
 
 	// must have a signature for each input needed
 	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
-	err = tf.(*tx.Tx).AddSignatures([]xc.TxSignature{
-		sig, sig,
+	err = tf.(*tx.Tx).AddSignatures([]*xc.SignatureResponse{
+		{
+			Signature: sig,
+		},
+		{
+			Signature: sig,
+		},
 	}...)
 	require.ErrorContains(err, "expected 1 signatures, got 2 signatures")
 
@@ -409,8 +422,13 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	}
 	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
 	require.Len(tf.(*tx.Tx).Input.UnspentOutputs, 2)
-	err = tf.(*tx.Tx).AddSignatures([]xc.TxSignature{
-		sig, sig,
+	err = tf.(*tx.Tx).AddSignatures([]*xc.SignatureResponse{
+		{
+			Signature: sig,
+		},
+		{
+			Signature: sig,
+		},
 	}...)
 	require.NoError(err)
 }

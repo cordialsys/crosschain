@@ -138,11 +138,37 @@ func NewTxSignatures(data [][]byte) []TxSignature {
 	return ret
 }
 
+type SignatureRequest struct {
+	// Required: The payload to sign
+	Payload []byte
+	// May be optionally set, if different from the from-address.
+	Signer Address
+}
+
+func NewSignatureRequest(payload []byte, signerMaybe ...Address) *SignatureRequest {
+	signer := Address("")
+	if len(signerMaybe) > 0 {
+		signer = signerMaybe[0]
+	}
+	return &SignatureRequest{
+		Payload: payload,
+		Signer:  signer,
+	}
+}
+
+type SignatureResponse struct {
+	// Signaure of the payload
+	Signature TxSignature
+	// Address + public key of the signer
+	PublicKey []byte
+	Address   Address
+}
+
 // Tx is a transaction
 type Tx interface {
 	Hash() TxHash
-	Sighashes() ([]TxDataToSign, error)
-	AddSignatures(...TxSignature) error
+	Sighashes() ([]*SignatureRequest, error)
+	AddSignatures(...*SignatureResponse) error
 	// only needed for RPC endpoints that require signatures in separate fields
 	GetSignatures() []TxSignature
 	Serialize() ([]byte, error)

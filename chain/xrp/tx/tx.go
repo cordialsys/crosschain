@@ -79,7 +79,7 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	if tx.XRPTx == nil {
 		return nil, errors.New("missing XRP transaction")
 	}
@@ -104,17 +104,17 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	digestSha512 := sha512.Sum512(encodeForSigningBytes)
 	firstHalf := digestSha512[:32]
 
-	return []xc.TxDataToSign{firstHalf[:]}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(firstHalf[:])}, nil
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx.TransactionSignature != nil {
 		return errors.New("transaction already signed")
 	}
 
 	for _, rsvBytes := range signatures {
-		r, s, err := btctx.DecodeEcdsaSignature(rsvBytes)
+		r, s, err := btctx.DecodeEcdsaSignature(rsvBytes.Signature)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 		signatureBytes := signature.Serialize()
 		signatureHex := hex.EncodeToString(signatureBytes)
 		tx.XRPTx.TxnSignature = signatureHex
-		tx.TransactionSignature = append(tx.TransactionSignature, rsvBytes)
+		tx.TransactionSignature = append(tx.TransactionSignature, rsvBytes.Signature)
 	}
 
 	return nil

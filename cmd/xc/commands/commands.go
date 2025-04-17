@@ -350,13 +350,10 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
+			signerCollection := signer.NewCollection()
+			signerCollection.AddMainSigner(mainSigner, from)
+
 			logrus.WithField("address", from).Info("sending from")
-			signers := []*signerObj{
-				{
-					signer:  mainSigner,
-					address: from,
-				},
-			}
 			if feePayer {
 				feePayerPrivateKey := signer.ReadPrivateKeyFeePayerEnv()
 				if feePayerPrivateKey == "" {
@@ -376,10 +373,7 @@ func CmdTxTransfer() *cobra.Command {
 				}
 				logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
 				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress))
-				signers = append(signers, &signerObj{
-					signer:  feePayerSigner,
-					address: feePayerAddress,
-				})
+				signerCollection.AddAuxSigner(feePayerSigner, feePayerAddress)
 			}
 
 			if memo != "" {
@@ -460,20 +454,18 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// sign
-			signatures := []xc.TxSignature{}
+			signatures := []*xc.SignatureResponse{}
 			for _, sighash := range sighashes {
-				log := logrus.WithField("sighash", hex.EncodeToString(sighash))
-				for _, signer := range signers {
-					// sign the tx sighash(es)
-					signature, err := signer.signer.Sign(sighash)
-					if err != nil {
-						panic(err)
-					}
-					signatures = append(signatures, signature)
-					log.
-						WithField("address", signer.address).
-						WithField("signature", hex.EncodeToString(signature)).Info("adding signature")
+				log := logrus.WithField("payload", hex.EncodeToString(sighash.Payload))
+				// sign the tx sighash(es)
+				signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
+				if err != nil {
+					panic(err)
 				}
+				signatures = append(signatures, signature)
+				log.
+					WithField("address", signature.Address).
+					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding signature")
 			}
 
 			// complete the tx by adding its signature
