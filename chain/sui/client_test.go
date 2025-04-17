@@ -34,8 +34,8 @@ func mustHexToPure(str string) *bcs.CallArg__Pure {
 	return data
 }
 
-func (s *CrosschainTestSuite) TestFetchTxInfo() {
-	require := s.Require()
+func TestFetchTxInfo(t *testing.T) {
+	require := require.New(t)
 
 	vectors := []struct {
 		name string
@@ -67,6 +67,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:      xc.NewAmountBlockchainFromStr("10001997880"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
+						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 					},
 				},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{
@@ -75,6 +76,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:      xc.NewAmountBlockchainFromStr("10000000000"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
+						Event:       xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
 					},
 				},
 				Fee:    xc.NewAmountBlockchainFromStr("1997880"),
@@ -107,6 +109,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:      xc.NewAmountBlockchainFromStr("1079040"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
+						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 					},
 				},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{},
@@ -141,6 +144,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:          xc.NewAmountBlockchainFromStr("1500000000000"),
 						NativeAsset:     "SUI",
 						ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
+						Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
 					},
 				},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{
@@ -149,12 +153,14 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 						Amount:      xc.NewAmountBlockchainFromStr("1611816"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
+						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 					},
 					{
 						Address:         "0xfe33ab3ab64a92088402fc22d850f04f0770d899695104447ffd93d7b83cfeb8",
 						Amount:          xc.NewAmountBlockchainFromStr("1500000000000"),
 						NativeAsset:     "SUI",
 						ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
+						Event:           xclient.NewEventFromIndex(2, xclient.MovementVariantNative),
 					},
 				},
 				// believe it or not SUI will rebate (pay you) fee if you merge enough coins
@@ -175,36 +181,37 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	}
 
 	for _, v := range vectors {
-		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(s.T(), v.resp)
-		defer close()
-		asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
+		t.Run(v.name, func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
 
-		asset.URL = server.URL
-		client, _ := NewClient(asset)
+			asset.URL = server.URL
+			client, _ := NewClient(asset)
 
-		txInfo, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash(v.val.TxID))
+			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.val.TxID))
 
-		if v.err != "" {
-			require.Equal(xclient.LegacyTxInfo{}, txInfo)
-			require.ErrorContains(err, v.err)
-		} else {
-			require.Nil(err)
-			require.NotNil(txInfo)
-			require.Equal(v.val, txInfo)
-		}
+			if v.err != "" {
+				require.Equal(xclient.LegacyTxInfo{}, txInfo)
+				require.ErrorContains(err, v.err)
+			} else {
+				require.Nil(err)
+				require.NotNil(txInfo)
+				require.Equal(v.val, txInfo)
+			}
+		})
 	}
 
 }
-func (s *CrosschainTestSuite) TestInvalidTxFetchTxInfo() {
-	require := s.Require()
-	server, close := testtypes.MockJSONRPC(s.T(), "")
+func TestInvalidTxFetchTxInfo(t *testing.T) {
+	require := require.New(t)
+	server, close := testtypes.MockJSONRPC(t, "")
 	defer close()
 	asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
 	asset.URL = server.URL
 	client, _ := NewClient(asset)
 
-	_, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("invalidhash"))
+	_, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash("invalidhash"))
 	require.ErrorContains(err, "could not decode txHash")
 
 }

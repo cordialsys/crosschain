@@ -17,6 +17,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
+	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -301,12 +302,15 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 		}
 		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
+
+		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxHash), int(in.Index))
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
 			Asset:           string(asset),
+			Event:           xclient.NewEvent(utxoId, xclient.MovementVariantNative),
 		})
 	}
 
@@ -323,18 +327,19 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for i, out := range data.Outputs {
+		utxoId := clientcommon.NewUtxoId(txHash, int(out.Index))
 		endpoint := &xclient.LegacyTxInfoEndpoint{
 			Address:     xc.Address(out.Recipient),
 			Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 			NativeAsset: xc.NativeAsset(asset),
 			Asset:       string(asset),
+			Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
 		}
 		if out.Recipient != from {
 			// legacy endpoint drops 'change' movements
 			destinations = append(destinations, endpoint)
-		} else {
-			txWithInfo.AddDroppedDestination(i, endpoint)
 		}
+		txWithInfo.AddDroppedDestination(i, endpoint)
 	}
 
 	// from
@@ -360,10 +365,9 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, txHashStr xc.Tx
 	// the new model will calculate fees from the difference of inflows/outflows
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 
-	// add back the change movements
-	for index, droppedDest := range legacyTx.GetDroppedBtcDestinations() {
-		legacyTx.InsertDestinationAtIndex(index, droppedDest)
-	}
+	// include change movements for non-legacy
+	legacyTx.Destinations = legacyTx.GetDroppedBtcDestinations()
+
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
