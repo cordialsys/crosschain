@@ -31,7 +31,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
 	input := &tx_input.TxInput{}
-	tx, err := builder.NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx := tx.(*Tx).SolTx
@@ -48,13 +48,13 @@ func TestNewNativeTransferErr(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tx, err := builder.NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 3")
 
 	from = xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	// fails on parsing to
-	tx, err = builder.NewNativeTransfer(from, to, amount, input)
+	tx, err = builder.NewNativeTransfer(from, from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 2")
 }

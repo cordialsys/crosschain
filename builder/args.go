@@ -19,6 +19,8 @@ type builderOptions struct {
 	// asset contract address
 	contract *xc.ContractAddress
 	decimals *int
+
+	feePayer *xc.Address
 }
 
 func newBuilderOptions() builderOptions {
@@ -50,6 +52,7 @@ func (opts *builderOptions) GetPriority() (xc.GasFeePriority, bool)  { return ge
 func (opts *builderOptions) GetPublicKey() ([]byte, bool)            { return get(opts.publicKey) }
 func (opts *builderOptions) GetContract() (xc.ContractAddress, bool) { return get(opts.contract) }
 func (opts *builderOptions) GetDecimals() (int, bool)                { return get(opts.decimals) }
+func (opts *builderOptions) GetFeePayer() (xc.Address, bool)         { return get(opts.feePayer) }
 
 // Other options
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
@@ -122,6 +125,12 @@ func OptionValidator(validator string) BuilderOption {
 func OptionStakeAccount(account string) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.stakeAccount = &account
+		return nil
+	}
+}
+func OptionFeePayer(feePayer xc.Address) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.feePayer = &feePayer
 		return nil
 	}
 }

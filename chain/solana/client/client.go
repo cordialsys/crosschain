@@ -194,6 +194,10 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 		// one signature for solana transfers (note: staking txs use multiple)
 		{},
 	}
+	if _, ok := args.GetFeePayer(); ok {
+		// add another for the fee payer
+		tx.SolTx.Signatures = append(tx.SolTx.Signatures, solana.Signature{})
+	}
 
 	sim, err := client.SolClient.SimulateTransactionWithOpts(ctx, tx.SolTx, &rpc.SimulateTransactionOpts{
 		SigVerify: false,
@@ -283,6 +287,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 	result.Fee = xc.NewAmountBlockchainFromUint64(meta.Fee)
+	if len(solTx.Message.AccountKeys) > 0 {
+		// The first account is the fee payer on solana
+		result.FeePayer = xc.Address(solTx.Message.AccountKeys[0].String())
+	}
 
 	result.TxID = string(txHash)
 

@@ -10,6 +10,11 @@ type FullBuilder interface {
 	Staking
 }
 
+// Marker to indicate if fee payer is supported, until we support it everywhere
+type BuilderSupportsFeePayer interface {
+	SupportsFeePayer()
+}
+
 type Transfer interface {
 	Transfer(args TransferArgs, input xc.TxInput) (xc.Tx, error)
 }
