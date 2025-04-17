@@ -43,8 +43,18 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-	copy(from_addr[:], mustDecodeHex(string(from)))
-	copy(to_addr[:], mustDecodeHex(string(to)))
+
+	decoded, err := DecodeHex(string(from))
+	if err != nil {
+		return &Tx{}, err
+	}
+	copy(from_addr[:], decoded)
+
+	decoded, err = DecodeHex(string(to))
+	if err != nil {
+		return &Tx{}, err
+	}
+	copy(to_addr[:], decoded)
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
 
 	chain_id := input.ChainId
@@ -80,8 +90,16 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 
 	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
 	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-	copy(from_addr[:], mustDecodeHex(string(from)))
-	copy(to_addr[:], mustDecodeHex(string(to)))
+	decoded, err := DecodeHex(string(from))
+	if err != nil {
+		return &Tx{}, err
+	}
+	copy(from_addr[:], decoded)
+	decoded, err = DecodeHex(string(to))
+	if err != nil {
+		return &Tx{}, err
+	}
+
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
 	typeTag, err := transactionbuilder.NewTypeTagStructFromString(string(contract))
 	if err != nil {

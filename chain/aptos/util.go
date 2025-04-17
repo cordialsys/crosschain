@@ -2,14 +2,15 @@ package aptos
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strings"
 )
 
-func mustDecodeHex(h string) []byte {
+func DecodeHex(h string) ([]byte, error) {
 	h = strings.Replace(h, "0x", "", 1)
 	bz, err := hex.DecodeString(h)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to decode address: %s: %w", h, err)
 	}
-	return bz
+	return bz, nil
 }
