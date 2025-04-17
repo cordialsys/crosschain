@@ -191,6 +191,7 @@ func TestFetchTxInfo(t *testing.T) {
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
 					NativeAsset:     "APTOS",
+					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 				}},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
@@ -198,6 +199,7 @@ func TestFetchTxInfo(t *testing.T) {
 					ContractAddress: "APTOS",
 					NativeAsset:     "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
+					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
 				}},
 			},
 		},
@@ -238,6 +240,7 @@ func TestFetchTxInfo(t *testing.T) {
 					NativeAsset:     "APTOS",
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
+					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
 				}},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:         "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
@@ -245,6 +248,7 @@ func TestFetchTxInfo(t *testing.T) {
 					NativeAsset:     "APTOS",
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
+					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
 				}},
 			},
 			err: "",

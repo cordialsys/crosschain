@@ -17,6 +17,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
+	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -220,14 +221,17 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		if len(in.Addresses) > 0 {
 			input.Address = xc.Address(in.Addresses[0])
 		}
+
 		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
+		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxID), in.Vout)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
 			Asset:           string(asset),
+			Event:           xclient.NewEvent(utxoId, xclient.MovementVariantNative),
 		})
 	}
 
@@ -246,6 +250,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for i, out := range data.Vout {
+		utxoId := clientcommon.NewUtxoId(txHash, out.N)
 		if len(out.Addresses) > 0 {
 			addr := out.Addresses[0]
 			endpoint := &xclient.LegacyTxInfoEndpoint{
@@ -253,13 +258,13 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 				Amount:      xc.NewAmountBlockchainFromStr(out.Value),
 				NativeAsset: xc.NativeAsset(asset),
 				Asset:       string(asset),
+				Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
 			}
 			if addr != from {
 				// legacy endpoint drops 'change' movements
 				destinations = append(destinations, endpoint)
-			} else {
-				txWithInfo.AddDroppedDestination(i, endpoint)
 			}
+			txWithInfo.AddDroppedDestination(i, endpoint)
 		}
 	}
 
@@ -286,10 +291,8 @@ func (client *BlockbookClient) FetchTxInfo(ctx context.Context, txHashStr xc.TxH
 	// the new model will calculate fees from the difference of inflows/outflows
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 
-	// add back the change movements
-	for index, droppedDest := range legacyTx.GetDroppedBtcDestinations() {
-		legacyTx.InsertDestinationAtIndex(index, droppedDest)
-	}
+	// include change movements for non-legacy
+	legacyTx.Destinations = legacyTx.GetDroppedBtcDestinations()
 
 	// remap to new tx
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil

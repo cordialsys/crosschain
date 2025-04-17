@@ -95,6 +95,8 @@ type BalanceChange struct {
 	Amount    *xc.AmountHumanReadable `json:"amount,omitempty"`
 	XAddress  AddressName             `json:"address"`    // deprecated
 	AddressId xc.Address              `json:"address_id"` // replaces address
+	// Details of the event in the transaction that contributed to this movement being reported.
+	Event *Event `json:"event,omitempty"`
 }
 
 type Event struct {
@@ -238,13 +240,18 @@ func NewBalanceChange(chain xc.NativeAsset, addressId xc.Address, balance xc.Amo
 	}
 	addressName := NewAddressName(chain, string(addressId))
 	var amount *xc.AmountHumanReadable
-
+	var event *Event = nil
 	return &BalanceChange{
 		balance,
 		amount,
 		addressName,
 		addressId,
+		event,
 	}
+}
+
+func (b *BalanceChange) AddEventMeta(event *Event) {
+	b.Event = event
 }
 
 func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmations uint64, err *string) *TxInfo {
@@ -381,16 +388,20 @@ func NewMovement(chain xc.NativeAsset, contract xc.ContractAddress) *Movement {
 	return &Movement{xasset, xcontract, assetId, contractId, from, to, memo, event, chain}
 }
 
-func (tf *Movement) AddSource(from xc.Address, balance xc.AmountBlockchain, decimals *int) {
-	tf.From = append(tf.From, NewBalanceChange(tf.chain, from, balance, decimals))
+func (tf *Movement) AddSource(from xc.Address, balance xc.AmountBlockchain, decimals *int) *BalanceChange {
+	bc := NewBalanceChange(tf.chain, from, balance, decimals)
+	tf.From = append(tf.From, bc)
+	return bc
 }
 
 func (tf *Movement) AddEventMeta(event *Event) {
 	tf.Event = event
 }
 
-func (tf *Movement) AddDestination(to xc.Address, balance xc.AmountBlockchain, decimals *int) {
-	tf.To = append(tf.To, NewBalanceChange(tf.chain, to, balance, decimals))
+func (tf *Movement) AddDestination(to xc.Address, balance xc.AmountBlockchain, decimals *int) *BalanceChange {
+	bc := NewBalanceChange(tf.chain, to, balance, decimals)
+	tf.To = append(tf.To, bc)
+	return bc
 }
 func (tf *Movement) SetMemo(memo string) {
 	tf.Memo = memo
@@ -447,19 +458,19 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 		tfs := []*Movement{}
 		for _, source := range legacyTx.Sources {
 			tf := NewMovement(chain, source.ContractAddress)
-			tf.AddSource(source.Address, source.Amount, nil)
+			balanceChange := tf.AddSource(source.Address, source.Amount, nil)
 			if source.Event != nil {
-				tf.AddEventMeta(source.Event)
+				balanceChange.AddEventMeta(source.Event)
 			}
 			tfs = append(tfs, tf)
 		}
 
 		for _, dest := range legacyTx.Destinations {
 			tf := NewMovement(chain, dest.ContractAddress)
+			balanceChange := tf.AddDestination(dest.Address, dest.Amount, nil)
 			if dest.Event != nil {
-				tf.AddEventMeta(dest.Event)
+				balanceChange.AddEventMeta(dest.Event)
 			}
-			tf.AddDestination(dest.Address, dest.Amount, nil)
 			tfs = append(tfs, tf)
 		}
 		// coalesece movements that have same asset

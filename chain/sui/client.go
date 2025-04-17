@@ -164,7 +164,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	totalSuiSent := xc.NewAmountBlockchainFromUint64(0)
 	totalSuiReceived := xc.NewAmountBlockchainFromUint64(0)
 
-	for _, bal := range resp.BalanceChanges {
+	for i, bal := range resp.BalanceChanges {
 		amt := xc.NewAmountBlockchainFromStr(bal.Amount)
 
 		asset := ""
@@ -196,6 +196,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 				Amount:          abs,
 				Address:         xc.Address(from),
 				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
+				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
 			})
 		} else {
 			to, _ = AddressOrObjectOwner(&bal.Owner)
@@ -209,6 +210,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 				Amount:          amt,
 				Address:         xc.Address(to),
 				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
+				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
 			})
 		}
 	}

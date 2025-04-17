@@ -205,7 +205,11 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 type ChangeAndEvents struct {
 	Change AptosChangeInner
-	Events []aptostypes.Event
+	Events []*EventAndIndex
+}
+type EventAndIndex struct {
+	Event aptostypes.Event
+	Index int
 }
 
 func (ch *ChangeAndEvents) ContractAddress() string {
@@ -303,13 +307,19 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				Change: changeInner,
 			}
 
-			for _, ev := range tx.Events {
+			for i, ev := range tx.Events {
 				if ev.Guid.AccountAddress == change.DepositEvents.Guid.Id.AccountAddress &&
 					ev.Guid.CreationNumber == change.DepositEvents.Guid.Id.CreationNumber {
-					changeAndEvents.Events = append(changeAndEvents.Events, ev)
+					changeAndEvents.Events = append(changeAndEvents.Events, &EventAndIndex{
+						Event: ev,
+						Index: i,
+					})
 				} else if ev.Guid.AccountAddress == change.WithdrawEvents.Guid.Id.AccountAddress &&
 					ev.Guid.CreationNumber == change.WithdrawEvents.Guid.Id.CreationNumber {
-					changeAndEvents.Events = append(changeAndEvents.Events, ev)
+					changeAndEvents.Events = append(changeAndEvents.Events, &EventAndIndex{
+						Event: ev,
+						Index: i,
+					})
 				}
 			}
 			coinChanges = append(coinChanges, changeAndEvents)
@@ -320,10 +330,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	for _, coinChange := range coinChanges {
 		for _, ev := range coinChange.Events {
-			switch ev.Type {
+			switch ev.Event.Type {
 			case "0x1::coin::WithdrawEvent":
 				withdraw := &CoinWithdrawEvent{}
-				err := reserializeJson(ev.Data, withdraw)
+				err := reserializeJson(ev.Event.Data, withdraw)
 				if err != nil {
 					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
 					continue
@@ -332,18 +342,19 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				logrus.WithFields(logrus.Fields{
 					"chain":    client.Asset.GetChain().Chain,
 					"contract": contract,
-					"address":  xc.Address(ev.Guid.AccountAddress),
+					"address":  xc.Address(ev.Event.Guid.AccountAddress),
 					"amount":   withdraw.Amount,
 				}).Debug("withdraw-event")
 				sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 					ContractAddress: contract,
 					NativeAsset:     client.Asset.GetChain().Chain,
-					Address:         xc.Address(ev.Guid.AccountAddress),
+					Address:         xc.Address(ev.Event.Guid.AccountAddress),
 					Amount:          xc.NewAmountBlockchainFromStr(withdraw.Amount),
+					Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
 				})
 			case "0x1::coin::DepositEvent":
 				deposit := &CoinDepositEvent{}
-				err := reserializeJson(ev.Data, deposit)
+				err := reserializeJson(ev.Event.Data, deposit)
 				if err != nil {
 					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
 					continue
@@ -352,19 +363,20 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 				logrus.WithFields(logrus.Fields{
 					"chain":    client.Asset.GetChain().Chain,
 					"contract": contract,
-					"address":  xc.Address(ev.Guid.AccountAddress),
+					"address":  xc.Address(ev.Event.Guid.AccountAddress),
 					"amount":   deposit.Amount,
 				}).Debug("deposit-event")
 				destinations = append(destinations, &xclient.LegacyTxInfoEndpoint{
 					ContractAddress: contract,
 					NativeAsset:     client.Asset.GetChain().Chain,
-					Address:         xc.Address(ev.Guid.AccountAddress),
+					Address:         xc.Address(ev.Event.Guid.AccountAddress),
 					Amount:          xc.NewAmountBlockchainFromStr(deposit.Amount),
+					Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
 				})
 			default:
 				// skip / unknown.
 				logrus.WithFields(logrus.Fields{
-					"event": ev.Type,
+					"event": ev.Event.Type,
 				}).Debug("unknown event")
 			}
 		}
