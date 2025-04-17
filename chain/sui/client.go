@@ -309,9 +309,42 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	}
 	contract = NormalizeCoinContract(contract)
 
-	all_coins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), contract)
+	input := NewTxInput()
+	suiCoins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), native)
 	if err != nil {
 		return &TxInput{}, err
+	}
+	SortCoins(suiCoins)
+	if len(suiCoins) > 0 {
+		// use the largest SUI coin for gas
+		input.GasCoin = *suiCoins[0]
+		input.GasCoinOwner = args.GetFrom()
+	}
+	feePayer, ok := args.GetFeePayer()
+	if ok {
+		input.GasCoin = types.Coin{}
+		sponsorSuiCoins, err := c.GetAllCoinsFor(ctx, feePayer, native)
+		if err != nil {
+			return &TxInput{}, err
+		}
+		// use gas coin from sponsor if available
+		SortCoins(sponsorSuiCoins)
+		if len(sponsorSuiCoins) > 0 {
+			input.GasCoin = *sponsorSuiCoins[0]
+			input.GasCoinOwner = feePayer
+		} else {
+			return &TxInput{}, fmt.Errorf("SUI fee payer %s has no SUI coins", feePayer)
+		}
+	}
+
+	transferCoins := suiCoins
+	if contract != native && contract != "" {
+		// If we're not sending SUI, we need to make a separate call to get coins that are being transferred.
+		transferCoins, err = c.GetAllCoinsFor(ctx, args.GetFrom(), contract)
+		if err != nil {
+			return &TxInput{}, err
+		}
+		SortCoins(transferCoins)
 	}
 
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
@@ -319,32 +352,14 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		return &TxInput{}, err
 	}
 	epoch := xc.NewAmountBlockchainFromStr(latestCheckpoint.Epoch)
+	input.CurrentEpoch = epoch.Uint64()
 
 	// store the object id's for the transfer
-	input := NewTxInput()
-	input.CurrentEpoch = epoch.Uint64()
-	input.Coins = all_coins
+	input.Coins = transferCoins
 	input.SortCoins()
 	// take max 50 to bound the tx_input size.
 	if len(input.Coins) > MaxCoinObjects {
 		input.Coins = input.Coins[:MaxCoinObjects]
-	}
-
-	if contract == native {
-		// gas coin should just be the largest object
-		if len(input.Coins) > 0 {
-			input.GasCoin = *input.Coins[0]
-		}
-	} else {
-		// we need to fetch our sui objects
-		all_sui_coins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), native)
-		if err != nil {
-			return &TxInput{}, err
-		}
-		SortCoins(all_sui_coins)
-		if len(all_sui_coins) > 0 {
-			input.GasCoin = *all_sui_coins[0]
-		}
 	}
 
 	gasPrice, err := c.EstimateGas(ctx)
@@ -518,8 +533,6 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 			time.Unix(int64(timestampMs/1000), 0),
 		),
 	}
-	for _, tx := range checkpoint.Transactions {
-		block.TransactionIds = append(block.TransactionIds, tx)
-	}
+	block.TransactionIds = append(block.TransactionIds, checkpoint.Transactions...)
 	return block, nil
 }

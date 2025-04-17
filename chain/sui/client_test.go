@@ -260,6 +260,7 @@ func TestTransfers(t *testing.T) {
 		// in SUI, not mist.
 		amount        string
 		tokenContract xc.ContractAddress
+		feePayer      xc.Address
 		resp          interface{}
 		inputs        []bcs.CallArg
 		commands      []bcs.Command
@@ -268,10 +269,10 @@ func TestTransfers(t *testing.T) {
 	}{
 		// Test with 2 sui coins
 		{
-			"Test_with_2_sui_coin",
-			"1.5",
-			xc.ContractAddress(""),
-			[]string{
+			name:          "Test_with_2_sui_coin",
+			amount:        "1.5",
+			tokenContract: xc.ContractAddress(""),
+			resp: []string{
 				// get coins
 				`{"data":[
 					{"coinType":"0x2::sui::SUI","coinObjectId":"0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6","version":"1852477","digest":"u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo","balance":"2001904720","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"},
@@ -286,7 +287,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				// remainder split (gas coin balance - gas budget)
 				U64ToPure(28969157920 - (1000000 + 2964000 - 1956240)),
 				// merged coins after gas coin
@@ -296,7 +297,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__SplitCoins{
 					Field0: &bcs.Argument__GasCoin{},
 					Field1: []bcs.Argument{ArgumentInput(0)},
@@ -320,16 +321,16 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(3),
 				},
 			},
-			1000000 + 2964000 - 1956240,
-			nil,
+			gasBudget: 1000000 + 2964000 - 1956240,
+			err:       nil,
 		},
 
 		// Test with >>2 sui coins
 		{
-			"Test_with_many_sui_coin",
-			"3",
-			xc.ContractAddress(""),
-			[]string{
+			name:          "Test_with_many_sui_coin",
+			amount:        "3",
+			tokenContract: xc.ContractAddress(""),
+			resp: []string{
 				// get coins
 				`{"data":[
 					{"coinType":"0x2::sui::SUI","coinObjectId":"0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6","version":"1852477","digest":"SNiJ8aV9rerhbVTwZikSAWVgJPhx9jxaPXdGcfeYut9","balance": "45035120" ,"previousTransaction":"D85viPWoceLm1siButSgA9Z7fyfRR7GcnZvti1HgmXp8"},
@@ -352,7 +353,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"BzJbzapMeyC1QrdC5Q7H4okbxyZQJ9MntWaTBHesi3cW","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				// remainder split (gas_coin - gas_budget)
 				U64ToPure(5000000000 - (4000000 + 3000000 - 2000000)),
 				// merged coins after gas coin (sorted by value)
@@ -369,7 +370,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__SplitCoins{
 					Field0: &bcs.Argument__GasCoin{},
 					Field1: []bcs.Argument{ArgumentInput(0)},
@@ -400,16 +401,15 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(10),
 				},
 			},
-			(4000000 + 3000000 - 2000000),
-			// 2_000_000_000,
-			nil,
+			gasBudget: 4000000 + 3000000 - 2000000,
+			err:       nil,
 		},
 		// Test with 1 sui coin
 		{
-			"Test_with_1_sui_coin",
-			"1.0",
-			xc.ContractAddress(""),
-			[]string{
+			name:          "Test_with_1_sui_coin",
+			amount:        "1.0",
+			tokenContract: xc.ContractAddress(""),
+			resp: []string{
 				// get coins
 				`{"data":[
 					{"coinType":"0x2::sui::SUI","coinObjectId":"0xc587db1fbe680b769c1a562a09f2c871a087bafa542c7cb73db6064e2b791bdf","version":"1852491","digest":"GBm2HRW1WvNRrGX5iM3syjbD1PeaWQs69s42wJEam7HY","balance":"1845686480","previousTransaction":"4qkLLVGsxNwvvpJMwSbCh4jFmC9J8Cb1x1zhNaC7k5cK"}
@@ -424,7 +424,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				// no split of gas coin
 				// no merge coin this time
 
@@ -433,7 +433,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__SplitCoins{
 					Field0: &bcs.Argument__GasCoin{},
 					Field1: []bcs.Argument{
@@ -447,15 +447,15 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(1),
 				},
 			},
-			(4000000 + 3000000 - 2000000),
-			nil,
+			gasBudget: 4000000 + 3000000 - 2000000,
+			err:       nil,
 		},
 		// Test with 1 sui coin, no balance
 		{
-			"Test_with_no_balance",
-			"10.0",
-			xc.ContractAddress(""),
-			[]string{
+			name:          "Test_with_no_balance",
+			amount:        "10.0",
+			tokenContract: xc.ContractAddress(""),
+			resp: []string{
 				// get coins
 				`{"data":[
 					{"coinType":"0x2::sui::SUI","coinObjectId":"0xc587db1fbe680b769c1a562a09f2c871a087bafa542c7cb73db6064e2b791bdf","version":"1852491","digest":"GBm2HRW1WvNRrGX5iM3syjbD1PeaWQs69s42wJEam7HY","balance":"1845686480","previousTransaction":"4qkLLVGsxNwvvpJMwSbCh4jFmC9J8Cb1x1zhNaC7k5cK"}
@@ -470,18 +470,18 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
-			[]bcs.CallArg{},
-			[]bcs.Command{},
-			0,
-			errors.New("not enough funds"),
+			inputs:    []bcs.CallArg{},
+			commands:  []bcs.Command{},
+			gasBudget: 0,
+			err:       errors.New("not enough funds"),
 		},
 
 		// Test with sending almost all of the balance and expect that the gas_budget is reduced to the remainder accordingly.
 		{
-			"Test_gas_budget_remainder",
-			"95.0",
-			xc.ContractAddress(""),
-			[]string{
+			name:          "Test_gas_budget_remainder",
+			amount:        "95.0",
+			tokenContract: xc.ContractAddress(""),
+			resp: []string{
 				// get coins
 				` {"data":[
 					{"coinType":"0x2::sui::SUI","coinObjectId":"0x3150377d1db0395abfd3b19cfeca94eaf5987a12b95a0aab431195e77399f092","version":"1852505","digest":"7xvFhTk5r3RCLQPcybUeTuwAUKAy8ozXN5EbKsnvp9Qb","balance":"10000000000","previousTransaction":"APAAcvLGmcXFTjMwv7iAJ2hwETQyQFDkfVzs4tEyE43F"},
@@ -502,7 +502,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"5NVoZeHas2s7go1wiSMXtM2g1KitDwu2eksvEt1jRcWj","confirmedLocalExecution":true}`,
 			},
 			// split, merge, split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				// remainder split
 				U64ToPure(33827025240 - (4000000 + 3000000 - 2000000)),
 				// merged coins after gas coin (sorted by value)
@@ -518,7 +518,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__SplitCoins{
 					Field0: &bcs.Argument__GasCoin{},
 					Field1: []bcs.Argument{ArgumentInput(0)},
@@ -548,24 +548,24 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(9),
 				},
 			},
-			4000000 + 3000000 - 2000000,
-			nil,
+			gasBudget: 4000000 + 3000000 - 2000000,
+			err:       nil,
 		},
 
 		// Test sending a usdc token when there's 1 usdc coin
 		{
-			"Test_1_usdc_coin",
-			"3.0",
-			xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
-			[]string{
+			name:          "Test_1_usdc_coin",
+			amount:        "3.0",
+			tokenContract: xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
+			resp: []string{
+				// suix_getCoins (gas)
+				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207737","digest":"ACRr1x7hC7CRfPu9a7gecLkStHdu6eGNK81SqvCGVJM1","balance":"6892967516","previousTransaction":"HhCq8usSNk4DTmaKCR17AZC4dbwEw1rSFFuFTchm61iF"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getCoins (token)
 				`{"data":[
 					{"coinType":"0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC","coinObjectId":"0x70136e3f64bea493b5c73e5e2fa03beb36678fc2f6df471c17e7ae8cd34baac5","version":"207737","digest":"D7N9aUM4Cn6ukSFnbDUu2VACa7Q6FLzyj9znSL3W4YHt","balance":"2516489093104","previousTransaction":"HhCq8usSNk4DTmaKCR17AZC4dbwEw1rSFFuFTchm61iF"}
 				],"nextCursor":"0x70136e3f64bea493b5c73e5e2fa03beb36678fc2f6df471c17e7ae8cd34baac5","hasNextPage":false}`,
 				// sui_getCheckpoints
 				`{"data":[{"epoch":"21","sequenceNumber":"210947","digest":"8S1Rd5KsqGH2JEoTnJHroz5RDD5oPxAxerXKBomJ4h8y","networkTotalTransactions":"1654947","previousDigest":"FDpz4PTTBu32XnHjo5JQ4gQfpUrUPivcWQXWvP8b1caH","epochRollingGasCostSummary":{"computationCost":"767194001460","storageCost":"1767919045200","storageRebate":"1704412479924","nonRefundableStorageFee":"17216287676"},"timestampMs":"1683901433754","transactions":["2XoiF5ueWohVK1sYKgVJZN1GjB4fXNrbhJZqDt2CPAWq","2c5CvBw57EX2kLXAqzqA1JVpPSb9RcZZ3wW6FEvaCRRs","4YsGHEsMFeMUNWALBuECduwFCAkb2VFjx993fetvLLsS","4d8NLyNCk2XQiiA4T7t6ah9NC9eWnHhXhycmSEgS9ivG","BHdwEXSpi1HfyAJH5HuducZ43iRuKgEm8Ukm4j3srQDt","Bhm8dMMtHxJqaKEPogBQKiAKYTsfTzTjURXwvqa3mGbz","DqFPyPoKGv7TwTaThrCUqQPCUuykUfzRGsE1QdqKjWbx","EnPgKYQpmbzzyke742XEH2ncitBnJ5d968yMXRdEiCNw"],"checkpointCommitments":[],"validatorSignature":"jgxvZ1V0HlIWovRMHNYppUsNyq6EKgt7KwZRDJiOspO3ScIs9Z53kcJ8HJUiFk49"}],"nextCursor":"210947","hasNextPage":true}`,
-				// suix_getCoins (gas)
-				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207737","digest":"ACRr1x7hC7CRfPu9a7gecLkStHdu6eGNK81SqvCGVJM1","balance":"6892967516","previousTransaction":"HhCq8usSNk4DTmaKCR17AZC4dbwEw1rSFFuFTchm61iF"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getReferenceGasPrice
 				`"1000"`,
 				// gas sim
@@ -574,7 +574,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"HAKa4YPcFYT4M1LkYvUE6u8nLjgJX6cwmyR4LHGNXqYe","confirmedLocalExecution":true}`,
 			},
 			// split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				&bcs.CallArg__Object{Value: mustCoinToObject(coinObject(
 					"0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
 					"0x70136e3f64bea493b5c73e5e2fa03beb36678fc2f6df471c17e7ae8cd34baac5",
@@ -587,7 +587,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__SplitCoins{
 					Field0: ArgumentInput(0),
 					Field1: []bcs.Argument{ArgumentInput(1)},
@@ -599,16 +599,18 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(2),
 				},
 			},
-			((4000000 + 3000000 - 2000000) * 110) / 100,
-			nil,
+			gasBudget: (4000000 + 3000000 - 2000000) * 110 / 100,
+			err:       nil,
 		},
 
 		// Test sending a usdc token when there's multiple usdc coin
 		{
-			"Test_many_usdc_coin",
-			"1500.0",
-			xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
-			[]string{
+			name:          "Test_many_usdc_coin",
+			amount:        "1500.0",
+			tokenContract: xc.ContractAddress("0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC"),
+			resp: []string{
+				// suix_getCoins
+				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207746","digest":"xZ3CBnj1N7VrfZMDs6151tUnbWrqjEkDKAGJTGULZQH","balance":"3890508188","previousTransaction":"648EuGHEB2dmLsVgCU6NS7HEts67A6UCu2kGGFHverpB"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getCoins
 				`{"data":[
 					{"coinType":"0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC","coinObjectId":"0x282fbf63a36defad50d93da60a63e1a70900c8bd9011403d6d5b5303e652dc62","version":"207746","digest":"7c1zLpCL9fbYB2oh7xhTLBm68zvMLca1tjaFUvekqAm2","balance":"18489093104","previousTransaction":"648EuGHEB2dmLsVgCU6NS7HEts67A6UCu2kGGFHverpB"},
@@ -618,8 +620,6 @@ func TestTransfers(t *testing.T) {
 					],"nextCursor":"0xe5c09ef8b4ccc651dba40286eb212c75c9b196c680ef6417ef8fbe9b527ef67e","hasNextPage":false}`,
 				// sui_getCheckpoints
 				`{"data":[{"epoch":"21","sequenceNumber":"213110","digest":"7s32SP7EX4G6kwz6oF92j6aTH536tQctu8QZtaWnMjLh","networkTotalTransactions":"1673509","previousDigest":"FijCctQxLyzJRerPBPKoHzpSgk6ZXcVJ4jj5oGmWPgo2","epochRollingGasCostSummary":{"computationCost":"785413001460","storageCost":"1810760678400","storageRebate":"1744598088684","nonRefundableStorageFee":"17622202916"},"timestampMs":"1683903102105","transactions":["HiTCaHRPiQQ2JzPd74u8ubFA9qTqdzFBQNe4Kk8mjkY","3hSj8MncixFy4wNpFRGsPuGGPNgLNfHvws4sZ4iqqcQA","5Cz9paQe5tUSanZtJ22w6kyhSeovdndLLgsmpTK1PShe","5cDUSNmx1Wz1pcW33J2hHqtptFdQrAV6JeHJjvRhwBh3","7AZJHhWcfyB8ddgHEg4JCMXwfcKkeEZGDmW4tNkMtpa6","E66oHc4eS3yXVMAHwdUooVHnDRqg9vjKgWjhnUBR6GZp","FFPoHULMzkFr2SafckJ5yxcRL4UX493BJNLpjRjRG9E8","G5cXK2kYiyf8GjmTuGvEi4m3r991Go2kQz5jPGiJQfbx","HEsfY9HEC5rAJkq5ofFMRrpW9w9dF82Jv29azn1FqjaX","Hq1odW3nkVH6FeZ8Baw9NRLq43TnQP6V2ojVhmuDa21p"],"checkpointCommitments":[],"validatorSignature":"o026PhUt43ZhM9EAvHHGYyn/xAdsCWlFp0Q6KqcRiA8Md1f9U+vVRGk8JUro6P1m"}],"nextCursor":"213110","hasNextPage":true}`,
-				// suix_getCoins
-				`{"data":[{"coinType":"0x2::sui::SUI","coinObjectId":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","version":"207746","digest":"xZ3CBnj1N7VrfZMDs6151tUnbWrqjEkDKAGJTGULZQH","balance":"3890508188","previousTransaction":"648EuGHEB2dmLsVgCU6NS7HEts67A6UCu2kGGFHverpB"}],"nextCursor":"0x34f60fd2a191693f538c75a224b66afb3e7f1ccaea898aff2bc442bed59ec162","hasNextPage":false}`,
 				// suix_getReferenceGasPrice
 				`"1000"`,
 				// gas sim
@@ -628,7 +628,7 @@ func TestTransfers(t *testing.T) {
 				`{"digest":"7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP","confirmedLocalExecution":true}`,
 			},
 			// merge, split, transfer
-			[]bcs.CallArg{
+			inputs: []bcs.CallArg{
 				&bcs.CallArg__Object{Value: mustCoinToObject(coinObject(
 					"0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
 					"0x5b72d2e0bb0a6a45421b3f474bb97aa3b63a1ce2a14991e68a1d96be4d2f19b5",
@@ -664,7 +664,7 @@ func TestTransfers(t *testing.T) {
 				// destination address
 				mustHexToPure(to),
 			},
-			[]bcs.Command{
+			commands: []bcs.Command{
 				&bcs.Command__MergeCoins{
 					Field0: ArgumentInput(0),
 					Field1: []bcs.Argument{
@@ -684,8 +684,102 @@ func TestTransfers(t *testing.T) {
 					Field1: ArgumentInput(5),
 				},
 			},
-			((4000000 + 3000000 - 2000000) * 110) / 100,
-			nil,
+			gasBudget: ((4000000 + 3000000 - 2000000) * 110) / 100,
+			err:       nil,
+		},
+
+		// Test fee payer
+		{
+			name:          "Test_with_fee_payer_2_sui_coin_each",
+			amount:        "1.5",
+			tokenContract: xc.ContractAddress(""),
+			feePayer:      xc.Address("0x000a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de6000"),
+			resp: []string{
+				// get coins
+				`{"data":[
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6","version":"1852477","digest":"u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo","balance":"2001904720","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"},
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","version":"1852477","digest":"SwXnkbcrycgr6unAXdcJQ5jfo9dMNMkztMWc3ZxNjL3","balance":"28969157920","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"}
+				],"nextCursor":"0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","hasNextPage":false}`,
+				// get sui coins of fee payer
+				`{"data":[
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x000019f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6","version":"1852470","digest":"ENUoMU2gFeLZEPxxQxdMwrNGtvJLFry2HvgXVCnCB1k9","balance":"2001904720","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"},
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x1111a9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","version":"1852470","digest":"FUzqDFoq73G1WecQacFv2WmX83ezk16DGZkkzLTwCbvJ","balance":"30000000000","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"}
+				],"nextCursor":"0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","hasNextPage":false}`,
+				// get checkpoint
+				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
+				//reference gas
+				"1000",
+				DryRunResponse(1000000, 2964000, 1956240),
+				// submit tx
+				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
+			},
+			// split, merge, split, transfer
+			inputs: []bcs.CallArg{
+				// coins to be merged:
+				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d", "SwXnkbcrycgr6unAXdcJQ5jfo9dMNMkztMWc3ZxNjL3", 28969157920, 1852477))},
+				&bcs.CallArg__Object{Value: mustCoinToObject(suiCoin("0x1cdc19f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6", "u6uSbWNMxkRkCqkjSTbsMeWMYB2VK7pbAo6vFoaMzSo", 2001904720, 1852477))},
+				// split amt (transfer amount)
+				U64ToPure(1_500_000_000),
+				// destination address
+				mustHexToPure(to),
+			},
+			commands: []bcs.Command{
+				// The gas coin should not be split:
+				// &bcs.Command__SplitCoins{
+				// 	Field0: &bcs.Argument__GasCoin{},
+				// 	Field1: []bcs.Argument{ArgumentInput(0)},
+				// },
+				&bcs.Command__MergeCoins{
+					Field0: ArgumentInput(0),
+					Field1: []bcs.Argument{
+						ArgumentInput(1),
+					},
+				},
+				&bcs.Command__SplitCoins{
+					Field0: ArgumentInput(0),
+					Field1: []bcs.Argument{
+						ArgumentInput(2),
+					},
+				},
+				&bcs.Command__TransferObjects{
+					Field0: []bcs.Argument{
+						ArgumentResult(1),
+					},
+					Field1: ArgumentInput(3),
+				},
+			},
+			gasBudget: 1000000 + 2964000 - 1956240,
+			err:       nil,
+		},
+		// Test fee payer when there's no coins to spend
+		// We want to be extra sure that we don't spend the sponsor's money
+		{
+			name:          "Test_with_fee_payer_no_coins",
+			amount:        "1.5",
+			tokenContract: xc.ContractAddress(""),
+			feePayer:      xc.Address("0x000a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de6000"),
+			resp: []string{
+				// get coins (empty)
+				`{"data":[
+				],"nextCursor":"0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","hasNextPage":false}`,
+				// get sui coins of fee payer
+				`{"data":[
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x000019f7751451412d090632bb1ca2c845a9c8f6cd8798d99d304571cfea1ca6","version":"1852470","digest":"ENUoMU2gFeLZEPxxQxdMwrNGtvJLFry2HvgXVCnCB1k9","balance":"2001904720","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"},
+					{"coinType":"0x2::sui::SUI","coinObjectId":"0x1111a9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","version":"1852470","digest":"FUzqDFoq73G1WecQacFv2WmX83ezk16DGZkkzLTwCbvJ","balance":"30000000000","previousTransaction":"AtPwJTvPfAd47yjBmJCGCJEB7E2XmoJ6aB23XX1o6c4M"}
+				],"nextCursor":"0x418ca9b7e3bf4bd3ecdb2d45daae92b2428a3488670e28a620ee7ee870f46b2d","hasNextPage":false}`,
+				// get checkpoint
+				`{"data":[{"epoch":"21","sequenceNumber":"2206686","digest":"HtsAAgd1ajMR8qMocnNF6XbAtiBHrxdauGhWtXqKouF3","networkTotalTransactions":"5164703","previousDigest":"H8oYvb73KoG7TWXpw4JPy2qZk7ddvHY3rYQ8kHcNmcua","epochRollingGasCostSummary":{"computationCost":"130960164300","storageCost":"499151462400","storageRebate":"422717709348","nonRefundableStorageFee":"4269875852"},"timestampMs":"1683320609521","transactions":["3yVjcHqKwLN8K8TrZZZMpMUp4VSGg4LRp4uuzvvzzrFD","Cv2NH6zJiRJMtPMzxzZABgDpBfNmb9eniWW9t5v2kPtz","GJaDtfzHap6V8ARdQTstkJm7PiWsEXWkUapXHA2nbmbD"],"checkpointCommitments":[],"validatorSignature":"i3aT5RVtIOvX0pEc/HU+xFTHbw2zV5SdT7q5n6GfS+e85CtkC8qqseeK2Hx9Nhia"}],"nextCursor":"2206686","hasNextPage":true}`,
+				//reference gas
+				"1000",
+				DryRunResponse(1000000, 2964000, 1956240),
+				// submit tx
+				`{"digest":"5bKyJZUyqHV4aDwQSR9hsiBJXpfTycDoP2NG59bL6p1E","confirmedLocalExecution":true}`,
+			},
+			// split, merge, split, transfer
+			inputs:    []bcs.CallArg{},
+			commands:  []bcs.Command{},
+			gasBudget: 1000000 + 2964000 - 1956240,
+			err:       fmt.Errorf("no coins to spend"),
 		},
 	}
 
@@ -709,6 +803,9 @@ func TestTransfers(t *testing.T) {
 			if v.tokenContract != "" {
 				args.SetContract(v.tokenContract)
 			}
+			if v.feePayer != "" {
+				args.SetFeePayer(xc.Address(v.feePayer))
+			}
 
 			input, err := client.FetchTransferInput(context.Background(), args)
 			if v.err != nil {
@@ -728,7 +825,7 @@ func TestTransfers(t *testing.T) {
 			builder, err := NewTxBuilder(nativeAsset.GetChain().Base())
 			require.NoError(err)
 
-			tx, err := builder.NewTransfer(xc.Address(from), xc.Address(to), amount_machine, input)
+			tx, err := builder.Transfer(args, input)
 			if v.err == nil {
 				require.NoError(err)
 			} else {
@@ -753,7 +850,12 @@ func TestTransfers(t *testing.T) {
 
 			require.EqualValues(suiTx.Value.GasData.Budget, v.gasBudget)
 			require.EqualValues(suiTx.Value.GasData.Price, 1_000)
-			require.EqualValues(suiTx.Value.GasData.Owner, fromData)
+			if v.feePayer != "" {
+				feePayerData, _ := HexToAddress(string(v.feePayer))
+				require.EqualValues(suiTx.Value.GasData.Owner, feePayerData)
+			} else {
+				require.EqualValues(suiTx.Value.GasData.Owner, fromData)
+			}
 			require.EqualValues(suiTx.Value.GasData.Payment, []struct {
 				Field0 bcs.ObjectID
 				Field1 bcs.SequenceNumber
@@ -765,8 +867,8 @@ func TestTransfers(t *testing.T) {
 			commands := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Commands
 			inputs := suiTx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value.Inputs
 
-			require.Len(commands, len(v.commands))
-			require.Len(inputs, len(v.inputs))
+			require.Len(commands, len(v.commands), "commands length mismatch")
+			require.Len(inputs, len(v.inputs), "inputs length mismatch")
 			for i, cmd := range v.commands {
 				fmt.Println("checking command", i)
 				require.Equal(cmd, commands[i])

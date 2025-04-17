@@ -22,7 +22,8 @@ type TxInput struct {
 	GasPrice  uint64 `json:"gas_price,omitempty"`
 	Pubkey    []byte `json:"pubkey,omitempty"`
 	// Native Sui object that we can use to pay gas with
-	GasCoin types.Coin `json:"gas_coin,omitempty"`
+	GasCoin      types.Coin `json:"gas_coin,omitempty"`
+	GasCoinOwner xc.Address `json:"gas_coin_owner,omitempty"`
 	// All objects (native or token)
 	Coins []*types.Coin `json:"coins,omitempty"`
 	// current epoch
@@ -191,9 +192,10 @@ func NewTxInput() *TxInput {
 
 type Tx struct {
 	// Input      TxInput
-	signatures [][]byte
-	public_key []byte
-	Tx         bcs.TransactionData__V1
+	signatures    [][]byte
+	public_key    []byte
+	Tx            bcs.TransactionData__V1
+	extraFeePayer xc.Address
 }
 
 var _ xc.Tx = &Tx{}
@@ -221,14 +223,22 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	if err != nil {
 		return []*xc.SignatureRequest{}, err
 	}
-	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash[:])}, nil
+	if tx.extraFeePayer != "" {
+		return []*xc.SignatureRequest{
+			// the order doesn't matter for SUI
+			xc.NewSignatureRequest(hash[:]),
+			xc.NewSignatureRequest(hash[:], tx.extraFeePayer),
+		}, nil
+	} else {
+		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash[:])}, nil
+	}
 }
 func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	for _, sig := range signatures {
 		// sui expects signature to be {0, signature, public_key}
 		sui_sig := []byte{0}
 		sui_sig = append(sui_sig, sig.Signature...)
-		sui_sig = append(sui_sig, tx.public_key...)
+		sui_sig = append(sui_sig, sig.PublicKey...)
 		tx.signatures = append(tx.signatures, sui_sig)
 	}
 	return nil
