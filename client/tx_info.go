@@ -497,15 +497,19 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 	}
 	zero := big.NewInt(0)
 	if legacyTx.Fee.Cmp((*xc.AmountBlockchain)(zero)) != 0 {
-		if legacyTx.From == "" {
+		feePayer := legacyTx.FeePayer
+		if feePayer == "" {
+			feePayer = legacyTx.From
+		}
+		if feePayer == "" {
 			// infer the from address from the sources
 			for _, source := range legacyTx.Sources {
 				if source.ContractAddress == legacyTx.ContractAddress || source.ContractAddress == xc.ContractAddress(chain) {
-					legacyTx.From = source.Address
+					feePayer = source.Address
 				}
 			}
 		}
-		txInfo.AddFee(legacyTx.From, legacyTx.FeeContract, legacyTx.Fee, nil)
+		txInfo.AddFee(feePayer, legacyTx.FeeContract, legacyTx.Fee, nil)
 	}
 
 	txInfo.Fees = txInfo.CalculateFees()
