@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strings"
 	"time"
@@ -10,6 +11,12 @@ import (
 )
 
 type Dagger struct{}
+
+func isTrue(s string) bool {
+	s = strings.ToLower(s)
+	s = strings.TrimSpace(s)
+	return s == "true" || s == "1" || s == "yes"
+}
 
 func (m *Dagger) TestChain(
 	ctx context.Context,
@@ -24,6 +31,8 @@ func (m *Dagger) TestChain(
 	network string,
 	// +optional
 	algorithm string,
+	// +optional
+	feePayer string,
 ) (string, error) {
 	nodeService := dag.Container().
 		From(image).
@@ -58,6 +67,10 @@ func (m *Dagger) TestChain(
 	if contract != "" {
 		testBalance = append(testBalance, "--decimals", decimals)
 		testTransfer = append(testTransfer, "--decimals", decimals)
+	}
+	if isTrue(feePayer) {
+		fmt.Println("using feePayer")
+		testTransfer = append(testTransfer, "--fee-payer")
 	}
 
 	return dag.Container().
