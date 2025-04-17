@@ -67,6 +67,10 @@ func (opts *builderOptions) SetDecimals(decimals int) {
 	opts.decimals = &decimals
 }
 
+func (opts *builderOptions) SetFeePayer(feePayer xc.Address) {
+	opts.feePayer = &feePayer
+}
+
 type BuilderOption func(opts *builderOptions) error
 
 func OptionMemo(memo string) BuilderOption {

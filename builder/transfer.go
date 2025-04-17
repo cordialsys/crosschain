@@ -70,3 +70,7 @@ func (args *TransferArgs) SetTo(to xc.Address) {
 func (args *TransferArgs) SetContract(contract xc.ContractAddress) {
 	args.options.SetContract(contract)
 }
+
+func (args *TransferArgs) SetFeePayer(feePayer xc.Address) {
+	args.options.SetFeePayer(feePayer)
+}

@@ -252,6 +252,7 @@ func CmdTxInfo() *cobra.Command {
 func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
 	var feePayer bool
+	var dryRun bool
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -457,6 +458,9 @@ func CmdTxTransfer() *cobra.Command {
 			signatures := []*xc.SignatureResponse{}
 			for _, sighash := range sighashes {
 				log := logrus.WithField("payload", hex.EncodeToString(sighash.Payload))
+				if len(sighash.Payload) == 0 {
+					panic("requested to sign empty payload")
+				}
 				// sign the tx sighash(es)
 				signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
 				if err != nil {
@@ -473,6 +477,14 @@ func CmdTxTransfer() *cobra.Command {
 			err = tx.AddSignatures(signatures...)
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
+			}
+			if dryRun {
+				txBytes, err := tx.Serialize()
+				if err != nil {
+					return fmt.Errorf("could not serialize tx: %v", err)
+				}
+				fmt.Println(hex.EncodeToString(txBytes))
+				return nil
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
@@ -516,6 +528,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
 	return cmd
 }
 

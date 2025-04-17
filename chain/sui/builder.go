@@ -14,6 +14,10 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
+
+func (txBuilder TxBuilder) SupportsFeePayer() {
+}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
@@ -24,11 +28,15 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+	feePayer, ok := args.GetFeePayer()
+	if !ok {
+		feePayer = args.GetFrom()
+	}
+	return txBuilder.NewTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
 // Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	var local_input *TxInput
 	var ok bool
 	if local_input, ok = input.(*TxInput); !ok {
@@ -45,6 +53,11 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	if err != nil {
 		return &Tx{}, fmt.Errorf("could not decode from address: %v", err)
 	}
+	feePayerData, err := HexToAddress(string(feePayer))
+	if err != nil {
+		return &Tx{}, fmt.Errorf("could not decode fee payer address: %v", err)
+	}
+
 	toPure, err := HexToPure(string(to))
 	if err != nil {
 		return &Tx{}, fmt.Errorf("could not decode to address: %v", err)
@@ -107,19 +120,20 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	var gasRemainderResult bcs.Argument
 	// I. Split the gas coin if necessary
 	// Check to see if we can afford the gas budget.
-	if local_input.IsNativeTransfer() && len(local_input.Coins) > 0 {
-		// Split off the remainder from gas budget
-		remainder := local_input.GasCoin.Balance.Uint64() - local_input.GasBudget
-		cmd_inputs = append(cmd_inputs, U64ToPure(remainder))
+	if feePayer == from {
+		if local_input.IsNativeTransfer() && len(local_input.Coins) > 0 {
+			// Split off the remainder from gas budget
+			remainder := local_input.GasCoin.Balance.Uint64() - local_input.GasBudget
+			cmd_inputs = append(cmd_inputs, U64ToPure(remainder))
 
-		commands = append(commands, &bcs.Command__SplitCoins{
-			Field0: &bcs.Argument__GasCoin{},
-			Field1: []bcs.Argument{
-				ArgumentInput(uint16(0)),
-			},
-		})
-		gasRemainderResult = ArgumentResult(uint16(len(commands) - 1))
-
+			commands = append(commands, &bcs.Command__SplitCoins{
+				Field0: &bcs.Argument__GasCoin{},
+				Field1: []bcs.Argument{
+					ArgumentInput(uint16(0)),
+				},
+			})
+			gasRemainderResult = ArgumentResult(uint16(len(commands) - 1))
+		}
 	}
 
 	primaryCoinInput := gasRemainderResult
@@ -166,8 +180,12 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 	}
 
 	if primaryCoinInput == nil {
-		// if we only have one coin.. than the primary coin should be the gas coin
-		primaryCoinInput = &bcs.Argument__GasCoin{}
+		if feePayer == from {
+			// if we only have one coin.. than the primary coin should be the gas coin
+			primaryCoinInput = &bcs.Argument__GasCoin{}
+		} else {
+			return &Tx{}, fmt.Errorf("no coins to spend")
+		}
 	}
 
 	// now let's spend the primary coin by splitting `amt` from it
@@ -209,7 +227,7 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 				}{
 					gasCoin,
 				},
-				Owner:  fromData,
+				Owner:  feePayerData,
 				Price:  local_input.GasPrice,
 				Budget: local_input.GasBudget,
 			},
@@ -224,16 +242,20 @@ func (txBuilder TxBuilder) NewTransfer(from xc.Address, to xc.Address, amount xc
 		},
 	}
 
-	return &Tx{
+	xcTx := &Tx{
 		Tx:         tx,
 		public_key: local_input.Pubkey,
-	}, nil
+	}
+	if feePayer != from {
+		xcTx.extraFeePayer = feePayer
+	}
+	return xcTx, nil
 }
 
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(from, to, amount, input)
+func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(feePayer, from, to, amount, input)
 }
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	// The token is already in the coins in the tx_input so txbuilding is the exact same.
-	return txBuilder.NewTransfer(from, to, amount, input)
+	return txBuilder.NewTransfer(feePayer, from, to, amount, input)
 }
