@@ -11,6 +11,8 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 
 	xc "github.com/cordialsys/crosschain"
+	bin "github.com/gagliardetto/binary"
+	lookup "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/sirupsen/logrus"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -19,7 +21,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
-	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 )
@@ -232,6 +233,50 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return err
 }
 
+// Taken from solana-go README.md example
+// https://github.com/gagliardetto/solana-go?tab=readme-ov-file#address-lookup-tables
+func processTransactionWithAddressLookups(ctx context.Context, txx *solana.Transaction, rpcClient *rpc.Client) error {
+	if !txx.Message.IsVersioned() {
+		return nil
+	}
+	tblKeys := txx.Message.GetAddressTableLookups().GetTableIDs()
+	if len(tblKeys) == 0 {
+		return nil
+	}
+	numLookups := txx.Message.GetAddressTableLookups().NumLookups()
+	if numLookups == 0 {
+		return nil
+	}
+	resolutions := make(map[solana.PublicKey]solana.PublicKeySlice)
+	for _, key := range tblKeys {
+		info, err := rpcClient.GetAccountInfo(
+			ctx,
+			key,
+		)
+		if err != nil {
+			return err
+		}
+		tableContent, err := lookup.DecodeAddressLookupTableState(info.GetBinary())
+		if err != nil {
+			return err
+		}
+
+		resolutions[key] = tableContent.Addresses
+	}
+
+	err := txx.Message.SetAddressTables(resolutions)
+	if err != nil {
+		return err
+	}
+
+	err = txx.Message.ResolveLookups()
+	if err != nil {
+		return err
+	}
+	// fmt.Println(txx.String())
+	return nil
+}
+
 // FetchLegacyTxInfo returns tx info for a Solana tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	result := xclient.LegacyTxInfo{}
@@ -264,9 +309,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	solTx, err := solana.TransactionFromDecoder(bin.NewBinDecoder(res.Transaction.GetBinary()))
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("error decoding transaction: %w", err)
 	}
-	tx := tx.NewTxFrom(solTx)
+
+	// Complicated txs may contain only pointers to address, forcing us to resolve the accounts/addresses stored on-chain.
+	err = processTransactionWithAddressLookups(ctx, solTx, client.SolClient)
+	if err != nil {
+		return result, fmt.Errorf("error processing resolveing address-lookups: %w", err)
+	}
+
+	tx := tx.NewDecoderFromNativeTx(solTx, res.Meta)
 	meta := res.Meta
 	if res.BlockTime != nil {
 		result.BlockTime = res.BlockTime.Time().Unix()
@@ -287,9 +339,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 	result.Fee = xc.NewAmountBlockchainFromUint64(meta.Fee)
-	if len(solTx.Message.AccountKeys) > 0 {
+	accountKeys := tx.GetAccountKeys()
+	if len(accountKeys) > 0 {
 		// The first account is the fee payer on solana
-		result.FeePayer = xc.Address(solTx.Message.AccountKeys[0].String())
+		result.FeePayer = xc.Address(accountKeys[0].String())
 	}
 
 	result.TxID = string(txHash)
@@ -376,13 +429,21 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	for _, instr := range tx.GetTokenTransfers() {
 		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
 		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
-		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
-
 		to := xc.Address(toTokenAccount.String())
-		contract := xc.ContractAddress("")
+
+		tokenAccountInfo, toErr := client.LookupTokenAccount(ctx, toTokenAccount)
+		var contract xc.ContractAddress
+
 		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		if err != nil {
-			logrus.WithError(err).Warn("failed to lookup token account")
+		if toErr != nil {
+			tokenAccountInfo, fromErr := client.LookupTokenAccount(ctx, instr.Instruction.GetSourceAccount().PublicKey)
+			if fromErr != nil {
+				// we must skip, as we can't determine the the asset to report this as.
+				logrus.WithError(err).Warn("failed to lookup to-or-from token accounts")
+				continue
+			}
+			logrus.WithError(toErr).Warn("failed to lookup to token account")
+			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
 		} else {
 			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
 			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)

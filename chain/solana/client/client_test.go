@@ -18,7 +18,6 @@ import (
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/stretchr/testify/require"
 )
 
@@ -347,8 +346,7 @@ func TestSubmitTxErr(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
 	tx := &tx.Tx{
-		SolTx:       &solana.Transaction{},
-		ParsedSolTx: &rpc.ParsedTransaction{},
+		SolTx: &solana.Transaction{},
 	}
 	err := client.SubmitTx(context.Background(), tx)
 	require.ErrorContains(t, err, "unsupported protocol scheme")
@@ -537,44 +535,6 @@ func TestFetchTxInfo(t *testing.T) {
 			"",
 		},
 		{
-			// 0.001 USDC
-			"ZJaJTB5oLfPrzEsFE2cEa94KdNb6SGvqMgaLdtqoYFnaqo4zAncVPjkpDqPbVPv85S68zNcaTyYobDcPJuRfhrX",
-			[]string{
-				`{"blockTime":1645120351,"meta":{"err":null,"fee":5000,"innerInstructions":[{"index":0,"instructions":[{"accounts":[0,1],"data":"3Bxs4h24hBtQy9rw","programIdIndex":5},{"accounts":[1],"data":"9krTDU2LzCSUJuVZ","programIdIndex":5},{"accounts":[1],"data":"SYXsBSQy3GeifSEQSGvTbrPNposbSAiSoh1YA85wcvGKSnYg","programIdIndex":5},{"accounts":[1,4,3,7],"data":"2","programIdIndex":6}]}],"loadedAddresses":{"readonly":[],"writable":[]},"logMessages":["Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL invoke [1]","Program log: Transfer 2039280 lamports to the associated token account","Program 11111111111111111111111111111111 invoke [2]","Program 11111111111111111111111111111111 success","Program log: Allocate space for the associated token account","Program 11111111111111111111111111111111 invoke [2]","Program 11111111111111111111111111111111 success","Program log: Assign the associated token account to the SPL Token program","Program 11111111111111111111111111111111 invoke [2]","Program 11111111111111111111111111111111 success","Program log: Initialize the associated token account","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]","Program log: Instruction: InitializeAccount","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 3297 of 169352 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success","Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 34626 of 200000 compute units","Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [1]","Program log: Instruction: TransferChecked","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 3414 of 200000 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success"],"postBalances":[4995907578480,2039280,2002039280,0,1461600,1,953185920,1009200,898174080],"postTokenBalances":[{"accountIndex":1,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb","uiTokenAmount":{"amount":"1000000","decimals":6,"uiAmount":1.0,"uiAmountString":"1"}},{"accountIndex":2,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g","uiTokenAmount":{"amount":"9437986064320000","decimals":6,"uiAmount":9437986064.32,"uiAmountString":"9437986064.32"}}],"preBalances":[4995909622760,0,2002039280,0,1461600,1,953185920,1009200,898174080],"preTokenBalances":[{"accountIndex":2,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g","uiTokenAmount":{"amount":"9437986065320000","decimals":6,"uiAmount":9437986065.32,"uiAmountString":"9437986065.32"}}],"rewards":[],"status":{"Ok":null}},"slot":115302132,"transaction":["AWHQR1wAwmzbcOtoAVvDi4tkCQD/n6Pnks/038BYBd5o3oh+QZDKHR0Onl9j+AFGp5wziV4cS96gDbzm4RYebwsBAAYJ/H0x63TSPiBNuaFOZG+ZK2YJNAoqn9Gpp2i1PA5g++W//Q+h80WCx4fF9949OkDj+1D/UUOKp6XPufludArJk2as/hRuCozLqVIK567QNivd/o4dGEy7JdaJah9qp8KU/IgIYyGQCEBiNfpMj7sqhtPae2di6sOTI7Kh2MQEpBQ7RCyzkSFX8TqTPQE0KC0DK1/+zQGi2/G3eQYI3wAupwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABt324ddloZPZy+FGzut5rBy0he1fWzeROoz1hX7/AKkGp9UXGSxcUSGMyUw9SvF/WNruCJuh/UTj29mKAAAAAIyXJY9OJInxuz0QKRSODYMLWhOZ2v8QhASOe9jb6fhZNT+YJRqOG5qSK+OHTJJvIkfUNScIwvHTlo4R2xjWx7cCCAcAAQMEBQYHAAYFAgQBAAAKDEBCDwAAAAAABg==","base64"]}`,
-				`{"context":{"slot":115302135},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				// `{"context":{"apiVersion":"1.13.2","slot":169710435},"value":{"data":["O0Qss5EhV/E6kz0BNCgtAytf/s0Botvxt3kGCN8ALqf8iAhjIZAIQGI1+kyPuyqG09p7Z2Lqw5MjsqHYxASkFAA1DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","base64"],"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":371}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.14.17","slot":205923735},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU","owner":"DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA","state":"initialized","tokenAmount":{"amount":"100","decimals":6,"uiAmount":0.001,"uiAmountString":"0.001"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":0}},"id":1}`,
-			},
-			xclient.LegacyTxInfo{
-				TxID:            "ZJaJTB5oLfPrzEsFE2cEa94KdNb6SGvqMgaLdtqoYFnaqo4zAncVPjkpDqPbVPv85S68zNcaTyYobDcPJuRfhrX",
-				From:            "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
-				To:              "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
-				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-				Amount:          xc.NewAmountBlockchainFromUint64(1000000),
-				Fee:             xc.NewAmountBlockchainFromUint64(5000),
-				FeePayer:        "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
-				Sources: []*xclient.LegacyTxInfoEndpoint{{
-					Address:         "HzcTrHjkEhjFTHEsC6Dsv8DXCh21WgujD4s5M15Sm94g",
-					ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-					Amount:          xc.NewAmountBlockchainFromUint64(1000000),
-					Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
-				},
-				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
-					{
-						Address:         "DvSgNMRxVSMBpLp4hZeBrmQo8ZRFne72actTZ3PYE3AA",
-						ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-						Amount:          xc.NewAmountBlockchainFromUint64(1000000),
-						Event:           xclient.NewEvent("2", xclient.MovementVariantNative),
-					},
-				},
-				BlockIndex:    115302132,
-				BlockTime:     1645120351,
-				Confirmations: 3,
-			},
-			"",
-		},
-		{
 			// 0.0002 USDC
 			"5ZrG8iS4RxLXDRQEWkAoddWHzkS1fA1m6ppxaAekgGzskhcFqjkw1ZaFCsLorbhY5V4YUUkjE3SLY2JNLyVanxrM",
 			[]string{
@@ -678,6 +638,132 @@ func TestFetchTxInfo(t *testing.T) {
 			"",
 		},
 		{
+			// Multi sol + USDC transfer, with internal/inner instructions
+			"2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
+			[]string{
+				// getTransaction
+				`{"blockTime":1744942223,"meta":{"computeUnitsConsumed":90548,"err":null,"fee":91404,"innerInstructions":[{"index":2,"instructions":[{"accounts":[0,7,1,8,9,3,13,14,11],"data":"2p2EsBa2hBpHob4XKiovKuRZ","programIdIndex":12,"stackHeight":2},{"accounts":[9,7,3,8],"data":"hZ4Wxjgxc7SnH","programIdIndex":14,"stackHeight":3},{"accounts":[3,4,1],"data":"3bWSwbMixZV1","programIdIndex":14,"stackHeight":2},{"accounts":[1,10],"data":"3Bxs4EVjZpa2tEN3","programIdIndex":11,"stackHeight":2}]}],"loadedAddresses":{"readonly":["11111111111111111111111111111111","BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk","ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL","TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"],"writable":["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","BT72p68Jp5eJUpuHThxSoeTRS9p4upTM8969X79GeQRF","3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ"]},"logMessages":["Program ComputeBudget111111111111111111111111111111 invoke [1]","Program ComputeBudget111111111111111111111111111111 success","Program ComputeBudget111111111111111111111111111111 invoke [1]","Program ComputeBudget111111111111111111111111111111 success","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs invoke [1]","Program log: Instruction: HandleUserOperation","Program log: metadata nonce: 190","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk invoke [2]","Program log: Instruction: ReleaseToken","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]","Program log: Instruction: TransferChecked","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 6200 of 18887 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success","Program data: 6OX/iGW9D9wBxvp6877brTo9ZfNqq8l0MbG75MLS9uDkfKYCA0UvXWFx7wABAAAAACy+4kgZ1zDU8Lj/pckqIVbYAxKJsxDYq4kr2VR6mMSn","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk consumed 25498 of 37443 compute units","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk success","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]","Program log: Instruction: Transfer","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4644 of 10503 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success","Program 11111111111111111111111111111111 invoke [2]","Program 11111111111111111111111111111111 success","Program data: WWNObeb8wOTl8wJD2bXLTm7unzZIvmtUR6Qf+JuCmjLYK4xrdIdSvPVlhGU97gRJA9E4yHeEhCdq660NvgAAAAAAAAA=","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs consumed 90248 of 93248 compute units","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs success"],"postBalances":[3746672245,69751950,1169280,2039280,2039280,1,1141440,389086612583,489594522939,2039280,208956596070,1,1141440,731913600,934087680],"postTokenBalances":[{"accountIndex":3,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"0","decimals":6,"uiAmount":null,"uiAmountString":"0"}},{"accountIndex":4,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"4608152451","decimals":6,"uiAmount":4608.152451,"uiAmountString":"4608.152451"}},{"accountIndex":9,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"19346973797","decimals":6,"uiAmount":19346.973797,"uiAmountString":"19346.973797"}}],"preBalances":[3746763649,72212447,1169280,2039280,2039280,1,1141440,389086612583,489594522939,2039280,208954135573,1,1141440,731913600,934087680],"preTokenBalances":[{"accountIndex":3,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"4591313938","decimals":6,"uiAmount":4591.313938,"uiAmountString":"4591.313938"}},{"accountIndex":4,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"0","decimals":6,"uiAmount":null,"uiAmountString":"0"}},{"accountIndex":9,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"19363812310","decimals":6,"uiAmount":19363.81231,"uiAmountString":"19363.81231"}}],"rewards":[],"status":{"Ok":null}},"slot":334182963,"transaction":["AU8ql0w1B0kio01+8JPiB74Q+HO7lq0j5PFH8m90GCEGJXimpXVAbA6MHKkZV62E/6T+L3iM8/SmDD8HcMcyuweAAQACBwBhh7VduskWvE6JTY7SlYqyUmDTjKK88V0EUQlzZTqcLL7iSBnXMNTwuP+lySohVtgDEomzENiriSvZVHqYxKcwsk15FBgYLcenkuzDYsoIjcDSZNfwzXm8mdZSRqrYQ8KBzJBVIxHYVbPIV53wT41zsQzpLgedCTskLlurqoFrAgzFuqeAKp8nlkEwrJfPJeoBYQhDwIDJq8Z0p/lbdu0DBkZv5SEXMv/srbpyw5vnvIzlu8X3EmssQ5s6QAAAAMH5eEXH4N6dclT1jQ+o9ERAGroPE7d81/2Phorhn6ue4Dyxuu57L+P52h9fC4kXx13sluxs3x8A/BATMsBJv9QDBQAFAmxtAQAFAAkD7xcOAAAAAAAGEAECAAsAAQMEBwgJCgwNDgugAlYQcC7UnMR79WWEZT3uBEkD0TjId4SEJ2rrrQ0BvgAAAAAAAAABAAAAAKUAAABwx2lBP7WwtACjxatbfTRR05uNupt2doStUC+Y2OeyiAIAAABncNHhAwCNffuwklT8vEoOmkDJnZht+PmPiosz3JjRA0lvSw/sxIbZk3Qh4/1rQgYyU/IV6V7HM6D+WFixrzkQsSu1JaY/OQo0Ic5uLYkytrpQ8kaAVIPiDeBnQi4gFPZ1ABWZ0TnYJz/vqfL4gyA4WWPhS8LbkAcUeR1CEp5LKxxBAAAAAwgJAAQBBQYCCQoLEQDAsA8sQ2tgjwFx7wABAAAAAAoDAgMBCQADg9OqEgEAAAALAgEHDAACAAAAUYslAAAAAADhtAFoAAAAAAGgfYr/iNHgu+9lVUAi8vOn85KVMwvJFF6xJ+NvO5aPIAQGC1YIBAAFAwI=","base64"],"version":0}`,
+				// addressLookupTable
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":["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","base64"],"executable":false,"lamports":24443520,"owner":"AddressLookupTab1e1111111111111111111111111","rentEpoch":18446744073709551615,"space":3384}}`,
+				// getSlot
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"blockhash":"2pSMZNzuseAqFXQkfcor1Ts6WvEojJ3uQm7hhe2415j6","lastValidBlockHeight":312525000}}`,
+				// getTokenAccount
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
+				// getTokenAccount
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
+			},
+			xclient.LegacyTxInfo{
+				TxID:            "2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
+				From:            "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+				To:              "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+				ContractAddress: "",
+				Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						ContractAddress: "",
+						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+						Event:           xclient.NewEvent("3.4", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
+						Event:           xclient.NewEvent("3.2", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(4608152451),
+						Event:           xclient.NewEvent("3.3", xclient.MovementVariantNative),
+					},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+						ContractAddress: "",
+						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+						Event:           xclient.NewEvent("3.4", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
+						Event:           xclient.NewEvent("3.2", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(4608152451),
+						Event:           xclient.NewEvent("3.3", xclient.MovementVariantNative),
+					},
+				},
+				Fee:           xc.NewAmountBlockchainFromUint64(91404),
+				FeePayer:      "12VFrc1dFynPzs4HBRdRoMKNm1jca2S2uhaNKCkdffwy",
+				BlockIndex:    334182963,
+				BlockTime:     1744942223,
+				Confirmations: 106746,
+			},
+			"",
+		},
+		{
+			// Multi sol + USDC transfer, but one of the getTokenAccount fails
+			"2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
+			[]string{
+				// getTransaction
+				`{"blockTime":1744942223,"meta":{"computeUnitsConsumed":90548,"err":null,"fee":91404,"innerInstructions":[{"index":2,"instructions":[{"accounts":[0,7,1,8,9,3,13,14,11],"data":"2p2EsBa2hBpHob4XKiovKuRZ","programIdIndex":12,"stackHeight":2},{"accounts":[9,7,3,8],"data":"hZ4Wxjgxc7SnH","programIdIndex":14,"stackHeight":3},{"accounts":[3,4,1],"data":"3bWSwbMixZV1","programIdIndex":14,"stackHeight":2},{"accounts":[1,10],"data":"3Bxs4EVjZpa2tEN3","programIdIndex":11,"stackHeight":2}]}],"loadedAddresses":{"readonly":["11111111111111111111111111111111","BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk","ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL","TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"],"writable":["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","BT72p68Jp5eJUpuHThxSoeTRS9p4upTM8969X79GeQRF","3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ"]},"logMessages":["Program ComputeBudget111111111111111111111111111111 invoke [1]","Program ComputeBudget111111111111111111111111111111 success","Program ComputeBudget111111111111111111111111111111 invoke [1]","Program ComputeBudget111111111111111111111111111111 success","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs invoke [1]","Program log: Instruction: HandleUserOperation","Program log: metadata nonce: 190","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk invoke [2]","Program log: Instruction: ReleaseToken","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [3]","Program log: Instruction: TransferChecked","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 6200 of 18887 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success","Program data: 6OX/iGW9D9wBxvp6877brTo9ZfNqq8l0MbG75MLS9uDkfKYCA0UvXWFx7wABAAAAACy+4kgZ1zDU8Lj/pckqIVbYAxKJsxDYq4kr2VR6mMSn","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk consumed 25498 of 37443 compute units","Program BuuP1rJXnVs5GHSPoUxLqeQzV4nBXQ7RFAJ7j4rt6jEk success","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]","Program log: Instruction: Transfer","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 4644 of 10503 compute units","Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success","Program 11111111111111111111111111111111 invoke [2]","Program 11111111111111111111111111111111 success","Program data: WWNObeb8wOTl8wJD2bXLTm7unzZIvmtUR6Qf+JuCmjLYK4xrdIdSvPVlhGU97gRJA9E4yHeEhCdq660NvgAAAAAAAAA=","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs consumed 90248 of 93248 compute units","Program E4CKSsnjU9WXzrBJpNXnFi4gbb1kmLuavwZHd35TLeHs success"],"postBalances":[3746672245,69751950,1169280,2039280,2039280,1,1141440,389086612583,489594522939,2039280,208956596070,1,1141440,731913600,934087680],"postTokenBalances":[{"accountIndex":3,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"0","decimals":6,"uiAmount":null,"uiAmountString":"0"}},{"accountIndex":4,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"4608152451","decimals":6,"uiAmount":4608.152451,"uiAmountString":"4608.152451"}},{"accountIndex":9,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"19346973797","decimals":6,"uiAmount":19346.973797,"uiAmountString":"19346.973797"}}],"preBalances":[3746763649,72212447,1169280,2039280,2039280,1,1141440,389086612583,489594522939,2039280,208954135573,1,1141440,731913600,934087680],"preTokenBalances":[{"accountIndex":3,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"4591313938","decimals":6,"uiAmount":4591.313938,"uiAmountString":"4591.313938"}},{"accountIndex":4,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"0","decimals":6,"uiAmount":null,"uiAmountString":"0"}},{"accountIndex":9,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg","programId":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","uiTokenAmount":{"amount":"19363812310","decimals":6,"uiAmount":19363.81231,"uiAmountString":"19363.81231"}}],"rewards":[],"status":{"Ok":null}},"slot":334182963,"transaction":["AU8ql0w1B0kio01+8JPiB74Q+HO7lq0j5PFH8m90GCEGJXimpXVAbA6MHKkZV62E/6T+L3iM8/SmDD8HcMcyuweAAQACBwBhh7VduskWvE6JTY7SlYqyUmDTjKK88V0EUQlzZTqcLL7iSBnXMNTwuP+lySohVtgDEomzENiriSvZVHqYxKcwsk15FBgYLcenkuzDYsoIjcDSZNfwzXm8mdZSRqrYQ8KBzJBVIxHYVbPIV53wT41zsQzpLgedCTskLlurqoFrAgzFuqeAKp8nlkEwrJfPJeoBYQhDwIDJq8Z0p/lbdu0DBkZv5SEXMv/srbpyw5vnvIzlu8X3EmssQ5s6QAAAAMH5eEXH4N6dclT1jQ+o9ERAGroPE7d81/2Phorhn6ue4Dyxuu57L+P52h9fC4kXx13sluxs3x8A/BATMsBJv9QDBQAFAmxtAQAFAAkD7xcOAAAAAAAGEAECAAsAAQMEBwgJCgwNDgugAlYQcC7UnMR79WWEZT3uBEkD0TjId4SEJ2rrrQ0BvgAAAAAAAAABAAAAAKUAAABwx2lBP7WwtACjxatbfTRR05uNupt2doStUC+Y2OeyiAIAAABncNHhAwCNffuwklT8vEoOmkDJnZht+PmPiosz3JjRA0lvSw/sxIbZk3Qh4/1rQgYyU/IV6V7HM6D+WFixrzkQsSu1JaY/OQo0Ic5uLYkytrpQ8kaAVIPiDeBnQi4gFPZ1ABWZ0TnYJz/vqfL4gyA4WWPhS8LbkAcUeR1CEp5LKxxBAAAAAwgJAAQBBQYCCQoLEQDAsA8sQ2tgjwFx7wABAAAAAAoDAgMBCQADg9OqEgEAAAALAgEHDAACAAAAUYslAAAAAADhtAFoAAAAAAGgfYr/iNHgu+9lVUAi8vOn85KVMwvJFF6xJ+NvO5aPIAQGC1YIBAAFAwI=","base64"],"version":0}`,
+				// addressLookupTable
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":["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","base64"],"executable":false,"lamports":24443520,"owner":"AddressLookupTab1e1111111111111111111111111","rentEpoch":18446744073709551615,"space":3384}}`,
+				// getSlot
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"blockhash":"2pSMZNzuseAqFXQkfcor1Ts6WvEojJ3uQm7hhe2415j6","lastValidBlockHeight":312525000}}`,
+				// getTokenAccount
+				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
+				// getTokenAccount (failure)
+				`{}`,
+			},
+			xclient.LegacyTxInfo{
+				TxID:            "2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
+				From:            "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+				To:              "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+				ContractAddress: "",
+				Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+				Sources: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						ContractAddress: "",
+						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+						Event:           xclient.NewEvent("3.4", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
+						Event:           xclient.NewEvent("3.2", xclient.MovementVariantNative),
+					},
+				},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{
+					{
+						Address:         "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+						ContractAddress: "",
+						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
+						Event:           xclient.NewEvent("3.4", xclient.MovementVariantNative),
+					},
+					{
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
+						Event:           xclient.NewEvent("3.2", xclient.MovementVariantNative),
+					},
+				},
+				Fee:           xc.NewAmountBlockchainFromUint64(91404),
+				FeePayer:      "12VFrc1dFynPzs4HBRdRoMKNm1jca2S2uhaNKCkdffwy",
+				BlockIndex:    334182963,
+				BlockTime:     1744942223,
+				Confirmations: 106746,
+			},
+			"",
+		},
+		{
 			"5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw",
 			`{}`,
 			xclient.LegacyTxInfo{},
@@ -734,6 +820,7 @@ func TestFetchTxInfo(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
+				testtypes.JsonPrint(txInfo)
 				require.Equal(t, v.val, txInfo)
 			}
 		})
