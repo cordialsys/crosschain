@@ -37,9 +37,11 @@ func TestNewStakingTransfer(t *testing.T) {
 	tx, err := txBuilder.Stake(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
+	decoded, err := tx.(*Tx).GetDecoder()
+	require.NoError(t, err)
 
-	createAccounts := tx.(*Tx).GetCreateAccounts()
-	stakes := tx.(*Tx).GetDelegateStake()
+	createAccounts := decoded.GetCreateAccounts()
+	stakes := decoded.GetDelegateStake()
 	require.Len(t, createAccounts, 1)
 	require.Len(t, stakes, 1)
 
@@ -100,13 +102,16 @@ func TestNewUnstakeTransfer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 
-	deactivates := tx.(*Tx).GetDeactivateStakes()
+	decoded, err := tx.(*Tx).GetDecoder()
+	require.NoError(t, err)
+
+	deactivates := decoded.GetDeactivateStakes()
 	require.Len(t, deactivates, 3)
 	require.Equal(t, input.EligibleStakes[0].StakeAccount, deactivates[0].Instruction.GetStakeAccount().PublicKey)
 	require.Equal(t, input.EligibleStakes[1].StakeAccount, deactivates[1].Instruction.GetStakeAccount().PublicKey)
 	require.Equal(t, input.EligibleStakes[2].StakeAccount, deactivates[2].Instruction.GetStakeAccount().PublicKey)
 
-	splits := tx.(*Tx).GetSplitStakes()
+	splits := decoded.GetSplitStakes()
 	require.Len(t, splits, 1)
 	// 5 SOL remainder to be split (along with the inactive stakes)
 	require.EqualValues(t, 5_000_000_000+2282880*3, *splits[0].Instruction.Lamports)
@@ -149,7 +154,10 @@ func TestNewWithdrawTransfer(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 
-	withdrawals := tx.(*Tx).GetStakeWithdraws()
+	decoded, err := tx.(*Tx).GetDecoder()
+	require.NoError(t, err)
+
+	withdrawals := decoded.GetStakeWithdraws()
 	require.Len(t, withdrawals, 2)
 	require.Equal(t, input.EligibleStakes[0].StakeAccount, withdrawals[0].Instruction.GetStakeAccount().PublicKey)
 	require.Equal(t, input.EligibleStakes[1].StakeAccount, withdrawals[1].Instruction.GetStakeAccount().PublicKey)
