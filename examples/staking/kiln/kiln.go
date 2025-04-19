@@ -143,7 +143,7 @@ func CmdStake() *cobra.Command {
 			}
 
 			// sign
-			signatures := []xc.TxSignature{}
+			signatures := []*xc.SignatureResponse{}
 			for _, sighash := range sighashes {
 				// sign the tx sighash(es)
 				signature, err := signer.Sign(sighash)
@@ -280,7 +280,7 @@ func CmdUnstake() *cobra.Command {
 			}
 
 			// sign
-			signatures := []xc.TxSignature{}
+			signatures := []*xc.SignatureResponse{}
 			for _, sighash := range sighashes {
 				// sign the tx sighash(es)
 				signature, err := signer.Sign(sighash)

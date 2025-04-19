@@ -390,8 +390,6 @@ github.com/cometbft/cometbft-db v1.0.1 h1:SylKuLseMLQKw3+i8y8KozZyJcQSL98qEe2CGM
 github.com/cometbft/cometbft-db v1.0.1/go.mod h1:EBrFs1GDRiTqrWXYi4v90Awf/gcdD5ExzdPbg4X8+mk=
 github.com/cometbft/cometbft/api v1.0.0 h1:gGBwvsJi/gnHJEtwYfjPIGs2AKg/Vfa1ZuKCPD1/Ko4=
 github.com/cometbft/cometbft/api v1.0.0/go.mod h1:EkQiqVSu/p2ebrZEnB2z6Re7r8XNe//M7ylR0qEwWm0=
-github.com/coming-chat/go-aptos v0.0.0-20221109075633-2804a4483f45 h1:BqPY3c9NNuJ8OGdyVQdWueQcFwmOyywpPY+nDwf82e0=
-github.com/coming-chat/go-aptos v0.0.0-20221109075633-2804a4483f45/go.mod h1:HaGBPmQOlKzxkbGancRSX8wcwDxvj9Zs173CSla43vE=
 github.com/coming-chat/lcs v0.0.0-20220829063658-0fa8432d2bdf h1:HrK16SFZnoxATieE+UHFSHZ6D2+XApv9g752MgvW7es=
 github.com/coming-chat/lcs v0.0.0-20220829063658-0fa8432d2bdf/go.mod h1:CVVNl2j3TGYyUjuux+oYrRenPGvD+5UQbPGYp/zUews=
 github.com/consensys/bavard v0.1.24 h1:Lfe+bjYbpaoT7K5JTFoMi5wo9V4REGLvQQbHmatoN2I=
@@ -400,6 +398,8 @@ github.com/consensys/gnark-crypto v0.14.0 h1:DDBdl4HaBtdQsq/wfMwJvZNE80sHidrK3Nf
 github.com/consensys/gnark-crypto v0.14.0/go.mod h1:CU4UijNPsHawiVGNxe9co07FkzCeWHHrb1li/n1XoU0=
 github.com/containerd/continuity v0.3.0 h1:nisirsYROK15TAMVukJOUyGJjz4BNQJBVsNvAXZJ/eg=
 github.com/containerd/continuity v0.3.0/go.mod h1:wJEAIwKOm/pBZuBd0JmeTvnLquTB1Ag8espWhkykbPM=
+github.com/cordialsys/go-aptos-sdk v0.0.0-20250419002707-fc55164b5726 h1:9fbsfxZh64Zsz9bYiiKsRQZcTX+JEpTg4gcvA1DoeLk=
+github.com/cordialsys/go-aptos-sdk v0.0.0-20250419002707-fc55164b5726/go.mod h1:hzXqFO40XA/kcmAP26WDJmc7WiJcoLZlnvR0ZVWXu9g=
 github.com/cordialsys/go-json v0.10.5-sonic-replace h1:9wdSnZ7KBekIZ9tLiCEQAkY6kEHp44IdcQFnKUNSxLI=
 github.com/cordialsys/go-json v0.10.5-sonic-replace/go.mod h1:uwUxqlxlq1Bf1VxJpxbWfMbQgM8w30PKKZrg94/NcTk=
 github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5 h1:K/rLcFPSCGcCQEdeB+FM2el8VQopZbiK+xCYYCPUcz4=

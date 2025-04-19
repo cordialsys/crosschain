@@ -101,28 +101,28 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	b, err := codec.Encode(tx.payload)
 	// if data is longer than 256 bytes, must hash it first
 	if len(b) > 256 {
 		h := blake2b.Sum256(b)
 		b = h[:]
 	}
-	return []xc.TxDataToSign{b}, err
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(b)}, err
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	tx.extrinsic.Signature = &extrinsic.Signature{
 		Signer: tx.sender,
 		Signature: types.MultiSignature{
 			IsEd25519: true,
-			AsEd25519: types.NewSignature(signatures[0]),
+			AsEd25519: types.NewSignature(signatures[0].Signature),
 		},
 		SignedFields: tx.payload.SignedFields,
 	}
 	tx.extrinsic.Version |= types.ExtrinsicBitSigned
-	tx.inputSignatures = []xc.TxSignature{signatures[0]}
+	tx.inputSignatures = []xc.TxSignature{signatures[0].Signature}
 	// logrus.WithField("signature", hex.EncodeToString(signatures[0])).Debug("set signature")
 	return nil
 }

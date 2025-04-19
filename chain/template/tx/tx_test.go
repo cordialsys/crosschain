@@ -25,6 +25,6 @@ func TestTxSighashes(t *testing.T) {
 func TestTxAddSignature(t *testing.T) {
 
 	tx1 := tx.Tx{}
-	err := tx1.AddSignatures([]xc.TxSignature{}...)
+	err := tx1.AddSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "not implemented")
 }

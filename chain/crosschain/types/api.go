@@ -107,12 +107,12 @@ func NewBinaryTx(serializedSignedTx []byte, TxSignatures [][]byte) xc.Tx {
 func (tx *SubmitTxReq) Hash() xc.TxHash {
 	panic("not implemented")
 }
-func (tx *SubmitTxReq) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx *SubmitTxReq) Sighashes() ([]*xc.SignatureRequest, error) {
 	panic("not implemented")
 }
-func (tx *SubmitTxReq) AddSignatures(sigs ...xc.TxSignature) error {
+func (tx *SubmitTxReq) AddSignatures(sigs ...*xc.SignatureResponse) error {
 	for _, sig := range sigs {
-		tx.TxSignatures = append(tx.TxSignatures, sig)
+		tx.TxSignatures = append(tx.TxSignatures, sig.Signature)
 	}
 	return nil
 }

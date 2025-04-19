@@ -48,6 +48,7 @@ type PublicKey []byte
 const EnvEd25519ScalarSigning = "XC_SIGN_WITH_SCALAR"
 
 const EnvPrivateKey = "XC_PRIVATE_KEY"
+const EnvPrivateKeyFeePayer = "XC_PRIVATE_KEY_FEE_PAYER"
 
 func ReadPrivateKeyEnv() string {
 	val := os.Getenv(EnvPrivateKey)
@@ -56,6 +57,15 @@ func ReadPrivateKeyEnv() string {
 	}
 	// fallback to old PRIVATE_KEY
 	return os.Getenv("PRIVATE_KEY")
+}
+
+func ReadPrivateKeyFeePayerEnv() string {
+	val := os.Getenv(EnvPrivateKeyFeePayer)
+	if val != "" {
+		return val
+	}
+	// fallback to old PRIVATE_KEY
+	return os.Getenv("PRIVATE_KEY_FEE_PAYER")
 }
 
 func fromMnemonic(privateKeyOrMnemonic string, hdPathNum uint32) (PrivateKey, error) {
@@ -163,7 +173,8 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 	}
 }
 
-func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
+func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
+	data := req.Payload
 	switch s.algorithm {
 	case xc.Ed255:
 		var signatureRaw []byte
@@ -173,21 +184,33 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		} else {
 			signatureRaw = ed25519.Sign(ed25519.PrivateKey(s.privateKey), []byte(data))
 		}
-		return xc.TxSignature(signatureRaw), nil
+		return &xc.SignatureResponse{
+			Address:   "",
+			Signature: signatureRaw,
+			PublicKey: s.MustPublicKey(),
+		}, nil
 	case xc.K256Keccak, xc.K256Sha256:
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))
 		if err != nil {
-			return []byte{}, err
+			return nil, err
 		}
 		signatureRaw, err := crypto.Sign([]byte(data), ecdsaKey)
-		return xc.TxSignature(signatureRaw), err
+		return &xc.SignatureResponse{
+			Address:   "",
+			Signature: signatureRaw,
+			PublicKey: s.MustPublicKey(),
+		}, err
 	case xc.Schnorr:
 		privKey, _ := btcec.PrivKeyFromBytes(s.privateKey)
 		signature, err := schnorr.Sign(privKey, data)
 		if err != nil {
 			return nil, err
 		}
-		return signature.Serialize(), nil
+		return &xc.SignatureResponse{
+			Address:   "",
+			Signature: signature.Serialize(),
+			PublicKey: s.MustPublicKey(),
+		}, nil
 	case xc.Bls12_381G2Blake2:
 		var privKey bls.PrivateKey[bls.G2]
 		err := privKey.UnmarshalBinary(s.privateKey)
@@ -211,14 +234,18 @@ func (s *Signer) Sign(data xc.TxDataToSign) (xc.TxSignature, error) {
 		Q = dusk.ScalarMultShort(s.privateKey, Q)
 		signBytes := Q.BytesCompressed()
 
-		return xc.TxSignature(signBytes), nil
+		return &xc.SignatureResponse{
+			Address:   "",
+			Signature: signBytes,
+			PublicKey: s.MustPublicKey(),
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg for driver: %v", s.driver)
 	}
 }
 
-func (s *Signer) SignAll(data []xc.TxDataToSign) ([]xc.TxSignature, error) {
-	signatures := make([]xc.TxSignature, len(data))
+func (s *Signer) SignAll(data []*xc.SignatureRequest) ([]*xc.SignatureResponse, error) {
+	signatures := make([]*xc.SignatureResponse, len(data))
 	for i, d := range data {
 		sig, err := s.Sign(d)
 		if err != nil {
@@ -228,7 +255,7 @@ func (s *Signer) SignAll(data []xc.TxDataToSign) ([]xc.TxSignature, error) {
 	}
 	return signatures, nil
 }
-func (s *Signer) MustSignAll(data []xc.TxDataToSign) []xc.TxSignature {
+func (s *Signer) MustSignAll(data []*xc.SignatureRequest) []*xc.SignatureResponse {
 	signatures, err := s.SignAll(data)
 	if err != nil {
 		panic(err)

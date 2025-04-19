@@ -31,7 +31,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
 	input := &tx_input.TxInput{}
-	tx, err := builder.NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
 	require.NoError(t, err)
 	require.NotNil(t, tx)
 	solTx := tx.(*Tx).SolTx
@@ -48,13 +48,13 @@ func TestNewNativeTransferErr(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tx, err := builder.NewNativeTransfer(from, to, amount, input)
+	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 3")
 
 	from = xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	// fails on parsing to
-	tx, err = builder.NewNativeTransfer(from, to, amount, input)
+	tx, err = builder.NewNativeTransfer(from, from, to, amount, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 2")
 }
@@ -95,6 +95,25 @@ func TestNewTokenTransfer(t *testing.T) {
 	require.Equal(t, uint16(0x7), solTx.Message.Instructions[0].ProgramIDIndex)
 	require.Equal(t, uint16(0x8), solTx.Message.Instructions[1].ProgramIDIndex)
 	require.Equal(t, ataTo, solTx.Message.AccountKeys[1])
+
+	// transfer to non-existing ATA & fee payer used: create using fee payer money
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	input = &TxInput{ShouldCreateATA: true}
+	feePayerArgs := args
+	feePayerArgs.SetFeePayer(feePayer)
+	tx, err = builder.Transfer(feePayerArgs, input)
+	require.NoError(t, err)
+	require.NotNil(t, tx)
+	solTx = tx.(*Tx).SolTx
+	require.Equal(t, 0, len(solTx.Signatures))
+	require.Equal(t, 2, len(solTx.Message.Instructions))
+	require.Equal(t, uint16(0x8), solTx.Message.Instructions[0].ProgramIDIndex)
+	require.Equal(t, uint16(0x9), solTx.Message.Instructions[1].ProgramIDIndex)
+	// The create-ATA instruction should reference the fee payer as the account creator
+	require.Equal(t, uint16(0), solTx.Message.Instructions[0].Accounts[0])
+	require.Equal(t, ataTo.String(), solTx.Message.AccountKeys[2].String())
+	// The fee payer should be the fee-payer address.
+	require.EqualValues(t, feePayer, solTx.Message.AccountKeys[0].String())
 
 	// transfer directly to ATA
 	args = buildertest.MustNewTransferArgs(

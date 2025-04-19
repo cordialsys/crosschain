@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
 	"github.com/stretchr/testify/require"
 )
@@ -25,6 +26,7 @@ func TestTransfer(t *testing.T) {
 
 	fromPrivateKey := "93a4def9eb501965b9f5f3079fab53284ea6a557e48e8affa817ab0258908bbc"
 	toPrivateKey := "22194a8955e9233aa2f0a0206c8ea861e5fa92a613ab5c7e236a11de3f4bc9ad"
+	feePayerPrivateKey := "6a4aed1042d10d3102281cfc9fe94e8584dc5f089bffbad0c497c10f6deb4d7d"
 
 	rpcArgs := &setup.RpcArgs{
 		Chain:     chain,
@@ -49,28 +51,40 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err, "Failed creating client")
 
 	fromWalletAddress := deriveAddress(t, xcFactory, chainConfig, fromPrivateKey)
+	feePayerWalletAddress := deriveAddress(t, xcFactory, chainConfig, feePayerPrivateKey)
 
 	fmt.Println("Wallet Address:", fromWalletAddress)
 	transferAmount, err := xc.NewAmountHumanReadableFromStr("0.1")
 	require.NoError(t, err)
 	transferAmountBlockchain := transferAmount.ToBlockchain(decimals)
 
+	// request funds for gas if needed
+	if feePayer {
+		fundWallet(t, chainConfig, feePayerWalletAddress, "0.1", "", chainConfig.Decimals)
+	} else {
+		if contract != "" {
+			fundWallet(t, chainConfig, fromWalletAddress, "0.1", "", chainConfig.Decimals)
+		}
+	}
+
 	// fund multiple times, which results in multiple UTXO on utxo chains.
 	fundWallet(t, chainConfig, fromWalletAddress, "0.8", contract, decimals)
 	fundWallet(t, chainConfig, fromWalletAddress, "1", contract, decimals)
 	fundWallet(t, chainConfig, fromWalletAddress, "1.2", contract, decimals)
 
-	if contract != "" {
-		// a bit for gas
-		fundWallet(t, chainConfig, fromWalletAddress, "0.1", "", chainConfig.Decimals)
-	}
-
 	require.NoError(t, err, "Failed to fund wallet address")
 
-	signer, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
+	mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKey)
 	require.NoError(t, err)
+	collection := signer.NewCollection()
 
-	publicKey, err := signer.PublicKey()
+	if feePayer {
+		feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+		require.NoError(t, err)
+		collection.AddAuxSigner(feePayerSigner, feePayerWalletAddress)
+	}
+
+	publicKey, err := mainSigner.PublicKey()
 	require.NoError(t, err)
 
 	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
@@ -79,12 +93,25 @@ func TestTransfer(t *testing.T) {
 	from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
 	require.NoError(t, err)
 
+	collection.AddMainSigner(mainSigner, from)
+
 	toAddress := deriveAddress(t, xcFactory, chainConfig, toPrivateKey)
 	fmt.Println("sending from ", from, " to ", toAddress)
+
+	txBuilder, err := xcFactory.NewTxBuilder(chainConfig.Base())
+	require.NoError(t, err)
 
 	tfOptions := []builder.BuilderOption{
 		builder.OptionTimestamp(time.Now().Unix()),
 		builder.OptionPublicKey(publicKey),
+	}
+	if feePayer {
+		tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerWalletAddress))
+		_, ok := txBuilder.(builder.BuilderSupportsFeePayer)
+		if !ok {
+			t.Fatalf("%s tx builder does not support fee payer", chainConfig.Chain)
+		}
+		fmt.Println("fee payer is used: ", feePayerWalletAddress)
 	}
 
 	balanceArgs := xcclient.NewBalanceArgs(fromWalletAddress)
@@ -128,22 +155,20 @@ func TestTransfer(t *testing.T) {
 	err = xc.CheckFeeLimit(input, chainConfig)
 	require.NoError(t, err)
 
-	builder, err := xcFactory.NewTxBuilder(chainConfig.Base())
-	require.NoError(t, err)
-
-	tx, err := builder.Transfer(tfArgs, input)
+	tx, err := txBuilder.Transfer(tfArgs, input)
 	require.NoError(t, err)
 
 	sighashes, err := tx.Sighashes()
 	require.NoError(t, err)
 
-	signatures := []xc.TxSignature{}
+	signatures := []*xc.SignatureResponse{}
 	for _, sighash := range sighashes {
 		// sign the tx sighash(es)
-		signature, err := signer.Sign(sighash)
+		signature, err := collection.Sign(sighash.Signer, sighash.Payload)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("adding signature for %s\n", sighash.Signer)
 		signatures = append(signatures, signature)
 	}
 
@@ -195,6 +220,20 @@ func TestTransfer(t *testing.T) {
 		txInfo = info
 		fmt.Println(asJson(txInfo))
 		break
+	}
+
+	if feePayer {
+		// should be a movement from the fee payer
+		found := false
+		for _, movement := range txInfo.Movements {
+			for _, from := range movement.From {
+				if from.AddressId == feePayerWalletAddress {
+					found = true
+					break
+				}
+			}
+		}
+		require.True(t, found, "Fee payer movement not found")
 	}
 
 	var finalWalletBalance xc.AmountBlockchain

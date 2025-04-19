@@ -251,6 +251,9 @@ func CmdTxInfo() *cobra.Command {
 
 func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
+	var feePayer bool
+	var dryRun bool
+
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
 		Aliases: []string{"tf"},
@@ -320,34 +323,65 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
-
-			signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
-			if err != nil {
-				return fmt.Errorf("could not import private key: %v", err)
-			}
-
-			publicKey, err := signer.PublicKey()
-			if err != nil {
-				return fmt.Errorf("could not create public key: %v", err)
-			}
-
 			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}
 
+			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
+			tfOptions := []builder.BuilderOption{
+				builder.OptionTimestamp(time.Now().Unix()),
+			}
+
+			mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+			publicKey, err := mainSigner.PublicKey()
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+			tfOptions = append(tfOptions, builder.OptionPublicKey(publicKey))
+
 			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
 			if err != nil {
 				return fmt.Errorf("could not derive address: %v", err)
 			}
-			logrus.WithField("address", from).Info("sending from")
+			signerCollection := signer.NewCollection()
+			signerCollection.AddMainSigner(mainSigner, from)
 
-			tfOptions := []builder.BuilderOption{
-				builder.OptionTimestamp(time.Now().Unix()),
-				builder.OptionPublicKey(publicKey),
+			txBuilder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
+			if err != nil {
+				return fmt.Errorf("could not load tx-builder: %v", err)
 			}
+
+			logrus.WithField("address", from).Info("sending from")
+			if feePayer {
+				_, ok := txBuilder.(builder.BuilderSupportsFeePayer)
+				if !ok {
+					return fmt.Errorf("support for fee payer on chain %s is not implemented", chainConfig.Chain)
+				}
+				feePayerPrivateKey := signer.ReadPrivateKeyFeePayerEnv()
+				if feePayerPrivateKey == "" {
+					return fmt.Errorf("must set env %s", signer.EnvPrivateKeyFeePayer)
+				}
+				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+				if err != nil {
+					return fmt.Errorf("could not import fee-payer private key: %v", err)
+				}
+				feePayerPublicKey, err := feePayerSigner.PublicKey()
+				if err != nil {
+					return fmt.Errorf("could not create fee-payer public key: %v", err)
+				}
+				feePayerAddress, err := addressBuilder.GetAddressFromPublicKey(feePayerPublicKey)
+				if err != nil {
+					return fmt.Errorf("could not derive fee-payer address: %v", err)
+				}
+				logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
+				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress))
+				signerCollection.AddAuxSigner(feePayerSigner, feePayerAddress)
+			}
+
 			if memo != "" {
 				tfOptions = append(tfOptions, builder.OptionMemo(memo))
 			}
@@ -408,13 +442,8 @@ func CmdTxTransfer() *cobra.Command {
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			builder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
-			if err != nil {
-				return fmt.Errorf("could not load tx-builder: %v", err)
-			}
-
 			// create tx (no network, no private key needed)
-			tx, err := builder.Transfer(tfArgs, input)
+			tx, err := txBuilder.Transfer(tfArgs, input)
 			if err != nil {
 				return fmt.Errorf("could not build transfer: %v", err)
 			}
@@ -426,14 +455,21 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// sign
-			signatures := []xc.TxSignature{}
+			signatures := []*xc.SignatureResponse{}
 			for _, sighash := range sighashes {
+				log := logrus.WithField("payload", hex.EncodeToString(sighash.Payload))
+				if len(sighash.Payload) == 0 {
+					panic("requested to sign empty payload")
+				}
 				// sign the tx sighash(es)
-				signature, err := signer.Sign(sighash)
+				signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
 				if err != nil {
 					panic(err)
 				}
 				signatures = append(signatures, signature)
+				log.
+					WithField("address", signature.Address).
+					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding signature")
 			}
 
 			// complete the tx by adding its signature
@@ -441,6 +477,14 @@ func CmdTxTransfer() *cobra.Command {
 			err = tx.AddSignatures(signatures...)
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
+			}
+			if dryRun {
+				txBytes, err := tx.Serialize()
+				if err != nil {
+					return fmt.Errorf("could not serialize tx: %v", err)
+				}
+				fmt.Println(hex.EncodeToString(txBytes))
+				return nil
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
@@ -477,12 +521,14 @@ func CmdTxTransfer() *cobra.Command {
 			return fmt.Errorf("could not find transaction that we submitted by hash %s", tx.Hash())
 		},
 	}
-	cmd.Flags().String("contract", "", "contract address of asset to send, if applicable")
-	cmd.Flags().String("decimals", "", "decimals of the token, when using --contract.")
-	cmd.Flags().String("memo", "", "set a memo for the transfer.")
+	cmd.Flags().String("contract", "", "Contract address of asset to send, if applicable")
+	cmd.Flags().String("decimals", "", "Decimals of the token, when using --contract.")
+	cmd.Flags().String("memo", "", "Set a memo for the transfer.")
+	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (must set env PRIVATE_KEY_FEE_PAYER)")
 	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
 	return cmd
 }
 

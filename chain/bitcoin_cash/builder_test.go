@@ -46,11 +46,13 @@ func TestTransfer(t *testing.T) {
 	require.Equal(t,
 		// will have to update if anything changes in BCH
 		"b2e256dc39726ed6b0b5f85f393187eefcf9bcbf2d27ddc0695920d320ce061b",
-		hex.EncodeToString(sighashes[0]),
+		hex.EncodeToString(sighashes[0].Payload),
 	)
 
 	signature := make([]byte, 64)
-	err = btcTx.AddSignatures(signature)
+	err = btcTx.AddSignatures(&xc.SignatureResponse{
+		Signature: signature,
+	})
 	require.NoError(t, err)
 
 	serialized, err := btcTx.Serialize()

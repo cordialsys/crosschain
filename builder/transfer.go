@@ -28,6 +28,10 @@ func (args *TransferArgs) GetContract() (xc.ContractAddress, bool) {
 	return args.options.GetContract()
 }
 
+func (args *TransferArgs) GetFeePayer() (xc.Address, bool) {
+	return args.options.GetFeePayer()
+}
+
 // Decimals for token contract, which may be needed for token transfers on some chains
 func (args *TransferArgs) GetDecimals() (int, bool) {
 	return args.options.GetDecimals()
@@ -65,4 +69,8 @@ func (args *TransferArgs) SetTo(to xc.Address) {
 
 func (args *TransferArgs) SetContract(contract xc.ContractAddress) {
 	args.options.SetContract(contract)
+}
+
+func (args *TransferArgs) SetFeePayer(feePayer xc.Address) {
+	args.options.SetFeePayer(feePayer)
 }

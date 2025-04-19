@@ -46,26 +46,26 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	if tx.EthTx == nil {
-		return []xc.TxDataToSign{}, errors.New("transaction not initialized")
+		return []*xc.SignatureRequest{}, errors.New("transaction not initialized")
 	}
 	sighash := tx.Signer.Hash(tx.EthTx).Bytes()
-	return []xc.TxDataToSign{sighash}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx.EthTx == nil {
 		return errors.New("transaction not initialized")
 	}
 
-	signedTx, err := tx.EthTx.WithSignature(tx.Signer, signatures[0])
+	signedTx, err := tx.EthTx.WithSignature(tx.Signer, signatures[0].Signature)
 	if err != nil {
 		return err
 	}
 	tx.EthTx = signedTx
-	tx.Signatures = []xc.TxSignature{signatures[0]}
+	tx.Signatures = []xc.TxSignature{signatures[0].Signature}
 	return nil
 }
 

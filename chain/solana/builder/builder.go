@@ -23,6 +23,11 @@ type TxBuilder struct {
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 
+// Solana driver supports fee payer
+var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
+
+func (txBuilder TxBuilder) SupportsFeePayer() {}
+
 type TxInput = tx_input.TxInput
 
 // Max number of token transfers we can fit in a solana transaction,
@@ -40,19 +45,25 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+
+	feePayer, ok := args.GetFeePayer()
+	if !ok {
+		feePayer = args.GetFrom()
+	}
+
 	if contract, ok := args.GetContract(); ok {
 		decimals, ok := args.GetDecimals()
 		if !ok {
 			return nil, fmt.Errorf("cannot send solana token transfer without knowing the decimals")
 		}
-		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, decimals, input)
+		return txBuilder.NewTokenTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), contract, decimals, input)
 	} else {
-		return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+		return txBuilder.NewNativeTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput xc.TxInput) (xc.Tx, error) {
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
 		return nil, err
@@ -77,21 +88,11 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		)
 	}
 
-	tx1, err := solana.NewTransaction(
-		instructions,
-		input.RecentBlockHash,
-		solana.TransactionPayer(accountFrom),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &tx.Tx{
-		SolTx: tx1,
-	}, nil
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, input)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, decimals int, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, decimals int, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 	if contract == "" {
 		return nil, errors.New("asset does not have a contract")
@@ -106,7 +107,6 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	if err != nil {
 		return nil, err
 	}
-
 	accountTo, err := solana.PublicKeyFromBase58(string(to))
 	if err != nil {
 		return nil, err
@@ -140,8 +140,17 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 
 	instructions := []solana.Instruction{}
 	if txInput.ShouldCreateATA {
+		// fee payer should pay for the ATA creation, if used.
+		accountCreatorPayer := accountFrom
+		if feePayer != from {
+			accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
+			if err != nil {
+				return nil, err
+			}
+			accountCreatorPayer = accountFeePayer
+		}
 		createAta := ata.NewCreateInstruction(
-			accountFrom,
+			accountCreatorPayer,
 			accountTo,
 			accountContract,
 		).Build()
@@ -213,21 +222,30 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		)
 	}
 
-	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, txInput)
 }
 
-func (txBuilder TxBuilder) buildSolanaTx(instructions []solana.Instruction, accountFrom solana.PublicKey, txInput *TxInput) (*tx.Tx, error) {
+func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, instructions []solana.Instruction, txInput *TxInput) (*tx.Tx, error) {
+	accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
+	if err != nil {
+		return nil, err
+	}
+
 	tx1, err := solana.NewTransaction(
 		instructions,
 		txInput.RecentBlockHash,
-		solana.TransactionPayer(accountFrom),
+		solana.TransactionPayer(accountFeePayer),
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &tx.Tx{
+	tx := &tx.Tx{
 		SolTx: tx1,
-	}, nil
+	}
+	if feePayer != from {
+		tx.SetExtraFeePayerSigner(feePayer)
+	}
+	return tx, nil
 }
 
 func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, txInput *TxInput) (xc.Tx, error) {
@@ -248,5 +266,5 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 		token.NewCloseAccountInstruction(ataFrom, accountFrom, accountFrom, nil).Build(),
 	}
 
-	return txBuilder.buildSolanaTx(instructions, accountFrom, txInput)
+	return txBuilder.buildSolanaTx(from, from, instructions, txInput)
 }

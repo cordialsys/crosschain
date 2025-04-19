@@ -110,8 +110,8 @@ func (tx Tx) Hash() xc.TxHash {
 	}
 
 	sighash := sighashes[0]
-	sighash = append(sighash, tx.Signature...)
-	scalar, err := dusk.Blake2bScalarReduce(sighash)
+	sighash.Payload = append(sighash.Payload, tx.Signature...)
+	scalar, err := dusk.Blake2bScalarReduce(sighash.Payload)
 	if err != nil {
 		return xc.TxHash("failed to get scalar from sighash")
 	}
@@ -126,19 +126,19 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	bytes := make([]byte, 0)
 	bytes = append(bytes, tx.Payload.ChainId)
 
 	senderBytes, err := tx.Payload.Sender.MarshalBinary()
 	if err != nil {
-		return []xc.TxDataToSign{}, errors.New("failed to marshal sender")
+		return []*xc.SignatureRequest{}, errors.New("failed to marshal sender")
 	}
 	bytes = append(bytes, senderBytes...)
 	if tx.Payload.Receiver != tx.Payload.Sender {
 		receiverBytes, err := tx.Payload.Receiver.MarshalBinary()
 		if err != nil {
-			return []xc.TxDataToSign{}, errors.New("failed to marshal receiver")
+			return []*xc.SignatureRequest{}, errors.New("failed to marshal receiver")
 		}
 		bytes = append(bytes, receiverBytes...)
 	}
@@ -150,7 +150,7 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 	if tx.Payload.Fee.RefundAddress != tx.Payload.Sender {
 		refundAddressBytes, err := tx.Payload.Fee.RefundAddress.MarshalBinary()
 		if err != nil {
-			return []xc.TxDataToSign{}, errors.New("failed to marshal refund address")
+			return []*xc.SignatureRequest{}, errors.New("failed to marshal refund address")
 		}
 		bytes = append(bytes, refundAddressBytes...)
 	}
@@ -162,11 +162,11 @@ func (tx Tx) Sighashes() ([]xc.TxDataToSign, error) {
 		bytes = append(bytes, tx.Payload.Memo...)
 	}
 
-	return []xc.TxDataToSign{bytes}, nil
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(bytes)}, nil
 }
 
 // AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
+func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if len(signatures) != 1 {
 		return errors.New("only one signature is allowed")
 	}
@@ -176,7 +176,7 @@ func (tx *Tx) AddSignatures(signatures ...xc.TxSignature) error {
 	}
 
 	signature := signatures[0]
-	tx.Signature = signature
+	tx.Signature = signature.Signature
 
 	return nil
 }

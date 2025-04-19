@@ -33,7 +33,7 @@ func TestNativeTx(t *testing.T) {
 	require.Len(t, hashes, 1)
 
 	sig := make([]byte, 64)
-	err = tx.AddSignatures(xc.TxSignature(sig))
+	err = tx.AddSignatures(&xc.SignatureResponse{Signature: sig})
 	require.NoError(t, err)
 
 	bz, err := tx.Serialize()
@@ -88,7 +88,7 @@ func TestTokenTx(t *testing.T) {
 	require.Len(t, hashes, 1)
 
 	sig := make([]byte, 64)
-	err = tx.AddSignatures(xc.TxSignature(sig))
+	err = tx.AddSignatures(&xc.SignatureResponse{Signature: sig})
 	require.NoError(t, err)
 
 	bz, err := tx.Serialize()
