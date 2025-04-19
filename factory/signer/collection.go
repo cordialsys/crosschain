@@ -38,22 +38,22 @@ func (s *Collection) AddAuxSigner(signer *Signer, address xc.Address) {
 	s.AddSigner(signer, address, false)
 }
 
-func (s *Collection) GetSigner(address xc.Address) (*Signer, bool) {
+func (s *Collection) GetSigner(address xc.Address) (*Signer, xc.Address, bool) {
 	for _, item := range s.items {
 		if item.address == address || (item.mainSigner && address == "") {
-			return item.signer, true
+			return item.signer, item.address, true
 		}
 	}
-	return nil, false
+	return nil, "", false
 }
 
 func (s *Collection) HasSigner(address xc.Address) bool {
-	_, ok := s.GetSigner(address)
+	_, _, ok := s.GetSigner(address)
 	return ok
 }
 
 func (s *Collection) Sign(address xc.Address, payload []byte) (*xc.SignatureResponse, error) {
-	signer, ok := s.GetSigner(address)
+	signer, theAddr, ok := s.GetSigner(address)
 	if !ok {
 		return nil, fmt.Errorf("signer not found for address '%s'", address)
 	}
@@ -64,6 +64,6 @@ func (s *Collection) Sign(address xc.Address, payload []byte) (*xc.SignatureResp
 	if err != nil {
 		return nil, err
 	}
-	signature.Address = address
+	signature.Address = theAddr
 	return signature, nil
 }

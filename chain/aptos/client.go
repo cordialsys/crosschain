@@ -17,7 +17,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/cordialsys/crosschain/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,64 +24,20 @@ import (
 type Client struct {
 	Asset       xc.ITask
 	AptosClient *aptosclient.RestClient
-	interceptor *utils.HttpInterceptor
 }
 
 var _ xclient.Client = &Client{}
 
-// Some APTOS responses are incompatible for our current APTOS library.
-// The differences are minor, but hard to accomodate in the library.  An issue opened, but
-// since the differences are in data we don't need, we can surgically remove them here :)
-// - Transaction.signature type incompatible
-func ReplaceIncompatiableTxResponses(body []byte) []byte {
-	data := map[string]json.RawMessage{}
-
-	err := json.Unmarshal(body, &data)
-	if err != nil {
-		panic(err)
-	}
-
-	// - consider Block.transactions[].signature
-	if txs, ok := data["transactions"]; ok {
-		txsData := []map[string]json.RawMessage{}
-		err := json.Unmarshal(txs, &txsData)
-		if err != nil {
-			panic(err)
-		}
-		for _, tx := range txsData {
-			delete(tx, "signature")
-		}
-		bz, err := json.Marshal(txsData)
-		if err != nil {
-			panic(err)
-		}
-		data["transactions"] = bz
-	}
-	// - consider Transaction.signature
-	delete(data, "signature")
-
-	newBody, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	// return body
-	return newBody
-}
-
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
-	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableTxResponses)
 	httpClient := &http.Client{
-		Transport: interceptor,
-		Timeout:   30 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 	client, err := aptosclient.DialWithClient(context.Background(), cfg.URL, httpClient)
 	return &Client{
 		cfgI,
 		client,
-		interceptor,
 	}, err
 }
 
@@ -200,7 +155,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	tx_bz, err := tx.Serialize()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not serialize tx: %v", err)
 	}
 	newTxn, err := client.AptosClient.SubmitSignedBCSTransaction(tx_bz)
 	_ = newTxn
@@ -262,8 +217,6 @@ func parseContractAddress(typeString string) string {
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	client.interceptor.Enable()
-	defer client.interceptor.Disable()
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
 		if aptosErr, ok := err.(*aptostypes.RestError); ok {
@@ -273,7 +226,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		return xclient.LegacyTxInfo{}, err
 	}
-	client.interceptor.Disable()
 
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
 	if err != nil {
@@ -291,6 +243,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	unit_price := tx.GasUnitPrice
 	gas_used := tx.GasUsed
 	feeu256 := xc.NewAmountBlockchainFromUint64(gas_used * unit_price)
+	feePayerAddress := ""
+	if tx.Signature != nil {
+		if tx.Signature.FeePayerAddress != "" {
+			feePayerAddress = tx.Signature.FeePayerAddress
+		}
+	}
 
 	coinChanges := []ChangeAndEvents{}
 	// we look at the changes in a transaction and join them with the events.
@@ -422,6 +380,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Sources:       sources,
 		Destinations:  destinations,
 		Fee:           feeu256,
+		FeePayer:      xc.Address(feePayerAddress),
 		Confirmations: int64(confirmations),
 		BlockHash:     fmt.Sprintf("%d", tx.Version),
 		// convert usec to sec
@@ -547,8 +506,6 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		height = ledger.BlockHeight
 	}
 
-	client.interceptor.Enable()
-	defer client.interceptor.Disable()
 	aptosBlock, err := client.AptosClient.GetBlockByHeight(fmt.Sprint(height), true)
 	if err != nil {
 		return nil, err

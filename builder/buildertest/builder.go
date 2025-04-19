@@ -44,3 +44,4 @@ var OptionPriority = builder.OptionPriority
 var OptionPublicKey = builder.OptionPublicKey
 var OptionMemo = builder.OptionMemo
 var OptionTxInput = builder.WithTxInputOptions
+var OptionFeePayer = builder.OptionFeePayer

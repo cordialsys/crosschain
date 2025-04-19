@@ -44,3 +44,30 @@ func (s *AptosTestSuite) TestGetAddressFromPublicKeyErr() {
 	require.Equal(xc.Address(""), address)
 	require.EqualError(err, "invalid format for ed25519 public key")
 }
+
+func (s *AptosTestSuite) TestDecodeHex() {
+	require := s.Require()
+
+	// zero pad 1
+	hexString := "0x8ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19"
+	decoded, err := DecodeAddress(hexString)
+	require.NoError(err)
+	require.Equal("08ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19", hex.EncodeToString(decoded[:]))
+
+	// zero pad 2
+	hexString = "0x6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19"
+	decoded, err = DecodeAddress(hexString)
+	require.NoError(err)
+	require.Equal("00006e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19", hex.EncodeToString(decoded[:]))
+
+	// not long enough for address
+	hexString = "1234567890abcdef"
+	decoded, err = DecodeAddress(hexString)
+	require.Error(err)
+
+	// no zero-pad
+	hexString = "0x11116e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19"
+	decoded, err = DecodeAddress(hexString)
+	require.NoError(err)
+	require.Equal("11116e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19", hex.EncodeToString(decoded[:]))
+}
