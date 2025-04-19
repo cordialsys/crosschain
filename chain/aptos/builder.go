@@ -15,6 +15,10 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
+var _ xcbuilder.BuilderSupportsFeePayer = TxBuilder{}
+
+func (txBuilder TxBuilder) SupportsFeePayer() {
+}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -31,30 +35,30 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		return &Tx{}, errors.New("xc.TxInput is not from an aptos chain")
 	}
 
+	feePayer, ok := args.GetFeePayer()
+	if !ok {
+		feePayer = args.GetFrom()
+	}
+
 	if contract, ok := args.GetContract(); ok {
-		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, local_input)
+		return txBuilder.NewTokenTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), contract, local_input)
 	} else {
-		return txBuilder.NewNativeTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
+		return txBuilder.NewNativeTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), local_input)
 	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input *tx_input.TxInput) (xc.Tx, error) {
 
-	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-
-	decoded, err := DecodeHex(string(from))
+	from_addr, err := DecodeAddress(string(from))
 	if err != nil {
 		return &Tx{}, err
 	}
-	copy(from_addr[:], decoded)
 
-	decoded, err = DecodeHex(string(to))
+	to_addr, err := DecodeAddress(string(to))
 	if err != nil {
 		return &Tx{}, err
 	}
-	copy(to_addr[:], decoded)
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
 
 	chain_id := input.ChainId
@@ -70,8 +74,8 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		},
 	}
 
-	return &Tx{
-		tx: transactionbuilder.RawTransaction{
+	tx := &Tx{
+		rawTx: transactionbuilder.RawTransaction{
 			Sender:         from_addr,
 			SequenceNumber: input.SequenceNumber,
 			Payload:        payload,
@@ -82,20 +86,22 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 			ChainId:                 uint8(chain_id),
 		},
 		Input: input,
-	}, nil
+	}
+
+	if feePayer != from {
+		tx.extraFeePayer = feePayer
+	}
+	return tx, nil
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input *tx_input.TxInput) (xc.Tx, error) {
+func (txb *TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input *tx_input.TxInput) (xc.Tx, error) {
 
-	to_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-	from_addr := [transactionbuilder.ADDRESS_LENGTH]byte{}
-	decoded, err := DecodeHex(string(from))
+	from_addr, err := DecodeAddress(string(from))
 	if err != nil {
 		return &Tx{}, err
 	}
-	copy(from_addr[:], decoded)
-	decoded, err = DecodeHex(string(to))
+	to_addr, err := DecodeAddress(string(to))
 	if err != nil {
 		return &Tx{}, err
 	}
@@ -119,9 +125,8 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 			to_addr[:], toAmountBytes,
 		},
 	}
-	// TODO validate max fee
-	return &Tx{
-		tx: transactionbuilder.RawTransaction{
+	tx := &Tx{
+		rawTx: transactionbuilder.RawTransaction{
 			Sender:         from_addr,
 			SequenceNumber: input.SequenceNumber,
 			Payload:        payload,
@@ -132,5 +137,9 @@ func (txb *TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc
 			ChainId:                 uint8(chain_id),
 		},
 		Input: input,
-	}, nil
+	}
+	if feePayer != from {
+		tx.extraFeePayer = feePayer
+	}
+	return tx, nil
 }
