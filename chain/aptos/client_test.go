@@ -132,8 +132,6 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
-	hash := tf.Hash()
-	require.Len(hash, 64)
 
 	// add signature
 	sig := []byte{}
@@ -146,6 +144,8 @@ func (s *AptosTestSuite) TestSubmitTx() {
 		Address:   from,
 	})
 	require.NoError(err)
+	hash := tf.Hash()
+	require.Len(hash, 64)
 
 	client, err := NewClient(asset)
 	require.NoError(err)
@@ -398,8 +398,6 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
-	hash := tf.Hash()
-	require.Len(hash, 64)
 
 	// add signature
 	sig := []byte{}
@@ -412,6 +410,8 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 		Address:   from,
 	})
 	require.NoError(err)
+	hash := tf.Hash()
+	require.Len(hash, 64)
 
 	ser, err := tf.Serialize()
 	require.NoError(err)
@@ -444,8 +444,6 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
-	hash := tf.Hash()
-	require.Len(hash, 64)
 
 	// add signature
 	sig := []byte{}
@@ -458,6 +456,8 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 		Address:   from,
 	})
 	require.NoError(err)
+	hash := tf.Hash()
+	require.Len(hash, 64)
 
 	ser, err := tf.Serialize()
 	require.NoError(err)
@@ -465,6 +465,62 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	require.Equal("a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", hex.EncodeToString(ser))
 
 	// use invalid contract address
-	_, err = builder.NewTokenTransfer(from, to, amount, xc.ContractAddress("0x112345"), input)
+	_, err = builder.NewTokenTransfer(from, from, to, amount, xc.ContractAddress("0x112345"), input)
 	require.ErrorContains(err, "Invalid struct tag string literal")
+}
+
+func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
+	require := s.Require()
+
+	native_asset := xc.NewChainConfig("APTOS").WithNet("devnet")
+	builder, _ := NewTxBuilder(native_asset.Base())
+	from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
+	to := xc.Address("0xbb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00")
+	feePayer := xc.Address("0x8ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b19")
+	amount := xc.NewAmountBlockchainFromUint64(1)
+	pubkey := []byte{1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8}
+	input := &tx_input.TxInput{
+		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
+		SequenceNumber:  3,
+		GasLimit:        2000,
+		GasPrice:        10,
+		Timestamp:       12345,
+		ChainId:         1,
+		Pubkey:          pubkey,
+	}
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		buildertest.OptionContractAddress("0x1::Coin::USDC"),
+		buildertest.OptionFeePayer(feePayer),
+	)
+	tf, err := builder.Transfer(args, input)
+	require.NoError(err)
+	require.NotNil(tf)
+
+	// add signature
+	sig := []byte{}
+	for i := 0; i < 64; i++ {
+		sig = append(sig, byte(i))
+	}
+	err = tf.AddSignatures(&xc.SignatureResponse{
+		Signature: sig,
+		PublicKey: pubkey,
+		Address:   from,
+	}, &xc.SignatureResponse{
+		Signature: sig,
+		PublicKey: pubkey,
+		Address:   feePayer,
+	})
+	require.NoError(err)
+
+	hash := tf.Hash()
+	require.Len(hash, 64)
+
+	ser, err := tf.Serialize()
+	require.NoError(err)
+	require.True(len(ser) > 64)
+	require.Equal(
+		"a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e00000000000001030020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f000008ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b190020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+		hex.EncodeToString(ser),
+	)
 }
