@@ -185,6 +185,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		To:        string(args.GetTo()),
 		Memo:      memoMaybe,
 		Priority:  string(priorityMaybe),
+		FeePayer:  types.NewFeePayerInfoOrNil(&args),
 	})
 	if err != nil {
 		return nil, err
