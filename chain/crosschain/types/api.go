@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -45,11 +46,37 @@ type TxInputReq struct {
 	To      string `json:"to"`
 	Balance string `json:"balance"`
 
+	FeePayer *FeePayerInfo `json:"fee_payer,omitempty"`
+
 	// Optional transfer parameters:
 	// public key of the signing address, in hex
 	PublicKey string `json:"public_key,omitempty"`
 	Memo      string `json:"memo,omitempty"`
 	Priority  string `json:"priority,omitempty"`
+}
+
+type FeePayerInfo struct {
+	// Address of the fee payer
+	Address string `json:"address"`
+	// Hex encoded public key
+	PublicKey string `json:"public_key"`
+}
+
+type FeePayerGetter interface {
+	GetFeePayer() (xc.Address, bool)
+	GetFeePayerPublicKey() ([]byte, bool)
+}
+
+func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
+	address, ok := feePayerGetter.GetFeePayer()
+	if !ok {
+		return nil
+	}
+	publicKey, ok := feePayerGetter.GetFeePayerPublicKey()
+	if !ok {
+		return nil
+	}
+	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey)}
 }
 
 type StakingInputReq struct {
@@ -58,6 +85,7 @@ type StakingInputReq struct {
 	Validator string             `json:"validator,omitempty"`
 	Account   string             `json:"account,omitempty"`
 	Provider  xc.StakingProvider `json:"provider,omitempty"`
+	FeePayer  *FeePayerInfo      `json:"fee_payer,omitempty"`
 }
 
 type LegacyTxInputRes struct {

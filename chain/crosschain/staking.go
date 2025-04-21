@@ -52,6 +52,7 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 		From:     string(args.GetFrom()),
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
+		FeePayer: types.NewFeePayerInfoOrNil(&args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -76,6 +77,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		From:     string(args.GetFrom()),
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
+		FeePayer: types.NewFeePayerInfoOrNil(&args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -100,6 +102,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 		From:     string(args.GetFrom()),
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
+		FeePayer: types.NewFeePayerInfoOrNil(&args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
