@@ -78,12 +78,6 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 	collection := signer.NewCollection()
 
-	if feePayer {
-		feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
-		require.NoError(t, err)
-		collection.AddAuxSigner(feePayerSigner, feePayerWalletAddress)
-	}
-
 	publicKey, err := mainSigner.PublicKey()
 	require.NoError(t, err)
 
@@ -106,7 +100,13 @@ func TestTransfer(t *testing.T) {
 		builder.OptionPublicKey(publicKey),
 	}
 	if feePayer {
-		tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerWalletAddress))
+		feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+		require.NoError(t, err)
+		collection.AddAuxSigner(feePayerSigner, feePayerWalletAddress)
+		tfOptions = append(tfOptions, builder.OptionFeePayer(
+			feePayerWalletAddress,
+			feePayerSigner.MustPublicKey(),
+		))
 		_, ok := txBuilder.(builder.BuilderSupportsFeePayer)
 		if !ok {
 			t.Fatalf("%s tx builder does not support fee payer", chainConfig.Chain)

@@ -29,6 +29,10 @@ func (args *StakeArgs) GetPublicKey() ([]byte, bool)           { return args.opt
 func (args *StakeArgs) GetValidator() (string, bool)      { return args.options.GetValidator() }
 func (args *StakeArgs) GetStakeOwner() (xc.Address, bool) { return args.options.GetStakeOwner() }
 func (args *StakeArgs) GetStakeAccount() (string, bool)   { return args.options.GetStakeAccount() }
+func (args *StakeArgs) GetFeePayer() (xc.Address, bool)   { return args.options.GetFeePayer() }
+func (args *StakeArgs) GetFeePayerPublicKey() ([]byte, bool) {
+	return args.options.GetFeePayerPublicKey()
+}
 
 func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (StakeArgs, error) {
 	builderOptions := builderOptions{}

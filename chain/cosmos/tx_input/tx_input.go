@@ -23,13 +23,15 @@ var BANK CosmoAssetType = "bank"
 // TxInput for Cosmos
 type TxInput struct {
 	xc.TxInputEnvelope
-	AccountNumber       uint64  `json:"account_number,omitempty"`
-	Sequence            uint64  `json:"sequence,omitempty"`
-	GasLimit            uint64  `json:"gas_limit,omitempty"`
-	GasPrice            float64 `json:"gas_price,omitempty"`
-	LegacyMemo          string  `json:"memo,omitempty"`
-	LegacyFromPublicKey []byte  `json:"from_pubkey,omitempty"`
-	TimeoutHeight       uint64  `json:"timeout_height"`
+	AccountNumber         uint64  `json:"account_number,omitempty"`
+	Sequence              uint64  `json:"sequence,omitempty"`
+	FeePayerSequence      uint64  `json:"fee_payer_sequence,omitempty"`
+	FeePayerAccountNumber uint64  `json:"fee_payer_account_number,omitempty"`
+	GasLimit              uint64  `json:"gas_limit,omitempty"`
+	GasPrice              float64 `json:"gas_price,omitempty"`
+	LegacyMemo            string  `json:"memo,omitempty"`
+	LegacyFromPublicKey   []byte  `json:"from_pubkey,omitempty"`
+	TimeoutHeight         uint64  `json:"timeout_height"`
 
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
 	ChainId   string         `json:"chain_id,omitempty"`

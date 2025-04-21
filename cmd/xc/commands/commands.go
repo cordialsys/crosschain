@@ -378,7 +378,7 @@ func CmdTxTransfer() *cobra.Command {
 					return fmt.Errorf("could not derive fee-payer address: %v", err)
 				}
 				logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
-				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress))
+				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress, feePayerPublicKey))
 				signerCollection.AddAuxSigner(feePayerSigner, feePayerAddress)
 			}
 

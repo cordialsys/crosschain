@@ -491,7 +491,7 @@ func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
 	args := buildertest.MustNewTransferArgs(
 		from, to, amount,
 		buildertest.OptionContractAddress("0x1::Coin::USDC"),
-		buildertest.OptionFeePayer(feePayer),
+		buildertest.OptionFeePayer(feePayer, []byte{}),
 	)
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)

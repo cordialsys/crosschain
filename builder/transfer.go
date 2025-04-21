@@ -32,6 +32,10 @@ func (args *TransferArgs) GetFeePayer() (xc.Address, bool) {
 	return args.options.GetFeePayer()
 }
 
+func (args *TransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
+	return args.options.GetFeePayerPublicKey()
+}
+
 // Decimals for token contract, which may be needed for token transfers on some chains
 func (args *TransferArgs) GetDecimals() (int, bool) {
 	return args.options.GetDecimals()
@@ -71,6 +75,14 @@ func (args *TransferArgs) SetContract(contract xc.ContractAddress) {
 	args.options.SetContract(contract)
 }
 
+func (args *TransferArgs) SetPublicKey(publicKey []byte) {
+	args.options.publicKey = &publicKey
+}
+
 func (args *TransferArgs) SetFeePayer(feePayer xc.Address) {
 	args.options.SetFeePayer(feePayer)
+}
+
+func (args *TransferArgs) SetFeePayerPublicKey(feePayerPublicKey []byte) {
+	args.options.SetFeePayerPublicKey(feePayerPublicKey)
 }

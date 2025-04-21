@@ -74,7 +74,7 @@ func (s *CrosschainTestSuite) TestFeePayerSpend() {
 		xc.Address(from),
 		xc.Address(to),
 		xc.NewAmountBlockchainFromUint64(1_000_000_000),
-		builder.OptionFeePayer(xc.Address(feePayer)),
+		builder.OptionFeePayer(xc.Address(feePayer), []byte{}),
 	)
 	_, err = txBuilder.Transfer(args, input)
 	require.ErrorContains(err, "no coins to spend")

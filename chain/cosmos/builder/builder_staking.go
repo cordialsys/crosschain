@@ -8,6 +8,7 @@ import (
 	stakingtypes "cosmossdk.io/x/staking/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cosmos/cosmos-sdk/types"
 )
@@ -33,16 +34,12 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	}
 
 	fees := txBuilder.calculateFees(amount, "", &stakeInput.TxInput, false)
-	memo, _ := args.GetMemo()
-	pubkey, ok := args.GetPublicKey()
+	_, ok = args.GetPublicKey()
 	if !ok {
 		return nil, fmt.Errorf("associated public key for %s was not passed as an argument", from)
 	}
 
-	return txBuilder.createTxWithMsg(&stakeInput.TxInput, msg, txArgs{
-		Memo:          memo,
-		FromPublicKey: pubkey,
-	}, fees)
+	return txBuilder.createTxWithMsg(&stakeInput.TxInput, msg, tx.NewTxArgsFromStakingArgs(args, &stakeInput.TxInput), fees)
 }
 
 func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
@@ -67,16 +64,12 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	}
 
 	fees := txBuilder.calculateFees(amount, "", &stakeInput.TxInput, false)
-	memo, _ := args.GetMemo()
-	pubkey, ok := args.GetPublicKey()
+	_, ok = args.GetPublicKey()
 	if !ok {
 		return nil, fmt.Errorf("associated public key for %s was not passed as an argument", from)
 	}
 
-	return txBuilder.createTxWithMsg(&stakeInput.TxInput, msg, txArgs{
-		Memo:          memo,
-		FromPublicKey: pubkey,
-	}, fees)
+	return txBuilder.createTxWithMsg(&stakeInput.TxInput, msg, tx.NewTxArgsFromStakingArgs(args, &stakeInput.TxInput), fees)
 }
 
 func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
@@ -100,14 +93,10 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 	}
 
 	fees := txBuilder.calculateFees(amount, "", &withdrawInput.TxInput, false)
-	memo, _ := args.GetMemo()
-	pubkey, ok := args.GetPublicKey()
+	_, ok = args.GetPublicKey()
 	if !ok {
 		return nil, fmt.Errorf("associated public key for %s was not passed as an argument", from)
 	}
 
-	return txBuilder.createTxWithMsg(&withdrawInput.TxInput, msg, txArgs{
-		Memo:          memo,
-		FromPublicKey: pubkey,
-	}, fees)
+	return txBuilder.createTxWithMsg(&withdrawInput.TxInput, msg, tx.NewTxArgsFromStakingArgs(args, &withdrawInput.TxInput), fees)
 }

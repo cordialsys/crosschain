@@ -41,6 +41,9 @@ jobs:
             decimals: 6
           - chain: XPLA
             image: us-docker.pkg.dev/cordialsys/crosschain/cosmos:latest
+          - chain: XPLA
+            image: us-docker.pkg.dev/cordialsys/crosschain/cosmos:latest
+            fee-payer: true
           - chain: BTC
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest

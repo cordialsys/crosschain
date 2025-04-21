@@ -62,7 +62,8 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 }
 
 func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
-	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "")
+	feePayer, _ := args.GetFeePayer()
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "", feePayer)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +73,8 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 }
 
 func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
-	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "")
+	feePayer, _ := args.GetFeePayer()
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "", feePayer)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +84,8 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 }
 
 func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
-	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "")
+	feePayer, _ := args.GetFeePayer()
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), "", feePayer)
 	if err != nil {
 		return nil, err
 	}

@@ -44,6 +44,10 @@ func registerInterfacesInjective(registry codectypes.InterfaceRegistry) {
 		&injective.EthAccount{},
 	)
 	registry.RegisterImplementations(
+		(*sdk.AccountI)(nil),
+		&injective.EthAccount{},
+	)
+	registry.RegisterImplementations(
 		(*authtypes.GenesisAccount)(nil),
 		&injective.EthAccount{},
 	)

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/client"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -66,16 +67,17 @@ func TestFetchTxInput(t *testing.T) {
 		from      string
 		pubKeyStr string
 		to        string
+		feePayer  string
 		resp      interface{}
 		txInput   *tx_input.TxInput
 		err       string
 	}{
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			[]string{
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {"latest_block_height": "123"},"validator_info": {}}}`,
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
@@ -84,8 +86,7 @@ func TestFetchTxInput(t *testing.T) {
 				// get tx simulate
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
-			// `{"uluna": "0.015"}`,
-			&TxInput{
+			txInput: &tx_input.TxInput{
 				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR")),
 				AccountNumber:       17241,
@@ -97,14 +98,14 @@ func TestFetchTxInput(t *testing.T) {
 				AssetType:           tx_input.BANK,
 				ChainId:             "chainId",
 			},
-			"",
+			err: "",
 		},
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla").WithDriver(xc.DriverCosmosEvmos),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			"AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
-			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
-			[]string{
+			asset:     xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla").WithDriver(xc.DriverCosmosEvmos),
+			from:      "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			pubKeyStr: "AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
+			to:        "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
+			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
@@ -113,7 +114,7 @@ func TestFetchTxInput(t *testing.T) {
 				// get tx simulate
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
-			&TxInput{
+			txInput: &tx_input.TxInput{
 				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:       1442,
@@ -125,17 +126,20 @@ func TestFetchTxInput(t *testing.T) {
 				AssetType:           tx_input.BANK,
 				ChainId:             "chainId",
 			},
-			"",
+			err: "",
 		},
 		// CW20 token type
 		{
-			xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla").WithDriver(xc.DriverCosmosEvmos),
-			"xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			"AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
-			"xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
-			[]string{
+			asset:     xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla").WithDriver(xc.DriverCosmosEvmos),
+			from:      "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			pubKeyStr: "AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
+			to:        "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
+			resp: []string{
+				// get-account
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
+				// chain status
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				// fee estimation
 				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance (fail)
 				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
@@ -144,7 +148,7 @@ func TestFetchTxInput(t *testing.T) {
 				// get tx simulate
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
-			&TxInput{
+			txInput: &tx_input.TxInput{
 				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
 				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:       1442,
@@ -156,61 +160,94 @@ func TestFetchTxInput(t *testing.T) {
 				AssetType:           tx_input.CW20,
 				ChainId:             "chainId",
 			},
-			"",
+			err: "",
+		},
+		{
+			// fee-payer
+			asset:     xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla").WithDriver(xc.DriverCosmosEvmos),
+			from:      "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
+			pubKeyStr: "AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C",
+			to:        "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
+			feePayer:  "xpla1ku8pgxxga27x6v62gvu4h9dpnk7y8kcp92grl0",
+			resp: []string{
+				// get-account
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
+				// get-account (fee-payer)
+				`{"jsonrpc":"2.0","id":1,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
+				// chain status
+				`{"jsonrpc": "2.0","id": 2,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
+				// fee estimation
+				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// get x/bank balance
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get tx simulate
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
+			},
+			txInput: &tx_input.TxInput{
+				TxInputEnvelope:       xc.TxInputEnvelope{Type: "cosmos"},
+				LegacyFromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
+				AccountNumber:         1442,
+				Sequence:              4,
+				FeePayerAccountNumber: 1442,
+				FeePayerSequence:      4,
+				GasLimit:              (50_000 * 110) / 100,
+				TimeoutHeight:         client.TimeoutInBlocks,
+				GasPrice:              850000,
+				LegacyMemo:            "",
+				AssetType:             tx_input.BANK,
+				ChainId:               "chainId",
+			},
+			err: "",
 		},
 		// error getting account from RPC
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			``,
-			// `{"uluna": "0.015"}`,
-			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
-			"failed to get account data",
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp:      ``,
+			txInput:   &tx_input.TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
+			err:       "failed to get account data",
 		},
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`null`,
-			// `{"uluna": "0.015"}`,
-			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
-			"failed to get account data",
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp:      `null`,
+			txInput:   &tx_input.TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
+			err:       "failed to get account data",
 		},
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			`{}`,
-			// `{"uluna": "0.015"}`,
-			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
-			"failed to get account data",
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp:      `{}`,
+			txInput:   &tx_input.TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
+			err:       "failed to get account data",
 		},
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
-			// `{"uluna": "0.015"}`,
-			&TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
-			"failed to get account data",
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp:      `{"message": "custom RPC error", "code": 123}`,
+			txInput:   &tx_input.TxInput{TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"}},
+			err:       "failed to get account data",
 		},
 		// error getting gas
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			[]string{
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
 				`{"message": "custom HTTP error", "code": 123}`,
 			},
-			&TxInput{
+			txInput: &TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
 				Sequence:        3,
@@ -218,19 +255,19 @@ func TestFetchTxInput(t *testing.T) {
 				TimeoutHeight:   client.TimeoutInBlocks,
 				ChainId:         "chainId",
 			},
-			"failed to estimate gas",
+			err: "failed to estimate gas",
 		},
 		{
-			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
-			"terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
-			"",
-			"terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
-			[]string{
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
 				"null",
 			},
-			&TxInput{
+			txInput: &tx_input.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
 				AccountNumber:   17241,
 				GasLimit:        gas.NativeTransferGasLimit,
@@ -238,7 +275,7 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:        3,
 				ChainId:         "chainId",
 			},
-			"failed to estimate gas",
+			err: "failed to estimate gas",
 		},
 	}
 
@@ -253,7 +290,14 @@ func TestFetchTxInput(t *testing.T) {
 			require.NoError(t, err)
 			from := xc.Address(v.from)
 			to := xc.Address(v.to)
-			input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+			args, err := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+			require.NoError(t, err)
+
+			if v.feePayer != "" {
+				args.SetFeePayer(xc.Address(v.feePayer))
+			}
+
+			input, err := client.FetchTransferInput(context.Background(), args)
 
 			if v.err != "" {
 				require.ErrorContains(t, err, v.err)
@@ -308,6 +352,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "LUNA",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(1000000),
+				FeePayer:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				BlockIndex:      2754866,
 				BlockTime:       1668891362,
 				Confirmations:   48860,
@@ -354,6 +399,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "XPLA",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(112200000000000000),
+				FeePayer:        "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				BlockIndex:      1359533,
 				BlockTime:       1669849454,
 				Confirmations:   107,
@@ -399,6 +445,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 				Amount:          xc.NewAmountBlockchainFromUint64(18480304),
 				Fee:             xc.NewAmountBlockchainFromUint64(583610850000000000),
+				FeePayer:        "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 				BlockIndex:      4855691,
 				BlockTime:       1669849454,
 				Confirmations:   198,
@@ -495,6 +542,7 @@ func TestFetchTxInfo(t *testing.T) {
 				ContractAddress: "XPLA",
 				Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
 				Fee:             xc.NewAmountBlockchainFromUint64(112200000000000000),
+				FeePayer:        "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				BlockIndex:      1359533,
 				BlockTime:       1669849454,
 				Confirmations:   107,
