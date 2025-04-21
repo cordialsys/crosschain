@@ -28,6 +28,10 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
+var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
+
+func (txBuilder TxBuilder) SupportsFeePayer() {
+}
 
 // NewTxBuilder creates a new Cosmos TxBuilder
 func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -89,10 +93,7 @@ func (txBuilder TxBuilder) NewBankTransfer(args xcbuilder.TransferArgs, input xc
 	}
 
 	fees := txBuilder.calculateFees(args.GetAmount(), contractMaybe, txInput, true)
-	return txBuilder.createTxWithMsg(txInput, msgSend, txArgs{
-		Memo:          txInput.LegacyMemo,
-		FromPublicKey: txInput.LegacyFromPublicKey,
-	}, fees)
+	return txBuilder.createTxWithMsg(txInput, msgSend, tx.NewTxArgsFromTransferArgs(args, txInput), fees)
 }
 
 func (txBuilder TxBuilder) NewCW20Transfer(args xcbuilder.TransferArgs, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
@@ -110,10 +111,7 @@ func (txBuilder TxBuilder) NewCW20Transfer(args xcbuilder.TransferArgs, contract
 
 	fees := txBuilder.calculateFees(args.GetAmount(), contract, txInput, false)
 
-	return txBuilder.createTxWithMsg(txInput, msgSend, txArgs{
-		Memo:          txInput.LegacyMemo,
-		FromPublicKey: txInput.LegacyFromPublicKey,
-	}, fees)
+	return txBuilder.createTxWithMsg(txInput, msgSend, tx.NewTxArgsFromTransferArgs(args, txInput), fees)
 }
 
 func (txBuilder TxBuilder) GetDenom(contract xc.ContractAddress) string {
@@ -181,19 +179,13 @@ func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, contractMay
 	return feeCoins
 }
 
-type txArgs struct {
-	Memo          string
-	FromPublicKey []byte
-}
-
 // createTxWithMsg creates a new Tx given Cosmos Msg
-func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Msg, args txArgs, fees types.Coins) (xc.Tx, error) {
+func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Msg, args tx.TxArgs, fees types.Coins) (xc.Tx, error) {
 	return tx.NewTx(
 		txBuilder.Asset,
+		args,
 		*input,
 		[]types.Msg{msg},
 		fees,
-		args.FromPublicKey,
-		args.Memo,
 	), nil
 }

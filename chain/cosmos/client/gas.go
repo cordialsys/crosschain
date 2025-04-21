@@ -27,11 +27,14 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 	if err != nil {
 		return zero, fmt.Errorf("could not build estimate gas tx: %v", err)
 	}
-	txBytes, _ := tx.Serialize()
+	txBytes, err := tx.Serialize()
+	if err != nil {
+		return zero, fmt.Errorf("could not serialize tx: %v", err)
+	}
 
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
-		return zero, err
+		return zero, fmt.Errorf("could not broadcast tx: %v", err)
 	}
 	native := client.Asset.GetChain()
 	denoms := []string{
@@ -98,6 +101,8 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	input.GasPrice = 0
 	input.AssetType = tx_input.BANK
 	args, _ := xcbuilder.NewTransferArgs(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1))
+	args.SetPublicKey(fromPk.Bytes())
+
 	tx1, err := builder.Transfer(args, input)
 	if err != nil {
 		return nil, err

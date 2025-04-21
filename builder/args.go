@@ -11,7 +11,8 @@ type builderOptions struct {
 	timestamp      *int64
 	gasFeePriority *xc.GasFeePriority
 	// avoiding use of map to ensure determinism in iteration and thread safety
-	publicKey *[]byte
+	publicKey         *[]byte
+	feePayerPublicKey *[]byte
 
 	validator    *string
 	stakeOwner   *xc.Address
@@ -53,6 +54,7 @@ func (opts *builderOptions) GetPublicKey() ([]byte, bool)            { return ge
 func (opts *builderOptions) GetContract() (xc.ContractAddress, bool) { return get(opts.contract) }
 func (opts *builderOptions) GetDecimals() (int, bool)                { return get(opts.decimals) }
 func (opts *builderOptions) GetFeePayer() (xc.Address, bool)         { return get(opts.feePayer) }
+func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)    { return get(opts.feePayerPublicKey) }
 
 // Other options
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
@@ -69,6 +71,10 @@ func (opts *builderOptions) SetDecimals(decimals int) {
 
 func (opts *builderOptions) SetFeePayer(feePayer xc.Address) {
 	opts.feePayer = &feePayer
+}
+
+func (opts *builderOptions) SetFeePayerPublicKey(feePayerPublicKey []byte) {
+	opts.feePayerPublicKey = &feePayerPublicKey
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -132,9 +138,10 @@ func OptionStakeAccount(account string) BuilderOption {
 		return nil
 	}
 }
-func OptionFeePayer(feePayer xc.Address) BuilderOption {
+func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.feePayer = &feePayer
+		opts.feePayerPublicKey = &feePayerPublicKey
 		return nil
 	}
 }

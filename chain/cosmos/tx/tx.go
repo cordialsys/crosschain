@@ -19,20 +19,22 @@ import (
 
 // Tx for Cosmos
 type Tx struct {
-	ChainCfg        *xc.ChainBaseConfig
-	Input           tx_input.TxInput
-	Msgs            []types.Msg
-	Fees            types.Coins
-	SignerPublicKey []byte
-	Memo            string
-
+	ChainCfg *xc.ChainBaseConfig
+	Input    tx_input.TxInput
+	Msgs     []types.Msg
+	Fees     types.Coins
+	// SignerPublicKey   []byte
+	// Memo              string
+	// FeePayer          xc.Address
+	// FeePayerPublicKey []byte
+	Args       TxArgs
 	signatures [][]byte
 }
 
-func NewTx(chain *xc.ChainBaseConfig, input tx_input.TxInput, msgs []types.Msg, fees types.Coins, senderPubkey []byte, memo string) *Tx {
+func NewTx(chain *xc.ChainBaseConfig, args TxArgs, input tx_input.TxInput, msgs []types.Msg, fees types.Coins) *Tx {
 	signatures := [][]byte{}
 	return &Tx{
-		chain, input, msgs, fees, senderPubkey, memo, signatures,
+		chain, input, msgs, fees, args, signatures,
 	}
 }
 
@@ -72,6 +74,22 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	}
 
 	sighash := GetSighash(tx.ChainCfg, signDocBytes)
+
+	if tx.Args.FeePayer != "" {
+		signDoc2 := *signDoc
+		signDoc2.AccountNumber = tx.Input.FeePayerAccountNumber
+		serialized2, err := signDoc2.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		sighash2 := GetSighash(tx.ChainCfg, serialized2)
+
+		return []*xc.SignatureRequest{
+			xc.NewSignatureRequest(sighash),
+			xc.NewSignatureRequest(sighash2, tx.Args.FeePayer),
+		}, nil
+	}
+
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
@@ -131,7 +149,7 @@ func GetSighash(asset *xc.ChainBaseConfig, sigData []byte) []byte {
 
 func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 	body := &sdktx.TxBody{
-		Memo:          tx.Memo,
+		Memo:          tx.Args.Memo,
 		TimeoutHeight: tx.Input.TimeoutHeight,
 	}
 	msgsAny, err := sdktx.SetMsgs(tx.Msgs)
@@ -140,7 +158,7 @@ func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 	}
 	body.Messages = msgsAny
 
-	pubkey := address.GetPublicKey(tx.ChainCfg, tx.SignerPublicKey)
+	pubkey := address.GetPublicKey(tx.ChainCfg, tx.Args.FromPublicKey)
 	pubkeyAny, err := codectypes.NewAnyWithValue(pubkey)
 	if err != nil {
 		return nil, err
@@ -158,7 +176,25 @@ func (tx Tx) BuildUnsigned() (*sdktx.SignDoc, error) {
 	signerInfo := []*sdktx.SignerInfo{
 		{PublicKey: pubkeyAny, ModeInfo: modeInfo, Sequence: tx.Input.Sequence},
 	}
-	fee := &sdktx.Fee{Amount: tx.Fees, GasLimit: tx.Input.GasLimit}
+
+	if tx.Args.FeePayer != "" {
+		feePayerPubkey := address.GetPublicKey(tx.ChainCfg, tx.Args.FeePayerPublicKey)
+		feePayerPubkeyAny, err := codectypes.NewAnyWithValue(feePayerPubkey)
+		if err != nil {
+			return nil, err
+		}
+		signerInfo = append(signerInfo, &sdktx.SignerInfo{
+			PublicKey: feePayerPubkeyAny,
+			ModeInfo:  modeInfo,
+			Sequence:  tx.Input.FeePayerSequence,
+		})
+	}
+
+	fee := &sdktx.Fee{
+		Amount:   tx.Fees,
+		GasLimit: tx.Input.GasLimit,
+		Payer:    string(tx.Args.FeePayer),
+	}
 	authInfo := sdktx.AuthInfo{SignerInfos: signerInfo, Fee: fee}
 
 	bodyBytes, err := body.Marshal()

@@ -23,6 +23,7 @@ import (
 	banktypes "cosmossdk.io/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -123,7 +124,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
-	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), contract)
+	feePayer, _ := args.GetFeePayer()
+	baseTxInput, err := client.FetchBaseTxInput(ctx, args.GetFrom(), contract, feePayer)
 	if err != nil {
 		return nil, err
 	}
@@ -170,11 +172,18 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 		if err != nil {
 			return nil, err
 		}
+		sigHashes, err := cosmosTxI.Sighashes()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get sighashes for simulation: %v", err)
+		}
+		signatures := make([]*xc.SignatureResponse, len(sigHashes))
+		for i := range sigHashes {
+			signatures[i] = &xc.SignatureResponse{
+				Signature: make([]byte, 64),
+			}
+		}
 		cosmosTx := cosmosTxI.(*tx.Tx)
-		sig := make([]byte, 64)
-		err = cosmosTx.AddSignatures(&xc.SignatureResponse{
-			Signature: sig,
-		})
+		err = cosmosTx.AddSignatures(signatures...)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +215,7 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 	return nil, simErr
 }
 
-func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
+func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, contractMaybe xc.ContractAddress, feePayerMaybe xc.Address) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
@@ -216,6 +225,16 @@ func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, con
 	}
 	txInput.AccountNumber = account.GetAccountNumber()
 	txInput.Sequence = account.GetSequence()
+
+	if feePayerMaybe != "" {
+		feePayerAccount, err := client.GetAccount(ctx, feePayerMaybe)
+		if err != nil || feePayerAccount == nil {
+			return txInput, fmt.Errorf("failed to get account data for fee-payer %v: %v", feePayerMaybe, err)
+		}
+		txInput.FeePayerSequence = feePayerAccount.GetSequence()
+		txInput.FeePayerAccountNumber = feePayerAccount.GetAccountNumber()
+	}
+
 	switch client.Asset.(type) {
 	case *xc.ChainConfig:
 		txInput.GasLimit = gas.NativeTransferGasLimit
@@ -344,6 +363,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			switch tf := decodedTx.(type) {
 			case types.FeeTx:
 				result.Fee = xc.AmountBlockchain(*tf.GetFee()[0].Amount.BigInt())
+				feePayer, _ := sdk.Bech32ifyAddressBytes(client.Asset.GetChain().ChainPrefix, tf.FeePayer())
+				result.FeePayer = xc.Address(feePayer)
 			default:
 				logrus.Warnf("could not determine transaction type for fee %T", tf)
 			}
@@ -362,6 +383,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			// same as native asset
 			result.FeeContract = ""
 		}
+		result.FeePayer = xc.Address(fee.Payer)
 	}
 	for _, ev := range events.Transfers {
 		contract := ev.Contract
