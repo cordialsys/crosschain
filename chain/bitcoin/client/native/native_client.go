@@ -160,9 +160,9 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 
 	data, _ := hex.DecodeString(resp.Hex)
 	txObject := &tx.Tx{
-		Input:  tx_input.NewTxInput(),
-		MsgTx:  &wire.MsgTx{},
-		Signed: true,
+		UnspentOutputs: []tx_input.Output{},
+		MsgTx:          &wire.MsgTx{},
+		Signed:         true,
 	}
 	txObject.MsgTx.Deserialize(bytes.NewReader(data))
 	inputs := []tx.Input{}
@@ -192,7 +192,7 @@ func (client *NativeClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxH
 			Address: xc.Address(addresses[0].String()),
 		}
 		inputs = append(inputs, input)
-		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
+		txObject.UnspentOutputs = append(txObject.UnspentOutputs, input.Output)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,

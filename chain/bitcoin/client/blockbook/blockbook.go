@@ -40,6 +40,7 @@ type BlockbookClient struct {
 }
 
 var _ xclient.Client = &BlockbookClient{}
+var _ xclient.MultiTransferClient = &BlockbookClient{}
 var _ address.WithAddressDecoder = &BlockbookClient{}
 
 func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
@@ -122,7 +123,7 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 		return nil, err
 	}
 
-	outputs := tx_input.NewOutputs(data, script)
+	outputs := tx_input.NewOutputs(data, script, addr)
 
 	return outputs, nil
 }
@@ -193,10 +194,10 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	// build Tx
 	txObject := &tx.Tx{
-		Input:      tx_input.NewTxInput(),
-		Recipients: []tx.Recipient{},
-		MsgTx:      &wire.MsgTx{},
-		Signed:     true,
+		UnspentOutputs: []tx_input.Output{},
+		Recipients:     []tx.Recipient{},
+		MsgTx:          &wire.MsgTx{},
+		Signed:         true,
 	}
 	inputs := []tx.Input{}
 	// btc chains the native asset and asset are the same
@@ -222,7 +223,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 			input.Address = xc.Address(in.Addresses[0])
 		}
 
-		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
+		txObject.UnspentOutputs = append(txObject.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
 		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxID), in.Vout)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
@@ -316,6 +317,7 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	if err != nil {
 		return input, err
 	}
+	input.Address = args.GetFrom()
 	input.UnspentOutputs = allUnspentOutputs
 	gasPerByte, err := client.EstimateFee(ctx)
 	input.GasPricePerByte = gasPerByte
@@ -332,6 +334,57 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	}
 
 	return input, nil
+}
+
+func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {
+	multiInput := tx_input.NewMultiTransferInput()
+
+	// Fetch all UTXO from all spenders in a flat array
+	allUtxo := []tx_input.Output{}
+	for _, spender := range args.Spenders() {
+		utxo, err := client.UnspentOutputs(ctx, spender.GetFrom())
+		if err != nil {
+			return multiInput, err
+		}
+		allUtxo = append(allUtxo, utxo...)
+	}
+
+	// Calculate the total amount that will be distributed
+	totalAmount := xc.NewAmountBlockchainFromUint64(0)
+	for _, receiver := range args.Receivers() {
+		amount := receiver.GetAmount()
+		totalAmount = totalAmount.Add(&amount)
+	}
+
+	// Sort + Filter the UTXO for the minimum set (+ some ~10 extra) that satisfies the total amount
+	filteredUtxo := tx_input.FilterForMinUtxoSet(allUtxo, totalAmount, 10)
+
+	// Group back by address
+	groupedUtxoByAddress := map[xc.Address][]tx_input.Output{}
+	serialiedByAddress := map[xc.Address]bool{}
+	for _, utxo := range filteredUtxo {
+		groupedUtxoByAddress[utxo.Address] = append(groupedUtxoByAddress[utxo.Address], utxo)
+	}
+	// iterate over array instead of map to preserve order
+	for _, utxo := range filteredUtxo {
+		if _, ok := serialiedByAddress[utxo.Address]; !ok {
+			multiInput.Inputs = append(multiInput.Inputs, &tx_input.TxInput{
+				UnspentOutputs: groupedUtxoByAddress[utxo.Address],
+				Address:        utxo.Address,
+			})
+		}
+		serialiedByAddress[utxo.Address] = true
+	}
+
+	// Estimate fees
+	gasPerByte, err := client.EstimateFee(ctx)
+	multiInput.GasPricePerByte = gasPerByte
+	if err != nil {
+		return multiInput, err
+	}
+	multiInput.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
+
+	return multiInput, nil
 }
 
 func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {

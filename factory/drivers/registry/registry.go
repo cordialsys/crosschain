@@ -30,8 +30,9 @@ func RegisterTxVariantInput(variant xc.TxVariantInput) {
 	i1, ok1 := variant.(xc.StakeTxInput)
 	i2, ok2 := variant.(xc.UnstakeTxInput)
 	i3, ok3 := variant.(xc.WithdrawTxInput)
-	if !ok1 && !ok2 && !ok3 {
-		panic(fmt.Sprintf("staking input %T must implement one of %T, %T, %T", variant, i1, i2, i3))
+	i4, ok4 := variant.(xc.MultiTransferInput)
+	if !ok1 && !ok2 && !ok3 && !ok4 {
+		panic(fmt.Sprintf("staking input %T must implement one of %T, %T, %T, %T", variant, i1, i2, i3, i4))
 	}
 
 	supportedVariantTx = append(supportedVariantTx, variant)

@@ -125,7 +125,7 @@ func TestTxSighashes(t *testing.T) {
 	require := require.New(t)
 	tx := bitcoin_cash.Tx{
 		&bitcointx.Tx{
-			Input: &tx_input.TxInput{},
+			UnspentOutputs: []tx_input.Output{},
 		},
 	}
 	sighashes, err := tx.Sighashes()

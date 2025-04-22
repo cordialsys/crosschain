@@ -2,7 +2,6 @@ package tx_input
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -19,6 +18,10 @@ type Outpoint struct {
 	Index uint32 `json:"index"`
 }
 
+func (o *Outpoint) String() string {
+	return fmt.Sprintf("%s:%d", hex.EncodeToString(o.Hash), o.Index)
+}
+
 func (o *Outpoint) Equals(other *Outpoint) bool {
 	return bytes.Equal(o.Hash, other.Hash) && o.Index == other.Index
 }
@@ -27,13 +30,14 @@ type Output struct {
 	Outpoint     `json:"outpoint"`
 	Value        xc.AmountBlockchain `json:"value"`
 	PubKeyScript []byte              `json:"pubkey_script"`
+	Address      xc.Address          `json:"-"`
 }
 
 // TxInput for Bitcoin
 type TxInput struct {
 	xc.TxInputEnvelope
+	Address         xc.Address          `json:"address"`
 	UnspentOutputs  []Output            `json:"unspent_outputs"`
-	FromPublicKey   []byte              `json:"from_pubkey"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
@@ -44,7 +48,6 @@ func init() {
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithAmount = &TxInput{}
 
 // NewTxInput returns a new Bitcoin TxInput
@@ -117,24 +120,6 @@ func (txInput *TxInput) GetEstimatedSizePerSpentUtxo() uint64 {
 		return 255
 	}
 	return txInput.EstimatedSizePerSpentUtxo
-}
-
-func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
-	txInput.FromPublicKey = publicKeyBytes
-	return nil
-}
-
-func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
-	publicKeyBytes, err := base64.StdEncoding.DecodeString(publicKeyStr)
-	if err != nil {
-		return fmt.Errorf("invalid public key %v: %v", publicKeyStr, err)
-	}
-	// should we force compressed public key here?
-	// if wallet was generated with uncompressed, we should assume that was
-	// intentional, and stick with that.
-	err = txInput.SetPublicKey(publicKeyBytes)
-
-	return err
 }
 
 func (txInput *TxInput) SetAmount(amount xc.AmountBlockchain) {
@@ -233,7 +218,7 @@ func FilterUnconfirmedHeuristic[UTXO UtxoI](unspentOutputs []UTXO) []UTXO {
 	return res
 }
 
-func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte) []Output {
+func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte, address xc.Address) []Output {
 	res := []Output{}
 
 	for _, u := range unspentOutputs {
@@ -249,6 +234,7 @@ func NewOutputs[UTXO UtxoI](unspentOutputs []UTXO, addressScript []byte) []Outpu
 			},
 			Value:        xc.NewAmountBlockchainFromUint64(u.GetValue()),
 			PubKeyScript: addressScript,
+			Address:      address,
 		}
 		log.Debugf("Utoxo hash: %v", u.GetTxHash())
 		res = append(res, output)

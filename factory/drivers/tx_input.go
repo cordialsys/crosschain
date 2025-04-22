@@ -134,6 +134,18 @@ func UnmarshalVariantInput(data []byte) (xc.TxVariantInput, error) {
 	return input, nil
 }
 
+func UnmarshalMultiTransferInput(data []byte) (xc.MultiTransferInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	multiTransfer, ok := inp.(xc.MultiTransferInput)
+	if !ok {
+		return multiTransfer, fmt.Errorf("not a multi-transfer input: %T", inp)
+	}
+	return multiTransfer, nil
+}
+
 func UnmarshalStakingInput(data []byte) (xc.StakeTxInput, error) {
 	inp, err := UnmarshalVariantInput(data)
 	if err != nil {

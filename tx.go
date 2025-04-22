@@ -94,6 +94,10 @@ type TxVariantInput interface {
 }
 
 // Markers for each type of Variant Tx
+type MultiTransferInput interface {
+	TxVariantInput
+	MultiTransfer()
+}
 type StakeTxInput interface {
 	TxVariantInput
 	Staking()
