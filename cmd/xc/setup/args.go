@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/cometbft/cometbft/types/time"
@@ -164,7 +165,7 @@ const DefaultTreasuryApiRef = "env:TREASURY_API_KEY"
 func AddRpcArgs(cmd *cobra.Command) {
 	// cmd.PersistentFlags().String("config", "", "Path to treasury.toml configuration file.")
 	cmd.PersistentFlags().String("rpc", "", "RPC url to use. Optional.")
-	cmd.PersistentFlags().String("chain", "", "Chain to use. Required.")
+	cmd.PersistentFlags().String("chain", os.Getenv("XC_CHAIN"), "Chain to use (may set XC_CHAIN env var). Required.")
 	cmd.PersistentFlags().String("algorithm", "", "Override default signing algorithm. Optional, used only by bitcoin.")
 	cmd.PersistentFlags().String("api-key", DefaultApiRef, fmt.Sprintf("Secret reference for API key to use for RPC client (may also set %s).", DefaultTreasuryApiRef))
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")

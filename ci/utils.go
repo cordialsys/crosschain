@@ -4,14 +4,19 @@ package ci
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"testing"
+	"time"
+
+	xcclient "github.com/cordialsys/crosschain/client"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory"
@@ -149,4 +154,113 @@ func deriveAddress(t *testing.T, xcFactory *factory.Factory, chainConfig *xc.Cha
 	require.NoError(t, err)
 
 	return from
+}
+
+func fetchCombinedBalance(t *testing.T, client xcclient.Client, balanceArgs ...*xcclient.BalanceArgs) xc.AmountBlockchain {
+	combinedBalance := xc.NewAmountBlockchainFromUint64(0)
+	for _, balanceArg := range balanceArgs {
+		balance, err := client.FetchBalance(context.Background(), balanceArg)
+		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance for %s", balanceArg.Address()))
+		combinedBalance = combinedBalance.Add(&balance)
+	}
+	return combinedBalance
+}
+
+// Because we haven't been successful with getting the faucets on devnet nodes
+// to be syncronous, we instead tolerate some delay in the test
+func awaitBalance(t *testing.T, client xcclient.Client, expectedBalance xc.AmountBlockchain, decimals int32, balanceArgs ...*xcclient.BalanceArgs) {
+	combinedBalance := xc.NewAmountBlockchainFromUint64(0)
+	for attempts := range 30 {
+		combinedBalance = xc.NewAmountBlockchainFromUint64(0)
+		for _, balanceArg := range balanceArgs {
+			balance, err := client.FetchBalance(context.Background(), balanceArg)
+			require.NoError(t, err, fmt.Sprintf("Failed to fetch balance for %s on attempt %d", balanceArg.Address(), attempts))
+			combinedBalance = combinedBalance.Add(&balance)
+		}
+		if combinedBalance.Cmp(&expectedBalance) == 0 {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
+	fmt.Println("Wallet Balance after transaction:", combinedBalance.ToHuman(decimals).String())
+	require.Equal(t,
+		expectedBalance.ToHuman(decimals).String(),
+		combinedBalance.ToHuman(decimals).String(),
+		"Failed to get balance over after 30 attempts",
+	)
+}
+
+// Fetch the tx, waiting for it to be confirmed and the balance to change
+func awaitTx(t *testing.T, client xcclient.Client, txHash xc.TxHash, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) xcclient.TxInfo {
+	start := time.Now()
+	timeout := time.Minute * 1
+	for {
+		if time.Since(start) > timeout {
+			require.Fail(t, fmt.Sprintf("Timed out waiting %v for transactions", time.Since(start)))
+		}
+		time.Sleep(1 * time.Second)
+		info, err := client.FetchTxInfo(context.Background(), txHash)
+		if err != nil {
+			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
+			continue
+		}
+		if info.Confirmations < 1 {
+			fmt.Printf("waiting for 1 confirmation...\n")
+			continue
+		}
+		finalWalletBalance := fetchCombinedBalance(t, client, balanceArgs...)
+		if finalWalletBalance.String() == initialBalance.String() {
+			fmt.Printf("waiting for change in balance...\n")
+			continue
+		}
+
+		fmt.Println(asJson(info))
+		return info
+	}
+}
+
+// We poll until we the "full" expected balance change, as sometimes
+// the balance can partially update (e.g. deducts network fee first...).
+func verifyBalanceChanges(t *testing.T, client xcclient.Client, txInfo xcclient.TxInfo, assetId string, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) {
+	var finalWalletBalance xc.AmountBlockchain
+	var remainder xc.AmountBlockchain
+	addresses := []xc.Address{}
+	for _, balanceArg := range balanceArgs {
+		addresses = append(addresses, balanceArg.Address())
+	}
+
+	// We poll until we the "full" expected balance change, as sometimes
+	// the balance can partially update (e.g. deducts network fee first...).
+	for range 50 {
+		finalWalletBalance = fetchCombinedBalance(t, client, balanceArgs...)
+		fmt.Printf("Balance of %v after transaction: %v\n", balanceArgs, finalWalletBalance)
+
+		remainder = initialBalance
+		for _, movement := range txInfo.Movements {
+			if movement.AssetId != xc.ContractAddress(assetId) {
+				// skip movements not matching the asset we transferred
+				continue
+			}
+			for _, from := range movement.From {
+				if slices.Contains(addresses, from.AddressId) {
+					// subtract
+					remainder = remainder.Sub(&from.Balance)
+				}
+			}
+			for _, to := range movement.To {
+				if slices.Contains(addresses, to.AddressId) {
+					// add
+					remainder = remainder.Add(&to.Balance)
+				}
+			}
+		}
+		if finalWalletBalance.String() == remainder.String() {
+			break
+		} else {
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+
+	require.Equal(t, finalWalletBalance.String(), remainder.String())
+	require.Less(t, finalWalletBalance.Uint64(), initialBalance.Uint64())
 }

@@ -9,6 +9,7 @@ import (
 
 type Spender struct {
 	address        xc.Address
+	publicKey      []byte
 	options        builderOptions
 	appliedOptions []BuilderOption
 }
@@ -20,7 +21,7 @@ type Receiver struct {
 	appliedOptions []BuilderOption
 }
 
-func NewSpender(address xc.Address, options ...BuilderOption) (*Spender, error) {
+func NewSpender(address xc.Address, publicKey []byte, options ...BuilderOption) (*Spender, error) {
 	builderOptions := newBuilderOptions()
 	for _, opt := range options {
 		err := opt(&builderOptions)
@@ -30,6 +31,7 @@ func NewSpender(address xc.Address, options ...BuilderOption) (*Spender, error) 
 	}
 	return &Spender{
 		address,
+		publicKey,
 		builderOptions,
 		options,
 	}, nil
@@ -75,14 +77,9 @@ func NewMultiTransferArgs(spenders []*Spender, receivers []*Receiver, options ..
 }
 
 func (args *Spender) GetFrom() xc.Address { return args.address }
-func (args *Spender) GetContract() (xc.ContractAddress, bool) {
-	return args.options.GetContract()
-}
-func (args *Spender) GetDecimals() (int, bool) {
-	return args.options.GetDecimals()
-}
-func (args *Spender) GetPublicKey() ([]byte, bool) {
-	return args.options.GetPublicKey()
+
+func (args *Spender) GetPublicKey() []byte {
+	return args.publicKey
 }
 
 func (args *Receiver) GetTo() xc.Address              { return args.address }
@@ -123,11 +120,6 @@ func (args *MultiTransferArgs) AsTransfers() ([]*TransferArgs, error) {
 	for i := range args.spenders {
 		spender := args.spenders[i]
 		receiver := args.receivers[i]
-		contractSpender, ok1 := spender.GetContract()
-		contractReceiver, ok2 := receiver.GetContract()
-		if ok1 != ok2 {
-			return nil, fmt.Errorf("spender is sending '%s' asset but receiver is receiving '%s' asset", contractSpender, contractReceiver)
-		}
 		allOptions := []BuilderOption{}
 		allOptions = append(allOptions, spender.appliedOptions...)
 		allOptions = append(allOptions, receiver.appliedOptions...)
@@ -143,36 +135,15 @@ func (args *MultiTransferArgs) AsTransfers() ([]*TransferArgs, error) {
 	return transfers, nil
 }
 
-// func (args *MultiTransferArgs) TotalTransferAmount(contract *xc.ContractAddress) xc.AmountBlockchain {
-// 	total := xc.NewAmountBlockchainFromUint64(0)
-// 	for _, receiver := range args.receivers {
-// 		expectedContract := contract != nil
-// 		receiverContract, ok := receiver.GetContract()
-// 		if !ok && !expectedContract {
-// 			amount := receiver.GetAmount()
-// 			total = total.Add(&amount)
-// 			continue
-// 		}
-
-// 		if ok && expectedContract {
-// 			if receiverContract != *contract {
-// 				amount := receiver.GetAmount()
-// 				total = total.Add(&amount)
-// 				continue
-// 			}
-// 		}
-
-// 		if contract != nil && receiverContract == *contract {
-// 			amount := receiver.GetAmount()
-// 			total = total.Add(&amount)
-// 			continue
-// 		}
-
-// 		if contract == nil && receiverContract == "" {
-// 			amount := receiver.GetAmount()
-// 			total = total.Add(&amount)
-// 			continue
-// 		}
-// 	}
-// 	return total
-// }
+// Deduct fee from the first matching receiver
+// Used for inclusive fee spending.
+func (args *MultiTransferArgs) DeductFee(amount xc.AmountBlockchain, contract xc.ContractAddress) error {
+	for _, receiver := range args.receivers {
+		receiverContract, _ := receiver.GetContract()
+		if receiverContract == contract {
+			receiver.amount = receiver.amount.Sub(&amount)
+			return nil
+		}
+	}
+	return fmt.Errorf("no matching receiver found to deduct fee of %s %s", amount.String(), contract)
+}

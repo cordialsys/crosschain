@@ -154,9 +154,7 @@ func NewAmountBlockchainToMaskFloat64(f64 float64) AmountBlockchain {
 
 // NewAmountBlockchainFromStr creates a new AmountBlockchain from a string
 func NewAmountBlockchainFromStr(str string) AmountBlockchain {
-	var ok bool
-	var bigInt *big.Int
-	bigInt, ok = new(big.Int).SetString(str, 0)
+	bigInt, ok := new(big.Int).SetString(str, 0)
 	if !ok {
 		return NewAmountBlockchainFromUint64(0)
 	}

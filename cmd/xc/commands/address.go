@@ -6,11 +6,13 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/spf13/cobra"
 )
 
 func CmdAddress() *cobra.Command {
+	var privateKeyRef string
 	cmd := &cobra.Command{
 		Use:   "address",
 		Short: fmt.Sprintf("Derive an address from the %s environment variable.", signer.EnvPrivateKey),
@@ -24,9 +26,12 @@ func CmdAddress() *cobra.Command {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}
 
-			privateKeyInput := signer.ReadPrivateKeyEnv()
+			privateKeyInput, err := config.GetSecret(privateKeyRef)
+			if err != nil {
+				return fmt.Errorf("could not get secret: %v", err)
+			}
 			if privateKeyInput == "" {
-				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
+				return fmt.Errorf("secret reference (default env:%s) loaded empty value", privateKeyRef)
 			}
 
 			signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
@@ -54,5 +59,6 @@ func CmdAddress() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	return cmd
 }

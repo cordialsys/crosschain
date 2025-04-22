@@ -7,12 +7,14 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/spf13/cobra"
 )
 
 func CmdRpcBalance() *cobra.Command {
 	var contract string
 	var decimal bool
+	var privateKeyRef string
 	cmd := &cobra.Command{
 		Use:   "balance [address]",
 		Short: "Check balance of an asset.  Reported as big integer, not accounting for any decimals.",
@@ -21,7 +23,8 @@ func CmdRpcBalance() *cobra.Command {
 			contract, _ := cmd.Flags().GetString("contract")
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			address, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
 			if err != nil {
 				return err
 			}
@@ -57,6 +60,7 @@ func CmdRpcBalance() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().BoolVar(&decimal, "decimal", false, "Report balance as a decimal.  If set, the decimals will be looked up.")
 	return cmd
