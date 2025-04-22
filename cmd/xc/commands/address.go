@@ -1,0 +1,58 @@
+package commands
+
+import (
+	"fmt"
+
+	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
+	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/signer"
+	"github.com/spf13/cobra"
+)
+
+func CmdAddress() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "address",
+		Short: fmt.Sprintf("Derive an address from the %s environment variable.", signer.EnvPrivateKey),
+		Args:  cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			xcFactory := setup.UnwrapXc(cmd.Context())
+			chainConfig := setup.UnwrapChain(cmd.Context())
+			algorithm, _ := cmd.Flags().GetString("algorithm")
+			addressArgs := []xcaddress.AddressOption{}
+			if algorithm != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
+			}
+
+			privateKeyInput := signer.ReadPrivateKeyEnv()
+			if privateKeyInput == "" {
+				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
+			}
+
+			signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
+			if err != nil {
+				return fmt.Errorf("could not import private key: %v", err)
+			}
+
+			publicKey, err := signer.PublicKey()
+			if err != nil {
+				return fmt.Errorf("could not create public key: %v", err)
+			}
+
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
+			if err != nil {
+				return fmt.Errorf("could not create address builder: %v", err)
+			}
+
+			from, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+			if err != nil {
+				return fmt.Errorf("could not derive address: %v", err)
+			}
+
+			fmt.Println(from)
+
+			return nil
+		},
+	}
+	return cmd
+}
