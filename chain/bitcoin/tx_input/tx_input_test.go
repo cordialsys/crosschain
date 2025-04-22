@@ -10,6 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var amount = xc.NewAmountBlockchainFromUint64
+
+func newOutput(amount uint64) tx_input.Output {
+	return tx_input.Output{
+		Value: xc.NewAmountBlockchainFromUint64(amount),
+	}
+}
+
 func newPoint(hash []byte, index int) tx_input.Outpoint {
 	return tx_input.Outpoint{
 		Hash:  hash,
@@ -147,5 +155,111 @@ func TestTxInputGasMultiplier(t *testing.T) {
 		} else {
 			require.Equal(t, v.result, v.input.GasPricePerByte.Uint64(), desc)
 		}
+	}
+}
+
+func TestFilterForMinUtxoSet(t *testing.T) {
+	type testcase struct {
+		name           string
+		unspentOutputs []tx_input.Output
+		targetAmount   xc.AmountBlockchain
+		minTotalUtxo   int
+		expected       []tx_input.Output
+		expectedTotal  xc.AmountBlockchain
+	}
+
+	vectors := []testcase{
+		{
+			name:           "empty inputs",
+			unspentOutputs: []tx_input.Output{},
+			targetAmount:   amount(100),
+			minTotalUtxo:   2,
+			expected:       []tx_input.Output{},
+			expectedTotal:  amount(0),
+		},
+		{
+			name: "single utxo sufficient",
+			unspentOutputs: []tx_input.Output{
+				newOutput(1000),
+			},
+			targetAmount: amount(500),
+			minTotalUtxo: 2,
+			expected: []tx_input.Output{
+				newOutput(1000),
+			},
+			expectedTotal: amount(1000),
+		},
+		{
+			name: "multiple utxos, need all to reach target",
+			unspentOutputs: []tx_input.Output{
+				newOutput(100),
+				newOutput(200),
+				newOutput(300),
+			},
+			targetAmount: amount(550),
+			minTotalUtxo: 1,
+			expected: []tx_input.Output{
+				newOutput(300),
+				newOutput(200),
+				newOutput(100),
+			},
+			expectedTotal: amount(600),
+		},
+		{
+			name: "multiple utxos, need minExtraUtxo",
+			unspentOutputs: []tx_input.Output{
+				newOutput(1000),
+				newOutput(100),
+				newOutput(50),
+				newOutput(25),
+			},
+			targetAmount: amount(500),
+			minTotalUtxo: 3,
+			expected: []tx_input.Output{
+				newOutput(1000),
+				newOutput(100),
+				newOutput(50),
+			},
+			expectedTotal: amount(1150),
+		},
+		{
+			name: "insufficient utxos",
+			unspentOutputs: []tx_input.Output{
+				newOutput(100),
+				newOutput(200),
+			},
+			targetAmount: amount(500),
+			minTotalUtxo: 1,
+			expected: []tx_input.Output{
+				newOutput(200),
+				newOutput(100),
+			},
+			expectedTotal: amount(300),
+		},
+	}
+
+	for _, v := range vectors {
+		t.Run(v.name, func(t *testing.T) {
+			result := tx_input.FilterForMinUtxoSet(v.unspentOutputs, v.targetAmount, v.minTotalUtxo)
+
+			// Check the number of outputs
+			require.Equal(t, len(v.expected), len(result), "number of outputs")
+
+			// Check each output value
+			for i, output := range result {
+				fmt.Println("expected", v.expected[i].Value.String(), "output", output.Value.String())
+				require.Equal(t, v.expected[i].Value.String(), output.Value.String(),
+					"output %d value", i)
+			}
+
+			// Calculate total value of result
+			total := xc.NewAmountBlockchainFromUint64(0)
+			for _, output := range result {
+				total = total.Add(&output.Value)
+			}
+
+			// Check total value
+			require.Equal(t, v.expectedTotal.Uint64(), total.Uint64(), "total value")
+		})
 	}
 }

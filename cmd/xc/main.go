@@ -23,7 +23,6 @@ func CmdXc() *cobra.Command {
 				return err
 			}
 			setup.ConfigureLogger(args)
-
 			xcFactory, err := setup.LoadFactory(args)
 			if err != nil {
 				return err
@@ -31,31 +30,35 @@ func CmdXc() *cobra.Command {
 			if args.UseLocalImplementation {
 				xcFactory.NoXcClients = true
 			}
-
 			chainConfig, err := setup.LoadChain(xcFactory, args.Chain)
 			if err != nil {
 				return err
 			}
 			setup.OverrideChainSettings(chainConfig, args)
 
-			stakingArgs, err := setup.StakingArgsFromCmd(cmd)
-			if err != nil {
-				return err
-			}
-			var stakingCfg *services.ServicesConfig
-			if stakingArgs.ConfigPath != "" {
-				stakingCfg, err = services.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
-			} else {
-				stakingCfg, err = services.LoadConfig(xcFactory.GetNetworkSelector())
-			}
-			if err != nil {
-				return err
-			}
-
 			ctx := setup.CreateContext(xcFactory, chainConfig)
-			ctx = setup.WrapStakingArgs(ctx, stakingArgs)
-			ctx = setup.WrapStakingConfig(ctx, stakingCfg)
-
+			logrus.Info(cmd.Use)
+			switch cmd.Use {
+			case "multi-transfer":
+				// avoid loading staking config for multi-transfer
+			default:
+				// load staking config for other commands
+				stakingArgs, err := setup.StakingArgsFromCmd(cmd)
+				if err != nil {
+					return err
+				}
+				var stakingCfg *services.ServicesConfig
+				if stakingArgs.ConfigPath != "" {
+					stakingCfg, err = services.LoadConfigFromFile(xcFactory.GetNetworkSelector(), stakingArgs.ConfigPath)
+				} else {
+					stakingCfg, err = services.LoadConfig(xcFactory.GetNetworkSelector())
+				}
+				if err != nil {
+					return err
+				}
+				ctx = setup.WrapStakingArgs(ctx, stakingArgs)
+				ctx = setup.WrapStakingConfig(ctx, stakingCfg)
+			}
 			url, _ := chainConfig.ClientURL()
 
 			logrus.WithFields(logrus.Fields{
@@ -85,6 +88,7 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(commands.CmdTxInput())
 	cmd.AddCommand(commands.CmdTxInfo())
 	cmd.AddCommand(commands.CmdTxTransfer())
+	cmd.AddCommand(commands.CmdTxMultiTransfer())
 	cmd.AddCommand(commands.CmdAddress())
 	cmd.AddCommand(commands.CmdChains())
 	cmd.AddCommand(commands.CmdRpcBlock())

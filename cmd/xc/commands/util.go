@@ -5,15 +5,25 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
-func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string) (xc.Address, error) {
+func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string, keyRef string) (xc.Address, error) {
 	if len(args) > 0 {
 		return xc.Address(args[0]), nil
 	}
-	privateKeyInput := signer.ReadPrivateKeyEnv()
+	privateKeyInput := ""
+	if keyRef != "" {
+		var err error
+		privateKeyInput, err = config.GetSecret(keyRef)
+		if err != nil {
+			return "", fmt.Errorf("could not get secret: %v", err)
+		}
+	} else {
+		privateKeyInput = signer.ReadPrivateKeyEnv()
+	}
 	if privateKeyInput == "" {
 		return "", fmt.Errorf("must provide [address] as input, set env %s for it to be derived", signer.EnvPrivateKey)
 	}

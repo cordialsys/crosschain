@@ -62,14 +62,14 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			// should include dust utxo's, up to 10
 			utxos:         []int{2_000_000, 1_000_000, 3_000_000, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
 			targetAmount:  5_000_000,
-			expectedTotal: 5_000_000 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8,
+			expectedTotal: 3_000_000 + 2_000_000 + 1_000_000 + 11 + 10 + 9 + 8 + 7 + 6 + 5,
 			expectedLen:   10,
 		},
 		{
 			// order input shouldn't matter
 			utxos:         []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 2_000_000, 1_000_000, 3_000_000},
 			targetAmount:  5_000_000,
-			expectedTotal: 5_000_000 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8,
+			expectedTotal: 3_000_000 + 2_000_000 + 1_000_000 + 11 + 10 + 9 + 8 + 7 + 6 + 5,
 			expectedLen:   10,
 		},
 	}

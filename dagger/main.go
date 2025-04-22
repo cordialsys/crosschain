@@ -18,6 +18,12 @@ func isTrue(s string) bool {
 	return s == "true" || s == "1" || s == "yes"
 }
 
+var defaultTests = []string{
+	"TestBalance",
+	"TestTransfer",
+	"TestFetchBlock",
+}
+
 func (m *Dagger) TestChain(
 	ctx context.Context,
 	chain string,
@@ -33,6 +39,8 @@ func (m *Dagger) TestChain(
 	algorithm string,
 	// +optional
 	feePayer string,
+	// +optional
+	tests []string,
 ) (string, error) {
 	nodeService := dag.Container().
 		From(image).
@@ -51,29 +59,32 @@ func (m *Dagger) TestChain(
 	if contract != "" && decimals == "" {
 		panic("decimals is required when contract is provided")
 	}
-
-	testBalance := []string{
-		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestBalance",
-		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
-	}
-	testTransfer := []string{
-		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestTransfer",
-		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
-	}
-	testBlock := []string{
-		"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", "TestFetchBlock",
-		"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
-	}
-	if contract != "" {
-		testBalance = append(testBalance, "--decimals", decimals)
-		testTransfer = append(testTransfer, "--decimals", decimals)
-	}
-	if isTrue(feePayer) {
-		fmt.Println("using feePayer")
-		testTransfer = append(testTransfer, "--fee-payer")
+	if len(tests) == 0 {
+		tests = defaultTests
 	}
 
-	return dag.Container().
+	testCommands := [][]string{}
+	for _, test := range tests {
+		switch test {
+		case "TestBalance", "TestTransfer", "TestFetchBlock", "TestMultiTransfer":
+			// ok
+		default:
+			panic("unknown test: " + test)
+		}
+		command := []string{
+			"go", "test", "-v", "-tags", "ci", "./ci/...", "-run", test,
+			"--chain", chain, "--contract", contract, "--rpc", "http://node-service:10000", "--network", network, "--algorithm", algorithm,
+			"--decimals", decimals,
+		}
+
+		if isTrue(feePayer) {
+			fmt.Println("using feePayer")
+			command = append(command, "--fee-payer")
+		}
+		testCommands = append(testCommands, command)
+	}
+
+	container := dag.Container().
 		From("alpine:latest").
 		WithExec([]string{"apk", "update"}).
 		WithExec([]string{"apk", "add", "curl"}).
@@ -93,11 +104,11 @@ func (m *Dagger) TestChain(
 
 		// Add node service
 		WithServiceBinding("node-service", nodeService).
-		WithEnvVariable("cache-bust", time.Now().String()).
+		WithEnvVariable("cache-bust", time.Now().String())
 
-		// Run tests
-		WithExec(testBalance).
-		WithExec(testTransfer).
-		WithExec(testBlock).
-		Stdout(ctx)
+	for _, command := range testCommands {
+		container = container.WithExec(command)
+	}
+
+	return container.Stdout(ctx)
 }

@@ -20,6 +20,7 @@ func CmdTxInput() *cobra.Command {
 	var publicKeyHex string
 	var memo string
 	var decimals int
+	var privateKeyRef string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input"},
@@ -30,7 +31,7 @@ func CmdTxInput() *cobra.Command {
 			contract, _ := cmd.Flags().GetString("contract")
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			fromAddress, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+			fromAddress, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
 			if err != nil {
 				return err
 			}
@@ -114,6 +115,6 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().StringVar(&publicKeyHex, "public-key", "",
 		fmt.Sprintf("Public key in hex of the sender address (will use %s if set)", signer.EnvPrivateKey),
 	)
-
+	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	return cmd
 }

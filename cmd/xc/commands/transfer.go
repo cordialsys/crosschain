@@ -13,6 +13,7 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -22,6 +23,8 @@ func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
 	var feePayer bool
 	var dryRun bool
+	var fromSecretRef string
+	var feePayerSecretRef string
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -78,7 +81,10 @@ func CmdTxTransfer() *cobra.Command {
 				decimals = int32(parsed)
 			}
 
-			privateKeyInput := signer.ReadPrivateKeyEnv()
+			privateKeyInput, err := config.GetSecret(fromSecretRef)
+			if err != nil {
+				return fmt.Errorf("could not get from-address secret: %v", err)
+			}
 			if privateKeyInput == "" {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
@@ -130,9 +136,12 @@ func CmdTxTransfer() *cobra.Command {
 				if !ok {
 					return fmt.Errorf("support for fee payer on chain %s is not implemented", chainConfig.Chain)
 				}
-				feePayerPrivateKey := signer.ReadPrivateKeyFeePayerEnv()
+				feePayerPrivateKey, err := config.GetSecret(feePayerSecretRef)
+				if err != nil {
+					return fmt.Errorf("could not get fee-payer secret: %v", err)
+				}
 				if feePayerPrivateKey == "" {
-					return fmt.Errorf("must set env %s", signer.EnvPrivateKeyFeePayer)
+					return fmt.Errorf("fee-payer secret reference loaded an empty value")
 				}
 				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
 				if err != nil {
@@ -290,10 +299,12 @@ func CmdTxTransfer() *cobra.Command {
 			return fmt.Errorf("could not find transaction that we submitted by hash %s", tx.Hash())
 		},
 	}
+	cmd.Flags().StringVar(&fromSecretRef, "from", "env:"+signer.EnvPrivateKey, "Secret reference for the from-address private key")
+	cmd.Flags().StringVar(&feePayerSecretRef, "fee-payer-secret", "env:"+signer.EnvPrivateKeyFeePayer, "Secret reference for the fee-payer address private key")
 	cmd.Flags().String("contract", "", "Contract address of asset to send, if applicable")
 	cmd.Flags().String("decimals", "", "Decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "Set a memo for the transfer.")
-	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (must set env PRIVATE_KEY_FEE_PAYER)")
+	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (uses --fee-payer-secret)")
 	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")

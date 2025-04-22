@@ -372,8 +372,18 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 				UnspentOutputs: groupedUtxoByAddress[utxo.Address],
 				Address:        utxo.Address,
 			})
+			serialiedByAddress[utxo.Address] = true
 		}
-		serialiedByAddress[utxo.Address] = true
+	}
+	for _, input := range multiInput.Inputs {
+		for _, utxo := range input.UnspentOutputs {
+			logrus.WithFields(logrus.Fields{
+				"address": utxo.Address,
+				"amount":  utxo.Value,
+				"utxo":    utxo.Outpoint.String(),
+				"total":   len(allUtxo),
+			}).Debug("prioritized utxo")
+		}
 	}
 
 	// Estimate fees

@@ -9,6 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,7 @@ func CmdFund() *cobra.Command {
 	var contract string
 	var amountHuman string
 	var decimalsStr string
+	var privateKeyRef string
 	var api string
 	cmd := &cobra.Command{
 		Use:   "fund [address]",
@@ -25,7 +27,7 @@ func CmdFund() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			address, err := inputAddressOrDerived(xcFactory, chainConfig, args)
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
 			if err != nil {
 				return err
 			}
@@ -79,5 +81,6 @@ func CmdFund() *cobra.Command {
 	cmd.Flags().StringVar(&decimalsStr, "decimals", "", "decimals of the token, when using --contract.")
 	cmd.Flags().StringVar(&api, "api", "http://127.0.0.1:10001", "API url to use for faucet.")
 	cmd.Flags().StringVar(&amountHuman, "amount", "1", "Decimal-adjusted amount of funds to request.")
+	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	return cmd
 }

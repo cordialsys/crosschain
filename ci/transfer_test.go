@@ -127,21 +127,8 @@ func TestTransfer(t *testing.T) {
 	tfArgs, err := builder.NewTransferArgs(from, toAddress, transferAmountBlockchain, tfOptions...)
 	require.NoError(t, err)
 
-	var initialBalance xc.AmountBlockchain
-
-	fmt.Println("Wallet Balance before transaction:", initialBalance.String())
-	// Because we haven't been successful with getting the faucets on devnet nodes
-	// to be syncronous, we instead tolerate some delay in the test
-	for attempts := range 30 {
-		initialBalance, err = client.FetchBalance(context.Background(), balanceArgs)
-		require.NoError(t, err, fmt.Sprintf("Failed to fetch balance on attempt %d", attempts))
-		asHuman := initialBalance.ToHuman(decimals).String()
-		if asHuman == "3" {
-			break
-		}
-		time.Sleep(1 * time.Second)
-	}
-	require.Equal(t, "3", initialBalance.ToHuman(decimals).String(), "Failed to get balance over after 30 attempts")
+	initialBalance := xc.NewAmountHumanReadableFromFloat(3.0).ToBlockchain(decimals)
+	awaitBalance(t, client, initialBalance, decimals, balanceArgs)
 
 	input, err := client.FetchTransferInput(context.Background(), tfArgs)
 	require.NoError(t, err)
@@ -191,36 +178,7 @@ func TestTransfer(t *testing.T) {
 	}
 
 	fmt.Println("submitted tx", tx.Hash())
-	start := time.Now()
-
-	var txInfo xcclient.TxInfo
-
-	timeout := time.Minute * 1
-	for {
-		if time.Since(start) > timeout {
-			require.Fail(t, fmt.Sprintf("Timed out waiting %v for transactions", time.Since(start)))
-		}
-		time.Sleep(1 * time.Second)
-		info, err := client.FetchTxInfo(context.Background(), tx.Hash())
-		if err != nil {
-			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
-			continue
-		}
-		if info.Confirmations < 1 {
-			fmt.Printf("waiting for 1 confirmation...\n")
-			continue
-		}
-		finalWalletBalance, err := client.FetchBalance(context.Background(), balanceArgs)
-		require.NoError(t, err, "Failed to fetch balance")
-		if finalWalletBalance.String() == initialBalance.String() {
-			fmt.Printf("waiting for change in balance...\n")
-			continue
-		}
-
-		txInfo = info
-		fmt.Println(asJson(txInfo))
-		break
-	}
+	txInfo := awaitTx(t, client, tx.Hash(), initialBalance, balanceArgs)
 
 	if feePayer {
 		// should be a movement from the fee payer
@@ -236,42 +194,5 @@ func TestTransfer(t *testing.T) {
 		require.True(t, found, "Fee payer movement not found")
 	}
 
-	var finalWalletBalance xc.AmountBlockchain
-	var remainder xc.AmountBlockchain
-
-	// We poll until we the "full" expected balance change, as sometimes
-	// the balance can partially update (e.g. deducts network fee first...).
-	for range 50 {
-		finalWalletBalance, err = client.FetchBalance(context.Background(), balanceArgs)
-		require.NoError(t, err, "Failed to fetch balance")
-		fmt.Printf("Balance of %s after transaction: %v\n", fromWalletAddress, finalWalletBalance)
-
-		remainder = initialBalance
-		for _, movement := range txInfo.Movements {
-			if movement.AssetId != xc.ContractAddress(assetId) {
-				// skip movements not matching the asset we transferred
-				continue
-			}
-			for _, from := range movement.From {
-				if from.AddressId == fromWalletAddress {
-					// subtract
-					remainder = remainder.Sub(&from.Balance)
-				}
-			}
-			for _, to := range movement.To {
-				if to.AddressId == fromWalletAddress {
-					// add
-					remainder = remainder.Add(&to.Balance)
-				}
-			}
-		}
-		if finalWalletBalance.String() == remainder.String() {
-			break
-		} else {
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
-
-	require.Equal(t, finalWalletBalance.String(), remainder.String())
-	require.Less(t, finalWalletBalance.Uint64(), initialBalance.Uint64())
+	verifyBalanceChanges(t, client, txInfo, assetId, initialBalance, balanceArgs)
 }

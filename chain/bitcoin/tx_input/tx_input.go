@@ -148,7 +148,7 @@ func (txInput *TxInput) SumUtxo() *xc.AmountBlockchain {
 
 // 1. sort unspentOutputs from lowest to highest
 // 2. grab the minimum amount of UTXO needed to satify amount
-// 3. tack on the smallest utxo's until `minUtxo` is reached.
+// 3. tack on smaller utxo's until `minUtxo` is reached.
 // This ensures a small number of UTXO are used for transaction while also consolidating some
 // smaller utxo into the transaction.
 // Returns the total balance of the min utxo set.  txInput.inputs are updated to the new set.
@@ -158,26 +158,29 @@ func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockcha
 	// 1. sort from lowest to higher
 	if len(unspentOutputs) > 1 {
 		sort.Slice(unspentOutputs, func(i, j int) bool {
-			return unspentOutputs[i].Value.Cmp(&unspentOutputs[j].Value) <= 0
+			return unspentOutputs[i].Value.Cmp(&unspentOutputs[j].Value) > 0
 		})
 	}
 
-	lenUTXOIndex := len(unspentOutputs)
-	for balance.Cmp(&targetAmount) < 0 && lenUTXOIndex > 0 {
-		o := unspentOutputs[lenUTXOIndex-1]
-		log.Infof("unspent output h2l: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
-		filtered = append(filtered, o)
-		balance = balance.Add(&o.Value)
-		lenUTXOIndex--
+	// 2. grab the minimum amount of UTXO needed to satify amount
+	index := 0
+	var utxo Output
+	for _, utxo = range unspentOutputs {
+		if balance.Cmp(&targetAmount) >= 0 {
+			break
+		}
+		filtered = append(filtered, utxo)
+		balance = balance.Add(&utxo.Value)
+		index += 1
 	}
-
-	// add the smallest utxo until we reach `minUtxo` inputs
-	// lenUTXOIndex wasn't used, so i can grow up to lenUTXOIndex (included)
-	for i := 0; len(filtered) < minUtxo && i < lenUTXOIndex; i++ {
-		o := unspentOutputs[i]
-		log.Infof("unspent output l2h: %s (%s)", hex.EncodeToString(o.PubKeyScript), o.Value.String())
-		filtered = append(filtered, o)
-		balance = balance.Add(&o.Value)
+	// 3. add on extra UTXO until we reach `minUtxo`
+	if len(unspentOutputs) > index {
+		for _, utxo := range unspentOutputs[index:] {
+			if len(filtered) >= minUtxo {
+				break
+			}
+			filtered = append(filtered, utxo)
+		}
 	}
 	return filtered
 }

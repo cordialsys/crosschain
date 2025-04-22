@@ -51,6 +51,10 @@ jobs:
             algorithm: schnorr
             image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
             network: regtest
+          - chain: BTC
+            image: us-docker.pkg.dev/cordialsys/crosschain/bitcoin:latest
+            network: regtest
+            tests: ["TestMultiTransfer"]
           - chain: TAO
             image: us-docker.pkg.dev/cordialsys/crosschain/bittensor:latest
 
@@ -59,6 +63,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: install dagger
         run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.14.0 BIN_DIR=/usr/bin sudo -E sh
+      - name: test-param
+        run: echo "tests; ${{join(matrix.chain.tests, ',')}}"
       - name: chain
         run: >
           dagger --progress plain -v call test-chain
@@ -70,3 +76,4 @@ jobs:
           --contract "${{matrix.chain.contract}}"
           --decimals "${{matrix.chain.decimals}}"
           --fee-payer "${{matrix.chain.fee-payer}}"
+          --tests "${{join(matrix.chain.tests, ',')}}"
