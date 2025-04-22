@@ -13,6 +13,7 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.MultiTransfer = &TxBuilder{}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -35,6 +36,14 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	tx, err := txBuilder.TxBuilder.NewNativeTransfer(from, to, amount, input)
+	if err != nil {
+		return nil, err
+	}
+	return NewTx(tx.(*bitcointx.Tx)), nil
+}
+
+func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
+	tx, err := txBuilder.TxBuilder.MultiTransfer(args, input)
 	if err != nil {
 		return nil, err
 	}

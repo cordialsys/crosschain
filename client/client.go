@@ -31,6 +31,10 @@ type Client interface {
 	FetchBlock(ctx context.Context, args *BlockArgs) (*BlockWithTransactions, error)
 }
 
+type MultiTransferClient interface {
+	FetchMultiTransferInput(ctx context.Context, args builder.MultiTransferArgs) (xc.MultiTransferInput, error)
+}
+
 type StakingClient interface {
 	// Fetch staked balances accross different possible states
 	FetchStakeBalance(ctx context.Context, args StakedBalanceArgs) ([]*StakedBalance, error)

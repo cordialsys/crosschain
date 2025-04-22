@@ -347,7 +347,7 @@ func (s *CrosschainTestSuite) TestTxHash() {
 func (s *CrosschainTestSuite) TestTxSighashes() {
 	require := s.Require()
 	tx := tx.Tx{
-		Input: &tx_input.TxInput{},
+		UnspentOutputs: []tx_input.Output{},
 	}
 	sighashes, err := tx.Sighashes()
 	require.NotNil(sighashes)
@@ -366,8 +366,6 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 			Value: xc.NewAmountBlockchainFromUint64(1000),
 		}},
 	}
-	err := input.SetPublicKey([]byte{})
-	require.NoError(err)
 	tf, err := builder.NewNativeTransfer(from, to, amount, input)
 	require.NoError(err)
 
@@ -421,7 +419,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 		},
 	}
 	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
-	require.Len(tf.(*tx.Tx).Input.UnspentOutputs, 2)
+	require.Len(tf.(*tx.Tx).UnspentOutputs, 2)
 	err = tf.(*tx.Tx).AddSignatures([]*xc.SignatureResponse{
 		{
 			Signature: sig,

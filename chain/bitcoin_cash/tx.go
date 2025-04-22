@@ -24,9 +24,9 @@ var _ xc.Tx = &tx.Tx{}
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (txObj *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	sighashes := make([]*xc.SignatureRequest, len(txObj.Input.UnspentOutputs))
+	sighashes := make([]*xc.SignatureRequest, len(txObj.UnspentOutputs))
 
-	for i, utxo := range txObj.Input.UnspentOutputs {
+	for i, utxo := range txObj.UnspentOutputs {
 		pubKeyScript := utxo.PubKeyScript
 		value := utxo.Value.Uint64()
 		fetcher := txscript.NewCannedPrevOutputFetcher(
@@ -66,7 +66,7 @@ func (txObj *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) erro
 		sigHashByte := txscript.SigHashAll
 		sigHashByte = sigHashByte | SighashForkID
 		builder.AddData(append(signature.Serialize(), byte(sigHashByte)))
-		builder.AddData(txObj.Input.FromPublicKey)
+		builder.AddData(signatureResponses[i].PublicKey)
 		log.Debug("append signature (non-segwit)")
 		// if sigScript != nil {
 		// 	log.Debug("append sigScript (non-segwit)")

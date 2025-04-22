@@ -35,11 +35,7 @@ type Tx struct {
 	Recipients []Recipient
 	Signatures []xc.TxSignature
 
-	Amount xc.AmountBlockchain
-	Input  *tx_input.TxInput
-	From   xc.Address
-	To     xc.Address
-	// isBch  bool
+	UnspentOutputs []tx_input.Output `json:"unspent_outputs"`
 }
 
 var _ xc.Tx = &Tx{}
@@ -71,8 +67,8 @@ func (tx *Tx) txHashNormalBytes() []byte {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	sighashes := make([]*xc.SignatureRequest, len(tx.Input.UnspentOutputs))
-	if len(tx.Input.UnspentOutputs) == 0 {
+	sighashes := make([]*xc.SignatureRequest, len(tx.UnspentOutputs))
+	if len(tx.UnspentOutputs) == 0 {
 		return sighashes, nil
 	}
 
@@ -80,7 +76,7 @@ func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	// precomputed midstate sighashes. Because of this, we have to
 	// prepare a proper mapped fetcher.
 	mapping := make(map[wire.OutPoint]*wire.TxOut)
-	for _, utxo := range tx.Input.UnspentOutputs {
+	for _, utxo := range tx.UnspentOutputs {
 		op := wire.OutPoint{
 			Hash:  chainhash.Hash(utxo.Outpoint.Hash),
 			Index: utxo.Outpoint.Index,
@@ -93,7 +89,7 @@ func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	fetcher := txscript.NewMultiPrevOutFetcher(mapping)
 	sighashMidstate := txscript.NewTxSigHashes(tx.MsgTx, fetcher)
 
-	for i, utxo := range tx.Input.UnspentOutputs {
+	for i, utxo := range tx.UnspentOutputs {
 		pubKeyScript := utxo.PubKeyScript
 		value := utxo.Value.Uint64()
 
@@ -132,7 +128,7 @@ func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 			return []*xc.SignatureRequest{}, err
 		}
 
-		sighashes[i] = xc.NewSignatureRequest(hash)
+		sighashes[i] = xc.NewSignatureRequest(hash, utxo.Address)
 	}
 
 	return sighashes, nil
@@ -184,7 +180,7 @@ func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
 		}
 
 		signature := ecdsa.NewSignature(&r, &s)
-		pubKeyScript := tx.Input.UnspentOutputs[i].PubKeyScript
+		pubKeyScript := tx.UnspentOutputs[i].PubKeyScript
 		signatureWithSuffix := append(signature.Serialize(), byte(txscript.SigHashAll))
 
 		if txscript.IsPayToTaproot(pubKeyScript) {
@@ -194,13 +190,13 @@ func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
 		} else if txscript.IsPayToWitnessPubKeyHash(pubKeyScript) || txscript.IsPayToWitnessScriptHash(pubKeyScript) {
 			// Segwit witness
 			log.Debug("append signature (segwit)")
-			tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{signatureWithSuffix, tx.Input.FromPublicKey})
+			tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{signatureWithSuffix, signatureResponses[i].PublicKey})
 		} else {
 			log.Debug("append signature (legacy)")
 			// Support non-segwit
 			builder := txscript.NewScriptBuilder()
 			builder.AddData(signatureWithSuffix)
-			builder.AddData(tx.Input.FromPublicKey)
+			builder.AddData(signatureResponses[i].PublicKey)
 			tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
 			if err != nil {
 				return err

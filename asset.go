@@ -206,6 +206,10 @@ func (stakingProvider StakingProvider) Valid() bool {
 
 type TxVariantInputType string
 
+func NewMultiTransferInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/multi-transfer/%s", driver, variant))
+}
+
 func NewStakingInputType(driver Driver, variant string) TxVariantInputType {
 	return TxVariantInputType(fmt.Sprintf("drivers/%s/staking/%s", driver, variant))
 }

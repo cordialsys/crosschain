@@ -134,7 +134,7 @@ func (client *BlockchairClient) UnspentOutputs(ctx context.Context, addr xc.Addr
 	addressScript, _ := hex.DecodeString(data.Address.ScriptHex)
 
 	utxos := tx_input.FilterUnconfirmedHeuristic(data.Utxo)
-	outputs := tx_input.NewOutputs(utxos, addressScript)
+	outputs := tx_input.NewOutputs(utxos, addressScript, addr)
 
 	return outputs, nil
 }
@@ -275,10 +275,10 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 
 	// build Tx
 	txObject := &tx.Tx{
-		Input:      tx_input.NewTxInput(),
-		Recipients: []tx.Recipient{},
-		MsgTx:      &wire.MsgTx{},
-		Signed:     true,
+		UnspentOutputs: []tx_input.Output{},
+		Recipients:     []tx.Recipient{},
+		MsgTx:          &wire.MsgTx{},
+		Signed:         true,
 	}
 	inputs := []tx.Input{}
 	// btc chains the native asset and asset are the same
@@ -300,7 +300,7 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 			// SigScript: sigScript,
 			Address: xc.Address(in.Recipient),
 		}
-		txObject.Input.UnspentOutputs = append(txObject.Input.UnspentOutputs, input.Output)
+		txObject.UnspentOutputs = append(txObject.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
 
 		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxHash), int(in.Index))

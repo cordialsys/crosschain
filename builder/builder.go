@@ -19,6 +19,10 @@ type Transfer interface {
 	Transfer(args TransferArgs, input xc.TxInput) (xc.Tx, error)
 }
 
+type MultiTransfer interface {
+	MultiTransfer(args MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error)
+}
+
 type Staking interface {
 	Stake(stakingArgs StakeArgs, input xc.StakeTxInput) (xc.Tx, error)
 	Unstake(stakingArgs StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error)

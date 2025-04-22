@@ -28,6 +28,7 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.MultiTransfer = &TxBuilder{}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -115,12 +116,90 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	tx := tx.Tx{
 		MsgTx: msgTx,
 
-		From:   from,
-		To:     to,
-		Amount: amount,
-		Input:  local_input,
+		// From:   from,
+		// To:     to,
+		// Amount: amount,
+		UnspentOutputs: local_input.UnspentOutputs,
 
 		Recipients: recipients,
+	}
+	return &tx, nil
+}
+
+// NewNativeTransfer creates a new transfer for a native asset
+func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
+	var local_input *tx_input.MultiTransferInput
+	var ok bool
+	if local_input, ok = (input.(*tx_input.MultiTransferInput)); !ok {
+		return &tx.Tx{}, errors.New("xc.MultiTransferInput is not from a bitcoin chain")
+	}
+	// the fee limit is also just the fee on bitcoin (there's no variable gas / cost of execution)
+	recipients := []tx.Recipient{}
+	transferAmount := xc.NewAmountBlockchainFromUint64(0)
+	for _, receiver := range args.Receivers() {
+		amount := receiver.GetAmount()
+		transferAmount = transferAmount.Add(&amount)
+		recipients = append(recipients, tx.Recipient{
+			To:    receiver.GetTo(),
+			Value: amount,
+		})
+	}
+
+	fee, _ := local_input.GetFeeLimit()
+	transferAmountAndFee := transferAmount.Add(&fee)
+
+	totalSpend := local_input.SumUtxo()
+	unspentAmountMinusTransferAndFee := totalSpend.Sub(&transferAmountAndFee)
+
+	spenders := args.Spenders()
+
+	// send remaining funds back to sender if any
+	if !unspentAmountMinusTransferAndFee.IsZero() {
+		recipients = append(recipients, tx.Recipient{
+			To:    spenders[0].GetFrom(),
+			Value: unspentAmountMinusTransferAndFee,
+		})
+	}
+
+	msgTx := wire.NewMsgTx(TxVersion)
+
+	unspentOutputs := []tx_input.Output{}
+	for _, input := range local_input.Inputs {
+		for _, utxo := range input.UnspentOutputs {
+			hash := chainhash.Hash{}
+			copy(hash[:], utxo.Hash)
+			msgTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(&hash, utxo.Index), nil, nil))
+			utxo.Address = input.Address
+			unspentOutputs = append(unspentOutputs, utxo)
+		}
+	}
+
+	// Outputs
+	for _, recipient := range recipients {
+		addr, err := txBuilder.AddressDecoder.Decode(recipient.To, txBuilder.Params)
+		if err != nil {
+			return nil, err
+		}
+		script, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			logrus.WithError(err).WithField("to", recipient.To).Error("trying paytoaddr")
+			return nil, err
+		}
+		value := recipient.Value.Int().Int64()
+		if value < 0 {
+			diff := local_input.SumUtxo().Sub(&transferAmount)
+			return nil, fmt.Errorf("not enough funds for fees, estimated fee is %s but only %s is left after transfer",
+				fee.ToHuman(txBuilder.Asset.Decimals).String(), diff.ToHuman(txBuilder.Asset.Decimals).String(),
+			)
+		}
+		msgTx.AddTxOut(wire.NewTxOut(value, script))
+	}
+
+	tx := tx.Tx{
+		MsgTx: msgTx,
+
+		UnspentOutputs: unspentOutputs,
+		Recipients:     recipients,
 	}
 	return &tx, nil
 }
