@@ -33,11 +33,6 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-
-	from := args.GetFrom()
-	to := args.GetTo()
-	amount := args.GetAmount()
-
 	destinationTag := int64(0)
 	var err error
 	if memo, ok := args.GetMemo(); ok {
@@ -48,50 +43,59 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	}
 
 	if contract, ok := args.GetContract(); ok {
-		return txBuilder.NewTokenTransfer(from, to, amount, contract, destinationTag, input)
+		return txBuilder.NewTokenTransfer(args, contract, destinationTag, input)
 	} else {
-		return txBuilder.NewNativeTransfer(from, to, amount, destinationTag, input)
+		return txBuilder.NewNativeTransfer(args, destinationTag, input)
 	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
 	XRPAmount := xrptx.AmountBlockchain{
-		XRPAmount: amount.String(),
+		XRPAmount: args.GetAmount().String(),
+	}
+	pubKey, ok := args.GetPublicKey()
+	if !ok || len(pubKey) == 0 {
+		return nil, fmt.Errorf("must set from public-key in transfer args: %s", args.GetFrom())
 	}
 
 	xrpTx := xrptx.XRPTransaction{
-		Account:            from,
+		Account:            args.GetFrom(),
 		Amount:             XRPAmount,
-		Destination:        to,
+		Destination:        args.GetTo(),
 		DestinationTag:     destinationTag,
 		Fee:                txInput.Fee.String(),
 		Flags:              0,
 		LastLedgerSequence: txInput.LastLedgerSequence,
 		Sequence:           txInput.Sequence,
-		SigningPubKey:      hex.EncodeToString(txInput.PublicKey),
+		SigningPubKey:      hex.EncodeToString(pubKey),
 		TransactionType:    xrptx.PAYMENT,
 	}
 
 	return &xrptx.Tx{
 		XRPTx:      &xrpTx,
-		SignPubKey: txInput.PublicKey,
+		SignPubKey: pubKey,
 	}, nil
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, assetId xc.ContractAddress, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, assetId xc.ContractAddress, destinationTag int64, input xc.TxInput) (xc.Tx, error) {
 	txInput := input.(*TxInput)
 
 	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
+	pubKey, ok := args.GetPublicKey()
+	if !ok || len(pubKey) == 0 {
+		return nil, fmt.Errorf("must set from public-key in transfer args: %s", args.GetFrom())
+	}
 
 	// XRP tokens are fixed decimals
-	tokenAmountValue := amount.ToHuman(types.TRUSTLINE_DECIMALS)
+	bal := args.GetAmount()
+	tokenAmountValue := bal.ToHuman(types.TRUSTLINE_DECIMALS)
 
 	XRPAmount := xrptx.AmountBlockchain{
 		TokenAmount: &xrptx.Amount{
@@ -116,21 +120,21 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	xrpTx := xrptx.XRPTransaction{
-		Account:            from,
+		Account:            args.GetFrom(),
 		Amount:             XRPAmount,
 		SendMax:            sendMax,
-		Destination:        to,
+		Destination:        args.GetTo(),
 		Fee:                txInput.Fee.String(),
 		Flags:              0,
 		LastLedgerSequence: txInput.LastLedgerSequence,
 		Sequence:           txInput.Sequence,
-		SigningPubKey:      hex.EncodeToString(txInput.PublicKey),
+		SigningPubKey:      hex.EncodeToString(pubKey),
 		TransactionType:    xrptx.PAYMENT,
 		DestinationTag:     destinationTag,
 	}
 
 	return &xrptx.Tx{
 		XRPTx:      &xrpTx,
-		SignPubKey: txInput.PublicKey,
+		SignPubKey: pubKey,
 	}, nil
 }

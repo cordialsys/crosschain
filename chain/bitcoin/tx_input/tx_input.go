@@ -48,7 +48,6 @@ func init() {
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithAmount = &TxInput{}
 
 // NewTxInput returns a new Bitcoin TxInput
 func NewTxInput() *TxInput {

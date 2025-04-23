@@ -219,12 +219,10 @@ func TestTxInputSerDeser(t *testing.T) {
 
 	// Cosmos
 	inputCosmos := cosmostxinput.NewTxInput()
-	inputCosmos.LegacyFromPublicKey = []byte{1, 2, 3}
 	inputCosmos.AccountNumber = 1
 	inputCosmos.Sequence = 2
 	inputCosmos.GasLimit = 3
 	inputCosmos.GasPrice = 4.5
-	inputCosmos.LegacyMemo = "memo"
 	ser, err = xcf.MarshalTxInput(inputCosmos)
 	require.NoError(err)
 

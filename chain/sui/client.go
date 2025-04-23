@@ -380,7 +380,9 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 
 	input.ExcludeGasCoin()
 	inputSim := *input
-	inputSim.Pubkey = make([]byte, 32)
+	if _, ok := args.GetPublicKey(); !ok {
+		args.SetPublicKey(make([]byte, 32))
+	}
 
 	builder, err := NewTxBuilder(c.Asset.GetChain().Base())
 	if err != nil {

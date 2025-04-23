@@ -66,7 +66,6 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           861823,
 				LastLedgerSequence: 1221021,
 				Fee:                xc.NewAmountBlockchainFromUint64(100),
-				PublicKey:          []uint8(nil),
 			},
 		},
 		{
@@ -97,7 +96,6 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           0,
 				LastLedgerSequence: 1221021,
 				Fee:                xc.NewAmountBlockchainFromUint64(10),
-				PublicKey:          []uint8(nil),
 			},
 		},
 		{
@@ -127,7 +125,6 @@ func TestFetchTxInput(t *testing.T) {
 				Sequence:           861823,
 				LastLedgerSequence: 20,
 				Fee:                xc.NewAmountBlockchainFromUint64(100),
-				PublicKey:          []uint8(nil),
 			},
 		},
 	}

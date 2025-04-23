@@ -151,31 +151,15 @@ func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption
 // However, wasn't very clear or easy to use.  This function bridges the gap, to allow
 // callers to use a more natural interface with options.  Chain transaction builders can
 // call this to safely set provided options on the old transaction input setters.
-func WithTxInputOptions(txInput xc.TxInput, amount xc.AmountBlockchain, options TransactionOptions) (xc.TxInput, error) {
-	if priority, ok := options.GetPriority(); ok && priority != "" {
-		err := txInput.SetGasFeePriority(priority)
+func WithTxInputOptions(txInput xc.TxInput, timeStamp int64, priorityMaybe xc.GasFeePriority) (xc.TxInput, error) {
+	if priorityMaybe != "" {
+		err := txInput.SetGasFeePriority(priorityMaybe)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if pubkey, ok := options.GetPublicKey(); ok {
-		if withPubkey, ok := txInput.(xc.TxInputWithPublicKey); ok {
-			withPubkey.SetPublicKey(pubkey)
-		}
-	}
-
-	if withAmount, ok := txInput.(xc.TxInputWithAmount); ok {
-		withAmount.SetAmount(amount)
-	}
-	if memo, ok := options.GetMemo(); ok {
-		if withMemo, ok := txInput.(xc.TxInputWithMemo); ok {
-			withMemo.SetMemo(memo)
-		}
-	}
-	if timeStamp, ok := options.GetTimestamp(); ok {
-		if withUnix, ok := txInput.(xc.TxInputWithUnix); ok {
-			withUnix.SetUnix(timeStamp)
-		}
+	if withUnix, ok := txInput.(xc.TxInputWithUnix); ok {
+		withUnix.SetUnix(timeStamp)
 	}
 	return txInput, nil
 }

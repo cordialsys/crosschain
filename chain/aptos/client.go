@@ -89,7 +89,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		zero := [32]byte{}
 		privateKey := ed25519.NewKeyFromSeed(zero[:])
 		privateKey.Public()
-		input.Pubkey = pubkey
 
 		txI, err := builder.Transfer(args, input)
 		if err != nil {

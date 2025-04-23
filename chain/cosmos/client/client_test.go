@@ -87,16 +87,14 @@ func TestFetchTxInput(t *testing.T) {
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
-				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
-				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR")),
-				AccountNumber:       17241,
-				Sequence:            3,
-				GasLimit:            (50_000 * 110) / 100,
-				GasPrice:            0.015,
-				LegacyMemo:          "",
-				TimeoutHeight:       client.TimeoutInBlocks + 123,
-				AssetType:           tx_input.BANK,
-				ChainId:             "chainId",
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
+				AccountNumber:   17241,
+				Sequence:        3,
+				GasLimit:        (50_000 * 110) / 100,
+				GasPrice:        0.015,
+				TimeoutHeight:   client.TimeoutInBlocks + 123,
+				AssetType:       tx_input.BANK,
+				ChainId:         "chainId",
 			},
 			err: "",
 		},
@@ -115,16 +113,14 @@ func TestFetchTxInput(t *testing.T) {
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
-				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
-				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
-				AccountNumber:       1442,
-				Sequence:            4,
-				GasLimit:            (50_000 * 110) / 100,
-				TimeoutHeight:       client.TimeoutInBlocks,
-				GasPrice:            850000,
-				LegacyMemo:          "",
-				AssetType:           tx_input.BANK,
-				ChainId:             "chainId",
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
+				AccountNumber:   1442,
+				Sequence:        4,
+				GasLimit:        (50_000 * 110) / 100,
+				TimeoutHeight:   client.TimeoutInBlocks,
+				GasPrice:        850000,
+				AssetType:       tx_input.BANK,
+				ChainId:         "chainId",
 			},
 			err: "",
 		},
@@ -149,16 +145,14 @@ func TestFetchTxInput(t *testing.T) {
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
-				TxInputEnvelope:     xc.TxInputEnvelope{Type: "cosmos"},
-				LegacyFromPublicKey: ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
-				AccountNumber:       1442,
-				Sequence:            4,
-				GasLimit:            (50_000 * 110) / 100,
-				TimeoutHeight:       client.TimeoutInBlocks,
-				GasPrice:            850000,
-				LegacyMemo:          "",
-				AssetType:           tx_input.CW20,
-				ChainId:             "chainId",
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
+				AccountNumber:   1442,
+				Sequence:        4,
+				GasLimit:        (50_000 * 110) / 100,
+				TimeoutHeight:   client.TimeoutInBlocks,
+				GasPrice:        850000,
+				AssetType:       tx_input.CW20,
+				ChainId:         "chainId",
 			},
 			err: "",
 		},
@@ -185,7 +179,6 @@ func TestFetchTxInput(t *testing.T) {
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope:       xc.TxInputEnvelope{Type: "cosmos"},
-				LegacyFromPublicKey:   ignoreError(base64.StdEncoding.DecodeString("AreNsVEsIEpsORnscZlxzo7Xha4JRK0a7v6rJwPR5U0C")),
 				AccountNumber:         1442,
 				Sequence:              4,
 				FeePayerAccountNumber: 1442,
@@ -193,7 +186,6 @@ func TestFetchTxInput(t *testing.T) {
 				GasLimit:              (50_000 * 110) / 100,
 				TimeoutHeight:         client.TimeoutInBlocks,
 				GasPrice:              850000,
-				LegacyMemo:            "",
 				AssetType:             tx_input.BANK,
 				ChainId:               "chainId",
 			},
@@ -304,10 +296,6 @@ func TestFetchTxInput(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, input)
-
-				if v.pubKeyStr != "" {
-					input.(xc.TxInputWithPublicKey).SetPublicKeyFromStr(v.pubKeyStr)
-				}
 
 				require.Equal(t, v.txInput, input)
 			}

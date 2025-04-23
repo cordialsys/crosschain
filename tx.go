@@ -12,23 +12,6 @@ type TxInput interface {
 	TxInputGetMaxPossibleFee
 }
 
-// TxInputWithPublicKey is input data to a tx for chains that need to explicitly set the public key, e.g. Cosmos
-type TxInputWithPublicKey interface {
-	TxInput
-	SetPublicKey([]byte) error
-	SetPublicKeyFromStr(string) error
-}
-
-// TxInputWithAmount for chains that can optimize the tx input if they know the amount being transferred.
-type TxInputWithAmount interface {
-	SetAmount(AmountBlockchain)
-}
-
-// For chains/transactions that leverage memo field
-type TxInputWithMemo interface {
-	SetMemo(string)
-}
-
 // For chains/transactions that can benefit from knowing the timestamp
 type TxInputWithUnix interface {
 	SetUnix(int64)

@@ -2,6 +2,7 @@ package sui_test
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
@@ -799,7 +800,10 @@ func TestTransfers(t *testing.T) {
 			client, err := NewClient(nativeAsset)
 			require.NoError(err)
 
-			args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine)
+			fromPkBz, err := hex.DecodeString(from_pk)
+			require.NoError(err)
+
+			args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine, buildertest.OptionPublicKey(fromPkBz))
 			if v.tokenContract != "" {
 				args.SetContract(v.tokenContract)
 			}
@@ -814,7 +818,6 @@ func TestTransfers(t *testing.T) {
 			}
 			require.NoError(err)
 			local_input := input.(*TxInput)
-			local_input.SetPublicKeyFromStr(from_pk)
 
 			// check that the gas coin was not also included in
 			// the list of coins to spend.

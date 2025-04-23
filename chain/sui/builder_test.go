@@ -28,13 +28,12 @@ func (s *CrosschainTestSuite) TestTransferHash() {
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverSui),
 		GasBudget:       100,
 		GasPrice:        100,
-		Pubkey:          from_pk,
 		GasCoin:         gasCoin,
 		Coins:           spendCoins,
 		CurrentEpoch:    20,
 	}
 
-	tx, err := builder.NewTransfer(xc.Address(from), xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(5_000_000_000), input)
+	tx, err := builder.NewTransfer(xc.Address(from), from_pk, xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(5_000_000_000), input)
 	require.NoError(err)
 
 	require.EqualValues("3T2PjqaRxgjnWc1TMrJRd7ygs91CP55KMiTEnH4H9NTV", tx.Hash())
@@ -65,7 +64,6 @@ func (s *CrosschainTestSuite) TestFeePayerSpend() {
 		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverSui),
 		GasBudget:       100,
 		GasPrice:        100,
-		Pubkey:          from_pk,
 		GasCoin:         gasCoin,
 		Coins:           spendCoins,
 		CurrentEpoch:    20,
@@ -75,6 +73,7 @@ func (s *CrosschainTestSuite) TestFeePayerSpend() {
 		xc.Address(to),
 		xc.NewAmountBlockchainFromUint64(1_000_000_000),
 		builder.OptionFeePayer(xc.Address(feePayer), []byte{}),
+		builder.OptionPublicKey(from_pk),
 	)
 	_, err = txBuilder.Transfer(args, input)
 	require.ErrorContains(err, "no coins to spend")

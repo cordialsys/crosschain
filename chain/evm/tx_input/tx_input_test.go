@@ -8,7 +8,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput

@@ -190,7 +190,9 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
-			input, err = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+			timeStamp, _ := tfArgs.GetTimestamp()
+			priorityMaybe, _ := tfArgs.GetPriority()
+			input, err = builder.WithTxInputOptions(input, timeStamp, priorityMaybe)
 			if err != nil {
 				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
 			}

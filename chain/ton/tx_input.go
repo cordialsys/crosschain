@@ -1,11 +1,6 @@
 package ton
 
 import (
-	"crypto/ed25519"
-	"encoding/hex"
-	"fmt"
-	"strings"
-
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -18,8 +13,6 @@ type TxInput struct {
 	// MasterChainInfo api.MasterChainInfo `json:"master_chain_info"`
 	AccountStatus    api.AccountStatus   `json:"account_status"`
 	Sequence         uint64              `json:"sequence"`
-	PublicKey        []byte              `json:"public_key,omitempty"`
-	Memo             string              `json:"memo,omitempty"`
 	Timestamp        int64               `json:"timestamp"`
 	TokenWallet      xc.Address          `json:"token_wallet"`
 	JettonWalletCode []byte              `json:"jetton_wallet_code"`
@@ -28,9 +21,7 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
-var _ xc.TxInputWithMemo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -48,25 +39,6 @@ func (input *TxInput) GetDriver() xc.Driver {
 	return xc.DriverTon
 }
 
-func (input *TxInput) SetPublicKey(pk []byte) error {
-	if len(pk) != ed25519.PublicKeySize {
-		return fmt.Errorf("invalid ed25519 public key size: %d", len(pk))
-	}
-	input.PublicKey = pk
-	return nil
-}
-func (input *TxInput) SetPublicKeyFromStr(pkStr string) error {
-	pkStr = strings.TrimPrefix(pkStr, "0x")
-	pk, err := hex.DecodeString(pkStr)
-	if err != nil {
-		return fmt.Errorf("invalid hex: %v", err)
-	}
-	return input.SetPublicKey(pk)
-}
-
-func (input *TxInput) SetMemo(memo string) {
-	input.Memo = memo
-}
 func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 }
