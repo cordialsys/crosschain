@@ -137,12 +137,22 @@ func (args *MultiTransferArgs) AsTransfers() ([]*TransferArgs, error) {
 
 // Deduct fee from the first matching receiver
 // Used for inclusive fee spending.
-func (args *MultiTransferArgs) DeductFee(amount xc.AmountBlockchain, contract xc.ContractAddress) error {
+func (args *MultiTransferArgs) DeductFee(amount xc.AmountBlockchain, chainId xc.NativeAsset, contract xc.ContractAddress) error {
+	// funge empty contract with the chainId
+	if contract == "" {
+		contract = xc.ContractAddress(chainId)
+	}
 	for _, receiver := range args.receivers {
 		receiverContract, _ := receiver.GetContract()
+		if receiverContract == "" {
+			receiverContract = xc.ContractAddress(chainId)
+		}
+
 		if receiverContract == contract {
-			receiver.amount = receiver.amount.Sub(&amount)
-			return nil
+			if receiver.amount.Int().Cmp(amount.Int()) >= 0 {
+				receiver.amount = receiver.amount.Sub(&amount)
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("no matching receiver found to deduct fee of %s %s", amount.String(), contract)
