@@ -250,7 +250,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			if inclusiveFee {
 				fee, feeAssetId := input.GetFeeLimit()
 
-				err = tfArgs.DeductFee(fee, feeAssetId)
+				err = tfArgs.DeductFee(fee, chainConfig.Chain, feeAssetId)
 				if err != nil {
 					return fmt.Errorf("could not deduct fee: %v", err)
 				}
