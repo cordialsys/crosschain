@@ -115,7 +115,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			}
 
 			signers := signer.NewCollection()
-			senders := make([]*builder.Spender, len(fromSecretRefs))
+			senders := make([]*builder.Sender, len(fromSecretRefs))
 			for i, fromSecretRef := range fromSecretRefs {
 				fromSecret, err := config.GetSecret(fromSecretRef)
 				if err != nil {
@@ -151,7 +151,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 				logrus.WithField("address", address).Info("sending from")
 
 				signers.AddAuxSigner(signer, address)
-				senders[i], err = builder.NewSpender(address, publicKey)
+				senders[i], err = builder.NewSender(address, publicKey)
 				if err != nil {
 					return fmt.Errorf("could not create spender for from-address at position %d: %v", i, err)
 				}

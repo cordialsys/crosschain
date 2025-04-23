@@ -7,7 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-type Spender struct {
+type Sender struct {
 	address        xc.Address
 	publicKey      []byte
 	options        builderOptions
@@ -21,7 +21,7 @@ type Receiver struct {
 	appliedOptions []BuilderOption
 }
 
-func NewSpender(address xc.Address, publicKey []byte, options ...BuilderOption) (*Spender, error) {
+func NewSender(address xc.Address, publicKey []byte, options ...BuilderOption) (*Sender, error) {
 	builderOptions := newBuilderOptions()
 	for _, opt := range options {
 		err := opt(&builderOptions)
@@ -29,7 +29,7 @@ func NewSpender(address xc.Address, publicKey []byte, options ...BuilderOption) 
 			return nil, err
 		}
 	}
-	return &Spender{
+	return &Sender{
 		address,
 		publicKey,
 		builderOptions,
@@ -54,13 +54,13 @@ func NewReceiver(address xc.Address, amount xc.AmountBlockchain, options ...Buil
 }
 
 type MultiTransferArgs struct {
-	spenders       []*Spender
+	spenders       []*Sender
 	receivers      []*Receiver
 	options        builderOptions
 	appliedOptions []BuilderOption
 }
 
-func NewMultiTransferArgs(spenders []*Spender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
+func NewMultiTransferArgs(spenders []*Sender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	for _, opt := range options {
 		err := opt(&builderOptions)
@@ -76,9 +76,9 @@ func NewMultiTransferArgs(spenders []*Spender, receivers []*Receiver, options ..
 	}, nil
 }
 
-func (args *Spender) GetFrom() xc.Address { return args.address }
+func (args *Sender) GetFrom() xc.Address { return args.address }
 
-func (args *Spender) GetPublicKey() []byte {
+func (args *Sender) GetPublicKey() []byte {
 	return args.publicKey
 }
 
@@ -93,7 +93,7 @@ func (args *Receiver) GetDecimals() (int, bool) {
 	return args.options.GetDecimals()
 }
 
-func (args *MultiTransferArgs) Spenders() []*Spender {
+func (args *MultiTransferArgs) Spenders() []*Sender {
 	return args.spenders
 }
 
