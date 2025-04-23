@@ -133,13 +133,13 @@ func TestMultiTransfer(t *testing.T) {
 	}
 
 	// Create senders
-	senders := make([]*builder.Spender, len(fromAddresses))
+	senders := make([]*builder.Sender, len(fromAddresses))
 	for i, addr := range fromAddresses {
 		signer, err := xcFactory.NewSigner(chainConfig.Base(), fromPrivateKeys[i])
 		require.NoError(t, err)
 		publicKey, err := signer.PublicKey()
 		require.NoError(t, err)
-		senders[i], err = builder.NewSpender(addr, publicKey)
+		senders[i], err = builder.NewSender(addr, publicKey)
 		require.NoError(t, err)
 	}
 
