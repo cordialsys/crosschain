@@ -47,10 +47,11 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	var stateInit *tlb.StateInit
 	var err error
 	if txInput.AccountStatus != api.Active {
-		if len(txInput.PublicKey) == 0 {
-			return nil, fmt.Errorf("did not set public-key in tx-input for new ton account %s", from)
+		fromPubKey, ok := args.GetPublicKey()
+		if !ok || len(fromPubKey) == 0 {
+			return nil, fmt.Errorf("must set from-public-key in transfer args for new ton account: %s", from)
 		}
-		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(txInput.PublicKey), tonaddress.DefaultWalletVersion, tonaddress.DefaultSubwalletId)
+		stateInit, err = wallet.GetStateInit(ed25519.PublicKey(fromPubKey), tonaddress.DefaultWalletVersion, tonaddress.DefaultSubwalletId)
 		if err != nil {
 			return nil, err
 		}
@@ -70,6 +71,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	if err != nil {
 		return nil, err
 	}
+	memo, _ := args.GetMemo()
 
 	msgs := []*wallet.Message{}
 	// Token transfer
@@ -106,7 +108,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 			maxJettonFee = txInput.EstimatedMaxFee
 		}
 
-		tfMsg, err := BuildJettonTransfer(uint64(txInput.Timestamp), fromAddr, tokenAddr, toAddr, amountTlb, tlb.FromNanoTON(maxJettonFee.Int()), txInput.Memo)
+		tfMsg, err := BuildJettonTransfer(uint64(txInput.Timestamp), fromAddr, tokenAddr, toAddr, amountTlb, tlb.FromNanoTON(maxJettonFee.Int()), memo)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +116,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 	} else {
 		// Native transfer
-		tfMsg, err := BuildTransfer(toAddr, amountTlb, false, txInput.Memo)
+		tfMsg, err := BuildTransfer(toAddr, amountTlb, false, memo)
 		if err != nil {
 			return nil, err
 		}

@@ -300,14 +300,14 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("could not get address public-key: %v", err)
 	}
-	if getAddrResponse.ExitCode == 0 && len(getAddrResponse.Stack) > 0 {
-		// Set the public key if the account is present on chain.
-		// If not, the public key will need to be set by caller.
-		err = input.SetPublicKeyFromStr(getAddrResponse.Stack[0].Value)
-		if err != nil {
-			logrus.WithError(err).Warn("could not set public key from remote")
-		}
-	}
+	// if getAddrResponse.ExitCode == 0 && len(getAddrResponse.Stack) > 0 {
+	// 	// Set the public key if the account is present on chain.
+	// 	// If not, the public key will need to be set by caller.
+	// 	err = input.SetPublicKeyFromStr(getAddrResponse.Stack[0].Value)
+	// 	if err != nil {
+	// 		logrus.WithError(err).Warn("could not set public key from remote")
+	// 	}
+	// }
 
 	return input, nil
 }

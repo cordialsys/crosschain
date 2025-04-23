@@ -134,7 +134,8 @@ func TestTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
-	input, err = builder.WithTxInputOptions(input, tfArgs.GetAmount(), &tfArgs)
+	timeStamp, _ := tfArgs.GetTimestamp()
+	input, err = builder.WithTxInputOptions(input, timeStamp, "")
 	require.NoError(t, err)
 
 	fmt.Println("transfer input: ", asJson(input))

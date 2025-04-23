@@ -1,11 +1,7 @@
 package tx_input
 
 import (
-	"encoding/base64"
-	"encoding/hex"
-	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/shopspring/decimal"
 
@@ -29,8 +25,6 @@ type TxInput struct {
 	FeePayerAccountNumber uint64  `json:"fee_payer_account_number,omitempty"`
 	GasLimit              uint64  `json:"gas_limit,omitempty"`
 	GasPrice              float64 `json:"gas_price,omitempty"`
-	LegacyMemo            string  `json:"memo,omitempty"`
-	LegacyFromPublicKey   []byte  `json:"from_pubkey,omitempty"`
 	TimeoutHeight         uint64  `json:"timeout_height"`
 
 	AssetType CosmoAssetType `json:"asset_type,omitempty"`
@@ -38,8 +32,6 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
-var _ xc.TxInputWithMemo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -97,28 +89,6 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	}
 	// sequence all same - we're safe
 	return true
-}
-func (txInput *TxInput) SetPublicKey(publicKeyBytes []byte) error {
-	txInput.LegacyFromPublicKey = publicKeyBytes
-	return nil
-}
-
-func (txInput *TxInput) SetMemo(memo string) {
-	txInput.LegacyMemo = memo
-}
-
-func (txInput *TxInput) SetPublicKeyFromStr(publicKeyStr string) error {
-	var publicKeyBytes []byte
-	var err error
-	if strings.HasPrefix(publicKeyStr, "0x") {
-		publicKeyBytes, err = hex.DecodeString(publicKeyStr)
-	} else {
-		publicKeyBytes, err = base64.StdEncoding.DecodeString(publicKeyStr)
-	}
-	if err != nil {
-		return fmt.Errorf("invalid public key %v: %v", publicKeyStr, err)
-	}
-	return txInput.SetPublicKey(publicKeyBytes)
 }
 
 // NewTxInput returns a new Cosmos TxInput

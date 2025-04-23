@@ -32,6 +32,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	args := buildertest.MustNewTransferArgs(
 		from, to, amount,
 		buildertest.OptionMemo("999"),
+		buildertest.OptionPublicKey(make([]byte, 32)),
 	)
 
 	nt, err := txBuilder.Transfer(args, input)
@@ -55,6 +56,7 @@ func TestNewTokenTransfer(t *testing.T) {
 		from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
 		buildertest.OptionMemo("0x999"),
+		buildertest.OptionPublicKey(make([]byte, 32)),
 	)
 
 	input := &TxInput{}
@@ -77,6 +79,7 @@ func TestNewTransfer(t *testing.T) {
 	input := &TxInput{}
 	args := buildertest.MustNewTransferArgs(
 		from, to, amount,
+		buildertest.OptionPublicKey(make([]byte, 32)),
 	)
 	tnt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
@@ -93,6 +96,7 @@ func TestNewTransfer(t *testing.T) {
 	args = buildertest.MustNewTransferArgs(
 		from, to, amount2,
 		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
+		buildertest.OptionPublicKey(make([]byte, 32)),
 	)
 	tnt, err = txBuilder.Transfer(args, input)
 	require.NoError(t, err)

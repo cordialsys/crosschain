@@ -62,9 +62,9 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 		},
 	}
 
-	if txInput.Memo != "" {
+	if memo, ok := args.GetMemo(); ok {
 		var xdrMemo xdr.Memo
-		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, txInput.Memo)
+		xdrMemo, err = xdr.NewMemo(xdr.MemoTypeMemoText, memo)
 		if err != nil {
 			return &xlmtx.Tx{}, fmt.Errorf("failed to create memo: %w", err)
 		}

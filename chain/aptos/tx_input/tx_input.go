@@ -1,9 +1,6 @@
 package tx_input
 
 import (
-	"encoding/base64"
-	"encoding/hex"
-
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
@@ -16,11 +13,9 @@ type TxInput struct {
 	GasPrice       uint64 `json:"gas_price,omitempty"`
 	Timestamp      uint64 `json:"timestamp,omitempty"`
 	ChainId        int    `json:"chain_id,omitempty"`
-	Pubkey         []byte `json:"pubkey,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -72,27 +67,4 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	}
 	// sequence all same - we're safe
 	return true
-}
-
-func (input *TxInput) SetPublicKey(pubkey []byte) error {
-	input.Pubkey = pubkey
-	return nil
-}
-
-func (input *TxInput) SetPublicKeyFromStr(pubkeyStr string) error {
-	var err error
-	var pubkey []byte
-	if len(pubkeyStr) == 128 || len(pubkeyStr) == 130 {
-		pubkey, err = hex.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	} else {
-		pubkey, err = base64.RawStdEncoding.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	}
-	input.Pubkey = pubkey
-	return nil
 }

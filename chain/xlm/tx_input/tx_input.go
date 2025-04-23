@@ -11,7 +11,6 @@ import (
 )
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithMemo = &TxInput{}
 
 type TxInput struct {
 	xc.TxInputEnvelope
@@ -26,8 +25,6 @@ type TxInput struct {
 	// Specifies the duration for which a transaction remains valid after being submitted.
 	TransactionActiveTime time.Duration
 	MinLedgerSequence     int64
-	// Transaction memo
-	Memo string
 }
 
 func init() {
@@ -90,9 +87,4 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(uint64(input.MaxFee)), ""
-}
-
-// SetMemo implements xc.TxInputWithMemo.SetMemo
-func (input *TxInput) SetMemo(memo string) {
-	input.Memo = memo
 }

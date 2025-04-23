@@ -126,9 +126,8 @@ func (s *AptosTestSuite) TestSubmitTx() {
 		GasPrice:        10,
 		Timestamp:       12345,
 		ChainId:         1,
-		Pubkey:          pubkey,
 	}
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	args := buildertest.MustNewTransferArgs(from, to, amount, buildertest.OptionPublicKey(pubkey))
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
@@ -392,9 +391,8 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 		GasPrice:        10,
 		Timestamp:       12345,
 		ChainId:         1,
-		Pubkey:          pubkey,
 	}
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	args := buildertest.MustNewTransferArgs(from, to, amount, buildertest.OptionPublicKey(pubkey))
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
@@ -435,11 +433,11 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 		GasPrice:        10,
 		Timestamp:       12345,
 		ChainId:         1,
-		Pubkey:          pubkey,
 	}
 	args := buildertest.MustNewTransferArgs(
 		from, to, amount,
 		buildertest.OptionContractAddress("0x1::Coin::USDC"),
+		buildertest.OptionPublicKey(pubkey),
 	)
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
@@ -486,12 +484,12 @@ func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
 		GasPrice:        10,
 		Timestamp:       12345,
 		ChainId:         1,
-		Pubkey:          pubkey,
 	}
 	args := buildertest.MustNewTransferArgs(
 		from, to, amount,
 		buildertest.OptionContractAddress("0x1::Coin::USDC"),
 		buildertest.OptionFeePayer(feePayer, []byte{}),
+		buildertest.OptionPublicKey(pubkey),
 	)
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)

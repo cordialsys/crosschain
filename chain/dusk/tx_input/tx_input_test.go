@@ -6,18 +6,18 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
-	"github.com/test-go/testify/require"
+	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
+	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput
 
 func TestSafeFromDoubleSpend(t *testing.T) {
 
-	newInput := &TxInput{}
-	oldInput1 := &TxInput{}
+	newInput := &TxInput{Nonce: 0}
+	oldInput1 := &TxInput{Nonce: 0}
 	// Defaults are false but each chain has conditions
-	require.False(t, newInput.SafeFromDoubleSend(oldInput1))
+	require.True(t, newInput.SafeFromDoubleSend(oldInput1))
 	require.False(t, newInput.IndependentOf(oldInput1))
 }
 
@@ -35,6 +35,12 @@ func TestTxInputConflicts(t *testing.T) {
 			newInput:        &TxInput{},
 			oldInput:        &TxInput{},
 			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput:        &TxInput{Nonce: 0},
+			oldInput:        &TxInput{Nonce: 1},
+			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{

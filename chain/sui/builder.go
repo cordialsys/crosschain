@@ -32,17 +32,21 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	if !ok {
 		feePayer = args.GetFrom()
 	}
-	return txBuilder.NewTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+	fromPubKey, ok := args.GetPublicKey()
+	if !ok {
+		return &Tx{}, errors.New("must set public key on TxInput for SUI")
+	}
+	return txBuilder.NewTransfer(feePayer, fromPubKey, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
 
 // Old transfer interface
-func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	var local_input *TxInput
 	var ok bool
 	if local_input, ok = input.(*TxInput); !ok {
 		return &Tx{}, errors.New("xc.TxInput is not from an sui chain")
 	}
-	if len(local_input.Pubkey) == 0 {
+	if len(fromPubKey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
 	}
 
@@ -244,7 +248,7 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, from xc.Address, to 
 
 	xcTx := &Tx{
 		Tx:         tx,
-		public_key: local_input.Pubkey,
+		public_key: fromPubKey,
 	}
 	if feePayer != from {
 		xcTx.extraFeePayer = feePayer
@@ -252,10 +256,10 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, from xc.Address, to 
 	return xcTx, nil
 }
 
-func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	return txBuilder.NewTransfer(feePayer, from, to, amount, input)
+func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, fromPubKey []byte, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	return txBuilder.NewTransfer(feePayer, fromPubKey, from, to, amount, input)
 }
-func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, fromPubKey []byte, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
 	// The token is already in the coins in the tx_input so txbuilding is the exact same.
-	return txBuilder.NewTransfer(feePayer, from, to, amount, input)
+	return txBuilder.NewTransfer(feePayer, fromPubKey, from, to, amount, input)
 }

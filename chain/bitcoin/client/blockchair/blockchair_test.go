@@ -92,7 +92,7 @@ func TestFetchTxInput(t *testing.T) {
 			input, err := client.FetchTransferInput(context.Background(), args)
 			require.NotNil(input)
 			// optimize the utxo amounts
-			input.(xc.TxInputWithAmount).SetAmount(xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
+			input.(*tx_input.TxInput).SetAmount(xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
 
 			fmt.Println(input)
 			fmt.Println(err)

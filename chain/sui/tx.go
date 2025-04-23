@@ -2,8 +2,6 @@ package sui
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/hex"
 	"sort"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -20,7 +18,6 @@ type TxInput struct {
 	xc.TxInputEnvelope
 	GasBudget uint64 `json:"gas_budget,omitempty"`
 	GasPrice  uint64 `json:"gas_price,omitempty"`
-	Pubkey    []byte `json:"pubkey,omitempty"`
 	// Native Sui object that we can use to pay gas with
 	GasCoin      types.Coin `json:"gas_coin,omitempty"`
 	GasCoinOwner xc.Address `json:"gas_coin_owner,omitempty"`
@@ -31,7 +28,6 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithPublicKey = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -113,29 +109,6 @@ func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
 	}
 	// all either disjoint or different epoches - we're safe
 	return true
-}
-
-func (input *TxInput) SetPublicKey(pubkey []byte) error {
-	input.Pubkey = pubkey
-	return nil
-}
-
-func (input *TxInput) SetPublicKeyFromStr(pubkeyStr string) error {
-	var err error
-	var pubkey []byte
-	if len(pubkeyStr) == 64 || len(pubkeyStr) == 128 {
-		pubkey, err = hex.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	} else {
-		pubkey, err = base64.StdEncoding.DecodeString(pubkeyStr)
-		if err != nil {
-			return err
-		}
-	}
-	input.Pubkey = pubkey
-	return nil
 }
 
 func SortCoins(coins []*types.Coin) {
