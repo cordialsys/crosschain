@@ -15,11 +15,17 @@ type MockedClient struct {
 }
 
 var _ xclient.Client = &MockedClient{}
+var _ xclient.MultiTransferClient = &MockedClient{}
 
 // FetchTransferInput fetches tx input, mocked
 func (m *MockedClient) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	margs := m.Called(ctx, args.GetFrom(), args.GetTo())
+	margs := m.Called(ctx, args.GetFrom())
 	return margs.Get(0).(xc.TxInput), margs.Error(1)
+}
+
+func (m *MockedClient) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {
+	margs := m.Called(ctx, args)
+	return margs.Get(0).(xc.MultiTransferInput), margs.Error(1)
 }
 
 // FetchLegacyTxInput fetches tx input, mocked

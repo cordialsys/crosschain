@@ -154,7 +154,7 @@ func (txInput *TxInput) SumUtxo() *xc.AmountBlockchain {
 func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockchain, minUtxo int) []Output {
 	filtered := []Output{}
 	balance := xc.NewAmountBlockchainFromUint64(0)
-	// 1. sort from lowest to higher
+	// 1. Sort by value from highest to lowest
 	if len(unspentOutputs) > 1 {
 		sort.Slice(unspentOutputs, func(i, j int) bool {
 			return unspentOutputs[i].Value.Cmp(&unspentOutputs[j].Value) > 0
