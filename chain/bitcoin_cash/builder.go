@@ -3,13 +3,13 @@ package bitcoin_cash
 import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/bitcoin"
+	builder "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	bitcointx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 )
 
 // TxBuilder for Bitcoin
 type TxBuilder struct {
-	bitcoin.TxBuilder
+	builder.TxBuilder
 }
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
@@ -17,7 +17,7 @@ var _ xcbuilder.MultiTransfer = &TxBuilder{}
 
 // NewTxBuilder creates a new Bitcoin TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
-	txBuilder, err := bitcoin.NewTxBuilder(cfgI)
+	txBuilder, err := builder.NewTxBuilder(cfgI)
 	if err != nil {
 		return TxBuilder{}, err
 	}

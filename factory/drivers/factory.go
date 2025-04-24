@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/aptos"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
+	bitcoinbuilder "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	cosmosaddress "github.com/cordialsys/crosschain/chain/cosmos/address"
@@ -143,7 +144,7 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 	case DriverSui:
 		return sui.NewTxBuilder(cfg)
 	case DriverBitcoin, DriverBitcoinLegacy:
-		return bitcoin.NewTxBuilder(cfg)
+		return bitcoinbuilder.NewTxBuilder(cfg)
 	case DriverBitcoinCash:
 		return bitcoin_cash.NewTxBuilder(cfg)
 	case DriverSubstrate:

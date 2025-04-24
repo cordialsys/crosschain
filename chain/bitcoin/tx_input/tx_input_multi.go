@@ -4,15 +4,13 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 )
 
 // TxInput for Bitcoin
 type MultiTransferInput struct {
 	Inputs          []TxInput           `json:"inputs"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
-	// Estimated size in bytes, per utxo that gets spent
-	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
+	EstimatedSize   uint64              `json:"estimated_size"`
 }
 
 // This is a necessary interface so we can check conflicts between:
@@ -54,22 +52,11 @@ func (input *MultiTransferInput) SetGasFeePriority(other xc.GasFeePriority) erro
 	return nil
 }
 
-func (txInput *MultiTransferInput) GetEstimatedSizePerSpentUtxo() uint64 {
-	if txInput.EstimatedSizePerSpentUtxo == 0 {
-		log.WithField("driver", txInput.GetDriver()).Warn("estimated size per spent utxo not set")
-		return 255
-	}
-	return txInput.EstimatedSizePerSpentUtxo
-}
-
 func (txInput *MultiTransferInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	gasPrice := txInput.GasPricePerByte
-	allUtxoCount := 0
-	for _, input := range txInput.Inputs {
-		allUtxoCount += len(input.UnspentOutputs)
-	}
+	txSize := txInput.EstimatedSize
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
-		txInput.GetEstimatedSizePerSpentUtxo() * uint64(allUtxoCount),
+		txSize,
 	)
 	fee := gasPrice.Mul(&estimatedTxBytesLength)
 	return fee, ""
