@@ -93,6 +93,10 @@ func (args *Receiver) GetDecimals() (int, bool) {
 	return args.options.GetDecimals()
 }
 
+func (args *Receiver) GetMemo() (string, bool) {
+	return args.options.GetMemo()
+}
+
 func (args *MultiTransferArgs) Spenders() []*Sender {
 	return args.spenders
 }
@@ -110,6 +114,10 @@ func (args *MultiTransferArgs) GetFeePayer() (xc.Address, bool) {
 
 func (args *MultiTransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
+}
+
+func (args *MultiTransferArgs) GetMemo() (string, bool) {
+	return args.options.GetMemo()
 }
 
 func (args *MultiTransferArgs) AsTransfers() ([]*TransferArgs, error) {

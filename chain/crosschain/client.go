@@ -34,6 +34,7 @@ type Client struct {
 
 var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
+var _ xclient.MultiTransferClient = &Client{}
 
 const ServiceApiKeyHeader = "x-service-api-key"
 
@@ -175,7 +176,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	memoMaybe, _ := args.GetMemo()
 	priorityMaybe, _ := args.GetPriority()
 
-	res, err := client.legacyApiCall(ctx, "/input", &types.TxInputReq{
+	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
 		Chain:     client.Asset.GetChain().Chain,
 		Contract:  string(contract),
 		Balance:   args.GetAmount().String(),
@@ -194,6 +195,48 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	var r = &types.LegacyTxInputRes{}
 	_ = json.Unmarshal(res, r)
 	return drivers.UnmarshalTxInput(r.NewTxInput)
+}
+
+func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {
+	chain := client.Asset.GetChain().Chain
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/batch-transfers", client.URL, chain)
+
+	memoMaybe, _ := args.GetMemo()
+	priorityMaybe, _ := args.GetPriority()
+	senders := []*types.Sender{}
+	receivers := []*types.Receiver{}
+	for _, sender := range args.Spenders() {
+		senders = append(senders, &types.Sender{
+			Address:   sender.GetFrom(),
+			PublicKey: hex.EncodeToString(sender.GetPublicKey()),
+		})
+	}
+	for _, receiver := range args.Receivers() {
+		toMemoMaybe, _ := receiver.GetMemo()
+		contract, _ := receiver.GetContract()
+		decimals, _ := receiver.GetDecimals()
+		receivers = append(receivers, &types.Receiver{
+			Address:  receiver.GetTo(),
+			Balance:  receiver.GetAmount(),
+			Memo:     toMemoMaybe,
+			Contract: contract,
+			Decimals: decimals,
+		})
+	}
+	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, &types.MultiTransferInputReq{
+		Chain:     client.Asset.GetChain().Chain,
+		Senders:   senders,
+		Receivers: receivers,
+		FeePayer:  types.NewFeePayerInfoOrNil(&args),
+		Priority:  string(priorityMaybe),
+		Memo:      memoMaybe,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var r = &types.TransferInputRes{}
+	_ = json.Unmarshal(res, r)
+	return drivers.UnmarshalMultiTransferInput([]byte(r.Input))
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {

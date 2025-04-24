@@ -37,7 +37,7 @@ func (b *BalanceRes) GetBalance() xc.AmountBlockchain {
 	return b.Balance
 }
 
-type TxInputReq struct {
+type TransferInputReq struct {
 	Chain    xc.NativeAsset `json:"chain"`
 	Contract string         `json:"contract,omitempty"`
 	Decimals string         `json:"decimals,omitempty"`
@@ -79,6 +79,28 @@ func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
 	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey)}
 }
 
+type Sender struct {
+	Address xc.Address `json:"address"`
+	// hex-encoded
+	PublicKey string `json:"public_key"`
+}
+type Receiver struct {
+	Address  xc.Address          `json:"address"`
+	Balance  xc.AmountBlockchain `json:"balance"`
+	Memo     string              `json:"memo,omitempty"`
+	Contract xc.ContractAddress  `json:"contract,omitempty"`
+	Decimals int                 `json:"decimals,omitempty"`
+}
+
+type MultiTransferInputReq struct {
+	Chain     xc.NativeAsset `json:"chain"`
+	Senders   []*Sender      `json:"senders"`
+	Receivers []*Receiver    `json:"receivers"`
+	FeePayer  *FeePayerInfo  `json:"fee_payer,omitempty"`
+	Priority  string         `json:"priority,omitempty"`
+	Memo      string         `json:"memo,omitempty"`
+}
+
 type StakingInputReq struct {
 	From      string             `json:"from"`
 	Balance   string             `json:"balance"`
@@ -89,13 +111,17 @@ type StakingInputReq struct {
 }
 
 type LegacyTxInputRes struct {
-	*TxInputReq
+	*TransferInputReq
 	xc.TxInput `json:"raw_tx_input,omitempty"`
 	NewTxInput json.RawMessage `json:"input,omitempty"`
 }
 
+type TransferInputRes struct {
+	Input string `json:"input,omitempty"`
+}
+
 type TxInputRes struct {
-	*TxInputReq
+	*TransferInputReq
 	TxInput string `json:"input,omitempty"`
 }
 
