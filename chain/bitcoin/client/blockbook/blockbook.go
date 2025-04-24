@@ -17,6 +17,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
+	"github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -392,9 +393,52 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 	if err != nil {
 		return multiInput, err
 	}
-	multiInput.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
+	size, err := client.EstimateTxSize(ctx, args, *multiInput)
+	if err != nil {
+		return multiInput, err
+	}
+	multiInput.EstimatedSize = uint64(size)
 
 	return multiInput, nil
+}
+
+// Estimate the size of the transaction in bytes.  This is useful for estimating fees, and is more accurate than
+// just counting the number of UTXO.
+func (client *BlockbookClient) EstimateTxSize(ctx context.Context, args xcbuilder.MultiTransferArgs, input tx_input.MultiTransferInput) (int, error) {
+	txBuilder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+	if err != nil {
+		return 0, err
+	}
+	// ensure the fee estimate is 0 for the estimation
+	input.EstimatedSize = 0
+
+	tx, err := txBuilder.MultiTransfer(args, &input)
+	if err != nil {
+		return 0, err
+	}
+
+	sighashes, err := tx.Sighashes()
+	if err != nil {
+		return 0, err
+	}
+	sigs := []*xc.SignatureResponse{}
+	for _, sighash := range sighashes {
+		sigs = append(sigs, &xc.SignatureResponse{
+			Signature: make([]byte, 64),
+			PublicKey: make([]byte, 64),
+			Address:   sighash.Signer,
+		})
+	}
+	err = tx.AddSignatures(sigs...)
+	if err != nil {
+		return 0, err
+	}
+	serial, err := tx.Serialize()
+	if err != nil {
+		return 0, err
+	}
+
+	return len(serial), nil
 }
 
 func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {

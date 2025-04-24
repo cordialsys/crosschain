@@ -1,4 +1,4 @@
-package bitcoin_test
+package builder_test
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	. "github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
+	. "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/stretchr/testify/suite"
