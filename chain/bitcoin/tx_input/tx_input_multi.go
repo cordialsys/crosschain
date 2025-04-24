@@ -9,16 +9,22 @@ import (
 
 // TxInput for Bitcoin
 type MultiTransferInput struct {
-	Inputs []*TxInput
-	// UnspentOutputs  []Output            `json:"unspent_outputs"`
-	// FromPublicKey   []byte              `json:"from_pubkey"`
+	Inputs          []TxInput           `json:"inputs"`
 	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
 }
 
+// This is a necessary interface so we can check conflicts between:
+// * MultiTransferInput
+// * TxInput
+type UtxoGetter interface {
+	GetUtxo() []Output
+}
+
 var _ xc.TxVariantInput = &MultiTransferInput{}
 var _ xc.MultiTransferInput = &MultiTransferInput{}
+var _ UtxoGetter = &MultiTransferInput{}
 
 func NewMultiTransferInput() *MultiTransferInput {
 	return &MultiTransferInput{}
@@ -70,17 +76,13 @@ func (txInput *MultiTransferInput) GetFeeLimit() (xc.AmountBlockchain, xc.Contra
 }
 
 func (input *MultiTransferInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if btcOther, ok := other.(*MultiTransferInput); ok {
-		for _, inputOther := range btcOther.Inputs {
-			for _, input := range input.Inputs {
-				// check if any utxo are spent twice
-				for _, utxo1 := range inputOther.UnspentOutputs {
-					for _, utxo2 := range input.UnspentOutputs {
-						if utxo1.Outpoint.Equals(&utxo2.Outpoint) {
-							// not independent
-							return false
-						}
-					}
+	if btcOther, ok := other.(UtxoGetter); ok {
+		// check if any utxo are spent twice
+		for _, utxo1 := range btcOther.GetUtxo() {
+			for _, utxo2 := range input.GetUtxo() {
+				if utxo1.Outpoint.Equals(&utxo2.Outpoint) {
+					// not independent
+					return false
 				}
 			}
 		}
@@ -90,8 +92,11 @@ func (input *MultiTransferInput) IndependentOf(other xc.TxInput) (independent bo
 }
 
 func (input *MultiTransferInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
-		return false
+	// check that all other inputs are of the same type, so we can safely default-false
+	for _, other := range others {
+		if _, ok := other.(UtxoGetter); !ok {
+			return false
+		}
 	}
 	// any disjoint set of utxo's can risk double send
 	for _, other := range others {
@@ -109,4 +114,20 @@ func (txInput *MultiTransferInput) SumUtxo() *xc.AmountBlockchain {
 		balance = balance.Add(input.SumUtxo())
 	}
 	return &balance
+}
+
+func (input *MultiTransferInput) GetUtxo() []Output {
+	size := 0
+	for _, input := range input.Inputs {
+		size += len(input.UnspentOutputs)
+	}
+	utxos := make([]Output, size)
+	idx := 0
+	for _, input := range input.Inputs {
+		for _, utxo := range input.UnspentOutputs {
+			utxos[idx] = utxo
+			idx++
+		}
+	}
+	return utxos
 }

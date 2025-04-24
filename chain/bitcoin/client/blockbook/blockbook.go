@@ -368,7 +368,7 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 	// iterate over array instead of map to preserve order
 	for _, utxo := range filteredUtxo {
 		if _, ok := serialiedByAddress[utxo.Address]; !ok {
-			multiInput.Inputs = append(multiInput.Inputs, &tx_input.TxInput{
+			multiInput.Inputs = append(multiInput.Inputs, tx_input.TxInput{
 				UnspentOutputs: groupedUtxoByAddress[utxo.Address],
 				Address:        utxo.Address,
 			})
