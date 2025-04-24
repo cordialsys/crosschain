@@ -48,6 +48,7 @@ func init() {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ UtxoGetter = &TxInput{}
 
 // NewTxInput returns a new Bitcoin TxInput
 func NewTxInput() *TxInput {
@@ -71,9 +72,9 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if btcOther, ok := other.(*TxInput); ok {
+	if btcOther, ok := other.(UtxoGetter); ok {
 		// check if any utxo are spent twice
-		for _, utxo1 := range btcOther.UnspentOutputs {
+		for _, utxo1 := range btcOther.GetUtxo() {
 			for _, utxo2 := range input.UnspentOutputs {
 				if utxo1.Outpoint.Equals(&utxo2.Outpoint) {
 					// not independent
@@ -87,8 +88,11 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 
 func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
-		return false
+	// check that all other inputs are of the same type, so we can safely default-false
+	for _, other := range others {
+		if _, ok := other.(UtxoGetter); !ok {
+			return false
+		}
 	}
 	// any disjoint set of utxo's can risk double send
 	for _, other := range others {
@@ -144,6 +148,9 @@ func (txInput *TxInput) SumUtxo() *xc.AmountBlockchain {
 	}
 	return &balance
 }
+func (txInput *TxInput) GetUtxo() []Output {
+	return txInput.UnspentOutputs
+}
 
 // 1. sort unspentOutputs from lowest to highest
 // 2. grab the minimum amount of UTXO needed to satify amount
@@ -163,8 +170,7 @@ func FilterForMinUtxoSet(unspentOutputs []Output, targetAmount xc.AmountBlockcha
 
 	// 2. grab the minimum amount of UTXO needed to satify amount
 	index := 0
-	var utxo Output
-	for _, utxo = range unspentOutputs {
+	for _, utxo := range unspentOutputs {
 		if balance.Cmp(&targetAmount) >= 0 {
 			break
 		}

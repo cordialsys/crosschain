@@ -51,13 +51,13 @@ func TestTxInputConflicts(t *testing.T) {
 		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
 		fmt.Println()
 		require.Equal(t,
-			v.newInput.IndependentOf(v.oldInput),
 			v.independent,
+			v.newInput.IndependentOf(v.oldInput),
 			"IndependentOf",
 		)
 		require.Equal(t,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
 			v.doubleSpendSafe,
+			v.newInput.SafeFromDoubleSend(v.oldInput),
 			"SafeFromDoubleSend",
 		)
 	}

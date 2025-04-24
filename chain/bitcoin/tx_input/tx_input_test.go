@@ -34,6 +34,20 @@ func newInput(points ...tx_input.Outpoint) *tx_input.TxInput {
 	return &input
 }
 
+func newMultiInput(points ...tx_input.Outpoint) *tx_input.MultiTransferInput {
+	input := tx_input.MultiTransferInput{}
+	for _, p := range points {
+		input.Inputs = append(input.Inputs, tx_input.TxInput{
+			UnspentOutputs: []tx_input.Output{
+				{
+					Outpoint: p,
+				},
+			},
+		})
+	}
+	return &input
+}
+
 func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
 		newInput xc.TxInput
@@ -102,24 +116,88 @@ func TestTxInputConflicts(t *testing.T) {
 			independent:     false,
 			doubleSpendSafe: false,
 		},
+		{
+			newInput: newMultiInput(
+				newPoint([]byte{10}, 10),
+				newPoint([]byte{12}, 12),
+			),
+			oldInput: nil,
+			// must be false for both, not always independent
+			independent:     false,
+			doubleSpendSafe: false,
+		},
+		{
+			// verify we can handle tx-input vs multi-tx-input independence
+			newInput: newInput(
+				newPoint([]byte{10}, 10),
+				newPoint([]byte{12}, 12),
+			),
+			oldInput: newMultiInput(
+				newPoint([]byte{10}, 11),
+				newPoint([]byte{12}, 13),
+			),
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			// verify we can handle multi-tx-input vs tx-input independence
+			newInput: newMultiInput(
+				newPoint([]byte{10}, 10),
+				newPoint([]byte{12}, 12),
+			),
+			oldInput: newInput(
+				newPoint([]byte{10}, 11),
+				newPoint([]byte{12}, 13),
+			),
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			// verify we can handle multi-tx-input vs tx-input double-spend
+			newInput: newMultiInput(
+				newPoint([]byte{10}, 10), //dup
+				newPoint([]byte{12}, 12),
+			),
+			oldInput: newInput(
+				newPoint([]byte{10}, 10), //dup
+				newPoint([]byte{12}, 13),
+			),
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			// verify we can handle tx-input vs multi-tx-input double-spend
+			newInput: newInput(
+				newPoint([]byte{10}, 10), //dup
+				newPoint([]byte{12}, 12),
+			),
+			oldInput: newMultiInput(
+				newPoint([]byte{10}, 10), //dup
+				newPoint([]byte{12}, 13),
+			),
+			independent:     false,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
-		newBz, _ := json.Marshal(v.newInput)
-		oldBz, _ := json.Marshal(v.oldInput)
-		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
-		fmt.Println()
-		require.Equal(
-			t,
-			v.newInput.IndependentOf(v.oldInput),
-			v.independent,
-			"IndependentOf",
-		)
-		require.Equal(
-			t,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
-			v.doubleSpendSafe,
-			"SafeFromDoubleSend",
-		)
+		t.Run(fmt.Sprintf("testcase %d", i), func(t *testing.T) {
+			newBz, _ := json.Marshal(v.newInput)
+			oldBz, _ := json.Marshal(v.oldInput)
+			fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
+			fmt.Println()
+			require.Equal(
+				t,
+				v.independent,
+				v.newInput.IndependentOf(v.oldInput),
+				"IndependentOf",
+			)
+			require.Equal(
+				t,
+				v.doubleSpendSafe,
+				v.newInput.SafeFromDoubleSend(v.oldInput),
+				"SafeFromDoubleSend",
+			)
+		})
 	}
 }
 
