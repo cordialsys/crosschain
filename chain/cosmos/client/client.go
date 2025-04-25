@@ -212,6 +212,11 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 		}
 		return res, nil
 	}
+	// Sometimes the queried account nonce is not final, so we mark this as something
+	// that can be retried.
+	if simErr != nil && strings.Contains(simErr.Error(), "account sequence mismatch") {
+		return nil, errors.FailedPreconditionf("%v", simErr)
+	}
 	return nil, simErr
 }
 

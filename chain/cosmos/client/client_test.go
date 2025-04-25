@@ -3,7 +3,6 @@ package client_test
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/cosmos/cosmos-sdk/types"
 	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
@@ -190,6 +190,34 @@ func TestFetchTxInput(t *testing.T) {
 				ChainId:               "chainId",
 			},
 			err: "",
+		},
+		{
+			asset:     xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
+			from:      "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
+			pubKeyStr: "Avz3JMl9/6wgIe+hgYwv7zvLt1PKIpE6jbXnnsSj3uDR",
+			to:        "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
+			resp: []string{
+				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
+				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {"latest_block_height": "123"},"validator_info": {}}}`,
+				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// get x/bank balance
+				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				// get tx simulate
+				`{"jsonrpc":"2.0","id":4,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
+				`{"jsonrpc":"2.0","id":4,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
+			},
+			txInput: &tx_input.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
+				AccountNumber:   17241,
+				Sequence:        3,
+				GasLimit:        (50_000 * 110) / 100,
+				GasPrice:        0.015,
+				TimeoutHeight:   client.TimeoutInBlocks + 123,
+				AssetType:       tx_input.BANK,
+				ChainId:         "chainId",
+			},
+			// should identify the error as retryable
+			err: fmt.Sprintf("%s:", errors.FailedPrecondition),
 		},
 		// error getting account from RPC
 		{
@@ -558,7 +586,7 @@ func TestFetchTxInfo(t *testing.T) {
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
-			errors.New(`{"message": "custom RPC error", "code": 123}`),
+			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			xclient.LegacyTxInfo{},
 			"custom RPC error",
 		},
@@ -580,7 +608,7 @@ func TestFetchTxInfo(t *testing.T) {
 			// should be able to catch this as TransactionNotFound case
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
-			errors.New(`{"message": "RPC error -32603 - Internal error: tx (E97DB7DB40A02F0773EFE3AA5328292EDB27BEB089DF0972A26E8683068BCFA7) not found"}`),
+			fmt.Errorf(`{"message": "RPC error -32603 - Internal error: tx (E97DB7DB40A02F0773EFE3AA5328292EDB27BEB089DF0972A26E8683068BCFA7) not found"}`),
 			xclient.LegacyTxInfo{},
 			"TransactionNotFound:",
 		},
@@ -700,7 +728,7 @@ func TestFetchBalance(t *testing.T) {
 		{
 			asset:   xc.NewChainConfig(xc.XPLA).WithChainCoin("axpla").WithChainPrefix("xpla"),
 			address: "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
-			resp:    errors.New(`{"message": "custom RPC error", "code": 123}`),
+			resp:    fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
 			val:     "",
 			err:     "custom RPC error",
 		},
