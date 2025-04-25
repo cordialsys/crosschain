@@ -3,15 +3,17 @@ package crosschain
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
-	xcclient "github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	testtypes "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/grpc/codes"
 )
 
 type CrosschainTestSuite struct {
@@ -28,8 +30,6 @@ func (s *CrosschainTestSuite) SetupTest() {
 func TestExampleTestSuite(t *testing.T) {
 	suite.Run(t, new(CrosschainTestSuite))
 }
-
-// Client
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
@@ -68,7 +68,11 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 func (s *CrosschainTestSuite) TestFetchTxInputError() {
 	require := s.Require()
 
-	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
+	server, close := testtypes.MockHTTP(
+		s.T(),
+		fmt.Sprintf(`{"code":%d,"message":"api-error"}`, codes.FailedPrecondition),
+		400,
+	)
 	defer close()
 
 	client, _ := NewClient(s.Asset, "", "", "")
@@ -77,28 +81,13 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 	from := xc.Address("from")
 	to := xc.Address("to")
 	_, err := client.FetchLegacyTxInput(s.Ctx, from, to)
-	require.EqualError(err, "api-error")
+	require.EqualError(err, "FailedPrecondition: api-error")
+
+	errNative, ok := err.(*errors.Error)
+	require.True(ok, "client did not map error to native error")
+	require.Equal(errors.FailedPrecondition, errNative.Status)
+	require.Equal("api-error", errNative.Message)
 }
-
-// func (s *CrosschainTestSuite) TestFetchTxInputErrorFallback() {
-// 	require := s.Require()
-
-// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
-// 	defer close()
-
-// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
-// 	defer close2()
-
-// 	s.Asset.GetChain().Driver = xc.DriverSolana
-// 	s.Asset.GetChain().URL = server2.URL
-// 	client, _ := NewClient(s.Asset)
-// 	client.URL = server.URL
-
-// 	from := xc.Address("from")
-// 	to := xc.Address("to")
-// 	_, err := client.FetchTxInput(s.Ctx, from, to)
-// 	require.ErrorContains(err, "custom RPC error")
-// }
 
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
@@ -139,28 +128,8 @@ func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 
 	txHash := xc.TxHash("hash")
 	_, err := client.FetchLegacyTxInfo(s.Ctx, txHash)
-	require.EqualError(err, "api-error")
+	require.EqualError(err, "InvalidArgument: api-error")
 }
-
-// func (s *CrosschainTestSuite) TestFetchTxInfoErrorFallback() {
-// 	require := s.Require()
-
-// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
-// 	defer close()
-
-// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
-// 	defer close2()
-
-// 	s.Asset.GetChain().Driver = xc.DriverSolana
-// 	s.Asset.GetChain().URL = server2.URL
-// 	client, _ := NewClient(s.Asset)
-// 	client.URL = server.URL
-
-// 	// note: need a valid tx hash because go-solana checks
-// 	txHash := xc.TxHash("5U2YvvKUS6NUrDAJnABHjx2szwLCVmg8LCRK9BDbZwVAbf2q5j8D9Sc9kUoqanoqpn6ZpDguY3rip9W7N7vwCjSw")
-// 	_, err := client.FetchLegacyTxInfo(s.Ctx, txHash)
-// 	require.ErrorContains(err, "custom RPC error")
-// }
 
 func (s *CrosschainTestSuite) TestSubmitTx() {
 	require := s.Require()
@@ -199,30 +168,8 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 		TxData: []byte("data"),
 	}
 	err := client.SubmitTx(s.Ctx, txData)
-	require.EqualError(err, "api-error")
+	require.EqualError(err, "InvalidArgument: api-error")
 }
-
-// func (s *CrosschainTestSuite) TestSubmitTxErrorFallback() {
-// 	require := s.Require()
-
-// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
-// 	defer close()
-
-// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
-// 	defer close2()
-
-// 	s.Asset.GetChain().Driver = xc.DriverSolana
-// 	s.Asset.GetChain().URL = server2.URL
-// 	client, _ := NewClient(s.Asset)
-// 	client.URL = server.URL
-
-// 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
-// 	txData := &types.SubmitTxReq{
-// 		TxData: []byte("data"),
-// 	}
-// 	err := client.SubmitTx(s.Ctx, txData)
-// 	require.ErrorContains(err, "custom RPC error")
-// }
 
 func (s *CrosschainTestSuite) TestFetchBalance() {
 	require := s.Require()
@@ -242,7 +189,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	client.URL = server.URL
 
 	address := xc.Address("address")
-	balanceArgs := xcclient.NewBalanceArgs(address)
+	balanceArgs := xclient.NewBalanceArgs(address)
 	balance, err := client.FetchBalance(s.Ctx, balanceArgs)
 	require.Nil(err)
 	require.Equal(expectedBalance, balance)
@@ -262,33 +209,10 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	client.URL = server.URL
 
 	address := xc.Address("address")
-	balanceArgs := xcclient.NewBalanceArgs(address)
+	balanceArgs := xclient.NewBalanceArgs(address)
 	_, err := client.FetchBalance(s.Ctx, balanceArgs)
-	require.EqualError(err, "api-error")
+	require.EqualError(err, "InvalidArgument: api-error")
 
 	_, err = client.FetchNativeBalance(s.Ctx, address)
-	require.EqualError(err, "api-error")
+	require.EqualError(err, "InvalidArgument: api-error")
 }
-
-// func (s *CrosschainTestSuite) TestFetchBalanceErrorFallback() {
-// 	require := s.Require()
-
-// 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
-// 	defer close()
-
-// 	server2, close2 := testtypes.MockJSONRPC(s.T(), errors.New(`{"message": "custom RPC error", "code": 123}`))
-// 	defer close2()
-
-// 	s.Asset.GetChain().Driver = xc.DriverSolana
-// 	s.Asset.GetChain().URL = server2.URL
-// 	client, _ := NewClient(s.Asset)
-// 	client.URL = server.URL
-
-// 	// note: need a valid address because go-solana checks
-// 	address := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-// 	_, err := client.FetchBalance(s.Ctx, address)
-// 	require.ErrorContains(err, "custom RPC error")
-
-// 	_, err = client.FetchNativeBalance(s.Ctx, address)
-// 	require.ErrorContains(err, "custom RPC error")
-// }
