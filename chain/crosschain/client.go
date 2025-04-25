@@ -16,9 +16,11 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 )
 
 // Client for Template
@@ -156,9 +158,14 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 		var r types.Status
 		err = json.Unmarshal(bz, &r)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("(status=%d) %s", r.Code, string(bz))
 		}
-		return nil, fmt.Errorf("%s", r.Message)
+		status, ok := errors.FromGrpcCode(codes.Code(r.Code))
+		if ok {
+			// map to native error
+			return nil, errors.Errorf(status, "%v", r.Message)
+		}
+		return nil, &r
 	}
 
 	return bz, nil

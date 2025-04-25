@@ -2,6 +2,8 @@ package errors
 
 import (
 	"fmt"
+
+	"google.golang.org/grpc/codes"
 )
 
 type Status string
@@ -32,6 +34,48 @@ const UnknownError Status = "UnknownError"
 
 // Failed to due to an on-chain condition that could resolve in time.
 const FailedPrecondition Status = "FailedPrecondition"
+
+func (s Status) ToGrpcCode() (codes.Code, bool) {
+	switch s {
+	case TransactionNotFound:
+		// transaction not found
+		return codes.NotFound, true
+	case FailedPrecondition:
+		// on-chain error, retryable
+		return codes.FailedPrecondition, true
+	case TransactionExists:
+		// transaction already exists, should fetch
+		return codes.AlreadyExists, true
+	case NetworkError:
+		// network error, retryable
+		return codes.Unavailable, true
+	case NoBalance, NoBalanceForGas:
+		// no balance
+		return codes.OutOfRange, true
+	case TransactionTimedOut, TransactionFailure:
+		// transaction will _not_ work
+		return codes.Aborted, true
+	}
+	return codes.Unknown, false
+}
+
+func FromGrpcCode(code codes.Code) (Status, bool) {
+	switch code {
+	case codes.NotFound:
+		return TransactionNotFound, true
+	case codes.FailedPrecondition:
+		return FailedPrecondition, true
+	case codes.AlreadyExists:
+		return TransactionExists, true
+	case codes.Unavailable:
+		return NetworkError, true
+	case codes.OutOfRange:
+		return NoBalance, true
+	case codes.Aborted:
+		return TransactionFailure, true
+	}
+	return UnknownError, false
+}
 
 type Error struct {
 	Status  Status

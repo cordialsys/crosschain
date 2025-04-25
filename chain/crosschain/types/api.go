@@ -9,9 +9,14 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
 	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/codes"
 )
 
 type Status status.Status
+
+func (s *Status) Error() string {
+	return fmt.Sprintf("%s: %s", codes.Code(s.Code).String(), s.Message)
+}
 
 type ApiResponse interface{}
 
