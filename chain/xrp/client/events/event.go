@@ -58,39 +58,26 @@ func NewEvent(node types.AffectedNodes) (Event, bool, error) {
 }
 
 func extractCreatedNodeBalance(node *types.CreatedNode) (xc.AmountBlockchain, error) {
-	var (
-		newBalance xc.AmountHumanReadable
-		decimals   int32
-		err        error
-	)
-
 	if node.NewFields == nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("NewFields is empty")
 	}
 
 	if node.NewFields.Balance.XRPAmount != "" {
-		decimals = types.XRP_NATIVE_DECIMALS
-		newBalance, err = xc.NewAmountHumanReadableFromStr(node.NewFields.Balance.XRPAmount)
-		if err != nil {
-			return xc.AmountBlockchain{}, err
-		}
+		return xc.NewAmountBlockchainFromStr(node.NewFields.Balance.XRPAmount), nil
 	} else {
-		decimals = types.TRUSTLINE_DECIMALS
-		newBalance, err = xc.NewAmountHumanReadableFromStr(node.NewFields.Balance.TokenAmount.Value)
+		// XRP node reports token balance adjusted for decimals
+		tokenValue, err := xc.NewAmountHumanReadableFromStr(node.NewFields.Balance.TokenAmount.Value)
 		if err != nil {
 			return xc.AmountBlockchain{}, err
 		}
+		return tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS), nil
 	}
 
-	return newBalance.ToBlockchain(decimals), nil
 }
 
 func extractModifiedNodeBalance(node *types.ModifiedNode) (xc.AmountBlockchain, error) {
 	var (
-		finalBalanceHumanReadable, previousBalanceHumanReadable xc.AmountHumanReadable
-		finalFields, previousBalance                            xc.AmountBlockchain
-		decimals                                                int32
-		parseErr                                                error
+		finalFields, previousBalance xc.AmountBlockchain
 	)
 
 	if node.FinalFields == nil || node.PreviousFields == nil {
@@ -98,28 +85,25 @@ func extractModifiedNodeBalance(node *types.ModifiedNode) (xc.AmountBlockchain, 
 	}
 
 	if node.FinalFields.Balance.XRPAmount != "" {
-		decimals = types.XRP_NATIVE_DECIMALS
-		finalBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.XRPAmount)
-
-		finalFields = finalBalanceHumanReadable.ToBlockchain(decimals)
+		finalFields = xc.NewAmountBlockchainFromStr(node.FinalFields.Balance.XRPAmount)
 	} else {
-		decimals = types.TRUSTLINE_DECIMALS
-		finalBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.TokenAmount.Value)
-		finalFields = finalBalanceHumanReadable.ToBlockchain(decimals)
-	}
-	if parseErr != nil {
-		return xc.AmountBlockchain{}, parseErr
+		// XRP node reports token balance adjusted for decimals
+		tokenValue, err := xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
+		finalFields = tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS)
 	}
 
 	if node.PreviousFields.Balance.XRPAmount != "" {
-		previousBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.XRPAmount)
-		previousBalance = previousBalanceHumanReadable.ToBlockchain(decimals)
+		previousBalance = xc.NewAmountBlockchainFromStr(node.PreviousFields.Balance.XRPAmount)
 	} else {
-		previousBalanceHumanReadable, parseErr = xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.TokenAmount.Value)
-		previousBalance = previousBalanceHumanReadable.ToBlockchain(decimals)
-	}
-	if parseErr != nil {
-		return xc.AmountBlockchain{}, parseErr
+		// XRP node reports token balance adjusted for decimals
+		tokenValue, err := xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.TokenAmount.Value)
+		if err != nil {
+			return xc.AmountBlockchain{}, err
+		}
+		previousBalance = tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS)
 	}
 
 	transactedAmount := previousBalance.Sub(&finalFields)

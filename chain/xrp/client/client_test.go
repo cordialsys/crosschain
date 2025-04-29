@@ -334,7 +334,7 @@ func TestFetchTxInfo(t *testing.T) {
 						AssetId:   "XRP",
 						From: []*xclient.BalanceChange{
 							{
-								Balance:   xc.NewAmountBlockchainFromStr("10000012000000"),
+								Balance:   xc.NewAmountBlockchainFromStr("10000012"),
 								Amount:    nil,
 								XAddress:  "chains/XRP/addresses/rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
 								AddressId: "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
@@ -343,7 +343,7 @@ func TestFetchTxInfo(t *testing.T) {
 						To: []*xclient.BalanceChange{
 							{
 
-								Balance:   xc.NewAmountBlockchainFromStr("10000000000000"),
+								Balance:   xc.NewAmountBlockchainFromStr("10000000"),
 								Amount:    nil,
 								XAddress:  "chains/XRP/addresses/rLETt614usCXtkc8YcQmrzachrCaDjACjP",
 								AddressId: "rLETt614usCXtkc8YcQmrzachrCaDjACjP",
@@ -356,7 +356,7 @@ func TestFetchTxInfo(t *testing.T) {
 					{
 						Asset:    "chains/XRP/assets/XRP",
 						Contract: "XRP",
-						Balance:  xc.NewAmountBlockchainFromStr("12000000"),
+						Balance:  xc.NewAmountBlockchainFromStr("12"),
 						Amount:   nil,
 					},
 				},
@@ -610,7 +610,7 @@ func TestFetchTxInfo(t *testing.T) {
 						AssetId:   "XRP",
 						From: []*xclient.BalanceChange{
 							{
-								Balance:   xc.NewAmountBlockchainFromStr("4862478000000"),
+								Balance:   xc.NewAmountBlockchainFromStr("4862478"),
 								Amount:    nil,
 								XAddress:  "chains/XRP/addresses/rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 								AddressId: "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
@@ -618,7 +618,7 @@ func TestFetchTxInfo(t *testing.T) {
 						},
 						To: []*xclient.BalanceChange{
 							{
-								Balance:   xc.NewAmountBlockchainFromStr("4862466000000"),
+								Balance:   xc.NewAmountBlockchainFromStr("4862466"),
 								Amount:    nil,
 								XAddress:  "chains/XRP/addresses/rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 								AddressId: "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
@@ -630,7 +630,7 @@ func TestFetchTxInfo(t *testing.T) {
 					{
 						Asset:    "chains/XRP/assets/XRP",
 						Contract: "XRP",
-						Balance:  xc.NewAmountBlockchainFromStr("12000000"),
+						Balance:  xc.NewAmountBlockchainFromStr("12"),
 					},
 				},
 				Confirmations: 566106,
