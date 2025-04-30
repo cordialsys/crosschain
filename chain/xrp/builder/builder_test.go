@@ -45,6 +45,35 @@ func TestNewNativeTransfer(t *testing.T) {
 	require.EqualValues(t, xrpTx.DestinationTag, 999)
 }
 
+func TestNewNativeTransferAccountDelete(t *testing.T) {
+
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	amount := xc.NewAmountBlockchainFromUint64(12)
+	input := &tx_input.TxInput{
+		AccountDelete:    true,
+		DeleteAccountFee: xc.NewAmountBlockchainFromUint64(200_000),
+		Fee:              xc.NewAmountBlockchainFromUint64(100),
+	}
+
+	args := buildertest.MustNewTransferArgs(
+		from, to, amount,
+		buildertest.OptionMemo("999"),
+		buildertest.OptionPublicKey(make([]byte, 32)),
+	)
+
+	nt, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	require.NotNil(t, nt)
+	xrpTx := nt.(*Tx).XRPTx
+	require.Equal(t, string(xrpTx.Account), "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
+	require.Equal(t, string(xrpTx.Destination), "rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
+	require.Equal(t, "200000", string(xrpTx.Fee))
+	require.EqualValues(t, "AccountDelete", xrpTx.TransactionType)
+	require.EqualValues(t, 999, xrpTx.DestinationTag)
+}
+
 func TestNewTokenTransfer(t *testing.T) {
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"

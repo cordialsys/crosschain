@@ -268,9 +268,10 @@ func (an *AffectedNodes) UnmarshalJSON(data []byte) error {
 }
 
 type DeletedNode struct {
-	FinalFields     *FinalFields `json:"FinalFields,omitempty"`
-	LedgerEntryType string       `json:"LedgerEntryType,omitempty"`
-	LedgerIndex     string       `json:"LedgerIndex,omitempty"`
+	FinalFields     *FinalFields    `json:"FinalFields,omitempty"`
+	PreviousFields  *PreviousFields `json:"PreviousFields,omitempty"`
+	LedgerEntryType string          `json:"LedgerEntryType,omitempty"`
+	LedgerIndex     string          `json:"LedgerIndex,omitempty"`
 }
 
 type CreatedNode struct {

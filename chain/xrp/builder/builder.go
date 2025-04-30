@@ -68,10 +68,15 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, destin
 		DestinationTag:     destinationTag,
 		Fee:                txInput.Fee.String(),
 		Flags:              0,
-		LastLedgerSequence: txInput.LastLedgerSequence,
-		Sequence:           txInput.Sequence,
+		LastLedgerSequence: txInput.V2LastLedgerSequence,
+		Sequence:           txInput.V2Sequence,
 		SigningPubKey:      hex.EncodeToString(pubKey),
 		TransactionType:    xrptx.PAYMENT,
+	}
+
+	if txInput.AccountDelete {
+		xrpTx.TransactionType = xrptx.ACCOUNT_DELETE
+		xrpTx.Fee = txInput.DeleteAccountFee.String()
 	}
 
 	return &xrptx.Tx{
@@ -126,8 +131,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, assetId
 		Destination:        args.GetTo(),
 		Fee:                txInput.Fee.String(),
 		Flags:              0,
-		LastLedgerSequence: txInput.LastLedgerSequence,
-		Sequence:           txInput.Sequence,
+		LastLedgerSequence: txInput.V2LastLedgerSequence,
+		Sequence:           txInput.V2Sequence,
 		SigningPubKey:      hex.EncodeToString(pubKey),
 		TransactionType:    xrptx.PAYMENT,
 		DestinationTag:     destinationTag,

@@ -9,9 +9,20 @@ import (
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Sequence           int64               `json:"Sequence"`
-	LastLedgerSequence int64               `json:"LastLedgerSequence"`
-	Fee                xc.AmountBlockchain `json:"fee,omitempty"`
+
+	// Included for treasury versions <= 25.6.x
+	XSequence           int64 `json:"Sequence"`
+	XLastLedgerSequence int64 `json:"LastLedgerSequence"`
+
+	// Renamed the fields to use snake_case for consistency
+	V2Sequence           int64 `json:"sequence"`
+	V2LastLedgerSequence int64 `json:"last_ledger_sequence"`
+
+	Fee              xc.AmountBlockchain `json:"fee,omitempty"`
+	DeleteAccountFee xc.AmountBlockchain `json:"delete_account_fee,omitempty"`
+	ReserveAmount    xc.AmountBlockchain `json:"reserve_amount,omitempty"`
+	XrpBalance       xc.AmountBlockchain `json:"xrp_balance,omitempty"`
+	AccountDelete    bool                `json:"account_delete,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -44,13 +55,16 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 }
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	if input.AccountDelete {
+		return input.ReserveAmount, ""
+	}
 	return input.Fee, ""
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
 	if emvOther, ok := other.(*TxInput); ok {
-		return emvOther.Sequence != input.Sequence
+		return emvOther.V2Sequence != input.V2Sequence
 	}
 
 	return false

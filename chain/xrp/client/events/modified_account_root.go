@@ -23,7 +23,7 @@ func (mnw *EventModifiedAccountRoot) GetContract() (xc.ContractAddress, error) {
 }
 
 func (mnw *EventModifiedAccountRoot) GetAmount() (xc.AmountBlockchain, error) {
-	transactedAmount, conversionErr := extractModifiedNodeBalance(mnw.node)
+	transactedAmount, conversionErr := extractModifiedNodeBalance(mnw.node.FinalFields, mnw.node.PreviousFields)
 	if conversionErr != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch ModifiedNode balance: %s", conversionErr.Error())
 	}

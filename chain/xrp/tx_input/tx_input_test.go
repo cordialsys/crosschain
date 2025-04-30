@@ -3,10 +3,11 @@ package tx_input_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/test-go/testify/require"
-	"testing"
 )
 
 type TxInput = tx_input.TxInput
@@ -33,24 +34,24 @@ func TestTxInputConflicts(t *testing.T) {
 	vectors := []testcase{
 		{
 			newInput: &TxInput{
-				Sequence:           22811103,
-				LastLedgerSequence: 90986722,
+				V2Sequence:           22811103,
+				V2LastLedgerSequence: 90986722,
 			},
 			oldInput: &TxInput{
-				Sequence:           22811103,
-				LastLedgerSequence: 90986722,
+				V2Sequence:           22811103,
+				V2LastLedgerSequence: 90986722,
 			},
 			independent:     false,
 			doubleSpendSafe: true,
 		},
 		{
 			newInput: &TxInput{
-				Sequence:           22811103,
-				LastLedgerSequence: 90986722,
+				V2Sequence:           22811103,
+				V2LastLedgerSequence: 90986722,
 			},
 			oldInput: &TxInput{
-				Sequence:           22811104,
-				LastLedgerSequence: 90986722,
+				V2Sequence:           22811104,
+				V2LastLedgerSequence: 90986722,
 			},
 			independent:     true,
 			doubleSpendSafe: false,

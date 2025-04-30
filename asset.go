@@ -581,6 +581,8 @@ type ChainClientConfig struct {
 	GasBudgetDefault AmountHumanReadable `yaml:"gas_budget_default,omitempty"`
 	// Gas budget that cannot be exceeded below
 	GasBudgetMinimum AmountHumanReadable `yaml:"gas_budget_min,omitempty"`
+	// A remainder balance (e.g. rent threshold) that must be maintained after a transfer.
+	ReserveAmount AmountHumanReadable `yaml:"reserve_amount,omitempty"`
 	// A default for clients to gas price if there's not better way to estimate.
 	ChainGasPriceDefault float64 `yaml:"chain_gas_price_default,omitempty"`
 	// A local multiplier for client to apply to gas estimation, if it's important/needed.

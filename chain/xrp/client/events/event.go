@@ -52,8 +52,15 @@ func NewEvent(node types.AffectedNodes) (Event, bool, error) {
 			// skip
 			return nil, false, nil
 		}
+	} else if node.DeletedNode != nil {
+		switch node.DeletedNode.LedgerEntryType {
+		case "AccountRoot":
+			return &eventDeletedAccountRoot{node.DeletedNode}, true, nil
+		default:
+			// skip
+			return nil, false, nil
+		}
 	}
-	// skip
 	return nil, false, nil
 }
 
@@ -75,38 +82,38 @@ func extractCreatedNodeBalance(node *types.CreatedNode) (xc.AmountBlockchain, er
 
 }
 
-func extractModifiedNodeBalance(node *types.ModifiedNode) (xc.AmountBlockchain, error) {
+func extractModifiedNodeBalance(finalFields *types.FinalFields, previousFields *types.PreviousFields) (xc.AmountBlockchain, error) {
 	var (
-		finalFields, previousBalance xc.AmountBlockchain
+		finalBalance, previousBalance xc.AmountBlockchain
 	)
 
-	if node.FinalFields == nil || node.PreviousFields == nil {
+	if finalFields == nil || previousFields == nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("FinalFields is empty")
 	}
 
-	if node.FinalFields.Balance.XRPAmount != "" {
-		finalFields = xc.NewAmountBlockchainFromStr(node.FinalFields.Balance.XRPAmount)
+	if finalFields.Balance.XRPAmount != "" {
+		finalBalance = xc.NewAmountBlockchainFromStr(finalFields.Balance.XRPAmount)
 	} else {
 		// XRP node reports token balance adjusted for decimals
-		tokenValue, err := xc.NewAmountHumanReadableFromStr(node.FinalFields.Balance.TokenAmount.Value)
+		tokenValue, err := xc.NewAmountHumanReadableFromStr(finalFields.Balance.TokenAmount.Value)
 		if err != nil {
 			return xc.AmountBlockchain{}, err
 		}
-		finalFields = tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS)
+		finalBalance = tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS)
 	}
 
-	if node.PreviousFields.Balance.XRPAmount != "" {
-		previousBalance = xc.NewAmountBlockchainFromStr(node.PreviousFields.Balance.XRPAmount)
+	if previousFields.Balance.XRPAmount != "" {
+		previousBalance = xc.NewAmountBlockchainFromStr(previousFields.Balance.XRPAmount)
 	} else {
 		// XRP node reports token balance adjusted for decimals
-		tokenValue, err := xc.NewAmountHumanReadableFromStr(node.PreviousFields.Balance.TokenAmount.Value)
+		tokenValue, err := xc.NewAmountHumanReadableFromStr(previousFields.Balance.TokenAmount.Value)
 		if err != nil {
 			return xc.AmountBlockchain{}, err
 		}
 		previousBalance = tokenValue.ToBlockchain(types.TRUSTLINE_DECIMALS)
 	}
 
-	transactedAmount := previousBalance.Sub(&finalFields)
+	transactedAmount := previousBalance.Sub(&finalBalance)
 
 	return transactedAmount.Abs(), nil
 }
