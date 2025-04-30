@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,6 +15,7 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for XRP
@@ -50,7 +50,39 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, err
 	}
 	currentSequencePtr := accountInfo.Result.AccountData.Sequence
-	txInput.Sequence = currentSequencePtr
+	txInput.XSequence = currentSequencePtr
+	txInput.V2Sequence = currentSequencePtr
+
+	txInput.XrpBalance = xc.NewAmountBlockchainFromStr(accountInfo.Result.AccountData.Balance)
+	// Currently the reserve amount is 1XRP and the delete-account fee is 0.2XRP
+	// We'll use the 0.2 as the threshold for account deletion.
+	txInput.DeleteAccountFee = xc.NewAmountBlockchainFromUint64(200_000)
+	txInput.ReserveAmount = xc.NewAmountBlockchainFromUint64(200_000)
+	reserveAmountHuman := client.Asset.GetChain().ChainClientConfig.ReserveAmount
+	if !reserveAmountHuman.IsZero() {
+		reserveAmount := reserveAmountHuman.ToBlockchain(client.Asset.GetChain().GetDecimals())
+		txInput.ReserveAmount = reserveAmount
+	}
+
+	tfAmount := args.GetAmount()
+	remainder := txInput.XrpBalance.Sub(&tfAmount)
+	zero := xc.NewAmountBlockchainFromUint64(0)
+	if remainder.Cmp(&zero) <= 0 {
+		decimals := client.Asset.GetChain().GetDecimals()
+		return nil, fmt.Errorf(
+			"insufficient balance: %s would remain after transfering %s",
+			remainder.ToHuman(decimals),
+			tfAmount.ToHuman(decimals),
+		)
+	}
+	if remainder.Cmp(&txInput.ReserveAmount) < 0 {
+		logrus.WithFields(logrus.Fields{
+			"balance": txInput.XrpBalance,
+			"reserve": txInput.ReserveAmount,
+			"amount":  tfAmount,
+		}).Debug("XRP balance is less than reserve amount, setting account delete")
+		txInput.AccountDelete = true
+	}
 
 	ledger, err := client.getLatestLedger(false)
 	if err != nil {
@@ -59,14 +91,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	ledgerSequencePtr := ledger.Result.LedgerCurrentIndex
 	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
-	txInput.LastLedgerSequence = lastLedgerSequence
+	txInput.XLastLedgerSequence = lastLedgerSequence
+	txInput.V2LastLedgerSequence = lastLedgerSequence
 
 	feeInfo, err := client.getFee()
 	if err != nil {
 		return nil, err
 	}
-	bz, _ := json.MarshalIndent(feeInfo, "", "  ")
-	fmt.Println(string(bz))
 
 	// XRP has very confusing method of going about prioritization.
 	// But fee itself is at least a simple fixed fee.
@@ -104,9 +135,17 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	serializedTxInputHex := hex.EncodeToString(serializedTxInputBytes)
 	serializedTxInputHexBytes := []byte(serializedTxInputHex)
 
-	_, err = client.postSubmit(serializedTxInputHexBytes)
+	submitResponse, err := client.postSubmit(serializedTxInputHexBytes)
 	if err != nil {
 		return err
+	}
+
+	if submitResponse.Result.EngineResultCode != 0 {
+		return fmt.Errorf(
+			"transaction not accepted: %s (%s)",
+			submitResponse.Result.EngineResultMessage,
+			submitResponse.Result.EngineResult,
+		)
 	}
 
 	return nil

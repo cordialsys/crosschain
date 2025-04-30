@@ -10,6 +10,8 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	xrpClient "github.com/cordialsys/crosschain/chain/xrp/client"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
@@ -28,9 +30,13 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestFetchTxInput(t *testing.T) {
+	from := xc.Address("r92tsEZEjK82wra6xaDvjZocKnR78VqpEM")
+	to := xc.Address("rs2x5gvFupB22myz86BUu7m5F4YuizsFna")
 
 	vectors := []struct {
-		asset           *xc.ChainConfig
+		name string
+		args xcbuilder.TransferArgs
+		// asset           *xc.ChainConfig
 		accountInfoResp interface{}
 		ledgerResp      interface{}
 		feeResp         interface{}
@@ -38,11 +44,13 @@ func TestFetchTxInput(t *testing.T) {
 		expectedTxInput xrptxinput.TxInput
 	}{
 		{
-			asset: xc.NewChainConfig(""),
+			name: "estimate fee",
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
 						Sequence: 861823,
+						Balance:  "10000000",
 					},
 				},
 			},
@@ -63,16 +71,24 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				Sequence:           861823,
-				LastLedgerSequence: 1221021,
-				Fee:                xc.NewAmountBlockchainFromUint64(100),
+				XSequence:            861823,
+				V2Sequence:           861823,
+				XLastLedgerSequence:  1221021,
+				V2LastLedgerSequence: 1221021,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
 		},
 		{
-			asset: xc.NewChainConfig(""),
+			name: "estimate fee uses base fee",
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
-					AccountData: types.AccountData{},
+					AccountData: types.AccountData{
+						Balance: "10000000",
+					},
 				},
 			},
 			ledgerResp: types.LedgerResponse{
@@ -93,17 +109,24 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				Sequence:           0,
-				LastLedgerSequence: 1221021,
-				Fee:                xc.NewAmountBlockchainFromUint64(10),
+				XSequence:            0,
+				V2Sequence:           0,
+				XLastLedgerSequence:  1221021,
+				V2LastLedgerSequence: 1221021,
+				Fee:                  xc.NewAmountBlockchainFromUint64(10),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
 		},
 		{
-			asset: xc.NewChainConfig(""),
+			name: "high median fee",
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
 						Sequence: 861823,
+						Balance:  "10000000",
 					},
 				},
 			},
@@ -122,10 +145,92 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				Sequence:           861823,
-				LastLedgerSequence: 20,
-				Fee:                xc.NewAmountBlockchainFromUint64(100),
+				XSequence:            861823,
+				V2Sequence:           861823,
+				XLastLedgerSequence:  20,
+				V2LastLedgerSequence: 20,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
+		},
+		{
+			name: "account delete",
+			// The remaining balance is less than the reserve amount, so account delete should be used.
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("9999000")),
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
+						Sequence: 861823,
+						Balance:  "10000000",
+					},
+				},
+			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+			},
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{},
+			},
+			expectedTxInput: xrptxinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{
+					Type: "xrp",
+				},
+				XSequence:            861823,
+				V2Sequence:           861823,
+				XLastLedgerSequence:  20,
+				V2LastLedgerSequence: 20,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
+				AccountDelete:        true,
+			},
+		},
+		{
+			name: "exceeds balance",
+			// The remaining balance is less than the reserve amount, so account delete should be used.
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("10000005")),
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
+						Sequence: 861823,
+						Balance:  "10000000",
+					},
+				},
+			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+			},
+			ledgerResp: types.LedgerResponse{
+				Result: types.LedgerResult{},
+			},
+			expectedTxInput: xrptxinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{
+					Type: "xrp",
+				},
+				XSequence:            861823,
+				V2Sequence:           861823,
+				XLastLedgerSequence:  20,
+				V2LastLedgerSequence: 20,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
+				AccountDelete:        true,
+			},
+			err: "insufficient balance: -0.000005 would remain after transfering 10.000005",
 		},
 	}
 
@@ -148,13 +253,12 @@ func TestFetchTxInput(t *testing.T) {
 			}
 		}))
 		defer server.Close()
+		asset := xc.NewChainConfig("").WithDecimals(types.XRP_NATIVE_DECIMALS)
+		asset.URL = server.URL
 
-		vector.asset.URL = server.URL
+		client, _ := xrpClient.NewClient(asset)
 
-		client, _ := xrpClient.NewClient(vector.asset)
-		from := xc.Address("r92tsEZEjK82wra6xaDvjZocKnR78VqpEM")
-		to := xc.Address("rs2x5gvFupB22myz86BUu7m5F4YuizsFna")
-		input, err := client.FetchLegacyTxInput(context.Background(), from, to)
+		input, err := client.FetchTransferInput(context.Background(), vector.args)
 
 		if err != nil {
 			require.Nil(t, input)

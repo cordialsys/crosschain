@@ -14,14 +14,15 @@ import (
 
 type XrpError struct {
 	Result struct {
-		ErrorStatus  string `json:"error"`
-		ErrorMessage string `json:"error_message"`
-		ErrorCode    int    `json:"error_code"`
+		ErrorStatus    string `json:"error"`
+		ErrorMessage   string `json:"error_message"`
+		ErrorException string `json:"error_exception"`
+		ErrorCode      int    `json:"error_code"`
 	} `json:"result"`
 }
 
 func (err *XrpError) Error() string {
-	return fmt.Sprintf("%s: %s (code: %d)", err.Result.ErrorStatus, err.Result.ErrorMessage, err.Result.ErrorCode)
+	return fmt.Sprintf("%s: %s %s (code: %d)", err.Result.ErrorStatus, err.Result.ErrorMessage, err.Result.ErrorException, err.Result.ErrorCode)
 }
 
 func (client *Client) Send(method string, requestBody any, response any) error {
@@ -46,12 +47,13 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to fetch balance, HTTP status: %s", resp.Status)
+		return fmt.Errorf("failed to send request, HTTP status: %s", resp.Status)
 	}
 	bz, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
+	log.WithField("body", string(bz)).Debug("response")
 
 	var errMaybe XrpError
 	_ = json.Unmarshal(bz, &errMaybe)
@@ -59,7 +61,6 @@ func (client *Client) Send(method string, requestBody any, response any) error {
 		return &errMaybe
 	}
 
-	log.WithField("body", string(bz)).Debug("response")
 	err = json.Unmarshal(bz, response)
 	if err != nil {
 		return fmt.Errorf("failed to decode response body: %w", err)

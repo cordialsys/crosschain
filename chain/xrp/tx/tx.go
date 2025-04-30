@@ -15,6 +15,7 @@ import (
 
 const (
 	PAYMENT                 TransactionType = "Payment"
+	ACCOUNT_DELETE          TransactionType = "AccountDelete"
 	TRANSACTION_HASH_PREFIX                 = "54584E00"
 )
 
@@ -165,8 +166,6 @@ func (tx Tx) Serialize() ([]byte, error) {
 	if err != nil {
 		return []byte{}, fmt.Errorf("failed to decode XRP transaction: %v", err)
 	}
-	serializedTxInputHex := hex.EncodeToString(decodedBytes)
-	fmt.Println(serializedTxInputHex)
 
 	hashHex, err := HashFromTx(encodedTx)
 	if err != nil {
@@ -205,14 +204,16 @@ func RenderToMap(xrpTx XRPTransaction) (map[string]interface{}, error) {
 	result["TransactionType"] = string(xrpTx.TransactionType)
 	result["TxnSignature"] = xrpTx.TxnSignature
 
-	if xrpTx.Amount.XRPAmount != "" {
-		amountRenderErr := RenderXrpAmount(result, xrpTx.Amount.XRPAmount)
-		if amountRenderErr != nil {
-			return nil, fmt.Errorf("failed to render XRP amount: %w", amountRenderErr)
+	if xrpTx.TransactionType != ACCOUNT_DELETE {
+		if xrpTx.Amount.XRPAmount != "" {
+			amountRenderErr := RenderXrpAmount(result, xrpTx.Amount.XRPAmount)
+			if amountRenderErr != nil {
+				return nil, fmt.Errorf("failed to render XRP amount: %w", amountRenderErr)
+			}
+		} else {
+			RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
+			RenderSendMax(result, &xrpTx.SendMax)
 		}
-	} else {
-		RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
-		RenderSendMax(result, &xrpTx.SendMax)
 	}
 
 	return result, nil
