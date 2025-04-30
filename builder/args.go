@@ -21,7 +21,8 @@ type builderOptions struct {
 	contract *xc.ContractAddress
 	decimals *int
 
-	feePayer *xc.Address
+	feePayer             *xc.Address
+	inclusiveFeeSpending bool
 }
 
 func newBuilderOptions() builderOptions {
@@ -60,6 +61,9 @@ func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)    { return ge
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
 func (opts *builderOptions) GetStakeOwner() (xc.Address, bool) { return get(opts.stakeOwner) }
 func (opts *builderOptions) GetStakeAccount() (string, bool)   { return get(opts.stakeAccount) }
+func (opts *builderOptions) InclusiveFeeSpendingEnabled() bool {
+	return opts.inclusiveFeeSpending
+}
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -75,6 +79,10 @@ func (opts *builderOptions) SetFeePayer(feePayer xc.Address) {
 
 func (opts *builderOptions) SetFeePayerPublicKey(feePayerPublicKey []byte) {
 	opts.feePayerPublicKey = &feePayerPublicKey
+}
+
+func (opts *builderOptions) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
+	opts.inclusiveFeeSpending = inclusiveFeeSpending
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -142,6 +150,13 @@ func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption
 	return func(opts *builderOptions) error {
 		opts.feePayer = &feePayer
 		opts.feePayerPublicKey = &feePayerPublicKey
+		return nil
+	}
+}
+
+func OptionInclusiveFeeSpending(inclusiveFeeSpending bool) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.inclusiveFeeSpending = inclusiveFeeSpending
 		return nil
 	}
 }

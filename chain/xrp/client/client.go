@@ -56,7 +56,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.XrpBalance = xc.NewAmountBlockchainFromStr(accountInfo.Result.AccountData.Balance)
 	// Currently the reserve amount is 1XRP and the delete-account fee is 0.2XRP
 	// We'll use the 0.2 as the threshold for account deletion.
-	txInput.DeleteAccountFee = xc.NewAmountBlockchainFromUint64(200_000)
+	txInput.AccountDeleteFee = xc.NewAmountBlockchainFromUint64(200_000)
 	txInput.ReserveAmount = xc.NewAmountBlockchainFromUint64(200_000)
 	reserveAmountHuman := client.Asset.GetChain().ChainClientConfig.ReserveAmount
 	if !reserveAmountHuman.IsZero() {
@@ -67,7 +67,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	tfAmount := args.GetAmount()
 	remainder := txInput.XrpBalance.Sub(&tfAmount)
 	zero := xc.NewAmountBlockchainFromUint64(0)
-	if remainder.Cmp(&zero) <= 0 {
+	if remainder.Cmp(&zero) < 0 {
 		decimals := client.Asset.GetChain().GetDecimals()
 		return nil, fmt.Errorf(
 			"insufficient balance: %s would remain after transfering %s",
@@ -75,7 +75,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			tfAmount.ToHuman(decimals),
 		)
 	}
-	if remainder.Cmp(&txInput.ReserveAmount) < 0 {
+	if remainder.Cmp(&txInput.ReserveAmount) <= 0 {
 		logrus.WithFields(logrus.Fields{
 			"balance": txInput.XrpBalance,
 			"reserve": txInput.ReserveAmount,

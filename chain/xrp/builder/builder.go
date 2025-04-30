@@ -75,8 +75,12 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, destin
 	}
 
 	if txInput.AccountDelete {
-		xrpTx.TransactionType = xrptx.ACCOUNT_DELETE
-		xrpTx.Fee = txInput.DeleteAccountFee.String()
+		if args.InclusiveFeeSpendingEnabled() {
+			// Only use account-delete if inclusive fee spending is enabled,
+			// as only then is it ok to send an amount that could vary slightly.
+			xrpTx.TransactionType = xrptx.ACCOUNT_DELETE
+			xrpTx.Fee = txInput.AccountDeleteFee.String()
+		}
 	}
 
 	return &xrptx.Tx{

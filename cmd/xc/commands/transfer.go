@@ -212,6 +212,7 @@ func CmdTxTransfer() *cobra.Command {
 				}
 				amount := tfArgs.GetAmount()
 				tfArgs.SetAmount(amount.Sub(&fee))
+				tfArgs.SetInclusiveFeeSpending(true)
 			}
 
 			err = xc.CheckFeeLimit(input, chainConfig)

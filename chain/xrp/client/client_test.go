@@ -77,7 +77,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
-				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
 		},
@@ -115,7 +115,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(10),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
-				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
 		},
@@ -151,14 +151,14 @@ func TestFetchTxInput(t *testing.T) {
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
-				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
 		},
 		{
-			name: "account delete",
+			name: "account delete, sending full balance",
 			// The remaining balance is less than the reserve amount, so account delete should be used.
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("9999000")),
+			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(10000000-200_000)),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -188,7 +188,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
-				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 				AccountDelete:        true,
 			},
@@ -226,7 +226,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
-				DeleteAccountFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 				AccountDelete:        true,
 			},

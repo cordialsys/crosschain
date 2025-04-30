@@ -19,10 +19,11 @@ type TxInput struct {
 	V2LastLedgerSequence int64 `json:"last_ledger_sequence"`
 
 	Fee              xc.AmountBlockchain `json:"fee,omitempty"`
-	DeleteAccountFee xc.AmountBlockchain `json:"delete_account_fee,omitempty"`
+	AccountDeleteFee xc.AmountBlockchain `json:"delete_account_fee,omitempty"`
 	ReserveAmount    xc.AmountBlockchain `json:"reserve_amount,omitempty"`
 	XrpBalance       xc.AmountBlockchain `json:"xrp_balance,omitempty"`
-	AccountDelete    bool                `json:"account_delete,omitempty"`
+	// Indicate if account-delete is needed to send the full amount requested
+	AccountDelete bool `json:"account_delete,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
