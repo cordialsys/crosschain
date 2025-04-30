@@ -53,7 +53,7 @@ func TestNewNativeTransferAccountDelete(t *testing.T) {
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &tx_input.TxInput{
 		AccountDelete:    true,
-		DeleteAccountFee: xc.NewAmountBlockchainFromUint64(200_000),
+		AccountDeleteFee: xc.NewAmountBlockchainFromUint64(200_000),
 		Fee:              xc.NewAmountBlockchainFromUint64(100),
 	}
 
@@ -61,6 +61,7 @@ func TestNewNativeTransferAccountDelete(t *testing.T) {
 		from, to, amount,
 		buildertest.OptionMemo("999"),
 		buildertest.OptionPublicKey(make([]byte, 32)),
+		buildertest.OptionInclusiveFeeSpending(true),
 	)
 
 	nt, err := txBuilder.Transfer(args, input)
@@ -72,6 +73,13 @@ func TestNewNativeTransferAccountDelete(t *testing.T) {
 	require.Equal(t, "200000", string(xrpTx.Fee))
 	require.EqualValues(t, "AccountDelete", xrpTx.TransactionType)
 	require.EqualValues(t, 999, xrpTx.DestinationTag)
+
+	// Ensure it's not possible to use account-delete without inclusive fee spending
+	args.SetInclusiveFeeSpending(false)
+	nt, err = txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	xrpTx = nt.(*Tx).XRPTx
+	require.EqualValues(t, "Payment", xrpTx.TransactionType)
 }
 
 func TestNewTokenTransfer(t *testing.T) {

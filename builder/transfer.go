@@ -41,6 +41,10 @@ func (args *TransferArgs) GetDecimals() (int, bool) {
 	return args.options.GetDecimals()
 }
 
+func (args *TransferArgs) InclusiveFeeSpendingEnabled() bool {
+	return args.options.InclusiveFeeSpendingEnabled()
+}
+
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	args := TransferArgs{
@@ -85,4 +89,8 @@ func (args *TransferArgs) SetFeePayer(feePayer xc.Address) {
 
 func (args *TransferArgs) SetFeePayerPublicKey(feePayerPublicKey []byte) {
 	args.options.SetFeePayerPublicKey(feePayerPublicKey)
+}
+
+func (args *TransferArgs) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
+	args.options.SetInclusiveFeeSpending(inclusiveFeeSpending)
 }

@@ -45,3 +45,4 @@ var OptionPublicKey = builder.OptionPublicKey
 var OptionMemo = builder.OptionMemo
 var OptionTxInput = builder.WithTxInputOptions
 var OptionFeePayer = builder.OptionFeePayer
+var OptionInclusiveFeeSpending = builder.OptionInclusiveFeeSpending
