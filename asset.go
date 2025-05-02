@@ -28,6 +28,7 @@ type NativeAsset string
 // List of supported NativeAsset
 const (
 	ACA    = NativeAsset("ACA")    // Acala
+	ADA    = NativeAsset("ADA")    // Cardano
 	AKT    = NativeAsset("AKT")    // Akash
 	APTOS  = NativeAsset("APTOS")  // APTOS
 	ArbETH = NativeAsset("ArbETH") // Arbitrum
@@ -85,6 +86,7 @@ const (
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
+	ADA,
 	AKT,
 	BAND,
 	BCH,
@@ -150,6 +152,7 @@ const (
 	DriverBitcoin       = Driver("bitcoin")
 	DriverBitcoinCash   = Driver("bitcoin-cash")
 	DriverBitcoinLegacy = Driver("bitcoin-legacy")
+	DriverCardano       = Driver("cardano")
 	DriverCosmos        = Driver("cosmos")
 	DriverCosmosEvmos   = Driver("evmos")
 	DriverDusk          = Driver("dusk")
@@ -274,6 +277,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverFilecoin
 	case DUSK:
 		return DriverDusk
+	case ADA:
+		return DriverCardano
 	}
 	return ""
 }
@@ -284,7 +289,7 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return K256Sha256
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return K256Keccak
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano:
 		return Ed255
 	case DriverDusk:
 		return Bls12_381G2Blake2
