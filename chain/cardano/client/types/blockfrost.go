@@ -43,7 +43,7 @@ type Utxo struct {
 	Address string   `json:"address"`
 	Amounts []Amount `json:"amount"`
 	TxHash  string   `json:"tx_hash"`
-	Index   uint16   `json:"index"`
+	Index   uint16   `json:"output_index"`
 }
 
 func (u *Utxo) GetAssetAmount(contract xc.ContractAddress) xc.AmountBlockchain {
