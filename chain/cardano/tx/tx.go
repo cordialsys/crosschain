@@ -52,6 +52,25 @@ type TxBody struct {
 	MemoHash []byte    `cbor:"7,keyasint,omitempty"`
 }
 
+func (txBody *TxBody) MarshalCBOR() ([]byte, error) {
+	type Body struct {
+		Inputs  cbor.Tag  `cbor:"0,keyasint"`
+		Outputs []*Output `cbor:"1,keyasint"`
+		Fee     uint64    `cbor:"2,keyasint"`
+		TTL     uint32    `cbor:"3,keyasint,omitempty,omitzero"`
+	}
+	txBodyData := Body{
+		Inputs: cbor.Tag{
+			Number:  258,
+			Content: txBody.Inputs,
+		},
+		Outputs: txBody.Outputs,
+		Fee:     txBody.Fee,
+		TTL:     txBody.TTL,
+	}
+	return cbor.Marshal(txBodyData)
+}
+
 type Input struct {
 	_ struct{} `cbor:",toarray"`
 
@@ -225,7 +244,7 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 			inputAmounts[contract] = inputAmount.Add(&inputQuantity)
 			log.WithFields(log.Fields{
 				"contract": contract,
-				"amount":   inputAmount,
+				"amount":   inputAmounts[contract],
 			}).Debug("input amount")
 		}
 	}
@@ -250,10 +269,6 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		for assetName, tokenAmount := range amounts {
 			contract := xc.ContractAddress(fmt.Sprintf("%s%s", hexPolId, assetName))
 			totalOutputs[contract] = xc.NewAmountBlockchainFromUint64(tokenAmount)
-			log.WithFields(log.Fields{
-				"contract": contract,
-				"amount":   tokenAmount,
-			}).Debug("output amount")
 		}
 	}
 
@@ -268,12 +283,16 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		if !ok {
 			outputAmount = zeroAmount
 		}
+		log.WithFields(log.Fields{
+			"contract": contract,
+			"amount":   outputAmount,
+		}).Debug("output amount")
 
 		changeAmount := inputAmount.Sub(&outputAmount)
 		if changeAmount.Cmp(&zeroAmount) == -1 {
 			return nil, fmt.Errorf("negative change amount for contract %s", contract)
 		}
-		changeOutput.AddAmount(inputAmount.Uint64(), contract)
+		changeOutput.AddAmount(changeAmount.Uint64(), contract)
 		log.WithFields(log.Fields{
 			"contract": contract,
 			"amount":   changeAmount,
@@ -358,8 +377,6 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (xc.Tx, error) {
 	fee = fee.Add(&input.FixedFee)
 	fee = fee.Add(&feeMargin)
 	tx.Body.Fee = fee.Uint64()
-
-	// Deduct fee from the change
 	tx.Body.Outputs[1].TokenAmounts.NativeAmount -= tx.Body.Fee
 	return tx, nil
 }
@@ -408,11 +425,6 @@ func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 		}
 		tx.Witness.Keys = append(tx.Witness.Keys, vKeyWitness)
 	}
-	cborWitness, err := cbor.Marshal(tx.Witness)
-	if err != nil {
-		return fmt.Errorf("failed to marshal witness: %w", err)
-	}
-	fmt.Printf("Witness: %x\n", cborWitness)
 
 	return nil
 }

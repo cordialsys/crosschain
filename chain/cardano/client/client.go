@@ -74,7 +74,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 func (client *Client) FetchProtocolParameters(ctx context.Context) (types.ProtocolParameters, error) {
 	var protocolParameters types.ProtocolParameters
-	err := client.Request(ctx, GET, "/epochs/latest/parameters", "", &protocolParameters)
+	err := client.Request(ctx, GET, "/epochs/latest/parameters", nil, &protocolParameters)
 
 	return protocolParameters, err
 }
@@ -82,7 +82,7 @@ func (client *Client) FetchProtocolParameters(ctx context.Context) (types.Protoc
 func (client *Client) FetchUtxos(ctx context.Context, address xc.Address, contract xc.ContractAddress) ([]types.Utxo, error) {
 	path := fmt.Sprintf("/addresses/%s/utxos/%s?order=desc", string(address), string(contract))
 	var response []types.Utxo
-	err := client.Request(ctx, GET, path, "", &response)
+	err := client.Request(ctx, GET, path, nil, &response)
 	return response, err
 }
 
@@ -137,7 +137,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	utxos = GetMinUtxoSet(utxos, targetAmount, contract)
 
 	var latestBlock types.Block
-	err = client.Request(ctx, GET, "/blocks/latest", "", &latestBlock)
+	err = client.Request(ctx, GET, "/blocks/latest", nil, &latestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
@@ -173,10 +173,9 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)
 	}
-	cborHex := hex.EncodeToString(bytes)
 
 	var response string
-	err = client.Request(ctx, POST, "/tx/submit", cborHex, &response)
+	err = client.Request(ctx, POST, "/tx/submit", bytes, &response)
 	if err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
 	}
@@ -192,21 +191,21 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
 	var latestBlock types.Block
-	err := client.Request(ctx, GET, "/blocks/latest", "", &latestBlock)
+	err := client.Request(ctx, GET, "/blocks/latest", nil, &latestBlock)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 
 	var transactionInfo types.TransactionInfo
 	transactionPath := fmt.Sprintf("/txs/%s", string(txHash))
-	err = client.Request(ctx, GET, transactionPath, "", &transactionInfo)
+	err = client.Request(ctx, GET, transactionPath, nil, &transactionInfo)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction info: %w", err)
 	}
 
 	var blockInfo types.Block
 	blockPath := fmt.Sprintf("/blocks/%d", transactionInfo.BlockHeight)
-	err = client.Request(ctx, GET, blockPath, "", &blockInfo)
+	err = client.Request(ctx, GET, blockPath, nil, &blockInfo)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch block info: %w", err)
 	}
@@ -230,7 +229,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 
 	var transactionUtxos types.TransactionUtxos
 	transactionUtxosPath := fmt.Sprintf("%s/utxos", transactionPath)
-	err = client.Request(ctx, GET, transactionUtxosPath, "", &transactionUtxos)
+	err = client.Request(ctx, GET, transactionUtxosPath, nil, &transactionUtxos)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction utxos: %w", err)
 	}
@@ -276,7 +275,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	path := fmt.Sprintf("/addresses/%s", string(args.Address()))
 	var getAddressInfoResponse types.GetAddressInfoResponse
-	err := client.Request(ctx, GET, path, "", &getAddressInfoResponse)
+	err := client.Request(ctx, GET, path, nil, &getAddressInfoResponse)
 	if err != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch address info: %w", err)
 	}
@@ -308,7 +307,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		blockPath = "/blocks/latest"
 	}
 	var block types.Block
-	err := client.Request(ctx, GET, blockPath, "", &block)
+	err := client.Request(ctx, GET, blockPath, nil, &block)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
@@ -322,7 +321,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 	blockTransactionsPaths := fmt.Sprintf("%s/txs", blockPath)
 	transactionHashes := make([]string, 0)
-	err = client.Request(ctx, GET, blockTransactionsPaths, "", &transactionHashes)
+	err = client.Request(ctx, GET, blockTransactionsPaths, nil, &transactionHashes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block transactions: %w", err)
 	}
@@ -333,7 +332,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}, nil
 }
 
-func (client *Client) Request(ctx context.Context, method string, path string, cbor string, resp any) error {
+func (client *Client) Request(ctx context.Context, method string, path string, cbor []byte, resp any) error {
 	apiPath := fmt.Sprintf("%s%s", API_VERSION, path)
 	logger := client.Logger.WithFields(log.Fields{
 		"path":   apiPath,
@@ -341,16 +340,14 @@ func (client *Client) Request(ctx context.Context, method string, path string, c
 	})
 	url := fmt.Sprintf("%s/%s", client.Url, apiPath)
 
-	logger.WithField("params", string(cbor)).Debug("sending request")
+	logger.WithFields(log.Fields{
+		"payload": hex.EncodeToString(cbor),
+	}).Debug("sending request")
 
 	var request *http.Request
 	var err error
 	if len(cbor) > 0 {
-		payload, err := json.Marshal(cbor)
-		if err != nil {
-			return fmt.Errorf("failed to encode request body: %w", err)
-		}
-		request, err = http.NewRequest(method, url, bytes.NewBuffer(payload))
+		request, err = http.NewRequest(method, url, bytes.NewBuffer(cbor))
 		request.Header.Set("Content-Type", "application/cbor")
 	} else {
 		request, err = http.NewRequest(method, url, nil)
