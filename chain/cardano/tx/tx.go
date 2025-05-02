@@ -17,9 +17,13 @@ import (
 
 const (
 	// PolicyId is 28 byte hash of the token policy
-	PolicyIdLen = 56
-	Lovelace    = "lovelace"
-	FeeMargin   = 500
+	PolicyIdLen             = 56
+	Lovelace                = "lovelace"
+	FeeMargin               = 500
+	DefaultHeaderSize       = 6
+	PolicyIdSize            = 28
+	AssetNameOverhead       = 12
+	UtxoEntrySizeWithoutVal = 27
 )
 
 // Tx for Cardano
@@ -197,8 +201,34 @@ type VKeyWitness struct {
 
 var _ xc.Tx = &Tx{}
 
-func CalcMinUtxoValue(coinsPerUtxoWord uint64) xc.AmountBlockchain {
-	return xc.NewAmountBlockchainFromUint64(0)
+// CalcMinUtxoValue calculates the minimum UTXO value for a given set of token amounts
+// based on the Cardano protocol parameters.
+// Base formula: https://cardano-ledger.readthedocs.io/en/latest/explanations/min-utxo-mary.html
+// Alonzo follow up: https://github.com/IntersectMBO/cardano-ledger/blob/master/doc/explanations/min-utxo-alonzo.rst
+func CalcMinUtxoValue(coinsPerUtxoWord xc.AmountBlockchain, policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc.AmountBlockchain {
+	policyIdCount := len(policyHashToAmounts)
+
+	totalCharCount := 0
+	assetCount := 0
+	for _, assetAmounts := range policyHashToAmounts {
+		for assetName, _ := range assetAmounts {
+			assetCount += 1
+			totalCharCount += len(assetName)
+		}
+	}
+
+	policyMultiplier := 0
+	if policyIdCount > assetCount {
+		policyMultiplier = policyIdCount
+	} else {
+		policyMultiplier = assetCount
+	}
+
+	sizeOfValue := (policyMultiplier * AssetNameOverhead) + totalCharCount + (policyIdCount * PolicyIdSize) + DefaultHeaderSize
+	// To words
+	sizeOfValue = (sizeOfValue + 7) / 8
+	utxoEntrySize := xc.NewAmountBlockchainFromUint64(uint64(UtxoEntrySizeWithoutVal + sizeOfValue))
+	return utxoEntrySize.Mul(&coinsPerUtxoWord)
 }
 
 func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output, error) {
@@ -214,7 +244,7 @@ func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output,
 	isNative := !ok
 	output.AddAmount(amount.Uint64(), contract)
 	if !isNative {
-		minLovelace := CalcMinUtxoValue(input.CoinsPerUtxoWord.Uint64())
+		minLovelace := CalcMinUtxoValue(input.CoinsPerUtxoWord, output.TokenAmounts.PolicyIdToAmounts)
 		output.AddAmount(minLovelace.Uint64(), xc.ContractAddress(Lovelace))
 	}
 
