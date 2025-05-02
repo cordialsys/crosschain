@@ -26,6 +26,15 @@ chains:
       coin_market_cap:
         chain_id:
         asset_id: "6756"
+  ADA:
+    chain: ADA
+    driver: cardano
+    chain_id: cardano
+    network: mainnet
+    chain_name: Cardano
+    decimals: 6
+    fee_limit: "3.0"
+    auth: "raw:preprodkeXbfCzkmYDogwPw4gvM6fxvYG9W1Wcm"
   AKT:
     chain: AKT
     driver: cosmos

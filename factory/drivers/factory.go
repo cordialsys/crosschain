@@ -14,6 +14,9 @@ import (
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	bitcoinbuilder "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
+	cardanoaddress "github.com/cordialsys/crosschain/chain/cardano/address"
+	cardanobuilder "github.com/cordialsys/crosschain/chain/cardano/builder"
+	cardanoclient "github.com/cordialsys/crosschain/chain/cardano/client"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	cosmosaddress "github.com/cordialsys/crosschain/chain/cosmos/address"
 	cosmosbuilder "github.com/cordialsys/crosschain/chain/cosmos/builder"
@@ -59,6 +62,8 @@ import (
 
 func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 	switch driver {
+	case DriverCardano:
+		return cardanoclient.NewClient(cfg)
 	case DriverEVM:
 		return evmclient.NewClient(cfg)
 	case DriverEVMLegacy:
@@ -131,6 +136,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 
 func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 	switch Driver(cfg.Driver) {
+	case DriverCardano:
+		return cardanobuilder.NewTxBuilder(cfg)
 	case DriverEVM:
 		return evmbuilder.NewTxBuilder(cfg)
 	case DriverEVMLegacy:
@@ -201,6 +208,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return xrpaddress.NewAddressBuilder(cfg)
 	case DriverXlm:
 		return xlmaddress.NewAddressBuilder(cfg)
+	case DriverCardano:
+		return cardanoaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }

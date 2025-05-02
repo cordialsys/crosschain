@@ -2,6 +2,14 @@
 
 network: "testnet"
 chains:
+  ADA:
+    chain: ADA
+    driver: cardano
+    chain_id: cardano
+    network: preprod
+    chain_name: Cardano
+    decimals: 6
+    auth: "raw:preprodkeXbfCzkmYDogwPw4gvM6fxvYG9W1Wcm"
   APTOS:
     chain: APTOS
     driver: aptos
