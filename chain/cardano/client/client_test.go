@@ -399,11 +399,13 @@ func TestFetchTxInfo(t *testing.T) {
 }
 
 func MustParseTime(s string) time.Time {
-	time, err := time.Parse(time.RFC3339, s)
+	t, err := time.Parse(time.RFC3339, s)
 	if err != nil {
 		panic("failed to parse time")
 	}
-	return time
+
+	unixTime := t.Unix()
+	return time.Unix(unixTime, 0)
 }
 
 func NewMovement(
