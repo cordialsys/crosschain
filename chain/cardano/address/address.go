@@ -31,6 +31,10 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
+	if len(publicKeyBytes) != 32 {
+		return "", fmt.Errorf("invalid public key length: %d, expected 32", len(publicKeyBytes))
+	}
+
 	var hrm string
 	// Header consists of 2 parts:
 	// - [0..4] bits: Address type

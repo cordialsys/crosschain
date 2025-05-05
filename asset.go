@@ -305,7 +305,7 @@ var Uncompressed PublicKeyFormat = "uncompressed"
 
 func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverCardano, DriverBitcoinCash, DriverBitcoinLegacy:
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
