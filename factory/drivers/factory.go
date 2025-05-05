@@ -14,6 +14,7 @@ import (
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	bitcoinbuilder "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
+	cardano "github.com/cordialsys/crosschain/chain/cardano"
 	cardanoaddress "github.com/cordialsys/crosschain/chain/cardano/address"
 	cardanobuilder "github.com/cordialsys/crosschain/chain/cardano/builder"
 	cardanoclient "github.com/cordialsys/crosschain/chain/cardano/client"
@@ -219,6 +220,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return err.Status
 	}
 	switch driver {
+	case DriverCardano:
+		return cardano.CheckError(err)
 	case DriverDusk:
 		return dusk.CheckError(err)
 	case DriverEVM:

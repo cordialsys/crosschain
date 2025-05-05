@@ -26,18 +26,19 @@ const (
 	GET  = "GET"
 	// Cardano uses lovelace as the smallest unit of ada
 	// 1 lovelace = 0.000001 ada
-	LOVELACE    = "lovelace"
+	Lovelace    = "lovelace"
+	Ada         = "ADA"
 	API_VERSION = "/api/v0"
 )
 
 // Client for Template
 type Client struct {
-	Asset      xc.ITask
-	Url        string
-	Network    string
-	Logger     *log.Entry
-	ProjectId  string
-	HttpClient *http.Client
+	Asset               xc.ITask
+	Url                 string
+	Network             string
+	Logger              *log.Entry
+	BlockfrostProjectId string
+	HttpClient          *http.Client
 }
 
 var _ xclient.Client = &Client{}
@@ -52,7 +53,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 	network := cfg.GetChain().Network
 	if network == "" {
-		return nil, errors.New("rpc url is empty")
+		network = "mainnet"
+		log.Warn("network is empty, defaulting to mainnet")
 	}
 
 	logger := log.WithFields(log.Fields{
@@ -62,13 +64,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	})
 
 	return &Client{
-		Asset:   cfgI,
-		Url:     url,
-		Network: network,
-		Logger:  logger,
-		// Not all providers require api key
-		ProjectId:  cfg.Auth2.LoadOrBlank(),
-		HttpClient: http.DefaultClient,
+		Asset:               cfgI,
+		Url:                 url,
+		Network:             network,
+		Logger:              logger,
+		BlockfrostProjectId: cfg.Auth2.LoadOrBlank(),
+		HttpClient:          http.DefaultClient,
 	}, nil
 }
 
@@ -112,14 +113,14 @@ func GetMinUtxoSet(utxos []types.Utxo, targetAmount xc.AmountBlockchain, contrac
 
 // FetchTransferInput returns tx input for a Cardano transfer
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	decimals, err := client.FetchDecimals(ctx, LOVELACE)
+	decimals, err := client.FetchDecimals(ctx, Lovelace)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
 
 	contract, ok := args.GetContract()
 	if !ok {
-		contract = LOVELACE
+		contract = Lovelace
 	}
 
 	utxos, err := client.FetchUtxos(ctx, args.GetFrom(), contract)
@@ -238,6 +239,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		addr := xc.Address(input.Address)
 		for _, amount := range input.Amounts {
 			contract := xc.ContractAddress(amount.Unit)
+			if contract == Lovelace {
+				contract = Ada
+			}
 			if contractToMovement[contract] == nil {
 				contractToMovement[contract] = xclient.NewMovement(
 					xc.ADA,
@@ -252,6 +256,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		addr := xc.Address(output.Address)
 		for _, amount := range output.Amounts {
 			contract := xc.ContractAddress(amount.Unit)
+			if contract == Lovelace {
+				contract = Ada
+			}
 			if contractToMovement[contract] == nil {
 				contractToMovement[contract] = xclient.NewMovement(
 					xc.ADA,
@@ -265,9 +272,15 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	movements := slices.Collect(maps.Values(contractToMovement))
 	txInfo.Movements = movements
 
+	decimals, err := client.FetchDecimals(ctx, Ada)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch decimals: %w", err)
+	}
+
 	feeAmount := xc.NewAmountBlockchainFromStr(transactionInfo.Fees)
-	feeAccount := xc.Address(transactionUtxos.Inputs[0].Address)
-	txInfo.AddFee(feeAccount, LOVELACE, feeAmount, nil)
+	txInfo.Fees = []*xclient.Balance{
+		xclient.NewBalance(xc.ADA, Ada, feeAmount, &decimals),
+	}
 
 	return *txInfo, nil
 }
@@ -282,7 +295,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 	contract, ok := args.Contract()
 	if !ok {
-		contract = LOVELACE
+		contract = Lovelace
 	}
 
 	for _, amount := range getAddressInfoResponse.Amounts {
@@ -356,8 +369,8 @@ func (client *Client) Request(ctx context.Context, method string, path string, c
 		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 
-	if client.ProjectId != "" {
-		request.Header.Set("project_id", client.ProjectId)
+	if client.BlockfrostProjectId != "" {
+		request.Header.Set("project_id", client.BlockfrostProjectId)
 	}
 
 	response, err := client.HttpClient.Do(request)

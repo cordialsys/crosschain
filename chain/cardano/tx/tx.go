@@ -208,6 +208,7 @@ var _ xc.Tx = &Tx{}
 func CalcMinUtxoValue(coinsPerUtxoWord xc.AmountBlockchain, policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc.AmountBlockchain {
 	policyIdCount := len(policyHashToAmounts)
 
+	// Count assets and total asset name characters
 	totalCharCount := 0
 	assetCount := 0
 	for _, assetAmounts := range policyHashToAmounts {
@@ -224,15 +225,19 @@ func CalcMinUtxoValue(coinsPerUtxoWord xc.AmountBlockchain, policyHashToAmounts 
 		policyMultiplier = assetCount
 	}
 
-	sizeOfValue := (policyMultiplier * AssetNameOverhead) + totalCharCount + (policyIdCount * PolicyIdSize) + DefaultHeaderSize
-	// To words
+	sizeOfValue := (policyMultiplier * AssetNameOverhead) + totalCharCount + (policyIdCount * PolicyIdSize)
+
+	// Round up to bytes
 	sizeOfValue = (sizeOfValue + 7) / 8
+	// Add overhead for the UTXO entry
+	sizeOfValue += DefaultHeaderSize
+
 	utxoEntrySize := xc.NewAmountBlockchainFromUint64(uint64(UtxoEntrySizeWithoutVal + sizeOfValue))
 	return utxoEntrySize.Mul(&coinsPerUtxoWord)
 }
 
 func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output, error) {
-	// Create first output
+	// Create firt output
 	receiverAddress := args.GetTo()
 	output, err := NewOutput(receiverAddress)
 	if err != nil {
@@ -355,12 +360,12 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (xc.Tx, error) {
 
 	// Create inputs
 	for _, utxo := range input.Utxos {
-		hehHash, err := hex.DecodeString(utxo.TxHash)
+		hexHash, err := hex.DecodeString(utxo.TxHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode hash: %w", err)
 		}
 		txInput := &Input{
-			TxHash: hehHash,
+			TxHash: hexHash,
 			Index:  utxo.Index,
 		}
 		tx.Body.Inputs = append(tx.Body.Inputs, txInput)
@@ -433,7 +438,6 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	signatureData := &xc.SignatureRequest{
 		Payload: hash[:],
 	}
-	println("Sighash: ", hex.EncodeToString(signatureData.Payload))
 
 	return []*xc.SignatureRequest{signatureData}, nil
 }
@@ -441,7 +445,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
 	if len(signatures) == 0 {
-		return nil
+		return errors.New("no signatures provided")
 	}
 
 	if len(tx.Witness.Keys) != 0 {
