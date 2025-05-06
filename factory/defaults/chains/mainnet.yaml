@@ -35,7 +35,6 @@ chains:
     decimals: 6
     default_gas_budget: "3.0"
     fee_limit: "30.0"
-    auth: "raw:preprodkeXbfCzkmYDogwPw4gvM6fxvYG9W1Wcm"
     transaction_active_time: "2h"
   AKT:
     chain: AKT
