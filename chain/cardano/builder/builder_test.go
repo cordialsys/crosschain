@@ -49,11 +49,7 @@ func TestNewNativeTransfer(t *testing.T) {
 				Index:  expectedUtxoIndex,
 			},
 		},
-		Slot:             90_751_416,
-		FixedFee:         xc.NewAmountBlockchainFromUint64(155_381),
-		FeePerByte:       xc.NewAmountBlockchainFromUint64(44),
-		MinUtxo:          xc.NewAmountBlockchainFromUint64(4_310),
-		CoinsPerUtxoWord: xc.NewAmountBlockchainFromUint64(4_310),
+		Slot: 90_751_416,
 	}
 
 	cfg := xc.NewChainConfig(xc.ADA).WithNet("preprod").WithDecimals(6)

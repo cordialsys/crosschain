@@ -5,11 +5,14 @@ chains:
   ADA:
     chain: ADA
     driver: cardano
-    chain_id: cardano
     network: preprod
+    chain_id: cardano
     chain_name: Cardano
+    default_gas_budget: "3.0"
+    fee_limit: "30.0"
     decimals: 6
     auth: "raw:preprodkeXbfCzkmYDogwPw4gvM6fxvYG9W1Wcm"
+    transaction_active_time: "2h"
   APTOS:
     chain: APTOS
     driver: aptos

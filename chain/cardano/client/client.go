@@ -16,24 +16,23 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
+	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	POST = "POST"
-	GET  = "GET"
-	// Cardano uses lovelace as the smallest unit of ada
-	// 1 lovelace = 0.000001 ada
-	Lovelace    = "lovelace"
-	Ada         = "ADA"
-	API_VERSION = "/api/v0"
+	FeeMargin      = 500
+	TokenDecimals  = 0
+	NativeDecimals = 6
+	ApiVersion     = "/api/v0"
 )
 
 // Client for Template
 type Client struct {
-	Asset               xc.ITask
+	ClientCfg           *xc.ChainClientConfig
+	ChainCfg            *xc.ChainConfig
 	Url                 string
 	Network             string
 	Logger              *log.Entry
@@ -45,51 +44,52 @@ var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
-	cfg := cfgI.GetChain()
-	url := cfg.GetChain().URL
+	chainConfig := cfgI.GetChain()
+	url := chainConfig.GetChain().URL
 	if url == "" {
 		return nil, errors.New("rpc url is empty")
 	}
 
-	network := cfg.GetChain().Network
+	network := chainConfig.GetChain().Network
 	if network == "" {
 		network = "mainnet"
 		log.Warn("network is empty, defaulting to mainnet")
 	}
 
 	logger := log.WithFields(log.Fields{
-		"chain":   cfg.Chain,
+		"chain":   chainConfig.Chain,
 		"rpc":     url,
 		"network": network,
 	})
 
 	return &Client{
-		Asset:               cfgI,
+		ClientCfg:           chainConfig.Client(),
+		ChainCfg:            chainConfig,
 		Url:                 url,
 		Network:             network,
 		Logger:              logger,
-		BlockfrostProjectId: cfg.Auth2.LoadOrBlank(),
+		BlockfrostProjectId: chainConfig.Auth2.LoadOrBlank(),
 		HttpClient:          http.DefaultClient,
 	}, nil
 }
 
 func (client *Client) FetchProtocolParameters(ctx context.Context) (types.ProtocolParameters, error) {
 	var protocolParameters types.ProtocolParameters
-	err := client.Request(ctx, GET, "/epochs/latest/parameters", nil, &protocolParameters)
+	err := client.Get(ctx, "/epochs/latest/parameters", &protocolParameters)
 
 	return protocolParameters, err
 }
 
 func (client *Client) FetchUtxos(ctx context.Context, address xc.Address, contract xc.ContractAddress) ([]types.Utxo, error) {
-	path := fmt.Sprintf("/addresses/%s/utxos/%s?order=desc", string(address), string(contract))
+	path := fmt.Sprintf("/addresses/%s/utxos/?order=desc", string(address))
 	var response []types.Utxo
-	err := client.Request(ctx, GET, path, nil, &response)
+	err := client.Get(ctx, path, &response)
 	return response, err
 }
 
 // 1. Sort utxos by amount descending
-// 2. Get minimum utxo set that adds up to the target amount
-func GetMinUtxoSet(utxos []types.Utxo, targetAmount xc.AmountBlockchain, contract xc.ContractAddress) []types.Utxo {
+// 2. Get minimum utxo set that can cover `targetAmount`
+func GetMinUtxoSet(utxos []types.Utxo, targetAmount tx.TokenAmounts, contract xc.ContractAddress) []types.Utxo {
 	slices.SortFunc(utxos, func(lhs types.Utxo, rhs types.Utxo) int {
 		amountL := lhs.GetAssetAmount(contract)
 		amountR := rhs.GetAssetAmount(contract)
@@ -98,29 +98,46 @@ func GetMinUtxoSet(utxos []types.Utxo, targetAmount xc.AmountBlockchain, contrac
 	})
 
 	utxoSet := make([]types.Utxo, 0)
-	balance := xc.NewAmountBlockchainFromUint64(0)
+	amounts := tx.TokenAmounts{}
 	for _, utxo := range utxos {
-		if balance.Cmp(&targetAmount) >= 0 {
-			break
+		for _, amount := range utxo.Amounts {
+			contract := amount.Unit
+			amnt := amount.Quantity
+			amounts.AddAmount(xc.ContractAddress(contract), xc.NewAmountBlockchainFromStr(amnt).Uint64())
 		}
 
-		amount := utxo.GetAssetAmount(contract)
-		balance = balance.Add(&amount)
 		utxoSet = append(utxoSet, utxo)
+		if amounts.CanCover(targetAmount) {
+			break
+		}
 	}
 	return utxoSet
 }
 
-// FetchTransferInput returns tx input for a Cardano transfer
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	decimals, err := client.FetchDecimals(ctx, Lovelace)
+// Create dummy Cardano transaction for fee estimation
+func CreateDummyTx(args xcbuilder.TransferArgs, txInput tx_input.TxInput) (xc.Tx, error) {
+	// Create a dummy transaction
+	dummyTx, err := tx.NewTx(args, txInput)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
+		return nil, err
 	}
 
+	witness := tx.VKeyWitness{
+		VKey:      make([]byte, 32),
+		Signature: make([]byte, 64),
+	}
+	dummyTx.(*tx.Tx).Witness = &tx.Witness{
+		Keys: []*tx.VKeyWitness{&witness},
+	}
+
+	return dummyTx, nil
+}
+
+// FetchTransferInput returns tx input for a Cardano transfer
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, ok := args.GetContract()
 	if !ok {
-		contract = Lovelace
+		contract = types.Lovelace
 	}
 
 	utxos, err := client.FetchUtxos(ctx, args.GetFrom(), contract)
@@ -128,17 +145,14 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch utxos: %w", err)
 	}
 
-	// Include the fee in target amount
-	cfg := client.Asset.GetChain()
-	feeLimit := cfg.FeeLimit
-	xfeeLimit := feeLimit.ToBlockchain(int32(decimals))
-	targetAmount := args.GetAmount()
-	targetAmount.Add(&xfeeLimit)
-
-	utxos = GetMinUtxoSet(utxos, targetAmount, contract)
+	gasBudget := client.ClientCfg.GasBudgetDefault.ToBlockchain(NativeDecimals).Uint64()
+	targetAmounts := tx.TokenAmounts{}
+	targetAmounts.AddAmount(types.Lovelace, gasBudget)
+	targetAmounts.AddAmount(contract, args.GetAmount().Uint64())
+	utxos = GetMinUtxoSet(utxos, targetAmounts, contract)
 
 	var latestBlock types.Block
-	err = client.Request(ctx, GET, "/blocks/latest", nil, &latestBlock)
+	err = client.Get(ctx, "/blocks/latest", &latestBlock)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
@@ -148,17 +162,25 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch protocol parameters: %w", err)
 	}
 
-	baseFee := protocolParams.FixedFee
-	feePerByte := protocolParams.FeePerByte
+	transactionActiveTime := uint64(client.ClientCfg.TransactionActiveTime.Seconds())
+	txInput := tx_input.TxInput{
+		Utxos:                   utxos,
+		Slot:                    latestBlock.Slot,
+		Fee:                     0,
+		TransactionValidityTime: transactionActiveTime,
+	}
+	dummyTx, err := CreateDummyTx(args, txInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create fee estimation transaction: %w", err)
+	}
+	cbor, err := dummyTx.Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize fee stimation transaction: %w", err)
+	}
+	txSize := len(cbor)
+	txInput.Fee = protocolParams.FeePerByte*uint64(txSize) + protocolParams.FixedFee + FeeMargin
 
-	return &tx_input.TxInput{
-		Utxos:            utxos,
-		FixedFee:         xc.NewAmountBlockchainFromUint64(baseFee),
-		FeePerByte:       xc.NewAmountBlockchainFromUint64(feePerByte),
-		Slot:             latestBlock.Slot,
-		MinUtxo:          xc.NewAmountBlockchainFromStr(protocolParams.MinUtxoValue),
-		CoinsPerUtxoWord: xc.NewAmountBlockchainFromStr(protocolParams.CoinsPerUtxoWord),
-	}, nil
+	return &txInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
@@ -176,7 +198,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	}
 
 	var response string
-	err = client.Request(ctx, POST, "/tx/submit", bytes, &response)
+	err = client.Post(ctx, "/tx/submit", bytes, &response)
 	if err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
 	}
@@ -192,26 +214,26 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
 	var latestBlock types.Block
-	err := client.Request(ctx, GET, "/blocks/latest", nil, &latestBlock)
+	err := client.Get(ctx, "/blocks/latest", &latestBlock)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 
 	var transactionInfo types.TransactionInfo
 	transactionPath := fmt.Sprintf("/txs/%s", string(txHash))
-	err = client.Request(ctx, GET, transactionPath, nil, &transactionInfo)
+	err = client.Get(ctx, transactionPath, &transactionInfo)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction info: %w", err)
 	}
 
 	var blockInfo types.Block
 	blockPath := fmt.Sprintf("/blocks/%d", transactionInfo.BlockHeight)
-	err = client.Request(ctx, GET, blockPath, nil, &blockInfo)
+	err = client.Get(ctx, blockPath, &blockInfo)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
-	chain := client.Asset.GetChain().Chain
+	chain := client.ChainCfg.Chain
 	timestamp := time.Unix(blockInfo.Time, 0)
 	block := xclient.NewBlock(
 		chain,
@@ -222,7 +244,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 
 	txInfo := xclient.NewTxInfo(
 		block,
-		client.Asset.GetChain(),
+		client.ChainCfg,
 		string(txHash),
 		blockInfo.Confirmations,
 		nil,
@@ -230,7 +252,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 
 	var transactionUtxos types.TransactionUtxos
 	transactionUtxosPath := fmt.Sprintf("%s/utxos", transactionPath)
-	err = client.Request(ctx, GET, transactionUtxosPath, nil, &transactionUtxos)
+	err = client.Get(ctx, transactionUtxosPath, &transactionUtxos)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction utxos: %w", err)
 	}
@@ -239,8 +261,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		addr := xc.Address(input.Address)
 		for _, amount := range input.Amounts {
 			contract := xc.ContractAddress(amount.Unit)
-			if contract == Lovelace {
-				contract = Ada
+			if contract == types.Lovelace {
+				contract = types.Ada
 			}
 			if contractToMovement[contract] == nil {
 				contractToMovement[contract] = xclient.NewMovement(
@@ -256,8 +278,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		addr := xc.Address(output.Address)
 		for _, amount := range output.Amounts {
 			contract := xc.ContractAddress(amount.Unit)
-			if contract == Lovelace {
-				contract = Ada
+			if contract == types.Lovelace {
+				contract = types.Ada
 			}
 			if contractToMovement[contract] == nil {
 				contractToMovement[contract] = xclient.NewMovement(
@@ -272,15 +294,16 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	movements := slices.Collect(maps.Values(contractToMovement))
 	txInfo.Movements = movements
 
-	decimals, err := client.FetchDecimals(ctx, Ada)
+	decimals, err := client.FetchDecimals(ctx, types.Ada)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
 
 	feeAmount := xc.NewAmountBlockchainFromStr(transactionInfo.Fees)
 	txInfo.Fees = []*xclient.Balance{
-		xclient.NewBalance(xc.ADA, Ada, feeAmount, &decimals),
+		xclient.NewBalance(xc.ADA, types.Ada, feeAmount, &decimals),
 	}
+	txInfo.Final = int(txInfo.Confirmations) > client.ChainCfg.ConfirmationsFinal
 
 	return *txInfo, nil
 }
@@ -288,14 +311,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	path := fmt.Sprintf("/addresses/%s", string(args.Address()))
 	var getAddressInfoResponse types.GetAddressInfoResponse
-	err := client.Request(ctx, GET, path, nil, &getAddressInfoResponse)
+	err := client.Get(ctx, path, &getAddressInfoResponse)
 	if err != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch address info: %w", err)
 	}
 
 	contract, ok := args.Contract()
 	if !ok {
-		contract = Lovelace
+		contract = types.Lovelace
 	}
 
 	for _, amount := range getAddressInfoResponse.Amounts {
@@ -307,8 +330,13 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	return xc.NewAmountBlockchainFromUint64(0), nil
 }
 
+// types.Ada uses 6 decimals, and tokens use 0 decimals.
+// Token decimals are tricky at the moment, so we return 0 for now.
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return 6, nil
+	if contract == types.Lovelace || contract == "" || contract == types.Ada {
+		return NativeDecimals, nil
+	}
+	return TokenDecimals, nil
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
@@ -320,13 +348,13 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		blockPath = "/blocks/latest"
 	}
 	var block types.Block
-	err := client.Request(ctx, GET, blockPath, nil, &block)
+	err := client.Get(ctx, blockPath, &block)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
 	xBlock := xclient.NewBlock(
-		client.Asset.GetChain().Chain,
+		client.ChainCfg.Chain,
 		height,
 		block.Hash,
 		time.Unix(block.Time, 0),
@@ -334,7 +362,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 	blockTransactionsPaths := fmt.Sprintf("%s/txs", blockPath)
 	transactionHashes := make([]string, 0)
-	err = client.Request(ctx, GET, blockTransactionsPaths, nil, &transactionHashes)
+	err = client.Get(ctx, blockTransactionsPaths, &transactionHashes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch block transactions: %w", err)
 	}
@@ -345,8 +373,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}, nil
 }
 
-func (client *Client) Request(ctx context.Context, method string, path string, cbor []byte, resp any) error {
-	apiPath := fmt.Sprintf("%s%s", API_VERSION, path)
+func (client *Client) request(ctx context.Context, method string, path string, cbor []byte, resp any) error {
+	apiPath := fmt.Sprintf("%s%s", ApiVersion, path)
 	logger := client.Logger.WithFields(log.Fields{
 		"path":   apiPath,
 		"method": method,
@@ -385,7 +413,12 @@ func (client *Client) Request(ctx context.Context, method string, path string, c
 	}
 
 	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to send request, status: %s, error: %s", response.Status, buff)
+		var errorResponse types.Error
+		err = json.Unmarshal(buff, &errorResponse)
+		if err != nil {
+			return fmt.Errorf("failed to decode error body: %w, buff: %s", err, string(buff))
+		}
+		return &errorResponse
 	}
 
 	logger.WithFields(log.Fields{
@@ -404,4 +437,12 @@ func (client *Client) Request(ctx context.Context, method string, path string, c
 	}
 
 	return nil
+}
+
+func (client *Client) Get(ctx context.Context, path string, resp any) error {
+	return client.request(ctx, "GET", path, nil, resp)
+}
+
+func (client *Client) Post(ctx context.Context, path string, cbor []byte, resp any) error {
+	return client.request(ctx, "POST", path, cbor, resp)
 }

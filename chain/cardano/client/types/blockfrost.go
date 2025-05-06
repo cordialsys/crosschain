@@ -1,10 +1,36 @@
 package types
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
 )
 
-const Cardano = "cardano"
+const (
+	Cardano = "cardano"
+	// Cardano uses lovelace as the smallest unit of ada
+	// 1 lovelace = 0.000001 ada
+	Lovelace                      = "lovelace"
+	Ada                           = "ADA"
+	CodeRequestNotValid           = "400"
+	CodeDailyRequestLimitExceeded = "402"
+	CodeNotAuthenticated          = "403"
+	CodeResourceDoesNotExist      = "404"
+	CodeUserAutoBannedForFlooding = "418"
+	CodeMempoolFull               = "425"
+	CodeRateLimitExceeded         = "429"
+	CodeInternalServerError       = "500"
+)
+
+type Error struct {
+	StatusCode int    `json:"status_code,omitempty"`
+	Err        string `json:"error,omitempty"`
+	Message    string `json:"message,omitempty"`
+}
+
+func (e *Error) Error() string {
+	return fmt.Sprintf("StatusCode: %d, Error: %s, Message: %s", e.StatusCode, e.Err, e.Message)
+}
 
 type Amount struct {
 	Unit     string `json:"unit"`
