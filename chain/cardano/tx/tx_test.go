@@ -34,11 +34,7 @@ func newTx(t *testing.T) *tx.Tx {
 				Index:  1,
 			},
 		},
-		Slot:             90_751_416,
-		FixedFee:         xc.NewAmountBlockchainFromUint64(155_381),
-		FeePerByte:       xc.NewAmountBlockchainFromUint64(44),
-		MinUtxo:          xc.NewAmountBlockchainFromUint64(4_310),
-		CoinsPerUtxoWord: xc.NewAmountBlockchainFromUint64(4_310),
+		Slot: 90_751_416,
 	}
 
 	transaction, err := tx.NewTx(transferArgs, transferInput)
@@ -48,7 +44,7 @@ func newTx(t *testing.T) *tx.Tx {
 
 func TestTxHash(t *testing.T) {
 	tx := newTx(t)
-	expectedHash := xc.TxHash("57004dd0ec9c90ed1d0a68497466b67f98c51b2027dc39906b7ae74d0dde3b3a")
+	expectedHash := xc.TxHash("53c1a2f0954b7827da2294a13242fc8cd6046ee346bdff8072e3db82335d1d86")
 	require.Equal(t, expectedHash, tx.Hash())
 }
 
@@ -58,7 +54,7 @@ func TestTxSighashes(t *testing.T) {
 	require.NotNil(t, sighashes)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(sighashes))
-	require.Equal(t, "57004dd0ec9c90ed1d0a68497466b67f98c51b2027dc39906b7ae74d0dde3b3a", hex.EncodeToString(sighashes[0].Payload))
+	require.Equal(t, "53c1a2f0954b7827da2294a13242fc8cd6046ee346bdff8072e3db82335d1d86", hex.EncodeToString(sighashes[0].Payload))
 }
 
 func TestTxAddSignature(t *testing.T) {

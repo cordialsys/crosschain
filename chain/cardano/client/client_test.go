@@ -19,10 +19,16 @@ import (
 )
 
 func NewTestConfig() *xc.ChainConfig {
+	amount, err := xc.NewAmountHumanReadableFromStr("3.0")
+	if err != nil {
+		panic(err)
+	}
 	return xc.NewChainConfig(xc.ADA).
 		WithNet("preprod").
 		WithDecimals(6).
-		WithUrl("https://mainnet.cardano.org")
+		WithUrl("https://mainnet.cardano.org").
+		WithTransactionActiveTime(time.Hour * 2).
+		WithGasBudgetDefault(amount)
 }
 
 func TestNewClient(t *testing.T) {
@@ -124,11 +130,9 @@ func TestFetchTxInput(t *testing.T) {
 						Index:  1,
 					},
 				},
-				Slot:             90_751_416,
-				FixedFee:         xc.NewAmountBlockchainFromUint64(155_381),
-				FeePerByte:       xc.NewAmountBlockchainFromUint64(44),
-				MinUtxo:          xc.NewAmountBlockchainFromUint64(4_310),
-				CoinsPerUtxoWord: xc.NewAmountBlockchainFromUint64(4_310),
+				Slot:                    90_751_416,
+				Fee:                     166265,
+				TransactionValidityTime: 7200,
 			},
 			err: false,
 		},
@@ -157,7 +161,11 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(cfg)
 			client.Url = server.URL
 
-			args, err := xcbuilder.NewTransferArgs(xc.Address(""), xc.Address(""), xc.NewAmountBlockchainFromUint64(1_000_000))
+			args, err := xcbuilder.NewTransferArgs(
+				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+				xc.NewAmountBlockchainFromUint64(1_000_000),
+			)
 			input, err := client.FetchTransferInput(context.Background(), args)
 			if vector.err {
 				require.Error(t, err)

@@ -18,12 +18,12 @@ import (
 const (
 	// PolicyId is 28 byte hash of the token policy
 	PolicyIdLen             = 56
-	Lovelace                = "lovelace"
 	FeeMargin               = 500
 	DefaultHeaderSize       = 6
 	PolicyIdSize            = 28
 	AssetNameOverhead       = 12
 	UtxoEntrySizeWithoutVal = 27
+	CoinsPerUtxoWord        = 37_037
 )
 
 // Tx for Cardano
@@ -82,12 +82,89 @@ type Input struct {
 	Index  uint16
 }
 
-type PolicyHash [28]byte
-type TokenNameHexToAmount map[string]uint64
+func ContractAddressToPolicyAndName(contract xc.ContractAddress) (PolicyHash, TokenName) {
+	policyId := string(contract[:PolicyIdLen])
+	assetName := string(contract[PolicyIdLen:])
+	return PolicyHash(policyId), TokenName(assetName)
+}
+
+type PolicyHash string
+
+func (p *PolicyHash) MarshalCBOR() ([]byte, error) {
+	policyBytes, err := hex.DecodeString(string(*p))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode policyId: %w", err)
+	}
+	return cbor.Marshal(policyBytes)
+}
+
+type TokenName string
+
+// TokenName should be encoded as CBOR byte string, followed by the length of the string
+func (t *TokenName) MarshalCBOR() ([]byte, error) {
+	// AssetName is hex encoded in RPC/cli requests, but decoded on chain
+	strName, err := hex.DecodeString(string(*t))
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode token name: %w", err)
+	}
+	length := uint8(len(strName))
+	// Tag as ByteString - fxamacker/cbor ByteString array is serializing to byte array instead
+	bytes := []byte{0x58}
+	bytes = append(bytes, length)
+	bytes = append(bytes, []byte(strName)...)
+	return bytes, nil
+}
+
+type TokenNameHexToAmount map[TokenName]uint64
+
 type TokenAmounts struct {
 	_                 struct{} `cbor:",toarray"`
 	NativeAmount      uint64
 	PolicyIdToAmounts map[PolicyHash]TokenNameHexToAmount
+}
+
+func (ta *TokenAmounts) AddAmount(contract xc.ContractAddress, amount uint64) {
+	if contract == types.Lovelace || contract == "" {
+		ta.NativeAmount = amount
+		return
+	}
+
+	policyId, assetName := ContractAddressToPolicyAndName(contract)
+	if ta.PolicyIdToAmounts == nil {
+		ta.PolicyIdToAmounts = make(map[PolicyHash]TokenNameHexToAmount)
+	}
+
+	_, ok := ta.PolicyIdToAmounts[policyId]
+	if !ok {
+		ta.PolicyIdToAmounts[policyId] = make(TokenNameHexToAmount, 0)
+	}
+	tokenAmounts := ta.PolicyIdToAmounts[policyId]
+	tokenAmounts[assetName] = amount
+}
+
+func (ta *TokenAmounts) GetAmount(policyId PolicyHash, tokenName TokenName) uint64 {
+	policyAssets, ok := ta.PolicyIdToAmounts[policyId]
+	if ok {
+		tokenAmount, ok := policyAssets[tokenName]
+		if ok {
+			return tokenAmount
+		}
+	}
+
+	return 0
+}
+
+// Returns true when `ta` can cover all `required` amounts
+func (ta TokenAmounts) CanCover(required TokenAmounts) bool {
+	for policyId, amounts := range required.PolicyIdToAmounts {
+		for assetName, requiredAmount := range amounts {
+			amount := ta.GetAmount(policyId, assetName)
+			if amount < requiredAmount {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 type Output struct {
@@ -135,8 +212,9 @@ func (o *Output) MarshalCBOR() ([]byte, error) {
 		return cbor.Marshal(nativeOutput)
 	} else {
 		type output struct {
-			Address []byte       `cbor:"0,keyasint"`
-			Amounts TokenAmounts `cbor:"1,keyasint"`
+			_       struct{} `cbor:",toarray"`
+			Address []byte
+			Amounts TokenAmounts
 		}
 
 		tokenOutput := output{
@@ -148,32 +226,8 @@ func (o *Output) MarshalCBOR() ([]byte, error) {
 	}
 }
 
-func (to *Output) AddAmount(amount uint64, contract xc.ContractAddress) error {
-	if contract == Lovelace || contract == "" {
-		to.TokenAmounts.NativeAmount = amount
-		return nil
-	}
-
-	policyId := string(contract[:PolicyIdLen])
-	assetName, err := hex.DecodeString(string(contract[PolicyIdLen:]))
-	policyHashRaw, err := hex.DecodeString(policyId)
-	if err != nil {
-		return fmt.Errorf("failed to decode policyId: %w", err)
-	}
-	policyHash := PolicyHash(policyHashRaw)
-
-	if to.TokenAmounts.PolicyIdToAmounts == nil {
-		to.TokenAmounts.PolicyIdToAmounts = make(map[PolicyHash]TokenNameHexToAmount)
-	}
-
-	_, ok := to.TokenAmounts.PolicyIdToAmounts[policyHash]
-	if !ok {
-		to.TokenAmounts.PolicyIdToAmounts[policyHash] = make(TokenNameHexToAmount, 0)
-	}
-	tokenAmounts := to.TokenAmounts.PolicyIdToAmounts[policyHash]
-	tokenAmounts[string(assetName)] = amount
-
-	return nil
+func (to *Output) AddAmount(contract xc.ContractAddress, amount uint64) {
+	to.TokenAmounts.AddAmount(contract, amount)
 }
 
 type Witness struct {
@@ -201,11 +255,11 @@ type VKeyWitness struct {
 
 var _ xc.Tx = &Tx{}
 
-// CalcMinUtxoValue calculates the minimum UTXO value for a given set of token amounts
+// CalcMinAdaValue calculates the minimum UTXO value for a given set of token amounts
 // based on the Cardano protocol parameters.
 // Base formula: https://cardano-ledger.readthedocs.io/en/latest/explanations/min-utxo-mary.html
 // Alonzo follow up: https://github.com/IntersectMBO/cardano-ledger/blob/master/doc/explanations/min-utxo-alonzo.rst
-func CalcMinUtxoValue(coinsPerUtxoWord xc.AmountBlockchain, policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc.AmountBlockchain {
+func CalcMinAdaValue(policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc.AmountBlockchain {
 	policyIdCount := len(policyHashToAmounts)
 
 	// Count assets and total asset name characters
@@ -233,7 +287,10 @@ func CalcMinUtxoValue(coinsPerUtxoWord xc.AmountBlockchain, policyHashToAmounts 
 	sizeOfValue += DefaultHeaderSize
 
 	utxoEntrySize := xc.NewAmountBlockchainFromUint64(uint64(UtxoEntrySizeWithoutVal + sizeOfValue))
-	return utxoEntrySize.Mul(&coinsPerUtxoWord)
+	coinsPerUtxoWord := xc.NewAmountBlockchainFromUint64(uint64(CoinsPerUtxoWord))
+	utxoEntrySize = utxoEntrySize.Mul(&coinsPerUtxoWord)
+	adamount := xc.NewAmountBlockchainFromUint64(1500000)
+	return utxoEntrySize.Add(&adamount) // 1.5 ADA
 }
 
 func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output, error) {
@@ -247,10 +304,10 @@ func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output,
 	amount := args.GetAmount()
 	contract, ok := args.GetContract()
 	isNative := !ok
-	output.AddAmount(amount.Uint64(), contract)
+	output.AddAmount(contract, amount.Uint64())
 	if !isNative {
-		minLovelace := CalcMinUtxoValue(input.CoinsPerUtxoWord, output.TokenAmounts.PolicyIdToAmounts)
-		output.AddAmount(minLovelace.Uint64(), xc.ContractAddress(Lovelace))
+		minLovelace := CalcMinAdaValue(output.TokenAmounts.PolicyIdToAmounts)
+		output.AddAmount(xc.ContractAddress(types.Lovelace), minLovelace.Uint64())
 	}
 
 	return output, nil
@@ -285,7 +342,7 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 	}
 
 	// Make sure that inputs contain lovelace
-	_, ok := inputAmounts[Lovelace]
+	_, ok := inputAmounts[types.Lovelace]
 	if !ok {
 		return nil, errors.New("missing lovelace input")
 	}
@@ -297,12 +354,10 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 	if nativeOutput.IsZero() {
 		return nil, errors.New("outputs with 0 lovelace are invalid")
 	}
-	totalOutputs[Lovelace] = nativeOutput
+	totalOutputs[types.Lovelace] = nativeOutput
 	for policyId, amounts := range output.TokenAmounts.PolicyIdToAmounts {
-		hexPolId := hex.EncodeToString(policyId[:])
-
 		for assetName, tokenAmount := range amounts {
-			contract := xc.ContractAddress(fmt.Sprintf("%s%s", hexPolId, assetName))
+			contract := xc.ContractAddress(string(policyId) + string(assetName))
 			totalOutputs[contract] = xc.NewAmountBlockchainFromUint64(tokenAmount)
 		}
 	}
@@ -327,7 +382,7 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		if changeAmount.Cmp(&zeroAmount) == -1 {
 			return nil, fmt.Errorf("negative change amount for contract %s", contract)
 		}
-		changeOutput.AddAmount(changeAmount.Uint64(), contract)
+		changeOutput.AddAmount(contract, changeAmount.Uint64())
 		log.WithFields(log.Fields{
 			"contract": contract,
 			"amount":   changeAmount,
@@ -385,33 +440,11 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (xc.Tx, error) {
 	}
 	tx.Body.Outputs = append(tx.Body.Outputs, changeOutput)
 
-	tx.Body.TTL = uint32(input.Slot + 3600*2) // 2 hours
-
-	// Witness for fee estimation
-	dummyWitness := &VKeyWitness{
-		VKey:      make([]byte, 32),
-		Signature: make([]byte, 64),
+	// TX will be valid indefinitely if TTL is not set
+	if input.TransactionValidityTime > 0 {
+		tx.Body.TTL = uint32(input.Slot + input.TransactionValidityTime) // 2 hours
 	}
-	tx.Witness.Keys = append(tx.Witness.Keys, dummyWitness)
-	// Make sure to zero out the dummy witness
-	defer func() {
-		tx.Witness.Keys = make([]*VKeyWitness, 0)
-	}()
-
-	// Serialize tx with dummy signature for fee estimation
-	txCbor, err := cbor.Marshal(tx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tx: %w", err)
-	}
-
-	// Calculate fee
-	txSize := xc.NewAmountBlockchainFromUint64(uint64(len(txCbor)))
-	feeMargin := xc.NewAmountBlockchainFromUint64(FeeMargin)
-	fee := input.FeePerByte
-	fee = fee.Mul(&txSize)
-	fee = fee.Add(&input.FixedFee)
-	fee = fee.Add(&feeMargin)
-	tx.Body.Fee = fee.Uint64()
+	tx.Body.Fee = input.Fee
 	tx.Body.Outputs[1].TokenAmounts.NativeAmount -= tx.Body.Fee
 	return tx, nil
 }

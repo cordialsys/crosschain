@@ -11,16 +11,10 @@ const FeeMargin = 500
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Utxos []types.Utxo `json:"utxos"`
-	Slot  uint64       `json:"slot"`
-	// FixedFee is defined as the minimum fee for a transaction
-	FixedFee xc.AmountBlockchain `json:"min_fee_b"`
-	// FeePerByte is the fee per transaction byte
-	FeePerByte xc.AmountBlockchain `json:"min_fee_a"`
-	// MinUtxo is the amount of minimum utxo value for ADA only transactions
-	MinUtxo xc.AmountBlockchain `json:"min_utxo"`
-	// CoinsPerUtxoWord is the price per utxo word for multi-asset transactions
-	CoinsPerUtxoWord xc.AmountBlockchain `json:"price_per_utxo_word"`
+	Utxos                   []types.Utxo `json:"utxos"`
+	Slot                    uint64       `json:"slot"`
+	Fee                     uint64       `json:"fee"`
+	TransactionValidityTime uint64       `json:"transaction_validity_time"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -46,9 +40,8 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return nil
 }
 
-// FIXME: Cardano fee calculation requires a TX size
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	return xc.NewAmountBlockchainFromUint64(0), ""
+	return xc.NewAmountBlockchainFromUint64(input.Fee), ""
 }
 
 // check if any utxo is spent twice
