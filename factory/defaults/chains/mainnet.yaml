@@ -36,6 +36,7 @@ chains:
     default_gas_budget: "3.0"
     fee_limit: "30.0"
     transaction_active_time: "2h"
+    auth: "env:CARDANO_PROJECT_ID"
   AKT:
     chain: AKT
     driver: cosmos

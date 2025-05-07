@@ -12,6 +12,7 @@ chains:
     fee_limit: "30.0"
     decimals: 6
     transaction_active_time: "2h"
+    auth: "env:CARDANO_PROJECT_ID"
   APTOS:
     chain: APTOS
     driver: aptos

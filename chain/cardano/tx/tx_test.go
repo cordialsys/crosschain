@@ -10,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/btree"
 )
 
 func newTx(t *testing.T) *tx.Tx {
@@ -113,4 +114,57 @@ func TestTxAddSignature(t *testing.T) {
 		})
 	}
 
+}
+
+func TestCalcMinAdaValue(t *testing.T) {
+	onePolicyNoAssetNames := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	assetsToAmounts := btree.NewMap[tx.TokenName, uint64](1)
+	assetsToAmounts.Set(tx.TokenName(""), 1_000_000)
+	onePolicyNoAssetNames.Set(
+		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
+		tx.TokenNameHexToAmount{assetsToAmounts})
+
+	onePolicyOne1LenName := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	assetsToAmounts1 := btree.NewMap[tx.TokenName, uint64](1)
+	assetsToAmounts1.Set(tx.TokenName("0"), 1_000_000)
+	onePolicyOne1LenName.Set(
+		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
+		tx.TokenNameHexToAmount{assetsToAmounts1})
+
+	onePolicyOne32LenName := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	assetsToAmount32 := btree.NewMap[tx.TokenName, uint64](1)
+	name32 := "01234567890123456789012345678901"
+	assetsToAmount32.Set(tx.TokenName(name32), 1_000_000)
+	onePolicyOne32LenName.Set(
+		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
+		tx.TokenNameHexToAmount{assetsToAmount32})
+
+	vectors := []struct {
+		Name            string
+		PolicyToAmounts tx.PolicyIdToAmounts
+		ExpectedSize    uint64
+	}{
+		{
+			Name:            "OnePolicyNoAssetNames",
+			PolicyToAmounts: tx.PolicyIdToAmounts{onePolicyNoAssetNames},
+			ExpectedSize:    1_407_406,
+		},
+		{
+			Name:            "OnePolicySingleLetterName",
+			PolicyToAmounts: tx.PolicyIdToAmounts{onePolicyOne1LenName},
+			ExpectedSize:    1_444_443,
+		},
+		{
+			Name:            "OnePolicyOne32LenName",
+			PolicyToAmounts: tx.PolicyIdToAmounts{onePolicyOne32LenName},
+			ExpectedSize:    1_555_554,
+		},
+	}
+
+	for _, v := range vectors {
+		t.Run(v.Name, func(t *testing.T) {
+			minAdaValue := tx.CalcMinAdaValue(&v.PolicyToAmounts)
+			require.Equal(t, v.ExpectedSize, minAdaValue.Uint64())
+		})
+	}
 }

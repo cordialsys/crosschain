@@ -12,6 +12,7 @@ import (
 	"github.com/cosmos/btcutil/bech32"
 	"github.com/fxamacker/cbor/v2"
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/btree"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -91,6 +92,9 @@ type Input struct {
 }
 
 func ContractAddressToPolicyAndName(contract xc.ContractAddress) (PolicyHash, TokenName) {
+	if contract == "" || contract == types.Lovelace {
+		return "", ""
+	}
 	policyId := string(contract[:PolicyIdLen])
 	assetName := string(contract[PolicyIdLen:])
 	return PolicyHash(policyId), TokenName(assetName)
@@ -123,12 +127,76 @@ func (t *TokenName) MarshalCBOR() ([]byte, error) {
 	return bytes, nil
 }
 
-type TokenNameHexToAmount map[TokenName]uint64
+type ordered interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr |
+		~float32 | ~float64 | ~string
+}
+
+func MarshalCBORBtreeMap[key ordered, value any](m *btree.Map[key, value]) ([]byte, error) {
+	// Append raw `object` CBOR header
+	mapBytes := []byte{0xA0}
+	// Ensure that map size is less than 15 - shouldn't happend, but we have to check
+	len := m.Len()
+	if len > 0x0000_1111 {
+		return nil, fmt.Errorf("map size is too large: %d", len)
+	}
+	mapBytes[0] |= byte(len)
+
+	iter := m.Iter()
+	for ok := iter.First(); ok; ok = iter.Next() {
+		key := iter.Key()
+		keyCbor, err := cbor.Marshal(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshall key: %w", err)
+		}
+		mapBytes = append(mapBytes, keyCbor...)
+
+		value := iter.Value()
+		valueCbor, err := cbor.Marshal(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal value: %w", err)
+		}
+		mapBytes = append(mapBytes, valueCbor...)
+	}
+	return mapBytes, nil
+}
+
+type TokenNameHexToAmount struct {
+	*btree.Map[TokenName, uint64]
+}
+
+func (t *TokenNameHexToAmount) MarshalCBOR() ([]byte, error) {
+	bytes, err := MarshalCBORBtreeMap(t.Map)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal token name hex to amount: %w", err)
+	}
+	return bytes, nil
+}
+
+type PolicyIdToAmounts struct {
+	*btree.Map[PolicyHash, TokenNameHexToAmount]
+}
+
+func (p *PolicyIdToAmounts) Iter() btree.MapIter[PolicyHash, TokenNameHexToAmount] {
+	if p == nil {
+		p = &PolicyIdToAmounts{btree.NewMap[PolicyHash, TokenNameHexToAmount](1)}
+	}
+	return p.Map.Iter()
+}
+
+func (p *PolicyIdToAmounts) MarshalCBOR() ([]byte, error) {
+	bytes, err := MarshalCBORBtreeMap(p.Map)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal token name hex to amount: %w", err)
+	}
+	return bytes, nil
+}
 
 type TokenAmounts struct {
 	_                 struct{} `cbor:",toarray"`
 	NativeAmount      uint64
-	PolicyIdToAmounts map[PolicyHash]TokenNameHexToAmount
+	PolicyIdToAmounts *PolicyIdToAmounts `cbor:"1,keyasint,omitempty"`
 }
 
 func (ta *TokenAmounts) AddAmount(contract xc.ContractAddress, amount uint64) {
@@ -139,21 +207,36 @@ func (ta *TokenAmounts) AddAmount(contract xc.ContractAddress, amount uint64) {
 
 	policyId, assetName := ContractAddressToPolicyAndName(contract)
 	if ta.PolicyIdToAmounts == nil {
-		ta.PolicyIdToAmounts = make(map[PolicyHash]TokenNameHexToAmount)
+		ta.PolicyIdToAmounts = &PolicyIdToAmounts{btree.NewMap[PolicyHash, TokenNameHexToAmount](1)}
 	}
 
-	_, ok := ta.PolicyIdToAmounts[policyId]
+	_, ok := ta.PolicyIdToAmounts.Get(policyId)
 	if !ok {
-		ta.PolicyIdToAmounts[policyId] = make(TokenNameHexToAmount, 0)
+		ta.PolicyIdToAmounts.Set(
+			policyId,
+			TokenNameHexToAmount{btree.NewMap[TokenName, uint64](1)},
+		)
 	}
-	tokenAmounts := ta.PolicyIdToAmounts[policyId]
-	tokenAmounts[assetName] = amount
+
+	// We just inserted a new policyId, skip check
+	tokenAmounts, _ := ta.PolicyIdToAmounts.Get(policyId)
+
+	assetAmounts, ok := tokenAmounts.Get(assetName)
+	if ok {
+		assetAmounts += amount
+	} else {
+		tokenAmounts.Set(assetName, amount)
+	}
 }
 
 func (ta *TokenAmounts) GetAmount(policyId PolicyHash, tokenName TokenName) uint64 {
-	policyAssets, ok := ta.PolicyIdToAmounts[policyId]
+	if policyId == "" {
+		return ta.NativeAmount
+	}
+
+	policyAssets, ok := ta.PolicyIdToAmounts.Get(policyId)
 	if ok {
-		tokenAmount, ok := policyAssets[tokenName]
+		tokenAmount, ok := policyAssets.Get(tokenName)
 		if ok {
 			return tokenAmount
 		}
@@ -164,8 +247,24 @@ func (ta *TokenAmounts) GetAmount(policyId PolicyHash, tokenName TokenName) uint
 
 // Returns true when `ta` can cover all `required` amounts
 func (ta TokenAmounts) CanCover(required TokenAmounts) bool {
-	for policyId, amounts := range required.PolicyIdToAmounts {
-		for assetName, requiredAmount := range amounts {
+	// Cannot cover native amount
+	if ta.NativeAmount < required.NativeAmount {
+		return false
+	}
+	// Can cover native, and no token amounts
+	if ta.PolicyIdToAmounts == nil || required.PolicyIdToAmounts == nil {
+		return true
+	}
+
+	iter := required.PolicyIdToAmounts.Iter()
+	for ok := iter.First(); ok; ok = iter.Next() {
+		policyId := iter.Key()
+		amounts := iter.Value()
+
+		assetsIter := amounts.Iter()
+		for ok := assetsIter.First(); ok; ok = assetsIter.Next() {
+			assetName := assetsIter.Key()
+			requiredAmount := assetsIter.Value()
 			amount := ta.GetAmount(policyId, assetName)
 			if amount < requiredAmount {
 				return false
@@ -267,14 +366,18 @@ var _ xc.Tx = &Tx{}
 // based on the Cardano protocol parameters.
 // Base formula: https://cardano-ledger.readthedocs.io/en/latest/explanations/min-utxo-mary.html
 // Alonzo follow up: https://github.com/IntersectMBO/cardano-ledger/blob/master/doc/explanations/min-utxo-alonzo.rst
-func CalcMinAdaValue(policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc.AmountBlockchain {
-	policyIdCount := len(policyHashToAmounts)
+func CalcMinAdaValue(policyHashToAmounts *PolicyIdToAmounts) xc.AmountBlockchain {
+	policyIdCount := policyHashToAmounts.Len()
 
 	// Count assets and total asset name characters
 	totalCharCount := 0
 	assetCount := 0
-	for _, assetAmounts := range policyHashToAmounts {
-		for assetName, _ := range assetAmounts {
+	policyIter := policyHashToAmounts.Iter()
+	for ok := policyIter.First(); ok; ok = policyIter.Next() {
+		assetAmounts := policyIter.Value()
+		assetIter := assetAmounts.Iter()
+		for ok := assetIter.First(); ok; ok = assetIter.Next() {
+			assetName := assetIter.Key()
 			assetCount += 1
 			totalCharCount += len(assetName)
 		}
@@ -341,10 +444,6 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 			}
 			inputQuantity := xc.NewAmountBlockchainFromStr(amount.Quantity)
 			inputAmounts[contract] = inputAmount.Add(&inputQuantity)
-			log.WithFields(log.Fields{
-				"contract": contract,
-				"amount":   inputAmounts[contract],
-			}).Debug("input amount")
 		}
 	}
 
@@ -362,8 +461,14 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		return nil, errors.New("outputs with 0 lovelace are invalid")
 	}
 	totalOutputs[types.Lovelace] = nativeOutput
-	for policyId, amounts := range output.TokenAmounts.PolicyIdToAmounts {
-		for assetName, tokenAmount := range amounts {
+	policyIter := output.TokenAmounts.PolicyIdToAmounts.Iter()
+	for ok := policyIter.First(); ok; ok = policyIter.Next() {
+		policyId := policyIter.Key()
+		amounts := policyIter.Value()
+		amountsIter := amounts.Iter()
+		for ok := amountsIter.First(); ok; ok = amountsIter.Next() {
+			assetName := amountsIter.Key()
+			tokenAmount := amountsIter.Value()
 			contract := xc.ContractAddress(string(policyId) + string(assetName))
 			totalOutputs[contract] = xc.NewAmountBlockchainFromUint64(tokenAmount)
 		}
@@ -380,23 +485,51 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		if !ok {
 			outputAmount = zeroAmount
 		}
-		log.WithFields(log.Fields{
-			"contract": contract,
-			"amount":   outputAmount,
-		}).Debug("output amount")
-
 		changeAmount := inputAmount.Sub(&outputAmount)
 		if changeAmount.Cmp(&zeroAmount) == -1 {
 			return nil, fmt.Errorf("negative change amount for contract %s", contract)
 		}
 		changeOutput.AddAmount(contract, changeAmount.Uint64())
-		log.WithFields(log.Fields{
-			"contract": contract,
-			"amount":   changeAmount,
-		}).Debug("change amount")
 	}
 
+	if log.GetLevel() == log.DebugLevel {
+		DebugAmounts(inputAmounts, totalOutputs, changeOutput)
+	}
 	return changeOutput, nil
+}
+
+func DebugAmounts(
+	inputAmounts map[xc.ContractAddress]xc.AmountBlockchain,
+	outputAmounts map[xc.ContractAddress]xc.AmountBlockchain,
+	changeOutput *Output,
+) {
+	input := log.Fields{}
+	for contract, amount := range inputAmounts {
+		input[string(contract)] = amount.String()
+	}
+	output := log.Fields{}
+	for contract, amount := range outputAmounts {
+		output[string(contract)] = amount.String()
+	}
+
+	change := log.Fields{}
+	changeAmounts := changeOutput.TokenAmounts
+	change[types.Lovelace] = changeAmounts.NativeAmount
+	policyIter := changeAmounts.PolicyIdToAmounts.Iter()
+	for ok := policyIter.First(); ok; ok = policyIter.Next() {
+		policyId := policyIter.Key()
+		assetAmounts := policyIter.Value()
+		assetIter := assetAmounts.Iter()
+		for ok := assetIter.First(); ok; ok = assetIter.Next() {
+			assetName := assetIter.Key()
+			assetAmount := assetIter.Value()
+			change[string(policyId)+string(assetName)] = assetAmount
+		}
+	}
+
+	log.WithFields(input).Debug("input amounts")
+	log.WithFields(output).Debug("output amounts")
+	log.WithFields(change).Debug("change amounts, before fee")
 }
 
 // Create Cardano transaction
