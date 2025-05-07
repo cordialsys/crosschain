@@ -175,7 +175,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	cbor, err := dummyTx.Serialize()
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize fee stimation transaction: %w", err)
+		return nil, fmt.Errorf("failed to serialize fee estimation transaction: %w", err)
 	}
 	txSize := len(cbor)
 	txInput.Fee = protocolParams.FeePerByte*uint64(txSize) + protocolParams.FixedFee + FeeMargin
