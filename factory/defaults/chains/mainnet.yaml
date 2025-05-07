@@ -49,6 +49,29 @@ chains:
         asset_id: akash-network
       coin_market_cap:
         asset_id: "7431"
+  BABY:
+    chain: BABY
+    driver: cosmos
+    chain_id: bbn-1
+    chain_name: Babylon
+    chain_prefix: bbn
+    decimals: 6
+    chain_coin: ubbn
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    chain_gas_limit_multiplier: 1.15
+    native_assets:
+      - asset_id: "BABY"
+        contract_id: "ubbn"
+        decimals: 6
+        fee_limit: "200.0"
+    external:
+      dti:
+      coin_gecko:
+        asset_id: babylon
+      coin_market_cap:
+        asset_id: "32198"
   BAND:
     chain: BAND
     driver: cosmos

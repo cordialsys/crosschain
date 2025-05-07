@@ -54,6 +54,13 @@ func TestParseMinGasErr(t *testing.T) {
 			Amount:        1,
 		},
 		{
+			// babylon does not include the denom
+			RawLog:        "insufficient fees; got: 0 required: 2000: insufficient fee",
+			Denoms:        []string{"ubby"},
+			ExpectedDenom: "ubby",
+			Amount:        2000,
+		},
+		{
 			RawLog:        "provided fee < minimum global fee (0axpla < 850000000000000000axpla). Please increase the gas price.: insufficient fee",
 			Denoms:        []string{"uluna", "axpla"},
 			ExpectedDenom: "axpla",

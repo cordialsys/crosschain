@@ -4,8 +4,10 @@ import (
 	"errors"
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 
+	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -59,8 +61,25 @@ func ParseMinGasError(res *sdk.TxResponse, denoms []string) (sdk.Coin, error) {
 			}
 		}
 	}
+	// try without the denom
+	if len(maxFees) == 0 && len(denoms) == 1 {
+		denom := denoms[0]
+		for _, part := range parts {
+			part = strings.TrimSpace(part)
+			// assume that the denom is omitted from the error message
+			amount, err := strconv.ParseInt(part, 0, 64)
+			if err != nil {
+				// skip
+			} else {
+				maxFees = append(maxFees, sdk.Coin{
+					Denom:  denom,
+					Amount: math.NewInt(amount),
+				})
+			}
+		}
+	}
 
-	if len(maxFees) == 0 {
+	if len(maxFees) == 0 || len(maxFees) > 2 {
 		return sdk.Coin{}, errors.New("could not parse min gas error: " + res.RawLog)
 	}
 	// sort and take max

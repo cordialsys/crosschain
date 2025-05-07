@@ -28,6 +28,23 @@ chains:
       - asset_id: "AKT"
         contract_id: "uakt"
         decimals: 6
+  BABY:
+    chain: BABY
+    driver: cosmos
+    chain_id: bbn-test-5
+    chain_name: Babylon
+    chain_prefix: bbn
+    decimals: 6
+    chain_coin: ubbn
+    fee_limit: "200.0"
+    chain_coin_hd_path: 118
+    chain_gas_multiplier: 1.01
+    chain_gas_limit_multiplier: 1.15
+    native_assets:
+      - asset_id: "BABY"
+        contract_id: "ubbn"
+        decimals: 6
+        fee_limit: "200.0"
   BAND:
     chain: BAND
     driver: cosmos

@@ -37,9 +37,12 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 		return zero, fmt.Errorf("could not broadcast tx: %v", err)
 	}
 	native := client.Asset.GetChain()
-	denoms := []string{
-		native.ChainCoin,
-		native.GasCoin,
+	denoms := []string{}
+	if native.GasCoin != "" {
+		denoms = append(denoms, native.GasCoin)
+	}
+	if native.ChainCoin != "" && native.ChainCoin != native.GasCoin {
+		denoms = append(denoms, native.ChainCoin)
 	}
 	minFeeRaw, err := gas.ParseMinGasError(res, denoms)
 	if err != nil {

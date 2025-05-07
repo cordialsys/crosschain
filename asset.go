@@ -87,6 +87,7 @@ const (
 var NativeAssetList []NativeAsset = []NativeAsset{
 	AKT,
 	BAND,
+	BABY,
 	BCH,
 	BTC,
 	DOGE,
@@ -254,7 +255,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY:
 		return DriverCosmos
 	case SUI:
 		return DriverSui
