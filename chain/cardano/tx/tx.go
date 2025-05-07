@@ -17,13 +17,21 @@ import (
 
 const (
 	// PolicyId is 28 byte hash of the token policy
-	PolicyIdLen             = 56
-	FeeMargin               = 500
-	DefaultHeaderSize       = 6
-	PolicyIdSize            = 28
-	AssetNameOverhead       = 12
+	PolicyIdLen = 56
+
+	// CalcMinAdaValue parameters, defined here: https://github.com/IntersectMBO/cardano-ledger/blob/master/doc/explanations/min-utxo-alonzo.rst
+	// Some names map directly to the formula, while others are speculative on my part, especially if the name isn't clearly derived from the formula above./
+	//
+	// Nameless in above document; however it's probably the size necessary to store ADA tokens
+	NativeTokensHeaderSize = 6
+	// Policy size is always a 28 byte hash
+	PolicyIdSize = 28
+	// Size overhead for an empty asset name
+	AssetNameCountMultiplier = 12
+	// Size of the UTXO entry without any coin values
 	UtxoEntrySizeWithoutVal = 27
-	CoinsPerUtxoWord        = 37_037
+	// Multiplier for the final size of the UTXO.
+	CoinsPerUtxoWord = 37_037
 )
 
 // Tx for Cardano
@@ -279,18 +287,17 @@ func CalcMinAdaValue(policyHashToAmounts map[PolicyHash]TokenNameHexToAmount) xc
 		policyMultiplier = assetCount
 	}
 
-	sizeOfValue := (policyMultiplier * AssetNameOverhead) + totalCharCount + (policyIdCount * PolicyIdSize)
+	sizeOfValue := (policyMultiplier * AssetNameCountMultiplier) + totalCharCount + (policyIdCount * PolicyIdSize)
 
 	// Round up to bytes
 	sizeOfValue = (sizeOfValue + 7) / 8
 	// Add overhead for the UTXO entry
-	sizeOfValue += DefaultHeaderSize
+	sizeOfValue += NativeTokensHeaderSize
 
 	utxoEntrySize := xc.NewAmountBlockchainFromUint64(uint64(UtxoEntrySizeWithoutVal + sizeOfValue))
 	coinsPerUtxoWord := xc.NewAmountBlockchainFromUint64(uint64(CoinsPerUtxoWord))
 	utxoEntrySize = utxoEntrySize.Mul(&coinsPerUtxoWord)
-	adamount := xc.NewAmountBlockchainFromUint64(1500000)
-	return utxoEntrySize.Add(&adamount) // 1.5 ADA
+	return utxoEntrySize
 }
 
 func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output, error) {

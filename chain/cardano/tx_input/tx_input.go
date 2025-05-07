@@ -6,8 +6,6 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
-const FeeMargin = 500
-
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
