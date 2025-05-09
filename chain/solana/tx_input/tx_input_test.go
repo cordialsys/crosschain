@@ -99,3 +99,65 @@ func TestTxInputConflicts(t *testing.T) {
 		)
 	}
 }
+
+func TestTxInputGetFeeLimit(t *testing.T) {
+	type testcase struct {
+		name              string
+		unitsConsumed     uint64
+		prioritizationFee xc.AmountBlockchain
+		baseFee           xc.AmountBlockchain
+		expectedFee       xc.AmountBlockchain
+	}
+
+	vectors := []testcase{
+		{
+			name:              "zero fees",
+			unitsConsumed:     0,
+			prioritizationFee: xc.NewAmountBlockchainFromUint64(0),
+			baseFee:           xc.NewAmountBlockchainFromUint64(0),
+			expectedFee:       xc.NewAmountBlockchainFromUint64(0),
+		},
+		{
+			name:              "with prioritization fee only",
+			unitsConsumed:     0,
+			prioritizationFee: xc.NewAmountBlockchainFromUint64(1000), // 1000 microlamports
+			baseFee:           xc.NewAmountBlockchainFromUint64(0),
+			expectedFee:       xc.NewAmountBlockchainFromUint64(1400), // 1.4M units * 1000 microlamports / 1M
+		},
+		{
+			name:              "with base fee only",
+			unitsConsumed:     0,
+			prioritizationFee: xc.NewAmountBlockchainFromUint64(0),
+			baseFee:           xc.NewAmountBlockchainFromUint64(5000),
+			expectedFee:       xc.NewAmountBlockchainFromUint64(5000),
+		},
+		{
+			name:              "with both fees",
+			unitsConsumed:     0,
+			prioritizationFee: xc.NewAmountBlockchainFromUint64(1000),
+			baseFee:           xc.NewAmountBlockchainFromUint64(5000),
+			expectedFee:       xc.NewAmountBlockchainFromUint64(6400), // 1400 + 5000
+		},
+		{
+			name:              "with specific compute units",
+			unitsConsumed:     500_000,
+			prioritizationFee: xc.NewAmountBlockchainFromUint64(1000),
+			baseFee:           xc.NewAmountBlockchainFromUint64(5000),
+			expectedFee:       xc.NewAmountBlockchainFromUint64(5500), // (500K * 1000) / 1M + 5000
+		},
+	}
+
+	for _, v := range vectors {
+		t.Run(v.name, func(t *testing.T) {
+			input := &TxInput{
+				UnitsConsumed:     v.unitsConsumed,
+				PrioritizationFee: v.prioritizationFee,
+				BaseFee:           v.baseFee,
+			}
+
+			fee, contract := input.GetFeeLimit()
+			require.Equal(t, v.expectedFee, fee)
+			require.Equal(t, xc.ContractAddress(""), contract)
+		})
+	}
+}
