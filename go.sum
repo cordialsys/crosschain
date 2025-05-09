@@ -398,8 +398,8 @@ github.com/consensys/gnark-crypto v0.14.0 h1:DDBdl4HaBtdQsq/wfMwJvZNE80sHidrK3Nf
 github.com/consensys/gnark-crypto v0.14.0/go.mod h1:CU4UijNPsHawiVGNxe9co07FkzCeWHHrb1li/n1XoU0=
 github.com/containerd/continuity v0.3.0 h1:nisirsYROK15TAMVukJOUyGJjz4BNQJBVsNvAXZJ/eg=
 github.com/containerd/continuity v0.3.0/go.mod h1:wJEAIwKOm/pBZuBd0JmeTvnLquTB1Ag8espWhkykbPM=
-github.com/cordialsys/go-aptos-sdk v0.0.0-20250419002707-fc55164b5726 h1:9fbsfxZh64Zsz9bYiiKsRQZcTX+JEpTg4gcvA1DoeLk=
-github.com/cordialsys/go-aptos-sdk v0.0.0-20250419002707-fc55164b5726/go.mod h1:hzXqFO40XA/kcmAP26WDJmc7WiJcoLZlnvR0ZVWXu9g=
+github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04 h1:k2/8TDHfPX3zA5GABSEhbVNBNiW0aNOy7nZQQuoittg=
+github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04/go.mod h1:hzXqFO40XA/kcmAP26WDJmc7WiJcoLZlnvR0ZVWXu9g=
 github.com/cordialsys/go-json v0.10.5-sonic-replace h1:9wdSnZ7KBekIZ9tLiCEQAkY6kEHp44IdcQFnKUNSxLI=
 github.com/cordialsys/go-json v0.10.5-sonic-replace/go.mod h1:uwUxqlxlq1Bf1VxJpxbWfMbQgM8w30PKKZrg94/NcTk=
 github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5 h1:K/rLcFPSCGcCQEdeB+FM2el8VQopZbiK+xCYYCPUcz4=
