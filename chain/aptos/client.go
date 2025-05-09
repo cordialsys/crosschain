@@ -127,12 +127,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			log = log.WithField("status", output[0].VmStatus)
 			if success {
 				input.GasLimit = output[0].GasUsed
-				if _, ok := args.GetContract(); ok {
-					// increase limit by ~10% for 3rd party tokens
-					input.GasLimit = (input.GasLimit * 1100) / 1000
-				}
+				// increase limit by ~10% as it seems the simulation often comes out a bit short.
+				input.GasLimit = (input.GasLimit * 1300) / 1000
 			}
 		}
+
 		log.WithField("success", success).Debug("simulated tx")
 	} else {
 		logrus.WithFields(logrus.Fields{
@@ -258,6 +257,18 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			return xclient.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
 		}
+		if strings.HasPrefix(changeInner.Type, "0x1::fungible_asset::FungibleStore") {
+			// TODO
+			// raw := json.RawMessage{}
+			// err := reserializeJson(ch.Data, &raw)
+			// if err != nil {
+			// 	panic(err)
+			// }
+			// // fmt.Println("change", string(raw))
+			// fmt.Println("-- address", ch.Address)
+			// fmt.Println("-- handle", ch.Handle)
+			// fmt.Println("fungible_asset", string(changeInner.Data))
+		}
 		if strings.HasPrefix(changeInner.Type, "0x1::coin::CoinStore") {
 			change := &CoinStoreChange{}
 			err := json.Unmarshal(changeInner.Data, change)
@@ -292,7 +303,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	for _, coinChange := range coinChanges {
 		for _, ev := range coinChange.Events {
 			switch ev.Event.Type {
-			case "0x1::coin::WithdrawEvent":
+			case "0x1::coin::WithdrawEvent", "0x1::fungible_asset::Withdraw":
 				withdraw := &CoinWithdrawEvent{}
 				err := reserializeJson(ev.Event.Data, withdraw)
 				if err != nil {
@@ -313,7 +324,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 					Amount:          xc.NewAmountBlockchainFromStr(withdraw.Amount),
 					Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
 				})
-			case "0x1::coin::DepositEvent":
+			case "0x1::coin::DepositEvent", "0x1::fungible_asset::Deposit":
 				deposit := &CoinDepositEvent{}
 				err := reserializeJson(ev.Event.Data, deposit)
 				if err != nil {
