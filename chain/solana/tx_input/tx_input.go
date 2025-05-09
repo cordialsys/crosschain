@@ -12,13 +12,15 @@ import (
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
-	RecentBlockHash     solana.Hash         `json:"recent_block_hash,omitempty"`
-	ToIsATA             bool                `json:"to_is_ata,omitempty"`
-	TokenProgram        solana.PublicKey    `json:"token_program"`
-	ShouldCreateATA     bool                `json:"should_create_ata,omitempty"`
-	SourceTokenAccounts []*TokenAccount     `json:"source_token_accounts,omitempty"`
-	PrioritizationFee   xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
-	Timestamp           int64               `json:"timestamp,omitempty"`
+	RecentBlockHash     solana.Hash      `json:"recent_block_hash,omitempty"`
+	ToIsATA             bool             `json:"to_is_ata,omitempty"`
+	TokenProgram        solana.PublicKey `json:"token_program"`
+	ShouldCreateATA     bool             `json:"should_create_ata,omitempty"`
+	SourceTokenAccounts []*TokenAccount  `json:"source_token_accounts,omitempty"`
+	// This is in "microlamports"
+	// https://solana.com/docs/core/fees#compute-units-and-limits
+	PrioritizationFee xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
+	Timestamp         int64               `json:"timestamp,omitempty"`
 	// The base fee is applied for every signature on the transaction
 	BaseFee xc.AmountBlockchain `json:"base_fee,omitempty"`
 	// The estimated compute units used by the transaction (basically the gas usage)
@@ -77,7 +79,9 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 	// calculate the max spend for the tx: (compute units * priority fee)
 	gasLimit := xc.NewAmountBlockchainFromUint64(computeUnits)
-	maxSpend := gasLimit.Mul(&input.PrioritizationFee)
+	maxSpendMicroLamports := gasLimit.Mul(&input.PrioritizationFee)
+	tenPow6 := xc.NewAmountBlockchainFromUint64(1_000_000)
+	maxSpend := maxSpendMicroLamports.Div(&tenPow6)
 
 	// calculate the base fee (# of signatures * base fee)
 	feePerSignature := input.BaseFee
