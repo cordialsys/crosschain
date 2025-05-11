@@ -49,7 +49,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 			input: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverAptos),
 				SequenceNumber:  2,
-				GasLimit:        1000,
+				GasLimit:        DefaultGasLimit,
 				GasPrice:        100,
 				Timestamp:       1683057860656414,
 				ChainId:         58,
@@ -168,7 +168,7 @@ func TestFetchTxInfo(t *testing.T) {
 		httpStatusCodes []int
 	}{
 		{
-			// 1.234 APTOS
+			// 1.234 APTOS on old coin-store token standard
 			tx: "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
@@ -206,6 +206,44 @@ func TestFetchTxInfo(t *testing.T) {
 				}},
 			},
 		},
+		{
+			// 10000 of a token on new fungible-asset token standard
+			tx: "0x17df567aa2daf8c146a0e9b827415402722b4f3b8178025ea703d9b03dc33f29",
+			resp: []string{
+				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
+				`{"version":"6717630095","hash":"0x17df567aa2daf8c146a0e9b827415402722b4f3b8178025ea703d9b03dc33f29","state_change_hash":"0x53ed331b0b7fe53d61993ef37fd6696adacd796e9ba16b5b0505703b107c9036","event_root_hash":"0x3f0278519f54ae1d71470c25b9bf42fdda8940b8671605b7c9162a262d0d4b5e","state_checkpoint_hash":null,"gas_used":"551","success":true,"vm_status":"Executed successfully","accumulator_root_hash":"0x82a45dfc98abb34ae5c976cc5ffa72a2a013b211e1ba7dc974a8f1b2394d91dd","changes":[{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::coin::PairedCoinType","data":{"type":{"account_address":"0x1","module_name":"0x6170746f735f636f696e","struct_name":"0x4170746f73436f696e"}}},"type":"write_resource"},{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::coin::PairedFungibleAssetRefs","data":{"burn_ref_opt":{"vec":[{"metadata":{"inner":"0xa"}}]},"mint_ref_opt":{"vec":[{"metadata":{"inner":"0xa"}}]},"transfer_ref_opt":{"vec":[{"metadata":{"inner":"0xa"}}]}}},"type":"write_resource"},{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::fungible_asset::ConcurrentSupply","data":{"current":{"max_value":"340282366920938463463374607431768211455","value":"68059588654519445"}}},"type":"write_resource"},{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::fungible_asset::Metadata","data":{"decimals":8,"icon_uri":"","name":"Aptos Coin","project_uri":"","symbol":"APT"}},"type":"write_resource"},{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::object::ObjectCore","data":{"allow_ungated_transfer":true,"guid_creation_num":"1125899906842625","owner":"0x1","transfer_events":{"counter":"0","guid":{"id":{"addr":"0xa","creation_num":"1125899906842624"}}}}},"type":"write_resource"},{"address":"0xa","state_key_hash":"0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043","data":{"type":"0x1::primary_fungible_store::DeriveRefPod","data":{"metadata_derive_ref":{"self":"0xa"}}},"type":"write_resource"},{"address":"0x9b1be2b34453eeefaf428a1e50b6ca8f1b333c01a523a0b093ef61ea4777eeb","state_key_hash":"0x5f21a06fca23d83d8eb770d6f4ad20cfd119fc7f810de70272c383819aa2b4c4","data":{"type":"0x1::fungible_asset::FungibleStore","data":{"balance":"399839400","frozen":false,"metadata":{"inner":"0xa"}}},"type":"write_resource"},{"address":"0x9b1be2b34453eeefaf428a1e50b6ca8f1b333c01a523a0b093ef61ea4777eeb","state_key_hash":"0x5f21a06fca23d83d8eb770d6f4ad20cfd119fc7f810de70272c383819aa2b4c4","data":{"type":"0x1::object::ObjectCore","data":{"allow_ungated_transfer":false,"guid_creation_num":"1125899906842625","owner":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","transfer_events":{"counter":"0","guid":{"id":{"addr":"0x9b1be2b34453eeefaf428a1e50b6ca8f1b333c01a523a0b093ef61ea4777eeb","creation_num":"1125899906842624"}}}}},"type":"write_resource"},{"address":"0x448c83c716bd1144173c0522f108ff507bb8f4ddbe34a925bf3e1d7ea2632cfa","state_key_hash":"0x2288c3a5537388991d3a91b2b89b673b17aefdd4f738c3d77fbfcd271a96cdf7","data":{"type":"0x1::coin::CoinInfo<0x448c83c716bd1144173c0522f108ff507bb8f4ddbe34a925bf3e1d7ea2632cfa::test_faucet::TestFaucetCoin>","data":{"decimals":6,"name":"Test Coin","supply":{"vec":[{"aggregator":{"vec":[]},"integer":{"vec":[{"limit":"340282366920938463463374607431768211455","value":"18000000"}]}}]},"symbol":"TC"}},"type":"write_resource"},{"address":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","state_key_hash":"0xfc1d25fd25a4b7a3b2a808c0a6b3c7aebc9c28a5b82f95624ed1d0ca74b57a0c","data":{"type":"0x1::account::Account","data":{"authentication_key":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","coin_register_events":{"counter":"0","guid":{"id":{"addr":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","creation_num":"0"}}},"guid_creation_num":"2","key_rotation_events":{"counter":"0","guid":{"id":{"addr":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","creation_num":"1"}}},"rotation_capability_offer":{"for":{"vec":[]}},"sequence_number":"7","signer_capability_offer":{"for":{"vec":[]}}}},"type":"write_resource"},{"address":"0x7a4842208fb122689ca0f33bdb43a6a6d1fc9af24fedff2f38646a5a95eb442e","state_key_hash":"0x35cc1e6c2cfcf4cd356309a220b042e03fad26cc245cdb8d3d99a5a8c07b5d2e","data":{"type":"0x1::fungible_asset::FungibleStore","data":{"balance":"4990000","frozen":false,"metadata":{"inner":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}},"type":"write_resource"},{"address":"0x7a4842208fb122689ca0f33bdb43a6a6d1fc9af24fedff2f38646a5a95eb442e","state_key_hash":"0x35cc1e6c2cfcf4cd356309a220b042e03fad26cc245cdb8d3d99a5a8c07b5d2e","data":{"type":"0x1::object::ObjectCore","data":{"allow_ungated_transfer":false,"guid_creation_num":"1125899906842625","owner":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","transfer_events":{"counter":"0","guid":{"id":{"addr":"0x7a4842208fb122689ca0f33bdb43a6a6d1fc9af24fedff2f38646a5a95eb442e","creation_num":"1125899906842624"}}}}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::coin::PairedCoinType","data":{"type":{"account_address":"0x448c83c716bd1144173c0522f108ff507bb8f4ddbe34a925bf3e1d7ea2632cfa","module_name":"0x746573745f666175636574","struct_name":"0x54657374466175636574436f696e"}}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::coin::PairedFungibleAssetRefs","data":{"burn_ref_opt":{"vec":[{"metadata":{"inner":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}]},"mint_ref_opt":{"vec":[{"metadata":{"inner":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}]},"transfer_ref_opt":{"vec":[{"metadata":{"inner":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}]}}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::fungible_asset::ConcurrentSupply","data":{"current":{"max_value":"340282366920938463463374607431768211455","value":"17000000"}}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::fungible_asset::Metadata","data":{"decimals":6,"icon_uri":"","name":"Test Coin","project_uri":"","symbol":"TC"}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::object::ObjectCore","data":{"allow_ungated_transfer":true,"guid_creation_num":"1125899906842625","owner":"0xa","transfer_events":{"counter":"0","guid":{"id":{"addr":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","creation_num":"1125899906842624"}}}}},"type":"write_resource"},{"address":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20","state_key_hash":"0xd66a9c67279a27cf56cfaeb9b364b8acc602e62cd3779db854451b2e22e30498","data":{"type":"0x1::primary_fungible_store::DeriveRefPod","data":{"metadata_derive_ref":{"self":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}},"type":"write_resource"},{"address":"0xf739abb65036bfbc1d12653549394392eeaa9f67f24eeb22f69d81f5c053702a","state_key_hash":"0xb4b8d776a1ef9774b015257aacaf352726e743bf565a137edcbc6a60afc9a341","data":{"type":"0x1::fungible_asset::FungibleStore","data":{"balance":"10000","frozen":false,"metadata":{"inner":"0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20"}}},"type":"write_resource"},{"address":"0xf739abb65036bfbc1d12653549394392eeaa9f67f24eeb22f69d81f5c053702a","state_key_hash":"0xb4b8d776a1ef9774b015257aacaf352726e743bf565a137edcbc6a60afc9a341","data":{"type":"0x1::object::ObjectCore","data":{"allow_ungated_transfer":false,"guid_creation_num":"1125899906842625","owner":"0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be","transfer_events":{"counter":"0","guid":{"id":{"addr":"0xf739abb65036bfbc1d12653549394392eeaa9f67f24eeb22f69d81f5c053702a","creation_num":"1125899906842624"}}}}},"type":"write_resource"}],"sender":"0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d","sequence_number":"6","max_gas_amount":"716","gas_unit_price":"100","expiration_timestamp_secs":"1746985549280360","payload":{"function":"0x1::aptos_account::transfer_coins","type_arguments":["0x448c83c716bd1144173c0522f108ff507bb8f4ddbe34a925bf3e1d7ea2632cfa::test_faucet::TestFaucetCoin"],"arguments":["0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be","10000"],"type":"entry_function_payload"},"signature":{"public_key":"0x6e6335ae12bf871f4e4d066508aa5965cfa20111b14cf5278d6bb3fc63ff78db","signature":"0x89b71d1531db790e9c7b1e09f6c7a5f53e8ae1d6c75e0450654c6a88745569eec56985f115a3e6b6b84c3ee8ea9f988b1e3cf50caab89b88a9e80befb3da350a","type":"ed25519_signature"},"events":[{"guid":{"creation_number":"0","account_address":"0x0"},"sequence_number":"0","type":"0x1::fungible_asset::Withdraw","data":{"amount":"10000","store":"0x7a4842208fb122689ca0f33bdb43a6a6d1fc9af24fedff2f38646a5a95eb442e"}},{"guid":{"creation_number":"0","account_address":"0x0"},"sequence_number":"0","type":"0x1::fungible_asset::Deposit","data":{"amount":"10000","store":"0xf739abb65036bfbc1d12653549394392eeaa9f67f24eeb22f69d81f5c053702a"}},{"guid":{"creation_number":"0","account_address":"0x0"},"sequence_number":"0","type":"0x1::transaction_fee::FeeStatement","data":{"execution_gas_units":"8","io_gas_units":"12","storage_fee_octas":"53240","storage_fee_refund_octas":"0","total_charge_gas_units":"551"}}],"timestamp":"1746985555790511","type":"user_transaction"}`,
+				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
+				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
+			},
+			val: xclient.LegacyTxInfo{
+				TxID:            "0x17df567aa2daf8c146a0e9b827415402722b4f3b8178025ea703d9b03dc33f29",
+				BlockHash:       "6717630095",
+				From:            "0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d",
+				To:              "0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be",
+				ToAlt:           "",
+				ContractAddress: "",
+				Amount:          xc.NewAmountBlockchainFromUint64(10000),
+				Fee:             xc.NewAmountBlockchainFromUint64(55100),
+				BlockIndex:      1309838,
+				BlockTime:       1746985555,
+				Confirmations:   7334,
+				Sources: []*xclient.LegacyTxInfoEndpoint{{
+					Address:         "0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d",
+					Amount:          xc.NewAmountBlockchainFromUint64(10000),
+					ContractAddress: "0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20",
+					NativeAsset:     "APTOS",
+					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+				}},
+				Destinations: []*xclient.LegacyTxInfoEndpoint{{
+					Address:         "0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be",
+					Amount:          xc.NewAmountBlockchainFromUint64(10000),
+					ContractAddress: "0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20",
+					NativeAsset:     "APTOS",
+					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+				}},
+			},
+		},
+		// not found
 		{
 			tx: "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3221",
 			resp: []string{
@@ -261,7 +299,7 @@ func TestFetchTxInfo(t *testing.T) {
 			tx: "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 			resp: []string{
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
-				`{"version":"3509309","hash":"0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222","state_change_hash":"0xe0e855e3d08f97fc71a5b41b368800588ac7f8b2e49b29daef4d2577c761fe80","event_root_hash":"0x3846412f44cf58865775791b67093d555c854fbffe153965e325f8744c988a71","state_checkpoint_hash":null,"gas_used":"6","success":false,"vm_status":"Executed successfully","accumulator_root_hash":"0x30c4b395b9da13dfdeb74a341798f20d6c65872594f1e22f8fc734c9378c0747","changes":[],"sender":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682","sequence_number":"1","max_gas_amount":"2000","gas_unit_price":"100","expiration_timestamp_secs":"1683055757286067","payload":{"function":"0x1::aptos_account::transfer","type_arguments":[],"arguments":["0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365","123400000"],"type":"entry_function_payload"},"signature":{"public_key":"0xa09bb3957ad788bfcfd3f7c5eda9ab2876ff0de8db38dafdf439cfe3f96673b6","signature":"0xd488cd2fda4ef325c68e3c7503a7075841f5ba08808fa2014407e18680fc3d4f515be9cdf6c619baa0e680990d7aad2f5f066cdba778598b28cc8dc3108f420c","type":"ed25519_signature"},"events":[{"guid":{"creation_number":"3","account_address":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"},"sequence_number":"1","type":"0x1::coin::WithdrawEvent","data":{"amount":"123400000"}},{"guid":{"creation_number":"2","account_address":"0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365"},"sequence_number":"730","type":"0x1::coin::DepositEvent","data":{"amount":"123400000"}}],"timestamp":"1683055759739669","type":"user_transaction"}`,
+				`{"version":"3509309","hash":"0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222","state_change_hash":"0xe0e855e3d08f97fc71a5b41b368800588ac7f8b2e49b29daef4d2577c761fe80","event_root_hash":"0x3846412f44cf58865775791b67093d555c854fbffe153965e325f8744c988a71","state_checkpoint_hash":null,"gas_used":"6","success":false,"vm_status":"wrong object type","accumulator_root_hash":"0x30c4b395b9da13dfdeb74a341798f20d6c65872594f1e22f8fc734c9378c0747","changes":[],"sender":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682","sequence_number":"1","max_gas_amount":"2000","gas_unit_price":"100","expiration_timestamp_secs":"1683055757286067","payload":{"function":"0x1::aptos_account::transfer","type_arguments":[],"arguments":["0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365","123400000"],"type":"entry_function_payload"},"signature":{"public_key":"0xa09bb3957ad788bfcfd3f7c5eda9ab2876ff0de8db38dafdf439cfe3f96673b6","signature":"0xd488cd2fda4ef325c68e3c7503a7075841f5ba08808fa2014407e18680fc3d4f515be9cdf6c619baa0e680990d7aad2f5f066cdba778598b28cc8dc3108f420c","type":"ed25519_signature"},"events":[{"guid":{"creation_number":"3","account_address":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"},"sequence_number":"1","type":"0x1::coin::WithdrawEvent","data":{"amount":"123400000"}},{"guid":{"creation_number":"2","account_address":"0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365"},"sequence_number":"730","type":"0x1::coin::DepositEvent","data":{"amount":"123400000"}}],"timestamp":"1683055759739669","type":"user_transaction"}`,
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
@@ -276,9 +314,9 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Sources:         []*xclient.LegacyTxInfoEndpoint{},
-				Destinations:    []*xclient.LegacyTxInfoEndpoint{},
-				Error:           "transaction failed",
+				Sources:         nil,
+				Destinations:    nil,
+				Error:           "wrong object type",
 			},
 		},
 	}
@@ -308,9 +346,8 @@ func TestFetchTxInfo(t *testing.T) {
 	}
 }
 
-func (s *AptosTestSuite) TestFetchBalance() {
-	require := s.Require()
-
+func TestFetchBalance(t *testing.T) {
+	require := require.New(t)
 	vectors := []struct {
 		asset    xc.ITask
 		contract xc.ContractAddress
@@ -320,58 +357,43 @@ func (s *AptosTestSuite) TestFetchBalance() {
 	}{
 		{
 			asset: xc.NewChainConfig(""),
-			resp:  `{"type":"0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>","data":{"coin":{"value":"1000000"},"deposit_events":{"counter":"2","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"2"}}},"frozen":false,"withdraw_events":{"counter":"0","guid":{"id":{"addr":"0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85","creation_num":"3"}}}}}`,
+			resp:  `1000000`,
 			val:   "1000000",
-			err:   "",
-		},
-		{
-			// TODO I can't find any tokens on aptos
-			asset:    xc.NewChainConfig(""),
-			contract: "0x1234::coin:USDC",
-			resp: []string{
-				`{}`,
-				`{"message":"failed to parse path : failed to parse \"string(MoveStructTag)\": invalid struct tag: 0x1::coin::CoinStore<0x1::coin:USDC>, unrecognized token","error_code":"web_framework_error","vm_error_code":null}`,
-			},
-			val: "1000000",
-			err: "failed to parse",
-		},
-		{
-			asset: xc.NewChainConfig(""),
-			resp:  `null`,
-			val:   "0",
 			err:   "",
 		},
 	}
 
-	for _, v := range vectors {
-		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
-		server, close := testtypes.MockHTTP(s.T(), resp, 200)
-		defer close()
+	for i, v := range vectors {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
+			server, close := testtypes.MockHTTP(t, resp, 200)
+			defer close()
 
-		asset := v.asset
-		asset.GetChain().URL = server.URL
-		rpcClient, _ := NewClient(asset)
-		if v.err != "" {
-			// errors should return 400 status code.
-			server.StatusCodes = []int{400, 400, 400}
-		}
-		server.Response = v.resp
-		from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
-		fmt.Println(v.asset)
-		args := client.NewBalanceArgs(from)
-		if v.contract != "" {
-			args.SetContract(v.contract)
-		}
-		balance, err := rpcClient.FetchBalance(s.Ctx, args)
+			asset := v.asset
+			asset.GetChain().URL = server.URL
+			rpcClient, _ := NewClient(asset)
+			if v.err != "" {
+				// errors should return 400 status code.
+				server.StatusCodes = []int{400, 400, 400}
+			}
+			server.Response = v.resp
+			from := xc.Address("0xa589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85")
+			fmt.Println(v.asset)
+			args := client.NewBalanceArgs(from)
+			if v.contract != "" {
+				args.SetContract(v.contract)
+			}
+			balance, err := rpcClient.FetchBalance(context.Background(), args)
 
-		if v.err != "" {
-			require.Equal("0", balance.String())
-			require.ErrorContains(err, v.err)
-		} else {
-			require.Nil(err)
-			require.NotNil(balance)
-			require.Equal(v.val, balance.String())
-		}
+			if v.err != "" {
+				require.Equal("0", balance.String())
+				require.ErrorContains(err, v.err)
+			} else {
+				require.NoError(err)
+				require.NotNil(balance)
+				require.Equal(v.val, balance.String())
+			}
+		})
 	}
 }
 
@@ -460,11 +482,27 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	ser, err := tf.Serialize()
 	require.NoError(err)
 	require.True(len(ser) > 64)
-	require.Equal("a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f", hex.EncodeToString(ser))
+	require.Equal(
+		"a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab8503000000000000000200000000000000000000000000000000000000000000000000000000000000010d6170746f735f6163636f756e740e7472616e736665725f636f696e730107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a000000000000009984000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+		hex.EncodeToString(ser),
+	)
 
-	// use invalid contract address
-	_, err = builder.NewTokenTransfer(from, from, to, amount, xc.ContractAddress("0x112345"), input)
-	require.ErrorContains(err, "Invalid struct tag string literal")
+	// Use new fungible asset contract address
+	tf, err = builder.NewTokenTransfer(from, from, to, amount, xc.ContractAddress("0x112233445566778899112233445566778899112233445566778899"), input)
+	require.NoError(err)
+	err = tf.AddSignatures(&xc.SignatureResponse{
+		Signature: sig,
+		PublicKey: pubkey,
+		Address:   from,
+	})
+	require.NoError(err)
+	ser2, err := tf.Serialize()
+	require.NoError(err)
+	require.Equal(
+		"a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab8503000000000000000200000000000000000000000000000000000000000000000000000000000000010d6170746f735f6163636f756e74187472616e736665725f66756e6769626c655f617373657473000320000000000011223344556677889911223344556677889911223344556677889920bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a000000000000009984000000000000010020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+		hex.EncodeToString(ser2),
+	)
+	require.NotEqual(ser, ser2)
 }
 
 func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
@@ -518,7 +556,7 @@ func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
 	require.NoError(err)
 	require.True(len(ser) > 64)
 	require.Equal(
-		"a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab85030000000000000002000000000000000000000000000000000000000000000000000000000000000104636f696e087472616e736665720107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000493e00000000000001030020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f000008ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b190020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+		"a589a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab8503000000000000000200000000000000000000000000000000000000000000000000000000000000010d6170746f735f6163636f756e740e7472616e736665725f636f696e730107000000000000000000000000000000000000000000000000000000000000000104436f696e0455534443000220bb89a80d61ec380c24a5fdda109c3848c082584e6cb725e5ab19b18354b2ab00080100000000000000d0070000000000000a00000000000000998400000000000001030020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f000008ba6e5f0fd111dc60c5ad827c7f4110930f22a483a6697b7f888df0057e9b190020010203040506070801020304050607080102030405060708010203040506070840000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
 		hex.EncodeToString(ser),
 	)
 }

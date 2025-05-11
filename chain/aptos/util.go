@@ -9,7 +9,7 @@ import (
 )
 
 func DecodeHex(h string) ([]byte, error) {
-	h = strings.Replace(h, "0x", "", 1)
+	h = strings.TrimPrefix(h, "0x")
 	bz, err := hex.DecodeString(h)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func DecodeHex(h string) ([]byte, error) {
 }
 
 func DecodeAddress(h string) ([transactionbuilder.ADDRESS_LENGTH]byte, error) {
-	h = strings.Replace(h, "0x", "", 1)
+	h = strings.TrimPrefix(h, "0x")
 	if len(h) < 64 && len(h) > 32 {
 		// zero-pad
 		h = strings.Repeat("0", 64-len(h)) + h
