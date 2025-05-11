@@ -4,16 +4,15 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/aptos/events"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
@@ -27,6 +26,8 @@ type Client struct {
 }
 
 var _ xclient.Client = &Client{}
+
+const DefaultGasLimit = 10000
 
 // NewClient returns a new Aptos Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
@@ -68,7 +69,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
 	}
-	defaultGasLimit := 1000
+	defaultGasLimit := DefaultGasLimit
 	if client.Asset.GetChain().GasLimitDefault > 0 {
 		defaultGasLimit = client.Asset.GetChain().GasLimitDefault
 	}
@@ -127,12 +128,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			log = log.WithField("status", output[0].VmStatus)
 			if success {
 				input.GasLimit = output[0].GasUsed
+				// increase limit by ~10% for tokens it can vary sometimes.
 				if _, ok := args.GetContract(); ok {
-					// increase limit by ~10% for 3rd party tokens
 					input.GasLimit = (input.GasLimit * 1100) / 1000
 				}
 			}
 		}
+
 		log.WithField("success", success).Debug("simulated tx")
 	} else {
 		logrus.WithFields(logrus.Fields{
@@ -159,59 +161,6 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	newTxn, err := client.AptosClient.SubmitSignedBCSTransaction(tx_bz)
 	_ = newTxn
 	return err
-}
-
-type ChangeAndEvents struct {
-	Change AptosChangeInner
-	Events []*EventAndIndex
-}
-type EventAndIndex struct {
-	Event aptostypes.Event
-	Index int
-}
-
-func (ch *ChangeAndEvents) ContractAddress() string {
-	return parseContractAddress(ch.Change.Type)
-}
-
-type AptosChangeInner struct {
-	Type string          `json:"type"`
-	Data json.RawMessage `json:"data"`
-}
-type CoinStoreChange struct {
-	DepositEvents  AptosEvents `json:"deposit_events"`
-	WithdrawEvents AptosEvents `json:"withdraw_events"`
-}
-type AptosEvents struct {
-	Counter string `json:"counter"`
-	Guid    GuidId `json:"guid"`
-}
-type EventId struct {
-	CreationNumber string `json:"creation_num"`
-	AccountAddress string `json:"addr"`
-}
-type GuidId struct {
-	Id EventId `json:"id"`
-}
-
-type CoinDepositEvent struct {
-	Amount string `json:"amount"`
-}
-type CoinWithdrawEvent = CoinDepositEvent // same structure
-
-func reserializeJson(obj any, target any) error {
-	bz, err := json.Marshal(obj)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bz, target)
-}
-
-// Transform "0x1::coin::CoinStore<x>" -> x
-func parseContractAddress(typeString string) string {
-	typeString = strings.Replace(typeString, "0x1::coin::CoinStore<", "", 1)
-	typeString = strings.Replace(typeString, ">", "", 1)
-	return typeString
 }
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
@@ -249,98 +198,9 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
-	coinChanges := []ChangeAndEvents{}
-	// we look at the changes in a transaction and join them with the events.
-	// From this view, we can see which coins moved where.
-	for _, ch := range tx.Changes {
-		changeInner := AptosChangeInner{}
-		err := reserializeJson(ch.Data, &changeInner)
-		if err != nil {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
-		}
-		if strings.HasPrefix(changeInner.Type, "0x1::coin::CoinStore") {
-			change := &CoinStoreChange{}
-			err := json.Unmarshal(changeInner.Data, change)
-			if err != nil {
-				return xclient.LegacyTxInfo{}, fmt.Errorf("could not deserialize aptos change")
-			}
-			changeAndEvents := ChangeAndEvents{
-				Change: changeInner,
-			}
-
-			for i, ev := range tx.Events {
-				if ev.Guid.AccountAddress == change.DepositEvents.Guid.Id.AccountAddress &&
-					ev.Guid.CreationNumber == change.DepositEvents.Guid.Id.CreationNumber {
-					changeAndEvents.Events = append(changeAndEvents.Events, &EventAndIndex{
-						Event: ev,
-						Index: i,
-					})
-				} else if ev.Guid.AccountAddress == change.WithdrawEvents.Guid.Id.AccountAddress &&
-					ev.Guid.CreationNumber == change.WithdrawEvents.Guid.Id.CreationNumber {
-					changeAndEvents.Events = append(changeAndEvents.Events, &EventAndIndex{
-						Event: ev,
-						Index: i,
-					})
-				}
-			}
-			coinChanges = append(coinChanges, changeAndEvents)
-		}
-	}
-	sources := []*xclient.LegacyTxInfoEndpoint{}
-	destinations := []*xclient.LegacyTxInfoEndpoint{}
-
-	for _, coinChange := range coinChanges {
-		for _, ev := range coinChange.Events {
-			switch ev.Event.Type {
-			case "0x1::coin::WithdrawEvent":
-				withdraw := &CoinWithdrawEvent{}
-				err := reserializeJson(ev.Event.Data, withdraw)
-				if err != nil {
-					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
-					continue
-				}
-				contract := xc.ContractAddress(coinChange.ContractAddress())
-				logrus.WithFields(logrus.Fields{
-					"chain":    client.Asset.GetChain().Chain,
-					"contract": contract,
-					"address":  xc.Address(ev.Event.Guid.AccountAddress),
-					"amount":   withdraw.Amount,
-				}).Debug("withdraw-event")
-				sources = append(sources, &xclient.LegacyTxInfoEndpoint{
-					ContractAddress: contract,
-					NativeAsset:     client.Asset.GetChain().Chain,
-					Address:         xc.Address(ev.Event.Guid.AccountAddress),
-					Amount:          xc.NewAmountBlockchainFromStr(withdraw.Amount),
-					Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
-				})
-			case "0x1::coin::DepositEvent":
-				deposit := &CoinDepositEvent{}
-				err := reserializeJson(ev.Event.Data, deposit)
-				if err != nil {
-					logrus.WithField("txhash", txHash).WithError(err).Error("could not deserialize aptos coin event")
-					continue
-				}
-				contract := xc.ContractAddress(coinChange.ContractAddress())
-				logrus.WithFields(logrus.Fields{
-					"chain":    client.Asset.GetChain().Chain,
-					"contract": contract,
-					"address":  xc.Address(ev.Event.Guid.AccountAddress),
-					"amount":   deposit.Amount,
-				}).Debug("deposit-event")
-				destinations = append(destinations, &xclient.LegacyTxInfoEndpoint{
-					ContractAddress: contract,
-					NativeAsset:     client.Asset.GetChain().Chain,
-					Address:         xc.Address(ev.Event.Guid.AccountAddress),
-					Amount:          xc.NewAmountBlockchainFromStr(deposit.Amount),
-					Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
-				})
-			default:
-				// skip / unknown.
-				logrus.WithFields(logrus.Fields{
-					"event": ev.Event.Type,
-				}).Debug("unknown event")
-			}
-		}
+	sources, destinations, err := events.ParseEvents(tx, txHash)
+	if err != nil {
+		return xclient.LegacyTxInfo{}, err
 	}
 
 	chainCfg := client.Asset.GetChain()
@@ -368,8 +228,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 	errMsg := ""
 	if !tx.Success {
-		// APTOS doesn't seem to emit logs if the tx failed, so we should be okay with this.
 		errMsg = "transaction failed"
+		if tx.VmStatus != "" {
+			errMsg = tx.VmStatus
+		}
 	}
 
 	return xclient.LegacyTxInfo{
@@ -404,7 +266,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xcl
 // FetchBalance fetches balance for an Aptos address
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	if contract, ok := args.Contract(); ok {
-		balance, err := client.AptosClient.BalanceOf(string(args.Address()), string(contract))
+		balance, err := client.AptosClient.GetAccountBalance(string(args.Address()), string(contract), 0)
 		if err != nil {
 			return xc.NewAmountBlockchainFromUint64(0), err
 		}
@@ -416,7 +278,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 // FetchNativeBalance fetches the native asset balance for an Aptos address
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
-	balance, err := client.AptosClient.AptosBalanceOf(string(address))
+	balance, err := client.AptosClient.GetAccountBalance(string(address), "0x1::aptos_coin::AptosCoin", 0)
 	if err != nil {
 		return xc.NewAmountBlockchainFromUint64(0), err
 	}

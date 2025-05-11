@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"errors"
+	"strings"
 
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
 	xc "github.com/cordialsys/crosschain"
@@ -18,6 +19,21 @@ var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = TxBuilder{}
 
 func (txBuilder TxBuilder) SupportsFeePayer() {
+}
+
+var AptosModuleId *transactionbuilder.ModuleId
+
+func init() {
+	var err error
+	AptosModuleId, err = transactionbuilder.NewModuleIdFromString("0x1::aptos_account")
+	if err != nil {
+		panic(err)
+	}
+	// // There may not be a use for this module anymore.
+	// coinModuleId, err = transactionbuilder.NewModuleIdFromString("0x1::coin")
+	// if err != nil {
+	// 	panic(err)
+	// }
 }
 
 // NewTxBuilder creates a new Template TxBuilder
@@ -107,23 +123,45 @@ func (txb *TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to 
 	}
 
 	toAmountBytes := transactionbuilder.BCSSerializeBasicValue(amount.Int().Uint64())
-	typeTag, err := transactionbuilder.NewTypeTagStructFromString(string(contract))
-	if err != nil {
-		return nil, err
-	}
-
 	chain_id := input.ChainId
-	moduleName, err := transactionbuilder.NewModuleIdFromString("0x1::coin")
-	if err != nil {
-		return &Tx{}, err
-	}
-	payload := transactionbuilder.TransactionPayloadEntryFunction{
-		ModuleName:   *moduleName,
-		FunctionName: "transfer",
-		TyArgs:       []transactionbuilder.TypeTag{*typeTag},
-		Args: [][]byte{
-			to_addr[:], toAmountBytes,
-		},
+
+	// See https://aptos.dev/en/build/guides/exchanges#transferring-assets
+	// There are two different token standards in Aptos:
+	// 1. Coin: This was the first, and seems they are phasing it out.
+	// 2. Fungible Asset: This is newer.  It has a simpler contract address (no '::' namespacing)
+	var payload transactionbuilder.TransactionPayloadEntryFunction
+	if strings.Contains(string(contract), "::") {
+		// This is a coin standard transfer
+		typeTag, err := transactionbuilder.NewTypeTagStructFromString(string(contract))
+		if err != nil {
+			return nil, err
+		}
+		payload = transactionbuilder.TransactionPayloadEntryFunction{
+			ModuleName:   *AptosModuleId,
+			FunctionName: "transfer_coins",
+			TyArgs:       []transactionbuilder.TypeTag{*typeTag},
+			Args: [][]byte{
+				to_addr[:], toAmountBytes,
+			},
+		}
+	} else {
+		// This is a fungible asset transfer
+		contractAddr, err := DecodeAddress(string(contract))
+		if err != nil {
+			return &Tx{}, err
+		}
+
+		payload = transactionbuilder.TransactionPayloadEntryFunction{
+			ModuleName:   *AptosModuleId,
+			FunctionName: "transfer_fungible_assets",
+			// no type parameters anymore
+			TyArgs: []transactionbuilder.TypeTag{},
+			Args: [][]byte{
+				contractAddr[:],
+				to_addr[:],
+				toAmountBytes,
+			},
+		}
 	}
 	tx := &Tx{
 		rawTx: transactionbuilder.RawTransaction{
@@ -132,8 +170,8 @@ func (txb *TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to 
 			Payload:        payload,
 			MaxGasAmount:   input.GasLimit,
 			GasUnitPrice:   input.GasPrice,
-			// ~1 hour expiration
-			ExpirationTimestampSecs: input.Timestamp + 60*60,
+			// ~6 hour expiration
+			ExpirationTimestampSecs: input.Timestamp + 60*60*6,
 			ChainId:                 uint8(chain_id),
 		},
 		Input: input,
