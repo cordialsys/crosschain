@@ -282,40 +282,6 @@ func TestFetchTxInfo(t *testing.T) {
 				Movements: []*xclient.Movement{
 					NewMovement(
 						"ADA",
-						"ADA",
-						[]*xclient.BalanceChange{
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
-								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
-								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
-							},
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(19_758_398_403),
-								XAddress:  "chains/ADA/addresses/addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
-								AddressId: "addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
-							},
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(489_053_618),
-								XAddress:  "chains/ADA/addresses/addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf",
-								AddressId: "addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf",
-							},
-						},
-						[]*xclient.BalanceChange{
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
-								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
-								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
-							},
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(19_756_996_210),
-								XAddress:  "chains/ADA/addresses/addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
-								AddressId: "addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
-							},
-						},
-						nil,
-					),
-					NewMovement(
-						"ADA",
 						"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429",
 						[]*xclient.BalanceChange{
 							{
@@ -358,6 +324,40 @@ func TestFetchTxInfo(t *testing.T) {
 								Balance:   xc.NewAmountBlockchainFromUint64(1),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
 								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
+							},
+						},
+						nil,
+					),
+					NewMovement(
+						"ADA",
+						"ADA",
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
+								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
+								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
+							},
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(19_758_398_403),
+								XAddress:  "chains/ADA/addresses/addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
+								AddressId: "addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
+							},
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(489_053_618),
+								XAddress:  "chains/ADA/addresses/addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf",
+								AddressId: "addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf",
+							},
+						},
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
+								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
+								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
+							},
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(19_756_996_210),
+								XAddress:  "chains/ADA/addresses/addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
+								AddressId: "addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
 							},
 						},
 						nil,
