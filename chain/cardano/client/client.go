@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"net/http"
 	"slices"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	log "github.com/sirupsen/logrus"
+	"github.com/tidwall/btree"
 )
 
 const (
@@ -256,7 +256,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction utxos: %w", err)
 	}
-	contractToMovement := make(map[xc.ContractAddress]*xclient.Movement)
+	contractToMovement := NewContractToMovement()
 	for _, input := range transactionUtxos.Inputs {
 		addr := xc.Address(input.Address)
 		for _, amount := range input.Amounts {
@@ -264,13 +264,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 			if contract == types.Lovelace {
 				contract = types.Ada
 			}
-			if contractToMovement[contract] == nil {
-				contractToMovement[contract] = xclient.NewMovement(
-					xc.ADA,
-					contract,
-				)
-			}
-			contractToMovement[contract].AddSource(addr, xc.NewAmountBlockchainFromStr(amount.Quantity), nil)
+			contractMovement := contractToMovement.GetOrInit(contract)
+			contractMovement.AddSource(addr, xc.NewAmountBlockchainFromStr(amount.Quantity), nil)
 		}
 	}
 
@@ -281,17 +276,15 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 			if contract == types.Lovelace {
 				contract = types.Ada
 			}
-			if contractToMovement[contract] == nil {
-				contractToMovement[contract] = xclient.NewMovement(
-					xc.ADA,
-					contract,
-				)
-			}
-			contractToMovement[contract].AddDestination(addr, xc.NewAmountBlockchainFromStr(amount.Quantity), nil)
+			contractMovement := contractToMovement.GetOrInit(contract)
+			contractMovement.AddDestination(addr, xc.NewAmountBlockchainFromStr(amount.Quantity), nil)
 		}
 	}
 
-	movements := slices.Collect(maps.Values(contractToMovement))
+	movements := make([]*xclient.Movement, 0)
+	for _, movement := range contractToMovement.Values() {
+		movements = append(movements, movement)
+	}
 	txInfo.Movements = movements
 
 	decimals, err := client.FetchDecimals(ctx, types.Ada)
@@ -445,4 +438,26 @@ func (client *Client) Get(ctx context.Context, path string, resp any) error {
 
 func (client *Client) Post(ctx context.Context, path string, cbor []byte, resp any) error {
 	return client.request(ctx, "POST", path, cbor, resp)
+}
+
+type ContractToMovement struct {
+	*btree.Map[xc.ContractAddress, *xclient.Movement]
+}
+
+func NewContractToMovement() ContractToMovement {
+	return ContractToMovement{btree.NewMap[xc.ContractAddress, *xclient.Movement](1)}
+}
+
+func (c *ContractToMovement) GetOrInit(contract xc.ContractAddress) *xclient.Movement {
+	contractMovement, ok := c.Get(contract)
+	if !ok {
+		movement := xclient.NewMovement(
+			xc.ADA,
+			contract,
+		)
+		c.Set(contract, movement)
+	}
+
+	contractMovement, _ = c.Get(contract)
+	return contractMovement
 }
