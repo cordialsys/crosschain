@@ -115,21 +115,32 @@ func NewClient(asset xc.ITask) (*Client, error) {
 }
 
 // SubmitTx submits a EVM tx
-func (client *Client) SubmitTx(ctx context.Context, trans xc.Tx) error {
-	switch tx := trans.(type) {
-	case *tx.Tx:
-		err := client.EthClient.SendTransaction(ctx, tx.EthTx)
-		if err != nil {
-			return fmt.Errorf("sending transaction '%v': %v", tx.Hash(), err)
-		}
-		return nil
-	default:
-		bz, err := tx.Serialize()
-		if err != nil {
-			return err
-		}
-		return client.EthClient.Client().CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(bz))
+func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+	bz, err := tx.Serialize()
+	if err != nil {
+		return err
 	}
+	bzHex := hexutil.Encode(bz)
+	err1 := client.EthClient.Client().CallContext(ctx, nil, "eth_sendRawTransaction", bzHex)
+
+	secondaryUrl := client.Asset.GetChain().SecondaryURL
+	if secondaryUrl != "" {
+		// We support submitting to multiple RPC nodes.  With some evm clients, they have poor performance
+		// when it comes to rebroadcasting transactions.  For example, Geth seems to cache transactions
+		// for a while when they don't have enough funds to pay for gas.  When funds later loaded, Geth will
+		// silently ignore valid rebroadcasts for like 20+ minutes.  By submitting to an additional non-geth node, we can
+		// hopefully avoid this issue.
+		secondaryClient, err := rpc.DialHTTPWithClient(secondaryUrl, http.DefaultClient)
+		if err != nil {
+			return fmt.Errorf("dialing url: %v", secondaryUrl)
+		}
+		err2 := secondaryClient.CallContext(ctx, nil, "eth_sendRawTransaction", bzHex)
+		if err1 == nil || err2 == nil {
+			// If one succeeds, we're good.
+			return nil
+		}
+	}
+	return err1
 }
 
 // FetchLegacyTxInfo returns tx info for a EVM tx

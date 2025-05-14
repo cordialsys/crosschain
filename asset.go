@@ -565,7 +565,8 @@ type ChainClientConfig struct {
 	///// RPC / CLIENT CONFIGURATION
 	////////////////////////////////
 
-	URL string `yaml:"url,omitempty"`
+	URL          string `yaml:"url,omitempty"`
+	SecondaryURL string `yaml:"secondary_url,omitempty"`
 
 	// Set a secret reference, see config/secret.go.  Used for setting an API keys.
 	Auth2 config.Secret `yaml:"auth,omitempty"`
