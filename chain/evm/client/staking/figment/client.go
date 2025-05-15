@@ -15,7 +15,6 @@ import (
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/client/services/figment"
-	testutil "github.com/cordialsys/crosschain/testutil/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -110,7 +109,7 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 	if err != nil {
 		return nil, err
 	}
-	testutil.JsonPrint(res)
+	// testutil.JsonPrint(res)
 	stakingInput := tx_input.NewBatchDepositInput()
 	stakingInput.TxInput = *partialTxInput
 

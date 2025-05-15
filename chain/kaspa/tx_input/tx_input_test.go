@@ -6,13 +6,23 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
+	"github.com/cordialsys/crosschain/chain/template/tx_input"
 	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput
 
+func TestSafeFromDoubleSpend(t *testing.T) {
+
+	newInput := &TxInput{}
+	oldInput1 := &TxInput{}
+	// Defaults are false but each chain has conditions
+	require.False(t, newInput.SafeFromDoubleSend(oldInput1))
+	require.False(t, newInput.IndependentOf(oldInput1))
+}
+
 func TestTxInputConflicts(t *testing.T) {
+
 	type testcase struct {
 		newInput xc.TxInput
 		oldInput xc.TxInput
@@ -22,27 +32,15 @@ func TestTxInputConflicts(t *testing.T) {
 	}
 	vectors := []testcase{
 		{
-			newInput:        &TxInput{Nonce: 10},
-			oldInput:        &TxInput{Nonce: 10},
+			newInput:        &TxInput{},
+			oldInput:        &TxInput{},
 			independent:     false,
-			doubleSpendSafe: true,
-		},
-		{
-			newInput:        &TxInput{Nonce: 10},
-			oldInput:        &TxInput{Nonce: 11},
-			independent:     true,
 			doubleSpendSafe: false,
 		},
 		{
-			newInput:        &TxInput{Nonce: 10},
-			oldInput:        &TxInput{Nonce: 9},
-			independent:     true,
-			doubleSpendSafe: false,
-		},
-		{
-			newInput: &TxInput{Nonce: 10},
-			oldInput: nil,
-			// default false, not always independent
+			newInput: &TxInput{},
+			// check no old input
+			oldInput:        nil,
 			independent:     false,
 			doubleSpendSafe: false,
 		},
@@ -53,12 +51,14 @@ func TestTxInputConflicts(t *testing.T) {
 		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
 		fmt.Println()
 		require.Equal(t,
-			v.newInput.IndependentOf(v.oldInput),
 			v.independent,
+			v.newInput.IndependentOf(v.oldInput),
+			"IndependentOf",
 		)
 		require.Equal(t,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
 			v.doubleSpendSafe,
+			v.newInput.SafeFromDoubleSend(v.oldInput),
+			"SafeFromDoubleSend",
 		)
 	}
 }

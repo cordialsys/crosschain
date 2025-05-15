@@ -6,7 +6,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput

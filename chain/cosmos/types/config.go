@@ -60,8 +60,8 @@ func NewEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	interfaceRegistry, err := codectypes.NewInterfaceRegistryWithOptions(codectypes.InterfaceRegistryOptions{
 		ProtoFiles: proto.HybridResolver,
 		SigningOptions: signing.Options{
-			AddressCodec:          address.NewBech32Codec(chainCfg.ChainPrefix),
-			ValidatorAddressCodec: address.NewBech32Codec(chainCfg.ChainPrefix + "valoper"),
+			AddressCodec:          address.NewBech32Codec(chainCfg.ChainPrefix.AsString()),
+			ValidatorAddressCodec: address.NewBech32Codec(chainCfg.ChainPrefix.AsString() + "valoper"),
 		},
 	})
 	if err != nil {

@@ -118,7 +118,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Asset:     asset,
 		Ctx:       cliCtx,
 		rpcClient: rawRpcClient,
-		Prefix:    cfg.ChainPrefix,
+		Prefix:    string(cfg.ChainPrefix),
 	}, nil
 }
 
@@ -368,7 +368,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			switch tf := decodedTx.(type) {
 			case types.FeeTx:
 				result.Fee = xc.AmountBlockchain(*tf.GetFee()[0].Amount.BigInt())
-				feePayer, _ := sdk.Bech32ifyAddressBytes(client.Asset.GetChain().ChainPrefix, tf.FeePayer())
+				feePayer, _ := sdk.Bech32ifyAddressBytes(string(client.Asset.GetChain().ChainPrefix), tf.FeePayer())
 				result.FeePayer = xc.Address(feePayer)
 			default:
 				logrus.Warnf("could not determine transaction type for fee %T", tf)

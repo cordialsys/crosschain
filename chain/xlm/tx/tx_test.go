@@ -8,7 +8,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	"github.com/stellar/go/xdr"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 const TESTNET_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015"

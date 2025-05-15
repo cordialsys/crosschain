@@ -3,6 +3,10 @@ package drivers
 import (
 	"fmt"
 
+	"github.com/cordialsys/crosschain/chain/kaspa"
+	kaspaaddress "github.com/cordialsys/crosschain/chain/kaspa/address"
+	kaspabuilder "github.com/cordialsys/crosschain/chain/kaspa/builder"
+	kaspaclient "github.com/cordialsys/crosschain/chain/kaspa/client"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 
@@ -95,6 +99,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return xlmclient.NewClient(cfg)
 	case DriverDusk:
 		return duskclient.NewClient(cfg)
+	case DriverKaspa:
+		return kaspaclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -169,6 +175,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return filbuilder.NewTxBuilder(cfg)
 	case DriverDusk:
 		return duskbuilder.NewTxBuilder(cfg)
+	case DriverKaspa:
+		return kaspabuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -211,6 +219,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return xlmaddress.NewAddressBuilder(cfg)
 	case DriverCardano:
 		return cardanoaddress.NewAddressBuilder(cfg)
+	case DriverKaspa:
+		return kaspaaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
@@ -252,6 +262,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return xrp.CheckError(err)
 	case DriverXlm:
 		return xlm.CheckError(err)
+	case DriverKaspa:
+		return kaspa.CheckError(err)
 	}
 	return errors.UnknownError
 }
