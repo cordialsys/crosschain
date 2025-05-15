@@ -17,7 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 )
 
 func TestFetchTxInput(t *testing.T) {

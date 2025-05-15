@@ -91,11 +91,11 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	from, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native.Base(), fromPk.Bytes()).Address())
+	from, err := sdk.Bech32ifyAddressBytes(string(native.ChainPrefix), address.GetPublicKey(native.Base(), fromPk.Bytes()).Address())
 	if err != nil {
 		return nil, err
 	}
-	to, err := sdk.Bech32ifyAddressBytes(native.ChainPrefix, address.GetPublicKey(native.Base(), toPk.Bytes()).Address())
+	to, err := sdk.Bech32ifyAddressBytes(string(native.ChainPrefix), address.GetPublicKey(native.Base(), toPk.Bytes()).Address())
 	if err != nil {
 		return nil, err
 	}

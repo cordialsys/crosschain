@@ -27,6 +27,6 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", fmt.Errorf("address cannot be empty")
 	}
 
-	bech32Addr, err := sdk.Bech32ifyAddressBytes(ab.Asset.ChainPrefix, rawAddress)
+	bech32Addr, err := sdk.Bech32ifyAddressBytes(string(ab.Asset.ChainPrefix), rawAddress)
 	return xc.Address(bech32Addr), err
 }

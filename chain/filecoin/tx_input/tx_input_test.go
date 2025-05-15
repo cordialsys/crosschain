@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput

@@ -13,7 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/suite"
 )
 
