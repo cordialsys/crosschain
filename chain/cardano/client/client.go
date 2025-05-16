@@ -348,7 +348,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 	xBlock := xclient.NewBlock(
 		client.ChainCfg.Chain,
-		height,
+		block.Height,
 		block.Hash,
 		time.Unix(block.Time, 0),
 	)
