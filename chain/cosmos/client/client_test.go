@@ -14,7 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/cosmos/cosmos-sdk/types"
 	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/stretchr/testify/require"

@@ -2,7 +2,6 @@ package address
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
@@ -18,9 +17,9 @@ type AddressBuilder struct {
 // NewAddressBuilder creates a new Template AddressBuilder
 func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	prefix := cfgI.ChainPrefix
-	prefixNum, err := strconv.ParseUint(prefix, 10, 16)
-	if err != nil {
-		return nil, fmt.Errorf("expecting numeric byte for chain_prefix for substrate chain %s: %v", cfgI.Chain, err)
+	prefixNum, ok := prefix.AsInt()
+	if !ok {
+		return nil, fmt.Errorf("expecting numeric byte for chain_prefix for substrate chain '%s': %s", cfgI.Chain, prefix)
 	}
 	return AddressBuilder{chainPrefix: uint16(prefixNum)}, nil
 }

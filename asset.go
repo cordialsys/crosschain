@@ -61,6 +61,7 @@ const (
 	LUNA   = NativeAsset("LUNA")   // Terra V2
 	LUNC   = NativeAsset("LUNC")   // Terra Classic
 	KAR    = NativeAsset("KAR")    // Karura
+	KAS    = NativeAsset("KAS")    // Kaspa
 	KLAY   = NativeAsset("KLAY")   // Klaytn
 	KSM    = NativeAsset("KSM")    // Kusama
 	XDC    = NativeAsset("XDC")    // XinFin
@@ -119,6 +120,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	LUNA,
 	LUNC,
 	KAR,
+	KAS,
 	KLAY,
 	KSM,
 	XDC,
@@ -160,6 +162,7 @@ const (
 	DriverEVM           = Driver("evm")
 	DriverEVMLegacy     = Driver("evm-legacy")
 	DriverFilecoin      = Driver("filecoin")
+	DriverKaspa         = Driver("kaspa")
 	DriverSubstrate     = Driver("substrate")
 	DriverSolana        = Driver("solana")
 	DriverSui           = Driver("sui")
@@ -181,6 +184,7 @@ var SupportedDrivers = []Driver{
 	DriverEVM,
 	DriverEVMLegacy,
 	DriverFilecoin,
+	DriverKaspa,
 	DriverSubstrate,
 	DriverSolana,
 	DriverSui,
@@ -260,6 +264,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverAptos
 	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY:
 		return DriverCosmos
+	case KAS:
+		return DriverKaspa
 	case SUI:
 		return DriverSui
 	case SOL:
@@ -294,6 +300,8 @@ func (driver Driver) SignatureAlgorithm() SignatureType {
 		return Ed255
 	case DriverDusk:
 		return Bls12_381G2Blake2
+	case DriverKaspa:
+		return Schnorr
 	}
 	return ""
 }
@@ -312,7 +320,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin:
 		return Uncompressed
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk, DriverKaspa:
 		return Raw
 	}
 	return ""
@@ -441,7 +449,7 @@ func (chain *ChainConfig) WithChainCoin(chainCoin string) *ChainConfig {
 	return chain
 }
 func (chain *ChainConfig) WithChainPrefix(chainPrefix string) *ChainConfig {
-	chain.ChainBaseConfig.ChainPrefix = chainPrefix
+	chain.ChainBaseConfig.ChainPrefix = StringOrInt(chainPrefix)
 	return chain
 }
 
@@ -515,7 +523,7 @@ type ChainBaseConfig struct {
 
 	// Does the chain use a special prefix for it's address?
 	// E.g. most cosmos chains do this.
-	ChainPrefix string `yaml:"chain_prefix,omitempty"`
+	ChainPrefix StringOrInt `yaml:"chain_prefix,omitempty"`
 
 	// If the chain has a native asset, and it has an actual contract address, it should be set here.
 	// This is also referred to as the "ContractID".

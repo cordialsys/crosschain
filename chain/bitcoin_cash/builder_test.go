@@ -8,7 +8,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransfer(t *testing.T) {

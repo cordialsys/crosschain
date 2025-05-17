@@ -151,11 +151,14 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 			return &Signer{driver, secretBz, alg}, nil
 		}
 		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
-	case xc.K256Keccak, xc.K256Sha256, xc.Schnorr:
+	case xc.K256Keccak, xc.K256Sha256:
 		_, err := crypto.HexToECDSA(hex.EncodeToString(secretBz))
 		if err != nil {
 			return nil, err
 		}
+		return &Signer{driver, secretBz, alg}, nil
+	case xc.Schnorr:
+		_, _ = btcec.PrivKeyFromBytes(secretBz)
 		return &Signer{driver, secretBz, alg}, nil
 	case xc.Bls12_381G2Blake2:
 		if len(secretBz) != 32 {
@@ -270,7 +273,7 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 
 		publicKey := privateKey.Public().(ed25519.PublicKey)
 		return PublicKey(publicKey), nil
-	case xc.K256Keccak, xc.K256Sha256, xc.Schnorr:
+	case xc.K256Keccak, xc.K256Sha256:
 		ecdsaKey, err := crypto.HexToECDSA(hex.EncodeToString(s.privateKey))
 		if err != nil {
 			return []byte{}, err
@@ -281,6 +284,10 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 		default:
 			return crypto.FromECDSAPub(&ecdsaKey.PublicKey), nil
 		}
+	case xc.Schnorr:
+		privKey, publicKey := btcec.PrivKeyFromBytes(s.privateKey)
+		_ = privKey
+		return schnorr.SerializePubKey(publicKey), nil
 	case xc.Bls12_381G2Blake2:
 		var blsKey bls.PrivateKey[bls.G2]
 		blsKey.UnmarshalBinary(s.privateKey)

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
-	"github.com/test-go/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func mustHex(s string) []byte {

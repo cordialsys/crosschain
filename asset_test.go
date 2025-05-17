@@ -6,11 +6,52 @@ import (
 	"testing"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm"
+	"github.com/cordialsys/crosschain/chain/kaspa"
+	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/normalize"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
+
+// Chain specific validation of the chain configs
+func TestChains(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				switch chain.Driver {
+				case DriverEVM, DriverEVMLegacy:
+					evm.Validate(t, chain)
+				case DriverSubstrate:
+					substrate.Validate(t, chain)
+				case DriverKaspa:
+					kaspa.Validate(t, chain)
+				case DriverTron:
+					// pass
+				case DriverTon:
+					// pass
+				case DriverSui:
+					// pass
+				case DriverDusk:
+					// pass
+				case DriverAptos:
+					// pass
+				case DriverSolana:
+					// pass
+				case DriverCosmos:
+					// pass
+				case "":
+					require.Fail(t, "unknown driver", chain.Driver)
+				default:
+					require.Fail(t, fmt.Sprintf("missing .Validate() for %s driver", chain.Driver))
+				}
+			})
+		}
+	}
+}
 
 func (s *CrosschainTestSuite) TestTypesAssetVsNativeAsset() {
 	require := s.Require()
@@ -191,24 +232,6 @@ func TestLegacyChainCoinConfig(t *testing.T) {
 							"chain %s decimals does not match native asset %s decimals",
 							chain.Chain, na.AssetId,
 						))
-					}
-				}
-			})
-		}
-	}
-}
-
-// Test that the chain_id is a valid integer for chains that use it
-func TestChainID(t *testing.T) {
-	xcf1 := factory.NewDefaultFactory()
-	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
-	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
-		for _, chain := range xcf.GetAllChains() {
-			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
-				if chain.Driver == DriverEVM || chain.Driver == DriverEVMLegacy {
-					if chain.ChainID != "" {
-						_, ok := chain.ChainID.AsInt()
-						require.True(t, ok, fmt.Sprintf("%s should have a valid integer chain_id (%s)", chain.Chain, chain.ChainID))
 					}
 				}
 			})

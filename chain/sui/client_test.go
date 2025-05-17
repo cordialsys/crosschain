@@ -15,7 +15,7 @@ import (
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	xclient "github.com/cordialsys/crosschain/client"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )

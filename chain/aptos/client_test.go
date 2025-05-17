@@ -11,7 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
 

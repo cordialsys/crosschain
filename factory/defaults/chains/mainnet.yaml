@@ -555,6 +555,13 @@ chains:
         asset_id: "10042"
       coin_gecko:
         asset_id: karura
+  KAS:
+    chain: KAS
+    driver: kaspa
+    chain_prefix: "kaspa"
+    chain_name: Kaspa
+    decimals: 8
+    fee_limit: "100.0"
   KLAY:
     chain: KLAY
     driver: evm-legacy

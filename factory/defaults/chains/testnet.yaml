@@ -215,6 +215,13 @@ chains:
     chain_id: 4002
     chain_name: Fantom (Testnet)
     decimals: 18
+  KAS:
+    chain: KAS
+    driver: kaspa
+    # prefix for kaspa testnet
+    chain_prefix: "kaspatest"
+    chain_name: Kaspa Testnet (tn10)
+    decimals: 8
   KAR:
     chain: KAR
     driver: substrate

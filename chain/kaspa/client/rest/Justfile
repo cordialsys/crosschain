@@ -1,0 +1,4 @@
+
+
+api:
+    oapi-codegen -config oapi-codegen.yaml openapi.json | grep -v WARNING > openapi.gen.go

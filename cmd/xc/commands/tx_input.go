@@ -26,6 +26,7 @@ func CmdTxInput() *cobra.Command {
 	var privateKeyRef string
 	var feePayerSecretRef string
 	var feePayer bool
+	var feePayerAddress string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input", "transfer-input"},
@@ -87,27 +88,32 @@ func CmdTxInput() *cobra.Command {
 			}
 
 			if feePayer {
-				feePayerPrivateKey, err := config.GetSecret(feePayerSecretRef)
-				if err != nil {
-					return fmt.Errorf("could not get fee-payer secret: %v", err)
+				if feePayerAddress != "" {
+					logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer address, may not work if the public key is required")
+					tfOptions = append(tfOptions, builder.OptionFeePayer(xc.Address(feePayerAddress), []byte{}))
+				} else {
+					feePayerPrivateKey, err := config.GetSecret(feePayerSecretRef)
+					if err != nil {
+						return fmt.Errorf("could not get fee-payer secret: %v", err)
+					}
+					if feePayerPrivateKey == "" {
+						return fmt.Errorf("fee-payer secret reference loaded an empty value")
+					}
+					feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+					if err != nil {
+						return fmt.Errorf("could not import fee-payer private key: %v", err)
+					}
+					feePayerPublicKey, err := feePayerSigner.PublicKey()
+					if err != nil {
+						return fmt.Errorf("could not create fee-payer public key: %v", err)
+					}
+					feePayerAddress, err := addressBuilder.GetAddressFromPublicKey(feePayerPublicKey)
+					if err != nil {
+						return fmt.Errorf("could not derive fee-payer address: %v", err)
+					}
+					logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
+					tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress, feePayerPublicKey))
 				}
-				if feePayerPrivateKey == "" {
-					return fmt.Errorf("fee-payer secret reference loaded an empty value")
-				}
-				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
-				if err != nil {
-					return fmt.Errorf("could not import fee-payer private key: %v", err)
-				}
-				feePayerPublicKey, err := feePayerSigner.PublicKey()
-				if err != nil {
-					return fmt.Errorf("could not create fee-payer public key: %v", err)
-				}
-				feePayerAddress, err := addressBuilder.GetAddressFromPublicKey(feePayerPublicKey)
-				if err != nil {
-					return fmt.Errorf("could not derive fee-payer address: %v", err)
-				}
-				logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
-				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress, feePayerPublicKey))
 			}
 
 			// default to smallest possible amount
@@ -156,6 +162,7 @@ func CmdTxInput() *cobra.Command {
 
 	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (uses --fee-payer-secret)")
 	cmd.Flags().StringVar(&feePayerSecretRef, "fee-payer-secret", "env:"+signer.EnvPrivateKeyFeePayer, "Secret reference for the fee-payer address private key")
+	cmd.Flags().StringVar(&feePayerAddress, "fee-payer-address", "", "Use address value as fee-payer")
 
 	return cmd
 }

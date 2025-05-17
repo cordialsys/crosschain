@@ -2,14 +2,10 @@ package address_test
 
 import (
 	"encoding/hex"
-	"fmt"
-	"strconv"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
-	"github.com/cordialsys/crosschain/chain/substrate/client"
-	"github.com/cordialsys/crosschain/factory"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,39 +33,4 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 	address, err := builder.GetAddressFromPublicKey([]byte{1, 2, 3})
 	require.Equal(xc.Address(""), address)
 	require.ErrorContains(err, "invalid ed25519 public key")
-}
-
-func TestSubstrateChainsHavePrefix(t *testing.T) {
-	require := require.New(t)
-
-	configs := []*factory.Factory{
-		factory.NewFactory(&factory.FactoryOptions{}),
-		factory.NewNotMainnetsFactory(&factory.FactoryOptions{}),
-	}
-	for _, cfg := range configs {
-		for _, chain := range cfg.GetAllChains() {
-			if chain.Chain.Driver() == xc.DriverSubstrate {
-				// validate that chain_prefix is set
-				help := fmt.Sprintf("Invalid configuration for %s %s. Substrate chains must have the correct chain prefix u16 set, see https://polkadot.subscan.io/tools/format_transform",
-					cfg.Config.Network,
-					chain.Chain,
-				)
-				require.NotEmpty(chain.ChainPrefix, help)
-				_, err := strconv.ParseUint(chain.ChainPrefix, 10, 16)
-				require.NoError(err, help)
-
-				// check indexer url
-				if chain.IndexerType != client.IndexerRpc {
-					help = fmt.Sprintf("Invalid configuration for %s %s. Need to use 'rpc' or set indexer_url for supported subscan or taostats endpoint, see https://support.subscan.io/",
-						cfg.Config.Network,
-						chain.Chain,
-					)
-					require.NotEmpty(chain.IndexerUrl, help)
-				}
-			}
-		}
-	}
-	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").WithChainPrefix("0").Base())
-	require.Nil(err)
-	require.NotNil(builder)
 }

@@ -11,7 +11,7 @@ import (
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc/codes"
 )

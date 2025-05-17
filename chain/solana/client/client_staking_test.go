@@ -10,7 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
-	testtypes "github.com/cordialsys/crosschain/testutil/types"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/require"
 )
