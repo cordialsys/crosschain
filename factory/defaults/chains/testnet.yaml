@@ -222,6 +222,8 @@ chains:
     chain_prefix: "kaspatest"
     chain_name: Kaspa Testnet (tn10)
     decimals: 8
+    gas_budget_min: "0.00002036"
+    chain_gas_multiplier: 1.07
   KAR:
     chain: KAR
     driver: substrate

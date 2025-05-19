@@ -120,6 +120,9 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverFilecoin:
 		// nothing to do, bech32
+	case xc.DriverKaspa:
+		// bech32 is used, which is case sensitive.
+		// There is a required prefix that depends on the network (e.g. "kaspa:")
 	default:
 	}
 	return address
@@ -161,6 +164,12 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 
 	case xc.DriverCosmos:
 		// cosmos hash tx do not prefix 0x, so we always remove.
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
+
+	case xc.DriverKaspa:
+		// must be lowercase hex
 		hash = strings.TrimPrefix(hash, "0x")
 		hash = zeroPadHex("", hash, 64)
 		hash = strings.ToLower(hash)

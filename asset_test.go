@@ -41,7 +41,11 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverSolana:
 					// pass
-				case DriverCosmos:
+				case DriverCosmos, DriverCosmosEvmos:
+					// pass
+				case DriverCardano, DriverFilecoin, DriverXlm, DriverXrp:
+					// pass
+				case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
 					// pass
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)

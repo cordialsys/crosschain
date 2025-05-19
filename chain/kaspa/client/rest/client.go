@@ -22,6 +22,15 @@ func NewClient(url string, chain xc.NativeAsset) *Client {
 	return &Client{url, chain}
 }
 
+type ErrorResponse struct {
+	Code   int    `json:"code"`
+	Detail string `json:"detail"`
+}
+
+func (e *ErrorResponse) Error() string {
+	return fmt.Sprintf("%s (%d)", e.Detail, e.Code)
+}
+
 func (cli *Client) Do(method string, path string, requestBody any, response any) error {
 	path = strings.TrimPrefix(path, "/")
 	url := fmt.Sprintf("%s/%s", cli.url, path)
@@ -68,17 +77,13 @@ func (cli *Client) Do(method string, path string, requestBody any, response any)
 		}
 		return nil
 	} else {
-		// Deserialize to ErrorResponse struct for other status codes
-		// var errorResponse ErrorResponse
+		var errorResponse ErrorResponse
+		errorResponse.Code = resp.StatusCode
 		logrus.WithField("body", string(body)).Debug("error")
-		// if err := json.Unmarshal(body, &errorResponse); err != nil {
-		// 	return fmt.Errorf("failed to unmarshal error response: %v", err)
-		// }
-		// if errorResponse.Message != "" {
-		// 	return fmt.Errorf("%s", errorResponse.Message)
-		// }
-		logrus.WithField("body", string(body)).WithField("chain", cli.chain).Warn("unknown error")
-		return fmt.Errorf("unknown error (%d)", resp.StatusCode)
+		if err := json.Unmarshal(body, &errorResponse); err != nil {
+			return fmt.Errorf("unknown error (%d)", resp.StatusCode)
+		}
+		return &errorResponse
 	}
 }
 
@@ -93,4 +98,49 @@ func (cli *Client) GetUtxos(addresses []string) ([]UtxoResponse, error) {
 		return nil, err
 	}
 	return response, nil
+}
+
+func (cli *Client) SubmitTransaction(serializedSigned json.RawMessage) (SubmitTransactionResponse, error) {
+	var response SubmitTransactionResponse
+
+	if err := cli.Do("POST", "/transactions", serializedSigned, &response); err != nil {
+		return response, err
+	}
+	return response, nil
+}
+
+func (cli *Client) GetTransaction(txId string) (*TxModel, error) {
+	var response TxModel
+
+	if err := cli.Do("GET", fmt.Sprintf("/transactions/%s?resolve_previous_outpoints=light", txId), nil, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+// The blue score is what we use as a proxy for the block height.
+func (cli *Client) GetVirtualChainBlueScore() (*EndpointsGetVirtualChainBlueScoreBlockdagResponse, error) {
+	var response EndpointsGetVirtualChainBlueScoreBlockdagResponse
+
+	if err := cli.Do("GET", "/info/virtual-chain-blue-score", nil, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
+}
+
+func (cli *Client) GetBlocksFromBlockScore(blockScore uint64) ([]*BlockModel, error) {
+	var response []*BlockModel
+
+	if err := cli.Do("GET", fmt.Sprintf("/blocks-from-bluescore?blueScore=%d&includeTransactions=true", blockScore), nil, &response); err != nil {
+		return nil, err
+	}
+	return response, nil
+}
+
+func (cli *Client) GetFeeEstimate() (*FeeEstimateResponse, error) {
+	var response FeeEstimateResponse
+	if err := cli.Do("GET", "/info/fee-estimate", nil, &response); err != nil {
+		return nil, err
+	}
+	return &response, nil
 }

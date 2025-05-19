@@ -75,7 +75,7 @@ func TestSign(t *testing.T) {
 		{
 			alg:         xc.DriverBitcoin,
 			pri:         "1d25811b76f43c86d59d757622773b2969ee71270ea810a42deda024e0cf896a",
-			pub:         "03e3dacffee283cbfb561f8f44b0a0cff6d86b6d6b72bd0f57c15aeee965c708a4",
+			pub:         "e3dacffee283cbfb561f8f44b0a0cff6d86b6d6b72bd0f57c15aeee965c708a4",
 			msg:         "d7d9a2283d9899c96550a848c7ecd6e8a3094780a08c9760730399cb3d594d61",
 			sig:         "311832a81c1ff59db4adafedcfad97bc4352d427557954629c81c00c58b25ac5f1e0ff1fa81e5e104ad4a7f470c2931e7903c0d8733d9c846186112579fc7103",
 			algOverride: "schnorr",
