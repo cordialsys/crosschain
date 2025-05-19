@@ -24,15 +24,8 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	if err != nil {
 		return "", err
 	}
-	// _ = dagconfig.MainnetParams.Prefix
-	// pubKeyAddress, err := util.NewAddressPublicKey(schnorr.SerializePubKey(pubKey), util.Bech32Prefix(ab.prefix))
-	// if err != nil {
-	// 	return "", err
-	// }
-	asStr := bech32.Encode(ab.prefix, schnorr.SerializePubKey(pubKey), 0)
-
 	// Everyone has their own bech32 encoding algorithm
-	// addr := pubKeyAddress.EncodeAddress()
+	asStr := bech32.Encode(ab.prefix, schnorr.SerializePubKey(pubKey), 0)
 
 	return xc.Address(asStr), nil
 }

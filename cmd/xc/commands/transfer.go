@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
@@ -264,7 +265,11 @@ func CmdTxTransfer() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("could not serialize tx: %v", err)
 				}
-				fmt.Println(hex.EncodeToString(txBytes))
+				if utf8.Valid(txBytes) {
+					fmt.Println(string(txBytes))
+				} else {
+					fmt.Println(hex.EncodeToString(txBytes))
+				}
 				return nil
 			}
 

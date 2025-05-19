@@ -69,6 +69,7 @@ require (
 	github.com/fxamacker/cbor v1.5.1
 	github.com/fxamacker/cbor/v2 v2.8.0
 	github.com/kaspanet/kaspad v0.12.22
+	github.com/pkg/errors v0.9.1
 	golang.org/x/time v0.5.0
 )
 
@@ -228,7 +229,6 @@ require (
 	github.com/okx/go-wallet-sdk/util v0.0.2 // indirect
 	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
 	github.com/pierrec/xxHash v0.1.5 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect

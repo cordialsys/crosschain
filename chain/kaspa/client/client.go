@@ -2,34 +2,55 @@ package client
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/kaspa/builder"
 	"github.com/cordialsys/crosschain/chain/kaspa/client/rest"
+	"github.com/cordialsys/crosschain/chain/kaspa/tx"
 	"github.com/cordialsys/crosschain/chain/kaspa/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
+	"github.com/kaspanet/kaspad/util/txmass"
+	"github.com/sirupsen/logrus"
 )
 
 // Client for Template
 type Client struct {
 	chain    xc.NativeAsset
+	chainCfg *xc.ChainConfig
 	client   *rest.Client
 	decimals int
 }
 
+const (
+	defaultMassPerTxByte           = 1
+	defaultMassPerScriptPubKeyByte = 10
+	defaultMassPerSigOp            = 1000
+)
+
 var _ xclient.Client = &Client{}
+
+func derefOrZero[T any](v *T) T {
+	if v == nil {
+		var zero T
+		return zero
+	}
+	return *v
+}
 
 // TODO https://github.com/kaspanet/rusty-kaspa/blob/master/rpc/core/src/api/rpc.rs
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	chain := cfgI.GetChain()
 	clientConfig := chain.ChainClientConfig
 	client := rest.NewClient(clientConfig.URL, chain.Chain)
-	return &Client{chain.Chain, client, int(chain.Decimals)}, nil
+	return &Client{chain.Chain, chain, client, int(chain.Decimals)}, nil
 }
 
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	utxos, err := client.client.GetUtxos([]string{string(args.GetFrom())})
+func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	utxos, err := c.client.GetUtxos([]string{string(args.GetFrom())})
 	if err != nil {
 		return nil, err
 	}
@@ -46,24 +67,123 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			Amount:        xc.NewAmountBlockchainFromStr(*utxo.UtxoEntry.Amount),
 		})
 	}
+
+	feeRates, err := c.client.GetFeeEstimate()
+	if err != nil {
+		return nil, err
+	}
+
+	txBuilder, err := builder.NewTxBuilder(c.chainCfg.Base())
+	if err != nil {
+		return nil, err
+	}
+	txI, err := txBuilder.Transfer(args, txInput)
+	if err != nil {
+		return nil, err
+	}
+	kaspaTx := txI.(*tx.Tx)
+	domainTransaction, err := kaspaTx.BuildUnsignedDomainTransaction()
+	if err != nil {
+		return nil, err
+	}
+
+	txMassCalculator := txmass.NewCalculator(defaultMassPerTxByte, defaultMassPerScriptPubKeyByte, defaultMassPerSigOp)
+	transactionMass := txMassCalculator.CalculateTransactionMass(domainTransaction)
+
+	txInput.Mass = transactionMass
+	if c.chainCfg.ChainGasMultiplier > 0.01 {
+		txInput.Mass = uint64(float64(transactionMass) * c.chainCfg.ChainGasMultiplier)
+	}
+	txInput.FeePerGram = feeRates.GetMostNormalFeeEstimate()
+	txInput.MinFee = c.chainCfg.GasBudgetMinimum.ToBlockchain(int32(c.chainCfg.Decimals))
+
 	return txInput, nil
 }
 
-func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
-	return client.FetchTransferInput(ctx, args)
+	return c.FetchTransferInput(ctx, args)
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	return errors.New("not implemented")
+func (c *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+	serializedSigned, err := txInput.Serialize()
+	if err != nil {
+		return err
+	}
+	response, err := c.client.SubmitTransaction(serializedSigned)
+	if err != nil {
+		return err
+	}
+	logrus.WithFields(logrus.Fields{
+		"txid": *response.TransactionId,
+	}).Debug("submitted kaspa tx")
+	return nil
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	return xclient.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
 func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
-	return xclient.TxInfo{}, errors.New("not implemented")
+	tx, err := c.client.GetTransaction(string(txHash))
+	if apiErr, ok := err.(*rest.ErrorResponse); ok {
+		if apiErr.Code == 404 {
+			return xclient.TxInfo{}, errors.TransactionNotFoundf("%s", apiErr.Error())
+		}
+	}
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	lastestBlueScore, err := c.client.GetVirtualChainBlueScore()
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	movement := xclient.Movement{
+		AssetId: xc.ContractAddress(c.chain),
+	}
+
+	for _, input := range derefOrZero(tx.Inputs) {
+		movement.From = append(movement.From, xclient.NewBalanceChange(
+			c.chain,
+			xc.Address(*input.PreviousOutpointAddress),
+			xc.NewAmountBlockchainFromUint64(uint64(*input.PreviousOutpointAmount)),
+			nil,
+		))
+	}
+
+	for _, output := range derefOrZero(tx.Outputs) {
+		movement.To = append(movement.To, xclient.NewBalanceChange(
+			c.chain,
+			xc.Address(*output.ScriptPublicKeyAddress),
+			xc.NewAmountBlockchainFromUint64(uint64(output.Amount)),
+			nil,
+		))
+	}
+
+	confirmations := uint64(*lastestBlueScore.BlueScore) - uint64(*tx.AcceptingBlockBlueScore)
+
+	txInfo := xclient.NewTxInfo(&xclient.Block{
+		Chain: c.chain,
+		// The "blue score" is basically the block height.
+		// Although it seems there could be multiple "blocks" at a given height?
+		Height: xc.NewAmountBlockchainFromUint64(uint64(*tx.AcceptingBlockBlueScore)),
+		Hash:   *tx.AcceptingBlockHash,
+		Time: time.Unix(
+			int64((time.Duration(*tx.BlockTime) * time.Millisecond).Seconds()), 0),
+	},
+		c.chainCfg,
+		string(*tx.TransactionId),
+		confirmations,
+		nil,
+	)
+	txInfo.AddMovement(&movement)
+
+	// The fee is the natural difference of (inputs - outputs)
+	txInfo.Fees = txInfo.CalculateFees()
+
+	return *txInfo, nil
 }
 
 func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -81,9 +201,52 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 	return total, nil
 }
 
-func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return client.decimals, nil
+func (c *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	// no tokens on kaspa currently
+	if contract != "" && contract != xc.ContractAddress(c.chain) {
+		return 0, fmt.Errorf("no tokens on kaspa currently")
+	}
+	return c.decimals, nil
 }
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
-	return &xclient.BlockWithTransactions{}, errors.New("not implemented")
+func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	height, ok := args.Height()
+	if !ok {
+		latestBlueScore, err := c.client.GetVirtualChainBlueScore()
+		if err != nil {
+			return nil, err
+		}
+		height = uint64(*latestBlueScore.BlueScore)
+	}
+
+	blocks, err := c.client.GetBlocksFromBlockScore(height)
+	if err != nil {
+		return nil, err
+	}
+	firstBlock := blocks[0]
+
+	res := &xclient.BlockWithTransactions{
+		Block: xclient.Block{
+			Chain:  c.chain,
+			Height: xc.NewAmountBlockchainFromUint64(height),
+			Hash:   *firstBlock.VerboseData.Hash,
+			Time: time.Unix(
+				int64((time.Duration(xc.NewAmountBlockchainFromStr(*firstBlock.Header.Timestamp).Uint64()) * time.Millisecond).Seconds()), 0),
+		},
+	}
+
+	transactions := make(map[string]bool)
+
+	// Just merge all of the blocks for our response
+	for _, block := range blocks {
+		for _, tx := range derefOrZero(block.Transactions) {
+			txId := tx.VerboseData.TransactionId
+			// sometimes the same block shows up twice and can result in dup tx's
+			if _, ok := transactions[txId]; !ok {
+				transactions[txId] = true
+				res.TransactionIds = append(res.TransactionIds, txId)
+			}
+		}
+	}
+
+	return res, nil
 }

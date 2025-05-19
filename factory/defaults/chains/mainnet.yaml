@@ -18,6 +18,7 @@ chains:
     decimals: 12
     fee_limit: "10000.0"
     chain_prefix: "10"
+    indexer_type: rpc
     confirmations_final: 4
     external:
       dti:
@@ -562,6 +563,13 @@ chains:
     chain_name: Kaspa
     decimals: 8
     fee_limit: "100.0"
+    gas_budget_min: "0.00002036"
+    chain_gas_multiplier: 1.07
+    external:
+      coin_market_cap:
+        asset_id: "20396"
+      coin_gecko:
+        asset_id: kaspa
   KLAY:
     chain: KLAY
     driver: evm-legacy
