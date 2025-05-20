@@ -62,6 +62,7 @@ const (
 	LUNC   = NativeAsset("LUNC")   // Terra Classic
 	KAR    = NativeAsset("KAR")    // Karura
 	KAS    = NativeAsset("KAS")    // Kaspa
+	KAVA   = NativeAsset("KAVA")   // Kava
 	KLAY   = NativeAsset("KLAY")   // Klaytn
 	KSM    = NativeAsset("KSM")    // Kusama
 	XDC    = NativeAsset("XDC")    // XinFin
@@ -121,6 +122,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	LUNC,
 	KAR,
 	KAS,
+	KAVA,
 	KLAY,
 	KSM,
 	XDC,
@@ -262,7 +264,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY, KAVA:
 		return DriverCosmos
 	case KAS:
 		return DriverKaspa

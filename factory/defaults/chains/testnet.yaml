@@ -231,6 +231,23 @@ chains:
     net: testnet
     chain_name: Karura (Testnet)
     decimals: 12
+  KAVA:
+    chain: KAVA
+    driver: cosmos
+    chain_id: kava_2221-16000
+    chain_name: Kava
+    chain_prefix: kava
+    chain_coin: ukava
+    confirmations_final: 15
+    chain_coin_hd_path: 459
+    chain_gas_multiplier: 1.02
+    decimals: 6
+    fee_limit: "100.0"
+    native_assets:
+      - asset_id: "KAVA"
+        contract_id: "ukava"
+        decimals: 6
+        fee_limit: "100.0"
   KLAY:
     chain: KLAY
     driver: "evm-legacy"

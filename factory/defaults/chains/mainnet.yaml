@@ -570,6 +570,28 @@ chains:
         asset_id: "20396"
       coin_gecko:
         asset_id: kaspa
+  KAVA:
+    chain: KAVA
+    driver: cosmos
+    chain_id: kava_2222-10
+    chain_name: Kava
+    chain_prefix: kava
+    chain_coin: ukava
+    confirmations_final: 15
+    chain_coin_hd_path: 459
+    chain_gas_multiplier: 1.02
+    decimals: 6
+    fee_limit: "100.0"
+    native_assets:
+      - asset_id: "KAVA"
+        contract_id: "ukava"
+        decimals: 6
+        fee_limit: "100.0"
+    external:
+      coin_market_cap:
+        asset_id: "4846"
+      coin_gecko:
+        asset_id: kava
   KLAY:
     chain: KLAY
     driver: evm-legacy
