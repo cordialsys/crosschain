@@ -388,54 +388,60 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if err != nil {
 		return input, fmt.Errorf("could not create tx builder: %v", err)
 	}
-
-	txI, err := builder.Transfer(args, &inputSim)
-	if err != nil {
-		return input, fmt.Errorf("could not build tx: %v", err)
-	}
-	tx := txI.(*Tx)
-	serialized, err := tx.Serialize()
-	if err != nil {
-		return input, fmt.Errorf("could not serialize tx: %v", err)
-	}
-	dryRun, err := c.SuiClient.DryRunTransaction(ctx, lib.Base64Data(serialized))
-	if err != nil {
-		return input, fmt.Errorf("could not dry run tx: %v", err)
-	}
 	log := logrus.WithField("from", args.GetFrom())
-	if dryRun.Effects.Data.V1 == nil {
-		log.Error("dry run returned nil effects")
+
+	if len(inputSim.GasCoin.Digest) == 0 {
+		// unable to simulate without budget for gas
+		log.Warn("skipping simulation as the address or fee-payer has no SUI balance")
 	} else {
-		// outBz, _ := json.MarshalIndent(dryRun, "", "  ")
-		// fmt.Println(string(outBz))
-		log = log.WithField("status", dryRun.Effects.Data.V1.Status.Status)
-		log = log.WithField("error", dryRun.Effects.Data.V1.Status.Error)
-		if dryRun.Effects.Data.V1.Status.Status == "success" {
-			gasUsed := dryRun.Effects.Data.V1.GasUsed
-			// https://docs.sui.io/concepts/tokenomics/gas-in-sui
-			gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64()
-			gasRebate := gasUsed.StorageRebate.Uint64()
-			// use the min gas budget for SUI
-			if gasRebate > gasFee {
-				gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
-				if gasFee == 0 {
-					gasFee = 2000000
-				}
-			} else {
-				gasFee = gasFee - gasRebate
-			}
 
-			if contract != native {
-				// increase budget by 10% for 3rd party coins
-				log = log.WithField("contract", contract)
-				gasFee = (gasFee * 110) / 100
-			}
-			input.GasBudget = gasFee
-			log = log.WithField("gas_budget", gasFee)
+		txI, err := builder.Transfer(args, &inputSim)
+		if err != nil {
+			return input, fmt.Errorf("could not build tx: %v", err)
 		}
-		log.Debug("simulated tx")
-	}
+		tx := txI.(*Tx)
+		serialized, err := tx.Serialize()
+		if err != nil {
+			return input, fmt.Errorf("could not serialize tx: %v", err)
+		}
+		dryRun, err := c.SuiClient.DryRunTransaction(ctx, lib.Base64Data(serialized))
+		if err != nil {
+			return input, fmt.Errorf("could not dry run tx: %v", err)
+		}
+		if dryRun.Effects.Data.V1 == nil {
+			log.Error("dry run returned nil effects")
+		} else {
+			// outBz, _ := json.MarshalIndent(dryRun, "", "  ")
+			// fmt.Println(string(outBz))
+			log = log.WithField("status", dryRun.Effects.Data.V1.Status.Status)
+			log = log.WithField("error", dryRun.Effects.Data.V1.Status.Error)
+			if dryRun.Effects.Data.V1.Status.Status == "success" {
+				gasUsed := dryRun.Effects.Data.V1.GasUsed
+				// https://docs.sui.io/concepts/tokenomics/gas-in-sui
+				gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64()
+				gasRebate := gasUsed.StorageRebate.Uint64()
+				// use the min gas budget for SUI
+				if gasRebate > gasFee {
+					gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
+					if gasFee == 0 {
+						gasFee = 2000000
+					}
+				} else {
+					gasFee = gasFee - gasRebate
+				}
 
+				if contract != native {
+					// increase budget by 10% for 3rd party coins
+					log = log.WithField("contract", contract)
+					gasFee = (gasFee * 110) / 100
+				}
+				input.GasBudget = gasFee
+				log = log.WithField("gas_budget", gasFee)
+			}
+			log.Debug("simulated tx")
+		}
+
+	}
 	return input, nil
 }
 
