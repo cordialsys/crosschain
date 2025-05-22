@@ -58,7 +58,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 		return AddressBuilder{}, err
 	}
 
-	algorithm := asset.Driver.SignatureAlgorithm()
+	algorithm := asset.Driver.SignatureAlgorithms()[0]
 	if alg, ok := opts.GetAlgorithmType(); ok {
 		algorithm = alg
 	}
