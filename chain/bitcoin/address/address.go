@@ -69,7 +69,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 			return AddressBuilder{}, fmt.Errorf("unsupported address type: %s", algorithm)
 		}
 	} else {
-		algorithm = asset.Driver.SignatureAlgorithm()
+		algorithm = asset.Driver.SignatureAlgorithms()[0]
 	}
 
 	log.Debugf("New bitcoin address builder with algorithm: %s", algorithm)

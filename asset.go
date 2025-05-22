@@ -292,20 +292,24 @@ func (native NativeAsset) Driver() Driver {
 	return ""
 }
 
-func (driver Driver) SignatureAlgorithm() SignatureType {
+// Returns the signature algorithms supported by the driver
+// The first algorithm will be used as the default.
+func (driver Driver) SignatureAlgorithms() []SignatureType {
 	switch driver {
-	case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin:
-		return K256Sha256
+	case DriverBitcoin:
+		return []SignatureType{K256Sha256, Schnorr}
+	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin:
+		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
-		return K256Keccak
+		return []SignatureType{K256Keccak}
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano:
-		return Ed255
+		return []SignatureType{Ed255}
 	case DriverDusk:
-		return Bls12_381G2Blake2
+		return []SignatureType{Bls12_381G2Blake2}
 	case DriverKaspa:
-		return Schnorr
+		return []SignatureType{Schnorr}
 	}
-	return ""
+	return []SignatureType{}
 }
 
 type PublicKeyFormat string

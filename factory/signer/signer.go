@@ -129,7 +129,7 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 	if err != nil {
 		return nil, errors.New("invalid address options")
 	}
-	alg := driver.SignatureAlgorithm()
+	alg := driver.SignatureAlgorithms()[0]
 	algorithmOverride, ok := opts.GetAlgorithmType()
 	if ok {
 		alg = algorithmOverride

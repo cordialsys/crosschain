@@ -207,11 +207,11 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 		require.Equal("drivers", parts[0])
 		require.Contains(inputColumns, parts[2], "input type column must be one of: "+strings.Join(inputColumns, ", "))
 		// test driver is valid
-		require.NotEmpty(xc.Driver(parts[1]).SignatureAlgorithm(), "driver is not valid")
+		require.NotEmpty(xc.Driver(parts[1]).SignatureAlgorithms(), "driver is not valid")
 		require.NotEmpty(parts[3], "missing ID")
 
 		require.NotEmpty(variantType.Driver())
-		require.NotEmpty(variantType.Driver().SignatureAlgorithm(), "driver is not valid")
+		require.NotEmpty(variantType.Driver().SignatureAlgorithms(), "driver is not valid")
 		require.NotEmpty(variantType.Variant(), "tx variant input does not have an id / variant set.")
 
 		if _, ok := variants[variantType]; ok {
@@ -275,6 +275,6 @@ func (s *CrosschainTestSuite) TestAllTxInputSerDeser() {
 func (s *CrosschainTestSuite) TestSigAlg() {
 	require := s.Require()
 	for _, driver := range xc.SupportedDrivers {
-		require.NotEmpty(driver.SignatureAlgorithm())
+		require.NotEmpty(driver.SignatureAlgorithms())
 	}
 }

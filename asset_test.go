@@ -82,7 +82,7 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 		}
 		drivers[driver] = true
 		// test driver is valid
-		require.NotEmpty(driver.SignatureAlgorithm(), "driver is not valid")
+		require.NotEmpty(driver.SignatureAlgorithms(), "driver is not valid")
 	}
 }
 
