@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -246,13 +247,20 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 		return xclient.TxInfo{}, fmt.Errorf("failed to create transaction info: %w", err)
 	}
 
+	var operations []xdr.Operation
 	var envelope xdr.TransactionEnvelope
 	if err := envelope.UnmarshalBinary([]byte(decodedEnvelope)); err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %v", err)
+		if strings.Contains(err.Error(), "is not a valid OperationType") {
+			// not an operation we recognize, so we'll omit it
+		} else {
+			return xclient.TxInfo{}, fmt.Errorf("failed to unmarshal envelope XDR: %v", err)
+		}
+	} else {
+		operations = envelope.Operations()
 	}
 
 	// Populate movements depending on operation type
-	for _, operation := range envelope.Operations() {
+	for _, operation := range operations {
 		sourceAccountMaybe := operation.SourceAccount
 		if sourceAccountMaybe == nil {
 			// Use source account of the enveloping transaction if not present in the operation
