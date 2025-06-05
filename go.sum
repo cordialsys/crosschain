@@ -402,8 +402,8 @@ github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04 h1:k2/8TDH
 github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04/go.mod h1:hzXqFO40XA/kcmAP26WDJmc7WiJcoLZlnvR0ZVWXu9g=
 github.com/cordialsys/go-json v0.10.5-sonic-replace h1:9wdSnZ7KBekIZ9tLiCEQAkY6kEHp44IdcQFnKUNSxLI=
 github.com/cordialsys/go-json v0.10.5-sonic-replace/go.mod h1:uwUxqlxlq1Bf1VxJpxbWfMbQgM8w30PKKZrg94/NcTk=
-github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5 h1:K/rLcFPSCGcCQEdeB+FM2el8VQopZbiK+xCYYCPUcz4=
-github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250217001845-949ab5355cc5/go.mod h1:CEcT3hIMwYmEoBEHWrBkEQOgwdO02slYt8iUxdVeJLQ=
+github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250605153144-52df5e76c212 h1:cRWxadwoWSw1lSrnInG39JkpFdCtt47tg0LLKjELPFo=
+github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250605153144-52df5e76c212/go.mod h1:CEcT3hIMwYmEoBEHWrBkEQOgwdO02slYt8iUxdVeJLQ=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e h1:+7Qlxur12FHCy565/p4Bz9e1WpaeNZ3dqhWAHotcspw=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e/go.mod h1:N2GL3FT9suJEPh4wRxEGD0nobzxzGIyVbzCAye7BbfA=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
