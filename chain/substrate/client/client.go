@@ -363,7 +363,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 		tx.BlockHash = "0x" + hex.EncodeToString(txInfo.BlockHash[:])
 		tx.BlockIndex = int64(txInfo.Block.Block.Header.Number)
-		// unfortunately there is no way to determine the block time that i can find.
+		// TODO we need to also scan for the "set timestamp" extrinsic in the block to use as the block time
 		tx.BlockTime = 0
 
 	}
@@ -513,28 +513,28 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	var subBlock *types.SignedBlock
 	var err error
 	height, ok := args.Height()
+	var blockHash types.Hash
 	if !ok {
-		subBlock, err = client.DotClient.RPC.Chain.GetBlockLatest()
+		blockHash, err = client.DotClient.RPC.Chain.GetBlockHashLatest()
 		if err != nil {
 			return nil, err
 		}
-
 	} else {
-		blockHash, err := client.DotClient.RPC.Chain.GetBlockHash(height)
+		blockHash, err = client.DotClient.RPC.Chain.GetBlockHash(height)
 		if err != nil {
 			return nil, err
 		}
-		subBlock, err = client.DotClient.RPC.Chain.GetBlock(blockHash)
-		if err != nil {
-			return nil, err
-		}
+	}
+	subBlock, err = client.DotClient.RPC.Chain.GetBlock(blockHash)
+	if err != nil {
+		return nil, err
 	}
 
 	block := &xclient.BlockWithTransactions{
 		Block: *xclient.NewBlock(
 			client.Asset.GetChain().Chain,
 			uint64(subBlock.Block.Header.Number),
-			subBlock.Block.Header.ExtrinsicsRoot.Hex(),
+			blockHash.Hex(),
 			time.Unix(0, 0),
 		),
 	}

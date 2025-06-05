@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"strings"
 
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
@@ -14,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	substratetx "github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/sirupsen/logrus"
+	"github.com/vedhavyas/go-subkey/v2/scale"
 	"golang.org/x/time/rate"
 )
 
@@ -153,6 +155,56 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 }
 
 func HashExtrinsic(ext *types.Extrinsic) []byte {
-	bz, _ := codec.Encode(ext)
+	// Force version to be treated as v4.
+	// Some extrinisics are v5 but are still compatible when hashing.
+	// This implementation is copied from the library, ignores the version.
+	// Better than _always_failing to hash.
+	v4 := v4Extrinsic{ext}
+	bz, err := codec.Encode(&v4)
+	if err != nil {
+		logrus.WithError(err).Error("failed to encode extrinsic")
+	}
 	return substratetx.HashSerialized(bz)
+}
+
+type v4Extrinsic struct {
+	*types.Extrinsic
+}
+
+func (e v4Extrinsic) Encode(encoder scale.Encoder) error {
+	if e.Type() != types.ExtrinsicVersion4 {
+		// ignore
+	}
+	var bb = bytes.Buffer{}
+	tempEnc := scale.NewEncoder(&bb)
+
+	err := tempEnc.Encode(e.Version)
+	if err != nil {
+		return err
+	}
+
+	if e.IsSigned() {
+		err = tempEnc.Encode(e.Signature)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tempEnc.Encode(e.Method)
+	if err != nil {
+		return err
+	}
+
+	eb := bb.Bytes()
+	err = encoder.EncodeUintCompact(*big.NewInt(0).SetUint64(uint64(len(eb))))
+	if err != nil {
+		return err
+	}
+
+	err = encoder.Write(eb)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
