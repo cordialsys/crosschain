@@ -162,14 +162,23 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxI
 		))
 	}
 
-	confirmations := uint64(*lastestBlueScore.BlueScore) - uint64(*tx.AcceptingBlockBlueScore)
+	confirmations := uint64(0)
+	height := 0
+	hashMaybe := ""
+	if tx.AcceptingBlockBlueScore != nil && *tx.AcceptingBlockBlueScore != 0 {
+		confirmations = uint64(*lastestBlueScore.BlueScore) - uint64(*tx.AcceptingBlockBlueScore)
+		height = *tx.AcceptingBlockBlueScore
+	}
+	if tx.AcceptingBlockHash != nil {
+		hashMaybe = *tx.AcceptingBlockHash
+	}
 
 	txInfo := xclient.NewTxInfo(&xclient.Block{
 		Chain: c.chain,
 		// The "blue score" is basically the block height.
 		// Although it seems there could be multiple "blocks" at a given height?
-		Height: xc.NewAmountBlockchainFromUint64(uint64(*tx.AcceptingBlockBlueScore)),
-		Hash:   *tx.AcceptingBlockHash,
+		Height: xc.NewAmountBlockchainFromUint64(uint64(height)),
+		Hash:   hashMaybe,
 		Time: time.Unix(
 			int64((time.Duration(*tx.BlockTime) * time.Millisecond).Seconds()), 0),
 	},
