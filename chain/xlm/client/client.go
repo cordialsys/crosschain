@@ -253,17 +253,24 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 
 	// Populate movements depending on operation type
 	for _, operation := range envelope.Operations() {
+		sourceAccountMaybe := operation.SourceAccount
+		if sourceAccountMaybe == nil {
+			// Use source account of the enveloping transaction if not present in the operation
+			fromEnv := envelope.SourceAccount()
+			sourceAccountMaybe = &fromEnv
+		}
+		sourceAccount := *sourceAccountMaybe
 
 		// Regular transfer from SourceAccount to Destination
 		payment, isPayment := operation.Body.GetPaymentOp()
 		if isPayment {
-			ProcessPayment(&txInfo, GetAssetCode(payment.Asset), *operation.SourceAccount, payment.Destination, payment.Amount)
+			ProcessPayment(&txInfo, GetAssetCode(payment.Asset), sourceAccount, payment.Destination, payment.Amount)
 		}
 
 		// CreateAccount operation - this can be treated as a regular payment, because it involves the same movements
 		createAccount, isCreateAccount := operation.Body.GetCreateAccountOp()
 		if isCreateAccount {
-			ProcessPayment(&txInfo, "XLM", *operation.SourceAccount, createAccount.Destination.ToMuxedAccount(), createAccount.StartingBalance)
+			ProcessPayment(&txInfo, "XLM", sourceAccount, createAccount.Destination.ToMuxedAccount(), createAccount.StartingBalance)
 		}
 
 		// PathPayments involve different source and destination assets
@@ -275,7 +282,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 				&txInfo,
 				sendAsset,
 				destAsset,
-				*operation.SourceAccount,
+				sourceAccount,
 				pathPaymentSend.Destination,
 				pathPaymentSend.SendAmount,
 				pathPaymentSend.DestMin)
@@ -290,7 +297,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 				&txInfo,
 				sendAsset,
 				destAsset,
-				*operation.SourceAccount,
+				sourceAccount,
 				pathPaymentReceive.Destination,
 				pathPaymentReceive.SendMax,
 				pathPaymentReceive.DestAmount)

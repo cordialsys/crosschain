@@ -846,6 +846,130 @@ func TestFetchTxInfo(t *testing.T) {
 				Confirmations: 5711,
 			},
 		},
+
+		{
+			// Missing the source account in the operation, like in:
+			// https://testnet.stellarchain.io/transactions/bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd
+			hash: "bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
+			getTxResult: `{
+				"id": "bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
+				"paging_token": "5766530465796096",
+				"successful": true,
+				"hash": "bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
+				"ledger": 1342625,
+				"created_at": "2025-01-09T12:46:09Z",
+				"source_account": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
+				"source_account_sequence": "338194314821647",
+				"fee_account": "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
+				"fee_charged": "100",
+				"max_fee": "10000",
+				"operation_count": 1,
+				"envelope_xdr": "AAAAAgAAAAC6dj438wEEaw561ovXxPWFkUhaspPi74/APAysEKvbvwAAJxAACFZwAAAAEAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAQAAAAB7tXKH+4afQYJFcqY/Owzq6xXU4IL05hpMR7ju06lXlAAAAAAAAAAABycOAAAAAAAAAAABEKvbvwAAAEDCITpl3PVMUasdAOAYGxPLDLcK43FMEReLOeEqz33Ja8x05eEJfygqMsuItykcv4dxjgCuyGPmg4OLeIsyR8kO",
+				"result_xdr": "AAAAAAAAAGQAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAA=",
+				"memo_type": "none",
+				"signatures": [
+					"TDO6muOPlSe3mK1TMj/dgsV29h7wA0ww1qZI+B5irKGKQ5EwGjeECkIWRHcDTTkf7Gu13eLjofg76Cx/fu3XBQ=="
+				],
+				"preconditions": {
+					"timebounds": {
+						"min_time": "0"
+					}
+				}
+			}`,
+			getLedgerResult: `{
+				"id": "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
+				"paging_token": "2210293249736704",
+				"hash": "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
+				"prev_hash": "c616391d7034f5d4ccfd203b1ecda2fba9b1a449bd9566a6eeea4875263cbfa3",
+				"sequence": 1342625,
+				"successful_transaction_count": 2,
+				"failed_transaction_count": 1,
+				"operation_count": 2,
+				"tx_set_operation_count": 3,
+				"closed_at": "2025-01-09T12:46:09Z",
+				"total_coins": "100000000000.0000000",
+				"fee_pool": "16753.9196547",
+				"base_fee_in_stroops": 100,
+				"base_reserve_in_stroops": 5000000,
+				"max_tx_set_size": 200,
+				"protocol_version": 22
+			}`,
+			getLatestLedgerResult: `{
+				"_embedded": {
+					"records": [
+						{
+							"id": "dbaea72b5a49689c63df5afa0cef9ac40cda1174e9c06612dd8c4d741665c726",
+							"paging_token": "5766530465796096",
+							"hash": "dbaea72b5a49689c63df5afa0cef9ac40cda1174e9c06612dd8c4d741665c726",
+							"prev_hash": "9dffc1f46afdaeae61cbab8f38d4142886b9c26bb5be0127b14643e04e88f46d",
+							"sequence": 1342626,
+							"successful_transaction_count": 2,
+							"failed_transaction_count": 4,
+							"operation_count": 3,
+							"tx_set_operation_count": 10,
+							"closed_at": "2025-01-09T20:42:33Z",
+							"total_coins": "100000000000.0000000",
+							"fee_pool": "16974.5816010",
+							"base_fee_in_stroops": 100,
+							"base_reserve_in_stroops": 5000000,
+							"max_tx_set_size": 200,
+							"protocol_version": 22
+						}
+					]
+				}
+			}`,
+			expected: xclient.TxInfo{
+				Name:   "chains/XLM/transactions/bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
+				Hash:   "bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
+				XChain: xc.NativeAsset("XLM"),
+				Block: &xclient.Block{
+					Chain:  xc.NativeAsset("XLM"),
+					Height: xc.NewAmountBlockchainFromUint64(1342625),
+					Hash:   "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
+					Time:   MustParseTime("2025-01-09T12:46:09Z"),
+				},
+				Movements: []*xclient.Movement{
+					NewMovement(
+						"XLM",
+						"XLM",
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(120000000),
+								XAddress:  "chains/XLM/addresses/GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
+								AddressId: "GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
+							},
+						},
+						[]*xclient.BalanceChange{{
+							Balance:   xc.NewAmountBlockchainFromUint64(120000000),
+							XAddress:  "chains/XLM/addresses/GB53K4UH7ODJ6QMCIVZKMPZ3BTVOWFOU4CBPJZQ2JRD3R3WTVFLZJ7Q3",
+							AddressId: "GB53K4UH7ODJ6QMCIVZKMPZ3BTVOWFOU4CBPJZQ2JRD3R3WTVFLZJ7Q3",
+						}},
+						nil,
+					),
+					NewMovement(
+						"XLM",
+						"XLM",
+						[]*xclient.BalanceChange{
+							{
+								Balance:   xc.NewAmountBlockchainFromUint64(100),
+								XAddress:  "chains/XLM/addresses/GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
+								AddressId: "GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
+							},
+						},
+						[]*xclient.BalanceChange{},
+						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+					),
+				},
+				Fees: []*xclient.Balance{
+					{
+						Asset:    "chains/XLM/assets/XLM",
+						Contract: "XLM",
+						Balance:  xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+				Confirmations: 1,
+			},
+		},
 		{
 			getTxResult: `{
 				"type": "https://stellar.org/horizon-errors/not_found",
