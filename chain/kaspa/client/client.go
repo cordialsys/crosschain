@@ -13,6 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/kaspa/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	"github.com/cordialsys/crosschain/testutil"
 	"github.com/kaspanet/kaspad/util/txmass"
 	"github.com/sirupsen/logrus"
 )
@@ -161,7 +162,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxI
 			nil,
 		))
 	}
-
+	testutil.JsonPrint(tx)
 	confirmations := uint64(0)
 	height := 0
 	hashMaybe := ""
@@ -169,8 +170,12 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxI
 		confirmations = uint64(*lastestBlueScore.BlueScore) - uint64(*tx.AcceptingBlockBlueScore)
 		height = *tx.AcceptingBlockBlueScore
 	}
-	if tx.AcceptingBlockHash != nil {
-		hashMaybe = *tx.AcceptingBlockHash
+	if tx.BlockHash != nil && len(*tx.BlockHash) > 0 {
+		hashMaybe = (*tx.BlockHash)[0]
+	}
+	txId := string(txHash)
+	if tx.TransactionId != nil {
+		txId = *tx.TransactionId
 	}
 
 	txInfo := xclient.NewTxInfo(&xclient.Block{
@@ -183,7 +188,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxI
 			int64((time.Duration(*tx.BlockTime) * time.Millisecond).Seconds()), 0),
 	},
 		c.chainCfg,
-		string(*tx.TransactionId),
+		txId,
 		confirmations,
 		nil,
 	)
@@ -218,18 +223,35 @@ func (c *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress)
 	return c.decimals, nil
 }
 func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	var blocks []*rest.BlockModel
+	var err error
 	height, ok := args.Height()
-	if !ok {
+	if ok {
+		blocks, err = c.client.GetBlocksFromBlockScore(height)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// attempt to scan for the latest block
+		// Kaspa chain head is pretty flaky, scanning is needed to be reliable here
 		latestBlueScore, err := c.client.GetVirtualChainBlueScore()
 		if err != nil {
 			return nil, err
 		}
 		height = uint64(*latestBlueScore.BlueScore)
+		for i := range 10 {
+			blocks, err = c.client.GetBlocksFromBlockScore(height - uint64(i*10))
+			if err != nil {
+				return nil, err
+			}
+			if len(blocks) > 0 {
+				break
+			}
+		}
 	}
 
-	blocks, err := c.client.GetBlocksFromBlockScore(height)
-	if err != nil {
-		return nil, err
+	if len(blocks) == 0 {
+		return nil, fmt.Errorf("no block found")
 	}
 	firstBlock := blocks[0]
 
