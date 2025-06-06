@@ -370,7 +370,8 @@ type External struct {
 		AssetId string `yaml:"asset_id,omitempty"`
 	} `yaml:"coin_gecko,omitempty"`
 	IndexingCo struct {
-		ChainId string `yaml:"chain_id,omitempty"`
+		ChainId  string `yaml:"chain_id,omitempty"`
+		Disabled bool   `yaml:"disabled,omitempty"`
 	} `yaml:"indexing_co,omitempty"`
 }
 
