@@ -116,7 +116,7 @@ chains:
     decimals: 8
   BNB:
     chain: BNB
-    driver: evm-legacy
+    driver: evm
     chain_id: 97
     chain_name: Binance Smart Chain (Testnet)
     decimals: 18

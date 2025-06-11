@@ -262,7 +262,7 @@ chains:
         asset_id: berachain-bera
   BNB:
     chain: BNB
-    driver: evm-legacy
+    driver: evm
     chain_id: 56
     chain_name: Binance Smart Chain
     decimals: 18
