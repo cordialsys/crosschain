@@ -114,6 +114,13 @@ func (amount AmountBlockchain) ApplyGasPriceMultiplier(chain *ChainClientConfig)
 	// no multiplier configured, return same
 	return amount
 }
+func (amount AmountBlockchain) ApplySecondaryGasPriceMultiplier(chain *ChainClientConfig) AmountBlockchain {
+	if chain.SecondaryChainGasMultiplier > 0.01 {
+		return MultiplyByFloat(amount, chain.SecondaryChainGasMultiplier)
+	}
+	// no multiplier configured, return same
+	return amount
+}
 
 func MultiplyByFloat(amount AmountBlockchain, multiplier float64) AmountBlockchain {
 	if amount.Uint64() == 0 {

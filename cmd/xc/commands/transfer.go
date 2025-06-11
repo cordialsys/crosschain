@@ -212,7 +212,13 @@ func CmdTxTransfer() *cobra.Command {
 					}
 				}
 				amount := tfArgs.GetAmount()
-				tfArgs.SetAmount(amount.Sub(&fee))
+				deductedAmount := amount.Sub(&fee)
+				logrus.WithFields(logrus.Fields{
+					"fee":             fee.ToHuman(chainConfig.GetDecimals()),
+					"original_amount": amount.ToHuman(chainConfig.GetDecimals()),
+					"new_amount":      deductedAmount.ToHuman(chainConfig.GetDecimals()),
+				}).Info("deducting fee from amount")
+				tfArgs.SetAmount(deductedAmount)
 				tfArgs.SetInclusiveFeeSpending(true)
 			}
 

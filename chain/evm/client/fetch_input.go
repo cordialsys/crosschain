@@ -8,11 +8,13 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/abi/gas_price_oracle"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -133,6 +135,24 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, err
 	}
 	txInput.GasLimit = gasLimit
+
+	if oracleAddr := client.Asset.GetChain().GasPriceOracleAddress; oracleAddr != "" {
+		serializedTx, err := exampleTf.Serialize()
+		if err != nil {
+			return nil, err
+		}
+		oracleAddr, _ := address.FromHex(xc.Address(oracleAddr))
+		oracle, err := gas_price_oracle.NewGasPriceOracle(oracleAddr, client.EthClient)
+		if err != nil {
+			return nil, fmt.Errorf("could not create gas price oracle: %v", err)
+		}
+		l1Fee, err := oracle.GetL1Fee(&bind.CallOpts{}, serializedTx)
+		if err != nil {
+			return nil, fmt.Errorf("could not get l1 fee: %v", err)
+		}
+		txInput.L1Fee = xc.AmountBlockchain(*l1Fee).ApplySecondaryGasPriceMultiplier(client.Asset.GetChain().Client())
+	}
+
 	return txInput, nil
 }
 

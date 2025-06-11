@@ -16,6 +16,7 @@ type TxInput struct {
 	// DynamicFeeTx
 	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
 	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
+	L1Fee     xc.AmountBlockchain `json:"l1_fee,omitempty"`
 	// GasPrice xc.AmountBlockchain `json:"gas_price,omitempty"` // wei per gas
 	// Task params
 	Params []string `json:"params,omitempty"`
@@ -75,11 +76,12 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	dynamicMaxFeeSpend := input.GasFeeCap.Mul(&gasLimit)
 
 	// use larger of the two
-	if legacyMaxFeeSpend.Cmp(&dynamicMaxFeeSpend) > 0 {
-		return legacyMaxFeeSpend, ""
-	} else {
-		return dynamicMaxFeeSpend, ""
+	maxFeeSpend := dynamicMaxFeeSpend
+	if legacyMaxFeeSpend.Cmp(&maxFeeSpend) > 0 {
+		maxFeeSpend = legacyMaxFeeSpend
 	}
+	maxFeeSpend = maxFeeSpend.Add(&input.L1Fee)
+	return maxFeeSpend, ""
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
