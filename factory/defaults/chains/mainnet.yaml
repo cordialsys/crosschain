@@ -223,6 +223,8 @@ chains:
   BASE:
     chain: BASE
     driver: evm
+    gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
+    secondary_chain_gas_multiplier: 1.0
     confirmations_final: 64
     chain_name: Base Protocol
     decimals: 18
@@ -794,6 +796,8 @@ chains:
   OptETH:
     chain: OptETH
     driver: evm
+    gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
+    secondary_chain_gas_multiplier: 1.0
     chain_id: 10
     chain_name: Optimism
     decimals: 18
