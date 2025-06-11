@@ -97,6 +97,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":{"baseFeePerGas":"0xba43b7400","difficulty":"0x19","extraData":"0xd682040083626f7288676f312e31392e37856c696e7578000000000000000000ec6ff50a6a950f50eb734ee68765c988ce7dbaae7af3f92f5604100affceb6d87fd6ad01972752001d4e067ec14482630bb88db995f5503c76cfd625c949922300","gasLimit":"0x1c0e7cb","gasUsed":"0x0","hash":"0x32c7587e0c0634a19c40dee211323dd0b2d83494f65d619a9ddefa6d31f99238","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","miner":"0x0000000000000000000000000000000000000000","mixHash":"0x0000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0000000000000000","number":"0x2bbd145","parentHash":"0x6c63c167c9014fb62dad62dde72f774f64634237d18f5877ec3642c44b3af2dd","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x269","stateRoot":"0x70d3c1f93205f1b6970b6e0ebc5a20c938dbcc8050c82e07a09fa1d568a9d428","timestamp":"0x64cbc1e1","totalDifficulty":"0x2f15808f","transactions":[],"transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","uncles":[]}}`,
 				// eth_maxPriorityFeePerGas
 				`"0x6fc23ac00"`,
+				// eth_gasPrice
+				`"0x1"`,
 				// txpool_contentFrom
 				`{"jsonrpc":"2.0","id":2,"result":{"pending":{}, "queued":{}}}`,
 				// eth_estimateGas
@@ -108,6 +110,7 @@ func TestFetchTxInput(t *testing.T) {
 				GasLimit:        21220,
 				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
 				GasTipCap:       xc.NewAmountBlockchainFromUint64(30000000000),
+				GasPrice:        xc.NewAmountBlockchainFromUint64(1),
 				ChainId:         xc.NewAmountBlockchainFromUint64(0x123),
 				// legacy price
 				// GasPrice: xc.NewAmountBlockchainFromUint64(50000000000 + 30000000000),
@@ -126,6 +129,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":{"baseFeePerGas":"0x14f46b0400","difficulty":"0x19","extraData":"0xd682040083626f7288676f312e31392e37856c696e7578000000000000000000ec6ff50a6a950f50eb734ee68765c988ce7dbaae7af3f92f5604100affceb6d87fd6ad01972752001d4e067ec14482630bb88db995f5503c76cfd625c949922300","gasLimit":"0x1c0e7cb","gasUsed":"0x0","hash":"0x32c7587e0c0634a19c40dee211323dd0b2d83494f65d619a9ddefa6d31f99238","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","miner":"0x0000000000000000000000000000000000000000","mixHash":"0x0000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0000000000000000","number":"0x2bbd145","parentHash":"0x6c63c167c9014fb62dad62dde72f774f64634237d18f5877ec3642c44b3af2dd","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x269","stateRoot":"0x70d3c1f93205f1b6970b6e0ebc5a20c938dbcc8050c82e07a09fa1d568a9d428","timestamp":"0x64cbc1e1","totalDifficulty":"0x2f15808f","transactions":[],"transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","uncles":[]}}`,
 				// eth_maxPriorityFeePerGas
 				`"0x77359400"`,
+				// eth_gasPrice
+				`"0x00"`,
 				// txpool_contentFrom
 				`{"jsonrpc":"2.0","id":2,"result":{"pending":{}, "queued":{}}}`,
 				// eth_estimateGas
@@ -158,6 +163,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":{"baseFeePerGas":"0xba43b7400","difficulty":"0x19","extraData":"0xd682040083626f7288676f312e31392e37856c696e7578000000000000000000ec6ff50a6a950f50eb734ee68765c988ce7dbaae7af3f92f5604100affceb6d87fd6ad01972752001d4e067ec14482630bb88db995f5503c76cfd625c949922300","gasLimit":"0x1c0e7cb","gasUsed":"0x0","hash":"0x32c7587e0c0634a19c40dee211323dd0b2d83494f65d619a9ddefa6d31f99238","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","miner":"0x0000000000000000000000000000000000000000","mixHash":"0x0000000000000000000000000000000000000000000000000000000000000000","nonce":"0x0000000000000000","number":"0x2bbd145","parentHash":"0x6c63c167c9014fb62dad62dde72f774f64634237d18f5877ec3642c44b3af2dd","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x269","stateRoot":"0x70d3c1f93205f1b6970b6e0ebc5a20c938dbcc8050c82e07a09fa1d568a9d428","timestamp":"0x64cbc1e1","totalDifficulty":"0x2f15808f","transactions":[],"transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","uncles":[]}}`,
 				// eth_maxPriorityFeePerGas
 				`"0x6fc23ac00"`,
+				// eth_gasPrice
+				`"0x00"`,
 				// txpool_contentFrom
 				fmt.Sprintf(`{"jsonrpc":"2.0","id":2,"result":{"pending":{
 					"1234": {
@@ -181,24 +188,26 @@ func TestFetchTxInput(t *testing.T) {
 			multiplier: 1.0,
 		},
 	}
-	for _, v := range vectors {
-		fmt.Println("testing ", v.name)
-		server, close := testtypes.MockJSONRPC(t, v.resp)
-		defer close()
-		asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithGasPriceMultiplier(v.multiplier)
-		client, err := client.NewClient(asset)
-		require.NoError(t, err)
-		amount := xc.NewAmountBlockchainFromUint64(1)
-		input, err := client.FetchTransferInput(context.Background(), buildertest.MustNewTransferArgs(xc.Address(fromAddr), "", amount))
-		require.NoError(t, err)
-		if v.err != "" {
-			require.Equal(t, tx_input.TxInput{}, input)
-			require.ErrorContains(t, err, v.err)
-		} else {
+	for i, v := range vectors {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			fmt.Println("testing ", v.name)
+			server, close := testtypes.MockJSONRPC(t, v.resp)
+			defer close()
+			asset := xc.NewChainConfig(xc.ETH, xc.DriverEVM).WithUrl(server.URL).WithGasPriceMultiplier(v.multiplier)
+			client, err := client.NewClient(asset)
 			require.NoError(t, err)
-			require.NotNil(t, input)
-			require.Equal(t, v.val, input)
-		}
+			amount := xc.NewAmountBlockchainFromUint64(1)
+			input, err := client.FetchTransferInput(context.Background(), buildertest.MustNewTransferArgs(xc.Address(fromAddr), "", amount))
+			require.NoError(t, err)
+			if v.err != "" {
+				require.Equal(t, tx_input.TxInput{}, input)
+				require.ErrorContains(t, err, v.err)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, input)
+				require.Equal(t, v.val, input)
+			}
+		})
 	}
 }
 

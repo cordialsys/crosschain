@@ -258,9 +258,9 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON:
+	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON:
 		return DriverEVM
-	case BNB, FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
+	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos

@@ -67,7 +67,7 @@ func (s *CrosschainTestSuite) TestAssetDriver() {
 	require := s.Require()
 	require.Equal(DriverBitcoin, NativeAsset(BTC).Driver())
 	require.Equal(DriverEVM, NativeAsset(ETH).Driver())
-	require.Equal(DriverEVMLegacy, NativeAsset(BNB).Driver())
+	require.Equal(DriverEVMLegacy, NativeAsset(FTM).Driver())
 	require.Equal(DriverAptos, NativeAsset(APTOS).Driver())
 	require.Equal(DriverSolana, NativeAsset(SOL).Driver())
 	require.Equal(DriverCosmos, NativeAsset(ATOM).Driver())
