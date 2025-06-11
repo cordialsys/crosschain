@@ -136,7 +136,7 @@ func TestFetchTxInput(t *testing.T) {
 				Nonce:           6,
 				GasLimit:        21220,
 				// GasFee should not get multiplied
-				GasFeeCap: xc.NewAmountBlockchainFromUint64(90000000000),
+				GasFeeCap: xc.NewAmountBlockchainFromUint64(90000000000 * 2),
 				GasTipCap: xc.NewAmountBlockchainFromUint64(2000000000 * 2),
 				ChainId:   xc.NewAmountBlockchainFromUint64(0x123),
 				// legacy price
@@ -238,7 +238,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 						Address:     "0x17519be39a6b67a19468dfbdc1d795c38232c274",
 						Amount:      xc.NewAmountBlockchainFromStr("5321609027609419494"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEventFromIndex(0, xcclient.MovementVariantNative),
+						Event:       xcclient.NewEvent("", xcclient.MovementVariantNative),
 					},
 				},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{
@@ -246,7 +246,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 						Address:     "0xa0a5c02f0371ccc142ad5ad170c291c86c3e6379",
 						Amount:      xc.NewAmountBlockchainFromStr("5321609027609419494"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEventFromIndex(0, xcclient.MovementVariantNative),
+						Event:       xcclient.NewEvent("", xcclient.MovementVariantNative),
 					},
 				},
 				Fee:    xc.NewAmountBlockchainFromStr("89668526728137000"),
@@ -327,7 +327,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(0, xcclient.MovementVariantNative),
+						Event:           xcclient.NewEvent("", xcclient.MovementVariantNative),
 					},
 					{
 						Address:         "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
@@ -357,7 +357,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(0, xcclient.MovementVariantNative),
+						Event:           xcclient.NewEvent("", xcclient.MovementVariantNative),
 					},
 					{
 						Address:         "0xb3a16c2b68bbb0111ebd27871a5934b949837d95",
@@ -625,7 +625,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
 							},
 						},
-						Event: xcclient.NewEventFromIndex(0, xcclient.MovementVariantNative),
+						Event: xcclient.NewEvent("", xcclient.MovementVariantNative),
 					},
 					{
 						XAsset:    "chains/ETH/assets/ETH",
