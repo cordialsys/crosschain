@@ -39,14 +39,15 @@ func (client *Client) DefaultGasLimit(smartContract bool) uint64 {
 func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address, trans *tx.Tx) (uint64, error) {
 	zero := big.NewInt(0)
 	fromAddr, _ := address.FromHex(from)
+	ethTx := trans.GetEthTx()
 
 	msg := ethereum.CallMsg{
 		From: fromAddr,
-		To:   trans.EthTx.To(),
+		To:   ethTx.To(),
 		// use a high limit just for the estimation
 		Gas:        8_000_000,
-		Value:      trans.EthTx.Value(),
-		Data:       trans.EthTx.Data(),
+		Value:      ethTx.Value(),
+		Data:       ethTx.Data(),
 		AccessList: types.AccessList{},
 	}
 	isSmartContract := len(msg.Data) > 0

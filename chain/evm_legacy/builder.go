@@ -2,20 +2,19 @@ package evm_legacy
 
 import (
 	"fmt"
-	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 var DefaultMaxTipCapGwei uint64 = 5
 
-// TxBuilder for EVM
-type TxBuilder evmbuilder.TxBuilder
+// TxBuilder for EVM legacy
+type TxBuilder struct {
+	Asset *xc.ChainBaseConfig
+}
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 
@@ -25,57 +24,25 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	if err != nil {
 		return TxBuilder{}, err
 	}
-	builder = builder.WithTxBuilder(&LegacyEvmTxBuilder{})
 
 	return TxBuilder(builder), nil
 }
 
-// supports evm before london merge
-type LegacyEvmTxBuilder struct {
-}
-
-var _ evmbuilder.GethTxBuilder = &LegacyEvmTxBuilder{}
-
-func parseInput(input xc.TxInput) (*TxInput, error) {
+func parseInput(input xc.TxInput) (*evminput.TxInput, error) {
 	switch input := input.(type) {
-	case *TxInput:
-		return input, nil
 	case *evminput.TxInput:
-		return (*TxInput)(input), nil
+		return input, nil
+	case *TxInput:
+		return (*evminput.TxInput)(input), nil
 	default:
 		return nil, fmt.Errorf("invalid input type %T", input)
 	}
 }
 
-func (*LegacyEvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
-	address, err := evmaddress.FromHex(to)
-	if err != nil {
-		return nil, err
-	}
-	asIntChainID, _ := chain.ChainID.AsInt()
-	chainID := new(big.Int).SetUint64(asIntChainID)
-	input, err := parseInput(inputRaw)
-	if err != nil {
-		return nil, err
-	}
-	// use chainId from input if it's set
-	if !input.ChainId.IsZero() {
-		chainID = input.ChainId.Int()
-	}
-
-	return &Tx{
-		EthTx: types.NewTransaction(
-			input.Nonce,
-			address,
-			value.Int(),
-			input.GasLimit,
-			input.GasPrice.Int(),
-			data,
-		),
-		Signer: types.LatestSignerForChainID(chainID),
-	}, nil
-}
-
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	return evmbuilder.TxBuilder(txBuilder).Transfer(args, input)
+	casted, err := parseInput(input)
+	if err != nil {
+		return nil, err
+	}
+	return NewTx(txBuilder.Asset, args, casted, true)
 }
