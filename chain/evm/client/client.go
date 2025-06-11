@@ -247,13 +247,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 					Address:     xc.Address(from),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
-					Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+					Event:       xclient.NewEvent("", xclient.MovementVariantNative),
 				}},
 				Destinations: []*xclient.LegacyTxInfoEndpoint{{
 					Address:     xc.Address(to),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
-					Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+					Event:       xclient.NewEvent("", xclient.MovementVariantNative),
 				}},
 			}
 		}
