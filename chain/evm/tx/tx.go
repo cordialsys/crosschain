@@ -1,149 +1,144 @@
 package tx
 
 import (
-	"errors"
-	"strings"
+	"fmt"
+	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
-	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
+	"github.com/cordialsys/crosschain/chain/evm/tx_input"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/sirupsen/logrus"
 )
 
-var ERC20 abi.ABI
-
-func init() {
-	var err error
-	ERC20, err = abi.JSON(strings.NewReader(erc20.Erc20ABI))
-	if err != nil {
-		panic(err)
-	}
+type evmTx interface {
+	BuildEthTx() (*types.Transaction, error)
+	Sighashes() ([]*xc.SignatureRequest, error)
+	AddSignatures(signatures []*xc.SignatureResponse)
+	Serialize() ([]byte, error)
 }
 
 // Tx for EVM
 type Tx struct {
-	EthTx      *types.Transaction
-	Signer     types.Signer
-	Signatures []xc.TxSignature
+	// EthTx *types.Transaction
+	// Signer     types.Signer
 	// parsed info
+
+	txInner evmTx
+
+	// args   xcbuilder.TransferArgs
+	// input  *tx_input.TxInput
+	// chain  *xc.ChainBaseConfig
+	// legacy bool
+
+	signatures []xc.TxSignature
 }
 
 var _ xc.Tx = &Tx{}
 
-type SourcesAndDests struct {
-	Sources      []*xclient.LegacyTxInfoEndpoint
-	Destinations []*xclient.LegacyTxInfoEndpoint
+func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_input.TxInput, legacy bool) (*Tx, error) {
+	var txInner evmTx
+
+	if legacy {
+		txInner = NewLegacyTx(args, input, chain)
+	} else {
+		if feePayer, ok := args.GetFeePayer(); ok {
+			_ = feePayer
+			return nil, fmt.Errorf("fee payer not supported yet")
+			// txSingle = NewSingleTx(args, input, chain)
+		} else {
+			txInner = NewSingleTx(args, input, chain)
+		}
+	}
+	return &Tx{
+		txInner,
+		[]xc.TxSignature{},
+	}, nil
 }
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	if tx.EthTx != nil {
-		return xc.TxHash(tx.EthTx.Hash().Hex())
+	if tx.txInner == nil {
+		return xc.TxHash("")
 	}
-	return xc.TxHash("")
+	var ethTx *types.Transaction
+	var err error
+	ethTx, err = tx.txInner.BuildEthTx()
+	if err != nil {
+		return xc.TxHash("")
+	}
+	return xc.TxHash(ethTx.Hash().Hex())
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	if tx.EthTx == nil {
-		return []*xc.SignatureRequest{}, errors.New("transaction not initialized")
+	if tx.txInner == nil {
+		return nil, fmt.Errorf("transaction not initialized")
 	}
-	sighash := tx.Signer.Hash(tx.EthTx).Bytes()
-	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
+	return tx.txInner.Sighashes()
 }
 
 // AddSignatures adds a signature to Tx
 func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
-	if tx.EthTx == nil {
-		return errors.New("transaction not initialized")
+	if tx.txInner == nil {
+		return fmt.Errorf("transaction not initialized")
 	}
-
-	signedTx, err := tx.EthTx.WithSignature(tx.Signer, signatures[0].Signature)
-	if err != nil {
-		return err
+	tx.txInner.AddSignatures(signatures)
+	for _, signature := range signatures {
+		tx.signatures = append(tx.signatures, signature.Signature)
 	}
-	tx.EthTx = signedTx
-	tx.Signatures = []xc.TxSignature{signatures[0].Signature}
 	return nil
 }
 
 func (tx Tx) GetSignatures() []xc.TxSignature {
-	return tx.Signatures
+	return tx.signatures
 }
 
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
-	if tx.EthTx == nil {
-		return []byte{}, errors.New("transaction not initialized")
-	}
-	return tx.EthTx.MarshalBinary()
+	return tx.txInner.Serialize()
 }
 
-// ParseTransfer parses a tx and extracts higher-level transfer information
-func ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
-	loggedSources := []*xclient.LegacyTxInfoEndpoint{}
-	loggedDestinations := []*xclient.LegacyTxInfoEndpoint{}
-	for _, log := range receipt.Logs {
-		if len(log.Topics) == 0 {
-			continue
+func (tx Tx) GetEthTx() *types.Transaction {
+	ethTx, err := tx.txInner.BuildEthTx()
+	if err != nil {
+		return nil
+	}
+	return ethTx
+}
+
+// On EVM the destination address is the recipient of an ether transfer,
+// but for token transfers, it is the token contract address (the token recipient is then in the data).
+func EvmDestinationAndData(args xcbuilder.TransferArgs) (common.Address, []byte, error) {
+	address, err := evmaddress.FromHex(args.GetTo())
+	if err != nil {
+		return common.Address{}, nil, err
+	}
+
+	if contractStr, ok := args.GetContract(); ok {
+		contract, err := evmaddress.FromHex(xc.Address(contractStr))
+		if err != nil {
+			return common.Address{}, nil, err
 		}
-		event, _ := ERC20.EventByID(log.Topics[0])
-		// if event != nil {
-		// fmt.Println("PARSE LOG", event.RawName)
-		// }
-		if event != nil && event.RawName == "Transfer" {
-			erc20, _ := erc20.NewErc20(receipt.ContractAddress, nil)
-			tf, err := erc20.ParseTransfer(*log)
-			if err != nil {
-				logrus.WithError(err).WithField("index", log.Index).Warn("could not parse log")
-				continue
-			}
-			eventMeta := xclient.NewEventFromIndex(uint64(log.Index), xclient.MovementVariantToken)
-			loggedDestinations = append(loggedDestinations, &xclient.LegacyTxInfoEndpoint{
-				Address:         xc.Address(tf.To.String()),
-				ContractAddress: xc.ContractAddress(log.Address.String()),
-				Amount:          xc.AmountBlockchain(*tf.Tokens),
-				NativeAsset:     nativeAsset,
-				Event:           eventMeta,
-			})
-			loggedSources = append(loggedSources, &xclient.LegacyTxInfoEndpoint{
-				Address:         xc.Address(tf.From.String()),
-				ContractAddress: xc.ContractAddress(log.Address.String()),
-				Amount:          xc.AmountBlockchain(*tf.Tokens),
-				NativeAsset:     nativeAsset,
-				Event:           eventMeta,
-			})
+		data, err := BuildERC20Payload(args.GetTo(), args.GetAmount())
+		if err != nil {
+			return common.Address{}, nil, err
 		}
-	}
-
-	return SourcesAndDests{
-		Sources:      loggedSources,
-		Destinations: loggedDestinations,
+		return contract, data, nil
+	} else {
+		// ether transfer
+		return address, nil, nil
 	}
 }
 
-// Fee returns the fee associated to the tx
-func Fee(gasTipCap xc.AmountBlockchain, gasPrice xc.AmountBlockchain, baseFeeUint uint64, gasUsedUint uint64) xc.AmountBlockchain {
-	// from Etherscan: (BaseFee + MaxPriority)*GasUsed
-	maxPriority := gasTipCap
-	gasUsed := xc.NewAmountBlockchainFromUint64(gasUsedUint)
-	baseFee := xc.NewAmountBlockchainFromUint64(baseFeeUint)
-	baseFeeAndPriority := baseFee.Add(&maxPriority)
-	fee1 := gasUsed.Mul(&baseFeeAndPriority)
-
-	// old gas price * gas used
-	fee2 := gasPrice.Mul(&gasUsed)
-	if fee1.Cmp(&fee2) < 0 && gasTipCap.Uint64() > 0 {
-		return fee1
+func GetEthSigner(chain *xc.ChainBaseConfig, input *tx_input.TxInput) types.Signer {
+	asIntChainID, _ := chain.ChainID.AsInt()
+	chainID := new(big.Int).SetUint64(asIntChainID)
+	// use chainId from input if it's set
+	if !input.ChainId.IsZero() {
+		chainID = input.ChainId.Int()
 	}
-	return fee2
-}
 
-func ensure0x(address string) string {
-	if !strings.HasPrefix(string(address), "0x") {
-		address = "0x" + address
-	}
-	return address
+	return types.LatestSignerForChainID(chainID)
 }

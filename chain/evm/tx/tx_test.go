@@ -15,8 +15,7 @@ func TestTxHashEmpty(t *testing.T) {
 
 func TestTxSighashesEmpty(t *testing.T) {
 	tx := tx.Tx{}
-	sighashes, err := tx.Sighashes()
-	require.NotNil(t, sighashes)
+	_, err := tx.Sighashes()
 	require.EqualError(t, err, "transaction not initialized")
 }
 
