@@ -193,7 +193,7 @@ chains:
     driver: evm
     chain_id: 42161
     chain_name: Arbitrum
-    chain_gas_multiplier: 0.05
+    chain_gas_multiplier: 2
     decimals: 18
     fee_limit: "0.5"
     confirmations_final: 120
