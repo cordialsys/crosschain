@@ -17,6 +17,7 @@ import (
 type TraceTransactionType string
 
 var DELEGATE_CALL TraceTransactionType = "DELEGATECALL"
+var STATIC_CALL TraceTransactionType = "STATICCALL"
 var CALL TraceTransactionType = "CALL"
 
 // TraceAction represents a single action in a transaction trace
@@ -96,9 +97,9 @@ func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash)
 		traceId := strings.Join(traceAddressParts, "_")
 
 		eventMeta := xclient.NewEvent(traceId, xclient.MovementVariantInternal)
-		if len(traceAddressParts) == 0 {
+		if traceId == "" {
 			// this is just the native eth transfer (.value in the tx).
-			eventMeta = xclient.NewEvent(traceId, xclient.MovementVariantNative)
+			eventMeta = xclient.NewEvent("", xclient.MovementVariantNative)
 		}
 		if amount.Cmp(zero) > 0 {
 			amount := xc.AmountBlockchain(*trace.Action.Value.ToInt())

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -219,6 +220,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 		val        xclient.LegacyTxInfo
 		err        string
 		forceError int
+		env        map[string]string
 	}{
 		// Send ether normal tx
 		{
@@ -397,7 +399,10 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 		},
 		// Parse multi eth transfer with internal eth movements
 		{
-			name:   "multi_erc20_deposit with internal eth",
+			name: "multi_erc20_deposit with internal eth using traceTransaction",
+			env: map[string]string{
+				"EVM_TRACE": "1",
+			},
 			txHash: "0xb3dcb32a7bb4856845898033522c676c1d2d50e0b07e5ec36880cd2d8b2a6b0f",
 			resp: []string{
 				// eth_getTransactionByHash
@@ -549,6 +554,10 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 	for _, v := range vectors {
 		t.Run(v.name, func(t *testing.T) {
 			fmt.Println("testing ", v.name)
+			for k, v := range v.env {
+				os.Setenv(k, v)
+				defer os.Unsetenv(k)
+			}
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()
 			server.ForceError = v.forceError
