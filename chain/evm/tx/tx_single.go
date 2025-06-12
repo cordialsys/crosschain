@@ -27,20 +27,27 @@ func NewSingleTx(args xcbuilder.TransferArgs, input *tx_input.TxInput, chain *xc
 }
 
 func (tx *SingleTx) BuildEthTx() (*types.Transaction, error) {
-	destination, data, err := EvmDestinationAndData(tx.args)
+	destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args)
 	if err != nil {
 		return nil, err
 	}
-	return types.NewTx(&types.DynamicFeeTx{
+	ethTx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   tx.input.ChainId.Int(),
 		Nonce:     tx.input.Nonce,
 		GasTipCap: tx.input.GasTipCap.Int(),
 		GasFeeCap: tx.input.GasFeeCap.Int(),
 		Gas:       tx.input.GasLimit,
 		To:        &destination,
-		Value:     tx.args.GetAmount().Int(),
+		Value:     amount,
 		Data:      data,
-	}), nil
+	})
+	if len(tx.signature) > 0 {
+		ethTx, err = ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ethTx, nil
 }
 
 func (tx *SingleTx) Sighashes() ([]*xc.SignatureRequest, error) {
@@ -52,6 +59,10 @@ func (tx *SingleTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
+func (tx *SingleTx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
+	return nil, nil
+}
+
 func (tx *SingleTx) AddSignatures(signatures []*xc.SignatureResponse) {
 	tx.signature = signatures[0].Signature
 }
@@ -61,9 +72,5 @@ func (tx *SingleTx) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
-	if err != nil {
-		return nil, err
-	}
-	return signedTx.MarshalBinary()
+	return ethTx.MarshalBinary()
 }

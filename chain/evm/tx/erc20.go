@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 )
@@ -94,7 +95,6 @@ func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error
 	hash := sha3.NewLegacyKeccak256()
 	hash.Write(transferFnSignature)
 	methodID := hash.Sum(nil)[:4]
-	// fmt.Println(hexutil.Encode(methodID)) // 0xa9059cbb
 
 	toAddress, err := evmaddress.FromHex(to)
 	if err != nil {
@@ -110,6 +110,40 @@ func BuildERC20Payload(to xc.Address, amount xc.AmountBlockchain) ([]byte, error
 	data = append(data, methodID...)
 	data = append(data, paddedAddress...)
 	data = append(data, paddedAmount...)
+
+	return data, nil
+}
+
+func BuildSmartAccountPayload(packedCalls []byte, signature xc.TxSignature) ([]byte, error) {
+
+	fnSignature := []byte("handleOps(bytes,uint256,uint256)")
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(fnSignature)
+	methodID := hash.Sum(nil)[:4]
+
+	unpaddedPackedCallsLen := uint256.NewInt(uint64(len(packedCalls))).Bytes32()
+	if len(packedCalls)%32 != 0 {
+		paddedLen := len(packedCalls) + (32 - (len(packedCalls) % 32))
+		packedCalls = common.RightPadBytes(packedCalls, paddedLen)
+	}
+
+	r := signature[:32]
+	vs := signature[32:64]
+	v := signature[64]
+	if v == 1 || v == 28 {
+		vs[0] |= 0x80
+	}
+
+	offset := 32 + len(vs) + len(r)
+	offset32 := uint256.NewInt(uint64(offset)).Bytes32()
+
+	var data []byte
+	data = append(data, methodID...)
+	data = append(data, offset32[:]...)
+	data = append(data, r...)
+	data = append(data, vs...)
+	data = append(data, unpaddedPackedCallsLen[:]...)
+	data = append(data, packedCalls...)
 
 	return data, nil
 }

@@ -1,0 +1,43 @@
+[
+    {
+        "inputs": [],
+        "name": "InvalidSignature",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "getNonce",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "userOps",
+                "type": "bytes"
+            },
+            {
+                "internalType": "uint256",
+                "name": "r",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "vs",
+                "type": "uint256"
+            }
+        ],
+        "name": "handleOps",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    }
+]

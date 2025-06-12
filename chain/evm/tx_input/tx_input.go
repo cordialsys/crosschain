@@ -26,6 +26,11 @@ type TxInput struct {
 
 	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
 
+	// For eip7702 transactions
+	BasicSmartAccountNonce uint64     `json:"basic_smart_account_nonce,omitempty"`
+	FeePayerAddress        xc.Address `json:"fee_payer_address,omitempty"`
+	FeePayerNonce          uint64     `json:"fee_payer_nonce,omitempty"`
+
 	// legacy only
 	Prices []*Price `json:"prices,omitempty"`
 }

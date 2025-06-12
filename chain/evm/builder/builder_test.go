@@ -46,7 +46,7 @@ func TestStakingTxUsesCredential(t *testing.T) {
 	trans, err := txBuilder.Stake(args, input)
 	require.NoError(t, err)
 
-	ethTx := trans.(*tx.Tx).GetEthTx()
+	ethTx := trans.(*tx.Tx).GetMockEthTx()
 	data := ethTx.Data()
 	expected, err := stake_batch_deposit.Serialize(xc.NewChainConfig("").Base(), input.PublicKeys, credentials, input.Signatures)
 	require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestUnstakingTx(t *testing.T) {
 	trans, err := txBuilder.Unstake(args, input)
 	require.NoError(t, err)
 
-	ethTx := trans.(*tx.Tx).GetEthTx()
+	ethTx := trans.(*tx.Tx).GetMockEthTx()
 	require.EqualValues(t, 0, ethTx.Value().Uint64(), "unstake should not send any eth")
 
 	data := ethTx.Data()

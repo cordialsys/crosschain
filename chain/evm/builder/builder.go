@@ -29,6 +29,7 @@ type TxBuilder struct {
 
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
+var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
 
 func NewEvmTxBuilder() *EvmTxBuilder {
 	return &EvmTxBuilder{}
@@ -40,6 +41,8 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 		Asset: asset,
 	}, nil
 }
+
+func (txBuilder TxBuilder) SupportsFeePayer() {}
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {

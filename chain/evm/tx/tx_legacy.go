@@ -27,18 +27,25 @@ func NewLegacyTx(args xcbuilder.TransferArgs, input *tx_input.TxInput, chain *xc
 }
 
 func (tx *LegacyTx) BuildEthTx() (*types.Transaction, error) {
-	destination, data, err := EvmDestinationAndData(tx.args)
+	destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args)
 	if err != nil {
 		return nil, err
 	}
-	return types.NewTransaction(
+	ethTx := types.NewTransaction(
 		tx.input.Nonce,
 		destination,
-		tx.args.GetAmount().Int(),
+		amount,
 		tx.input.GasLimit,
 		tx.input.GasPrice.Int(),
 		data,
-	), nil
+	)
+	if len(tx.signature) > 0 {
+		ethTx, err = ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return ethTx, nil
 }
 
 func (tx *LegacyTx) Sighashes() ([]*xc.SignatureRequest, error) {
@@ -50,6 +57,10 @@ func (tx *LegacyTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
+func (tx *LegacyTx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
+	return nil, nil
+}
+
 func (tx *LegacyTx) AddSignatures(signatures []*xc.SignatureResponse) {
 	tx.signature = signatures[0].Signature
 }
@@ -59,9 +70,5 @@ func (tx *LegacyTx) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
-	if err != nil {
-		return nil, err
-	}
-	return signedTx.MarshalBinary()
+	return ethTx.MarshalBinary()
 }

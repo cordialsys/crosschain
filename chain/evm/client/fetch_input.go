@@ -8,13 +8,14 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/evm/abi/basic_smart_account"
 	"github.com/cordialsys/crosschain/chain/evm/abi/gas_price_oracle"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/sirupsen/logrus"
@@ -39,7 +40,13 @@ func (client *Client) DefaultGasLimit(smartContract bool) uint64 {
 func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address, trans *tx.Tx) (uint64, error) {
 	zero := big.NewInt(0)
 	fromAddr, _ := address.FromHex(from)
-	ethTx := trans.GetEthTx()
+	ethTx := trans.GetMockEthTx()
+
+	if len(ethTx.SetCodeAuthorizations()) > 0 {
+		// TODO
+		logrus.Warn("skipping EIP7702 simulation")
+		return 500_000, nil
+	}
 
 	msg := ethereum.CallMsg{
 		From: fromAddr,
@@ -118,7 +125,8 @@ func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, er
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom())
+	feePayer, _ := args.GetFeePayer()
+	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), feePayer)
 	if err != nil {
 		return txInput, err
 	}
@@ -158,7 +166,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 }
 
 // FetchLegacyTxInput returns tx input for a EVM tx
-func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address) (*tx_input.TxInput, error) {
+func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address, feePayer xc.Address) (*tx_input.TxInput, error) {
 	nativeAsset := client.Asset.GetChain()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
@@ -181,6 +189,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 		return result, fmt.Errorf("could not lookup chain_id: %v", err)
 	}
 	result.ChainId = xc.AmountBlockchain(*chainId)
+	fromAddr, _ := address.FromHex(from)
 
 	// Gas
 	if !nativeAsset.NoGasFees {
@@ -211,7 +220,6 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			result.GasPrice = xc.AmountBlockchain(*legacyGasPrice).ApplyGasPriceMultiplier(nativeAsset.Client())
 		}
 
-		fromAddr, _ := address.FromHex(from)
 		pendingTxInfo, err := client.TxPoolContentFrom(ctx, fromAddr)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could not see pending tx pool")
@@ -240,6 +248,28 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 
 	} else {
 		result.GasTipCap = zero
+	}
+
+	if feePayer != "" {
+		// feePayerAddr, _ := address.FromHex(feePayer)
+		feePayerNonce, err := client.GetNonce(ctx, feePayer)
+		if err != nil {
+			return result, err
+		}
+		// If we are using a fee payer, then we will be using the main account as a smart account (eip7702).
+		// We need to get a separate nonce for the smart account.
+		// TODO should this just replace the nonce?
+		instance, err := basic_smart_account.NewBasicSmartAccount(fromAddr, client.EthClient)
+		if err != nil {
+			return result, err
+		}
+		nonce, err := instance.GetNonce(&bind.CallOpts{})
+		if err != nil {
+			return result, err
+		}
+		result.BasicSmartAccountNonce = nonce.Uint64()
+		result.FeePayerAddress = feePayer
+		result.FeePayerNonce = feePayerNonce
 	}
 
 	return result, nil
