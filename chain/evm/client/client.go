@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -223,7 +224,21 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	result.Confirmations = latestHeader.Number.Int64() - receipt.BlockNumber.Int64()
 
 	tokenMovements := tx.ParseTokenLogs(receipt, xc.NativeAsset(nativeAsset.Chain))
-	ethMovements, err := client.TraceEthMovements(ctx, txHash)
+	// ethMovements, err := client.TraceEthMovements(ctx, txHash)
+	var ethMovements tx.SourcesAndDests
+	if os.Getenv("EVM_DEBUG_TRACE") == "1" {
+		ethMovements, err = client.DebugTraceEthMovements(ctx, txHash)
+	} else if os.Getenv("EVM_TRACE") == "1" {
+		ethMovements, err = client.TraceEthMovements(ctx, txHash)
+	} else {
+		// default to debug trace as currently trace_transaction is missing eip7702 internal transfers.
+		ethMovements, err = client.DebugTraceEthMovements(ctx, txHash)
+		if err != nil {
+			// fallback to trace_transaction if debug_traceTransaction fails
+			ethMovements, err = client.TraceEthMovements(ctx, txHash)
+		}
+	}
+
 	if err != nil {
 		// Not all RPC nodes support this trace call, so we'll just drop reporting
 		// internal eth movements if there's an issue.
