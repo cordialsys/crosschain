@@ -46,6 +46,10 @@ func (tx *CustomTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
+func (tx *CustomTx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
+	return nil, nil
+}
+
 func (tx *CustomTx) AddSignatures(signatures []*xc.SignatureResponse) {
 	tx.signature = signatures[0].Signature
 }

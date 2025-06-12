@@ -266,6 +266,34 @@ func CmdTxTransfer() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
+
+			if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+				for {
+					additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+					if err != nil {
+						return fmt.Errorf("could not get additional sighashes: %v", err)
+					}
+					if len(additionalSighashes) == 0 {
+						break
+					}
+					for _, additionalSighash := range additionalSighashes {
+						log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+						signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
+						if err != nil {
+							panic(err)
+						}
+						signatures = append(signatures, signature)
+						log.
+							WithField("address", signature.Address).
+							WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
+					}
+					err = tx.AddSignatures(signatures...)
+					if err != nil {
+						return fmt.Errorf("could not add additional signature(s): %v", err)
+					}
+				}
+			}
+
 			if dryRun {
 				txBytes, err := tx.Serialize()
 				if err != nil {

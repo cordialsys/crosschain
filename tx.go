@@ -160,3 +160,6 @@ type Tx interface {
 	GetSignatures() []TxSignature
 	Serialize() ([]byte, error)
 }
+type TxAdditionalSighashes interface {
+	AdditionalSighashes() ([]*SignatureRequest, error)
+}
