@@ -52,10 +52,11 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		From: fromAddr,
 		To:   ethTx.To(),
 		// use a high limit just for the estimation
-		Gas:        8_000_000,
-		Value:      ethTx.Value(),
-		Data:       ethTx.Data(),
-		AccessList: types.AccessList{},
+		Gas:               8_000_000,
+		Value:             ethTx.Value(),
+		Data:              ethTx.Data(),
+		AccessList:        types.AccessList{},
+		AuthorizationList: ethTx.SetCodeAuthorizations(),
 	}
 	isSmartContract := len(msg.Data) > 0
 	// we should not include both gas pricing, need to pick one.
@@ -190,6 +191,12 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 	}
 	result.ChainId = xc.AmountBlockchain(*chainId)
 	fromAddr, _ := address.FromHex(from)
+	senderAddr := fromAddr
+	if feePayer != "" {
+		// If fee-payer is being used, then it is the sender (not the from address)
+		feePayerAddr, _ := address.FromHex(feePayer)
+		senderAddr = feePayerAddr
+	}
 
 	// Gas
 	if !nativeAsset.NoGasFees {
@@ -220,11 +227,11 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			result.GasPrice = xc.AmountBlockchain(*legacyGasPrice).ApplyGasPriceMultiplier(nativeAsset.Client())
 		}
 
-		pendingTxInfo, err := client.TxPoolContentFrom(ctx, fromAddr)
+		pendingTxInfo, err := client.TxPoolContentFrom(ctx, senderAddr)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could not see pending tx pool")
 		} else {
-			pending, ok := pendingTxInfo.InfoFor(string(from))
+			pending, ok := pendingTxInfo.InfoFor(senderAddr.String())
 			if ok {
 				// if there's a pending tx, we want to replace it (use 15% increase).
 				minMaxFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxFeePerGas.ToInt()), 1.15)
@@ -251,7 +258,6 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 	}
 
 	if feePayer != "" {
-		// feePayerAddr, _ := address.FromHex(feePayer)
 		feePayerNonce, err := client.GetNonce(ctx, feePayer)
 		if err != nil {
 			return result, err
@@ -265,7 +271,13 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 		}
 		nonce, err := instance.GetNonce(&bind.CallOpts{})
 		if err != nil {
-			return result, err
+			if strings.Contains(err.Error(), "no contract code at given address") {
+				// The address has not yet installed the smart account contract.
+				// This nonce is then 0.
+				nonce = big.NewInt(0)
+			} else {
+				return result, err
+			}
 		}
 		result.BasicSmartAccountNonce = nonce.Uint64()
 		result.FeePayerAddress = feePayer

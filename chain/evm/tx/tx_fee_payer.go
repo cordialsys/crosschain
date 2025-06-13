@@ -30,8 +30,8 @@ type FeePayerTx struct {
 var _ evmTx = &SingleTx{}
 
 // https://github.com/cordialsys/BasicSmartAccount
-// E.g. https://etherscan.io/address/0x19A6c30398c5276466Bf13AF2Ba568ef75026B86#code
-const basicSmartAccountAddressRaw = "0x19A6c30398c5276466Bf13AF2Ba568ef75026B86"
+// E.g. https://etherscan.io/address/0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90#code
+const basicSmartAccountAddressRaw = "0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90"
 
 var basicSmartAccountAddress = common.HexToAddress(basicSmartAccountAddressRaw)
 
@@ -108,7 +108,9 @@ func (tx *FeePayerTx) BuildEthTx() (*types.Transaction, error) {
 		To:        destination,
 		Value:     uint256.NewInt(0),
 		Data:      smartAccountPayload,
-		AuthList:  []types.SetCodeAuthorization{auth.SetCodeAuthorization()},
+		AuthList: []types.SetCodeAuthorization{
+			auth.SetCodeAuthorization(),
+		},
 	})
 	if len(tx.feePayerSignature) > 0 {
 		ethTx, err = ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.feePayerSignature)
