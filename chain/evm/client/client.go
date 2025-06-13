@@ -275,6 +275,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 	}
 	result.Fee = tx.Fee(trans.MaxPriorityFeePerGas, trans.GasPrice, baseFee, gasUsed)
+	result.FeePayer = xc.Address(trans.From)
 	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 

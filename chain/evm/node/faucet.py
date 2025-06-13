@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 FAUCET_PORT = int(os.getenv("FAUCET_PORT", "10001"))
 RPC_PORT = int(os.getenv("RPC_PORT", "10000"))
+PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 
 def system(cmd: str):
     r = os.system(cmd)
@@ -22,8 +23,8 @@ def fund(chain_id:str, contract: str):
     address = content['address']
     rpc_url = f"http://127.0.0.1:{RPC_PORT}"
 
-    if contract.lower() == "0x5FbDB2315678afecb367f032d93F642f64180aa3".lower():
-        system(f"bash -c 'CONTRACT={contract} AMOUNT={amount} TO={address} npx hardhat run scripts/transfer-token.js --network localhost'")
+    if len(contract) > 16:
+        system(f"bash -c 'CONTRACT={contract} AMOUNT={amount} TO={address} forge script ./script/MintToken.s.sol --broadcast --private-key {PRIVATE_KEY} --rpc-url {rpc_url}'")
         return {}
     elif chain_id == contract:
 

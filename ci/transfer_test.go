@@ -4,6 +4,7 @@ package ci
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -162,6 +164,29 @@ func TestTransfer(t *testing.T) {
 
 	err = tx.AddSignatures(signatures...)
 	require.NoError(t, err, "could not add signatures")
+
+	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+		for {
+			additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+			require.NoError(t, err, "could not get additional sighashes")
+			if len(additionalSighashes) == 0 {
+				break
+			}
+			for _, additionalSighash := range additionalSighashes {
+				log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+				signature, err := collection.Sign(additionalSighash.Signer, additionalSighash.Payload)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+				log.
+					WithField("address", signature.Address).
+					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
+			}
+			err = tx.AddSignatures(signatures...)
+			require.NoError(t, err, "could set signatures")
+		}
+	}
 
 	err = client.SubmitTx(context.Background(), tx)
 	require.NoError(t, err)

@@ -33,6 +33,13 @@ var _ evmTx = &SingleTx{}
 // E.g. https://etherscan.io/address/0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90#code
 const basicSmartAccountAddressRaw = "0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90"
 
+func SetBasicSmartAccountAddress(address string) {
+	basicSmartAccountAddress = common.HexToAddress(address)
+	if len(basicSmartAccountAddress) != 20 {
+		panic("invalid basic smart account address")
+	}
+}
+
 var basicSmartAccountAddress = common.HexToAddress(basicSmartAccountAddressRaw)
 
 // keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");

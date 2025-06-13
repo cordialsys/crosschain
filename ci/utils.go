@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	xcclient "github.com/cordialsys/crosschain/client"
 
 	xc "github.com/cordialsys/crosschain"
@@ -43,6 +44,9 @@ func init() {
 	flag.StringVar(&contract, "contract", "", "Contract address for token")
 	flag.StringVar(&decimalsStr, "decimals", "", "Decimals used for token")
 	flag.BoolVar(&feePayer, "fee-payer", false, "Use fee payer for transactions")
+
+	// The smart account address is different in the dev node.
+	evmtx.SetBasicSmartAccountAddress("0x91A4a87AB11aE1cbB2c8ba981AEa32aeCF54Dfc0")
 
 	logrus.SetLevel(logrus.DebugLevel)
 }

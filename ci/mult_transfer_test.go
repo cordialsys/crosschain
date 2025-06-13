@@ -4,6 +4,7 @@ package ci
 
 import (
 	"context"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/cordialsys/crosschain/normalize"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -214,6 +216,29 @@ func TestMultiTransfer(t *testing.T) {
 	// Add signatures to transaction
 	err = tx.AddSignatures(signatures...)
 	require.NoError(t, err)
+
+	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+		for {
+			additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+			require.NoError(t, err, "could not get additional sighashes")
+			if len(additionalSighashes) == 0 {
+				break
+			}
+			for _, additionalSighash := range additionalSighashes {
+				log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+				signature, err := signers.Sign(additionalSighash.Signer, additionalSighash.Payload)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+				log.
+					WithField("address", signature.Address).
+					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
+			}
+			err = tx.AddSignatures(signatures...)
+			require.NoError(t, err, "could set signatures")
+		}
+	}
 
 	// Submit transaction
 	err = client.SubmitTx(context.Background(), tx)

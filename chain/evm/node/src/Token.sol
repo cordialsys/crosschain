@@ -4,8 +4,7 @@
 // It will be used by the Solidity compiler to validate its version.
 pragma solidity ^0.8.9;
 
-// We import this library to be able to use console.log
-import "hardhat/console.sol";
+import {console} from "forge-std/console.sol";
 
 // This is the main building block for smart contracts.
 contract Token {
@@ -35,6 +34,7 @@ contract Token {
         // account that is deploying the contract.
         balances[msg.sender] = totalSupply;
         owner = msg.sender;
+        console.log("minting to ", owner, totalSupply);
     }
 
     /**
@@ -49,8 +49,6 @@ contract Token {
         // transaction will revert.
         require(balances[msg.sender] >= amount, "Not enough tokens");
 
-        // We can print messages and values using console.log, a feature of
-        // Hardhat Network:
         console.log(
             "Transferring from %s to %s %s tokens",
             msg.sender,
@@ -64,6 +62,13 @@ contract Token {
 
         // Notify off-chain applications of the transfer.
         emit Transfer(msg.sender, to, amount);
+    }
+
+    function mint(address to, uint256 amount) external {
+        console.log("Minting to %s %s tokens", to, amount);
+        // Mint the amount.
+        balances[to] += amount;
+        emit Transfer(address(this), to, amount);
     }
 
     /**

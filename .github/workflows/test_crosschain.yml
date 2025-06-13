@@ -37,8 +37,13 @@ jobs:
             image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
           - chain: ETH
             image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
-            contract: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+            contract: "0xe1D98dC57ea81d94Bb15b9a8ca5c0075C3d7a0C1"
             decimals: 6
+          - chain: ETH
+            image: us-docker.pkg.dev/cordialsys/crosschain/evm:latest
+            contract: "0xe1D98dC57ea81d94Bb15b9a8ca5c0075C3d7a0C1"
+            decimals: 6
+            fee-payer: true
           - chain: XPLA
             image: us-docker.pkg.dev/cordialsys/crosschain/cosmos:latest
           - chain: XPLA
