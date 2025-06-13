@@ -53,6 +53,7 @@ type Client struct {
 }
 
 var _ xclient.Client = &Client{}
+var _ xclient.MultiTransferClient = &Client{}
 
 // Ethereum does not support full delegated staking, so we can only report balance information.
 // A 3rd party 'staking provider' is required to do the rest.

@@ -16,7 +16,7 @@ import (
 )
 
 type FeePayerTx struct {
-	args  xcbuilder.TransferArgs
+	args  xcbuilder.MultiTransferArgs
 	input *tx_input.TxInput
 	chain *xc.ChainBaseConfig
 
@@ -56,7 +56,7 @@ type SmartAccountCall struct {
 	Data  []byte
 }
 
-func NewFeePayerTx(args xcbuilder.TransferArgs, input *tx_input.TxInput, chain *xc.ChainBaseConfig) *FeePayerTx {
+func NewFeePayerTx(args xcbuilder.MultiTransferArgs, input *tx_input.TxInput, chain *xc.ChainBaseConfig) *FeePayerTx {
 	return &FeePayerTx{
 		args,
 		input,
@@ -77,12 +77,13 @@ func (tx *FeePayerTx) BuildEthTx() (*types.Transaction, error) {
 	if len(tx.authorizationSignature) == 0 || len(tx.dataSignature) == 0 {
 		return nil, fmt.Errorf("missing initial signature responses")
 	}
-	// destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args)
-	// if err != nil {
-	// 	return nil, err
-	// }
+
 	// The destination is the smart account address (the main signer)
-	destination, _ := address.FromHex(tx.args.GetFrom())
+	spenders := tx.args.Spenders()
+	if len(spenders) != 1 {
+		return nil, fmt.Errorf("can only be one sender for an evm chain chain")
+	}
+	destination, _ := address.FromHex(spenders[0].GetFrom())
 	chainId := GetChainId(tx.chain, tx.input)
 
 	packedCalls, err := tx.BuildPackedCalls()
@@ -123,23 +124,28 @@ func (tx *FeePayerTx) BuildEthTx() (*types.Transaction, error) {
 }
 
 func (tx *FeePayerTx) BuildPackedCalls() ([]byte, error) {
-	destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args)
+	transfers, err := tx.args.AsAccountTransfers()
 	if err != nil {
 		return nil, err
+	}
+	calls := []SmartAccountCall{}
+	for _, transfer := range transfers {
+		destination, amount, data, err := EvmDestinationAndAmountAndData(transfer.GetTo(), transfer.GetAmount(), transfer)
+		if err != nil {
+			return nil, err
+		}
+		calls = append(calls, SmartAccountCall{
+			To:    destination,
+			Value: amount,
+			Data:  data,
+		})
 	}
 
 	var packedCalls []byte
 
-	calls := []SmartAccountCall{
-		{
-			To:    destination,
-			Value: amount,
-			Data:  data,
-		},
-	}
 	for _, call := range calls {
 		callBz := []byte{}
-		dataLen := big.NewInt(int64(len(call.Data))) // already in bytes, no /2
+		dataLen := big.NewInt(int64(len(call.Data)))
 
 		callBz = append(callBz, call.To.Bytes()...)
 		callBz = append(callBz, call.Value.FillBytes(make([]byte, 32))...)
@@ -160,7 +166,7 @@ func (tx *FeePayerTx) Sighashes() ([]*xc.SignatureRequest, error) {
 		return nil, err
 	}
 
-	mainSigner := tx.args.GetFrom()
+	mainSigner := tx.args.Spenders()[0].GetFrom()
 	mainSignerAddr, _ := address.FromHex(mainSigner)
 
 	// prepare body for EIP712 signature
@@ -187,9 +193,9 @@ func (tx *FeePayerTx) Sighashes() ([]*xc.SignatureRequest, error) {
 
 	return []*xc.SignatureRequest{
 		// first signature is the authorization by the main signer
-		xc.NewSignatureRequest(auth.Sighash()),
+		xc.NewSignatureRequest(auth.Sighash(), mainSigner),
 		// second signature is the data by the main signer
-		xc.NewSignatureRequest(dataDigest),
+		xc.NewSignatureRequest(dataDigest, mainSigner),
 	}, nil
 }
 

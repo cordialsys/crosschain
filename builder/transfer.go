@@ -6,10 +6,11 @@ import (
 
 type TransferArgs struct {
 	// TxCommonOptions
-	options builderOptions
-	from    xc.Address
-	to      xc.Address
-	amount  xc.AmountBlockchain
+	appliedOptions []BuilderOption
+	options        builderOptions
+	from           xc.Address
+	to             xc.Address
+	amount         xc.AmountBlockchain
 }
 
 var _ TransactionOptions = &TransferArgs{}
@@ -47,7 +48,9 @@ func (args *TransferArgs) InclusiveFeeSpendingEnabled() bool {
 
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
+	appliedOptions := options
 	args := TransferArgs{
+		appliedOptions,
 		builderOptions,
 		from,
 		to,

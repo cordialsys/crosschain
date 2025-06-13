@@ -30,6 +30,7 @@ type TxBuilder struct {
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 var _ xcbuilder.Staking = &TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
+var _ xcbuilder.MultiTransfer = &TxBuilder{}
 
 func NewEvmTxBuilder() *EvmTxBuilder {
 	return &EvmTxBuilder{}
@@ -47,6 +48,9 @@ func (txBuilder TxBuilder) SupportsFeePayer() {}
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	return tx.NewTx(txBuilder.Asset, args, input.(*tx_input.TxInput), false)
+}
+func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
+	return tx.NewMultiTx(txBuilder.Asset, args, &input.(*tx_input.MultiTransferInput).TxInput)
 }
 
 func (*EvmTxBuilder) BuildTxWithPayload(chain *xc.ChainBaseConfig, to xc.Address, value xc.AmountBlockchain, data []byte, inputRaw xc.TxInput) (xc.Tx, error) {
