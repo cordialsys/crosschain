@@ -99,24 +99,22 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return true
 }
 
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(other, input) {
 		return false
 	}
-	for _, other := range others {
-		oldInput, ok := other.(*TxInput)
-		if ok {
-			diff := input.Timestamp - oldInput.Timestamp
-			// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
-			// and different hash to consider it safe from double-send.
-			if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.RecentBlockHash.Equals(input.RecentBlockHash) {
-				// not yet safe
-				return false
-			}
-		} else {
-			// can't tell (this shouldn't happen) - default false
+	oldInput, ok := other.(*TxInput)
+	if ok {
+		diff := input.Timestamp - oldInput.Timestamp
+		// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
+		// and different hash to consider it safe from double-send.
+		if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.RecentBlockHash.Equals(input.RecentBlockHash) {
+			// not yet safe
 			return false
 		}
+	} else {
+		// can't tell (this shouldn't happen) - default false
+		return false
 	}
 	// all timed out - we're safe
 	return true

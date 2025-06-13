@@ -45,8 +45,8 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return ((*evminput.TxInput)(input)).IndependentOf(other)
 }
-func (input *TxInput) SafeFromDoubleSend(other ...xc.TxInput) (independent bool) {
-	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other...)
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (independent bool) {
+	return ((*evminput.TxInput)(input)).SafeFromDoubleSend(other)
 }
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return ((*evminput.TxInput)(input)).GetFeeLimit()

@@ -54,15 +54,13 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 
 // SafeFromDoubleSend implements xc.TxInputConflicts.SafeFromDoubleSend
-func (input *TxInput) SafeFromDoubleSend(previousAttempts ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, previousAttempts...) {
+func (input *TxInput) SafeFromDoubleSend(previousAttempt xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(previousAttempt, input) {
 		return false
 	}
 
-	for _, other := range previousAttempts {
-		if input.IndependentOf(other) {
-			return false
-		}
+	if input.IndependentOf(previousAttempt) {
+		return false
 	}
 
 	return true

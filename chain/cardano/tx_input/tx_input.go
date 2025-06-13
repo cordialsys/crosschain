@@ -60,19 +60,15 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 
 	return true
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// check if of the same types
-	for _, other := range others {
-		if _, ok := other.(*TxInput); !ok {
-			return false
-		}
+	if _, ok := other.(*TxInput); !ok {
+		return false
 	}
 
 	// we are risking double send if we have any independent utxo's
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
+	if input.IndependentOf(other) {
+		return false
 	}
 	// conflicting utxo for all - we're safe
 	return true

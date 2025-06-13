@@ -48,7 +48,7 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// default false
 	return
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// safe from double send ?
 	// default false
 	return

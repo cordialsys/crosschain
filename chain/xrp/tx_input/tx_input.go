@@ -71,16 +71,14 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return false
 }
 
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// safe from double send ?
-	if !xc.SameTxInputTypes(input, others...) {
+	if !xc.IsTypeOf(other, input) {
 		return false
 	}
 
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
+	if input.IndependentOf(other) {
+		return false
 	}
 
 	return true

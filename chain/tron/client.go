@@ -89,17 +89,15 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// tron uses recent-block-hash like mechanism like solana, but with explicit timestamps
 	return true
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	for _, other := range others {
-		oldInput, ok := other.(*TxInput)
-		if ok {
-			if input.Timestamp <= oldInput.Expiration {
-				return false
-			}
-		} else {
-			// can't tell (this shouldn't happen) - default false
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	oldInput, ok := other.(*TxInput)
+	if ok {
+		if input.Timestamp <= oldInput.Expiration {
 			return false
 		}
+	} else {
+		// can't tell (this shouldn't happen) - default false
+		return false
 	}
 	// all others timed out - we're safe
 	return true

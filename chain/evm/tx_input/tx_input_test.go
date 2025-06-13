@@ -53,6 +53,12 @@ func TestTxInputConflicts(t *testing.T) {
 			doubleSpendSafe: false,
 		},
 		{
+			newInput:        &TxInput{Nonce: 10, FeePayerAddress: xc.Address("0xaaa"), FeePayerNonce: 10},
+			oldInput:        &tx_input.MultiTransferInput{tx_input.TxInput{Nonce: 9, FeePayerAddress: xc.Address("0xbbb"), FeePayerNonce: 10}},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
 			newInput:        &TxInput{Nonce: 10, FeePayerAddress: "", FeePayerNonce: 10},
 			oldInput:        &TxInput{Nonce: 9, FeePayerAddress: "", FeePayerNonce: 9},
 			independent:     true,

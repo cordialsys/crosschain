@@ -92,20 +92,18 @@ func (input *TxInput) coinsDisjoint(other *TxInput) (disjoint bool) {
 	}
 	return true
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(other, input) {
 		return false
 	}
 	// all same sequence means no double send
-	for _, other := range others {
-		if suiOther, ok := other.(*TxInput); ok {
-			if input.coinsDisjoint(suiOther) && input.CurrentEpoch == suiOther.CurrentEpoch {
-				return false
-			}
-		} else {
-			// can't tell, default false
+	if suiOther, ok := other.(*TxInput); ok {
+		if input.coinsDisjoint(suiOther) && input.CurrentEpoch == suiOther.CurrentEpoch {
 			return false
 		}
+	} else {
+		// can't tell, default false
+		return false
 	}
 	// all either disjoint or different epoches - we're safe
 	return true
