@@ -22,6 +22,7 @@ var _ xclient.Client = &Client{}
 type TxInput evminput.TxInput
 
 var _ xc.TxInput = &TxInput{}
+var _ evminput.ToTxInput = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -33,6 +34,10 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverEVMLegacy,
 		},
 	}
+}
+
+func (input *TxInput) ToTxInput() *evminput.TxInput {
+	return (*evminput.TxInput)(input)
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
