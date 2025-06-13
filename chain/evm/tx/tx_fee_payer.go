@@ -30,15 +30,8 @@ type FeePayerTx struct {
 var _ evmTx = &SingleTx{}
 
 // https://github.com/cordialsys/BasicSmartAccount
-// E.g. https://etherscan.io/address/0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90#code
-const basicSmartAccountAddressRaw = "0xF457383ef5aF8D5FFdd065Cc2cB7a734304B2F90"
-
-func SetBasicSmartAccountAddress(address string) {
-	basicSmartAccountAddress = common.HexToAddress(address)
-	if len(basicSmartAccountAddress) != 20 {
-		panic("invalid basic smart account address")
-	}
-}
+// E.g. https://etherscan.io/address/0x7785a22Facd31dB653bA4928f1D5B81D093f0b2f#code
+const basicSmartAccountAddressRaw = "0x7785a22Facd31dB653bA4928f1D5B81D093f0b2f"
 
 var basicSmartAccountAddress = common.HexToAddress(basicSmartAccountAddressRaw)
 
