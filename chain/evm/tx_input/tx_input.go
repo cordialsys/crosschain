@@ -36,6 +36,11 @@ type TxInput struct {
 	Prices []*Price `json:"prices,omitempty"`
 }
 
+type ToTxInput interface {
+	// For ensuring compatibility with chains upgraded from evm-legacy driver
+	ToTxInput() *TxInput
+}
+
 var _ xc.TxInput = &TxInput{}
 
 func init() {
@@ -91,6 +96,9 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if toTxInput, ok := other.(ToTxInput); ok {
+		other = toTxInput.ToTxInput()
+	}
 	// different sequence means independence
 	var otherInput *TxInput
 	switch other := other.(type) {
@@ -124,6 +132,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if toTxInput, ok := other.(ToTxInput); ok {
+		other = toTxInput.ToTxInput()
+	}
 	if !xc.IsTypeOf(other, input, MultiTransferInput{}, BatchDepositInput{}, ExitRequestInput{}) {
 		return false
 	}

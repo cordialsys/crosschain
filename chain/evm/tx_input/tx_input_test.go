@@ -8,6 +8,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
+	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,6 +32,24 @@ func TestTxInputConflicts(t *testing.T) {
 		{
 			newInput:        &TxInput{Nonce: 10},
 			oldInput:        &TxInput{Nonce: 11},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput:        &TxInput{Nonce: 10},
+			oldInput:        &evm_legacy.TxInput{Nonce: 11},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput:        &evm_legacy.TxInput{Nonce: 11},
+			oldInput:        &TxInput{Nonce: 10},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			oldInput:        &TxInput{Nonce: 11},
+			newInput:        &TxInput{Nonce: 12, FromAddress: xc.Address("0x123")},
 			independent:     true,
 			doubleSpendSafe: false,
 		},
