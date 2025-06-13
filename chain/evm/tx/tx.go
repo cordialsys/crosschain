@@ -97,8 +97,8 @@ func (tx Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 	return tx.txInner.AdditionalSighashes()
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx.txInner == nil {
 		return fmt.Errorf("transaction not initialized")
 	}
@@ -130,7 +130,7 @@ func (tx Tx) GetMockEthTx() *types.Transaction {
 			Signature: make(xc.TxSignature, 65),
 		},
 	}
-	tx.AddSignatures(sigs...)
+	tx.SetSignatures(sigs...)
 	ethTx, err := tx.txInner.BuildEthTx()
 	if err != nil {
 		return nil
@@ -167,11 +167,9 @@ func EvmDestinationAndAmountAndData(to xc.Address, amount xc.AmountBlockchain, c
 		if err != nil {
 			return common.Address{}, nil, nil, err
 		}
-		fmt.Println("--- token transfer", to, amount, contract)
 		return contract, big.NewInt(0), data, nil
 	} else {
 		// ether transfer
-		fmt.Println("--- ether transfer", to, amount, contract)
 		return address, amount.Int(), nil, nil
 	}
 }

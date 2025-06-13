@@ -219,17 +219,17 @@ func TestTxAddSignature(t *testing.T) {
 	tx1 := tx.Tx{
 		TransactionSignature: []xc.TxSignature{},
 	}
-	err := tx1.AddSignatures([]*xc.SignatureResponse{}...)
+	err := tx1.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "transaction already signed")
 
 	tx2 := tx.Tx{}
-	err = tx2.AddSignatures([]*xc.SignatureResponse{{Signature: []byte{1, 2, 3}}}...)
+	err = tx2.SetSignatures([]*xc.SignatureResponse{{Signature: []byte{1, 2, 3}}}...)
 	require.EqualError(t, err, "signature must be 64 or 65 length serialized bytestring of r,s, and recovery byte")
 
 	bytes := make([]byte, 64)
 	tx3 := tx.Tx{
 		XRPTx: &tx.XRPTransaction{},
 	}
-	err = tx3.AddSignatures([]*xc.SignatureResponse{{Signature: bytes}}...)
+	err = tx3.SetSignatures([]*xc.SignatureResponse{{Signature: bytes}}...)
 	require.Nil(t, err)
 }

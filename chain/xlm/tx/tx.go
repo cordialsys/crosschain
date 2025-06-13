@@ -107,7 +107,7 @@ func NewDecoratedSignature(signature xc.TxSignature, pub_key []byte) (xdr.Decora
 	}, nil
 }
 
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx == nil {
 		return errors.New("invalid transaction")
 	}

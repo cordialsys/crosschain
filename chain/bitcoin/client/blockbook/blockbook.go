@@ -429,7 +429,7 @@ func (client *BlockbookClient) EstimateTxSize(ctx context.Context, args xcbuilde
 			Address:   sighash.Signer,
 		})
 	}
-	err = tx.AddSignatures(sigs...)
+	err = tx.SetSignatures(sigs...)
 	if err != nil {
 		return 0, err
 	}

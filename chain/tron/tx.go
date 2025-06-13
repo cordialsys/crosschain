@@ -39,8 +39,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	for _, sig := range signatures {
 		tx.tronTx.Signature = append(tx.tronTx.Signature, sig.Signature)
 	}

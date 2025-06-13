@@ -137,7 +137,7 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	for i := 0; i < 64; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = tf.AddSignatures(&xc.SignatureResponse{
+	err = tf.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 		PublicKey: pubkey,
 		Address:   from,
@@ -424,7 +424,7 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 	for i := 0; i < 64; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = tf.AddSignatures(&xc.SignatureResponse{
+	err = tf.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 		PublicKey: pubkey,
 		Address:   from,
@@ -470,7 +470,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	for i := 0; i < 64; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = tf.AddSignatures(&xc.SignatureResponse{
+	err = tf.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 		PublicKey: pubkey,
 		Address:   from,
@@ -490,7 +490,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 	// Use new fungible asset contract address
 	tf, err = builder.NewTokenTransfer(from, from, to, amount, xc.ContractAddress("0x112233445566778899112233445566778899112233445566778899"), input)
 	require.NoError(err)
-	err = tf.AddSignatures(&xc.SignatureResponse{
+	err = tf.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 		PublicKey: pubkey,
 		Address:   from,
@@ -538,7 +538,7 @@ func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
 	for i := 0; i < 64; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = tf.AddSignatures(&xc.SignatureResponse{
+	err = tf.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 		PublicKey: pubkey,
 		Address:   from,

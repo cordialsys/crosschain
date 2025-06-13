@@ -198,14 +198,14 @@ func TestTxSighashes(t *testing.T) {
 
 func TestTxAddSignature(t *testing.T) {
 	tx0 := tx.Tx{}
-	err := tx0.AddSignatures([]*xc.SignatureResponse{}...)
+	err := tx0.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "missing transaction envelope")
 
 	tx1 := tx.Tx{
 		TxEnvelope: &xdr.TransactionEnvelope{},
 		Signatures: []xc.TxSignature{},
 	}
-	err = tx1.AddSignatures([]*xc.SignatureResponse{}...)
+	err = tx1.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "transaction already signed")
 
 	tx2 := tx.Tx{
@@ -218,6 +218,6 @@ func TestTxAddSignature(t *testing.T) {
 			},
 		},
 	}
-	err = tx2.AddSignatures([]*xc.SignatureResponse{{Signature: []byte{1, 2, 3}}}...)
+	err = tx2.SetSignatures([]*xc.SignatureResponse{{Signature: []byte{1, 2, 3}}}...)
 	require.NoError(t, err)
 }

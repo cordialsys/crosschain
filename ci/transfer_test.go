@@ -162,7 +162,7 @@ func TestTransfer(t *testing.T) {
 		signatures = append(signatures, signature)
 	}
 
-	err = tx.AddSignatures(signatures...)
+	err = tx.SetSignatures(signatures...)
 	require.NoError(t, err, "could not add signatures")
 
 	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
@@ -183,7 +183,7 @@ func TestTransfer(t *testing.T) {
 					WithField("address", signature.Address).
 					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
 			}
-			err = tx.AddSignatures(signatures...)
+			err = tx.SetSignatures(signatures...)
 			require.NoError(t, err, "could set signatures")
 		}
 	}

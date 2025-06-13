@@ -118,7 +118,7 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = tx1.AddSignatures(&xc.SignatureResponse{
+	err = tx1.SetSignatures(&xc.SignatureResponse{
 		Signature: sig,
 	})
 	if err != nil {

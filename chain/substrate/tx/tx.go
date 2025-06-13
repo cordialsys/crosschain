@@ -111,8 +111,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(b)}, err
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	tx.extrinsic.Signature = &extrinsic.Signature{
 		Signer: tx.sender,
 		Signature: types.MultiSignature{

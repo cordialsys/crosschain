@@ -93,8 +93,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if len(signatureResponses) == 0 {
 		return fmt.Errorf("invalid signatures size")
 	}

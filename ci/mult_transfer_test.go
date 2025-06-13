@@ -214,7 +214,7 @@ func TestMultiTransfer(t *testing.T) {
 	}
 
 	// Add signatures to transaction
-	err = tx.AddSignatures(signatures...)
+	err = tx.SetSignatures(signatures...)
 	require.NoError(t, err)
 
 	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
@@ -235,7 +235,7 @@ func TestMultiTransfer(t *testing.T) {
 					WithField("address", signature.Address).
 					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
 			}
-			err = tx.AddSignatures(signatures...)
+			err = tx.SetSignatures(signatures...)
 			require.NoError(t, err, "could set signatures")
 		}
 	}

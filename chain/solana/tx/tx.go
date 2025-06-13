@@ -65,8 +65,8 @@ func (tx *Tx) AddTransientSigner(transientSigner solana.PrivateKey) {
 	tx.transientSigners = append(tx.transientSigners, transientSigner)
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	if tx.SolTx == nil {
 		return errors.New("transaction not initialized")
 	}

@@ -103,7 +103,7 @@ func TestTxAddSignature(t *testing.T) {
 
 	for _, vector := range vectors {
 		t.Run(vector.name, func(t *testing.T) {
-			err := vector.tx.AddSignatures(vector.sigs...)
+			err := vector.tx.SetSignatures(vector.sigs...)
 			if vector.err == "" {
 				require.NoError(t, err)
 			} else {

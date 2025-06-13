@@ -50,7 +50,7 @@ func TestTransfer(t *testing.T) {
 	)
 
 	signature := make([]byte, 64)
-	err = btcTx.AddSignatures(&xc.SignatureResponse{
+	err = btcTx.SetSignatures(&xc.SignatureResponse{
 		Signature: signature,
 	})
 	require.NoError(t, err)

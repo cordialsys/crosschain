@@ -226,7 +226,6 @@ func (tx *FeePayerTx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 	}, nil
 }
 
-// TODO rename to "SetSignatures"
 func (tx *FeePayerTx) AddSignatures(signatures []*xc.SignatureResponse) {
 	// first signature is the authorization
 	tx.authorizationSignature = signatures[0].Signature
