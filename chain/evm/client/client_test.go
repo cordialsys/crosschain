@@ -108,6 +108,7 @@ func TestFetchTxInput(t *testing.T) {
 			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
+				FromAddress:     xc.Address("0x1ed29c10e661e5721dfe162845f72548f090d8e7"),
 				GasLimit:        21220,
 				GasFeeCap:       xc.NewAmountBlockchainFromUint64(50000000000),
 				GasTipCap:       xc.NewAmountBlockchainFromUint64(30000000000),
@@ -140,6 +141,7 @@ func TestFetchTxInput(t *testing.T) {
 			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
 				Nonce:           6,
+				FromAddress:     xc.Address("0x1ed29c10e661e5721dfe162845f72548f090d8e7"),
 				GasLimit:        21220,
 				// GasFee should not get multiplied
 				GasFeeCap: xc.NewAmountBlockchainFromUint64(90000000000 * 2),
@@ -179,6 +181,7 @@ func TestFetchTxInput(t *testing.T) {
 			},
 			val: &tx_input.TxInput{
 				TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEVM),
+				FromAddress:     xc.Address("0x1ed29c10e661e5721dfe162845f72548f090d8e7"),
 				Nonce:           6,
 				GasLimit:        21220,
 				GasFeeCap:       xc.MultiplyByFloat(xc.NewAmountBlockchainFromUint64(50000000000), 1.15),

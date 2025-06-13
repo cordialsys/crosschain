@@ -11,8 +11,9 @@ import (
 // TxInput for EVM
 type TxInput struct {
 	xc.TxInputEnvelope
-	Nonce    uint64 `json:"nonce,omitempty"`
-	GasLimit uint64 `json:"gas_limit,omitempty"`
+	Nonce       uint64     `json:"nonce,omitempty"`
+	FromAddress xc.Address `json:"from_address,omitempty"`
+	GasLimit    uint64     `json:"gas_limit,omitempty"`
 	// DynamicFeeTx
 	GasTipCap xc.AmountBlockchain `json:"gas_tip_cap,omitempty"` // maxPriorityFeePerGas
 	GasFeeCap xc.AmountBlockchain `json:"gas_fee_cap,omitempty"` // maxFeePerGas
@@ -106,13 +107,17 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	}
 
 	independent = true
-	if otherInput.Nonce == input.Nonce {
-		independent = false
-	}
 	if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
+		if otherInput.Nonce == input.Nonce && otherInput.FromAddress == input.FromAddress {
+			independent = false
+		}
 		// Should not sign multiple tx for the same fee-payer nonce.
 		if otherInput.FeePayerAddress == input.FeePayerAddress &&
 			otherInput.FeePayerNonce == input.FeePayerNonce {
+			independent = false
+		}
+	} else {
+		if otherInput.Nonce == input.Nonce {
 			independent = false
 		}
 	}
