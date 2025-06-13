@@ -37,11 +37,31 @@ func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_inp
 		txInner = NewLegacyTx(args, input, chain)
 	} else {
 		if _, ok := args.GetFeePayer(); ok {
-			txInner = NewFeePayerTx(args, input, chain)
+			multiArgs, err := xcbuilder.NewMultiTransferArgsFromSingle(chain.Chain, &args)
+			if err != nil {
+				return nil, err
+			}
+			txInner = NewFeePayerTx(*multiArgs, input, chain)
 		} else {
 			txInner = NewSingleTx(args, input, chain)
 		}
 	}
+	return &Tx{
+		txInner,
+		[]xc.TxSignature{},
+	}, nil
+}
+
+func NewMultiTx(chain *xc.ChainBaseConfig, args xcbuilder.MultiTransferArgs, input *tx_input.TxInput) (*Tx, error) {
+	if _, ok := args.GetFeePayer(); !ok {
+		// Seems that 'self-sponsoring' eip7702 transactions does _not_ work.
+		// So there needs to be a separate fee payer.
+		// args.SetFeePayer(args.Spenders()[0].GetFrom())
+		// input.FeePayerNonce = input.Nonce
+		return nil, fmt.Errorf("separate fee-payer must be set for multi-transfers")
+	}
+
+	txInner := NewFeePayerTx(args, input, chain)
 	return &Tx{
 		txInner,
 		[]xc.TxSignature{},
@@ -118,28 +138,41 @@ func (tx Tx) GetMockEthTx() *types.Transaction {
 	return ethTx
 }
 
+type contractGetter interface {
+	GetContract() (xc.ContractAddress, bool)
+}
+
 // On EVM the destination address is the recipient of an ether transfer,
 // but for token transfers, it is the token contract address (the token recipient is then in the data).
 // The .amount field similarly must be in native transaction or in the data for a token transfer.
-func EvmDestinationAndAmountAndData(args xcbuilder.TransferArgs) (common.Address, *big.Int, []byte, error) {
-	address, err := evmaddress.FromHex(args.GetTo())
+func EvmDestinationAndAmountAndData(to xc.Address, amount xc.AmountBlockchain, contractMaybe contractGetter) (common.Address, *big.Int, []byte, error) {
+	address, err := evmaddress.FromHex(to)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	var contract xc.ContractAddress
+	if contractMaybe != nil {
+		value, ok := contractMaybe.GetContract()
+		if ok {
+			contract = value
+		}
+	}
 
-	if contractStr, ok := args.GetContract(); ok {
-		contract, err := evmaddress.FromHex(xc.Address(contractStr))
+	if contract != "" {
+		contract, err := evmaddress.FromHex(xc.Address(contract))
 		if err != nil {
 			return common.Address{}, nil, nil, err
 		}
-		data, err := BuildERC20Payload(args.GetTo(), args.GetAmount())
+		data, err := BuildERC20Payload(to, amount)
 		if err != nil {
 			return common.Address{}, nil, nil, err
 		}
+		fmt.Println("--- token transfer", to, amount, contract)
 		return contract, big.NewInt(0), data, nil
 	} else {
 		// ether transfer
-		return address, args.GetAmount().Int(), nil, nil
+		fmt.Println("--- ether transfer", to, amount, contract)
+		return address, amount.Int(), nil, nil
 	}
 }
 

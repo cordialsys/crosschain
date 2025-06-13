@@ -60,12 +60,26 @@ type MultiTransferArgs struct {
 	appliedOptions []BuilderOption
 }
 
-func NewMultiTransferArgs(spenders []*Sender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
+func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	for _, opt := range options {
 		err := opt(&builderOptions)
 		if err != nil {
 			return nil, err
+		}
+	}
+	switch chain.Driver() {
+	case xc.DriverEVM, xc.DriverEVMLegacy:
+		if len(spenders) != 1 {
+			return nil, errors.New("only one spender is supported for account-based chains")
+		}
+		_, ok := builderOptions.GetFeePayer()
+		if !ok {
+			return nil, errors.New("separate fee-payer must be set for multi-transfers on EVM-based chains")
+		}
+	case xc.DriverSolana:
+		if len(spenders) != 1 {
+			return nil, errors.New("only one spender is supported for account-based chains")
 		}
 	}
 	return &MultiTransferArgs{
@@ -74,6 +88,30 @@ func NewMultiTransferArgs(spenders []*Sender, receivers []*Receiver, options ...
 		builderOptions,
 		options,
 	}, nil
+}
+
+func NewMultiTransferArgsFromSingle(chain xc.NativeAsset, single *TransferArgs, options ...BuilderOption) (*MultiTransferArgs, error) {
+	senderPublicKey, ok := single.GetPublicKey()
+	if !ok {
+		return nil, errors.New("sender public key not set")
+	}
+	sender, err := NewSender(single.GetFrom(), senderPublicKey, options...)
+	if err != nil {
+		return nil, err
+	}
+	receiver, err := NewReceiver(single.GetTo(), single.GetAmount(), options...)
+	if err != nil {
+		return nil, err
+	}
+	// forkt the options from the single transfer args
+	appliedOptions := single.appliedOptions
+	appliedOptions = append(appliedOptions, options...)
+
+	multi, err := NewMultiTransferArgs(chain, []*Sender{sender}, []*Receiver{receiver}, appliedOptions...)
+	if err != nil {
+		return nil, err
+	}
+	return multi, nil
 }
 
 func (args *Sender) GetFrom() xc.Address { return args.address }
@@ -112,6 +150,10 @@ func (args *MultiTransferArgs) GetFeePayer() (xc.Address, bool) {
 	return args.options.GetFeePayer()
 }
 
+func (args *MultiTransferArgs) SetFeePayer(feePayer xc.Address) {
+	args.options.SetFeePayer(feePayer)
+}
+
 func (args *MultiTransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
 }
@@ -120,13 +162,36 @@ func (args *MultiTransferArgs) GetMemo() (string, bool) {
 	return args.options.GetMemo()
 }
 
-func (args *MultiTransferArgs) AsTransfers() ([]*TransferArgs, error) {
+func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {
 	transfers := make([]*TransferArgs, len(args.spenders))
 	if len(args.spenders) != len(args.receivers) {
 		return nil, errors.New("spenders and receivers must be the same length")
 	}
 	for i := range args.spenders {
 		spender := args.spenders[i]
+		receiver := args.receivers[i]
+		allOptions := []BuilderOption{}
+		allOptions = append(allOptions, spender.appliedOptions...)
+		allOptions = append(allOptions, receiver.appliedOptions...)
+		// apply args options last so they take precedence
+		allOptions = append(allOptions, args.appliedOptions...)
+
+		transferArgs, err := NewTransferArgs(spender.address, receiver.address, receiver.amount, allOptions...)
+		if err != nil {
+			return nil, err
+		}
+		transfers[i] = &transferArgs
+	}
+	return transfers, nil
+}
+
+func (args *MultiTransferArgs) AsAccountTransfers() ([]*TransferArgs, error) {
+	if len(args.spenders) != 1 {
+		return nil, errors.New("can only be one spender for an account-based chain")
+	}
+	transfers := make([]*TransferArgs, len(args.receivers))
+	spender := args.spenders[0]
+	for i := range args.receivers {
 		receiver := args.receivers[i]
 		allOptions := []BuilderOption{}
 		allOptions = append(allOptions, spender.appliedOptions...)

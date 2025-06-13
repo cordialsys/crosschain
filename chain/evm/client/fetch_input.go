@@ -21,6 +21,16 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func (client *Client) eip7702GasLimit(destinationCount int) uint64 {
+	native := client.Asset.GetChain()
+	gasLimit := uint64(500_000) + 100_000*uint64(destinationCount)
+	if native.Chain == xc.ArbETH {
+		// arbeth specifically has different gas limit scale
+		gasLimit = 4_000_000 + 250_000*uint64(destinationCount)
+	}
+	return gasLimit
+}
+
 func (client *Client) DefaultGasLimit(smartContract bool) uint64 {
 	// Set absolute gas limits for safety
 	gasLimit := uint64(90_000)
@@ -43,9 +53,9 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 	ethTx := trans.GetMockEthTx()
 
 	if len(ethTx.SetCodeAuthorizations()) > 0 {
-		// TODO
-		logrus.Warn("skipping EIP7702 simulation")
-		return 500_000, nil
+		// It seems that simulation is not currently possible for EIP7702 transactions.
+		logrus.Info("skipping EIP7702 simulation")
+		return client.eip7702GasLimit(0), nil
 	}
 
 	msg := ethereum.CallMsg{
@@ -166,6 +176,21 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	return txInput, nil
 }
 
+func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {
+	feePayer, _ := args.GetFeePayer()
+	spenders := args.Spenders()
+	if len(spenders) == 0 {
+		return nil, fmt.Errorf("no spenders")
+	}
+
+	txInput, err := client.FetchUnsimulatedInput(ctx, spenders[0].GetFrom(), feePayer)
+	if err != nil {
+		return nil, err
+	}
+	txInput.GasLimit = client.eip7702GasLimit(len(args.Receivers()))
+	return &tx_input.MultiTransferInput{TxInput: *txInput}, nil
+}
+
 // FetchLegacyTxInput returns tx input for a EVM tx
 func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address, feePayer xc.Address) (*tx_input.TxInput, error) {
 	nativeAsset := client.Asset.GetChain()
@@ -280,7 +305,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			}
 		}
 		result.BasicSmartAccountNonce = nonce.Uint64()
-		result.FeePayerAddress = feePayer
+		// result.FeePayerAddress = feePayer
 		result.FeePayerNonce = feePayerNonce
 	}
 

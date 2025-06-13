@@ -63,7 +63,8 @@ func CmdTxMultiTransfer() *cobra.Command {
 		Long: "On UTXO chains like Bitcoin, the first from-address will receive the change." +
 			"Otherwise, the order of the from-addresses does not matter, and the number of from-addresses does not need to match the number of to-addresses." +
 			"\n" +
-			"Whereas on account-based chains like Solana, the from, to, and amounts must all correspond to each other 1-to-1. The first address will pay the fee.",
+			"Whereas on account-based chains like Solana there can only be one from address." +
+			"Use empty \"\" value or chain-id for contract or decimals if sending native asset.",
 		Args: cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
@@ -103,7 +104,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			for i, amountRaw := range amountsRaw {
 				contract := contracts[i]
 				decimalsForAmount := int(chainConfig.GetDecimals())
-				if contract != "" {
+				if contract != "" && contract != string(chainConfig.Chain) {
 					decimalsForAmount = decimals[i]
 				}
 				amountHuman, err := xc.NewAmountHumanReadableFromStr(amountRaw)
@@ -163,7 +164,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 				contract := xc.ContractAddress(contracts[i])
 
 				options := []builder.BuilderOption{}
-				if contract != "" {
+				if contract != "" && contract != xc.ContractAddress(chainConfig.Chain) {
 					decimals := decimals[i]
 					options = append(options, builder.OptionContractAddress(contract))
 					options = append(options, builder.OptionContractDecimals(decimals))
@@ -231,7 +232,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 				}
 				tfOptions = append(tfOptions, builder.OptionPriority(priority))
 			}
-			tfArgs, err := builder.NewMultiTransferArgs(senders, receivers, tfOptions...)
+			tfArgs, err := builder.NewMultiTransferArgs(chainConfig.Chain, senders, receivers, tfOptions...)
 			if err != nil {
 				return fmt.Errorf("invalid multi-transfer args: %v", err)
 			}
@@ -300,6 +301,33 @@ func CmdTxMultiTransfer() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
+			if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+				for {
+					additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+					if err != nil {
+						return fmt.Errorf("could not get additional sighashes: %v", err)
+					}
+					if len(additionalSighashes) == 0 {
+						break
+					}
+					for _, additionalSighash := range additionalSighashes {
+						log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+						signature, err := signers.Sign(additionalSighash.Signer, additionalSighash.Payload)
+						if err != nil {
+							panic(err)
+						}
+						signatures = append(signatures, signature)
+						log.
+							WithField("address", signature.Address).
+							WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
+					}
+					err = tx.AddSignatures(signatures...)
+					if err != nil {
+						return fmt.Errorf("could not add additional signature(s): %v", err)
+					}
+				}
+			}
+
 			if dryRun {
 				txBytes, err := tx.Serialize()
 				if err != nil {

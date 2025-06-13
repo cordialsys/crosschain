@@ -27,7 +27,7 @@ func NewLegacyTx(args xcbuilder.TransferArgs, input *tx_input.TxInput, chain *xc
 }
 
 func (tx *LegacyTx) BuildEthTx() (*types.Transaction, error) {
-	destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args)
+	destination, amount, data, err := EvmDestinationAndAmountAndData(tx.args.GetTo(), tx.args.GetAmount(), &tx.args)
 	if err != nil {
 		return nil, err
 	}
