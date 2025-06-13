@@ -65,6 +65,12 @@ func TestTxInputConflicts(t *testing.T) {
 			doubleSpendSafe: false,
 		},
 		{
+			newInput:        &TxInput{FromAddress: xc.Address("0xccc"), Nonce: 10, FeePayerAddress: xc.Address("0xaaa"), FeePayerNonce: 10},
+			oldInput:        &TxInput{FromAddress: xc.Address("0xddd"), Nonce: 10, FeePayerAddress: xc.Address("0xbbb"), FeePayerNonce: 10},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
 			newInput: &TxInput{Nonce: 10},
 			oldInput: nil,
 			// default false, not always independent

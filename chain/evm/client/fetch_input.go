@@ -216,6 +216,8 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 	}
 	result.ChainId = xc.AmountBlockchain(*chainId)
 	fromAddr, _ := address.FromHex(from)
+	result.FromAddress = from
+
 	senderAddr := fromAddr
 	if feePayer != "" {
 		// If fee-payer is being used, then it is the sender (not the from address)
