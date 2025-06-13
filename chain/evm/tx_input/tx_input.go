@@ -27,9 +27,9 @@ type TxInput struct {
 	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
 
 	// For eip7702 transactions
-	BasicSmartAccountNonce uint64 `json:"basic_smart_account_nonce,omitempty"`
-	// FeePayerAddress        xc.Address `json:"fee_payer_address,omitempty"`
-	FeePayerNonce uint64 `json:"fee_payer_nonce,omitempty"`
+	BasicSmartAccountNonce uint64     `json:"basic_smart_account_nonce,omitempty"`
+	FeePayerAddress        xc.Address `json:"fee_payer_address,omitempty"`
+	FeePayerNonce          uint64     `json:"fee_payer_nonce,omitempty"`
 
 	// legacy only
 	Prices []*Price `json:"prices,omitempty"`
@@ -92,7 +92,17 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if evmOther, ok := other.(*TxInput); ok {
-		return evmOther.Nonce != input.Nonce
+		independent = true
+		if evmOther.Nonce == input.Nonce {
+			independent = false
+		}
+		if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
+			// Should not sign multiple tx for the same fee-payer nonce.
+			if evmOther.FeePayerAddress == input.FeePayerAddress &&
+				evmOther.FeePayerNonce == input.FeePayerNonce {
+				independent = false
+			}
+		}
 	}
 	return
 }
