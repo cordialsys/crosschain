@@ -213,9 +213,17 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			v.independent,
 			"IndependentOf",
 		)
+		doubleSpendSafe := true
+		allOldInputs := append(v.moreOldInputs, v.oldInput)
+		for _, oldInput := range allOldInputs {
+			result := v.newInput.SafeFromDoubleSend(oldInput)
+			if !result {
+				doubleSpendSafe = false
+			}
+		}
 		require.Equal(
-			v.newInput.SafeFromDoubleSend(append(v.moreOldInputs, v.oldInput)...),
 			v.doubleSpendSafe,
+			doubleSpendSafe,
 			"SafeFromDoubleSend",
 		)
 	}

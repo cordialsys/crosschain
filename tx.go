@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"encoding/base64"
+	"reflect"
 )
 
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
@@ -49,16 +50,19 @@ type TxInputConflicts interface {
 	//   to be sure a double send won't occur (return `true`).
 	// - If tx-inputs are not independent (spending same resources), then typically double-sends are impossible (and should return `true` here).
 	// - If there exists tx-inputs that are fully independent (and not timed out), then a double-send is possible and this should return false.
-	SafeFromDoubleSend(previousAttempts ...TxInput) (safe bool)
+	SafeFromDoubleSend(previousAttempts TxInput) (safe bool)
 }
 
-func SameTxInputTypes[T any](as T, inputs ...TxInput) bool {
-	for _, input := range inputs {
-		if _, ok := input.(T); !ok {
-			return false
+func IsTypeOf(input TxInput, validTypes ...any) bool {
+	if input == nil {
+		return false
+	}
+	for _, validType := range validTypes {
+		if reflect.TypeOf(input) == reflect.TypeOf(validType) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 type TxInputEnvelope struct {

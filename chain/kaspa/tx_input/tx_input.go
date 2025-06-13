@@ -84,19 +84,17 @@ func (input *TxInput) IndependentOf(otherI xc.TxInput) (independent bool) {
 	}
 	return false
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(other, input) {
 		return false
 	}
 	// safe from double send only if spending the same utxo
-	for _, other := range others {
-		other, ok := other.(*TxInput)
-		if !ok {
-			return false
-		}
-		if input.IndependentOf(other) {
-			return false
-		}
+	other, ok := other.(*TxInput)
+	if !ok {
+		return false
+	}
+	if input.IndependentOf(other) {
+		return false
 	}
 	// all share the a dependency, can't double send
 	return true

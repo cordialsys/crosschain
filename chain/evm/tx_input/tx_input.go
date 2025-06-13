@@ -91,30 +91,40 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
-	if evmOther, ok := other.(*TxInput); ok {
-		independent = true
-		if evmOther.Nonce == input.Nonce {
+	var otherInput *TxInput
+	switch other := other.(type) {
+	case *TxInput:
+		otherInput = other
+	case *MultiTransferInput:
+		otherInput = &other.TxInput
+	case *BatchDepositInput:
+		otherInput = &other.TxInput
+	case *ExitRequestInput:
+		otherInput = &other.TxInput
+	default:
+		return false
+	}
+
+	independent = true
+	if otherInput.Nonce == input.Nonce {
+		independent = false
+	}
+	if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
+		// Should not sign multiple tx for the same fee-payer nonce.
+		if otherInput.FeePayerAddress == input.FeePayerAddress &&
+			otherInput.FeePayerNonce == input.FeePayerNonce {
 			independent = false
-		}
-		if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
-			// Should not sign multiple tx for the same fee-payer nonce.
-			if evmOther.FeePayerAddress == input.FeePayerAddress &&
-				evmOther.FeePayerNonce == input.FeePayerNonce {
-				independent = false
-			}
 		}
 	}
 	return
 }
-func (input *TxInput) SafeFromDoubleSend(others ...xc.TxInput) (safe bool) {
-	if !xc.SameTxInputTypes(input, others...) {
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(other, input, MultiTransferInput{}, BatchDepositInput{}, ExitRequestInput{}) {
 		return false
 	}
 	// all same sequence means no double send
-	for _, other := range others {
-		if input.IndependentOf(other) {
-			return false
-		}
+	if input.IndependentOf(other) {
+		return false
 	}
 	// sequence all same - we're safe
 	return true
