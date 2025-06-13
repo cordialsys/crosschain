@@ -158,8 +158,8 @@ func DecodeEcdsaSignature(signature xc.TxSignature) (btcec.ModNScalar, btcec.Mod
 	return r, s, err
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if tx.Signed {
 		return fmt.Errorf("already signed")
 	}

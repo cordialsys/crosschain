@@ -3,7 +3,8 @@
 
 anvil --version
 
-anvil --hardfork prague --host 0.0.0.0 --port ${RPC_PORT} --block-time 2 &
+# use --block-base-fee-per-gas 0 or the gas fees seem to get rounded in avil :/
+anvil --hardfork prague --host 0.0.0.0 --port ${RPC_PORT} --block-time 2 --block-base-fee-per-gas 0 &
 
 while ! nc -z localhost ${RPC_PORT}; do sleep .25; echo waiting for port to open; done
 

@@ -21,6 +21,6 @@ func TestTxSighashesEmpty(t *testing.T) {
 
 func TestTxAddSignatureEmpty(t *testing.T) {
 	tx := tx.Tx{}
-	err := tx.AddSignatures([]*xc.SignatureResponse{}...)
+	err := tx.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "transaction not initialized")
 }

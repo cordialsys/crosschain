@@ -288,8 +288,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			return result, err
 		}
 		// If we are using a fee payer, then we will be using the main account as a smart account (eip7702).
-		// We need to get a separate nonce for the smart account.
-		// TODO should this just replace the nonce?
+		// This is in addition to the nonce for the smart account, and the nonce for the main account making an authorization.
 		instance, err := basic_smart_account.NewBasicSmartAccount(fromAddr, client.EthClient)
 		if err != nil {
 			return result, err
@@ -305,7 +304,6 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			}
 		}
 		result.BasicSmartAccountNonce = nonce.Uint64()
-		// result.FeePayerAddress = feePayer
 		result.FeePayerNonce = feePayerNonce
 	}
 

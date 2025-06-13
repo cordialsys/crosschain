@@ -269,7 +269,7 @@ func (s *CrosschainTestSuite) TestNewNativeTransfer() {
 				for i := 0; i < 65; i++ {
 					sig = append(sig, byte(i))
 				}
-				err = tf.AddSignatures(&xc.SignatureResponse{
+				err = tf.SetSignatures(&xc.SignatureResponse{
 					Signature: sig,
 				})
 				require.NoError(err)
@@ -370,7 +370,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	require.NoError(err)
 
 	txObject := tf.(*tx.Tx)
-	err = txObject.AddSignatures([]*xc.SignatureResponse{
+	err = txObject.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: []byte{1, 2, 3, 4},
 		},
@@ -380,7 +380,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	for i := 0; i < 65; i++ {
 		sig = append(sig, byte(i))
 	}
-	err = txObject.AddSignatures([]*xc.SignatureResponse{
+	err = txObject.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: sig,
 		},
@@ -388,7 +388,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	require.NoError(err)
 
 	// can't sign multiple times in a row
-	err = txObject.AddSignatures([]*xc.SignatureResponse{
+	err = txObject.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: sig,
 		},
@@ -397,7 +397,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 
 	// must have a signature for each input needed
 	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
-	err = tf.(*tx.Tx).AddSignatures([]*xc.SignatureResponse{
+	err = tf.(*tx.Tx).SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: sig,
 		},
@@ -420,7 +420,7 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 	}
 	tf, _ = builder.NewNativeTransfer(from, to, amount, input)
 	require.Len(tf.(*tx.Tx).UnspentOutputs, 2)
-	err = tf.(*tx.Tx).AddSignatures([]*xc.SignatureResponse{
+	err = tf.(*tx.Tx).SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: sig,
 		},

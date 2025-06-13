@@ -20,27 +20,27 @@ func TestTxHash(t *testing.T) {
 
 func TestTxAddSignaturesErr(t *testing.T) {
 	tx := Tx{ChainCfg: xc.NewChainConfig("").Base()}
-	err := tx.AddSignatures([]*xc.SignatureResponse{}...)
+	err := tx.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "invalid signatures size")
 
 	tx = Tx{ChainCfg: xc.NewChainConfig("").Base()}
-	err = tx.AddSignatures(&xc.SignatureResponse{
+	err = tx.SetSignatures(&xc.SignatureResponse{
 		Signature: []byte{1, 2, 3},
 	})
 	require.NoError(t, err)
 
-	err = tx.AddSignatures(&xc.SignatureResponse{
+	err = tx.SetSignatures(&xc.SignatureResponse{
 		Signature: []byte{1, 2, 3},
 	})
 	require.NoError(t, err)
 
 	bytes := make([]byte, 64)
-	err = tx.AddSignatures(&xc.SignatureResponse{
+	err = tx.SetSignatures(&xc.SignatureResponse{
 		Signature: bytes,
 	})
 	require.NoError(t, err)
 
-	err = tx.AddSignatures(&xc.SignatureResponse{
+	err = tx.SetSignatures(&xc.SignatureResponse{
 		Signature: bytes,
 	})
 	require.NoError(t, err)

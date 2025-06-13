@@ -206,7 +206,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash[:])}, nil
 	}
 }
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	for _, sig := range signatures {
 		// sui expects signature to be {0, signature, public_key}
 		sui_sig := []byte{0}

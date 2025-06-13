@@ -13,9 +13,9 @@ import (
 func CmdDebug() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:     "debug <tx-data>",
-		Aliases: []string{"tf"},
-		Short:   "Create and broadcast a new transaction transferring funds. The amount should be a decimal amount.",
+		Use:     "debug-eip7702 <tx-data>",
+		Aliases: []string{"debug-eip7702"},
+		Short:   "Parse and print metadata for a raw eip7702 transaction.",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			txData := args[0]
@@ -23,12 +23,7 @@ func CmdDebug() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to decode hex data: %w", err)
 			}
-			// tx := types.SetCodeAuthorization{}
 
-			// err = rlp.DecodeBytes(txBz[:], &tx)
-			// if err != nil {
-			// 	return fmt.Errorf("failed to decode tx data: %w", err)
-			// }
 			tx := types.Transaction{}
 			err = tx.UnmarshalBinary(txBz)
 			if err != nil {

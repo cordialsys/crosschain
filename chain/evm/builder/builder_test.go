@@ -39,7 +39,7 @@ func TestStakingTxUsesCredential(t *testing.T) {
 		hexutil.MustDecode("0x010000000000000000000000273b437645ba723299d07b1bdffcf508be64771f"),
 	}
 
-	txBuilder, err := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	txBuilder, err := builder.NewTxBuilder(xc.NewChainConfig("").WithChainID("5").Base())
 	require.NoError(t, err)
 	owner := xc.Address("0x273b437645Ba723299d07B1BdFFcf508bE64771f")
 	args, _ := xcbuilder.NewStakeArgs(xc.ETH, owner, xc.NewAmountBlockchainFromUint64(1))
@@ -48,7 +48,7 @@ func TestStakingTxUsesCredential(t *testing.T) {
 
 	ethTx := trans.(*tx.Tx).GetMockEthTx()
 	data := ethTx.Data()
-	expected, err := stake_batch_deposit.Serialize(xc.NewChainConfig("").Base(), input.PublicKeys, credentials, input.Signatures)
+	expected, err := stake_batch_deposit.Serialize(xc.NewChainConfig("").WithChainID("5").Base(), input.PublicKeys, credentials, input.Signatures)
 	require.NoError(t, err)
 
 	require.Equal(t, hex.EncodeToString(expected), hex.EncodeToString(data))
@@ -61,7 +61,7 @@ func TestUnstakingTx(t *testing.T) {
 		hexutil.MustDecode("0xa776cfc875b15a1444bbda22e47e759ade11b39912a3e210807204f410d43baa332acb38aab206bc8ac7ad476a42839b"),
 	}
 
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").WithChainID("5").Base())
 	owner := xc.Address("0x273b437645Ba723299d07B1BdFFcf508bE64771f")
 	human, _ := xc.NewAmountHumanReadableFromStr("64")
 

@@ -23,8 +23,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(...*xc.SignatureResponse) error {
 	return errors.New("not implemented")
 }
 

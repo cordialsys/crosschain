@@ -161,7 +161,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 }
 
 // Add signature script for each transaction input to spend it
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	domainTransaction, err := tx.BuildUnsignedDomainTransaction()
 	if err != nil {
 		return err

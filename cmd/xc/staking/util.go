@@ -45,7 +45,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 	}
 	signatures := signer.MustSignAll(sighashes)
 
-	err = tx.AddSignatures(signatures...)
+	err = tx.SetSignatures(signatures...)
 	if err != nil {
 		return "", fmt.Errorf("could not add signature(s): %v", err)
 	}

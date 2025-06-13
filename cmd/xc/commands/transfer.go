@@ -262,7 +262,7 @@ func CmdTxTransfer() *cobra.Command {
 
 			// complete the tx by adding its signature
 			// (no network, no private key needed)
-			err = tx.AddSignatures(signatures...)
+			err = tx.SetSignatures(signatures...)
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
@@ -287,7 +287,7 @@ func CmdTxTransfer() *cobra.Command {
 							WithField("address", signature.Address).
 							WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
 					}
-					err = tx.AddSignatures(signatures...)
+					err = tx.SetSignatures(signatures...)
 					if err != nil {
 						return fmt.Errorf("could not add additional signature(s): %v", err)
 					}

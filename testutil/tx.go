@@ -18,7 +18,7 @@ func (tx *MockXcTx) Hash() xc.TxHash {
 func (tx *MockXcTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	panic("not supported")
 }
-func (tx *MockXcTx) AddSignatures(...*xc.SignatureResponse) error {
+func (tx *MockXcTx) SetSignatures(...*xc.SignatureResponse) error {
 	panic("not supported")
 }
 func (tx *MockXcTx) GetSignatures() []xc.TxSignature {

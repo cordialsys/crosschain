@@ -43,8 +43,8 @@ func (txObj *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return sighashes, nil
 }
 
-// AddSignatures adds a signature to Tx
-func (txObj *Tx) AddSignatures(signatureResponses ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (txObj *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if txObj.Signed {
 		return fmt.Errorf("already signed")
 	}

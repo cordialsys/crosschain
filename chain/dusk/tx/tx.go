@@ -165,8 +165,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(bytes)}, nil
 }
 
-// AddSignatures adds a signature to Tx
-func (tx *Tx) AddSignatures(signatures ...*xc.SignatureResponse) error {
+// SetSignatures adds a signature to Tx
+func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	if len(signatures) != 1 {
 		return errors.New("only one signature is allowed")
 	}

@@ -68,15 +68,15 @@ func TestTxMemoHash(t *testing.T) {
 
 func TestTxAddSignature(t *testing.T) {
 	tx := tx.Tx{}
-	err := tx.AddSignatures([]*xc.SignatureResponse{}...)
+	err := tx.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "only one signature is allowed")
 
 	signatures := []*xc.SignatureResponse{{}, {}}
-	err = tx.AddSignatures(signatures...)
+	err = tx.SetSignatures(signatures...)
 	require.EqualError(t, err, "only one signature is allowed")
 
 	validSignatures := []*xc.SignatureResponse{{}}
-	err = tx.AddSignatures(validSignatures...)
+	err = tx.SetSignatures(validSignatures...)
 	require.NoError(t, err)
 }
 

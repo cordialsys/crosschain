@@ -181,7 +181,7 @@ func TestTxSighashes(t *testing.T) {
 
 func TestTxAddSignature(t *testing.T) {
 	emptytx := tx.Tx{}
-	err := emptytx.AddSignatures([]*xc.SignatureResponse{}...)
+	err := emptytx.SetSignatures([]*xc.SignatureResponse{}...)
 	require.EqualError(t, err, "only one signature is allowed")
 
 	signedTx := tx.Tx{
@@ -190,6 +190,6 @@ func TestTxAddSignature(t *testing.T) {
 			Data: []byte("signature"),
 		},
 	}
-	err = signedTx.AddSignatures(&xc.SignatureResponse{Signature: []byte("asdf")})
+	err = signedTx.SetSignatures(&xc.SignatureResponse{Signature: []byte("asdf")})
 	require.EqualError(t, err, "transaction already signed")
 }

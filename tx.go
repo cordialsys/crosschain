@@ -155,11 +155,15 @@ type SignatureResponse struct {
 type Tx interface {
 	Hash() TxHash
 	Sighashes() ([]*SignatureRequest, error)
-	AddSignatures(...*SignatureResponse) error
+	SetSignatures(...*SignatureResponse) error
 	// only needed for RPC endpoints that require signatures in separate fields
 	GetSignatures() []TxSignature
 	Serialize() ([]byte, error)
 }
+
 type TxAdditionalSighashes interface {
+	// This is available in case a transaction needs to make signatures-over-signatures.
+	// This should return any _remaining_ signatures requests left to fill.
+	// The caller will always call .SetSignatures() after this with all of the signature made so far.
 	AdditionalSighashes() ([]*SignatureRequest, error)
 }

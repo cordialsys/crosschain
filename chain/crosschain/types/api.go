@@ -169,7 +169,7 @@ func (tx *SubmitTxReq) Hash() xc.TxHash {
 func (tx *SubmitTxReq) Sighashes() ([]*xc.SignatureRequest, error) {
 	panic("not implemented")
 }
-func (tx *SubmitTxReq) AddSignatures(sigs ...*xc.SignatureResponse) error {
+func (tx *SubmitTxReq) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	for _, sig := range sigs {
 		tx.TxSignatures = append(tx.TxSignatures, sig.Signature)
 	}

@@ -62,7 +62,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 }
 
-func (tx *Tx) AddSignatures(sigs ...*xc.SignatureResponse) error {
+func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	if tx.ExternalMessage.Body != nil {
 		return fmt.Errorf("already signed TON tx")
 	}

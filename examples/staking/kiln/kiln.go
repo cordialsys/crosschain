@@ -153,7 +153,7 @@ func CmdStake() *cobra.Command {
 				signatures = append(signatures, signature)
 			}
 
-			err = tx.AddSignatures(signatures...)
+			err = tx.SetSignatures(signatures...)
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
@@ -290,7 +290,7 @@ func CmdUnstake() *cobra.Command {
 				signatures = append(signatures, signature)
 			}
 
-			err = tx.AddSignatures(signatures...)
+			err = tx.SetSignatures(signatures...)
 			if err != nil {
 				return fmt.Errorf("could not add signature(s): %v", err)
 			}
