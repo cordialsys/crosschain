@@ -41,6 +41,24 @@ func TestTxInputConflicts(t *testing.T) {
 			doubleSpendSafe: false,
 		},
 		{
+			newInput:        &TxInput{Nonce: 10, FeePayerAddress: xc.Address("0x123"), FeePayerNonce: 10},
+			oldInput:        &TxInput{Nonce: 9, FeePayerAddress: xc.Address("0x123"), FeePayerNonce: 10},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput:        &TxInput{Nonce: 10, FeePayerAddress: xc.Address("0xaaa"), FeePayerNonce: 10},
+			oldInput:        &TxInput{Nonce: 9, FeePayerAddress: xc.Address("0xbbb"), FeePayerNonce: 10},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput:        &TxInput{Nonce: 10, FeePayerAddress: "", FeePayerNonce: 10},
+			oldInput:        &TxInput{Nonce: 9, FeePayerAddress: "", FeePayerNonce: 9},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
 			newInput: &TxInput{Nonce: 10},
 			oldInput: nil,
 			// default false, not always independent
@@ -49,20 +67,22 @@ func TestTxInputConflicts(t *testing.T) {
 		},
 	}
 	for i, v := range vectors {
-		newBz, _ := json.Marshal(v.newInput)
-		oldBz, _ := json.Marshal(v.oldInput)
-		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
-		fmt.Println()
-		require.Equal(t,
-			v.newInput.IndependentOf(v.oldInput),
-			v.independent,
-			"IndependentOf",
-		)
-		require.Equal(t,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
-			v.doubleSpendSafe,
-			"SafeFromDoubleSend",
-		)
+		t.Run(fmt.Sprintf("testcase %d", i), func(t *testing.T) {
+			newBz, _ := json.Marshal(v.newInput)
+			oldBz, _ := json.Marshal(v.oldInput)
+			fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
+			fmt.Println()
+			require.Equal(t,
+				v.newInput.IndependentOf(v.oldInput),
+				v.independent,
+				"IndependentOf",
+			)
+			require.Equal(t,
+				v.newInput.SafeFromDoubleSend(v.oldInput),
+				v.doubleSpendSafe,
+				"SafeFromDoubleSend",
+			)
+		})
 	}
 }
 

@@ -305,6 +305,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 		}
 		result.BasicSmartAccountNonce = nonce.Uint64()
 		result.FeePayerNonce = feePayerNonce
+		result.FeePayerAddress = feePayer
 	}
 
 	return result, nil
