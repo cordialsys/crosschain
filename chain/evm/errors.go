@@ -27,7 +27,8 @@ func CheckError(err error) errors.Status {
 	}
 	if strings.Contains(msg, "transaction already in block chain") ||
 		strings.Contains(msg, "already known") ||
-		strings.Contains(msg, "known transaction:") {
+		strings.Contains(msg, "known transaction:") ||
+		strings.Contains(msg, "transaction already imported") {
 		return errors.TransactionExists
 	}
 	return errors.UnknownError

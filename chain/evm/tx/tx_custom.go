@@ -34,7 +34,15 @@ func NewCustomTx(input *tx_input.TxInput, chain *xc.ChainBaseConfig, ethTx *type
 }
 
 func (tx *CustomTx) BuildEthTx() (*types.Transaction, error) {
-	return tx.ethTx, nil
+	if len(tx.signature) > 0 {
+		signedTx, err := tx.ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
+		if err != nil {
+			return nil, err
+		}
+		return signedTx, nil
+	} else {
+		return tx.ethTx, nil
+	}
 }
 
 func (tx *CustomTx) Sighashes() ([]*xc.SignatureRequest, error) {
@@ -59,9 +67,6 @@ func (tx *CustomTx) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	signedTx, err := ethTx.WithSignature(GetEthSigner(tx.chain, tx.input), tx.signature)
-	if err != nil {
-		return nil, err
-	}
-	return signedTx.MarshalBinary()
+
+	return ethTx.MarshalBinary()
 }

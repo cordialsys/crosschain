@@ -1,21 +1,21 @@
 #!/bin/bash
 
-npm list | grep hardhat
 
-echo "hardhat version:"
-npx hardhat --version
+anvil --version
 
-npx hardhat node --hostname 0.0.0.0 --port ${RPC_PORT} &
+anvil --hardfork prague --host 0.0.0.0 --port ${RPC_PORT} --block-time 2 &
 
 while ! nc -z localhost ${RPC_PORT}; do sleep .25; echo waiting for port to open; done
 
-# deploy some tokens
-# First run deploys contract with address 0x5FbDB2315678afecb367f032d93F642f64180aa3
-npx hardhat run scripts/deploy.js --network localhost
+# This should match the basic_smart_account address used by evm tx package.
+# expected address: 0x91A4a87AB11aE1cbB2c8ba981AEa32aeCF54Dfc0
+# See also ci/untils.go
+export EVM_SALT=0xbdfee0231e0903cde9ca6fd75d08a500062dc3d87718f712bc6958ed697617c3
+forge script ./script/DeployBasicSmartAccount.s.sol --rpc-url http://localhost:${RPC_PORT} --broadcast --private-key ${PRIVATE_KEY}
 
-# Second run: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-# npx hardhat run scripts/deploy.js --network localhost
+# deploy some tokens:
+# expected address: 0xe1D98dC57ea81d94Bb15b9a8ca5c0075C3d7a0C1
+export EVM_SALT=0x0000000000000000000000000000000000000000000000000000000000000002
+forge script ./script/DeployToken.s.sol --rpc-url http://localhost:${RPC_PORT} --broadcast --private-key ${PRIVATE_KEY}
 
-# Third run: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-# npx hardhat run scripts/deploy.js --network localhost
 wait
