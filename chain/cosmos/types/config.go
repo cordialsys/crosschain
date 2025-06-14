@@ -1,6 +1,8 @@
 package types
 
 import (
+	"sync"
+
 	authzmodule "cosmossdk.io/x/authz/module"
 	"cosmossdk.io/x/bank"
 	distr "cosmossdk.io/x/distribution"
@@ -85,7 +87,13 @@ func NewEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	}, nil
 }
 
-var legacyCodecRegistered = false
+// Important that this is done a thread-safe way.
+// If multiple clients are created at the same time in parallel,
+// it will panic with "xxx conflicts with 2 other(s). Add it to the priority list for interface"
+//
+// We also can't use an `init` function, as this could break users using crosschain + cosmos-sdk
+// in the same process for non-client purposes.
+var modifyLegacyAdminoCodecOnce sync.Once
 
 // MakeEncodingConfig creates an EncodingConfig for testing
 func MakeEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
@@ -98,14 +106,9 @@ func MakeEncodingConfig(chainCfg *xc.ChainBaseConfig) (EncodingConfig, error) {
 	ModuleBasics.RegisterLegacyAminoCodec(encodingConfig.Amino)
 	ModuleBasics.RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
-	if !legacyCodecRegistered {
-		// authz module use this codec to get signbytes.
-		// authz MsgExec can execute all message types,
-		// so legacy.Cdc need to register all amino messages to get proper signature
+	modifyLegacyAdminoCodecOnce.Do(func() {
 		ModuleBasics.RegisterLegacyAminoCodec(legacy.Cdc)
-		legacyCodecRegistered = true
-	}
-
+	})
 	return encodingConfig, nil
 }
 
