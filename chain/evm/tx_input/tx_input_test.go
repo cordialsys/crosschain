@@ -96,6 +96,25 @@ func TestTxInputConflicts(t *testing.T) {
 			independent:     false,
 			doubleSpendSafe: false,
 		},
+
+		{
+			oldInput: &TxInput{
+				// uppercase address
+				FeePayerAddress: "0x13C731CB1ECEC87D7AC867CD7F14502363D58DE6",
+				FeePayerNonce:   43,
+				FromAddress:     xc.Address("0xB5ACB9DD013BAE4EFA31911BB4E4EFB06249FFE2"),
+				Nonce:           0,
+			},
+			newInput: &TxInput{
+				// lowercase address
+				FeePayerAddress: "0x13c731cb1ecec87d7ac867cd7f14502363d58de6",
+				FeePayerNonce:   43,
+				FromAddress:     xc.Address("0xe274c0b274c9f5ae1ee565c3845b3dff59661cda"),
+				Nonce:           14,
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
 		t.Run(fmt.Sprintf("testcase %d", i), func(t *testing.T) {

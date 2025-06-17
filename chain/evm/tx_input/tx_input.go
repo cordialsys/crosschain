@@ -67,7 +67,9 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 		return err
 	}
 	multipliedTipCap := multiplier.Mul(decimal.NewFromBigInt(input.GasTipCap.Int(), 0)).BigInt()
+	multipliedMaxCap := multiplier.Mul(decimal.NewFromBigInt(input.GasFeeCap.Int(), 0)).BigInt()
 	input.GasTipCap = xc.AmountBlockchain(*multipliedTipCap)
+	input.GasFeeCap = xc.AmountBlockchain(*multipliedMaxCap)
 
 	if input.GasFeeCap.Cmp(&input.GasTipCap) < 0 {
 		// increase max fee cap to accomodate tip if needed
@@ -116,11 +118,11 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 
 	independent = true
 	if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
-		if otherInput.Nonce == input.Nonce && otherInput.FromAddress == input.FromAddress {
+		if otherInput.Nonce == input.Nonce && strings.EqualFold(string(otherInput.FromAddress), string(input.FromAddress)) {
 			independent = false
 		}
 		// Should not sign multiple tx for the same fee-payer nonce.
-		if otherInput.FeePayerAddress == input.FeePayerAddress &&
+		if strings.EqualFold(string(otherInput.FeePayerAddress), string(input.FeePayerAddress)) &&
 			otherInput.FeePayerNonce == input.FeePayerNonce {
 			independent = false
 		}

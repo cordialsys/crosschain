@@ -58,6 +58,8 @@ type TransferInputReq struct {
 	PublicKey string `json:"public_key,omitempty"`
 	Memo      string `json:"memo,omitempty"`
 	Priority  string `json:"priority,omitempty"`
+
+	PreviousTransactionAttempts []string `json:"previous_transaction_attempts,omitempty"`
 }
 
 type FeePayerInfo struct {
@@ -104,6 +106,8 @@ type MultiTransferInputReq struct {
 	FeePayer  *FeePayerInfo  `json:"fee_payer,omitempty"`
 	Priority  string         `json:"priority,omitempty"`
 	Memo      string         `json:"memo,omitempty"`
+
+	PreviousTransactionAttempts []string `json:"previous_transaction_attempts,omitempty"`
 }
 
 type StakingInputReq struct {

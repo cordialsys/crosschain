@@ -96,7 +96,7 @@ func (cli *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBa
 }
 
 func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
-	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "")
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 		}
 	}
 
-	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "")
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "", nil)
 	if err != nil {
 		return nil, err
 	}

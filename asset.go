@@ -612,6 +612,10 @@ type ChainClientConfig struct {
 	SecondaryChainGasMultiplier float64 `yaml:"secondary_chain_gas_multiplier,omitempty"`
 	// for gas estimation of gas limit, for somechains the simulation may be flaky and need a multiplier
 	ChainGasLimitMultiplier float64 `yaml:"chain_gas_limit_multiplier,omitempty"`
+	// The multiplier to apply to gas when there is a minimum replacement increase.
+	// This is used for EVM chains, to avoid the "replacement transaction underpriced" message.
+	// Normally it is 10%, but on chains like Base and Optimism, it seems to be at least 25% in practice.
+	ReplacementTransactionMultiplier float64 `yaml:"replacement_transaction_multiplier,omitempty"`
 	// The max/min prices can be set to provide sanity limits for what a gas price (per gas or per byte) should be.
 	// This should be in the blockchain amount.
 	ChainMaxGasPrice float64 `yaml:"chain_max_gas_price,omitempty"`

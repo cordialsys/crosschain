@@ -229,6 +229,7 @@ chains:
     chain_name: Base Protocol
     decimals: 18
     fee_limit: "0.5"
+    replacement_transaction_multiplier: 1.5
     external:
       dti: 6M4WCXL3X
       indexing_co:
@@ -803,6 +804,7 @@ chains:
     decimals: 18
     fee_limit: "0.25"
     confirmations_final: 64
+    replacement_transaction_multiplier: 1.5
     external:
       coin_market_cap:
         chain_id: "42"
