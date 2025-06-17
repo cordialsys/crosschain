@@ -26,6 +26,7 @@ func CmdTxTransfer() *cobra.Command {
 	var dryRun bool
 	var fromSecretRef string
 	var feePayerSecretRef string
+	var previousAttempts []string
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -107,6 +108,7 @@ func CmdTxTransfer() *cobra.Command {
 			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
+				builder.OptionPreviousTransactionAttempts(previousAttempts),
 			}
 
 			mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
@@ -351,5 +353,6 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
+	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
 	return cmd
 }

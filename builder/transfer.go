@@ -46,6 +46,10 @@ func (args *TransferArgs) InclusiveFeeSpendingEnabled() bool {
 	return args.options.InclusiveFeeSpendingEnabled()
 }
 
+func (args *TransferArgs) GetPreviousTransactionAttempts() []string {
+	return args.options.GetPreviousTransactionAttempts()
+}
+
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
@@ -96,4 +100,8 @@ func (args *TransferArgs) SetFeePayerPublicKey(feePayerPublicKey []byte) {
 
 func (args *TransferArgs) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
 	args.options.SetInclusiveFeeSpending(inclusiveFeeSpending)
+}
+
+func (args *TransferArgs) SetPreviousTransactionAttempts(previousTransactionAttempts []string) {
+	args.options.SetPreviousTransactionAttempts(previousTransactionAttempts)
 }

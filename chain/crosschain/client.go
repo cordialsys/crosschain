@@ -194,6 +194,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		Memo:      memoMaybe,
 		Priority:  string(priorityMaybe),
 		FeePayer:  types.NewFeePayerInfoOrNil(&args),
+
+		PreviousTransactionAttempts: args.GetPreviousTransactionAttempts(),
 	})
 	if err != nil {
 		return nil, err
@@ -237,6 +239,8 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		FeePayer:  types.NewFeePayerInfoOrNil(&args),
 		Priority:  string(priorityMaybe),
 		Memo:      memoMaybe,
+
+		PreviousTransactionAttempts: args.GetPreviousTransactionAttempts(),
 	})
 	if err != nil {
 		return nil, err

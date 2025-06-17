@@ -161,3 +161,33 @@ func (client *Client) TxPoolContentFrom(ctx context.Context, from common.Address
 	err := client.EthClient.Client().CallContext(ctx, &result, "txpool_contentFrom", from.Hex())
 	return &result, err
 }
+
+// We have two methods of looking up previous tx attempts:
+// 1. The client request has a list of hashes, and we can just look them up.
+// 2. The RPC node may support txpool_contentFrom, which will return the txpool content for a given address.
+// Note that Optimism and Base do not support txpool_contentFrom, so we need to use the first method for those chains.
+func (client *Client) LookupPreviousTxAttempt(ctx context.Context, from common.Address, previousAttemptsMaybe []string) (*TxPoolTxInfo, bool, error) {
+	for _, attempt := range previousAttemptsMaybe {
+		txHash := common.HexToHash(attempt)
+		tx, _, err := client.EthClient.TransactionByHash(ctx, txHash)
+		if err != nil {
+			logrus.WithError(err).Info("could not get previous tx by hash")
+			continue
+		}
+		return &TxPoolTxInfo{
+			From:                 from.Hex(),
+			Hash:                 tx.Hash().Hex(),
+			Gas:                  hexutil.Big(*big.NewInt(int64(tx.Gas()))),
+			GasPrice:             hexutil.Big(*tx.GasPrice()),
+			MaxFeePerGas:         hexutil.Big(*tx.GasFeeCap()),
+			MaxPriorityFeePerGas: hexutil.Big(*tx.GasTipCap()),
+		}, true, nil
+	}
+	var pendingTxInfo TxPoolResult
+	err := client.EthClient.Client().CallContext(ctx, &pendingTxInfo, "txpool_contentFrom", from.Hex())
+	if err != nil {
+		return nil, false, err
+	}
+	pending, ok := pendingTxInfo.InfoFor(from.String())
+	return pending, ok, nil
+}

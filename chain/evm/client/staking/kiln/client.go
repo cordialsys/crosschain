@@ -109,7 +109,7 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 		return nil, err
 	}
 
-	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "")
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +203,7 @@ func (cli *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.Stake
 		}
 	}
 
-	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "")
+	partialTxInput, err := cli.rpcClient.FetchUnsimulatedInput(ctx, args.GetFrom(), "", nil)
 	if err != nil {
 		return nil, err
 	}

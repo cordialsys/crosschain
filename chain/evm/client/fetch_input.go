@@ -21,6 +21,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type NonceTag string
+
+const (
+	NonceTagPending NonceTag = "pending"
+	NonceTagLatest  NonceTag = "latest"
+)
+
 func (client *Client) eip7702GasLimit(destinationCount int) uint64 {
 	native := client.Asset.GetChain()
 	gasLimit := uint64(500_000) + 100_000*uint64(destinationCount)
@@ -137,7 +144,7 @@ func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, er
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	feePayer, _ := args.GetFeePayer()
-	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), feePayer)
+	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), feePayer, args.GetPreviousTransactionAttempts())
 	if err != nil {
 		return txInput, err
 	}
@@ -183,7 +190,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		return nil, fmt.Errorf("no spenders")
 	}
 
-	txInput, err := client.FetchUnsimulatedInput(ctx, spenders[0].GetFrom(), feePayer)
+	txInput, err := client.FetchUnsimulatedInput(ctx, spenders[0].GetFrom(), feePayer, args.GetPreviousTransactionAttempts())
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +199,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 }
 
 // FetchLegacyTxInput returns tx input for a EVM tx
-func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address, feePayer xc.Address) (*tx_input.TxInput, error) {
+func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address, feePayer xc.Address, previousAttempts []string) (*tx_input.TxInput, error) {
 	nativeAsset := client.Asset.GetChain()
 
 	zero := xc.NewAmountBlockchainFromUint64(0)
@@ -254,29 +261,34 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			result.GasPrice = xc.AmountBlockchain(*legacyGasPrice).ApplyGasPriceMultiplier(nativeAsset.Client())
 		}
 
-		pendingTxInfo, err := client.TxPoolContentFrom(ctx, senderAddr)
+		pending, ok, err := client.LookupPreviousTxAttempt(ctx, senderAddr, previousAttempts)
 		if err != nil {
-			logrus.WithFields(logrus.Fields{"from": from, "err": err}).Warn("could not see pending tx pool")
-		} else {
-			pending, ok := pendingTxInfo.InfoFor(senderAddr.String())
-			if ok {
-				// if there's a pending tx, we want to replace it (use 15% increase).
-				minMaxFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxFeePerGas.ToInt()), 1.15)
-				minPriorityFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxPriorityFeePerGas.ToInt()), 1.15)
-				log := logrus.WithFields(logrus.Fields{
-					"from":        from,
-					"old-tx":      pending.Hash,
-					"old-fee-cap": result.GasFeeCap.String(),
-					"new-fee-cap": minMaxFee.String(),
-				})
-				if result.GasFeeCap.Cmp(&minMaxFee) < 0 {
-					log.Debug("replacing max-fee-cap because of pending tx")
-					result.GasFeeCap = minMaxFee
-				}
-				if result.GasTipCap.Cmp(&minPriorityFee) < 0 {
-					log.Debug("replacing max-priority-fee-cap because of pending tx")
-					result.GasTipCap = minPriorityFee
-				}
+			logrus.WithError(err).Info("could not get previous tx by hash")
+		}
+		if ok {
+			// if there's a pending tx, we want to replace it (use default 15% increase).
+			replacementMultiplier := 1.15
+			if nativeAsset.ReplacementTransactionMultiplier > 1 {
+				replacementMultiplier = nativeAsset.ReplacementTransactionMultiplier
+			}
+
+			//  + nativeAsset.ReplacementTransactionMultiplier
+			minMaxFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxFeePerGas.ToInt()), replacementMultiplier)
+			minPriorityFee := xc.MultiplyByFloat(xc.AmountBlockchain(*pending.MaxPriorityFeePerGas.ToInt()), replacementMultiplier)
+			log := logrus.WithFields(logrus.Fields{
+				"from":        from,
+				"old-tx":      pending.Hash,
+				"old-fee-cap": result.GasFeeCap.String(),
+				"new-fee-cap": minMaxFee.String(),
+				"multiplier":  replacementMultiplier,
+			})
+			if result.GasFeeCap.Cmp(&minMaxFee) < 0 {
+				log.Debug("replacing max-fee-cap because of pending tx")
+				result.GasFeeCap = minMaxFee
+			}
+			if result.GasTipCap.Cmp(&minPriorityFee) < 0 {
+				log.Debug("replacing max-priority-fee-cap because of pending tx")
+				result.GasTipCap = minPriorityFee
 			}
 		}
 
