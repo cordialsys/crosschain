@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -113,6 +114,9 @@ func (c *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	}
 	response, err := c.client.SubmitTransaction(serializedSigned)
 	if err != nil {
+		if strings.Contains(err.Error(), "larger than max allowed size") {
+			return fmt.Errorf("%s: you may be sending a transaction amount that is too small", err.Error())
+		}
 		return err
 	}
 	logrus.WithFields(logrus.Fields{

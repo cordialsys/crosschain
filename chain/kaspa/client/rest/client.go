@@ -23,11 +23,15 @@ func NewClient(url string, chain xc.NativeAsset) *Client {
 }
 
 type ErrorResponse struct {
-	Code   int    `json:"code"`
-	Detail string `json:"detail"`
+	Code     int    `json:"code"`
+	Detail   string `json:"detail"`
+	ErrorMsg string `json:"error"`
 }
 
 func (e *ErrorResponse) Error() string {
+	if e.ErrorMsg != "" {
+		return e.ErrorMsg
+	}
 	return fmt.Sprintf("%s (%d)", e.Detail, e.Code)
 }
 
