@@ -50,6 +50,7 @@ const (
 	DOT    = NativeAsset("DOT")    // Polkadot
 	DUSK   = NativeAsset("DUSK")   // Dusk
 	ENJ    = NativeAsset("ENJ")    // Enjin
+	EOS    = NativeAsset("EOS")    // EOS
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
@@ -111,6 +112,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	DOT,
 	DUSK,
 	ENJ,
+	EOS,
 	ETC,
 	ETH,
 	ETHW,
@@ -161,6 +163,7 @@ const (
 	DriverCosmos        = Driver("cosmos")
 	DriverCosmosEvmos   = Driver("evmos")
 	DriverDusk          = Driver("dusk")
+	DriverEOS           = Driver("eos")
 	DriverEVM           = Driver("evm")
 	DriverEVMLegacy     = Driver("evm-legacy")
 	DriverFilecoin      = Driver("filecoin")
@@ -183,6 +186,7 @@ var SupportedDrivers = []Driver{
 	DriverBitcoinLegacy,
 	DriverCosmos,
 	DriverCosmosEvmos,
+	DriverEOS,
 	DriverEVM,
 	DriverEVMLegacy,
 	DriverFilecoin,
@@ -268,6 +272,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverCosmos
 	case KAS:
 		return DriverKaspa
+	case EOS:
+		return DriverEOS
 	case SUI:
 		return DriverSui
 	case SOL:
@@ -298,7 +304,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 	switch driver {
 	case DriverBitcoin:
 		return []SignatureType{K256Sha256, Schnorr}
-	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin:
+	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin, DriverEOS:
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return []SignatureType{K256Keccak}
@@ -320,7 +326,7 @@ var Uncompressed PublicKeyFormat = "uncompressed"
 
 func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
-	case DriverBitcoin, DriverCardano, DriverBitcoinCash, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverCardano, DriverBitcoinCash, DriverBitcoinLegacy, DriverEOS:
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
@@ -393,15 +399,21 @@ type AdditionalNativeAsset struct {
 	Decimals int32 `yaml:"decimals,omitempty"`
 	// Maximum fee limit
 	FeeLimit AmountHumanReadable `yaml:"fee_limit"`
+	Aliases  []string            `yaml:"aliases,omitempty"`
 }
 
-func NewAdditionalNativeAsset(assetId string, contractId ContractAddress, decimals int32, feeLimit AmountHumanReadable) *AdditionalNativeAsset {
+func NewAdditionalNativeAsset(assetId string, contractId ContractAddress, decimals int32, feeLimit AmountHumanReadable, aliases ...string) *AdditionalNativeAsset {
 	return &AdditionalNativeAsset{
 		assetId,
 		contractId,
 		decimals,
 		feeLimit,
+		aliases,
 	}
+}
+
+func (na *AdditionalNativeAsset) HasAlias(alias string) bool {
+	return slices.Contains(na.Aliases, alias)
 }
 
 type CrosschainClientConfig struct {

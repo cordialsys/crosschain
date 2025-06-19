@@ -10,6 +10,22 @@
 
 network: "mainnet"
 chains:
+  EOS:
+    chain: EOS
+    driver: eos
+    chain_coin: eosio.token/EOS
+    decimals: 4
+    native_assets:
+      - asset_id: "EOS"
+        contract_id: "eosio.token/EOS"
+        decimals: 4
+        fee_limit: "100.0"
+        aliases: ["eosio.token"]
+      - asset_id: "core.vaulta/A"
+        contract_id: "core.vaulta/A"
+        decimals: 4
+        fee_limit: "100.0"
+        aliases: ["core.vaulta"]
   ACA:
     chain: ACA
     driver: substrate

@@ -3,6 +3,7 @@ package drivers
 import (
 	"fmt"
 
+	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/kaspa"
 	kaspaaddress "github.com/cordialsys/crosschain/chain/kaspa/address"
 	kaspabuilder "github.com/cordialsys/crosschain/chain/kaspa/builder"
@@ -30,6 +31,9 @@ import (
 	duskaddress "github.com/cordialsys/crosschain/chain/dusk/address"
 	duskbuilder "github.com/cordialsys/crosschain/chain/dusk/builder"
 	duskclient "github.com/cordialsys/crosschain/chain/dusk/client"
+	eosaddress "github.com/cordialsys/crosschain/chain/eos/address"
+	eosbuilder "github.com/cordialsys/crosschain/chain/eos/builder"
+	eosclient "github.com/cordialsys/crosschain/chain/eos/client"
 	"github.com/cordialsys/crosschain/chain/evm"
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmbuilder "github.com/cordialsys/crosschain/chain/evm/builder"
@@ -101,6 +105,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return duskclient.NewClient(cfg)
 	case DriverKaspa:
 		return kaspaclient.NewClient(cfg)
+	case DriverEOS:
+		return eosclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -177,6 +183,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return duskbuilder.NewTxBuilder(cfg)
 	case DriverKaspa:
 		return kaspabuilder.NewTxBuilder(cfg)
+	case DriverEOS:
+		return eosbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -221,6 +229,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return cardanoaddress.NewAddressBuilder(cfg)
 	case DriverKaspa:
 		return kaspaaddress.NewAddressBuilder(cfg)
+	case DriverEOS:
+		return eosaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
@@ -264,6 +274,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return xlm.CheckError(err)
 	case DriverKaspa:
 		return kaspa.CheckError(err)
+	case DriverEOS:
+		return eos.CheckError(err)
 	}
 	return errors.UnknownError
 }

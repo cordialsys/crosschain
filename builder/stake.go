@@ -33,6 +33,7 @@ func (args *StakeArgs) GetFeePayer() (xc.Address, bool)   { return args.options.
 func (args *StakeArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
 }
+func (args *StakeArgs) GetFromIdentity() (string, bool) { return args.options.GetFromIdentity() }
 
 func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (StakeArgs, error) {
 	builderOptions := builderOptions{}
