@@ -144,7 +144,7 @@ func (client *Client) GetNonce(ctx context.Context, from xc.Address) (uint64, er
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	feePayer, _ := args.GetFeePayer()
-	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), feePayer, args.GetPreviousTransactionAttempts())
+	txInput, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), feePayer, args.GetTransactionAttempts())
 	if err != nil {
 		return txInput, err
 	}
@@ -190,7 +190,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		return nil, fmt.Errorf("no spenders")
 	}
 
-	txInput, err := client.FetchUnsimulatedInput(ctx, spenders[0].GetFrom(), feePayer, args.GetPreviousTransactionAttempts())
+	txInput, err := client.FetchUnsimulatedInput(ctx, spenders[0].GetFrom(), feePayer, args.GetTransactionAttempts())
 	if err != nil {
 		return nil, err
 	}
