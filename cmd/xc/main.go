@@ -94,7 +94,7 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(commands.CmdRpcBlock())
 	cmd.AddCommand(commands.CmdFund())
 	cmd.AddCommand(staking.CmdStaking())
-	cmd.AddCommand(commands.CmdDebug())
+	cmd.AddCommand(commands.CmdTools())
 
 	return cmd
 }

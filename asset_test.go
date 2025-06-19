@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/kaspa"
 	"github.com/cordialsys/crosschain/chain/substrate"
@@ -29,6 +30,8 @@ func TestChains(t *testing.T) {
 					substrate.Validate(t, chain)
 				case DriverKaspa:
 					kaspa.Validate(t, chain)
+				case DriverEOS:
+					eos.Validate(t, chain)
 				case DriverTron:
 					// pass
 				case DriverTon:

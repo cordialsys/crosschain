@@ -50,6 +50,14 @@ func (args *TransferArgs) GetTransactionAttempts() []string {
 	return args.options.GetTransactionAttempts()
 }
 
+func (args *TransferArgs) GetFromIdentity() (string, bool) {
+	return args.options.GetFromIdentity()
+}
+
+func (args *TransferArgs) GetToIdentity() (string, bool) {
+	return args.options.GetToIdentity()
+}
+
 func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
@@ -104,4 +112,12 @@ func (args *TransferArgs) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
 
 func (args *TransferArgs) SetTransactionAttempts(previousTransactionAttempts []string) {
 	args.options.SetTransactionAttempts(previousTransactionAttempts)
+}
+
+func (args *TransferArgs) SetFromIdentity(fromIdentity string) {
+	args.options.SetFromIdentity(fromIdentity)
+}
+
+func (args *TransferArgs) SetToIdentity(toIdentity string) {
+	args.options.SetToIdentity(toIdentity)
 }

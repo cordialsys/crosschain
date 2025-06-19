@@ -25,6 +25,10 @@ type builderOptions struct {
 	inclusiveFeeSpending bool
 	// list of transaction hashes that have been attempted and may still be in the mempool
 	transactionAttempts []string
+	// On chain identity of the sender.
+	fromIdentity *string
+	// On chain identity of the receiver.
+	toIdentity *string
 }
 
 func newBuilderOptions() builderOptions {
@@ -69,6 +73,8 @@ func (opts *builderOptions) GetStakeAccount() (string, bool)   { return get(opts
 func (opts *builderOptions) InclusiveFeeSpendingEnabled() bool {
 	return opts.inclusiveFeeSpending
 }
+func (opts *builderOptions) GetFromIdentity() (string, bool) { return get(opts.fromIdentity) }
+func (opts *builderOptions) GetToIdentity() (string, bool)   { return get(opts.toIdentity) }
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -92,6 +98,13 @@ func (opts *builderOptions) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
 
 func (opts *builderOptions) SetTransactionAttempts(TransactionAttempts []string) {
 	opts.transactionAttempts = TransactionAttempts
+}
+
+func (opts *builderOptions) SetFromIdentity(fromIdentity string) {
+	opts.fromIdentity = &fromIdentity
+}
+func (opts *builderOptions) SetToIdentity(toIdentity string) {
+	opts.toIdentity = &toIdentity
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -172,6 +185,22 @@ func OptionInclusiveFeeSpending(inclusiveFeeSpending bool) BuilderOption {
 func OptionTransactionAttempts(transactionAttempts []string) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.transactionAttempts = transactionAttempts
+		return nil
+	}
+}
+
+// The identity may be needed if the chain requires it (e.g. EOS)
+func OptionFromIdentity(fromIdentity string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.fromIdentity = &fromIdentity
+		return nil
+	}
+}
+
+// The identity may be needed if the chain requires it (e.g. EOS)
+func OptionToIdentity(toIdentity string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.toIdentity = &toIdentity
 		return nil
 	}
 }

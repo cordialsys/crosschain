@@ -1,0 +1,238 @@
+package client
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+
+	// eosapi "github.com/cordialsys/crosschain/chain/eos/client/api"
+	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
+	"github.com/cordialsys/crosschain/chain/eos/tx/action"
+	"github.com/cordialsys/crosschain/chain/eos/tx_input"
+	xclient "github.com/cordialsys/crosschain/client"
+)
+
+// Client for Template
+type Client struct {
+	api   *eos.API
+	chain *xc.ChainConfig
+}
+
+var _ xclient.Client = &Client{}
+
+func NewClient(cfgI xc.ITask) (*Client, error) {
+	url := cfgI.GetChain().URL
+	auth := cfgI.GetChain().Auth2
+	apiKey := ""
+	if auth != "" {
+		var err error
+		apiKey, err = auth.Load()
+		if err != nil {
+			return nil, fmt.Errorf("failed to load EOS client api key: %w", err)
+		}
+	}
+
+	api2 := eos.New(url)
+	api2.Header.Set("Content-Type", "application/json")
+	if apiKey != "" {
+		api2.Header.Set("x-api-key", apiKey)
+	}
+
+	return &Client{api: api2, chain: cfgI.GetChain()}, nil
+}
+
+// FetchTransferInput returns tx input for a Template tx
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	info, err := client.api.GetInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get EOS info: %w", err)
+	}
+	fromAddress := args.GetFrom()
+	fromIdentity, ok := args.GetFromIdentity()
+	if !ok {
+		accountsResp, err := client.api.GetAccountsByAuthorizers(ctx, []eos.PermissionLevel{}, []string{string(fromAddress)})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get accounts by authorizers: %v", err)
+		}
+		if len(accountsResp.Accounts) == 0 {
+			return nil, fmt.Errorf("no account found for %s", fromAddress)
+		}
+		accounts := map[string]bool{}
+		for _, account := range accountsResp.Accounts {
+			accounts[string(account.Account)] = true
+		}
+		if len(accounts) > 1 {
+			return nil, fmt.Errorf("multiple accounts found for %s, but no identity set for the address", fromAddress)
+		}
+		fromIdentity = string(accountsResp.Accounts[0].Account)
+	}
+
+	input := tx_input.NewTxInput()
+	input.ChainID = info.ChainID
+	input.HeadBlockID = info.HeadBlockID
+	input.Timestamp = info.HeadBlockTime.Time.Unix()
+	input.FromAccount = fromIdentity
+
+	contract, ok := args.GetContract()
+	if !ok {
+		contract = tx_input.DefaultContractId(client.chain.Base())
+		fmt.Println("no contract, using default -- ", contract)
+	} else {
+		fmt.Println("contract -- ", contract)
+	}
+	_, symbol, err := tx_input.ParseContractId(client.chain.Base(), contract, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse contract ID: %w", err)
+	}
+	input.Symbol = symbol
+
+	return input, nil
+}
+
+func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
+	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
+	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	return client.FetchTransferInput(ctx, args)
+}
+
+func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+	// This should be the JSON serialized transaction
+	bz, err := tx.Serialize()
+	if err != nil {
+		return fmt.Errorf("failed to serialize EOS tx: %w", err)
+	}
+	_, err = client.api.PushRawTransaction(ctx, bz)
+	if err != nil {
+		return fmt.Errorf("failed to push EOS tx: %w", err)
+	}
+
+	return nil
+}
+
+// Returns transaction info - legacy/old endpoint
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+}
+
+// Returns transaction info - new endpoint
+func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+	tx, err := client.api.GetTransactionFromAnySupportedEndpoint(ctx, string(txHash))
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to get EOS tx: %w", err)
+	}
+	err = tx.Validate()
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to validate EOS tx: %w", err)
+	}
+
+	native := client.chain.Chain
+
+	chainInfo, err := client.api.GetInfo(ctx)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to get EOS chain info: %w", err)
+	}
+	// TODO is there an tx with an error?
+
+	txInfo := xclient.NewTxInfo(
+		xclient.NewBlock(native, tx.GetBlockNum(), "", tx.GetBlockTime()),
+		client.chain,
+		tx.GetTxId(),
+		uint64(chainInfo.HeadBlockNum-uint32(tx.GetBlockNum())),
+		nil,
+	)
+
+	// There often seems to be redundent traces, so we need to dedup them.
+	recordedActions := map[string]bool{}
+	for _, trace := range tx.GetActions() {
+		// skip traces with no receipt
+		if !trace.Ok() {
+			continue
+		}
+		actionId := trace.GetId()
+		if recordedActions[actionId] {
+			continue
+		}
+		recordedActions[actionId] = true
+
+		switch trace.GetName() {
+		case "transfer":
+			data := action.Transfer{}
+			err = json.Unmarshal(trace.GetData(), &data)
+			if err != nil {
+				return xclient.TxInfo{}, err
+			}
+
+			contract := xc.ContractAddress(trace.GetAccount() + "/" + data.Quantity.Symbol.Symbol)
+			if contract == "eosio.token/EOS" {
+				contract = ""
+			}
+			movement := xclient.NewMovement(native, contract)
+
+			decimals := 4
+			amount := xc.NewAmountBlockchainFromUint64(uint64(data.Quantity.Amount))
+			movement.AddSource(xc.Address(data.From), amount, &decimals)
+			movement.AddDestination(xc.Address(data.To), amount, &decimals)
+			txInfo.AddMovement(movement)
+		}
+	}
+	return *txInfo, nil
+}
+
+func jsonPrint(v interface{}) {
+	bz, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		fmt.Println("failed to marshal JSON:", err)
+		return
+	}
+	fmt.Println(string(bz))
+}
+
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	from := args.Address()
+	accounts, err := client.api.GetAccountsByAuthorizers(ctx, []eos.PermissionLevel{}, []string{string(from)})
+	if err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to get EOS accounts: %w", err)
+	}
+
+	contract, ok := args.Contract()
+	if !ok {
+		contract = tx_input.DefaultContractId(client.chain.Base())
+	}
+
+	var contractAccount, symbol string
+	contractAccount, symbol, err = tx_input.ParseContractId(client.chain.Base(), contract, nil)
+	if err != nil {
+		return xc.AmountBlockchain{}, err
+	}
+
+	total := xc.AmountBlockchain{}
+	accountsLookedAt := map[eos.AccountName]bool{}
+	for _, account := range accounts.Accounts {
+		// There can be multiple entries for the same account, one for each permission.
+		if accountsLookedAt[account.Account] {
+			continue
+		}
+		assets, err := client.api.GetCurrencyBalance(ctx, account.Account, symbol, eos.AccountName(contractAccount))
+		if err != nil {
+			return xc.AmountBlockchain{}, fmt.Errorf("failed to get '%s' balance: %w", contract, err)
+		}
+		if len(assets) > 0 {
+			bal := xc.NewAmountBlockchainFromUint64(uint64(assets[0].Amount))
+			total = total.Add(&bal)
+		}
+		accountsLookedAt[account.Account] = true
+	}
+	return total, nil
+}
+
+func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	// seems it's always 4 decimals for EOS
+	return 4, nil
+}
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+	return &xclient.BlockWithTransactions{}, errors.New("not implemented")
+}

@@ -193,6 +193,11 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 		hash = strings.TrimPrefix(hash, "0x")
 		hash = zeroPadHex("", hash, 64)
 		hash = strings.ToLower(hash)
+	case xc.DriverEOS:
+		// EOS lowercase hex, no prefix
+		hash = strings.TrimPrefix(hash, "0x")
+		hash = zeroPadHex("", hash, 64)
+		hash = strings.ToLower(hash)
 	case xc.DriverFilecoin:
 		// nothing to do, bech32
 	default:

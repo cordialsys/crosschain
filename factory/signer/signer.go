@@ -11,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 
 	"github.com/cloudflare/circl/ecc/bls12381"
@@ -106,9 +107,15 @@ func fromString(secret string, hdNumMaybe uint32) ([]byte, error) {
 		// Try hex next
 		bz, err := hex.DecodeString(secret)
 		if err != nil {
-			// try base58
-			base58bz := base58.Decode(secret)
-			return base58bz, nil
+			// try wif
+			wif, err := btcutil.DecodeWIF(secret)
+			if err != nil {
+				// try base58
+				base58bz := base58.Decode(secret)
+				return base58bz, nil
+			}
+			wifBytes := wif.PrivKey.Key.Bytes()
+			return wifBytes[:], nil
 		}
 		return bz, nil
 	}
