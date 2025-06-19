@@ -162,8 +162,8 @@ func (args *MultiTransferArgs) GetMemo() (string, bool) {
 	return args.options.GetMemo()
 }
 
-func (args *MultiTransferArgs) GetPreviousTransactionAttempts() []string {
-	return args.options.GetPreviousTransactionAttempts()
+func (args *MultiTransferArgs) GetTransactionAttempts() []string {
+	return args.options.GetTransactionAttempts()
 }
 
 func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {

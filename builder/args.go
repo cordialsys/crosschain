@@ -24,7 +24,7 @@ type builderOptions struct {
 	feePayer             *xc.Address
 	inclusiveFeeSpending bool
 	// list of transaction hashes that have been attempted and may still be in the mempool
-	previousTransactionAttempts []string
+	transactionAttempts []string
 }
 
 func newBuilderOptions() builderOptions {
@@ -58,8 +58,8 @@ func (opts *builderOptions) GetContract() (xc.ContractAddress, bool) { return ge
 func (opts *builderOptions) GetDecimals() (int, bool)                { return get(opts.decimals) }
 func (opts *builderOptions) GetFeePayer() (xc.Address, bool)         { return get(opts.feePayer) }
 func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)    { return get(opts.feePayerPublicKey) }
-func (opts *builderOptions) GetPreviousTransactionAttempts() []string {
-	return opts.previousTransactionAttempts
+func (opts *builderOptions) GetTransactionAttempts() []string {
+	return opts.transactionAttempts
 }
 
 // Other options
@@ -90,8 +90,8 @@ func (opts *builderOptions) SetInclusiveFeeSpending(inclusiveFeeSpending bool) {
 	opts.inclusiveFeeSpending = inclusiveFeeSpending
 }
 
-func (opts *builderOptions) SetPreviousTransactionAttempts(previousTransactionAttempts []string) {
-	opts.previousTransactionAttempts = previousTransactionAttempts
+func (opts *builderOptions) SetTransactionAttempts(TransactionAttempts []string) {
+	opts.transactionAttempts = TransactionAttempts
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -169,9 +169,9 @@ func OptionInclusiveFeeSpending(inclusiveFeeSpending bool) BuilderOption {
 		return nil
 	}
 }
-func OptionPreviousTransactionAttempts(previousTransactionAttempts []string) BuilderOption {
+func OptionTransactionAttempts(transactionAttempts []string) BuilderOption {
 	return func(opts *builderOptions) error {
-		opts.previousTransactionAttempts = previousTransactionAttempts
+		opts.transactionAttempts = transactionAttempts
 		return nil
 	}
 }

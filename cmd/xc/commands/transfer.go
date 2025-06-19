@@ -108,7 +108,7 @@ func CmdTxTransfer() *cobra.Command {
 			amountBlockchain := transferredAmountHuman.ToBlockchain(decimals)
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
-				builder.OptionPreviousTransactionAttempts(previousAttempts),
+				builder.OptionTransactionAttempts(previousAttempts),
 			}
 
 			mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
