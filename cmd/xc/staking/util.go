@@ -50,6 +50,24 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 		return "", fmt.Errorf("could not add signature(s): %v", err)
 	}
 
+	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+		for {
+			additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+			if err != nil {
+				return "", fmt.Errorf("could not get additional sighashes: %v", err)
+			}
+			if len(additionalSighashes) == 0 {
+				break
+			}
+			moreSigs := signer.MustSignAll(additionalSighashes)
+			signatures = append(signatures, moreSigs...)
+			err = tx.SetSignatures(signatures...)
+			if err != nil {
+				return "", fmt.Errorf("could not add additional signature(s): %v", err)
+			}
+		}
+	}
+
 	bz, err := tx.Serialize()
 	if err != nil {
 		return "", err

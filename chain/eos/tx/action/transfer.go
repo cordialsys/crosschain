@@ -13,7 +13,7 @@ func jsonPrint(v interface{}) {
 	fmt.Println(string(json))
 }
 
-func NewTransfer(fromAccount, toAccount string, quantity xc.AmountHumanReadable, decimals int32, contractAccount string, contractSymbol string, memo string) (*eos.Action, error) {
+func NewTransfer(fromAccount, toAccount string, quantity xc.AmountBlockchain, decimals int32, contractAccount string, contractSymbol string, memo string) (*eos.Action, error) {
 	quantityString := NewAssetString(quantity, decimals, contractSymbol)
 	asset, err := eos.NewAssetFromString(quantityString)
 	if err != nil {
@@ -40,8 +40,9 @@ func NewTransfer(fromAccount, toAccount string, quantity xc.AmountHumanReadable,
 type AssetString = string
 
 // EOS requires the amount to be represented as a human string with 0 padded decimals.
-func NewAssetString(amount xc.AmountHumanReadable, decimals int32, symbol string) AssetString {
-	fixedString := amount.Decimal().StringFixed(decimals)
+func NewAssetString(amount xc.AmountBlockchain, decimals int32, symbol string) AssetString {
+	human := amount.ToHuman(decimals)
+	fixedString := human.Decimal().StringFixed(decimals)
 	return AssetString(fmt.Sprintf("%s %s", fixedString, symbol))
 }
 

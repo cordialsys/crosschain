@@ -28,6 +28,9 @@ var _ xc.TxInputWithUnix = &TxInput{}
 func init() {
 	// Uncomment this line to register the driver input for serialization/derserialization
 	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
 }
 
 func NewTxInput() *TxInput {

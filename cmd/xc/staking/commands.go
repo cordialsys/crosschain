@@ -60,6 +60,7 @@ func CmdStakedBalances() *cobra.Command {
 }
 
 func CmdStake() *cobra.Command {
+	var dryRun, offline bool
 	cmd := &cobra.Command{
 		Use:   "stake",
 		Short: "Stake an asset.",
@@ -69,10 +70,7 @@ func CmdStake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			offline, err := cmd.Flags().GetBool("offline")
-			if err != nil {
-				return err
-			}
+			offline = dryRun || offline
 
 			amountHuman := moreArgs.Amount
 			if amountHuman.String() == "0" {
@@ -116,11 +114,14 @@ func CmdStake() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().Lookup("offline").Hidden = true
 	return cmd
 }
 
 func CmdUnstake() *cobra.Command {
+	var dryRun, offline bool
 	cmd := &cobra.Command{
 		Use:   "unstake",
 		Short: "Unstake an asset.",
@@ -130,10 +131,7 @@ func CmdUnstake() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			offline, err := cmd.Flags().GetBool("offline")
-			if err != nil {
-				return err
-			}
+			offline = dryRun || offline
 
 			amountHuman := moreArgs.Amount
 			if amountHuman.String() == "0" {
@@ -200,11 +198,14 @@ func CmdUnstake() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().Lookup("offline").Hidden = true
 	return cmd
 }
 
 func CmdWithdraw() *cobra.Command {
+	var dryRun, offline bool
 	cmd := &cobra.Command{
 		Use:   "withdraw",
 		Short: "Withdraw from a stake account.",
@@ -214,10 +215,7 @@ func CmdWithdraw() *cobra.Command {
 			chain := setup.UnwrapChain(cmd.Context())
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
-			offline, err := cmd.Flags().GetBool("offline")
-			if err != nil {
-				return err
-			}
+			offline = dryRun || offline
 
 			amountHuman := moreArgs.Amount
 			if amountHuman.String() == "0" {
@@ -262,7 +260,9 @@ func CmdWithdraw() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().Bool("offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
+	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
+	cmd.Flags().Lookup("offline").Hidden = true
 	return cmd
 }
 

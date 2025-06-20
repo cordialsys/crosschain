@@ -9,7 +9,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 
-	// eosapi "github.com/cordialsys/crosschain/chain/eos/client/api"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 	"github.com/cordialsys/crosschain/chain/eos/tx/action"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
@@ -23,6 +22,7 @@ type Client struct {
 }
 
 var _ xclient.Client = &Client{}
+var _ xclient.StakingClient = &Client{}
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	url := cfgI.GetChain().URL
@@ -47,13 +47,20 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // FetchTransferInput returns tx input for a Template tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	from := args.GetFrom()
+	contract, _ := args.GetContract()
+	account, _ := args.GetFromIdentity()
+	return client.FetchBaseTxInput(ctx, from, account, contract)
+}
+
+func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, accountMaybe string, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
 	info, err := client.api.GetInfo(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOS info: %w", err)
 	}
-	fromAddress := args.GetFrom()
-	fromIdentity, ok := args.GetFromIdentity()
-	if !ok {
+	fromAddress := from
+	fromIdentity := accountMaybe
+	if fromIdentity == "" {
 		accountsResp, err := client.api.GetAccountsByAuthorizers(ctx, []eos.PermissionLevel{}, []string{string(fromAddress)})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get accounts by authorizers: %v", err)
@@ -77,13 +84,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	input.Timestamp = info.HeadBlockTime.Time.Unix()
 	input.FromAccount = fromIdentity
 
-	contract, ok := args.GetContract()
-	if !ok {
+	contract := contractMaybe
+	if contract == "" {
 		contract = tx_input.DefaultContractId(client.chain.Base())
-		fmt.Println("no contract, using default -- ", contract)
-	} else {
-		fmt.Println("contract -- ", contract)
 	}
+
 	_, symbol, err := tx_input.ParseContractId(client.chain.Base(), contract, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse contract ID: %w", err)
