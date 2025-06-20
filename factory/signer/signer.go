@@ -262,6 +262,7 @@ func (s *Signer) SignAll(data []*xc.SignatureRequest) ([]*xc.SignatureResponse, 
 			return nil, err
 		}
 		signatures[i] = sig
+		logrus.WithField("address", sig.Address).WithField("signature", hex.EncodeToString(sig.Signature)).Info("adding signature")
 	}
 	return signatures, nil
 }

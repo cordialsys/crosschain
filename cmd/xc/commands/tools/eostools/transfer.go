@@ -1,7 +1,6 @@
 package eostools
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -33,23 +32,11 @@ func jsonPrint(v interface{}) {
 	fmt.Println(string(json))
 }
 
-func encode(v interface{}) string {
-	buffer := bytes.NewBuffer(nil)
-	err := eos.NewEncoder(buffer).Encode(v)
-	NoError(err, "encode %T", v)
-
-	return hex.EncodeToString(buffer.Bytes())
-}
-
 func NoError(err error, message string, args ...interface{}) {
 	if err != nil {
-		Quit(message+": "+err.Error(), args...)
+		fmt.Printf(message+"\n", args...)
+		runtime.Goexit()
 	}
-}
-
-func Quit(message string, args ...interface{}) {
-	fmt.Printf(message+"\n", args...)
-	runtime.Goexit()
 }
 
 type EosTransfer struct {
@@ -125,11 +112,8 @@ func CmdTxTransferEOS() *cobra.Command {
 			input := inputI.(*tx_input.TxInput)
 			input.Timestamp = time.Now().Unix()
 
-			refApi := eos.New("https://jungle4.cryptolions.io:443")
+			refApi := eos.New(chainConfig.URL)
 			refApi.Header.Set("Content-Type", "application/json")
-
-			xapi := eos.New("https://jungle4.cryptolions.io:443")
-			xapi.Header.Set("Content-Type", "application/json")
 
 			fromAccount := input.FromAccount
 
@@ -139,7 +123,7 @@ func CmdTxTransferEOS() *cobra.Command {
 			}
 			_ = transferQuantity
 
-			theAction, err := action.NewTransfer(fromAccount, toAccount, amountHuman, 4, "eosio.token", "EOS", "")
+			theAction, err := action.NewTransfer(fromAccount, toAccount, amount, 4, "eosio.token", "EOS", "")
 			if err != nil {
 				return fmt.Errorf("failed to create transfer action: %v", err)
 			}

@@ -2,26 +2,22 @@ package tx
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	xcbuilder "github.com/cordialsys/crosschain/builder"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 	ecc2 "github.com/cordialsys/crosschain/chain/eos/eos-go/ecc"
-	"github.com/cordialsys/crosschain/chain/eos/tx/action"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 )
 
 // Tx for Template
 type Tx struct {
 	chain      *xc.ChainBaseConfig
-	args       xcbuilder.TransferArgs
 	input      *tx_input.TxInput
 	signatures []xc.TxSignature
+	builtTx    *eos.Transaction
 }
 
 var _ xc.Tx = &Tx{}
@@ -30,17 +26,21 @@ var _ xc.Tx = &Tx{}
 // of EOS's 'canoncical' signatures are found.
 var _ xc.TxAdditionalSighashes = &Tx{}
 
-func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_input.TxInput) *Tx {
-	return &Tx{chain, args, input, []xc.TxSignature{}}
+func NewTx(chain *xc.ChainBaseConfig, input *tx_input.TxInput, builtTx *eos.Transaction) *Tx {
+	return &Tx{chain, input, []xc.TxSignature{}, builtTx}
 }
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	eosTx, err := tx.GetTransferTx()
+	eosTx, err := tx.BuildTx()
 	if err != nil {
 		return ""
 	}
-	packedTrx, err := tx.SignAndPack(eosTx)
+	lastSig, ok := tx.LastSignature()
+	if !ok {
+		return ""
+	}
+	packedTrx, err := tx.SignAndPack(eosTx, lastSig)
 	if err != nil {
 		return ""
 	}
@@ -53,7 +53,7 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	eosTx, err := tx.GetTransferTx()
+	eosTx, err := tx.BuildTx()
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func (tx Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 	if len(tx.signatures) > 255 {
 		return nil, errors.New("could not find canonical EOS signature")
 	}
-	eosTx, err := tx.GetTransferTx()
+	eosTx, err := tx.BuildTx()
 	if err != nil {
 		return nil, err
 	}
@@ -112,11 +112,16 @@ func (tx *Tx) GetSignatures() []xc.TxSignature {
 
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
-	eosTx, err := tx.GetTransferTx()
+	eosTx, err := tx.BuildTx()
 	if err != nil {
 		return nil, err
 	}
-	packedTrx, err := tx.SignAndPack(eosTx)
+	lastSig, ok := tx.LastSignature()
+	if !ok {
+		return nil, errors.New("EOS tx not signed")
+	}
+
+	packedTrx, err := tx.SignAndPack(eosTx, lastSig)
 	if err != nil {
 		return nil, err
 	}
@@ -138,58 +143,17 @@ func jsonPrint(v interface{}) {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx Tx) GetTransferTx() (*eos.Transaction, error) {
-	fromAccount := tx.input.FromAccount
-	if identity, ok := tx.args.GetFromIdentity(); ok {
-		fromAccount = identity
-	}
-	toAccount := string(tx.args.GetTo())
-	if identity, ok := tx.args.GetToIdentity(); ok {
-		toAccount = identity
-	}
-	decimals, ok := tx.args.GetDecimals()
-	if !ok {
-		decimals = 4
-	}
-	amount := tx.args.GetAmount()
-	humanAmount := amount.ToHuman(int32(decimals))
-
-	contract, ok := tx.args.GetContract()
-	if !ok {
-		contract = tx_input.DefaultContractId(tx.chain)
-	}
-	contractAccount, symbol, err := tx_input.ParseContractId(tx.chain, contract, tx.input)
-	if err != nil {
-		return nil, err
-	}
-	memo, _ := tx.args.GetMemo()
-
-	action, err := action.NewTransfer(fromAccount, toAccount, humanAmount, int32(decimals), contractAccount, symbol, memo)
-	if err != nil {
-		return nil, err
-	}
-	// jsonPrint(action)
-	eosTx := &eos.Transaction{Actions: []*eos.Action{action}}
-	eosTx.RefBlockNum = uint16(binary.BigEndian.Uint32(tx.input.HeadBlockID[:4]))
-	eosTx.RefBlockPrefix = binary.LittleEndian.Uint32(tx.input.HeadBlockID[8:16])
-	expiration := time.Unix(tx.input.Timestamp, 0)
-	expiration = expiration.Add(tx_input.ExpirationPeriod)
-	eosTx.Expiration = eos.JSONTime{Time: expiration}
-
+func (tx Tx) BuildTx() (*eos.Transaction, error) {
+	eosTx := *tx.builtTx
 	// The signer may be using deterministic signatures, so we need to make
 	// some useless change in the signature body to force a completely different signature.
 	eosTx.MaxCPUUsageMS = byte(tx.SigCount())
-
-	return eosTx, nil
+	return &eosTx, nil
 }
 
-func (tx Tx) SignAndPack(eosTx *eos.Transaction) (*eos.PackedTransaction, error) {
-	lastSig, ok := tx.LastSignature()
-	if !ok {
-		return nil, errors.New("EOS tx not signed")
-	}
+func (tx Tx) SignAndPack(eosTx *eos.Transaction, signature xc.TxSignature) (*eos.PackedTransaction, error) {
 	signedTx := eos.NewSignedTransaction(eosTx)
-	withPrefix := append([]byte{byte(ecc2.CurveK1)}, lastSig...)
+	withPrefix := append([]byte{byte(ecc2.CurveK1)}, signature...)
 	sigFormatted, err := ecc2.NewSignatureFromData(withPrefix)
 	if err != nil {
 		return nil, err
