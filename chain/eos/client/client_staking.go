@@ -51,7 +51,7 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	from := args.GetFrom()
 	account, _ := args.GetFromIdentity()
-	input, err := client.FetchBaseTxInput(ctx, from, account, "")
+	input, err := client.FetchBaseTxInput(ctx, AddressAndAccount{Address: from, Account: account}, AddressAndAccount{}, "")
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
 	from := args.GetFrom()
 	account, _ := args.GetFromIdentity()
-	input, err := client.FetchBaseTxInput(ctx, from, account, "")
+	input, err := client.FetchBaseTxInput(ctx, AddressAndAccount{Address: from, Account: account}, AddressAndAccount{}, "")
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	from := args.GetFrom()
 	account, _ := args.GetFromIdentity()
-	input, err := client.FetchBaseTxInput(ctx, from, account, "")
+	input, err := client.FetchBaseTxInput(ctx, AddressAndAccount{Address: from, Account: account}, AddressAndAccount{}, "")
 	if err != nil {
 		return nil, err
 	}

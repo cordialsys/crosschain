@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
@@ -14,10 +15,12 @@ import (
 
 // Tx for Template
 type Tx struct {
-	chain      *xc.ChainBaseConfig
-	input      *tx_input.TxInput
-	signatures []xc.TxSignature
-	builtTx    *eos.Transaction
+	chain              *xc.ChainBaseConfig
+	input              *tx_input.TxInput
+	signatures         []xc.TxSignature
+	feePayerSignatures []xc.TxSignature
+	builtTx            *eos.Transaction
+	feePayer           xc.Address
 }
 
 var _ xc.Tx = &Tx{}
@@ -26,8 +29,8 @@ var _ xc.Tx = &Tx{}
 // of EOS's 'canoncical' signatures are found.
 var _ xc.TxAdditionalSighashes = &Tx{}
 
-func NewTx(chain *xc.ChainBaseConfig, input *tx_input.TxInput, builtTx *eos.Transaction) *Tx {
-	return &Tx{chain, input, []xc.TxSignature{}, builtTx}
+func NewTx(chain *xc.ChainBaseConfig, input *tx_input.TxInput, builtTx *eos.Transaction, feePayer xc.Address) *Tx {
+	return &Tx{chain, input, []xc.TxSignature{}, []xc.TxSignature{}, builtTx, feePayer}
 }
 
 // Hash returns the tx hash or id
@@ -36,11 +39,11 @@ func (tx Tx) Hash() xc.TxHash {
 	if err != nil {
 		return ""
 	}
-	lastSig, ok := tx.LastSignature()
+	lastSigs, ok := tx.LastSignatures()
 	if !ok {
 		return ""
 	}
-	packedTrx, err := tx.SignAndPack(eosTx, lastSig)
+	packedTrx, err := tx.SignAndPack(eosTx, lastSigs)
 	if err != nil {
 		return ""
 	}
@@ -62,21 +65,24 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		return nil, err
 	}
 
-	return []*xc.SignatureRequest{
+	requests := []*xc.SignatureRequest{
 		xc.NewSignatureRequest(sigDigest),
-	}, nil
+	}
+	if tx.feePayer != "" {
+		requests = append(requests, xc.NewSignatureRequest(sigDigest, tx.feePayer))
+	}
+	return requests, nil
 }
 
 func (tx Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
-	lastSig, ok := tx.LastSignature()
-	if ok {
-		if IsCanonical(lastSig) {
-			// the search is over :)
-			return nil, nil
-		}
-	}
 
 	// Have to keep trying...
+	_, allCanonical := tx.SigCount()
+	if allCanonical {
+		// the search is over :)
+		return nil, nil
+	}
+
 	if len(tx.signatures) > 255 {
 		return nil, errors.New("could not find canonical EOS signature")
 	}
@@ -90,9 +96,13 @@ func (tx Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 		return nil, err
 	}
 
-	return []*xc.SignatureRequest{
+	requests := []*xc.SignatureRequest{
 		xc.NewSignatureRequest(sigDigest),
-	}, nil
+	}
+	if tx.feePayer != "" {
+		requests = append(requests, xc.NewSignatureRequest(sigDigest, tx.feePayer))
+	}
+	return requests, nil
 }
 
 // AddSignatures adds a signature to Tx
@@ -100,7 +110,11 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	tx.signatures = []xc.TxSignature{}
 	for _, sig := range sigs {
 		canonicalSigMaybe := SwapRecoveryByte(sig.Signature)
-		tx.signatures = append(tx.signatures, canonicalSigMaybe)
+		if sig.Address == tx.feePayer && tx.feePayer != "" {
+			tx.feePayerSignatures = append(tx.feePayerSignatures, canonicalSigMaybe)
+		} else {
+			tx.signatures = append(tx.signatures, canonicalSigMaybe)
+		}
 	}
 	return nil
 }
@@ -116,12 +130,12 @@ func (tx Tx) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	lastSig, ok := tx.LastSignature()
+	lastSigs, ok := tx.LastSignatures()
 	if !ok {
 		return nil, errors.New("EOS tx not signed")
 	}
 
-	packedTrx, err := tx.SignAndPack(eosTx, lastSig)
+	packedTrx, err := tx.SignAndPack(eosTx, lastSigs)
 	if err != nil {
 		return nil, err
 	}
@@ -137,28 +151,37 @@ func (tx Tx) Serialize() ([]byte, error) {
 
 	return buffer.Bytes(), nil
 }
-func jsonPrint(v interface{}) {
-	json, _ := json.MarshalIndent(v, "", "  ")
-	fmt.Println(string(json))
-}
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) BuildTx() (*eos.Transaction, error) {
 	eosTx := *tx.builtTx
 	// The signer may be using deterministic signatures, so we need to make
 	// some useless change in the signature body to force a completely different signature.
-	eosTx.MaxCPUUsageMS = byte(tx.SigCount())
+	sigCount, _ := tx.SigCount()
+	seconds := time.Duration(sigCount) * time.Second
+	fmt.Println("--- sigCount", sigCount)
+	eosTx.Expiration = eos.JSONTime{Time: eosTx.Expiration.Add(seconds)}
 	return &eosTx, nil
 }
 
-func (tx Tx) SignAndPack(eosTx *eos.Transaction, signature xc.TxSignature) (*eos.PackedTransaction, error) {
-	signedTx := eos.NewSignedTransaction(eosTx)
-	withPrefix := append([]byte{byte(ecc2.CurveK1)}, signature...)
+func packSignature(sig xc.TxSignature) (ecc2.Signature, error) {
+	withPrefix := append([]byte{byte(ecc2.CurveK1)}, sig...)
 	sigFormatted, err := ecc2.NewSignatureFromData(withPrefix)
 	if err != nil {
-		return nil, err
+		return ecc2.Signature{}, err
 	}
-	signedTx.Signatures = []ecc2.Signature{sigFormatted}
+	return sigFormatted, nil
+}
+
+func (tx Tx) SignAndPack(eosTx *eos.Transaction, signatures []xc.TxSignature) (*eos.PackedTransaction, error) {
+	signedTx := eos.NewSignedTransaction(eosTx)
+	for _, signature := range signatures {
+		sigFormatted, err := packSignature(signature)
+		if err != nil {
+			return nil, err
+		}
+		signedTx.Signatures = append(signedTx.Signatures, sigFormatted)
+	}
 	packedTrx, err := signedTx.Pack(eos.CompressionNone)
 	if err != nil {
 		return nil, err
@@ -166,21 +189,40 @@ func (tx Tx) SignAndPack(eosTx *eos.Transaction, signature xc.TxSignature) (*eos
 	return packedTrx, nil
 }
 
-func (tx Tx) LastSignature() (xc.TxSignature, bool) {
+func (tx Tx) LastSignatures() ([]xc.TxSignature, bool) {
 	if len(tx.signatures) == 0 {
-		return xc.TxSignature{}, false
+		return []xc.TxSignature{}, false
 	}
-	return tx.signatures[len(tx.signatures)-1], true
+	if tx.feePayer != "" {
+		if len(tx.feePayerSignatures) == 0 {
+			return []xc.TxSignature{}, false
+		}
+
+		return []xc.TxSignature{
+			tx.signatures[len(tx.signatures)-1],
+			tx.feePayerSignatures[len(tx.feePayerSignatures)-1],
+		}, true
+	} else {
+		return []xc.TxSignature{
+			tx.signatures[len(tx.signatures)-1],
+		}, true
+	}
 }
 
-func (tx Tx) SigCount() int {
-	lastSig, ok := tx.LastSignature()
+func (tx Tx) SigCount() (int, bool) {
+	lastSigs, ok := tx.LastSignatures()
 	if !ok {
-		return 0
+		return 0, false
 	}
-	if IsCanonical(lastSig) {
-		// use the count before we received the canonical signature
-		return len(tx.signatures) - 1
+	all := true
+	for _, sig := range lastSigs {
+		if !IsCanonical(sig) {
+			all = false
+		}
 	}
-	return len(tx.signatures)
+	if all {
+		// use the count before we received the canonical signature(s)
+		return len(tx.signatures) - 1, true
+	}
+	return len(tx.signatures), false
 }

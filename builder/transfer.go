@@ -54,6 +54,10 @@ func (args *TransferArgs) GetFromIdentity() (string, bool) {
 	return args.options.GetFromIdentity()
 }
 
+func (args *TransferArgs) GetFeePayerIdentity() (string, bool) {
+	return args.options.GetFeePayerIdentity()
+}
+
 func (args *TransferArgs) GetToIdentity() (string, bool) {
 	return args.options.GetToIdentity()
 }

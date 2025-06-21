@@ -27,6 +27,8 @@ type builderOptions struct {
 	transactionAttempts []string
 	// On chain identity of the sender.
 	fromIdentity *string
+	// On chain identity of the fee payer.
+	feePayerIdentity *string
 	// On chain identity of the receiver.
 	toIdentity *string
 }
@@ -73,8 +75,9 @@ func (opts *builderOptions) GetStakeAccount() (string, bool)   { return get(opts
 func (opts *builderOptions) InclusiveFeeSpendingEnabled() bool {
 	return opts.inclusiveFeeSpending
 }
-func (opts *builderOptions) GetFromIdentity() (string, bool) { return get(opts.fromIdentity) }
-func (opts *builderOptions) GetToIdentity() (string, bool)   { return get(opts.toIdentity) }
+func (opts *builderOptions) GetFromIdentity() (string, bool)     { return get(opts.fromIdentity) }
+func (opts *builderOptions) GetFeePayerIdentity() (string, bool) { return get(opts.feePayerIdentity) }
+func (opts *builderOptions) GetToIdentity() (string, bool)       { return get(opts.toIdentity) }
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -105,6 +108,9 @@ func (opts *builderOptions) SetFromIdentity(fromIdentity string) {
 }
 func (opts *builderOptions) SetToIdentity(toIdentity string) {
 	opts.toIdentity = &toIdentity
+}
+func (opts *builderOptions) SetFeePayerIdentity(feePayerIdentity string) {
+	opts.feePayerIdentity = &feePayerIdentity
 }
 
 type BuilderOption func(opts *builderOptions) error
