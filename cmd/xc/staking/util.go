@@ -8,13 +8,19 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 )
 
-func LoadPrivateKey(xcFactory *factory.Factory, chain *xc.ChainConfig) (xc.Address, *signer.Signer, error) {
-	privateKeyInput := signer.ReadPrivateKeyEnv()
+func LoadPrivateKey(xcFactory *factory.Factory, chain *xc.ChainConfig, privateKeyRefMaybe string) (xc.Address, *signer.Signer, error) {
+	var privateKeyInput string
+	if privateKeyRefMaybe != "" {
+		privateKeyInput = config.Secret(privateKeyRefMaybe).LoadOrBlank()
+	} else {
+		privateKeyInput = signer.ReadPrivateKeyEnv()
+	}
 	if privateKeyInput == "" {
 		return "", nil, fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 	}

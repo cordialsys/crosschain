@@ -7,7 +7,15 @@ import (
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
-// TxInput for Template
+// Expiration period used for transactions.
+const ExpirationPeriod = 10 * time.Minute
+
+// The target RAM balance to try to maintain/float on transacting accounts.
+// Some transactions may require RAM if they add some new ledger entry (but not always).
+// Rather than try to simulate it to figure it out, we just maintain a target RAM balance.
+// const TargetRam = 2 * 1024
+const TargetRam = 1000
+
 type TxInput struct {
 	xc.TxInputEnvelope
 	Timestamp int64 `json:"timestamp"`
@@ -16,10 +24,20 @@ type TxInput struct {
 	HeadBlockID []byte `json:"head_block_id"`
 
 	// The account of the address that is sending the transaction.
-	FromAccount string `json:"from_account"`
+	FromAccount     string `json:"from_account"`
+	FeePayerAccount string `json:"fee_payer_account"`
 
 	// The symbol to use for the asset contract in the transaction
 	Symbol string `json:"symbol"`
+
+	// Information used to be able to conditionally buy or sell RAM.
+	AvailableRam int64 `json:"available_ram"`
+	// In uS
+	AvailableCPU int64 `json:"available_cpu"`
+	// in bytes
+	AvailableNET int64               `json:"available_net"`
+	TargetRam    int64               `json:"target_ram"`
+	EosBalance   xc.AmountBlockchain `json:"eos_balance"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -44,8 +62,6 @@ func NewTxInput() *TxInput {
 func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 }
-
-const ExpirationPeriod = 10 * time.Minute
 
 func (input *TxInput) GetDriver() xc.Driver {
 	return xc.DriverEOS

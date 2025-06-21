@@ -29,7 +29,7 @@ func CmdStakedBalances() *cobra.Command {
 				from = args[0]
 			} else {
 				// try loading from private-key env
-				fromWallet, _, err := LoadPrivateKey(xcFactory, chain)
+				fromWallet, _, err := LoadPrivateKey(xcFactory, chain, "")
 				if err != nil {
 					return fmt.Errorf("must provider an address or private key env (%v)", err)
 				}
@@ -61,6 +61,7 @@ func CmdStakedBalances() *cobra.Command {
 
 func CmdStake() *cobra.Command {
 	var dryRun, offline bool
+	var privateKeyRefMaybe string
 	cmd := &cobra.Command{
 		Use:   "stake",
 		Short: "Stake an asset.",
@@ -78,7 +79,7 @@ func CmdStake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			from, signer, err := LoadPrivateKey(xcFactory, chain)
+			from, signer, err := LoadPrivateKey(xcFactory, chain, privateKeyRefMaybe)
 			if err != nil {
 				return err
 			}
@@ -117,11 +118,13 @@ func CmdStake() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
 	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
 	cmd.Flags().Lookup("offline").Hidden = true
+	cmd.Flags().StringVar(&privateKeyRefMaybe, "from", "", "Secret reference to use for the address")
 	return cmd
 }
 
 func CmdUnstake() *cobra.Command {
 	var dryRun, offline bool
+	var privateKeyRefMaybe string
 	cmd := &cobra.Command{
 		Use:   "unstake",
 		Short: "Unstake an asset.",
@@ -139,7 +142,7 @@ func CmdUnstake() *cobra.Command {
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
 
-			from, signer, err := LoadPrivateKey(xcFactory, chain)
+			from, signer, err := LoadPrivateKey(xcFactory, chain, privateKeyRefMaybe)
 			if err != nil {
 				return err
 			}
@@ -201,11 +204,13 @@ func CmdUnstake() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
 	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
 	cmd.Flags().Lookup("offline").Hidden = true
+	cmd.Flags().StringVar(&privateKeyRefMaybe, "from", "", "Secret reference to use for the address")
 	return cmd
 }
 
 func CmdWithdraw() *cobra.Command {
 	var dryRun, offline bool
+	var privateKeyRefMaybe string
 	cmd := &cobra.Command{
 		Use:   "withdraw",
 		Short: "Withdraw from a stake account.",
@@ -222,7 +227,7 @@ func CmdWithdraw() *cobra.Command {
 				return fmt.Errorf("must pass --amount to stake")
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)
-			from, signer, err := LoadPrivateKey(xcFactory, chain)
+			from, signer, err := LoadPrivateKey(xcFactory, chain, privateKeyRefMaybe)
 			if err != nil {
 				return err
 			}
@@ -263,6 +268,7 @@ func CmdWithdraw() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "do not broadcast the signed transaction")
 	cmd.Flags().BoolVar(&offline, "offline", false, "do not broadcast the signed transaction")
 	cmd.Flags().Lookup("offline").Hidden = true
+	cmd.Flags().StringVar(&privateKeyRefMaybe, "from", "", "Secret reference to use for the address")
 	return cmd
 }
 

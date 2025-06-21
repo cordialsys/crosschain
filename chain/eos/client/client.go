@@ -50,39 +50,77 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	from := args.GetFrom()
 	contract, _ := args.GetContract()
 	account, _ := args.GetFromIdentity()
-	return client.FetchBaseTxInput(ctx, from, account, contract)
+	feePayer, _ := args.GetFeePayer()
+	feePayerIdentity, _ := args.GetFeePayerIdentity()
+	return client.FetchBaseTxInput(
+		ctx,
+		AddressAndAccount{Address: from, Account: account},
+		AddressAndAccount{Address: feePayer, Account: feePayerIdentity},
+		contract,
+	)
 }
 
-func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, accountMaybe string, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
+type AddressAndAccount struct {
+	Address xc.Address
+	Account string
+}
+
+func (client *Client) ResolveAccount(ctx context.Context, address xc.Address) (string, error) {
+	accountsResp, err := client.api.GetAccountsByAuthorizers(ctx, []eos.PermissionLevel{}, []string{string(address)})
+	if err != nil {
+		return "", fmt.Errorf("failed to get accounts by authorizers: %v", err)
+	}
+	if len(accountsResp.Accounts) == 0 {
+		return "", fmt.Errorf("no account found for '%s', you need to create an EOS account first", address)
+	}
+	accounts := map[string]bool{}
+	for _, account := range accountsResp.Accounts {
+		accounts[string(account.Account)] = true
+	}
+	if len(accounts) > 1 {
+		return "", fmt.Errorf("multiple accounts found for '%s', but no identity set for the address", address)
+	}
+	return string(accountsResp.Accounts[0].Account), nil
+}
+
+func (client *Client) FetchBaseTxInput(ctx context.Context, from AddressAndAccount, feePayerMaybe AddressAndAccount, contractMaybe xc.ContractAddress) (*tx_input.TxInput, error) {
 	info, err := client.api.GetInfo(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get EOS info: %w", err)
 	}
-	fromAddress := from
-	fromIdentity := accountMaybe
-	if fromIdentity == "" {
-		accountsResp, err := client.api.GetAccountsByAuthorizers(ctx, []eos.PermissionLevel{}, []string{string(fromAddress)})
+
+	if from.Account == "" {
+		from.Account, err = client.ResolveAccount(ctx, from.Address)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get accounts by authorizers: %v", err)
+			return nil, err
 		}
-		if len(accountsResp.Accounts) == 0 {
-			return nil, fmt.Errorf("no account found for %s", fromAddress)
-		}
-		accounts := map[string]bool{}
-		for _, account := range accountsResp.Accounts {
-			accounts[string(account.Account)] = true
-		}
-		if len(accounts) > 1 {
-			return nil, fmt.Errorf("multiple accounts found for %s, but no identity set for the address", fromAddress)
-		}
-		fromIdentity = string(accountsResp.Accounts[0].Account)
 	}
+	if feePayerMaybe.Address != "" && feePayerMaybe.Account == "" {
+		feePayerMaybe.Account, err = client.ResolveAccount(ctx, feePayerMaybe.Address)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	accountInfo, err := client.api.GetAccount(ctx, eos.AccountName(from.Account))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get account info for '%s': %v", from.Account, err)
+	}
+	ramAvailable := accountInfo.RAMQuota - accountInfo.RAMUsage
+	eosAmount := xc.NewAmountBlockchainFromUint64(uint64(accountInfo.CoreLiquidBalance.Amount))
 
 	input := tx_input.NewTxInput()
 	input.ChainID = info.ChainID
 	input.HeadBlockID = info.HeadBlockID
 	input.Timestamp = info.HeadBlockTime.Time.Unix()
-	input.FromAccount = fromIdentity
+	input.FromAccount = from.Account
+	input.FeePayerAccount = feePayerMaybe.Account
+
+	input.AvailableRam = int64(ramAvailable)
+	input.AvailableCPU = int64(accountInfo.CPULimit.Available)
+	input.AvailableNET = int64(accountInfo.NetLimit.Available)
+	input.TargetRam = tx_input.TargetRam
+	input.EosBalance = eosAmount
 
 	contract := contractMaybe
 	if contract == "" {
