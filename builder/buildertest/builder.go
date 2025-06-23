@@ -7,6 +7,9 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 )
 
+type TransferArgs = builder.TransferArgs
+type StakeArgs = builder.StakeArgs
+
 func MustNewTransferArgs(
 	from xc.Address,
 	to xc.Address,

@@ -296,7 +296,7 @@ func (s *SignedTransaction) Pack(compression CompressionType) (*PackedTransactio
 
 	packed := &PackedTransaction{
 		Signatures:            s.Signatures,
-		Compression:           compression != CompressionNone,
+		Compression:           CompressionNone,
 		PackedContextFreeData: rawcfd,
 		PackedTransaction:     rawtrx,
 		wasPackedLocally:      true,
@@ -310,7 +310,7 @@ func (s *SignedTransaction) Pack(compression CompressionType) (*PackedTransactio
 // that's how they are stored.
 type PackedTransaction struct {
 	Signatures            []ecc.Signature `json:"signatures"`
-	Compression           bool            `json:"compression"` // in C++, it's an enum, not sure how it Binary-marshals..
+	Compression           CompressionType `json:"compression"` // in C++, it's an enum, not sure how it Binary-marshals..
 	PackedContextFreeData HexBytes        `json:"packed_context_free_data"`
 	PackedTransaction     HexBytes        `json:"packed_trx"`
 	ContextFreeData       []string        `json:"context_free_data,omitempty" eos:"-"`
@@ -361,7 +361,7 @@ func (p *PackedTransaction) unpack(bare bool) (signedTx *SignedTransaction, err 
 	var freeDataReader io.Reader
 	freeDataReader = bytes.NewBuffer(p.PackedContextFreeData)
 
-	if p.Compression {
+	if p.Compression != CompressionNone {
 		txReader, err = zlib.NewReader(txReader)
 		if err != nil {
 			return nil, fmt.Errorf("new reader for tx, %s", err)

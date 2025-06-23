@@ -8,9 +8,9 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/eos/builder/action"
 	"github.com/cordialsys/crosschain/chain/eos/eos-go"
 	"github.com/cordialsys/crosschain/chain/eos/tx"
-	"github.com/cordialsys/crosschain/chain/eos/tx/action"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 )
 

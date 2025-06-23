@@ -197,6 +197,24 @@ type AccountResp struct {
 	EosioAnyLinkedActions  []LinkedAction       `json:"eosio_any_linked_actions"`  // added since EOSIO/Leap v2.0
 }
 
+// Get raw address used to control the account.
+// Prioritizes the address with "active" permission, falling back to the address with "owner" permission.
+func (a *AccountResp) GetRawAddressFromPermissions() string {
+	for _, perm := range a.Permissions {
+		if perm.PermName == "active" && len(perm.RequiredAuth.Keys) > 0 {
+			return string(perm.RequiredAuth.Keys[0].PublicKey)
+		}
+	}
+
+	for _, perm := range a.Permissions {
+		if perm.PermName == "owner" && len(perm.RequiredAuth.Keys) > 0 {
+			return string(perm.RequiredAuth.Keys[0].PublicKey)
+		}
+	}
+
+	return ""
+}
+
 type CurrencyBalanceResp struct {
 	EOSBalance        Asset    `json:"eos_balance"`
 	StakedBalance     Asset    `json:"staked_balance"`

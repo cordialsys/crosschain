@@ -1,17 +1,11 @@
 package action
 
 import (
-	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 )
-
-func jsonPrint(v interface{}) {
-	json, _ := json.MarshalIndent(v, "", "  ")
-	fmt.Println(string(json))
-}
 
 func NewTransfer(fromAccount, toAccount string, quantity xc.AmountBlockchain, decimals int32, contractAccount string, contractSymbol string, memo string) (*eos.Action, error) {
 	quantityString := NewAssetString(quantity, decimals, contractSymbol)
@@ -25,7 +19,6 @@ func NewTransfer(fromAccount, toAccount string, quantity xc.AmountBlockchain, de
 		Quantity: asset,
 		Memo:     memo,
 	}
-	jsonPrint(tf)
 
 	return &eos.Action{
 		Account: eos.AccountName(contractAccount),

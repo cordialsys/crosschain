@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -159,7 +158,6 @@ func (tx Tx) BuildTx() (*eos.Transaction, error) {
 	// some useless change in the signature body to force a completely different signature.
 	sigCount, _ := tx.SigCount()
 	seconds := time.Duration(sigCount) * time.Second
-	fmt.Println("--- sigCount", sigCount)
 	eosTx.Expiration = eos.JSONTime{Time: eosTx.Expiration.Add(seconds)}
 	return &eosTx, nil
 }

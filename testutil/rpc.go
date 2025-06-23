@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -157,4 +158,17 @@ func Reserialize[T any](val *T) *T {
 	bz, _ := json.Marshal(val)
 	json.Unmarshal(bz, &newVal)
 	return &newVal
+}
+
+// Produces more readable diffs when comparing TxInfo in unit tests
+func TxInfoEqual(t *testing.T, expected, actual xclient.TxInfo) {
+	a := Reserialize(&expected)
+	b := Reserialize(&actual)
+
+	aBz, _ := json.MarshalIndent(a, "", "  ")
+	bBz, _ := json.MarshalIndent(b, "", "  ")
+
+	// t.Logf("expected TxInfo:\n%s", string(aBz))
+	// t.Logf("actual TxInfo:\n%s", string(bBz))
+	require.Equal(t, string(aBz), string(bBz))
 }
