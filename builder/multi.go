@@ -120,6 +120,10 @@ func (args *Sender) GetPublicKey() []byte {
 	return args.publicKey
 }
 
+func (args *Sender) GetFromIdentity() (string, bool) {
+	return args.options.GetFromIdentity()
+}
+
 func (args *Receiver) GetTo() xc.Address              { return args.address }
 func (args *Receiver) GetAmount() xc.AmountBlockchain { return args.amount }
 
@@ -156,6 +160,10 @@ func (args *MultiTransferArgs) SetFeePayer(feePayer xc.Address) {
 
 func (args *MultiTransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
+}
+
+func (args *MultiTransferArgs) GetFeePayerIdentity() (string, bool) {
+	return args.options.GetFeePayerIdentity()
 }
 
 func (args *MultiTransferArgs) GetMemo() (string, bool) {

@@ -150,6 +150,7 @@ type ResourceValidator string
 const (
 	CPU ResourceValidator = "cpu"
 	NET ResourceValidator = "net"
+	ALL ResourceValidator = "all"
 )
 
 func expectedValidator(validator string) error {
@@ -177,6 +178,8 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 		stakeAction, err = action.NewDelegateBW(fromAccount, fromAccount, amount, zero, false)
 	case NET:
 		stakeAction, err = action.NewDelegateBW(fromAccount, fromAccount, zero, amount, false)
+	case ALL:
+		stakeAction, err = action.NewDelegateBW(fromAccount, fromAccount, amount, amount, false)
 	default:
 		return nil, expectedValidator(validator)
 	}
@@ -215,6 +218,8 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 		stakeAction, err = action.NewUnDelegateBW(fromAccount, fromAccount, amount, zero)
 	case NET:
 		stakeAction, err = action.NewUnDelegateBW(fromAccount, fromAccount, zero, amount)
+	case ALL:
+		stakeAction, err = action.NewUnDelegateBW(fromAccount, fromAccount, amount, amount)
 	default:
 		return nil, expectedValidator(validator)
 	}

@@ -55,9 +55,10 @@ type TransferInputReq struct {
 
 	// Optional transfer parameters:
 	// public key of the signing address, in hex
-	PublicKey string `json:"public_key,omitempty"`
-	Memo      string `json:"memo,omitempty"`
-	Priority  string `json:"priority,omitempty"`
+	PublicKey    string `json:"public_key,omitempty"`
+	Memo         string `json:"memo,omitempty"`
+	Priority     string `json:"priority,omitempty"`
+	FromIdentity string `json:"from_identity,omitempty"`
 
 	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
 }
@@ -67,11 +68,15 @@ type FeePayerInfo struct {
 	Address string `json:"address"`
 	// Hex encoded public key
 	PublicKey string `json:"public_key"`
+
+	// Optional parameters:
+	Identity string `json:"identity,omitempty"`
 }
 
 type FeePayerGetter interface {
 	GetFeePayer() (xc.Address, bool)
 	GetFeePayerPublicKey() ([]byte, bool)
+	GetFeePayerIdentity() (string, bool)
 }
 
 func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
@@ -83,13 +88,17 @@ func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
 	if !ok {
 		return nil
 	}
-	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey)}
+	identityMaybe, _ := feePayerGetter.GetFeePayerIdentity()
+	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey), Identity: identityMaybe}
 }
 
 type Sender struct {
 	Address xc.Address `json:"address"`
 	// hex-encoded
 	PublicKey string `json:"public_key"`
+
+	// Optional parameters:
+	Identity string `json:"identity,omitempty"`
 }
 type Receiver struct {
 	Address  xc.Address          `json:"address"`
@@ -111,12 +120,13 @@ type MultiTransferInputReq struct {
 }
 
 type StakingInputReq struct {
-	From      string             `json:"from"`
-	Balance   string             `json:"balance"`
-	Validator string             `json:"validator,omitempty"`
-	Account   string             `json:"account,omitempty"`
-	Provider  xc.StakingProvider `json:"provider,omitempty"`
-	FeePayer  *FeePayerInfo      `json:"fee_payer,omitempty"`
+	From         string             `json:"from"`
+	FromIdentity string             `json:"from_identity,omitempty"`
+	Balance      string             `json:"balance"`
+	Validator    string             `json:"validator,omitempty"`
+	Account      string             `json:"account,omitempty"`
+	Provider     xc.StakingProvider `json:"provider,omitempty"`
+	FeePayer     *FeePayerInfo      `json:"fee_payer,omitempty"`
 }
 
 type LegacyTxInputRes struct {
