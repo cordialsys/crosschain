@@ -15,6 +15,13 @@ type BuilderSupportsFeePayer interface {
 	SupportsFeePayer()
 }
 
+// Indicator to show that this chain requires an identity to be set for destination addresses.
+// * The identity may be looked up dynamically for sending addresses
+// * This is currently only used by EOS.
+type BuilderRequiresIdentity interface {
+	RequiresIdentityEOS()
+}
+
 type Transfer interface {
 	Transfer(args TransferArgs, input xc.TxInput) (xc.Tx, error)
 }

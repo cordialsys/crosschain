@@ -21,9 +21,8 @@ func NewDelegateBW(fromAccount, toAccount string, cpuQuantity xc.AmountBlockchai
 	}
 
 	tf := DelegateBW{
-		From:     eos.AccountName(fromAccount),
-		Receiver: eos.AccountName(toAccount),
-		// Amount:      totalAmountAsset,
+		From:        eos.AccountName(fromAccount),
+		Receiver:    eos.AccountName(toAccount),
 		CPUQuantity: cpuAsset,
 		NetQuantity: netAsset,
 		Transfer:    transfer,
@@ -41,16 +40,11 @@ func NewDelegateBW(fromAccount, toAccount string, cpuQuantity xc.AmountBlockchai
 
 // The order of the fields is important:
 type DelegateBW struct {
-	From     eos.AccountName `json:"from"`
-	Receiver eos.AccountName `json:"receiver"`
-	// Amount      eos.Asset       `json:"amount"`
-	NetQuantity eos.Asset `json:"stake_net_quantity"`
-	CPUQuantity eos.Asset `json:"stake_cpu_quantity"`
-	Transfer    bool      `json:"transfer"`
-
-	// These seem to be output-only fields.
-	// Amount xc.AmountHumanReadable `json:"amount,omitempty"`
-	// Symbol string                 `json:"symbol,omitempty"`
+	From        eos.AccountName `json:"from"`
+	Receiver    eos.AccountName `json:"receiver"`
+	NetQuantity eos.Asset       `json:"stake_net_quantity"`
+	CPUQuantity eos.Asset       `json:"stake_cpu_quantity"`
+	Transfer    bool            `json:"transfer"`
 }
 
 // This is output from RPC (not to be submitted in a transaction)
