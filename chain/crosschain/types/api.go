@@ -42,6 +42,18 @@ func (b *BalanceRes) GetBalance() xc.AmountBlockchain {
 	return b.Balance
 }
 
+// Optional parameters, not used by most chains:
+type TransferInputReqExtra struct {
+	// "Identities" are non-public key accounts on chain.  Only used by EOS currently.
+	FromIdentity     string `json:"from_identity,omitempty"`
+	FeePayerIdentity string `json:"fee_payer_identity,omitempty"`
+	// TransactionAttempts Currently is only used by EVM chains.
+	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
+	// Memo and priority are not currently used.
+	Memo     string `json:"memo,omitempty"`
+	Priority string `json:"priority,omitempty"`
+}
+
 type TransferInputReq struct {
 	Chain    xc.NativeAsset `json:"chain"`
 	Contract string         `json:"contract,omitempty"`
@@ -51,16 +63,10 @@ type TransferInputReq struct {
 	To      string `json:"to"`
 	Balance string `json:"balance"`
 
-	FeePayer *FeePayerInfo `json:"fee_payer,omitempty"`
+	FeePayer  *FeePayerInfo `json:"fee_payer,omitempty"`
+	PublicKey string        `json:"public_key,omitempty"`
 
-	// Optional transfer parameters:
-	// public key of the signing address, in hex
-	PublicKey    string `json:"public_key,omitempty"`
-	Memo         string `json:"memo,omitempty"`
-	Priority     string `json:"priority,omitempty"`
-	FromIdentity string `json:"from_identity,omitempty"`
-
-	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
+	Extra TransferInputReqExtra `json:"extra,omitempty"`
 }
 
 type FeePayerInfo struct {
@@ -68,15 +74,11 @@ type FeePayerInfo struct {
 	Address string `json:"address"`
 	// Hex encoded public key
 	PublicKey string `json:"public_key"`
-
-	// Optional parameters:
-	Identity string `json:"identity,omitempty"`
 }
 
 type FeePayerGetter interface {
 	GetFeePayer() (xc.Address, bool)
 	GetFeePayerPublicKey() ([]byte, bool)
-	GetFeePayerIdentity() (string, bool)
 }
 
 func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
@@ -88,17 +90,19 @@ func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
 	if !ok {
 		return nil
 	}
-	identityMaybe, _ := feePayerGetter.GetFeePayerIdentity()
-	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey), Identity: identityMaybe}
+	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey)}
 }
 
+type SenderExtra struct {
+	// Optional parameters, not used by most chains:
+	Identity string `json:"identity,omitempty"`
+}
 type Sender struct {
 	Address xc.Address `json:"address"`
 	// hex-encoded
 	PublicKey string `json:"public_key"`
 
-	// Optional parameters:
-	Identity string `json:"identity,omitempty"`
+	Extra SenderExtra `json:"extra,omitempty"`
 }
 type Receiver struct {
 	Address  xc.Address          `json:"address"`
@@ -108,25 +112,36 @@ type Receiver struct {
 	Decimals int                 `json:"decimals,omitempty"`
 }
 
+type MultiTransferInputReqExtra struct {
+	Priority            string   `json:"priority,omitempty"`
+	Memo                string   `json:"memo,omitempty"`
+	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
+}
+
 type MultiTransferInputReq struct {
 	Chain     xc.NativeAsset `json:"chain"`
 	Senders   []*Sender      `json:"senders"`
 	Receivers []*Receiver    `json:"receivers"`
 	FeePayer  *FeePayerInfo  `json:"fee_payer,omitempty"`
-	Priority  string         `json:"priority,omitempty"`
-	Memo      string         `json:"memo,omitempty"`
 
-	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
+	Extra MultiTransferInputReqExtra `json:"extra,omitempty"`
+}
+
+type StakingInputReqExtra struct {
+	// Optional parameters, not used by most chains:
+
+	FromIdentity     string `json:"from_identity,omitempty"`
+	FeePayerIdentity string `json:"fee_payer_identity,omitempty"`
 }
 
 type StakingInputReq struct {
-	From         string             `json:"from"`
-	FromIdentity string             `json:"from_identity,omitempty"`
-	Balance      string             `json:"balance"`
-	Validator    string             `json:"validator,omitempty"`
-	Account      string             `json:"account,omitempty"`
-	Provider     xc.StakingProvider `json:"provider,omitempty"`
-	FeePayer     *FeePayerInfo      `json:"fee_payer,omitempty"`
+	From      string               `json:"from"`
+	Balance   string               `json:"balance"`
+	Validator string               `json:"validator,omitempty"`
+	Account   string               `json:"account,omitempty"`
+	Provider  xc.StakingProvider   `json:"provider,omitempty"`
+	FeePayer  *FeePayerInfo        `json:"fee_payer,omitempty"`
+	Extra     StakingInputReqExtra `json:"extra,omitempty"`
 }
 
 type LegacyTxInputRes struct {

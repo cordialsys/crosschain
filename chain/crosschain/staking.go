@@ -17,6 +17,15 @@ import (
 // By doing this, it can defer to the remote to decide if this is needed for the given provider.
 var _ xcclient.ManualUnstakingClient = &Client{}
 
+func stakingInputReqExtra(args xcbuilder.StakeArgs) types.StakingInputReqExtra {
+	fromIdentityMaybe, _ := args.GetFromIdentity()
+	feePayerIdentityMaybe, _ := args.GetFeePayerIdentity()
+	return types.StakingInputReqExtra{
+		FromIdentity:     fromIdentityMaybe,
+		FeePayerIdentity: feePayerIdentityMaybe,
+	}
+}
+
 func (client *Client) FetchStakeBalance(ctx context.Context, args xcclient.StakedBalanceArgs) ([]*xcclient.StakedBalance, error) {
 	chain := client.Asset.GetChain().Chain
 
@@ -53,6 +62,7 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
+		Extra:    stakingInputReqExtra(args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -78,6 +88,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
+		Extra:    stakingInputReqExtra(args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -97,12 +108,12 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 }
 func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-
 	var req = &types.StakingInputReq{
 		From:     string(args.GetFrom()),
 		Balance:  args.GetAmount().String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
+		Extra:    stakingInputReqExtra(args),
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()

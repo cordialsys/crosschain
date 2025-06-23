@@ -22,12 +22,14 @@ type TxBuilder struct {
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 var _ xcbuilder.Staking = TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = TxBuilder{}
+var _ xcbuilder.BuilderRequiresIdentity = TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{cfgI}, nil
 }
-func (txBuilder TxBuilder) SupportsFeePayer() {}
+func (txBuilder TxBuilder) SupportsFeePayer()    {}
+func (txBuilder TxBuilder) RequiresIdentityEOS() {}
 
 func newTransaction(input *tx_input.TxInput) *eos.Transaction {
 	eosTx := &eos.Transaction{Actions: []*eos.Action{}}

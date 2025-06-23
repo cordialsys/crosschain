@@ -4,6 +4,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/eos/eos-go/ecc"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -32,7 +33,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", err
 	}
 
-	hash := ripemd160checksum(pubkey.SerializeCompressed(), CurveK1)
+	hash := ripemd160checksum(pubkey.SerializeCompressed(), ecc.CurveK1)
 
 	pubkeyAndChecksum := make([]byte, len(publicKeyBytes)+4)
 	copy(pubkeyAndChecksum, publicKeyBytes)
@@ -44,32 +45,11 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(prefixed), nil
 }
 
-type CurveID uint8
-
-const (
-	CurveK1 = CurveID(iota)
-	CurveR1
-	CurveWA
-)
-
-func (c CurveID) String() string {
-	switch c {
-	case CurveK1:
-		return "K1"
-	case CurveR1:
-		return "R1"
-	case CurveWA:
-		return "WA"
-	default:
-		return "UN" // unknown
-	}
-}
-
-func ripemd160checksum(in []byte, curve CurveID) []byte {
+func ripemd160checksum(in []byte, curve ecc.CurveID) []byte {
 	h := ripemd160.New()
 	_, _ = h.Write(in) // this implementation has no error path
 
-	if curve != CurveK1 {
+	if curve != ecc.CurveK1 {
 		_, _ = h.Write([]byte(curve.String()))
 	}
 

@@ -183,21 +183,24 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	memoMaybe, _ := args.GetMemo()
 	priorityMaybe, _ := args.GetPriority()
 	fromIdentityMaybe, _ := args.GetFromIdentity()
+	feePayerIdentityMaybe, _ := args.GetFeePayerIdentity()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
-		Chain:        client.Asset.GetChain().Chain,
-		Contract:     string(contract),
-		Balance:      args.GetAmount().String(),
-		Decimals:     decimalsStr,
-		PublicKey:    hex.EncodeToString(publicKeyMaybe),
-		From:         string(args.GetFrom()),
-		To:           string(args.GetTo()),
-		Memo:         memoMaybe,
-		Priority:     string(priorityMaybe),
-		FeePayer:     types.NewFeePayerInfoOrNil(&args),
-		FromIdentity: fromIdentityMaybe,
-
-		TransactionAttempts: args.GetTransactionAttempts(),
+		Chain:     client.Asset.GetChain().Chain,
+		Contract:  string(contract),
+		Balance:   args.GetAmount().String(),
+		Decimals:  decimalsStr,
+		PublicKey: hex.EncodeToString(publicKeyMaybe),
+		From:      string(args.GetFrom()),
+		To:        string(args.GetTo()),
+		FeePayer:  types.NewFeePayerInfoOrNil(&args),
+		Extra: types.TransferInputReqExtra{
+			FromIdentity:        fromIdentityMaybe,
+			FeePayerIdentity:    feePayerIdentityMaybe,
+			TransactionAttempts: args.GetTransactionAttempts(),
+			Memo:                memoMaybe,
+			Priority:            string(priorityMaybe),
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -221,7 +224,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		senders = append(senders, &types.Sender{
 			Address:   sender.GetFrom(),
 			PublicKey: hex.EncodeToString(sender.GetPublicKey()),
-			Identity:  fromIdentityMaybe,
+			Extra:     types.SenderExtra{Identity: fromIdentityMaybe},
 		})
 	}
 	for _, receiver := range args.Receivers() {
@@ -241,10 +244,11 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		Senders:   senders,
 		Receivers: receivers,
 		FeePayer:  types.NewFeePayerInfoOrNil(&args),
-		Priority:  string(priorityMaybe),
-		Memo:      memoMaybe,
-
-		TransactionAttempts: args.GetTransactionAttempts(),
+		Extra: types.MultiTransferInputReqExtra{
+			Priority:            string(priorityMaybe),
+			Memo:                memoMaybe,
+			TransactionAttempts: args.GetTransactionAttempts(),
+		},
 	})
 	if err != nil {
 		return nil, err
