@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
@@ -17,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -166,7 +166,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  xc.DOT,
 					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
-					Time:   time.Unix(1687547412, 0),
+					Time:   testtypes.FromTimeStamp("2023-06-23T19:10:12Z"),
 				},
 				Movements: []*xclient.Movement{
 					{
@@ -232,7 +232,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  xc.TAO,
 					Height: xc.NewAmountBlockchainFromUint64(3401817),
 					Hash:   "0x9d264b95980880a3ce28024e093af7f39c434bfc2dd0472fffdcbb924a369b25",
-					Time:   time.Unix(1721179044, 0),
+					Time:   testtypes.FromTimeStamp("2024-07-17T01:17:24Z"),
 				},
 				Movements: []*xclient.Movement{
 					{
@@ -302,7 +302,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  xc.DOT,
 					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
-					Time:   time.Unix(1687547412, 0),
+					Time:   testtypes.FromTimeStamp("2023-06-23T19:10:12Z"),
 				},
 				Movements: []*xclient.Movement{
 					// fee
@@ -358,7 +358,7 @@ func TestFetchTxInfo(t *testing.T) {
 			// don't compare fees as they are calculated from transfers
 			res.Fees = nil
 
-			require.Equal(reserialize(&tc.expectedTx), reserialize(&res))
+			testutil.TxInfoEqual(t, tc.expectedTx, res)
 		})
 	}
 }
