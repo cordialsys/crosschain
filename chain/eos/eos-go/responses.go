@@ -202,13 +202,13 @@ type AccountResp struct {
 func (a *AccountResp) GetRawAddressFromPermissions() string {
 	for _, perm := range a.Permissions {
 		if perm.PermName == "active" && len(perm.RequiredAuth.Keys) > 0 {
-			return string(perm.RequiredAuth.Keys[0].PublicKey)
+			return string(perm.RequiredAuth.Keys[0].PublicKey.String())
 		}
 	}
 
 	for _, perm := range a.Permissions {
 		if perm.PermName == "owner" && len(perm.RequiredAuth.Keys) > 0 {
-			return string(perm.RequiredAuth.Keys[0].PublicKey)
+			return string(perm.RequiredAuth.Keys[0].PublicKey.String())
 		}
 	}
 

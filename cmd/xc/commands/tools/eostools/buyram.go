@@ -2,91 +2,48 @@ package eostools
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/cordialsys/crosschain"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/eos/address"
 	"github.com/cordialsys/crosschain/chain/eos/builder/action"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
-	"github.com/cordialsys/crosschain/chain/eos/eos-go/ecc"
-	eostx "github.com/cordialsys/crosschain/chain/eos/tx"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-func jsonPrint(v interface{}) {
-	json, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(json))
-}
-
-func signEosTx(mainSigner *signer.Signer, eosTx *eos.Transaction, input *tx_input.TxInput) (*eos.SignedTransaction, error) {
-	expiration := eosTx.Expiration.Time
-	signedTx := eos.NewSignedTransaction(eosTx)
-	for i := 0; i < 100; i++ {
-		expiration = expiration.Add(1 * time.Second)
-		eosTx.Expiration = eos.JSONTime{Time: expiration}
-
-		sigDigest, err := eostx.Sighash(eosTx, input.ChainID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create sighash: %v", err)
-		}
-		sig, err := mainSigner.Sign(&crosschain.SignatureRequest{
-			Payload: sigDigest,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to sign transaction: %v", err)
-		}
-		canonicalSigMaybe := eostx.SwapRecoveryByte(sig.Signature)
-		logrus.WithFields(logrus.Fields{
-			"i":         i,
-			"canonical": eostx.IsCanonical(canonicalSigMaybe),
-			"signature": hex.EncodeToString(sig.Signature),
-		}).Info("signed transaction")
-		if eostx.IsCanonical(canonicalSigMaybe) {
-			withPrefix := append([]byte{byte(ecc.CurveK1)}, canonicalSigMaybe...)
-			sigFormatted, err := ecc.NewSignatureFromData(withPrefix)
-			if err != nil {
-				return nil, fmt.Errorf("failed to format signature: %v", err)
-			}
-			signedTx = eos.NewSignedTransaction(eosTx)
-			signedTx.Signatures = []ecc.Signature{sigFormatted}
-			break
-		} else {
-			// keep trying ...
-		}
-	}
-	return signedTx, nil
-}
-
-func CmdTxTransferEOS() *cobra.Command {
+func CmdTxBuyRam() *cobra.Command {
 	var dryRun bool
 	var fromSecretRef string
-	var memo string
+
+	var account string
+	var ramBytes int
 
 	cmd := &cobra.Command{
-		Use:     "transfer <to> <amount>",
-		Aliases: []string{"tf"},
-		Short:   "Send an EOS transfer.",
-		Args:    cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Use:     "buy-ram",
+		Aliases: []string{"buyram"},
+		Short:   "Buy ram for any EOS account.",
+		Args:    cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, _args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			ctx := cmd.Context()
 			_ = xcFactory
 			_ = chainConfig
+			if account == "" {
+				return fmt.Errorf("must set --account")
+			}
+			if ramBytes <= 0 {
+				return fmt.Errorf("must set --ram")
+			}
+
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
@@ -109,8 +66,6 @@ func CmdTxTransferEOS() *cobra.Command {
 				return fmt.Errorf("could not create public key: %v", err)
 			}
 
-			toAccount := args[0]
-
 			builder, err := address.NewAddressBuilder(chainConfig.Base())
 			if err != nil {
 				return err
@@ -120,9 +75,7 @@ func CmdTxTransferEOS() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			amountHuman, _ := xc.NewAmountHumanReadableFromStr(args[1])
-			amount := amountHuman.ToBlockchain(4)
-			tfArgs, err := xcbuilder.NewTransferArgs(fromAddress, xc.Address(toAccount), amount)
+			tfArgs, err := xcbuilder.NewTransferArgs(fromAddress, xc.Address(fromAddress), xc.NewAmountBlockchainFromUint64(1))
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)
 			}
@@ -139,9 +92,9 @@ func CmdTxTransferEOS() *cobra.Command {
 
 			fromAccount := input.FromAccount
 
-			actionTf, err := action.NewTransfer(fromAccount, toAccount, amount, 4, "eosio.token", "EOS", memo)
+			actionBuyRam, err := action.NewBuyRamBytes(fromAccount, account, uint32(ramBytes))
 			if err != nil {
-				return fmt.Errorf("failed to create transfer action: %v", err)
+				return fmt.Errorf("failed to create buy ram action: %v", err)
 			}
 
 			eosTx := &eos.Transaction{Actions: []*eos.Action{}}
@@ -150,7 +103,7 @@ func CmdTxTransferEOS() *cobra.Command {
 			expiration := time.Unix(input.Timestamp, 0)
 			expiration = expiration.Add(tx_input.ExpirationPeriod)
 			eosTx.Expiration = eos.JSONTime{Time: expiration}
-			eosTx.Actions = []*eos.Action{actionTf}
+			eosTx.Actions = []*eos.Action{actionBuyRam}
 
 			signedTx, err := signEosTx(mainSigner, eosTx, input)
 			if err != nil {
@@ -194,8 +147,10 @@ func CmdTxTransferEOS() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&fromSecretRef, "from", "env:"+signer.EnvPrivateKey, "Secret reference for the from-address private key")
-	cmd.Flags().StringVar(&memo, "memo", "", "Set a memo for the transfer.")
+	cmd.Flags().StringVar(&fromSecretRef, "from", "env:"+signer.EnvPrivateKey, "Secret reference for the signer private key (not necessary the address owning the new account)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
+
+	cmd.Flags().StringVar(&account, "account", "", "Account to buy ram for.")
+	cmd.Flags().IntVar(&ramBytes, "ram", 0, "Amount of RAM to buy for the account.")
 	return cmd
 }
