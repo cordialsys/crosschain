@@ -24,16 +24,16 @@ func TestSafeFromDoubleSpend(t *testing.T) {
 func TestTxInputConflicts(t *testing.T) {
 
 	type testcase struct {
-		newInput xc.TxInput
 		oldInput xc.TxInput
+		newInput xc.TxInput
 
 		independent     bool
 		doubleSpendSafe bool
 	}
 	vectors := []testcase{
 		{
-			newInput:        &TxInput{},
 			oldInput:        &TxInput{},
+			newInput:        &TxInput{},
 			independent:     false,
 			doubleSpendSafe: false,
 		},
@@ -46,19 +46,20 @@ func TestTxInputConflicts(t *testing.T) {
 		},
 	}
 	for i, v := range vectors {
-		newBz, _ := json.Marshal(v.newInput)
-		oldBz, _ := json.Marshal(v.oldInput)
-		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
-		fmt.Println()
-		require.Equal(t,
-			v.independent,
-			v.newInput.IndependentOf(v.oldInput),
-			"IndependentOf",
-		)
-		require.Equal(t,
-			v.doubleSpendSafe,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
-			"SafeFromDoubleSend",
-		)
+		t.Run(fmt.Sprintf("testcase_%d", i), func(t *testing.T) {
+			newBz, _ := json.Marshal(v.newInput)
+			oldBz, _ := json.Marshal(v.oldInput)
+			t.Logf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
+			require.Equal(t,
+				v.independent,
+				v.newInput.IndependentOf(v.oldInput),
+				"IndependentOf",
+			)
+			require.Equal(t,
+				v.doubleSpendSafe,
+				v.newInput.SafeFromDoubleSend(v.oldInput),
+				"SafeFromDoubleSend",
+			)
+		})
 	}
 }

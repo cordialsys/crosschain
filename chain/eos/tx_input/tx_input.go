@@ -1,6 +1,7 @@
 package tx_input
 
 import (
+	"bytes"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -8,7 +9,8 @@ import (
 )
 
 // Expiration period used for transactions.
-const ExpirationPeriod = 10 * time.Minute
+const ExpirationPeriod = 5 * time.Minute
+const ExpirationGracePeriod = 90 * time.Second
 
 // The target RAM balance to try to maintain/float on transacting accounts.
 // Some transactions may require RAM if they add some new ledger entry (but not always).
@@ -77,22 +79,24 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if other, ok := other.(*TxInput); ok {
-		// Consider independent if the time differece exceeds the expiration period, with a 60s tolerance.
-		diff := input.Timestamp - other.Timestamp
-		if diff < 0 {
-			diff = -diff
-		}
-		if (int64(ExpirationPeriod.Seconds()) + 60) < (diff) {
-			return true
-		}
-	}
-
-	return
+	// EOS doesn't use nonces, all are independent.
+	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	if !xc.IsTypeOf(other, input) {
 		return false
 	}
-	return !input.IndependentOf(other)
+	oldInput, ok := other.(*TxInput)
+	if ok {
+		diff := input.Timestamp - oldInput.Timestamp
+		if diff < int64((ExpirationPeriod+ExpirationGracePeriod).Seconds()) || bytes.Equal(input.HeadBlockID, oldInput.HeadBlockID) {
+			// not yet safe
+			return false
+		}
+	} else {
+		// can't tell (this shouldn't happen) - default false
+		return false
+	}
+	// all timed out - we're safe
+	return true
 }

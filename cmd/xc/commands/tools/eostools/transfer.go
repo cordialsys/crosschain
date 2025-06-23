@@ -13,10 +13,10 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/eos/address"
+	"github.com/cordialsys/crosschain/chain/eos/builder/action"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 	"github.com/cordialsys/crosschain/chain/eos/eos-go/ecc"
 	eostx "github.com/cordialsys/crosschain/chain/eos/tx"
-	"github.com/cordialsys/crosschain/chain/eos/tx/action"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
@@ -172,7 +172,7 @@ func CmdTxTransferEOS() *cobra.Command {
 
 			packedTrx, err := signedTx.Pack(eos.CompressionNone)
 			NoError(err, "pack transaction")
-			packedTrx.Compression = false
+			packedTrx.Compression = eos.CompressionNone
 
 			trxID, err := packedTrx.ID()
 			NoError(err, "transaction id")

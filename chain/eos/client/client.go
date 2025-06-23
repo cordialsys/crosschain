@@ -8,9 +8,11 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/sirupsen/logrus"
 
+	"github.com/cordialsys/crosschain/chain/eos/builder"
+	"github.com/cordialsys/crosschain/chain/eos/builder/action"
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
-	"github.com/cordialsys/crosschain/chain/eos/tx/action"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -181,7 +183,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 	// TODO is there an tx with an error?
 
 	txInfo := xclient.NewTxInfo(
-		xclient.NewBlock(native, tx.GetBlockNum(), "", tx.GetBlockTime()),
+		xclient.NewBlock(native, tx.GetBlockNum(), tx.GetBlockId(), tx.GetBlockTime()),
 		client.chain,
 		tx.GetTxId(),
 		uint64(chainInfo.HeadBlockNum-uint32(tx.GetBlockNum())),
@@ -220,18 +222,77 @@ func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclien
 			movement.AddSource(xc.Address(data.From), amount, &decimals)
 			movement.AddDestination(xc.Address(data.To), amount, &decimals)
 			txInfo.AddMovement(movement)
+		case "delegatebw":
+			data := action.DelegateBWOutputOnly{}
+			err = json.Unmarshal(trace.GetData(), &data)
+			if err != nil {
+				return xclient.TxInfo{}, err
+			}
+
+			var rawAddress string
+			accountInfo, err := client.api.GetAccount(ctx, eos.AccountName(data.From))
+			if err != nil {
+				logrus.WithFields(logrus.Fields{
+					"account": data.From,
+				}).Error("failed to get EOS account info")
+			} else {
+				rawAddress = accountInfo.GetRawAddressFromPermissions()
+			}
+
+			staking := xclient.Stake{
+				Validator: "",
+				Balance:   data.CPUQuantity.ToBlockchain(action.Decimals),
+				Account:   string(data.From),
+				Address:   rawAddress,
+			}
+
+			if !data.CPUQuantity.IsZero() {
+				cpuStaking := staking
+				cpuStaking.Validator = string(builder.CPU)
+				txInfo.Stakes = append(txInfo.Stakes, &cpuStaking)
+			}
+			if !data.NetQuantity.IsZero() {
+				netStaking := staking
+				netStaking.Validator = string(builder.NET)
+				txInfo.Stakes = append(txInfo.Stakes, &netStaking)
+			}
+		case "undelegatebw":
+			data := action.UnDelegateBWOutputOnly{}
+			err = json.Unmarshal(trace.GetData(), &data)
+			if err != nil {
+				return xclient.TxInfo{}, err
+			}
+
+			var rawAddress string
+			accountInfo, err := client.api.GetAccount(ctx, eos.AccountName(data.From))
+			if err != nil {
+				logrus.WithFields(logrus.Fields{
+					"account": data.From,
+				}).Error("failed to get EOS account info")
+			} else {
+				rawAddress = accountInfo.GetRawAddressFromPermissions()
+			}
+
+			unstaking := xclient.Unstake{
+				Balance:   data.CPUQuantity.ToBlockchain(action.Decimals),
+				Account:   string(data.From),
+				Address:   rawAddress,
+				Validator: string(builder.CPU),
+			}
+
+			if !data.CPUQuantity.IsZero() {
+				cpuUnstaking := unstaking
+				cpuUnstaking.Validator = string(builder.CPU)
+				txInfo.Unstakes = append(txInfo.Unstakes, &cpuUnstaking)
+			}
+			if !data.NetQuantity.IsZero() {
+				netUnstaking := unstaking
+				netUnstaking.Validator = string(builder.NET)
+				txInfo.Unstakes = append(txInfo.Unstakes, &netUnstaking)
+			}
 		}
 	}
 	return *txInfo, nil
-}
-
-func jsonPrint(v interface{}) {
-	bz, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		fmt.Println("failed to marshal JSON:", err)
-		return
-	}
-	fmt.Println(string(bz))
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -273,9 +334,30 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	// seems it's always 4 decimals for EOS
+	// seems it's always 4 decimals for EOS assets
 	return 4, nil
 }
+
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
-	return &xclient.BlockWithTransactions{}, errors.New("not implemented")
+	height, ok := args.Height()
+	if !ok {
+		info, err := client.api.GetInfo(ctx)
+		if err != nil {
+			return nil, err
+		}
+		height = uint64(info.HeadBlockNum)
+	}
+
+	resp, err := client.api.GetBlockByNum(ctx, uint32(height))
+	if err != nil {
+		return nil, err
+	}
+	native := client.chain.Chain
+	transactions := []string{}
+	for _, tx := range resp.Transactions {
+		transactions = append(transactions, tx.Transaction.ID.String())
+	}
+
+	block := xclient.NewBlock(native, height, resp.ID.String(), resp.Timestamp.Time)
+	return &xclient.BlockWithTransactions{Block: *block, TransactionIds: transactions}, nil
 }

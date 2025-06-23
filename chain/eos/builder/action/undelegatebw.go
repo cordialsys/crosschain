@@ -7,10 +7,12 @@ import (
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 )
 
+const Decimals = 4
+
 func NewUnDelegateBW(fromAccount, toAccount string, cpuQuantity xc.AmountBlockchain, netQuantity xc.AmountBlockchain) (*eos.Action, error) {
 
-	cpuQ := NewAssetString(cpuQuantity, 4, "EOS")
-	netQ := NewAssetString(netQuantity, 4, "EOS")
+	cpuQ := NewAssetString(cpuQuantity, Decimals, "EOS")
+	netQ := NewAssetString(netQuantity, Decimals, "EOS")
 
 	cpuAsset, err := eos.NewAssetFromString(cpuQ)
 	if err != nil {
@@ -42,4 +44,11 @@ type UnDelegateBW struct {
 	Receiver    eos.AccountName `json:"receiver"`
 	NetQuantity eos.Asset       `json:"unstake_net_quantity,omitempty"`
 	CPUQuantity eos.Asset       `json:"unstake_cpu_quantity,omitempty"`
+}
+
+type UnDelegateBWOutputOnly struct {
+	From        eos.AccountName        `json:"from"`
+	Receiver    eos.AccountName        `json:"receiver"`
+	NetQuantity xc.AmountHumanReadable `json:"unstake_net_quantity,omitempty"`
+	CPUQuantity xc.AmountHumanReadable `json:"unstake_cpu_quantity,omitempty"`
 }

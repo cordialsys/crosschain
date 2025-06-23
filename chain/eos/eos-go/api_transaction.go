@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type DownloadedTransaction interface {
@@ -33,16 +35,18 @@ func (api *API) GetTransactionFromAnySupportedEndpoint(ctx context.Context, id s
 		if apiErr, ok := err.(APIError); ok {
 			if apiErr.Code == 404 {
 				// try v1 endppoint
-				tx2, err := api.GetTransactionV1(ctx, id)
+				txV1, err := api.GetTransactionV1(ctx, id)
 				if err != nil {
 					// can't find any endpoint :(
 				} else {
-					return tx2, nil
+					logrus.WithField("tx_id", id).Debug("retrieved transaction using v1 endpoint")
+					return txV1, nil
 				}
 			}
 		}
 		return nil, err
 	}
+	logrus.WithField("tx_id", id).Debug("retrieved transaction using v2 endpoint")
 
 	return txV2, nil
 }

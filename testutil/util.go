@@ -23,8 +23,11 @@ func FromTimeStamp(ts string) time.Time {
 	if err != nil {
 		panic(err)
 	}
-	// drop any timezone information
-	return time.Unix(t.Unix(), 0)
+	if strings.HasSuffix(ts, "Z") {
+		// use UTC timezone
+		t = t.UTC()
+	}
+	return t
 }
 
 func HumanToBlockchain(amount string, decimals int) xc.AmountBlockchain {

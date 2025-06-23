@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xcclient "github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -756,7 +757,7 @@ func TestFetchTxInfo(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
 				txInfo.Fees = nil
-				require.Equal(t, testtypes.Reserialize(&v.val), testtypes.Reserialize(&txInfo))
+				testutil.TxInfoEqual(t, v.val, txInfo)
 			}
 		})
 	}

@@ -71,7 +71,7 @@ func TestUnmarshalBlockResp(t *testing.T) {
 	assert.Equal(t, uint32(1529), receipt.CPUUsageMicroSeconds)
 	assert.Equal(t, Varuint32(16), receipt.NetUsageWords)
 	assert.Equal(t, TransactionStatusExecuted, receipt.Status)
-	assert.Equal(t, false, receipt.Transaction.Packed.Compression)
+	assert.Equal(t, CompressionNone, receipt.Transaction.Packed.Compression)
 	assert.Equal(t, HexBytes{}, receipt.Transaction.Packed.PackedContextFreeData)
 
 	id, err := receipt.Transaction.Packed.ID()
