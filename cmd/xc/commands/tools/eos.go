@@ -14,6 +14,9 @@ func CmdEos() *cobra.Command {
 	}
 
 	cmd.AddCommand(eostools.CmdTxTransferEOS())
+	cmd.AddCommand(eostools.CmdTxCreateAccount())
+	cmd.AddCommand(eostools.CmdTxStake())
+	cmd.AddCommand(eostools.CmdTxBuyRam())
 
 	return cmd
 }

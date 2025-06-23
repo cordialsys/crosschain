@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cordialsys/crosschain/chain/eos/eos-go/ecc"
 )
 
 var symbolRegex = regexp.MustCompile("^[0-9]{1,2},[A-Z]{1,7}$")
@@ -695,8 +697,8 @@ type Authority struct {
 }
 
 type KeyWeight struct {
-	PublicKey string `json:"key"`
-	Weight    uint16 `json:"weight"` // weight_type
+	PublicKey ecc.PublicKey `json:"key"`
+	Weight    uint16        `json:"weight"` // weight_type
 }
 
 type WaitWeight struct {
@@ -1424,7 +1426,7 @@ func (a *BaseVariant) Obtain(def *VariantDefinition) (typeID uint32, typeName st
 	return uint32(a.TypeID), def.typeIDToName[a.TypeID], a.Impl
 }
 
-func (a *BaseVariant) MarshalJSON(def *VariantDefinition) ([]byte, error) {
+func (a *BaseVariant) MarshalJSONWith(def *VariantDefinition) ([]byte, error) {
 	typeName, found := def.typeIDToName[a.TypeID]
 	if !found {
 		return nil, fmt.Errorf("type %d is not know by variant definition", a.TypeID)
@@ -1433,7 +1435,7 @@ func (a *BaseVariant) MarshalJSON(def *VariantDefinition) ([]byte, error) {
 	return json.Marshal([]interface{}{typeName, a.Impl})
 }
 
-func (a *BaseVariant) UnmarshalJSON(data []byte, def *VariantDefinition) error {
+func (a *BaseVariant) UnmarshalJSONWith(data []byte, def *VariantDefinition) error {
 	// TODO: Implement
 	return nil
 }

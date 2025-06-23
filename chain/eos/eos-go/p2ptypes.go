@@ -311,11 +311,11 @@ type BlockSigningAuthority struct {
 }
 
 func (a *BlockSigningAuthority) MarshalJSON() ([]byte, error) {
-	return a.BaseVariant.MarshalJSON(BlockSigningAuthorityVariant)
+	return a.BaseVariant.MarshalJSONWith(BlockSigningAuthorityVariant)
 }
 
 func (a *BlockSigningAuthority) UnmarshalJSON(data []byte) error {
-	return a.BaseVariant.UnmarshalJSON(data, BlockSigningAuthorityVariant)
+	return a.BaseVariant.UnmarshalJSONWith(data, BlockSigningAuthorityVariant)
 }
 
 func (a *BlockSigningAuthority) UnmarshalBinary(decoder *Decoder) error {
