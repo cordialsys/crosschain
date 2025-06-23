@@ -447,7 +447,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 	}
 
 	txInfo := NewTxInfo(
-		NewBlock(chain, uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0)),
+		NewBlock(chain, uint64(legacyTx.BlockIndex), legacyTx.BlockHash, time.Unix(legacyTx.BlockTime, 0).UTC()),
 		chainCfg,
 		legacyTx.TxID,
 		uint64(legacyTx.Confirmations),

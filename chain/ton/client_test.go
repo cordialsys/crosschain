@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
@@ -214,7 +214,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  "TON",
 					Height: xc.NewAmountBlockchainFromUint64(21080779),
 					Hash:   "0:2000000000000000:22624217",
-					Time:   time.Unix(1721063820, 0),
+					Time:   testtypes.FromTimeStamp("2024-07-15T17:17:00Z"),
 				},
 				Movements: []*xcclient.Movement{
 					{
@@ -283,7 +283,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  "TON",
 					Height: xc.NewAmountBlockchainFromUint64(21082496),
 					Hash:   "0:2000000000000000:22626042",
-					Time:   time.Unix(1721068303, 0),
+					Time:   testtypes.FromTimeStamp("2024-07-15T18:31:43Z"),
 				},
 				Movements: []*xcclient.Movement{
 					// input TON movement
@@ -382,7 +382,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// fees are calculated, skip
 				info.Fees = nil
 
-				require.EqualValues(t, reserialize(v.tx), reserialize(&info))
+				testutil.TxInfoEqual(t, *v.tx, info)
 			}
 		})
 	}
