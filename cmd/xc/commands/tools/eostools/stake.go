@@ -100,11 +100,19 @@ func CmdTxStake() *cobra.Command {
 
 			netAmount := xc.NewAmountBlockchainFromUint64(0)
 			cpuAmount := xc.NewAmountBlockchainFromUint64(0)
+			div := 0
 			if cpu {
+				div++
 				cpuAmount = amount
 			}
 			if net {
+				div++
 				netAmount = amount
+			}
+			if div > 0 {
+				denom := xc.NewAmountBlockchainFromUint64(uint64(div))
+				cpuAmount = cpuAmount.Div(&denom)
+				netAmount = netAmount.Div(&denom)
 			}
 
 			actionStake, err := action.NewDelegateBW(fromAccount, account, cpuAmount, netAmount, true)

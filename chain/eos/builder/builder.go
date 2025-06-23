@@ -181,6 +181,9 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	case NET:
 		stakeAction, err = action.NewDelegateBW(fromAccount, fromAccount, zero, amount, false)
 	case ALL:
+		// split evenly between CPU and NET
+		two := xc.NewAmountBlockchainFromUint64(2)
+		amount = amount.Div(&two)
 		stakeAction, err = action.NewDelegateBW(fromAccount, fromAccount, amount, amount, false)
 	default:
 		return nil, expectedValidator(validator)
@@ -221,6 +224,9 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	case NET:
 		stakeAction, err = action.NewUnDelegateBW(fromAccount, fromAccount, zero, amount)
 	case ALL:
+		// split evenly between CPU and NET
+		two := xc.NewAmountBlockchainFromUint64(2)
+		amount = amount.Div(&two)
 		stakeAction, err = action.NewUnDelegateBW(fromAccount, fromAccount, amount, amount)
 	default:
 		return nil, expectedValidator(validator)
