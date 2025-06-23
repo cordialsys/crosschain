@@ -211,6 +211,14 @@ func OptionToIdentity(toIdentity string) BuilderOption {
 	}
 }
 
+// The identity may be needed if the chain requires it (e.g. EOS)
+func OptionFeePayerIdentity(feePayerIdentity string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.feePayerIdentity = &feePayerIdentity
+		return nil
+	}
+}
+
 // Previously the crosschain abstraction would require callers to set options
 // directly on the transaction input, if the interface was implemented on the input type.
 // However, wasn't very clear or easy to use.  This function bridges the gap, to allow

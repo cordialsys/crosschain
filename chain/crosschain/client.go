@@ -182,18 +182,20 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	publicKeyMaybe, _ := args.GetPublicKey()
 	memoMaybe, _ := args.GetMemo()
 	priorityMaybe, _ := args.GetPriority()
+	fromIdentityMaybe, _ := args.GetFromIdentity()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
-		Chain:     client.Asset.GetChain().Chain,
-		Contract:  string(contract),
-		Balance:   args.GetAmount().String(),
-		Decimals:  decimalsStr,
-		PublicKey: hex.EncodeToString(publicKeyMaybe),
-		From:      string(args.GetFrom()),
-		To:        string(args.GetTo()),
-		Memo:      memoMaybe,
-		Priority:  string(priorityMaybe),
-		FeePayer:  types.NewFeePayerInfoOrNil(&args),
+		Chain:        client.Asset.GetChain().Chain,
+		Contract:     string(contract),
+		Balance:      args.GetAmount().String(),
+		Decimals:     decimalsStr,
+		PublicKey:    hex.EncodeToString(publicKeyMaybe),
+		From:         string(args.GetFrom()),
+		To:           string(args.GetTo()),
+		Memo:         memoMaybe,
+		Priority:     string(priorityMaybe),
+		FeePayer:     types.NewFeePayerInfoOrNil(&args),
+		FromIdentity: fromIdentityMaybe,
 
 		TransactionAttempts: args.GetTransactionAttempts(),
 	})
@@ -215,9 +217,11 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	senders := []*types.Sender{}
 	receivers := []*types.Receiver{}
 	for _, sender := range args.Spenders() {
+		fromIdentityMaybe, _ := sender.GetFromIdentity()
 		senders = append(senders, &types.Sender{
 			Address:   sender.GetFrom(),
 			PublicKey: hex.EncodeToString(sender.GetPublicKey()),
+			Identity:  fromIdentityMaybe,
 		})
 	}
 	for _, receiver := range args.Receivers() {
