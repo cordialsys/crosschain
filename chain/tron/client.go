@@ -219,6 +219,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			destination.Amount = amount
 			destination.Asset = string(client.chain.Chain)
 			destination.NativeAsset = client.chain.Chain
+			destination.Event = xclient.NewEvent("", xclient.MovementVariantNative)
 
 			sources = append(sources, source)
 			destinations = append(destinations, destination)
@@ -287,7 +288,7 @@ func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xclient.LegacyTxInf
 	sources := make([]*xclient.LegacyTxInfoEndpoint, 0)
 	destinations := make([]*xclient.LegacyTxInfoEndpoint, 0)
 
-	for _, event := range log {
+	for i, event := range log {
 		source := new(xclient.LegacyTxInfoEndpoint)
 		destination := new(xclient.LegacyTxInfoEndpoint)
 		source.NativeAsset = xc.TRX
@@ -313,6 +314,7 @@ func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xclient.LegacyTxInf
 		source.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
 		destination.Address = xc.Address(eventDestinationB58)
 		destination.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
+		destination.Event = xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantToken)
 
 		sources = append(sources, source)
 		destinations = append(destinations, destination)
