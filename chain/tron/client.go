@@ -192,6 +192,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return xclient.LegacyTxInfo{}, err
 	}
+	latestBlockResp, err := client.client.GetBlockByLatest(1)
+	if err != nil {
+		return xclient.LegacyTxInfo{}, err
+	}
+	latestBlock := latestBlockResp.Block[0]
 
 	var from xc.Address
 	var to xc.Address
@@ -230,7 +235,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Fee:             xc.NewAmountBlockchainFromUint64(uint64(info.Fee)),
 		BlockIndex:      int64(info.BlockNumber),
 		BlockTime:       int64(info.BlockTimeStamp / 1000),
-		Confirmations:   0,
+		Confirmations:   int64(latestBlock.BlockHeader.RawData.Number - block.BlockHeader.RawData.Number),
 		Status:          xc.TxStatusSuccess,
 		Sources:         sources,
 		Destinations:    destinations,
@@ -350,7 +355,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return int(dec.Uint64()), nil
 }
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
-	var tonBlock *httpclient.BlockResponse
+	var tronBlock *httpclient.BlockResponse
 	height, ok := args.Height()
 	if !ok {
 		response, err := client.client.GetBlockByLatest(1)
@@ -360,24 +365,24 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		if len(response.Block) == 0 {
 			return nil, fmt.Errorf("no blocks found on chain")
 		}
-		tonBlock = response.Block[0]
+		tronBlock = response.Block[0]
 	} else {
 		response, err := client.client.GetBlockByNum(height)
 		if err != nil {
 			return nil, err
 		}
-		tonBlock = response
+		tronBlock = response
 	}
-	height = tonBlock.BlockHeader.RawData.Number
+	height = tronBlock.BlockHeader.RawData.Number
 
-	txs := tonBlock.Transactions
+	txs := tronBlock.Transactions
 
 	block := &xclient.BlockWithTransactions{
 		Block: *xclient.NewBlock(
 			client.chain.Chain,
 			height,
-			tonBlock.BlockId,
-			time.Unix(int64(tonBlock.BlockHeader.RawData.Timestamp/1000), 0),
+			tronBlock.BlockId,
+			time.Unix(int64(tronBlock.BlockHeader.RawData.Timestamp/1000), 0),
 		),
 	}
 	for _, tx := range txs {
