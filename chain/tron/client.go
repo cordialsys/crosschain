@@ -141,7 +141,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(string(args.GetFrom()), string(args.GetTo()), 5)
+	dummyTx, err := client.client.CreateTransaction(string(args.GetFrom()), string(args.GetTo()), 1)
 	if err != nil {
 		return nil, err
 	}

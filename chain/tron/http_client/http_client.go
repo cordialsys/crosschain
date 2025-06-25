@@ -187,6 +187,11 @@ func parseResponse[T any](res *http.Response, dest T) (T, error) {
 	if err != nil {
 		return dest, err
 	}
+	logrus.WithFields(logrus.Fields{
+		"body":   string(bz),
+		"url":    res.Request.URL,
+		"status": res.StatusCode,
+	}).Debug("response")
 	err = json.Unmarshal(bz, dest)
 	// decoder := json.NewDecoder(res.Body)
 	// err := decoder.Decode(dest)
