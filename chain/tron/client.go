@@ -166,8 +166,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Tron tx
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	t := tx.(*Tx)
-	bz, err := t.Serialize()
+	bz, err := tx.Serialize()
 	if err != nil {
 		return err
 	}
