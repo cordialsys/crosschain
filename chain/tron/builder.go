@@ -5,7 +5,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/okx/go-wallet-sdk/coins/tron"
 	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
 	"golang.org/x/crypto/sha3"
@@ -29,6 +28,17 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	}, nil
 }
 
+func GetAddressHash(address string) ([]byte, error) {
+	to, v, err := base58.CheckDecode(address)
+	if err != nil {
+		return nil, err
+	}
+	var bs []byte
+	bs = append(bs, v)
+	bs = append(bs, to...)
+	return bs, nil
+}
+
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 
@@ -41,11 +51,11 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
-	from_bytes, err := tron.GetAddressHash(string(from))
+	from_bytes, err := GetAddressHash(string(from))
 	if err != nil {
 		return nil, err
 	}
-	to_bytes, err := tron.GetAddressHash(string(to))
+	to_bytes, err := GetAddressHash(string(to))
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +75,6 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	i := input.(*TxInput)
 	tx := new(core.Transaction)
 	tx.RawData = i.ToRawData(contract)
-	// bz, _ := json.Marshal(tx)
-	// fmt.Println(string(bz))
 
 	return &Tx{
 		tronTx: tx,
@@ -84,26 +92,26 @@ func Signature(method string) []byte {
 
 // NewTokenTransfer creates a new transfer for a token asset
 func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
-	from_bytes, _, err := base58.CheckDecode(string(from))
+	from_bytes, err := GetAddressHash(string(from))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid from address: %v", err)
 	}
 
-	to_bytes, _, err := base58.CheckDecode(string(to))
+	to_bytes, err := GetAddressHash(string(to))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid to address: %v", err)
 	}
 
-	contract_bytes, _, err := base58.CheckDecode(string(contract))
+	contract_bytes, err := GetAddressHash(string(contract))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid contract address: %v", err)
 	}
 
 	addrType, err := eABI.NewType("address", "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("internal type construction error: %v", err)
 	}
-	amountType, err := eABI.NewType("address", "", nil)
+	amountType, err := eABI.NewType("uint256", "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("internal type construction error: %v", err)
 	}
@@ -120,12 +128,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		common.BytesToAddress(to_bytes),
 		amount.Int(),
 	})
+	if err != nil {
+		return nil, fmt.Errorf("could not pack: %v", err)
+	}
 	methodSig := Signature("transfer(address,uint256)")
 	data := append(methodSig, paramBz...)
-
-	if err != nil {
-		return nil, err
-	}
 
 	params := &core.TriggerSmartContract{}
 	params.ContractAddress = contract_bytes
@@ -137,7 +144,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	contractParam.Type = core.Transaction_Contract_TriggerSmartContract
 	param, err := ptypes.MarshalAny(params)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not marshal any: %v", err)
 	}
 	contractParam.Parameter = param
 
