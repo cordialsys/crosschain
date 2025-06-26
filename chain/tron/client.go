@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"math/big"
+	"net/url"
 	"strings"
 	"time"
 
@@ -13,8 +13,10 @@ import (
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
-	"github.com/okx/go-wallet-sdk/crypto/base58"
 	"github.com/sirupsen/logrus"
 )
 
@@ -176,7 +178,28 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return err
 }
 
+// Some data is available via the EVM RPC methods, but not the native methods :/
+func (client *Client) ConnectEvmJsonRpc(ctx context.Context) (*ethclient.Client, error) {
+	jsonRpcUrl, err := url.Parse(client.chain.URL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url: %v", err)
+	}
+
+	jsonRpcUrl = jsonRpcUrl.JoinPath("jsonrpc")
+	jsonRpcSocket, err := rpc.DialHTTPWithClient(jsonRpcUrl.String(), client.client.HttpClient())
+	if err != nil {
+		return nil, fmt.Errorf("dialing url: %v", client.chain.URL)
+	}
+	rpcClient := ethclient.NewClient(jsonRpcSocket)
+
+	return rpcClient, nil
+}
+
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+	rpcClient, err := client.ConnectEvmJsonRpc(ctx)
+	if err != nil {
+		return xclient.LegacyTxInfo{}, err
+	}
 	tx, err := client.client.GetTransactionByID(string(txHash))
 	if err != nil {
 		return xclient.LegacyTxInfo{}, err
@@ -186,11 +209,11 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	if err != nil {
 		return xclient.LegacyTxInfo{}, err
 	}
-
-	block, err := client.client.GetBlockByNum(info.BlockNumber)
+	evmTx, err := rpcClient.TransactionReceipt(ctx, common.HexToHash(string(txHash)))
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return xclient.LegacyTxInfo{}, fmt.Errorf("failed to get transaction by hash from EVM RPC: %v", err)
 	}
+
 	latestBlockResp, err := client.client.GetBlockByLatest(1)
 	if err != nil {
 		return xclient.LegacyTxInfo{}, err
@@ -200,7 +223,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	var from xc.Address
 	var to xc.Address
 	var amount xc.AmountBlockchain
-	sources, destinations := deserialiseTransactionEvents(info.Logs)
+	sources, destinations := deserialiseTransactionEvents(info.Logs, evmTx)
 	// If we cannot retrieve transaction events, we can infer that the TX is a native transfer
 	if len(sources) == 0 && len(destinations) == 0 {
 		from, to, amount, err = deserialiseNativeTransfer(tx)
@@ -225,8 +248,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
+	blockHash := evmTx.BlockHash.String()
+	// Tron natively doesn't use 0x prefix.
+	blockHash = strings.TrimPrefix(blockHash, "0x")
+
 	txInfo := xclient.LegacyTxInfo{
-		BlockHash:       block.BlockId,
+		BlockHash:       blockHash,
 		TxID:            string(txHash),
 		From:            from,
 		To:              to,
@@ -235,7 +262,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		Fee:             xc.NewAmountBlockchainFromUint64(uint64(info.Fee)),
 		BlockIndex:      int64(info.BlockNumber),
 		BlockTime:       int64(info.BlockTimeStamp / 1000),
-		Confirmations:   int64(latestBlock.BlockHeader.RawData.Number - block.BlockHeader.RawData.Number),
+		Confirmations:   int64(latestBlock.BlockHeader.RawData.Number - info.BlockNumber),
 		Status:          xc.TxStatusSuccess,
 		Sources:         sources,
 		Destinations:    destinations,
@@ -281,67 +308,6 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 	}
 
 	return xc.NewAmountBlockchainFromUint64(uint64(resp.Balance)), nil
-}
-
-func deserialiseTransactionEvents(log []*httpclient.Log) ([]*xclient.LegacyTxInfoEndpoint, []*xclient.LegacyTxInfoEndpoint) {
-	sources := make([]*xclient.LegacyTxInfoEndpoint, 0)
-	destinations := make([]*xclient.LegacyTxInfoEndpoint, 0)
-
-	for i, event := range log {
-		source := new(xclient.LegacyTxInfoEndpoint)
-		destination := new(xclient.LegacyTxInfoEndpoint)
-		source.NativeAsset = xc.TRX
-		destination.NativeAsset = xc.TRX
-
-		// The addresses in the TVM omits the prefix 0x41, so we add it here to allow us to parse the addresses
-		eventContractB58 := base58.CheckEncode(event.Address, 0x41)
-		eventSourceB58 := base58.CheckEncode(event.Topics[1][12:], 0x41)      // Remove padding
-		eventDestinationB58 := base58.CheckEncode(event.Topics[2][12:], 0x41) // Remove padding
-		eventMethodBz := event.Topics[0]
-
-		eventValue := new(big.Int)
-		eventValue.SetString(hex.EncodeToString(event.Data), 16) // event value is returned as a padded big int hex
-
-		if hex.EncodeToString(eventMethodBz) != strings.TrimPrefix(TRANSFER_EVENT_HASH_HEX, "0x") {
-			continue
-		}
-
-		source.ContractAddress = xc.ContractAddress(eventContractB58)
-		destination.ContractAddress = xc.ContractAddress(eventContractB58)
-
-		source.Address = xc.Address(eventSourceB58)
-		source.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
-		destination.Address = xc.Address(eventDestinationB58)
-		destination.Amount = xc.NewAmountBlockchainFromUint64(eventValue.Uint64())
-		destination.Event = xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantToken)
-
-		sources = append(sources, source)
-		destinations = append(destinations, destination)
-	}
-
-	return sources, destinations
-}
-
-func deserialiseNativeTransfer(tx *httpclient.GetTransactionIDResponse) (xc.Address, xc.Address, xc.AmountBlockchain, error) {
-	if len(tx.RawData.Contract) != 1 {
-		return "", "", xc.AmountBlockchain{}, fmt.Errorf("unsupported transaction")
-	}
-
-	contract := tx.RawData.Contract[0]
-
-	if contract.Type != "TransferContract" {
-		return "", "", xc.AmountBlockchain{}, fmt.Errorf("unsupported transaction")
-	}
-	transferContract, err := contract.AsTransferContract()
-	if err != nil {
-		return "", "", xc.AmountBlockchain{}, fmt.Errorf("invalid transfer-contract: %v", err)
-	}
-
-	from := xc.Address(transferContract.Owner)
-	to := xc.Address(transferContract.To)
-	amount := transferContract.Amount
-
-	return from, to, xc.NewAmountBlockchainFromUint64(uint64(amount)), nil
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
