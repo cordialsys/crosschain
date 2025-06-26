@@ -182,6 +182,10 @@ func NewHttpClient(baseUrl string) (*Client, error) {
 	}, err
 }
 
+func (c *Client) HttpClient() *http.Client {
+	return c.client
+}
+
 func parseResponse[T any](res *http.Response, dest T) (T, error) {
 	bz, err := io.ReadAll(res.Body)
 	if err != nil {
