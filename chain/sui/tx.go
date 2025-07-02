@@ -5,10 +5,10 @@ import (
 	"sort"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/blake2b"
 )

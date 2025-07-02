@@ -1,6 +1,8 @@
 module github.com/cordialsys/crosschain
 
-go 1.23.4
+go 1.24
+
+toolchain go1.24.4
 
 require (
 	cloud.google.com/go/secretmanager v1.13.1
@@ -19,8 +21,8 @@ require (
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.2.2-0.20240711233432-c7949e1f6b9a
 	github.com/cometbft/cometbft v1.0.0
 	github.com/coming-chat/go-aptos v0.0.0-20221109075633-2804a4483f45
-	github.com/coming-chat/go-sui/v2 v2.0.0
 	github.com/coming-chat/lcs v0.0.0-20220829063658-0fa8432d2bdf
+	github.com/cordialsys/go-sui-sdk/v2 v2.1.1
 	github.com/cosmos/btcutil v1.0.5
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5
 	github.com/cosmos/cosmos-sdk v0.52.0
@@ -299,8 +301,6 @@ replace (
 	github.com/bytedance/sonic => github.com/cordialsys/go-json v0.10.5-sonic-replace
 	// required for fee-payer
 	github.com/coming-chat/go-aptos => github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04
-	// required to parse newer Sui transactions
-	github.com/coming-chat/go-sui/v2 => github.com/cordialsys/go-sui-sdk/v2 v2.0.0-20250605153144-52df5e76c212
 	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-rc.1
 	github.com/okx/go-wallet-sdk/coins/tron => github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e
 )

@@ -82,9 +82,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 
 		server, close := testtypes.MockHTTP(s.T(), []string{
 			// /api/v2/utxo
-			fmt.Sprintf(
-				"[" + strings.Join(utxoJsons, ",") + "]",
-			),
+			"[" + strings.Join(utxoJsons, ",") + "]",
 			// /api/v2/estimatefee
 			`{"result": "0.00007998"}`,
 		}, 200)

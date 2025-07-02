@@ -3,11 +3,11 @@ package sui_test
 import (
 	"encoding/hex"
 
-	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 )
 
 func (s *CrosschainTestSuite) TestTransferHash() {
