@@ -1,22 +1,25 @@
 package sui
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/coming-chat/go-sui/v2/client"
-	"github.com/coming-chat/go-sui/v2/lib"
-	"github.com/coming-chat/go-sui/v2/move_types"
-	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	"github.com/cordialsys/go-sui-sdk/v2/client"
+	"github.com/cordialsys/go-sui-sdk/v2/lib"
+	"github.com/cordialsys/go-sui-sdk/v2/move_types"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,10 +29,53 @@ type Client struct {
 	SuiClient *client.Client
 }
 
+type HttpLogger struct {
+}
+
+func (i *HttpLogger) RoundTrip(req *http.Request) (*http.Response, error) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	logrus.WithFields(logrus.Fields{
+		"method": req.Method,
+		"url":    req.URL.String(),
+		"body":   string(body),
+	}).Trace("sui request")
+	res, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err = io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	res.Body = io.NopCloser(bytes.NewReader(body))
+
+	logrus.WithFields(logrus.Fields{
+		"status": res.StatusCode,
+		"body":   string(body),
+	}).Trace("sui response")
+	return res, err
+}
+
 // NewClient returns a new Sui Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
-	client, err := client.Dial(cfg.URL)
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:    3,
+			IdleConnTimeout: 30 * time.Second,
+		},
+	}
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		httpClient.Transport = &HttpLogger{}
+	}
+	client, err := client.DialWithClient(cfg.URL, httpClient)
+
 	return &Client{
 		Asset:     cfgI,
 		SuiClient: client,
@@ -275,9 +321,9 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 
 	fromData, err := move_types.NewAccountAddressHex(string(address))
 	if err != nil {
-		return []*types.Coin{}, err
+		return []*types.Coin{}, fmt.Errorf("could not decode address: %v", err)
 	}
-	var next *move_types.AccountAddress
+	var next *string
 	for {
 		coins, err := c.SuiClient.GetCoins(ctx, *fromData, &contract, next, 250)
 		if err != nil {
@@ -288,7 +334,7 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 			all_coins = append(all_coins, &c)
 		}
 		next = coins.NextCursor
-		if next == nil || !coins.HasNextPage {
+		if (next == nil || *next == "") || !coins.HasNextPage {
 			break
 		}
 	}

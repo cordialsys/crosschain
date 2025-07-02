@@ -7,15 +7,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/coming-chat/go-sui/v2/lib"
-	"github.com/coming-chat/go-sui/v2/move_types"
-	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	"github.com/cordialsys/go-sui-sdk/v2/lib"
+	"github.com/cordialsys/go-sui-sdk/v2/move_types"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )

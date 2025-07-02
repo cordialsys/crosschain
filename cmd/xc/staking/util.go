@@ -105,7 +105,7 @@ func WaitForTx(xcFactory *factory.Factory, chain *xc.ChainConfig, hash string, c
 	start := time.Now()
 	for {
 		if time.Since(start) > 2*time.Minute {
-			return nil, fmt.Errorf("timed out waiting for tx " + hash)
+			return nil, fmt.Errorf("timed out waiting for tx %s", hash)
 		}
 
 		tx, err := rpcCli.FetchTxInfo(context.Background(), xc.TxHash(hash))

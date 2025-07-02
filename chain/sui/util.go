@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/coming-chat/go-sui/v2/types"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 )
 
 type ObjectRef struct {

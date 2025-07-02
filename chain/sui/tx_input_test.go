@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcutil/base58"
-	"github.com/coming-chat/go-sui/v2/types"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/go-sui-sdk/v2/types"
 )
 
 func (s *CrosschainTestSuite) TestCoinEqual() {
