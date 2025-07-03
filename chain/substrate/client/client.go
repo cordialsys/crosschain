@@ -506,6 +506,10 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().Decimals), nil
 	}
+	if client.Asset.GetChain().Chain == "TAO" {
+		// all assets on TAO have 9 decimals
+		return 9, nil
+	}
 
 	return 0, fmt.Errorf("unsupported asset: %v", contract)
 }
