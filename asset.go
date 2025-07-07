@@ -661,6 +661,10 @@ type ChainClientConfig struct {
 	External External `yaml:"external,omitempty"`
 	// Informational URLs for the chain explorers.
 	ExplorerUrls ExplorerUrls `yaml:"explorer_urls,omitempty"`
+	// If true, this means that the chain is not intended for future use and
+	// is only maintained for legacy purposes (by the upstream community).
+	// E.g. "Terra Classic" or "Fantom" are legacy chains that each have replacements.
+	Legacy bool `yaml:"legacy,omitempty"`
 }
 
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
