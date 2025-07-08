@@ -38,7 +38,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		}
 	}
 
-	api2 := eos.New(url)
+	api2 := eos.New(url, cfgI.GetChain().DefaultHttpClient().Timeout)
 	api2.Header.Set("Content-Type", "application/json")
 	if apiKey != "" {
 		api2.Header.Set("x-api-key", apiKey)

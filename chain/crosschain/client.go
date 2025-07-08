@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -41,7 +42,7 @@ var _ xclient.MultiTransferClient = &Client{}
 const ServiceApiKeyHeader = "x-service-api-key"
 
 // NewClient returns a new Crosschain Client
-func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.NetworkSelector) (*Client, error) {
+func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
 	url = strings.TrimSuffix(url, "/")
 	var apiKey string
 	var err error
@@ -57,16 +58,19 @@ func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.Ne
 	}
 
 	return &Client{
-		Asset:   cfgI,
-		URL:     url,
-		Http:    &http.Client{},
+		Asset: cfgI,
+		URL:   url,
+		Http: &http.Client{
+			// Prevent requests from hanging indefinitely
+			Timeout: httpTimeout,
+		},
 		Network: network,
 		ApiKey:  apiKey,
 	}, nil
 }
 
-func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, serviceApiKey config.Secret, provider xc.StakingProvider, network xc.NetworkSelector) (*Client, error) {
-	client, err := NewClient(cfgI, url, apiKeyRef, network)
+func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, serviceApiKey config.Secret, provider xc.StakingProvider, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
+	client, err := NewClient(cfgI, url, apiKeyRef, network, httpTimeout)
 	if err != nil {
 		return nil, err
 	}

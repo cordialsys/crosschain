@@ -69,6 +69,16 @@ func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []
 		}
 	}
 	switch chain.Driver() {
+	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy, xc.DriverCardano, xc.DriverSui:
+		// check for address dups
+		for _, s1 := range spenders {
+			for _, s2 := range spenders {
+				if s1.address == s2.address {
+					return nil, errors.New("cannot use the same address multiple times in a batch transaction for a UTXO-based chain")
+				}
+			}
+		}
+
 	case xc.DriverEVM, xc.DriverEVMLegacy:
 		if len(spenders) != 1 {
 			return nil, errors.New("only one spender is supported for account-based chains")

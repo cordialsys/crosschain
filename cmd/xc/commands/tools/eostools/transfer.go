@@ -134,7 +134,7 @@ func CmdTxTransferEOS() *cobra.Command {
 			input := inputI.(*tx_input.TxInput)
 			input.Timestamp = time.Now().Unix()
 
-			refApi := eos.New(chainConfig.URL)
+			refApi := eos.New(chainConfig.URL, chainConfig.HttpTimeout)
 			refApi.Header.Set("Content-Type", "application/json")
 
 			fromAccount := input.FromAccount

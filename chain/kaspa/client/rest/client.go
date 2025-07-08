@@ -13,13 +13,14 @@ import (
 )
 
 type Client struct {
-	url   string
-	chain xc.NativeAsset
+	url        string
+	chain      xc.NativeAsset
+	httpClient *http.Client
 }
 
-func NewClient(url string, chain xc.NativeAsset) *Client {
+func NewClient(url string, chain xc.NativeAsset, httpClient *http.Client) *Client {
 	url = strings.TrimSuffix(url, "/")
-	return &Client{url, chain}
+	return &Client{url, chain, httpClient}
 }
 
 type ErrorResponse struct {
@@ -54,7 +55,7 @@ func (cli *Client) Do(method string, path string, requestBody any, response any)
 	}
 	log := logrus.WithField("url", url).WithField("method", method)
 	log.Debug("sending request")
-	resp, err := http.DefaultClient.Do(request)
+	resp, err := cli.httpClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to GET: %v", err)
 	}

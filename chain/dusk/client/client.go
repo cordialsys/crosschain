@@ -46,7 +46,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Asset:      cfgI,
 		Url:        cfg.GetChain().URL,
 		RuesUrl:    fmt.Sprintf("%s/on", cfg.GetChain().URL),
-		HttpClient: http.DefaultClient,
+		HttpClient: cfg.DefaultHttpClient(),
 		Logger:     logger,
 	}, nil
 }

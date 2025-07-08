@@ -33,7 +33,7 @@ func TestExampleTestSuite(t *testing.T) {
 
 func (s *CrosschainTestSuite) TestNewClient() {
 	require := s.Require()
-	client, err := NewClient(s.Asset, "", "", "")
+	client, err := NewClient(s.Asset, "", "", "", 0)
 	require.NotNil(client)
 	require.Nil(err)
 }
@@ -54,7 +54,7 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	from := xc.Address("from")
@@ -75,7 +75,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 	)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	from := xc.Address("from")
@@ -107,7 +107,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	txHash := xc.TxHash("hash")
@@ -123,7 +123,7 @@ func (s *CrosschainTestSuite) TestFetchTxInfoError() {
 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	txHash := xc.TxHash("hash")
@@ -142,7 +142,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
@@ -160,7 +160,7 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
@@ -185,7 +185,7 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	address := xc.Address("address")
@@ -205,7 +205,7 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
 	defer close()
 
-	client, _ := NewClient(s.Asset, "", "", "")
+	client, _ := NewClient(s.Asset, "", "", "", 0)
 	client.URL = server.URL
 
 	address := xc.Address("address")

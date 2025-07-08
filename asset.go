@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -437,7 +438,7 @@ func NewChainConfig(nativeAsset NativeAsset, driverMaybe ...Driver) *ChainConfig
 		},
 		ChainClientConfig: &ChainClientConfig{},
 	}
-	cfg.Configure()
+	cfg.Configure(0)
 	return cfg
 }
 func (chain *ChainConfig) Base() *ChainBaseConfig {
@@ -519,6 +520,22 @@ func (chain *ChainConfig) WithTransactionActiveTime(transactionActiveTime time.D
 	return chain
 }
 
+func (chain *ChainConfig) WithHttpTimeout(httpTimeout time.Duration) *ChainConfig {
+	chain.HttpTimeout = httpTimeout
+	return chain
+}
+
+func (chain *ChainConfig) DefaultHttpClient() *http.Client {
+	timeout := chain.HttpTimeout
+	if timeout <= 0 {
+		// default timeout
+		timeout = time.Second * 60
+	}
+	return &http.Client{
+		Timeout: timeout,
+	}
+}
+
 type ChainConfig struct {
 	*ChainBaseConfig   `yaml:",inline"`
 	*ChainClientConfig `yaml:",inline"`
@@ -579,11 +596,15 @@ type ChainBaseConfig struct {
 	XChainIDStr string `yaml:"chain_id_str,omitempty"`
 }
 
-func (chain *ChainConfig) Configure() {
+func (chain *ChainConfig) Configure(httpTimeout time.Duration) {
 	chain.ChainClientConfig.Configure()
 	if chain.XChainIDStr != "" {
 		logrus.Warnf("chain_id_str is deprecated, use chain_id instead")
 		chain.ChainID = StringOrInt(chain.XChainIDStr)
+	}
+	if chain.HttpTimeout <= 0 {
+		// use the global configuration default
+		chain.HttpTimeout = httpTimeout
 	}
 }
 
@@ -656,6 +677,8 @@ type ChainClientConfig struct {
 
 	// Rate limiter configured from `rate_limit`, `period_limit`, `burst` (requires calling .Configure after loading from config)
 	Limiter *rate.Limiter `yaml:"-" mapstructure:"-"`
+	// HTTP timeout for the client (will default to global factory configuration)
+	HttpTimeout time.Duration `yaml:"http_timeout,omitempty"`
 
 	// Additional metadata.  Not Used in crosschain itself, but helpful to enrich API endpoints.
 	External External `yaml:"external,omitempty"`

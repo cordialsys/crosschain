@@ -36,13 +36,13 @@ type API struct {
 	enablePartialRequiredKeys bool
 }
 
-func New(baseURL string) *API {
+func New(baseURL string, timeout time.Duration) *API {
 	api := &API{
 		HttpClient: &http.Client{
 			Transport: &http.Transport{
 				Proxy: http.ProxyFromEnvironment,
 				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
+					Timeout:   timeout,
 					KeepAlive: 30 * time.Second,
 					DualStack: true,
 				}).DialContext,
@@ -52,6 +52,7 @@ func New(baseURL string) *API {
 				ExpectContinueTimeout: 1 * time.Second,
 				DisableKeepAlives:     true, // default behavior, because of `nodeos`'s lack of support for Keep alives.
 			},
+			Timeout: timeout,
 		},
 		BaseURL:  strings.TrimRight(baseURL, "/"),
 		Compress: CompressionZlib,
