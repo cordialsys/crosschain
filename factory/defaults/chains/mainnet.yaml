@@ -9,6 +9,7 @@
 # Substrate chain prefixes can be found at https://polkadot.subscan.io/tools/format_transform
 
 network: "mainnet"
+http_timeout: 120s
 chains:
   EOS:
     chain: EOS

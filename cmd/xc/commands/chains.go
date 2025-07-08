@@ -68,7 +68,7 @@ func CmdChains() *cobra.Command {
 				logrus.Info("listing from local configuration")
 				chains := []*xc.ChainConfig{}
 				for _, chain := range xcFactory.GetAllChains() {
-					chain.Configure()
+					chain.Configure(xcFactory.Config.HttpTimeout)
 					chains = append(chains, chain)
 				}
 				err = printer(chains)

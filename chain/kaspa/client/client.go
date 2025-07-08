@@ -47,7 +47,7 @@ func derefOrZero[T any](v *T) T {
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	chain := cfgI.GetChain()
 	clientConfig := chain.ChainClientConfig
-	client := rest.NewClient(clientConfig.URL, chain.Chain)
+	client := rest.NewClient(clientConfig.URL, chain.Chain, chain.DefaultHttpClient())
 	return &Client{chain.Chain, chain, client, int(chain.Decimals)}, nil
 }
 

@@ -47,7 +47,7 @@ var _ address.WithAddressDecoder = &BlockbookClient{}
 func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
-	httpClient := http.Client{}
+	httpClient := cfg.DefaultHttpClient()
 	chaincfg, err := params.GetParams(cfg.Base())
 	if err != nil {
 		return &BlockbookClient{}, err
@@ -57,7 +57,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	decoder := address.NewAddressDecoder()
 
 	return &BlockbookClient{
-		httpClient,
+		*httpClient,
 		asset,
 		chaincfg,
 		url,

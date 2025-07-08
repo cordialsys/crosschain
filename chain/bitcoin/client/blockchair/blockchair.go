@@ -44,7 +44,7 @@ var _ address.WithAddressDecoder = &BlockchairClient{}
 func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
-	httpClient := http.Client{}
+	httpClient := cfg.DefaultHttpClient()
 	params, err := params.GetParams(cfg.Base())
 	if err != nil {
 		return &BlockchairClient{}, err
@@ -62,7 +62,7 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 		ApiKey:           apiKey,
 		Url:              cfg.URL,
 		Chaincfg:         params,
-		httpClient:       httpClient,
+		httpClient:       *httpClient,
 		Asset:            asset,
 		addressDecoder:   &address.BtcAddressDecoder{},
 		skipAmountFilter: false,

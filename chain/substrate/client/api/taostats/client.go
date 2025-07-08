@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/sirupsen/logrus"
@@ -46,7 +47,9 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 	}
 	logrus.WithField("url", url).Debug("post request")
 
-	explorerClient := &http.Client{}
+	explorerClient := &http.Client{
+		Timeout: 60 * time.Second,
+	}
 	resp, err := explorerClient.Do(req)
 	if err != nil {
 		return err

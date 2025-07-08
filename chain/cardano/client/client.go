@@ -69,7 +69,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		Network:             network,
 		Logger:              logger,
 		BlockfrostProjectId: chainConfig.Auth2.LoadOrBlank(),
-		HttpClient:          http.DefaultClient,
+		HttpClient:          chainConfig.DefaultHttpClient(),
 	}, nil
 }
 

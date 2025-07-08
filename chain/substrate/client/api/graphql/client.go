@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -37,7 +38,9 @@ func Post(ctx context.Context, url string, inputJson []byte, outputData any, arg
 		args.Limiter.Wait(ctx)
 	}
 
-	explorerClient := &http.Client{}
+	explorerClient := &http.Client{
+		Timeout: 60 * time.Second,
+	}
 	resp, err := explorerClient.Do(req)
 	if err != nil {
 		return err
