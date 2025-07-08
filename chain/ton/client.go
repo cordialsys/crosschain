@@ -108,7 +108,8 @@ func (cli *Client) send(method string, path string, requestBody any, response an
 		request.Header.Add("X-API-Key", cli.ApiKey)
 	}
 	logrus.WithField("url", url).Debug(method)
-	resp, err := http.DefaultClient.Do(request)
+	httpClient := cli.Asset.GetChain().DefaultHttpClient()
+	resp, err := httpClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to GET: %v", err)
 	}

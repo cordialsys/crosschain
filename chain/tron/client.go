@@ -127,7 +127,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		return nil, fmt.Errorf("chain gas-budget-default should be set to value greater than 0.0")
 	}
 
-	client, err := httpclient.NewHttpClient(cfg.URL)
+	client, err := httpclient.NewHttpClient(cfg.URL, cfg.DefaultHttpClient().Timeout)
 	if err != nil {
 		return nil, err
 	}

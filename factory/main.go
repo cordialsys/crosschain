@@ -88,7 +88,7 @@ func (f *Factory) NewClient(cfg ITask) (xclient.Client, error) {
 	url, driver := chainConfig.ClientURL()
 	switch driver {
 	case DriverCrosschain:
-		return remoteclient.NewClient(cfg, url, chainConfig.Auth2, chainConfig.CrosschainClient.Network)
+		return remoteclient.NewClient(cfg, url, chainConfig.Auth2, chainConfig.CrosschainClient.Network, f.Config.HttpTimeout)
 	default:
 		return drivers.NewClient(cfg, chainConfig.Driver)
 	}
@@ -101,7 +101,7 @@ func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg ITas
 		network := chainConfig.CrosschainClient.Network
 		switch Driver(driver) {
 		case DriverCrosschain:
-			return remoteclient.NewStakingClient(cfg, url, chainConfig.Auth2, stakingCfg.GetApiSecret(provider), provider, network)
+			return remoteclient.NewStakingClient(cfg, url, chainConfig.Auth2, stakingCfg.GetApiSecret(provider), provider, network, f.Config.HttpTimeout)
 		}
 	}
 	return drivers.NewStakingClient(stakingCfg, cfg, provider)

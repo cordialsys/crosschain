@@ -33,7 +33,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 	return &Client{
 		Url:        cfg.URL,
-		HttpClient: http.DefaultClient,
+		HttpClient: cfg.DefaultHttpClient(),
 		Asset:      cfgI,
 	}, nil
 }

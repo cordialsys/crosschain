@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 )
@@ -30,6 +31,7 @@ type Config struct {
 	// Default: "testnet"
 	Network       NetworkSetting `yaml:"network"`
 	CrosschainUrl string         `yaml:"crosschain_url"`
+	HttpTimeout   time.Duration  `yaml:"http_timeout"`
 
 	// map of lowercase(native_asset) -> NativeAssetObject
 	Chains map[string]*xc.ChainConfig `yaml:"chains"`
@@ -39,14 +41,14 @@ type Config struct {
 }
 
 func (cfg *Config) MigrateFields() {
-	for _, cfg := range cfg.Chains {
-		if cfg.ChainBaseConfig == nil {
-			cfg.ChainBaseConfig = &xc.ChainBaseConfig{}
+	for _, chain := range cfg.Chains {
+		if chain.ChainBaseConfig == nil {
+			chain.ChainBaseConfig = &xc.ChainBaseConfig{}
 		}
-		if cfg.ChainClientConfig == nil {
-			cfg.ChainClientConfig = &xc.ChainClientConfig{}
+		if chain.ChainClientConfig == nil {
+			chain.ChainClientConfig = &xc.ChainClientConfig{}
 		}
-		cfg.Configure()
+		chain.Configure(cfg.HttpTimeout)
 	}
 }
 

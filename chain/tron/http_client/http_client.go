@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/okx/go-wallet-sdk/crypto/base58"
@@ -166,7 +167,7 @@ type GetAccountResponse struct {
 	Address string `json:"address"`
 }
 
-func NewHttpClient(baseUrl string) (*Client, error) {
+func NewHttpClient(baseUrl string, timeout time.Duration) (*Client, error) {
 	baseUrl = strings.TrimSuffix(baseUrl, "/")
 	baseUrl = strings.TrimSuffix(baseUrl, "/wallet")
 	baseUrl = strings.TrimSuffix(baseUrl, "/jsonrpc")
@@ -174,7 +175,9 @@ func NewHttpClient(baseUrl string) (*Client, error) {
 
 	// may want to pass externally to support additional
 	// headers or something.
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: timeout,
+	}
 
 	return &Client{
 		baseUrl: u,

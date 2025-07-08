@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	comettypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -79,13 +78,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	host := cfg.URL
 	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableCosmosResponses)
 	interceptor.Enable()
+	rawHttpClient := cfg.DefaultHttpClient()
 
-	rawHttpClient := &http.Client{
-		// Need to use custom transport because:
-		// - cosmos library does not parse URLs correctly
-		// - need to intercept responses to remove incompatible response fields for some chains
-		Transport: interceptor,
-	}
+	// Need to use custom transport because:
+	// - cosmos library does not parse URLs correctly
+	// - need to intercept responses to remove incompatible response fields for some chains
+	rawHttpClient.Transport = interceptor
 	httpClient, err := rpchttp.NewWithClient(
 		host,
 		rawHttpClient,

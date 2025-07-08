@@ -65,7 +65,7 @@ func (i *HttpLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: cfg.DefaultHttpClient().Timeout,
 		Transport: &http.Transport{
 			MaxIdleConns:    3,
 			IdleConnTimeout: 30 * time.Second,

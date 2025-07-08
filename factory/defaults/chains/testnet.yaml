@@ -1,6 +1,7 @@
 # IndexingCo IDs can be found at https://jiti.indexing.co/networks
 
 network: "testnet"
+http_timeout: 60s
 chains:
   EOS:
     chain: EOS

@@ -98,10 +98,9 @@ func NewClient(asset xc.ITask) (*Client, error) {
 
 	// c, err := rpc.DialContext(context.Background(), url)
 	interceptor := utils.NewHttpInterceptor(ReplaceIncompatiableEvmResponses)
-	// {http.DefaultTransport, false}
-	httpClient := &http.Client{
-		Transport: interceptor,
-	}
+
+	httpClient := asset.GetChain().DefaultHttpClient()
+	httpClient.Transport = interceptor
 	c, err := rpc.DialHTTPWithClient(url, httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("dialing url: %v", nativeAsset.URL)

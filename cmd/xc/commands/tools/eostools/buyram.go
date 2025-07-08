@@ -87,7 +87,7 @@ func CmdTxBuyRam() *cobra.Command {
 			input := inputI.(*tx_input.TxInput)
 			input.Timestamp = time.Now().Unix()
 
-			refApi := eos.New(chainConfig.URL)
+			refApi := eos.New(chainConfig.URL, chainConfig.DefaultHttpClient().Timeout)
 			refApi.Header.Set("Content-Type", "application/json")
 
 			fromAccount := input.FromAccount
