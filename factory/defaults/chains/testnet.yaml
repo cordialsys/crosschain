@@ -391,6 +391,12 @@ chains:
     chain_name: Solana (Devnet)
     decimals: 9
     chain_gas_multiplier: 1.5
+  ES:
+    chain: ES
+    driver: solana
+    chain_name: Eclipse
+    decimals: 9
+    chain_gas_multiplier: 1.5
   SUI:
     chain: SUI
     driver: sui

@@ -52,6 +52,7 @@ const (
 	DUSK   = NativeAsset("DUSK")   // Dusk
 	ENJ    = NativeAsset("ENJ")    // Enjin
 	EOS    = NativeAsset("EOS")    // EOS
+	ES     = NativeAsset("ES")     // Eclipse
 	ETC    = NativeAsset("ETC")    // Ethereum Classic
 	ETH    = NativeAsset("ETH")    // Ethereum
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
@@ -114,6 +115,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	DUSK,
 	ENJ,
 	EOS,
+	ES,
 	ETC,
 	ETH,
 	ETHW,
@@ -277,7 +279,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEOS
 	case SUI:
 		return DriverSui
-	case SOL:
+	case SOL, ES:
 		return DriverSolana
 	case DOT, TAO, KSM, ENJ, KAR, ASTR:
 		return DriverSubstrate
