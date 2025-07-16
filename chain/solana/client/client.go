@@ -465,6 +465,42 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		})
 	}
 
+	for _, instr := range tx.GetTokenMintTo() {
+		from := instr.Instruction.GetAuthorityAccount()
+		to := instr.Instruction.GetMintAccount()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
+
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+			Address: xc.Address(from.PublicKey.String()),
+			Amount:  amount,
+			Event:   event,
+		})
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+			Address: xc.Address(to.PublicKey.String()),
+			Amount:  amount,
+			Event:   event,
+		})
+	}
+
+	for _, instr := range tx.GetTokenMintToChecked() {
+		from := instr.Instruction.GetAuthorityAccount()
+		to := instr.Instruction.GetMintAccount()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
+
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+			Address: xc.Address(from.PublicKey.String()),
+			Amount:  amount,
+			Event:   event,
+		})
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+			Address: xc.Address(to.PublicKey.String()),
+			Amount:  amount,
+			Event:   event,
+		})
+	}
+
 	for _, instr := range tx.GetCloseTokenAccounts() {
 		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
 		to := instr.Instruction.GetDestinationAccount().PublicKey.String()
@@ -564,7 +600,7 @@ func (client *Client) LookupTokenMint(ctx context.Context, tokenContract solana.
 	if err != nil {
 		return types.MintAccountInfo{}, err
 	}
-	fmt.Println(string(info.Value.Data.GetRawJSON()))
+	// fmt.Println(string(info.Value.Data.GetRawJSON()))
 	err = json.Unmarshal(info.Value.Data.GetRawJSON(), &accountInfo)
 	if err != nil {
 		return types.MintAccountInfo{}, err
@@ -581,7 +617,7 @@ func (client *Client) LookupTokenAccount(ctx context.Context, tokenAccount solan
 	if err != nil {
 		return types.TokenAccountInfo{}, err
 	}
-	fmt.Println(string(info.Value.Data.GetRawJSON()))
+	// fmt.Println(string(info.Value.Data.GetRawJSON()))
 	accountInfo, err = types.ParseRpcData(info.Value.Data)
 	if err != nil {
 		return types.TokenAccountInfo{}, err
