@@ -38,13 +38,17 @@ type TxData interface {
 }
 
 type NativeSolanaInstructionData struct {
-	solTx *solana.Transaction
-	meta  *rpc.TransactionMeta
+	solTx  *solana.Transaction
+	meta   *rpc.TransactionMeta
+	cached []ResolvedInstruction
 }
 
 var _ TxData = &NativeSolanaInstructionData{}
 
 func (d *NativeSolanaInstructionData) GetResolvedInstructions() []ResolvedInstruction {
+	if len(d.cached) > 0 {
+		return d.cached
+	}
 	instructions := []ResolvedInstruction{}
 	for i, instr := range d.solTx.Message.Instructions {
 		accounts, err := instr.ResolveInstructionAccounts(&d.solTx.Message)
@@ -87,6 +91,7 @@ func (d *NativeSolanaInstructionData) GetResolvedInstructions() []ResolvedInstru
 			})
 		}
 	}
+	d.cached = instructions
 	return instructions
 }
 
@@ -100,6 +105,7 @@ type SolanaInstruction interface {
 
 type Decoder struct {
 	txData TxData
+	cache  map[string]interface{}
 }
 
 func NewDecoderFromNativeTx(solTx *solana.Transaction, meta *rpc.TransactionMeta) *Decoder {
@@ -108,6 +114,7 @@ func NewDecoderFromNativeTx(solTx *solana.Transaction, meta *rpc.TransactionMeta
 			solTx: solTx,
 			meta:  meta,
 		},
+		cache: make(map[string]interface{}),
 	}
 }
 
@@ -117,6 +124,7 @@ type instructionAtIndex[T any] struct {
 }
 
 func getall[T any, Y SolanaInstruction](
+	cache *Decoder,
 	decoder func(accounts []*solana.AccountMeta, data []byte) (Y, error),
 	solanaProgram solana.PublicKey,
 	solTx TxData,
@@ -125,64 +133,74 @@ func getall[T any, Y SolanaInstruction](
 	if solTx == nil {
 		return []instructionAtIndex[T]{}
 	}
-	// message := solTx.Message
 
 	for _, instruction := range solTx.GetResolvedInstructions() {
-		// program, err := solTx.ResolveProgramIDIndex(instruction.ProgramIDIndex)
-		// if err != nil {
-		// 	continue
-		// }
-		// if !program.Equals(solanaProgram) {
-		// 	continue
-		// }
-		// accs, err := solTx.ResolveInstructionAccounts(&instruction)
-		// if err != nil {
-		// 	continue
-		// }
 		if !instruction.ProgramID.Equals(solanaProgram) {
 			continue
 		}
-		inst, err := decoder(instruction.Accounts, instruction.Data)
-		if err != nil {
-			continue
+
+		var impl interface{}
+		if cached, ok := cache.cache[instruction.ID()]; ok {
+			impl = cached
+		} else {
+			inst, err := decoder(instruction.Accounts, instruction.Data)
+			if err != nil {
+				continue
+			}
+			_, _, impl = inst.Obtain(bin.NewVariantDefinition(bin.Uint32TypeIDEncoding, nil))
+			cache.cache[instruction.ID()] = impl
 		}
-		_, _, impl := inst.Obtain(bin.NewVariantDefinition(bin.Uint32TypeIDEncoding, nil))
 		castedInst, ok := impl.(T)
 		if !ok {
 			continue
 		}
+
 		results = append(results, instructionAtIndex[T]{Instruction: castedInst, ID: instruction.ID()})
 	}
 	return results
 }
 
 func (tx Decoder) GetVoteWithdraws() []instructionAtIndex[*vote.Withdraw] {
-	x := getall[*vote.Withdraw](vote.DecodeInstruction, solana.VoteProgramID, tx.txData)
+	x := getall[*vote.Withdraw](&tx, vote.DecodeInstruction, solana.VoteProgramID, tx.txData)
 	return x
 }
 
 func (tx Decoder) GetSystemTransfers() []instructionAtIndex[*system.Transfer] {
-	return getall[*system.Transfer](system.DecodeInstruction, solana.SystemProgramID, tx.txData)
+	return getall[*system.Transfer](&tx, system.DecodeInstruction, solana.SystemProgramID, tx.txData)
 }
 
 func (tx Decoder) GetTokenTransferCheckeds() []instructionAtIndex[*token.TransferChecked] {
 	return append(
-		getall[*token.TransferChecked](token.DecodeInstruction, solana.TokenProgramID, tx.txData),
-		getall[*token.TransferChecked](token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
+		getall[*token.TransferChecked](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
+		getall[*token.TransferChecked](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
 	)
 }
 
 func (tx Decoder) GetTokenTransfers() []instructionAtIndex[*token.Transfer] {
 	return append(
-		getall[*token.Transfer](token.DecodeInstruction, solana.TokenProgramID, tx.txData),
-		getall[*token.Transfer](token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
+		getall[*token.Transfer](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
+		getall[*token.Transfer](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
+	)
+}
+
+func (tx Decoder) GetTokenMintTo() []instructionAtIndex[*token.MintTo] {
+	return append(
+		getall[*token.MintTo](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
+		getall[*token.MintTo](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
+	)
+}
+
+func (tx Decoder) GetTokenMintToChecked() []instructionAtIndex[*token.MintToChecked] {
+	return append(
+		getall[*token.MintToChecked](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
+		getall[*token.MintToChecked](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
 	)
 }
 
 func (tx Decoder) GetCloseTokenAccounts() []instructionAtIndex[*token.CloseAccount] {
 	return append(
-		getall[*token.CloseAccount](token.DecodeInstruction, solana.TokenProgramID, tx.txData),
-		getall[*token.CloseAccount](token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
+		getall[*token.CloseAccount](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
+		getall[*token.CloseAccount](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
 	)
 }
 
@@ -193,8 +211,8 @@ type CreateAccountLikeInstruction struct {
 
 func (tx Decoder) GetCreateAccounts() []instructionAtIndex[CreateAccountLikeInstruction] {
 	results := []instructionAtIndex[CreateAccountLikeInstruction]{}
-	creates := getall[*system.CreateAccount](system.DecodeInstruction, solana.SystemProgramID, tx.txData)
-	seeds := getall[*system.CreateAccountWithSeed](system.DecodeInstruction, solana.SystemProgramID, tx.txData)
+	creates := getall[*system.CreateAccount](&tx, system.DecodeInstruction, solana.SystemProgramID, tx.txData)
+	seeds := getall[*system.CreateAccountWithSeed](&tx, system.DecodeInstruction, solana.SystemProgramID, tx.txData)
 	for _, acc := range creates {
 		results = append(results, instructionAtIndex[CreateAccountLikeInstruction]{
 			Instruction: CreateAccountLikeInstruction{
@@ -217,19 +235,19 @@ func (tx Decoder) GetCreateAccounts() []instructionAtIndex[CreateAccountLikeInst
 }
 
 func (tx Decoder) GetDelegateStake() []instructionAtIndex[*stake.DelegateStake] {
-	return getall[*stake.DelegateStake](stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
+	return getall[*stake.DelegateStake](&tx, stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
 }
 
 func (tx Decoder) GetDeactivateStakes() []instructionAtIndex[*stake.Deactivate] {
-	return getall[*stake.Deactivate](stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
+	return getall[*stake.Deactivate](&tx, stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
 }
 
 func (tx Decoder) GetSplitStakes() []instructionAtIndex[*stake.Split] {
-	return getall[*stake.Split](stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
+	return getall[*stake.Split](&tx, stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
 }
 
 func (tx Decoder) GetStakeWithdraws() []instructionAtIndex[*stake.Withdraw] {
-	return getall[*stake.Withdraw](stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
+	return getall[*stake.Withdraw](&tx, stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
 }
 
 func (tx Decoder) GetAccountKeys() []solana.PublicKey {
