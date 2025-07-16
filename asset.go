@@ -396,6 +396,8 @@ type StakingConfig struct {
 type AdditionalNativeAsset struct {
 	// The asset ID of the asset to use
 	AssetId string `yaml:"asset_id,omitempty"`
+	// The native asset that this bridged asset corresponds to or settles in (e.g., "chains/ETH/assets/ETH" for OptEth or Eclipse)
+	BridgedAsset string `yaml:"bridged_asset,omitempty"`
 	// The on-chain contract ID of the asset
 	ContractId ContractAddress `yaml:"contract_id,omitempty"`
 	// Decimals for the asset
@@ -405,9 +407,10 @@ type AdditionalNativeAsset struct {
 	Aliases  []string            `yaml:"aliases,omitempty"`
 }
 
-func NewAdditionalNativeAsset(assetId string, contractId ContractAddress, decimals int32, feeLimit AmountHumanReadable, aliases ...string) *AdditionalNativeAsset {
+func NewAdditionalNativeAsset(assetId, bridgedAsset string, contractId ContractAddress, decimals int32, feeLimit AmountHumanReadable, aliases ...string) *AdditionalNativeAsset {
 	return &AdditionalNativeAsset{
 		assetId,
+		bridgedAsset,
 		contractId,
 		decimals,
 		feeLimit,
