@@ -175,7 +175,11 @@ func TestNativeAssetConfigs(t *testing.T) {
 
 				for _, na := range chain.NativeAssets {
 					require.NotEmpty(na.AssetId, fmt.Sprintf("%s additional asset %s should have an asset id", chain.Chain, na.AssetId))
-					require.NotEmpty(na.ContractId, fmt.Sprintf("%s additional asset %s should have a contract id", chain.Chain, na.AssetId))
+
+					require.True(
+						na.ContractId != "" || na.BridgedAsset != "",
+						fmt.Sprintf("%s additional asset %s must have at least one of contract_id or bridged_asset set", chain.Chain, na.AssetId),
+					)
 
 					normalizedAssetId := normalize.NormalizeAddressString(string(na.AssetId), chain.Chain)
 					require.Equal(

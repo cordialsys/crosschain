@@ -222,6 +222,10 @@ chains:
         asset_id: arbitrum-one
       indexing_co:
         chain_id: arbitrum
+    native_assets:
+      - asset_id: "ArbETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # ArbETH is settled in ETH
   AurETH:
     chain: AurETH
     driver: evm-legacy
@@ -424,12 +428,12 @@ chains:
     fee_limit: "2.0"
     confirmations_final: 200
     external:
-      coin_market_cap:
-        asset_id: "36174"
-      coin_gecko:
-        asset_id: eclipse-3
       indexing_co:
         chain_id: eclipse
+    native_assets:
+      - asset_id: "ES"
+        decimals: 9
+        bridged_asset: "chains/ETH/assets/ETH" # ES is settled in ETH
   ETC:
     chain: ETC
     driver: evm-legacy
@@ -839,10 +843,12 @@ chains:
     external:
       coin_market_cap:
         chain_id: "42"
-      coin_gecko:
-        asset_id: optimistic-ethereum
       indexing_co:
         chain_id: optimism
+    native_assets:
+      - asset_id: "OptETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # OptETH is settled in ETH
   SEI:
     chain: SEI
     driver: cosmos
