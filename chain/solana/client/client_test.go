@@ -81,6 +81,7 @@ func TestFetchTxInput(t *testing.T) {
 		toIsATA           bool
 		shouldCreateATA   bool
 		tokenAccountCount int
+		tokenProgram      string
 		err               string
 		forceError        int
 	}{
@@ -144,6 +145,33 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
+			toIsATA:         false,
+			shouldCreateATA: true,
+			err:             "",
+		},
+		{
+			// Token2022
+			asset:    xc.NewChainConfig(""),
+			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
+			resp: []string{
+				// valid blockhash
+				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
+				// get-account-info for token account
+				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
+				// valid owner account
+				`{"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid param: could not find account"},"id":1}`,
+				// empty ATA
+				`{"context":{"apiVersion":"1.13.3","slot":175636079},"value":null}`,
+				// token account
+				`{"context":{"apiVersion":"1.14.17","slot":205924180},"value":[{"account":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"5VCwKtCXgCJ6kit5FybXjvriW3xELsFDhYrPSqtJNmcD","state":"initialized","tokenAmount":{"amount":"55010000","decimals":6,"uiAmount":55.01,"uiAmountString":"55.01"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb","rentEpoch":361},"pubkey":"Hrb916EihPAN4T6xad9aVbrd5PfYmiJpvwLKA9XmgcGV"}]}`,
+				// priority fee
+				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
+				// simulation
+				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
+			},
+			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
+			tokenProgram:    solana.Token2022ProgramID.String(),
 			toIsATA:         false,
 			shouldCreateATA: true,
 			err:             "",
@@ -309,6 +337,9 @@ func TestFetchTxInput(t *testing.T) {
 				require.Equal(t, v.toIsATA, input.(*TxInput).ToIsATA, "ToIsATA")
 				require.Equal(t, v.shouldCreateATA, input.(*TxInput).ShouldCreateATA, "ShouldCreateATA")
 				require.Equal(t, v.blockHash, input.(*TxInput).RecentBlockHash.String())
+				if v.tokenProgram != "" {
+					require.Equal(t, v.tokenProgram, input.(*TxInput).TokenProgram.String())
+				}
 				if v.tokenAccountCount > 0 {
 					require.Len(t, input.(*TxInput).SourceTokenAccounts, v.tokenAccountCount)
 					// token accounts must be sorted descending
