@@ -302,5 +302,7 @@ replace (
 	// required for fee-payer
 	github.com/coming-chat/go-aptos => github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04
 	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-rc.1
+	// Patch adds support for transfer-fee-extension
+	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7
 	github.com/okx/go-wallet-sdk/coins/tron => github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e
 )

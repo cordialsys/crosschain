@@ -9,6 +9,7 @@ import (
 	"github.com/gagliardetto/solana-go/programs/stake"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
+	transferfee "github.com/gagliardetto/solana-go/programs/token/extension/transfer-fee"
 	"github.com/gagliardetto/solana-go/programs/vote"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/sirupsen/logrus"
@@ -70,7 +71,12 @@ func (d *NativeSolanaInstructionData) GetResolvedInstructions() []ResolvedInstru
 		})
 	}
 	for i, parent := range d.meta.InnerInstructions {
-		for j, instr := range parent.Instructions {
+		for j, _instr := range parent.Instructions {
+			instr := solana.CompiledInstruction{
+				ProgramIDIndex: _instr.ProgramIDIndex,
+				Accounts:       _instr.Accounts,
+				Data:           _instr.Data,
+			}
 			accounts, err := instr.ResolveInstructionAccounts(&d.solTx.Message)
 			if err != nil {
 				logrus.WithError(err).Errorf("error resolving accounts for inner instruction %d", i+1)
@@ -174,6 +180,10 @@ func (tx Decoder) GetTokenTransferCheckeds() []instructionAtIndex[*token.Transfe
 		getall[*token.TransferChecked](&tx, token.DecodeInstruction, solana.TokenProgramID, tx.txData),
 		getall[*token.TransferChecked](&tx, token.DecodeInstruction, solana.Token2022ProgramID, tx.txData)...,
 	)
+}
+
+func (tx Decoder) GetTokenTransferCheckedWithFee() []instructionAtIndex[*transferfee.TransferCheckedWithFee] {
+	return getall[*transferfee.TransferCheckedWithFee](&tx, transferfee.DecodeInstruction, solana.Token2022ProgramID, tx.txData)
 }
 
 func (tx Decoder) GetTokenTransfers() []instructionAtIndex[*token.Transfer] {
