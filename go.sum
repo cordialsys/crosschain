@@ -406,6 +406,8 @@ github.com/cordialsys/go-sui-sdk/v2 v2.1.1 h1:JyPHD6SJB5+QOzxhRMVSUxGrO0sYNM9N8y
 github.com/cordialsys/go-sui-sdk/v2 v2.1.1/go.mod h1:tJVBrbkHwlmOkPW1YCxOpZT8bFYeaK1MXBK+Qy4+PGU=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e h1:+7Qlxur12FHCy565/p4Bz9e1WpaeNZ3dqhWAHotcspw=
 github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e/go.mod h1:N2GL3FT9suJEPh4wRxEGD0nobzxzGIyVbzCAye7BbfA=
+github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7 h1:ZAA2/Yf95GS8TLky0JYpYMunzRjBdhJPk9+P0knrRus=
+github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7/go.mod h1:l/qqqIN6qJJPtxW/G1PF4JtcE3Zg2vD2EliZrr9Gn5k=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cosmos/btcutil v1.0.5 h1:t+ZFcX77LpKtDBhjucvnOH8C2l2ioGsBNEQ3jef8xFk=
 github.com/cosmos/btcutil v1.0.5/go.mod h1:IyB7iuqZMJlthe2tkIFL33xPyzbFYP0XVdS8P5lUPis=
@@ -520,8 +522,6 @@ github.com/gagliardetto/binary v0.8.0 h1:U9ahc45v9HW0d15LoN++vIXSJyqR/pWw8DDlhd7
 github.com/gagliardetto/binary v0.8.0/go.mod h1:2tfj51g5o9dnvsc+fL3Jxr22MuWzYXwx9wEoN0XQ7/c=
 github.com/gagliardetto/gofuzz v1.2.2 h1:XL/8qDMzcgvR4+CyRQW9UGdwPRPMHVJfqQ/uMvSUuQw=
 github.com/gagliardetto/gofuzz v1.2.2/go.mod h1:bkH/3hYLZrMLbfYWA0pWzXmi5TTRZnu4pMGZBkqMKvY=
-github.com/gagliardetto/solana-go v1.12.0 h1:rzsbilDPj6p+/DOPXBMLhwMZeBgeRuXjm5zQFCoXgsg=
-github.com/gagliardetto/solana-go v1.12.0/go.mod h1:l/qqqIN6qJJPtxW/G1PF4JtcE3Zg2vD2EliZrr9Gn5k=
 github.com/gagliardetto/treeout v0.1.4 h1:ozeYerrLCmCubo1TcIjFiOWTTGteOOHND1twdFpgwaw=
 github.com/gagliardetto/treeout v0.1.4/go.mod h1:loUefvXTrlRG5rYmJmExNryyBRh8f89VZhmMOyCyqok=
 github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff h1:tY80oXqGNY4FhTFhk+o9oFHGINQ/+vhlm8HFzi6znCI=

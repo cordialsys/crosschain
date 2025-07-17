@@ -426,6 +426,35 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			Event:           event,
 		})
 	}
+
+	for _, instr := range tx.GetTokenTransferCheckedWithFee() {
+		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
+		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
+		contract := xc.ContractAddress(instr.Instruction.GetMintAccount().PublicKey.String())
+		to := xc.Address(toTokenAccount.String())
+		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
+		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to lookup token account")
+		} else {
+			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
+		}
+
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
+		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
+		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+			Address:         xc.Address(from),
+			Amount:          amount,
+			ContractAddress: contract,
+			Event:           event,
+		})
+		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+			Address:         xc.Address(to),
+			Amount:          amount,
+			ContractAddress: contract,
+			Event:           event,
+		})
+	}
 	for _, instr := range tx.GetTokenTransfers() {
 		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
 		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
