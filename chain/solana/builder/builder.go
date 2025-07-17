@@ -133,9 +133,11 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address
 	// Temporarily adjust the backend library to use a different program ID.
 	// This is to support token2022 and potential other future variants.
 	originalTokenId := token.ProgramID
-	defer token.SetProgramID(originalTokenId)
+	defer func() {
+		token.ProgramID = originalTokenId
+	}()
 	if !txInput.TokenProgram.IsZero() && !txInput.TokenProgram.Equals(originalTokenId) {
-		token.SetProgramID(txInput.TokenProgram)
+		token.ProgramID = txInput.TokenProgram
 	}
 
 	instructions := []solana.Instruction{}
