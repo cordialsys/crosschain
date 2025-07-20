@@ -148,30 +148,52 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 	fee, _ := local_input.GetFeeLimit()
 	transferAmountAndFee := transferAmount.Add(&fee)
 
-	totalSpend := local_input.SumUtxo()
-	unspentAmountMinusTransferAndFee := totalSpend.Sub(&transferAmountAndFee)
+	remainingAmount := transferAmountAndFee
+	unspentOutputs := []tx_input.Output{}
+	for _, input := range local_input.Inputs {
+		if remainingAmount.IsZero() {
+			// stop
+			break
+		}
+		var spendingAddress xc.Address
+		for _, from := range args.Spenders() {
+			if from.GetFrom() == input.Address {
+				spendingAddress = from.GetFrom()
+				break
+			}
+		}
+		if spendingAddress == "" {
+			logrus.WithFields(logrus.Fields{
+				"input_address": input.Address,
+			}).Warn("input contains utxo for an unrelated address")
+			continue
+		}
 
-	spenders := args.Spenders()
-
-	// send remaining funds back to sender if any
-	if !unspentAmountMinusTransferAndFee.IsZero() {
-		recipients = append(recipients, tx.Recipient{
-			To:    spenders[0].GetFrom(),
-			Value: unspentAmountMinusTransferAndFee,
-		})
+		totalSpendForAddr := input.SumUtxo()
+		if totalSpendForAddr.Cmp(&remainingAmount) >= 0 {
+			// There is change leftover for this address
+			remainder := totalSpendForAddr.Sub(&remainingAmount)
+			recipients = append(recipients, tx.Recipient{
+				To:    spendingAddress,
+				Value: remainder,
+			})
+			// no more remaining amount to be spent
+			remainingAmount = xc.NewAmountBlockchainFromUint64(0)
+		} else {
+			// The total amount reported for this address will be spent (no change)
+			remainingAmount = remainingAmount.Sub(totalSpendForAddr)
+		}
+		for _, utxo := range input.UnspentOutputs {
+			utxo.Address = spendingAddress
+			unspentOutputs = append(unspentOutputs, utxo)
+		}
 	}
 
 	msgTx := wire.NewMsgTx(TxVersion)
-
-	unspentOutputs := []tx_input.Output{}
-	for _, input := range local_input.Inputs {
-		for _, utxo := range input.UnspentOutputs {
-			hash := chainhash.Hash{}
-			copy(hash[:], utxo.Hash)
-			msgTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(&hash, utxo.Index), nil, nil))
-			utxo.Address = input.Address
-			unspentOutputs = append(unspentOutputs, utxo)
-		}
+	for _, utxo := range unspentOutputs {
+		hash := chainhash.Hash{}
+		copy(hash[:], utxo.Hash)
+		msgTx.AddTxIn(wire.NewTxIn(wire.NewOutPoint(&hash, utxo.Index), nil, nil))
 	}
 
 	// Outputs
