@@ -36,6 +36,30 @@ func MustNewStakingArgs(
 	return args
 }
 
+func MustNewSender(
+	address xc.Address,
+	publicKey []byte,
+	options ...builder.BuilderOption,
+) *builder.Sender {
+	args, err := builder.NewSender(address, publicKey, options...)
+	if err != nil {
+		panic(err)
+	}
+	return args
+}
+
+func MustNewReceiver(
+	address xc.Address,
+	amount xc.AmountBlockchain,
+	options ...builder.BuilderOption,
+) *builder.Receiver {
+	args, err := builder.NewReceiver(address, amount, options...)
+	if err != nil {
+		panic(err)
+	}
+	return args
+}
+
 // Re-export for convenience
 var OptionContractAddress = builder.OptionContractAddress
 var OptionContractDecimals = builder.OptionContractDecimals

@@ -10,10 +10,12 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	. "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -429,4 +431,188 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 		},
 	}...)
 	require.NoError(err)
+}
+
+func genInput(addr string, totalAmount int, numberUtxos int) tx_input.TxInput {
+	input := tx_input.TxInput{
+		Address:        xc.Address(addr),
+		UnspentOutputs: []tx_input.Output{},
+	}
+	if numberUtxos <= 0 {
+		return input
+	}
+	// add (i-1) utxos of 1 satoshi each
+	for range numberUtxos - 1 {
+		input.UnspentOutputs = append(input.UnspentOutputs, tx_input.Output{
+			Value: xc.NewAmountBlockchainFromUint64(1),
+		})
+	}
+	// add the last utxo with the remaining amount
+	input.UnspentOutputs = append(input.UnspentOutputs, tx_input.Output{
+		Value: xc.NewAmountBlockchainFromUint64(uint64(totalAmount - (numberUtxos - 1))),
+	})
+	return input
+}
+
+func TestMultiTransferChange(t *testing.T) {
+	require := require.New(t)
+	chain := xc.NewChainConfig(xc.BTC).WithNet("testnet")
+	txBuilder, _ := NewTxBuilder(chain.Base())
+
+	type testcase struct {
+		name       string
+		fromInputs []tx_input.TxInput
+		froms      []string
+		tos        []tx.Recipient
+		// should be the same as the tos but with change address recipients added.
+		expectedRecipients []tx.Recipient
+		totalUtxoSpend     int
+	}
+
+	tests := []testcase{
+		{
+			name: "single spender",
+			fromInputs: []tx_input.TxInput{
+				genInput("tb1qlcpaaqyfqqraajlp7s4j4h8quuk07lnys2myvw", 10000, 5),
+			},
+			totalUtxoSpend: 5,
+			tos: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(3000),
+				},
+			},
+			expectedRecipients: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(3000),
+				},
+				{
+					// change
+					To:    xc.Address("tb1qlcpaaqyfqqraajlp7s4j4h8quuk07lnys2myvw"),
+					Value: xc.NewAmountBlockchainFromUint64(7000),
+				},
+			},
+		},
+
+		{
+			name: "multiple spenders middle address gets change",
+			fromInputs: []tx_input.TxInput{
+				genInput("tb1qlcpaaqyfqqraajlp7s4j4h8quuk07lnys2myvw", 10000, 3),
+				genInput("tb1q60ccgeenqeu6ravga6s9e07pgd5n8t5c72vlhv", 10000, 4),
+				// unused/not needed
+				genInput("tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r", 10000, 5),
+			},
+			totalUtxoSpend: 3 + 4,
+			tos: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(14000),
+				},
+				{
+					To:    xc.Address("tb1q74ddh4gvqqy0n23nmt4xtx5wsdyh5vt0gmt2m8"),
+					Value: xc.NewAmountBlockchainFromUint64(100),
+				},
+			},
+			expectedRecipients: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(14000),
+				},
+				{
+					To:    xc.Address("tb1q74ddh4gvqqy0n23nmt4xtx5wsdyh5vt0gmt2m8"),
+					Value: xc.NewAmountBlockchainFromUint64(100),
+				},
+				{
+					// change
+					To:    xc.Address("tb1q60ccgeenqeu6ravga6s9e07pgd5n8t5c72vlhv"),
+					Value: xc.NewAmountBlockchainFromUint64(5900),
+				},
+			},
+		},
+		{
+			name: "input contains unrelated address should be ignored",
+			froms: []string{
+				"tb1qlcpaaqyfqqraajlp7s4j4h8quuk07lnys2myvw",
+				"tb1q60ccgeenqeu6ravga6s9e07pgd5n8t5c72vlhv",
+				"tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r",
+			},
+			fromInputs: []tx_input.TxInput{
+				genInput("tb1qnavt59qjevnx5glhefm8nrlyq64cp34q3xrk7q", 10000000, 20), // NOT USED (not in trusted from set)
+				genInput("tb1q60ccgeenqeu6ravga6s9e07pgd5n8t5c72vlhv", 10000, 4),
+				// unused/not needed
+				genInput("tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r", 10000, 5),
+			},
+			totalUtxoSpend: 4 + 5,
+			tos: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(15000),
+				},
+				{
+					To:    xc.Address("tb1q74ddh4gvqqy0n23nmt4xtx5wsdyh5vt0gmt2m8"),
+					Value: xc.NewAmountBlockchainFromUint64(100),
+				},
+			},
+			expectedRecipients: []tx.Recipient{
+				{
+					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
+					Value: xc.NewAmountBlockchainFromUint64(15000),
+				},
+				{
+					To:    xc.Address("tb1q74ddh4gvqqy0n23nmt4xtx5wsdyh5vt0gmt2m8"),
+					Value: xc.NewAmountBlockchainFromUint64(100),
+				},
+				{
+					// change
+					To:    xc.Address("tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r"),
+					Value: xc.NewAmountBlockchainFromUint64(4900),
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			spenders := []*xcbuilder.Sender{}
+			for i, from := range tc.fromInputs {
+				if len(tc.froms) > 0 {
+					spenders = append(spenders, buildertest.MustNewSender(xc.Address(tc.froms[i]), []byte{}))
+				} else {
+					spenders = append(spenders, buildertest.MustNewSender(from.Address, []byte{}))
+				}
+			}
+			receivers := []*xcbuilder.Receiver{}
+			for _, to := range tc.tos {
+				receivers = append(receivers, buildertest.MustNewReceiver(to.To, to.Value))
+			}
+			args, err := xcbuilder.NewMultiTransferArgs(xc.BTC, spenders, receivers)
+			require.NoError(err)
+			tf, err := txBuilder.MultiTransfer(*args, &tx_input.MultiTransferInput{
+				Inputs: tc.fromInputs,
+				// exclude gas fees
+				GasPricePerByte: xc.NewAmountBlockchainFromUint64(0),
+				EstimatedSize:   0,
+			})
+			require.NoError(err)
+			require.NotNil(tf)
+			btcTx := tf.(*tx.Tx)
+			require.Equal(tc.expectedRecipients, btcTx.Recipients)
+			require.Equal(tc.totalUtxoSpend, len(btcTx.MsgTx.TxIn))
+
+			// should be only a single change output
+			sumRecipients := int64(0)
+			change := btcTx.Recipients[len(btcTx.Recipients)-1].Value.Int().Int64()
+			for _, recipient := range btcTx.Recipients {
+				sumRecipients += recipient.Value.Int().Int64()
+			}
+			totalTransferAmount := int64(0)
+			for _, recv := range receivers {
+				totalTransferAmount += recv.GetAmount().Int().Int64()
+			}
+			// total transfer amount == sum of recipients - change amount
+			require.Equal(totalTransferAmount, sumRecipients-change)
+		})
+	}
+
 }
