@@ -45,6 +45,9 @@ import (
 	filaddress "github.com/cordialsys/crosschain/chain/filecoin/address"
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
+	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
+	icpbuilder "github.com/cordialsys/crosschain/chain/internet_computer/builder"
+	icpclient "github.com/cordialsys/crosschain/chain/internet_computer/client"
 	"github.com/cordialsys/crosschain/chain/solana"
 	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
 	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
@@ -107,6 +110,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return kaspaclient.NewClient(cfg)
 	case DriverEOS:
 		return eosclient.NewClient(cfg)
+	case DriverInternetComputerProtocol:
+		return icpclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -187,6 +192,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return kaspabuilder.NewTxBuilder(cfg)
 	case DriverEOS:
 		return eosbuilder.NewTxBuilder(cfg)
+	case DriverInternetComputerProtocol:
+		return icpbuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -233,6 +240,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return kaspaaddress.NewAddressBuilder(cfg)
 	case DriverEOS:
 		return eosaddress.NewAddressBuilder(cfg)
+	case DriverInternetComputerProtocol:
+		return icpaddress.NewAddressBuilder(cfg, options...)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
