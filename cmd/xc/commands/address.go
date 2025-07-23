@@ -21,9 +21,13 @@ func CmdAddress() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			algorithm, _ := cmd.Flags().GetString("algorithm")
+			contract, _ := cmd.Flags().GetString("contract")
 			addressArgs := []xcaddress.AddressOption{}
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
+			}
+			if contract != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
 			}
 
 			privateKeyInput, err := config.GetSecret(privateKeyRef)
@@ -60,5 +64,6 @@ func CmdAddress() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
+	cmd.Flags().String("contract", "", "Contract address of asset to send, if applicable")
 	return cmd
 }

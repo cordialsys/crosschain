@@ -70,6 +70,9 @@ func CmdTxTransfer() *cobra.Command {
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}
+			if contract != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
+			}
 
 			toWalletAddress := args[0]
 			transferredAmount := args[1]
