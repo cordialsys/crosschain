@@ -560,6 +560,14 @@ chains:
         asset_id: "19960"
       indexing_co:
         chain_id: provenance
+  ICP:
+    chain: ICP
+    driver: icp
+    chain_name: Internet Computer Protocol
+    chain_coin: icp
+    confirmations_final: 1
+    decimals: 8
+    fee_limit: "100.0"
   INJ:
     chain: INJ
     driver: evmos
