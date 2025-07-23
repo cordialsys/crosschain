@@ -82,6 +82,7 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			if tx_time != 0 {
 				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
+				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
 			}
 
 			toWalletAddress := args[0]
