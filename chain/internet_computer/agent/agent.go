@@ -92,7 +92,6 @@ func newNonce() ([]byte, error) {
 }
 
 func (a Agent) CreateUnsignedRequest(canisterID icpaddress.Principal, typ types.RequestType, methodName string, args ...any) (types.Request, error) {
-	fmt.Printf("args: %v", args)
 	rawArgs, err := candid.Marshal(args)
 	if err != nil {
 		return types.Request{}, fmt.Errorf("failed to marshal args: %w", err)

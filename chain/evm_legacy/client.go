@@ -128,8 +128,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return client.EvmClient.FetchLegacyTxInfo(ctx, txHash)
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
-	return client.EvmClient.FetchTxInfo(ctx, txHash)
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	return client.EvmClient.FetchTxInfo(ctx, args)
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {

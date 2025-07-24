@@ -471,7 +471,7 @@ func TestTokenBalance(t *testing.T) {
 			from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 			args := xclient.NewBalanceArgs(
 				from,
-				xclient.OptionContract(xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")),
+				xclient.BalanceOptionContract(xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU")),
 			)
 			balance, err := client.FetchBalance(context.Background(), args)
 

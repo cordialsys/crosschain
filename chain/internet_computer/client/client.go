@@ -164,7 +164,8 @@ func tryGetSubmitedTxBlockIndex(txHash xc.TxHash) (uint64, bool) {
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	txHash := args.TxHash()
 	blockIndex, ok := tryGetSubmitedTxBlockIndex(txHash)
 	if !ok {
 		index, err := strconv.Atoi(string(txHash))

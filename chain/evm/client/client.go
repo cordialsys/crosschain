@@ -362,8 +362,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	return result, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
-	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}

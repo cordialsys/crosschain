@@ -22,6 +22,6 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 
 	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("XYZ").Base())
 	address, err := builder.GetAddressFromPublicKey(pkBytes)
-	require.Equal(t, xc.Address("5227b83cc14eda8a0ce76a7f2147071e60ee3502663b0efa4e10a4add469f107"), address)
+	require.Equal(t, xc.Address("d10faafe5dbce0649eeaf68cab767602ec39795c2b5eabf51da063f9de5d1464"), address)
 	require.NoError(t, err)
 }

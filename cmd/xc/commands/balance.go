@@ -35,7 +35,7 @@ func CmdRpcBalance() *cobra.Command {
 			}
 			options := []client.GetBalanceOption{}
 			if contract != "" {
-				options = append(options, client.OptionContract(xc.ContractAddress(contract)))
+				options = append(options, client.BalanceOptionContract(xc.ContractAddress(contract)))
 			}
 			balanceArgs := client.NewBalanceArgs(address, options...)
 

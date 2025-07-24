@@ -281,7 +281,8 @@ func TestFetchTxInfo(t *testing.T) {
 			client, err := client.NewClient(config)
 			require.NoError(t, err)
 
-			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.expectedInfo.Hash))
+			args := xclient.NewTxInfoArgs(xc.TxHash(vector.expectedInfo.Hash))
+			txInfo, err := client.FetchTxInfo(context.Background(), args)
 			require.Equal(t, vector.expectedInfo, txInfo)
 		})
 	}

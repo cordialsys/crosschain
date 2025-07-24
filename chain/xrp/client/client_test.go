@@ -829,7 +829,8 @@ func TestFetchTxInfo(t *testing.T) {
 			vector.asset.URL = server.URL
 
 			client, _ := xrpClient.NewClient(vector.asset)
-			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.txHash))
+			args := xclient.NewTxInfoArgs(xc.TxHash(vector.txHash))
+			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if vector.err != "" {
 				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
@@ -937,7 +938,7 @@ func TestFetchCBalance(t *testing.T) {
 
 		args := xclient.NewBalanceArgs(
 			address,
-			xclient.OptionContract("FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"),
+			xclient.BalanceOptionContract("FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"),
 		)
 		balance, err := client.FetchBalance(context.Background(), args)
 

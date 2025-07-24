@@ -741,7 +741,8 @@ func TestFetchTxInfo(t *testing.T) {
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)
-			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.txHash))
+			args := xclient.NewTxInfoArgs(xc.TxHash(v.txHash))
+			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if v.err != "" {
 				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
