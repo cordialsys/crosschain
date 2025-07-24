@@ -224,7 +224,8 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	txHash := args.TxHash()
 	url := fmt.Sprintf("%s/transactions/%s", client.Url, string(txHash))
 	var response types.GetTransactionResult
 	err := client.Get(url, &response)

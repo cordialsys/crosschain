@@ -594,7 +594,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	txHash := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHash)
 	if err != nil {
 		return xclient.TxInfo{}, err

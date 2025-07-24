@@ -29,7 +29,7 @@ func NewBalanceArgs(address xc.Address, options ...GetBalanceOption) *BalanceArg
 
 type GetBalanceOption func(*BalanceArgs)
 
-func OptionContract(contract xc.ContractAddress) GetBalanceOption {
+func BalanceOptionContract(contract xc.ContractAddress) GetBalanceOption {
 	return func(args *BalanceArgs) {
 		args.contract = contract
 	}

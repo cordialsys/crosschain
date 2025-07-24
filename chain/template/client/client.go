@@ -34,7 +34,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Template tx
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	return errors.New("not implemented")
 }
 
@@ -44,7 +44,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
 	return xclient.TxInfo{}, errors.New("not implemented")
 }
 

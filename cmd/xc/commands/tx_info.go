@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
 )
 
 func CmdTxInfo() *cobra.Command {
+	var contract string
 	cmd := &cobra.Command{
 		Use:     "tx-info <hash>",
 		Aliases: []string{"tx"},
@@ -20,12 +22,22 @@ func CmdTxInfo() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			hash := args[0]
 
+			options := []client.GetTxInfoOption{}
+			contract, err := cmd.Flags().GetString("contract")
+			if err != nil {
+				return err
+			}
+			if contract != "" {
+				options = append(options, client.TxInfoOptionContract(xc.ContractAddress(contract)))
+			}
+			txInfoArgs := client.NewTxInfoArgs(xc.TxHash(hash), options...)
+
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
 
-			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(hash))
+			txInfo, err := client.FetchTxInfo(context.Background(), txInfoArgs)
 			if err != nil {
 				return fmt.Errorf("could not fetch tx info: %v", err)
 			}
@@ -35,5 +47,6 @@ func CmdTxInfo() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&contract, "contract", "", "")
 	return cmd
 }

@@ -747,7 +747,7 @@ func TestFetchBalance(t *testing.T) {
 		if v.contract != "" {
 			args = xclient.NewBalanceArgs(
 				xc.Address(v.address),
-				xclient.OptionContract(xc.ContractAddress(v.contract)),
+				xclient.BalanceOptionContract(xc.ContractAddress(v.contract)),
 			)
 		}
 		client, _ := client.NewClient(asset)
