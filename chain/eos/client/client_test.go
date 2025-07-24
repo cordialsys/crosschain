@@ -169,9 +169,10 @@ func TestFetchTxInfo(t *testing.T) {
 				WithDecimals(4)
 
 			client, _ := client.NewClient(chainCfg)
+			args := xclient.NewTxInfoArgs(xc.TxHash("abc"))
 			txInfo, err := client.FetchTxInfo(
 				context.Background(),
-				"abc",
+				args,
 			)
 			if err != nil {
 				t.Logf("Error: %v", err)

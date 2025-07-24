@@ -7,6 +7,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/client"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
@@ -108,7 +109,8 @@ func WaitForTx(xcFactory *factory.Factory, chain *xc.ChainConfig, hash string, c
 			return nil, fmt.Errorf("timed out waiting for tx %s", hash)
 		}
 
-		tx, err := rpcCli.FetchTxInfo(context.Background(), xc.TxHash(hash))
+		args := client.NewTxInfoArgs(xc.TxHash(hash))
+		tx, err := rpcCli.FetchTxInfo(context.Background(), args)
 		if err != nil {
 			logrus.WithError(err).Info("could not fetch tx")
 		} else {

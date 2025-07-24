@@ -19,6 +19,43 @@ type AddressName string
 
 type MovementVariant string
 
+type TxInfoArgs struct {
+	hash     xc.TxHash
+	contract xc.ContractAddress
+}
+
+func (args *TxInfoArgs) Contract() (xc.ContractAddress, bool) {
+	return args.contract, args.contract != ""
+}
+
+func (args *TxInfoArgs) SetContract(contract xc.ContractAddress) {
+	args.contract = contract
+}
+
+func (args *TxInfoArgs) TxHash() xc.TxHash {
+	return args.hash
+}
+
+func (args *TxInfoArgs) SetAddress(hash xc.TxHash) {
+	args.hash = hash
+}
+
+func NewTxInfoArgs(hash xc.TxHash, options ...GetTxInfoOption) *TxInfoArgs {
+	args := &TxInfoArgs{hash: hash}
+	for _, option := range options {
+		option(args)
+	}
+	return args
+}
+
+type GetTxInfoOption func(*TxInfoArgs)
+
+func TxInfoOptionContract(contract xc.ContractAddress) GetTxInfoOption {
+	return func(args *TxInfoArgs) {
+		args.contract = contract
+	}
+}
+
 const (
 	// For transferring native asset
 	MovementVariantNative MovementVariant = "native"

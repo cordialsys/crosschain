@@ -13,6 +13,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -67,8 +68,13 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			algorithm, _ := cmd.Flags().GetString("algorithm")
 			addressArgs := []xcaddress.AddressOption{}
+			infoArgs := []xclient.GetTxInfoOption{}
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
+			}
+			if contract != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
+				infoArgs = append(infoArgs, xclient.TxInfoOptionContract(xc.ContractAddress(contract)))
 			}
 
 			toWalletAddress := args[0]
@@ -319,8 +325,10 @@ func CmdTxTransfer() *cobra.Command {
 			time.Sleep(1 * time.Second)
 			logrus.Info("fetching transaction...")
 			start := time.Now()
+
 			for time.Since(start) < timeout {
-				info, err := client.FetchTxInfo(context.Background(), tx.Hash())
+				tiArgs := xclient.NewTxInfoArgs(tx.Hash(), infoArgs...)
+				info, err := client.FetchTxInfo(context.Background(), tiArgs)
 				if err != nil {
 					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again in 3s...")
 					time.Sleep(3 * time.Second)

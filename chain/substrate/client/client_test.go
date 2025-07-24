@@ -352,7 +352,8 @@ func TestFetchTxInfo(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(client)
 
-			res, err := client.FetchTxInfo(context.Background(), xc.TxHash(tc.hash))
+			args := xclient.NewTxInfoArgs(xc.TxHash(tc.hash))
+			res, err := client.FetchTxInfo(context.Background(), args)
 			require.NoError(err)
 
 			// don't compare fees as they are calculated from transfers

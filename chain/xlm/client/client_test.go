@@ -1011,7 +1011,8 @@ func TestFetchTxInfo(t *testing.T) {
 
 		client, err := client.NewClient(chain)
 		require.NoError(t, err)
-		txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(vector.hash))
+		args := xclient.NewTxInfoArgs(xc.TxHash(vector.hash))
+		txInfo, err := client.FetchTxInfo(context.Background(), args)
 		if vector.err != "" {
 			require.Equal(t, xclient.TxInfo{}, txInfo)
 			require.ErrorContains(t, err, vector.err)

@@ -19,7 +19,7 @@ type Client interface {
 	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (LegacyTxInfo, error)
 
 	// Fetching transaction info
-	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (TxInfo, error)
+	FetchTxInfo(ctx context.Context, args *TxInfoArgs) (TxInfo, error)
 
 	// Fetch the balance of the given asset that the client is configured with
 	FetchBalance(ctx context.Context, args *BalanceArgs) (xc.AmountBlockchain, error)

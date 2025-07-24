@@ -17,6 +17,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	types "github.com/cordialsys/crosschain/chain/dusk/client/types"
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
+	"github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	log "github.com/sirupsen/logrus"
@@ -143,7 +144,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *client.TxInfoArgs) (xclient.TxInfo, error) {
+	txHash := args.TxHash()
 	latestHeight, err := client.FetchLatestBlockHeight()
 	if err != nil {
 		return xclient.TxInfo{}, err

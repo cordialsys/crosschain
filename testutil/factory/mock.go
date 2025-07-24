@@ -39,8 +39,8 @@ func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) 
 	args := m.Called(ctx, txHash)
 	return args.Get(0).(xclient.LegacyTxInfo), args.Error(1)
 }
-func (m *MockedClient) FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
-	args := m.Called(ctx, txHash)
+func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	args := m.Called(ctx, txInfoArgs)
 	return args.Get(0).(xclient.TxInfo), args.Error(1)
 }
 

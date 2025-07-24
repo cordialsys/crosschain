@@ -531,7 +531,8 @@ func TestFetchTxInfo(t *testing.T) {
 					WithDecimals(18),
 			)
 
-			txInfo, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.hash))
+			args := xclient.NewTxInfoArgs(xc.TxHash(v.hash))
+			txInfo, err := client.FetchTxInfo(context.Background(), args)
 			if v.err != "" {
 				require.Error(t, err)
 			} else {

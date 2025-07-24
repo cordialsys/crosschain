@@ -310,7 +310,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return r.LegacyTxInfo, err
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+	txHashStr := args.TxHash()
 	chain := client.Asset.GetChain().Chain
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)
 	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)

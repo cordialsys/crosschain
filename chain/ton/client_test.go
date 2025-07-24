@@ -372,7 +372,8 @@ func TestFetchTxInfo(t *testing.T) {
 
 			client, err := ton.NewClient(chain)
 			require.NoError(t, err)
-			info, err := client.FetchTxInfo(context.Background(), xc.TxHash(v.hash))
+			args := xcclient.NewTxInfoArgs(xc.TxHash(v.hash))
+			info, err := client.FetchTxInfo(context.Background(), args)
 
 			if v.err != "" {
 				require.ErrorContains(t, err, v.err)

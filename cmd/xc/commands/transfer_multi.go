@@ -349,7 +349,8 @@ func CmdTxMultiTransfer() *cobra.Command {
 			logrus.Info("fetching transaction...")
 			start := time.Now()
 			for time.Since(start) < timeout {
-				info, err := client.FetchTxInfo(context.Background(), tx.Hash())
+				args := xcclient.NewTxInfoArgs(tx.Hash())
+				info, err := client.FetchTxInfo(context.Background(), args)
 				if err != nil {
 					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again in 3s...")
 					time.Sleep(3 * time.Second)
