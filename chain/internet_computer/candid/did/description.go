@@ -3,8 +3,8 @@ package did
 import (
 	"strings"
 
-	"github.com/0x51-dev/upeg/parser"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/internal/candid"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
 )
 
 // Description represents the interface description of a program. An interface description consists of a sequence of
