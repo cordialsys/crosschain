@@ -76,10 +76,6 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return tx.signatures
-}
-
 func (tx Tx) Serialize() ([]byte, error) {
 	if tx.ExternalMessage.Body == nil {
 		return nil, fmt.Errorf("TON tx not yet signed and cannot be serialized")

@@ -2,6 +2,7 @@ package tx
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -17,13 +18,14 @@ import (
 
 // Tx for InternetComputerProtocol
 type Tx struct {
-	Agent         *agent.Agent
+	// Agent         *agent.Agent
 	Request       types.Request
 	SignedRequest []byte
 	Signature     []byte
 }
 
 var _ xc.Tx = &Tx{}
+var _ xc.TxWithMetadata = &Tx{}
 
 func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 	pubkey, ok := args.GetPublicKey()
@@ -34,10 +36,6 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 	identity := address.NewEd25519Identity(pubkey)
 	agentConfig := agent.AgentConfig{
 		Identity: identity,
-	}
-	a, err := agent.NewAgent(agentConfig)
-	if err != nil {
-		return Tx{}, fmt.Errorf("failed to create agent: %w", err)
 	}
 
 	canister := types.IcpLedgerPrincipal
@@ -66,7 +64,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 			CreatedAtTime:  &timestamp,
 			Amount:         types.NewTokens(amount.Uint64()),
 		}
-		request, err = a.CreateUnsignedRequest(canister, types.RequestTypeCall, types.MethodTransfer, transfer)
+		request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, types.MethodTransfer, transfer)
 		if err != nil {
 			return Tx{}, fmt.Errorf("failed to create transaction request: %w", err)
 		}
@@ -88,14 +86,14 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 			Memo:           input.ICRC1Memo,
 			CreatedAtTime:  &input.CreatedAtTime,
 		}
-		request, err = a.CreateUnsignedRequest(canister, types.RequestTypeCall, types.MethodICRCTransfer, []any{transfer})
+		request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, types.MethodICRCTransfer, []any{transfer})
 		if err != nil {
 			return Tx{}, fmt.Errorf("failed to create transaction request: %w", err)
 		}
 	}
 
 	return Tx{
-		Agent:     a,
+		// Agent:     a,
 		Request:   request,
 		Signature: []byte{},
 	}, nil
@@ -138,12 +136,27 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-// GetSignatures returns back signatures, which may be used for signed-transaction broadcasting
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return []xc.TxSignature{tx.Signature}
-}
-
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 	return candid.Marshal([]any{tx})
+}
+
+type BroadcastMetadata struct {
+	// Encoded as a principal string
+	CanisterID      string          `json:"canister_id"`
+	RequestID       types.RequestID `json:"request_id"`
+	SenderPublicKey []byte          `json:"sender_public_key"`
+}
+
+func (tx Tx) GetMetadata() ([]byte, error) {
+	metadata := BroadcastMetadata{
+		CanisterID:      tx.Request.CanisterID.String(),
+		RequestID:       tx.Request.RequestID(),
+		SenderPublicKey: tx.Request.Sender.PublicKey,
+	}
+	metadataBz, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+	return metadataBz, nil
 }

@@ -179,11 +179,20 @@ type SubmitTxReq struct {
 	TxSignatures [][]byte       `json:"tx_signatures"`
 }
 
+type SubmitTxReqWithMetadata struct {
+	SubmitTxReq
+	Metadata []byte `json:"metadata,omitempty"`
+}
+
 type SubmitTxRes struct {
 	*SubmitTxReq
 }
 
 var _ xc.Tx = &SubmitTxReq{}
+var _ xc.Tx = &SubmitTxReqWithMetadata{}
+var _ xc.TxWithMetadata = &SubmitTxReqWithMetadata{}
+var _ xc.TxLegacyGetSignatures = &SubmitTxReq{}
+var _ xc.TxLegacyGetSignatures = &SubmitTxReqWithMetadata{}
 
 func NewBinaryTx(serializedSignedTx []byte, TxSignatures [][]byte) xc.Tx {
 	return &SubmitTxReq{
@@ -213,6 +222,10 @@ func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
 }
 func (tx *SubmitTxReq) Serialize() ([]byte, error) {
 	return tx.TxData, nil
+}
+
+func (tx *SubmitTxReqWithMetadata) GetMetadata() ([]byte, error) {
+	return tx.Metadata, nil
 }
 
 type BlockResponse struct {

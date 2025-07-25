@@ -185,10 +185,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return tx.signatures
-}
-
 func (tx Tx) Serialize() ([]byte, error) {
 	if tx.signedDomainTransaction == nil {
 		return nil, errors.New("kaspa transaction not signed")

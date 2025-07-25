@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -16,7 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/agent"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
 	"github.com/cordialsys/crosschain/chain/internet_computer/client/types"
-	icptx "github.com/cordialsys/crosschain/chain/internet_computer/tx"
+	"github.com/cordialsys/crosschain/chain/internet_computer/tx"
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	log "github.com/sirupsen/logrus"
@@ -128,14 +129,41 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a InternetComputerProtocol tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	icpTx, ok := tx.(*icptx.Tx)
+func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
+	withMetadata, ok := txI.(xc.TxWithMetadata)
 	if !ok {
-		return errors.New("invalid transaction type")
+		return errors.New("ICP transactions must implement TxWithMetadata")
+	}
+	serializedSignedTx, err := txI.Serialize()
+	if err != nil {
+		return fmt.Errorf("failed to serialize tx: %w", err)
+	}
+	metadataBz, err := withMetadata.GetMetadata()
+	if err != nil {
+		return fmt.Errorf("failed to get metadata: %w", err)
+	}
+	var metadata tx.BroadcastMetadata
+	err = json.Unmarshal(metadataBz, &metadata)
+	if err != nil {
+		return fmt.Errorf("failed to decode metadata: %w", err)
+	}
+
+	identity := address.NewEd25519Identity(metadata.SenderPublicKey)
+	agentConfig := agent.AgentConfig{
+		Identity: identity,
+	}
+	agent, err := agent.NewAgent(agentConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create agent: %w", err)
+	}
+
+	canisterID, err := icpaddress.Decode(metadata.CanisterID)
+	if err != nil {
+		return fmt.Errorf("failed to decode canister id: %w", err)
 	}
 
 	var result types.TransferResult
-	err := icpTx.Agent.Call(icpTx.Request.CanisterID, icpTx.Request.RequestID(), icpTx.SignedRequest, []any{&result})
+	err = agent.Call(canisterID, metadata.RequestID, serializedSignedTx, []any{&result})
 	if err != nil {
 		return fmt.Errorf("failed to submit tx: %w", err)
 	}
@@ -143,7 +171,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	if result.Err != nil {
 		return fmt.Errorf("failed to submit tx: %v", result.Err)
 	} else if result.Ok != nil {
-		hash := tx.Hash()
+		hash := txI.Hash()
 		submitedTxs[hash] = *result.Ok
 	}
 	return nil
