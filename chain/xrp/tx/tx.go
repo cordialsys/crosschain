@@ -130,11 +130,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-// GetSignatures returns back signatures, which may be used for signed-transaction broadcasting
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return tx.TransactionSignature
-}
-
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 

@@ -160,9 +160,17 @@ type Tx interface {
 	Hash() TxHash
 	Sighashes() ([]*SignatureRequest, error)
 	SetSignatures(...*SignatureResponse) error
-	// only needed for RPC endpoints that require signatures in separate fields
-	GetSignatures() []TxSignature
 	Serialize() ([]byte, error)
+}
+
+type TxWithMetadata interface {
+	// If the client SubmitTx needs additional metadata, this can be used to define it.
+	GetMetadata() ([]byte, error)
+}
+
+type TxLegacyGetSignatures interface {
+	// Replaced by TxWithMetadata.GetMetadata()
+	GetSignatures() []TxSignature
 }
 
 type TxAdditionalSighashes interface {

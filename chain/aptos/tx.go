@@ -119,14 +119,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	sigs := []xc.TxSignature{}
-	for _, sig := range tx.txSignatures {
-		sigs = append(sigs, sig.Signature)
-	}
-	return sigs
-}
-
 func (tx Tx) Serialize() ([]byte, error) {
 	if len(tx.txSignatures) == 0 {
 		return []byte{}, errors.New("unable to serialize without first calling AddSignatures(...)")

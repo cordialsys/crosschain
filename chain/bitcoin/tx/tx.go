@@ -208,10 +208,6 @@ func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return tx.Signatures
-}
-
 func (tx *Tx) Serialize() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	if err := tx.MsgTx.Serialize(buf); err != nil {
