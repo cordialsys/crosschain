@@ -111,15 +111,6 @@ func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx Tx) GetSignatures() []xc.TxSignature {
-	sigs := []xc.TxSignature{}
-	for _, sig := range tx.signatures {
-		sigs = append(sigs, sig)
-	}
-
-	return sigs
-}
-
 // Serialize serializes a Tx
 func (tx Tx) Serialize() ([]byte, error) {
 	signDoc, err := tx.BuildUnsigned()

@@ -94,10 +94,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx Tx) GetSignatures() []xc.TxSignature {
-	return tx.inputSignatures
-}
-
 func NewTxFrom(solTx *solana.Transaction) *Tx {
 	tx := &Tx{
 		SolTx: solTx,

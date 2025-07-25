@@ -276,17 +276,35 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	if err != nil {
 		return err
 	}
-	xcSignatures := txInput.GetSignatures()
-	signatures := [][]byte{}
-	for _, sig := range xcSignatures {
-		signatures = append(signatures, sig)
+	var metadataBz []byte
+	if txWithMetadata, ok := txInput.(xc.TxWithMetadata); ok {
+		bz, err := txWithMetadata.GetMetadata()
+		if err != nil {
+			return err
+		}
+		metadataBz = bz
 	}
 
-	res, err := client.legacyApiCall(ctx, "/submit", &types.SubmitTxReq{
+	var signatures [][]byte
+	if txLegacyGetSignatures, ok := txInput.(xc.TxLegacyGetSignatures); ok {
+		for _, sig := range txLegacyGetSignatures.GetSignatures() {
+			signatures = append(signatures, sig)
+		}
+	}
+	req := &types.SubmitTxReq{
 		Chain:        chain,
 		TxData:       data,
 		TxSignatures: signatures,
-	})
+	}
+	var reqI xc.Tx = req
+	if len(metadataBz) > 0 {
+		reqI = &types.SubmitTxReqWithMetadata{
+			SubmitTxReq: *req,
+			Metadata:    metadataBz,
+		}
+	}
+
+	res, err := client.legacyApiCall(ctx, "/submit", reqI)
 	if err != nil {
 		return err
 	}
