@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -169,7 +170,7 @@ func TestFetchTxInfo(t *testing.T) {
 				WithDecimals(4)
 
 			client, _ := client.NewClient(chainCfg)
-			args := xclient.NewTxInfoArgs(xc.TxHash("abc"))
+			args := txinfo.NewArgs(xc.TxHash("abc"))
 			txInfo, err := client.FetchTxInfo(
 				context.Background(),
 				args,

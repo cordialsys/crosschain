@@ -16,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/filecoin/tx"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -531,7 +532,7 @@ func TestFetchTxInfo(t *testing.T) {
 					WithDecimals(18),
 			)
 
-			args := xclient.NewTxInfoArgs(xc.TxHash(v.hash))
+			args := txinfo.NewArgs(xc.TxHash(v.hash))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 			if v.err != "" {
 				require.Error(t, err)

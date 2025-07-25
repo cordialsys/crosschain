@@ -16,6 +16,7 @@ import (
 	tx "github.com/cordialsys/crosschain/chain/dusk/tx"
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -281,7 +282,7 @@ func TestFetchTxInfo(t *testing.T) {
 			client, err := client.NewClient(config)
 			require.NoError(t, err)
 
-			args := xclient.NewTxInfoArgs(xc.TxHash(vector.expectedInfo.Hash))
+			args := txinfo.NewArgs(xc.TxHash(vector.expectedInfo.Hash))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 			require.Equal(t, vector.expectedInfo, txInfo)
 		})

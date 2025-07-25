@@ -19,6 +19,7 @@ import (
 	txinput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/defaults/chains"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/require"
 )
@@ -1011,7 +1012,7 @@ func TestFetchTxInfo(t *testing.T) {
 
 		client, err := client.NewClient(chain)
 		require.NoError(t, err)
-		args := xclient.NewTxInfoArgs(xc.TxHash(vector.hash))
+		args := txinfo.NewArgs(xc.TxHash(vector.hash))
 		txInfo, err := client.FetchTxInfo(context.Background(), args)
 		if vector.err != "" {
 			require.Equal(t, xclient.TxInfo{}, txInfo)

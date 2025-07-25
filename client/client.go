@@ -5,6 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 )
 
 // Client is a client that can fetch data and submit tx to a public blockchain
@@ -19,7 +20,7 @@ type Client interface {
 	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (LegacyTxInfo, error)
 
 	// Fetching transaction info
-	FetchTxInfo(ctx context.Context, args *TxInfoArgs) (TxInfo, error)
+	FetchTxInfo(ctx context.Context, args *txinfo.Args) (TxInfo, error)
 
 	// Fetch the balance of the given asset that the client is configured with
 	FetchBalance(ctx context.Context, args *BalanceArgs) (xc.AmountBlockchain, error)

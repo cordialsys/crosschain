@@ -15,6 +15,7 @@ import (
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
@@ -372,7 +373,7 @@ func TestFetchTxInfo(t *testing.T) {
 
 			client, err := ton.NewClient(chain)
 			require.NoError(t, err)
-			args := xcclient.NewTxInfoArgs(xc.TxHash(v.hash))
+			args := txinfo.NewArgs(xc.TxHash(v.hash))
 			info, err := client.FetchTxInfo(context.Background(), args)
 
 			if v.err != "" {

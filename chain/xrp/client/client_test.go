@@ -18,6 +18,7 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -829,7 +830,7 @@ func TestFetchTxInfo(t *testing.T) {
 			vector.asset.URL = server.URL
 
 			client, _ := xrpClient.NewClient(vector.asset)
-			args := xclient.NewTxInfoArgs(xc.TxHash(vector.txHash))
+			args := txinfo.NewArgs(xc.TxHash(vector.txHash))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if vector.err != "" {

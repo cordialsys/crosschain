@@ -15,8 +15,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/filecoin/client/types"
 	filtx "github.com/cordialsys/crosschain/chain/filecoin/tx"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
-	"github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	log "github.com/sirupsen/logrus"
 	"github.com/stellar/go/support/time"
 )
@@ -200,7 +200,7 @@ func (client *Client) ConvertEvmHashToCid(txHash xc.TxHash) (xc.TxHash, error) {
 //
 // There is a small penalty for overestimating the gas limit, which is not included in calculations
 // at the moment
-func (client *Client) FetchTxInfo(ctx context.Context, args *client.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	isEvmHash := strings.HasPrefix(string(txHash), "0x")
 	if isEvmHash {

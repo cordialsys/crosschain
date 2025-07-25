@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/cordialsys/crosschain"
-	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 )
 
 func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.NativeAsset, txHash string) {
@@ -21,7 +21,7 @@ func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.Nat
 
 	// fetch tx info
 	client, _ := xc.NewClient(asset)
-	args := xclient.NewTxInfoArgs(crosschain.TxHash(txHash))
+	args := txinfo.NewArgs(crosschain.TxHash(txHash))
 	info, err := client.FetchTxInfo(ctx, args)
 	if err != nil {
 		panic(err)

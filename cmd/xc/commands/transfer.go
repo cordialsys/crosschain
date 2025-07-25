@@ -13,10 +13,10 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
-	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +28,8 @@ func CmdTxTransfer() *cobra.Command {
 	var fromSecretRef string
 	var feePayerSecretRef string
 	var previousAttempts []string
+	var sender string
+	var tx_time uint64
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -68,13 +70,18 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			algorithm, _ := cmd.Flags().GetString("algorithm")
 			addressArgs := []xcaddress.AddressOption{}
-			infoArgs := []xclient.GetTxInfoOption{}
+			infoArgs := []txinfo.Option{}
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}
 			if contract != "" {
-				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
-				infoArgs = append(infoArgs, xclient.TxInfoOptionContract(xc.ContractAddress(contract)))
+				infoArgs = append(infoArgs, txinfo.OptionContract(xc.ContractAddress(contract)))
+			}
+			if sender != "" {
+				infoArgs = append(infoArgs, txinfo.OptionSender(xc.Address(sender)))
+			}
+			if tx_time != 0 {
+				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
 			}
 
 			toWalletAddress := args[0]
@@ -326,9 +333,9 @@ func CmdTxTransfer() *cobra.Command {
 			logrus.Info("fetching transaction...")
 			start := time.Now()
 
+			txInfoArgs := txinfo.NewArgs(tx.Hash(), infoArgs...)
 			for time.Since(start) < timeout {
-				tiArgs := xclient.NewTxInfoArgs(tx.Hash(), infoArgs...)
-				info, err := client.FetchTxInfo(context.Background(), tiArgs)
+				info, err := client.FetchTxInfo(context.Background(), txInfoArgs)
 				if err != nil {
 					logrus.WithField("hash", tx.Hash()).WithError(err).Info("could not find tx on chain yet, trying again in 3s...")
 					time.Sleep(3 * time.Second)
@@ -362,5 +369,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
 	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
+	cmd.Flags().StringVar(&sender, "sender", "", "Address of the transaction sender")
+	cmd.Flags().Uint64Var(&tx_time, "tx-time", 0, "Block time of the transaction")
 	return cmd
 }

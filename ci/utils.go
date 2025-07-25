@@ -17,6 +17,7 @@ import (
 	"time"
 
 	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory"
@@ -199,7 +200,8 @@ func awaitTx(t *testing.T, client xcclient.Client, txHash xc.TxHash, initialBala
 			require.Fail(t, fmt.Sprintf("Timed out waiting %v for transactions", time.Since(start)))
 		}
 		time.Sleep(1 * time.Second)
-		info, err := client.FetchTxInfo(context.Background(), txHash)
+		args := txinfo.NewArgs(txHash)
+		info, err := client.FetchTxInfo(context.Background(), args)
 		if err != nil {
 			fmt.Printf("could not find tx yet, trying again (%v)...\n", err)
 			continue

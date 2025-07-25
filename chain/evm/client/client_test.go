@@ -15,6 +15,7 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -741,7 +742,7 @@ func TestFetchTxInfo(t *testing.T) {
 
 			asset.URL = server.URL
 			client, _ := client.NewClient(asset)
-			args := xclient.NewTxInfoArgs(xc.TxHash(v.txHash))
+			args := txinfo.NewArgs(xc.TxHash(v.txHash))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if v.err != "" {
