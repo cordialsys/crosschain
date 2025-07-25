@@ -7,7 +7,7 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/aviate-labs/leb128"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 func anyToFloat64(v any) (float64, bool) {

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0x51-dev/upeg/parser"
-	"github.com/0x51-dev/upeg/parser/op"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/internal/candid"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser/op"
 )
 
 //go:embed testdata

@@ -3,8 +3,8 @@ package did
 import (
 	"fmt"
 
-	"github.com/0x51-dev/upeg/parser"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/internal/candid"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
 )
 
 // Method is a public method of a service.
