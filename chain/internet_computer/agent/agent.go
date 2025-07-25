@@ -34,10 +34,10 @@ type AgentConfig struct {
 }
 
 type Agent struct {
-	Identity      icpaddress.Ed25519Identity
-	IngressExpiry time.Duration
-	Url           *url.URL
-	Logger        *log.Entry
+	Identity icpaddress.Ed25519Identity
+	Config   AgentConfig
+	Url      *url.URL
+	Logger   *log.Entry
 }
 
 func (a *Agent) Info(msg string) {
@@ -56,12 +56,6 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 		identity = config.Identity
 	}
 
-	ingressExpiry := config.IngressExpiry
-	if ingressExpiry == 0 {
-		// Defaults to 2 minutes
-		ingressExpiry = 2 * time.Minute
-	}
-
 	url := config.Url
 	if url == nil || url.Host == "" {
 		defaultUrl, err := url.Parse("https://icp-api.io")
@@ -72,15 +66,20 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 	}
 
 	return &Agent{
-		Identity:      identity,
-		IngressExpiry: ingressExpiry,
-		Url:           url,
-		Logger:        config.Logger,
+		Identity: identity,
+		Config:   config,
+		Url:      url,
+		Logger:   config.Logger,
 	}, nil
 }
 
-func (a *Agent) ExpiryDate() uint64 {
-	return uint64(time.Now().Add(a.IngressExpiry).UnixNano())
+func (config *AgentConfig) ExpiryDate() uint64 {
+	ingressExpiry := config.IngressExpiry
+	if ingressExpiry == 0 {
+		// Defaults to 2 minutes
+		ingressExpiry = 2 * time.Minute
+	}
+	return uint64(time.Now().Add(ingressExpiry).UnixNano())
 }
 
 func newNonce() ([]byte, error) {
@@ -91,7 +90,7 @@ func newNonce() ([]byte, error) {
 	return nonce, err
 }
 
-func (a Agent) CreateUnsignedRequest(canisterID icpaddress.Principal, typ types.RequestType, methodName string, args ...any) (types.Request, error) {
+func (a AgentConfig) CreateUnsignedRequest(canisterID icpaddress.Principal, typ types.RequestType, methodName string, args ...any) (types.Request, error) {
 	rawArgs, err := candid.Marshal(args)
 	if err != nil {
 		return types.Request{}, fmt.Errorf("failed to marshal args: %w", err)
@@ -192,7 +191,7 @@ func (a Agent) Call(canisterID icpaddress.Principal, requestID types.RequestID, 
 }
 
 func (a Agent) CallAnonymous(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
-	unsignedPayload, err := a.CreateUnsignedRequest(canisterID, types.RequestTypeCall, methodName, in...)
+	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeCall, methodName, in...)
 	if err != nil {
 		return fmt.Errorf("failed to create payload: %w", err)
 	}
@@ -207,7 +206,7 @@ func (a Agent) CallAnonymous(canisterID icpaddress.Principal, methodName string,
 }
 
 func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
-	unsignedPayload, err := a.CreateUnsignedRequest(canisterID, types.RequestTypeQuery, methodName, in...)
+	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeQuery, methodName, in...)
 	if err != nil {
 		return fmt.Errorf("failed to create payload: %w", err)
 	}

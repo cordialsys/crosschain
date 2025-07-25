@@ -2,6 +2,7 @@ package sui
 
 import (
 	"bytes"
+	"encoding/json"
 	"sort"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -170,6 +171,7 @@ type Tx struct {
 }
 
 var _ xc.Tx = &Tx{}
+var _ xc.TxWithMetadata = &Tx{}
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
@@ -222,10 +224,18 @@ func (tx Tx) Serialize() ([]byte, error) {
 	return bytes, nil
 }
 
-func (tx Tx) GetSignatures() []xc.TxSignature {
-	sigs := []xc.TxSignature{}
-	for _, sig := range tx.signatures {
-		sigs = append(sigs, sig)
+type BroadcastMetadata struct {
+	// SUI rpc requires signatures to be in separate field
+	Signatures [][]byte `json:"signatures"`
+}
+
+func (tx Tx) GetMetadata() ([]byte, error) {
+	metadata := BroadcastMetadata{
+		Signatures: tx.signatures,
 	}
-	return sigs
+	metadataBz, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+	return metadataBz, nil
 }

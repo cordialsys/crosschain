@@ -493,14 +493,38 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 }
 
 // SubmitTx submits a Sui tx
-func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	tx_bz, err := tx.Serialize()
+func (c *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
+	tx_bz, err := txI.Serialize()
 	if err != nil {
 		return err
 	}
-	// var sigs [][]byte
+
+	var sigs [][]byte
+	if txWithMetadata, ok := txI.(xc.TxWithMetadata); ok {
+		metadataBz, err := txWithMetadata.GetMetadata()
+		if err != nil {
+			return err
+		}
+		var metadata BroadcastMetadata
+		err = json.Unmarshal(metadataBz, &metadata)
+		if err != nil {
+			return err
+		}
+		sigs = metadata.Signatures
+	}
+
+	if len(sigs) == 0 {
+		if txLegacyGetSignatures, ok := txI.(xc.TxLegacyGetSignatures); ok {
+			fromLegacy := txLegacyGetSignatures.GetSignatures()
+			for _, sig := range fromLegacy {
+				sigs = append(sigs, []byte(sig))
+			}
+		} else {
+			return fmt.Errorf("tx does not implement TxWithMetadata or TxLegacyGetSignatures")
+		}
+	}
+
 	sigsB64 := []any{}
-	sigs := tx.GetSignatures()
 
 	for _, sig := range sigs {
 		sigsB64 = append(sigsB64, lib.Base64Data(sig))
