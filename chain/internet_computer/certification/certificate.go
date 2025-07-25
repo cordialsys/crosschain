@@ -5,54 +5,15 @@ import (
 	"crypto/ed25519"
 	"encoding/asn1"
 	"fmt"
-	"github.com/aviate-labs/leb128"
-	"github.com/cordialsys/crosschain/chain/internet_computer/address"
-	"github.com/cordialsys/crosschain/chain/internet_computer/certification/bls"
-	"github.com/cordialsys/crosschain/chain/internet_computer/certification/hashtree"
 	"slices"
 	"time"
 
+	"github.com/cordialsys/crosschain/chain/internet_computer/address"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
+	"github.com/cordialsys/crosschain/chain/internet_computer/certification/hashtree"
+
 	"github.com/fxamacker/cbor/v2"
 )
-
-func PublicBLSKeyFromDER(der []byte) (*bls.PublicKey, error) {
-	var seq asn1.RawValue
-	if _, err := asn1.Unmarshal(der, &seq); err != nil {
-		return nil, err
-	}
-	if seq.Tag != asn1.TagSequence {
-		return nil, fmt.Errorf("invalid tag: %d", seq.Tag)
-	}
-	var idSeq asn1.RawValue
-	rest, err := asn1.Unmarshal(seq.Bytes, &idSeq)
-	if err != nil {
-		return nil, err
-	}
-	var bs asn1.BitString
-	if _, err := asn1.Unmarshal(rest, &bs); err != nil {
-		return nil, err
-	}
-	if bs.BitLength != 96*8 {
-		return nil, fmt.Errorf("invalid bit string length: %d", bs.BitLength)
-	}
-	var algoId asn1.ObjectIdentifier
-	seqRest, err := asn1.Unmarshal(idSeq.Bytes, &algoId)
-	if err != nil {
-		return nil, err
-	}
-	if !algoId.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 44668, 5, 3, 1, 2, 1}) {
-		return nil, fmt.Errorf("invalid algorithm identifier: %v", algoId)
-	}
-	var curveID asn1.ObjectIdentifier
-	if _, err := asn1.Unmarshal(seqRest, &curveID); err != nil {
-		return nil, err
-	}
-	if !curveID.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 44668, 5, 3, 2, 1}) {
-		return nil, fmt.Errorf("invalid curve identifier: %v", curveID)
-	}
-	pub, err := bls.PublicKeyFromBytes(bs.Bytes)
-	return pub, err
-}
 
 func PublicBLSKeyToDER(publicKey []byte) ([]byte, error) {
 	if len(publicKey) != 96 {
@@ -96,161 +57,6 @@ func PublicED25519KeyFromDER(der []byte) (*ed25519.PublicKey, error) {
 	}
 	publicKey := ed25519.PublicKey(bs.Bytes)
 	return &publicKey, nil
-}
-func VerifyCertificate(
-	certificate Certificate,
-	canisterID address.Principal,
-	rootPublicKey []byte,
-) error {
-	publicKey, err := PublicBLSKeyFromDER(rootPublicKey)
-	if err != nil {
-		return err
-	}
-	key := publicKey
-	if certificate.Delegation != nil {
-		delegation := certificate.Delegation
-		k, err := verifyDelegationCertificate(
-			delegation,
-			publicKey,
-			canisterID,
-		)
-		if err != nil {
-			return err
-		}
-		key = k
-	}
-	return verifyCertificateSignature(certificate, key)
-}
-
-func VerifyCertifiedData(
-	certificate Certificate,
-	canisterID address.Principal,
-	rootPublicKey []byte,
-	certifiedData []byte,
-) error {
-	if err := VerifyCertificate(certificate, canisterID, rootPublicKey); err != nil {
-		return err
-	}
-	certificateCertifiedData, err := certificate.Tree.Lookup(
-		hashtree.Label("canister"),
-		canisterID.Raw,
-		hashtree.Label("certified_data"),
-	)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(certificateCertifiedData, certifiedData) {
-		return fmt.Errorf("certified data does not match: %x != %x", certificateCertifiedData, certifiedData)
-	}
-	return nil
-}
-
-func VerifySubnetCertificate(
-	certificate Certificate,
-	subnetID address.Principal,
-	rootPublicKey []byte,
-) error {
-	publicKey, err := PublicBLSKeyFromDER(rootPublicKey)
-	if err != nil {
-		return err
-	}
-	return verifySubnetCertificate(certificate, subnetID, publicKey)
-}
-
-func verifyCertificateSignature(certificate Certificate, publicKey *bls.PublicKey) error {
-	rootHash := certificate.Tree.Digest()
-	message := append(hashtree.DomainSeparator("ic-state-root"), rootHash[:]...)
-	signature, err := bls.SignatureFromBytes(certificate.Signature)
-	if err != nil {
-		return err
-	}
-	if !signature.Verify(publicKey, message) {
-		return fmt.Errorf("signature verification failed")
-	}
-	return nil
-}
-
-func verifyDelegationCertificate(
-	delegation *Delegation,
-	rootPublicKey *bls.PublicKey,
-	canisterID address.Principal,
-) (*bls.PublicKey, error) {
-	if delegation.Certificate.Delegation != nil {
-		return nil, fmt.Errorf("multiple delegations are not supported")
-	}
-	if err := verifyCertificateSignature(delegation.Certificate, rootPublicKey); err != nil {
-		return nil, err
-	}
-
-	rawRanges, err := delegation.Certificate.Tree.Lookup(
-		hashtree.Label("subnet"),
-		delegation.SubnetId.Raw,
-		hashtree.Label("canister_ranges"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	var canisterRanges CanisterRanges
-	if err := cbor.Unmarshal(rawRanges, &canisterRanges); err != nil {
-		return nil, err
-	}
-	if !canisterRanges.InRange(canisterID) {
-		return nil, fmt.Errorf("canister %s is not in range", canisterID)
-	}
-
-	rawPublicKey, err := delegation.Certificate.Tree.Lookup(
-		hashtree.Label("subnet"),
-		delegation.SubnetId.Raw,
-		hashtree.Label("public_key"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return PublicBLSKeyFromDER(rawPublicKey)
-}
-
-func verifySubnetCertificate(
-	certificate Certificate,
-	subnetID address.Principal,
-	rootPublicKey *bls.PublicKey,
-) error {
-	key := rootPublicKey
-	if certificate.Delegation != nil {
-		delegation := certificate.Delegation
-		k, err := verifySubnetDelegationCertificate(
-			delegation,
-			subnetID,
-			rootPublicKey,
-		)
-		if err != nil {
-			return err
-		}
-		key = k
-	}
-	return verifyCertificateSignature(certificate, key)
-}
-
-func verifySubnetDelegationCertificate(
-	delegation *Delegation,
-	subnetID address.Principal,
-	rootPublicKey *bls.PublicKey,
-) (*bls.PublicKey, error) {
-	if delegation.Certificate.Delegation != nil {
-		return nil, fmt.Errorf("multiple delegations are not supported")
-	}
-	if err := verifySubnetCertificate(delegation.Certificate, subnetID, rootPublicKey); err != nil {
-		return nil, err
-	}
-
-	rawPublicKey, err := delegation.Certificate.Tree.Lookup(
-		hashtree.Label("subnet"),
-		subnetID.Raw,
-		hashtree.Label("public_key"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return PublicBLSKeyFromDER(rawPublicKey)
 }
 
 type CanisterRange struct {

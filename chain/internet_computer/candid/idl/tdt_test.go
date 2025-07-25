@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/0x51-dev/upeg/parser"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/internal/ctest"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
 )
 
 func TestTypeDefinitionTable(t *testing.T) {

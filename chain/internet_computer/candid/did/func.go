@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/0x51-dev/upeg/parser"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
 )
 
 // Argument describes the argument types of a Field.

@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/aviate-labs/leb128"
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 func encodeTypes(ts []Type, tdt *TypeDefinitionTable) ([]byte, error) {

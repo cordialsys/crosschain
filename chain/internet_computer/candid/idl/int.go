@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/aviate-labs/leb128"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 func anyToInt16(v any) (int16, bool) {

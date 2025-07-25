@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0x51-dev/upeg/parser"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/internal/cvalue"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/parser"
 )
 
 func ConvertValues(n *parser.Node) ([]idl.Type, []any, error) {

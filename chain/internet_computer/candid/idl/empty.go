@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/aviate-labs/leb128"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 // Empty represents the empty value.

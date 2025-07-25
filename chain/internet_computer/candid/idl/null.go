@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"reflect"
 
-	"github.com/aviate-labs/leb128"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 type Null struct{}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/aviate-labs/leb128"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
 )
 
 func Decode(bs []byte) ([]idl.Type, []any, error) {
