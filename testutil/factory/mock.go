@@ -6,6 +6,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -39,7 +40,7 @@ func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) 
 	args := m.Called(ctx, txHash)
 	return args.Get(0).(xclient.LegacyTxInfo), args.Error(1)
 }
-func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *txinfo.Args) (xclient.TxInfo, error) {
 	args := m.Called(ctx, txInfoArgs)
 	return args.Get(0).(xclient.TxInfo), args.Error(1)
 }

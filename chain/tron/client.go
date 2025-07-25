@@ -13,6 +13,7 @@ import (
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -279,7 +280,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return txInfo, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
 		return xclient.TxInfo{}, err

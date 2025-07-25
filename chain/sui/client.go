@@ -16,6 +16,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/go-sui-sdk/v2/client"
 	"github.com/cordialsys/go-sui-sdk/v2/lib"
 	"github.com/cordialsys/go-sui-sdk/v2/move_types"
@@ -294,7 +295,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	}, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHashStr := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {

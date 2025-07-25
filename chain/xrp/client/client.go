@@ -13,9 +13,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/xrp/client/events"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
-	"github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -153,7 +153,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchTxInfo Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *client.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	txInfo, err := client.GetTxInfo(ctx, txHash)
 	if err != nil {

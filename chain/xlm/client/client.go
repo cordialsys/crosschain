@@ -20,6 +20,7 @@ import (
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stellar/go/xdr"
 )
 
@@ -224,7 +225,7 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	url := fmt.Sprintf("%s/transactions/%s", client.Url, string(txHash))
 	var response types.GetTransactionResult

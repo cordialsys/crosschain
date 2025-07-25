@@ -20,6 +20,7 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 )
@@ -310,7 +311,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return r.LegacyTxInfo, err
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHashStr := args.TxHash()
 	chain := client.Asset.GetChain().Chain
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)

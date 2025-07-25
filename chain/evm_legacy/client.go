@@ -11,6 +11,7 @@ import (
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 )
 
 type Client struct {
@@ -128,7 +129,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return client.EvmClient.FetchLegacyTxInfo(ctx, txHash)
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	return client.EvmClient.FetchTxInfo(ctx, args)
 }
 

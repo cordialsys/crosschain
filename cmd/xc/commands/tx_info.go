@@ -5,13 +5,15 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/spf13/cobra"
 )
 
 func CmdTxInfo() *cobra.Command {
 	var contract string
+	var sender string
+	var tx_time uint64
 	cmd := &cobra.Command{
 		Use:     "tx-info <hash>",
 		Aliases: []string{"tx"},
@@ -22,15 +24,21 @@ func CmdTxInfo() *cobra.Command {
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			hash := args[0]
 
-			options := []client.GetTxInfoOption{}
+			options := []txinfo.Option{}
 			contract, err := cmd.Flags().GetString("contract")
 			if err != nil {
 				return err
 			}
 			if contract != "" {
-				options = append(options, client.TxInfoOptionContract(xc.ContractAddress(contract)))
+				options = append(options, txinfo.OptionContract(xc.ContractAddress(contract)))
 			}
-			txInfoArgs := client.NewTxInfoArgs(xc.TxHash(hash), options...)
+			if sender != "" {
+				options = append(options, txinfo.OptionSender(xc.Address(sender)))
+			}
+			if tx_time != 0 {
+				options = append(options, txinfo.OptionTxTime(tx_time))
+			}
+			txInfoArgs := txinfo.NewArgs(xc.TxHash(hash), options...)
 
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
@@ -48,5 +56,7 @@ func CmdTxInfo() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "")
+	cmd.Flags().StringVar(&sender, "sender", "", "Transaction sender")
+	cmd.Flags().Uint64Var(&tx_time, "tx_time", 0, "Time of the transaction")
 	return cmd
 }

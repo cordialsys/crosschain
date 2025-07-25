@@ -18,6 +18,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
@@ -212,7 +213,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	var latestBlock types.Block
 	err := client.Get(ctx, "/blocks/latest", &latestBlock)

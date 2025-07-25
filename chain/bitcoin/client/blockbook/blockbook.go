@@ -23,6 +23,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 
 	// "github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -282,7 +283,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	return *txWithInfo, nil
 }
 
-func (client *BlockbookClient) FetchTxInfo(ctx context.Context, args *xclient.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *BlockbookClient) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
 		return xclient.TxInfo{}, err

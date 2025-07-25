@@ -12,10 +12,10 @@ import (
 	"github.com/cordialsys/crosschain/chain/kaspa/client/rest"
 	"github.com/cordialsys/crosschain/chain/kaspa/tx"
 	"github.com/cordialsys/crosschain/chain/kaspa/tx_input"
-	"github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/kaspanet/kaspad/util/txmass"
 	"github.com/sirupsen/logrus"
 )
@@ -130,7 +130,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	return xclient.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
-func (c *Client) FetchTxInfo(ctx context.Context, args *client.TxInfoArgs) (xclient.TxInfo, error) {
+func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	tx, err := c.client.GetTransaction(string(txHash))
 	if apiErr, ok := err.(*rest.ErrorResponse); ok {

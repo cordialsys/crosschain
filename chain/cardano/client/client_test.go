@@ -15,6 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -398,7 +399,7 @@ func TestFetchTxInfo(t *testing.T) {
 			client, _ := client.NewClient(cfg)
 			client.Url = server.URL
 
-			args := xclient.NewTxInfoArgs(xc.TxHash("3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610"))
+			args := txinfo.NewArgs(xc.TxHash("3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610"))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 			require.NoError(t, err)
 			require.Equal(t, vector.expectedInfo, txInfo)

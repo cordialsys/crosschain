@@ -18,6 +18,7 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -352,7 +353,7 @@ func TestFetchTxInfo(t *testing.T) {
 			require.NoError(err)
 			require.NotNil(client)
 
-			args := xclient.NewTxInfoArgs(xc.TxHash(tc.hash))
+			args := txinfo.NewArgs(xc.TxHash(tc.hash))
 			res, err := client.FetchTxInfo(context.Background(), args)
 			require.NoError(err)
 

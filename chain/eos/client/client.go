@@ -8,7 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cordialsys/crosschain/chain/eos/builder"
@@ -165,7 +165,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *client.TxInfoArgs) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHash := args.TxHash()
 	tx, err := client.api.GetTransactionFromAnySupportedEndpoint(ctx, string(txHash))
 	if err != nil {
