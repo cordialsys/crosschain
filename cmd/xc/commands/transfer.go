@@ -13,10 +13,10 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +82,6 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			if tx_time != 0 {
 				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
-				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
 			}
 
 			toWalletAddress := args[0]
