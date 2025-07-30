@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
-	types "github.com/cordialsys/crosschain/chain/internet_computer/client/types"
+	"github.com/cordialsys/crosschain/chain/internet_computer/client/types/icp"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,10 +20,10 @@ func TestCallAnonymous(t *testing.T) {
 	}
 	a, _ := NewAgent(config)
 
-	var balance types.IcpBalance
+	var balance icp.Balance
 	accountID, _ := hex.DecodeString("9523dc824aa062dcd9c91b98f4594ff9c6af661ac96747daef2090b7fe87037d")
-	err := a.Query(types.IcpLedgerPrincipal, types.MethodAccountBalance, []any{
-		types.BalanceArgs{Account: accountID},
+	err := a.Query(icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
+		icp.GetBalanceArgs{Account: accountID},
 	}, []any{&balance})
 
 	require.Equal(t, uint64(0), balance.E8S)
@@ -40,10 +40,10 @@ func TestQuery(t *testing.T) {
 	}
 	a, _ := NewAgent(config)
 
-	var balance types.IcpBalance
+	var balance icp.Balance
 	accountID, _ := hex.DecodeString("9523dc824aa062dcd9c91b98f4594ff9c6af661ac96747daef2090b7fe87037d")
-	err := a.Query(types.IcpLedgerPrincipal, types.MethodAccountBalance, []any{
-		types.BalanceArgs{Account: accountID},
+	err := a.Query(icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
+		icp.GetBalanceArgs{Account: accountID},
 	}, []any{&balance})
 
 	require.Equal(t, uint64(0), balance.E8S)
