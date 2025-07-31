@@ -146,9 +146,6 @@ func NewIcrcTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) 
 	}, nil
 }
 
-// ICP transactions have traditional hash, but are queried by `block index`
-// ICRC doesn't have hash ana are queried by `block index`
-// Because of that, we will return `RequestID`, and map it to `block index` on submission.
 func (tx Tx) Hash() xc.TxHash {
 	if tx.IcpTransfer != nil {
 		transfer := tx.IcpTransfer

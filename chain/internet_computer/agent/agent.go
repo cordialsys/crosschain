@@ -65,11 +65,17 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 		url = defaultUrl
 	}
 
+	logger := config.Logger
+	if logger == nil {
+		raw := log.New()
+		logger = log.NewEntry(raw)
+	}
+
 	return &Agent{
 		Identity: identity,
 		Config:   config,
 		Url:      url,
-		Logger:   config.Logger,
+		Logger:   logger,
 	}, nil
 }
 

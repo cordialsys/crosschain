@@ -45,6 +45,7 @@ import (
 	filaddress "github.com/cordialsys/crosschain/chain/filecoin/address"
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
+	icp "github.com/cordialsys/crosschain/chain/internet_computer"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpbuilder "github.com/cordialsys/crosschain/chain/internet_computer/builder"
 	icpclient "github.com/cordialsys/crosschain/chain/internet_computer/client"
@@ -287,6 +288,8 @@ func CheckError(driver Driver, err error) errors.Status {
 		return kaspa.CheckError(err)
 	case DriverEOS:
 		return eos.CheckError(err)
+	case DriverInternetComputerProtocol:
+		return icp.CheckError(err)
 	}
 	return errors.UnknownError
 }

@@ -21,8 +21,9 @@ func TestCallAnonymous(t *testing.T) {
 	a, _ := NewAgent(config)
 
 	var balance icp.Balance
-	accountID, _ := hex.DecodeString("9523dc824aa062dcd9c91b98f4594ff9c6af661ac96747daef2090b7fe87037d")
-	err := a.Query(icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
+	accountID, err := hex.DecodeString("9523dc824aa062dcd9c91b98f4594ff9c6af661ac96747daef2090b7fe87037d")
+	require.NoError(t, err)
+	err = a.CallAnonymous(icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
 		icp.GetBalanceArgs{Account: accountID},
 	}, []any{&balance})
 
