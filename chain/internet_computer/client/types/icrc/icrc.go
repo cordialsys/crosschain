@@ -12,6 +12,7 @@ import (
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
+	icperrors "github.com/cordialsys/crosschain/chain/internet_computer/client/types/errors"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -201,21 +202,21 @@ type GenericError struct {
 
 func (e *TransferError) Error() string {
 	if e.BadFee != nil {
-		return fmt.Sprintf("bad fee, expected: %d", e.BadFee.ExpectedFee.BigInt().Uint64())
+		return icperrors.BadFee(e.BadFee.ExpectedFee.BigInt().Uint64())
 	} else if e.BadBurn != nil {
-		return fmt.Sprintf("bad burn, min burn amount: %d", e.BadBurn.MinBurnAmount.BigInt().Uint64())
+		return icperrors.BadBurn(e.BadBurn.MinBurnAmount.BigInt().Uint64())
 	} else if e.InsufficientFunds != nil {
-		return fmt.Sprintf("insufficient funds, balance: %d", e.InsufficientFunds.Balance.BigInt().Uint64())
+		return icperrors.InsufficientFunds(e.BadBurn.MinBurnAmount.BigInt().Uint64())
 	} else if e.TooOld != nil {
-		return "transaction too old"
+		return icperrors.TransactionTooOld()
 	} else if e.CreatedInFuture != nil {
-		return "transaction created in the future"
+		return icperrors.CreatedInFuture()
 	} else if e.Duplicate != nil {
-		return fmt.Sprintf("duplicated tx: %d", e.Duplicate.DuplicateOf.BigInt().Uint64())
+		return icperrors.TransactionDuplicate(e.Duplicate.DuplicateOf.BigInt().Uint64())
 	} else if e.GenericError != nil {
-		return fmt.Sprintf("generic transaction error, code: %d, message: %s", e.GenericError.ErrorCode.BigInt().Uint64(), e.GenericError.Message)
+		return icperrors.Generic(e.GenericError.ErrorCode.BigInt().Uint64(), e.GenericError.Message)
 	} else {
-		return "unknown error"
+		return icperrors.Unknown()
 	}
 }
 
