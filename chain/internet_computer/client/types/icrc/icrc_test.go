@@ -10,7 +10,7 @@ import (
 )
 
 func TestIcrcTransferHash(t *testing.T) {
-	expected := "13ec3a17f13c5403e74b82a09d36268d8685f4a0a45577d0a9874f492464a71e"
+	expected := "418783abf0af99311178438612c6c73980d28b81daecb9daeea20c15cbbcc329"
 	fee := idl.NewNat(uint64(10))
 	createdAtTime := idl.NewNat(uint64(1_753_915_619_013_944_000))
 	transaction := icrc.Transaction{
