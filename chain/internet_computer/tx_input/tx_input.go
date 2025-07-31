@@ -1,14 +1,19 @@
 package tx_input
 
 import (
+	"time"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
+const SafetyTimeoutMargin = (24 * time.Hour) + (30 * time.Minute)
+
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-	Fee           uint64
+	Fee uint64
+	// UnixNano timestamp
 	CreatedAtTime uint64
 	Memo          uint64
 	Canister      xc.ContractAddress
@@ -56,13 +61,17 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(other, input) {
-		return false
+	oldInput, ok := other.(*TxInput)
+	if !ok {
+		return true
 	}
 
-	if input.IndependentOf(other) {
-		return false
+	// Transaqctions with `CreatedAtTime` > 24h cannot be submitted
+	now := time.Now().UnixNano()
+	diff := now - int64(oldInput.CreatedAtTime)
+	if int64(diff) > SafetyTimeoutMargin.Nanoseconds() {
+		return true
 	}
 
-	return true
+	return false
 }
