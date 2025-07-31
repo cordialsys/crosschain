@@ -9,7 +9,7 @@ import (
 
 const SafetyTimeoutMargin = (24 * time.Hour) + (30 * time.Minute)
 
-// TxInput for Template
+// TxInput for InternetComputerProtocol
 type TxInput struct {
 	xc.TxInputEnvelope
 	Fee uint64
