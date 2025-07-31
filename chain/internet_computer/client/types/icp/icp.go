@@ -416,6 +416,22 @@ type BlockTransaction struct {
 	Timestamp     *Timestamp         `ic:"timestamp,omitempty"`
 }
 
+func (tx BlockTransaction) SourceAddress() string {
+	return tx.Operation.From()
+}
+
+func (tx BlockTransaction) DestinationAddress() string {
+	return tx.Operation.To()
+}
+
+func (tx BlockTransaction) Amount() uint64 {
+	return tx.Operation.Amount()
+}
+
+func (tx BlockTransaction) Fee() uint64 {
+	return tx.Operation.Fee()
+}
+
 type Transaction[T AddressConstraint] struct {
 	Operation     Operation[T] `ic:"operation,omitempty" cbor:"0,keyasint"`
 	Memo          uint64       `ic:"memo" cbor:"1,keyasint"`

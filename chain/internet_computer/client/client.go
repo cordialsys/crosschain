@@ -306,24 +306,51 @@ func (client *Client) fetchAssetName(ctx context.Context, canister address.Princ
 	return response, err
 }
 
-// Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
-	sender, ok := args.Sender()
-	if !ok {
-		return xclient.TxInfo{}, errors.New("icp tx info requires sender address")
+func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (xclient.TxInfo, error) {
+	block, err := client.fetchRawBlock(ctx, canister, blockIndex)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch block: %w", err)
 	}
 
-	ledgerCanister := icp.LedgerPrincipal
-	contract, ok := args.Contract()
-	if ok {
-		c, err := icpaddress.Decode(string(contract))
-		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("error canister: %w", err)
-		}
-
-		ledgerCanister = c
+	blockHash, err := block.Hash()
+	if err != nil {
+		return xclient.TxInfo{}, err
 	}
 
+	transactionHash, err := block.TxHash()
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	height, err := client.fetchHeight(ctx, canister)
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, block.Timestamp.ToUnixTime())
+	txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
+
+	sourceAddress := xc.Address(block.Transaction.SourceAddress())
+	destinationAddress := xc.Address(block.Transaction.DestinationAddress())
+	amount := block.Transaction.Amount()
+	xcAmount := xc.NewAmountBlockchainFromUint64(amount)
+
+	movement := xclient.NewMovement(client.Asset.GetChain().Chain, "")
+	movement.AddSource(sourceAddress, xcAmount, nil)
+	movement.AddDestination(destinationAddress, xcAmount, nil)
+	movement.SetMemo(fmt.Sprintf("%d", block.Transaction.Memo))
+
+	txInfo.AddMovement(movement)
+
+	fee := xc.NewAmountBlockchainFromUint64(block.Transaction.Fee())
+	txInfo.AddFee(sourceAddress, "", fee, nil)
+	txInfo.Fees = txInfo.CalculateFees()
+	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+
+	return *txInfo, nil
+}
+
+func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister icpaddress.Principal, txHash xc.TxHash, sender xc.Address) (xclient.TxInfo, error) {
 	indexCanister, ok := indexCanisters[ledgerCanister.String()]
 	if !ok {
 		indexer, err := client.fetchIndexPrincipal(ctx, ledgerCanister)
@@ -339,7 +366,6 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch account transactions: %w", err)
 	}
 
-	txHash := args.TxHash()
 	for _, tx := range transactions {
 		th, err := tx.Hash()
 		if err != nil {
@@ -383,7 +409,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 			}
 			xcAmount := xc.NewAmountBlockchainFromUint64(amount)
 
-			movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
+			movement := xclient.NewMovement(client.Asset.GetChain().Chain, xc.ContractAddress(ledgerCanister.String()))
 			movement.AddSource(sourceAddress, xcAmount, nil)
 			movement.AddDestination(destinationAddress, xcAmount, nil)
 
@@ -409,8 +435,37 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 			return *txInfo, nil
 		}
 	}
+	return xclient.TxInfo{}, nil
+}
 
-	return xclient.TxInfo{}, errors.New("couldn't find given transaction")
+// Returns transaction info - new endpoint
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+	// We can fetch the transaction direclty if we receive a block index
+	// Fallback to account history lookup otherwise
+	blockIndex, err := strconv.Atoi(string(args.TxHash()))
+
+	ledgerCanister := icp.LedgerPrincipal
+	contract, ok := args.Contract()
+	if ok {
+		c, err := icpaddress.Decode(string(contract))
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("error canister: %w", err)
+		}
+
+		ledgerCanister = c
+	}
+
+	if err == nil {
+		return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, uint64(blockIndex))
+	} else {
+		hash := args.TxHash()
+		sender, ok := args.Sender()
+		if !ok {
+			return xclient.TxInfo{}, errors.New("fetching icp transactions by hash requires a sender address")
+		}
+
+		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, sender)
+	}
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
