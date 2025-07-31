@@ -9,14 +9,14 @@ import (
 	tx_input "github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 )
 
-// TxBuilder for Template
+// TxBuilder for InternetComputerProtocol
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 
-// NewTxBuilder creates a new Template TxBuilder
+// NewTxBuilder creates a new InternetComputerProtocol
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
