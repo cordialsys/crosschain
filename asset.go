@@ -88,6 +88,7 @@ const (
 	XLM    = NativeAsset("XLM")    // XLM
 	ZETA   = NativeAsset("ZETA")   // ZetaChain
 	NIL    = NativeAsset("NIL")    // Nillion
+	ICP    = NativeAsset("ICP")    // Internet Computer Protocol
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -151,6 +152,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XLM,
 	ZETA,
 	NIL,
+	ICP,
 }
 
 // Driver is the type of a chain
@@ -158,26 +160,27 @@ type Driver string
 
 // List of supported Driver
 const (
-	DriverAptos         = Driver("aptos")
-	DriverBitcoin       = Driver("bitcoin")
-	DriverBitcoinCash   = Driver("bitcoin-cash")
-	DriverBitcoinLegacy = Driver("bitcoin-legacy")
-	DriverCardano       = Driver("cardano")
-	DriverCosmos        = Driver("cosmos")
-	DriverCosmosEvmos   = Driver("evmos")
-	DriverDusk          = Driver("dusk")
-	DriverEOS           = Driver("eos")
-	DriverEVM           = Driver("evm")
-	DriverEVMLegacy     = Driver("evm-legacy")
-	DriverFilecoin      = Driver("filecoin")
-	DriverKaspa         = Driver("kaspa")
-	DriverSubstrate     = Driver("substrate")
-	DriverSolana        = Driver("solana")
-	DriverSui           = Driver("sui")
-	DriverTron          = Driver("tron")
-	DriverTon           = Driver("ton")
-	DriverXrp           = Driver("xrp")
-	DriverXlm           = Driver("xlm")
+	DriverAptos                    = Driver("aptos")
+	DriverBitcoin                  = Driver("bitcoin")
+	DriverBitcoinCash              = Driver("bitcoin-cash")
+	DriverBitcoinLegacy            = Driver("bitcoin-legacy")
+	DriverCardano                  = Driver("cardano")
+	DriverCosmos                   = Driver("cosmos")
+	DriverCosmosEvmos              = Driver("evmos")
+	DriverDusk                     = Driver("dusk")
+	DriverEOS                      = Driver("eos")
+	DriverEVM                      = Driver("evm")
+	DriverEVMLegacy                = Driver("evm-legacy")
+	DriverFilecoin                 = Driver("filecoin")
+	DriverInternetComputerProtocol = Driver("icp")
+	DriverKaspa                    = Driver("kaspa")
+	DriverSubstrate                = Driver("substrate")
+	DriverSolana                   = Driver("solana")
+	DriverSui                      = Driver("sui")
+	DriverTron                     = Driver("tron")
+	DriverTon                      = Driver("ton")
+	DriverXrp                      = Driver("xrp")
+	DriverXlm                      = Driver("xlm")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -193,6 +196,7 @@ var SupportedDrivers = []Driver{
 	DriverEVM,
 	DriverEVMLegacy,
 	DriverFilecoin,
+	DriverInternetComputerProtocol,
 	DriverKaspa,
 	DriverSubstrate,
 	DriverSolana,
@@ -273,6 +277,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverAptos
 	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY, KAVA:
 		return DriverCosmos
+	case ICP:
+		return DriverInternetComputerProtocol
 	case KAS:
 		return DriverKaspa
 	case EOS:
@@ -311,7 +317,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -335,7 +341,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin:
 		return Uncompressed
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk, DriverKaspa:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk, DriverKaspa, DriverInternetComputerProtocol:
 		return Raw
 	}
 	return ""

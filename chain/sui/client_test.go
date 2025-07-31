@@ -882,6 +882,10 @@ func TestTransfers(t *testing.T) {
 				require.Equal(inp, inputs[i])
 			}
 
+			tx.SetSignatures(&xc.SignatureResponse{
+				Signature: []byte{1, 2, 3, 4},
+			})
+
 			err = client.SubmitTx(context.Background(), tx)
 			require.NoError(err)
 		})

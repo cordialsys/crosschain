@@ -127,10 +127,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx Tx) GetSignatures() []xc.TxSignature {
-	return tx.inputSignatures
-}
-
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 	return codec.Encode(tx.extrinsic)

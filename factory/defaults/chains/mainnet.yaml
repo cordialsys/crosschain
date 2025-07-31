@@ -557,6 +557,19 @@ chains:
         asset_id: "19960"
       indexing_co:
         chain_id: provenance
+  ICP:
+    chain: ICP
+    driver: icp
+    chain_name: Internet Computer Protocol
+    confirmations_final: 1
+    decimals: 8
+    fee_limit: "100.0"
+    external:
+      coin_market_cap:
+        asset_id: "8916"
+      coin_gecko:
+      asset_id: "internet-computer"
+
   INJ:
     chain: INJ
     driver: evmos

@@ -636,15 +636,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-// GetSignatures returns back signatures, which may be used for signed-transaction broadcasting
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	signatures := make([]xc.TxSignature, len(tx.Witness.Keys))
-	for _, witness := range tx.Witness.Keys {
-		signatures = append(signatures, xc.TxSignature(witness.Signature))
-	}
-	return signatures
-}
-
 // Serialize returns the serialized tx
 func (tx Tx) Serialize() ([]byte, error) {
 	txCbor, err := cbor.Marshal(tx)

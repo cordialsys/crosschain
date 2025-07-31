@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
@@ -28,6 +29,7 @@ func CmdRpcBlock() *cobra.Command {
 				}
 				blockArgs = xcclient.AtHeight(h.Uint64())
 			}
+			blockArgs.SetContract(xc.ContractAddress(contract))
 
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
