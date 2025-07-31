@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
+	icperrors "github.com/cordialsys/crosschain/chain/internet_computer/client/types/errors"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -575,15 +576,17 @@ type TransferError struct {
 
 func (e *TransferError) Error() string {
 	if e.TxTooOld != nil {
-		return "transaction too old"
+		return icperrors.TransactionTooOld()
 	} else if e.BadFee != nil {
-		return fmt.Sprintf("bad fee, expected: %d", e.BadFee.ExpectedFee.E8s)
+		return icperrors.BadFee(e.BadFee.ExpectedFee.E8s)
 	} else if e.TxCreatedInFuture != nil {
-		return "transaction created in the future"
+		return icperrors.CreatedInFuture()
 	} else if e.InsufficientFunds != nil {
-		return fmt.Sprintf("insufficient funds, balance: %d", e.InsufficientFunds.Balance.E8s)
+		return icperrors.InsufficientFunds(e.InsufficientFunds.Balance.E8s)
+	} else if e.TxDuplicate != nil {
+		return icperrors.TransactionDuplicate(e.TxDuplicate.DuplicateOf)
 	} else {
-		return "unknown error"
+		return icperrors.Unknown()
 	}
 }
 
