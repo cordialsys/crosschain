@@ -285,6 +285,8 @@ chains:
   BNB:
     chain: BNB
     driver: evm
+    # including legacy information because we recently switched from evm-legacy to evm driver
+    include_legacy_information: true
     chain_id: 56
     chain_name: Binance Smart Chain
     decimals: 18

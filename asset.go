@@ -693,6 +693,8 @@ type ChainClientConfig struct {
 	// is only maintained for legacy purposes (by the upstream community).
 	// E.g. "Terra Classic" or "Fantom" are legacy chains that each have replacements.
 	Legacy bool `yaml:"legacy,omitempty"`
+	// Indicate to the driver if additional information should be included for older crosschain clients.
+	IncludeLegacyInformation bool `yaml:"include_legacy_information,omitempty"`
 }
 
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
