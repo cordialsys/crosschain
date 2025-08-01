@@ -252,13 +252,15 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 			result.GasFeeCap = result.GasTipCap
 		}
 
-		// Legacy gas fees
-		// This is included to be backwards compatible with clients still using evm-legacy driver, but haven't updated to evm driver yet.
-		legacyGasPrice, err := client.EthClient.SuggestGasPrice(ctx)
-		if err != nil {
-			logrus.WithError(err).Info("gas price not available")
-		} else {
-			result.GasPrice = xc.AmountBlockchain(*legacyGasPrice).ApplyGasPriceMultiplier(nativeAsset.Client())
+		if client.Asset.GetChain().IncludeLegacyInformation {
+			// Legacy gas fees
+			// This is included to be backwards compatible with clients still using evm-legacy driver, but haven't updated to evm driver yet.
+			legacyGasPrice, err := client.EthClient.SuggestGasPrice(ctx)
+			if err != nil {
+				logrus.WithError(err).Info("gas price not available")
+			} else {
+				result.GasPrice = xc.AmountBlockchain(*legacyGasPrice).ApplyGasPriceMultiplier(nativeAsset.Client())
+			}
 		}
 
 		pending, ok, err := client.LookupPreviousTxAttempt(ctx, senderAddr, previousAttempts)
