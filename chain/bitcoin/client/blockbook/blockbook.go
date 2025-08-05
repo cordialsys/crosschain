@@ -108,8 +108,12 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 			formattedAddr = fmt.Sprintf("%s%s", BitcoinCashPrefix, addr)
 		}
 	}
+	url := fmt.Sprintf("api/v2/utxo/%s", formattedAddr)
+	if client.Asset.GetChain().ConfirmedUtxo {
+		url += "?confirmed=true"
+	}
 
-	err := client.get(ctx, fmt.Sprintf("api/v2/utxo/%s", formattedAddr), &data)
+	err := client.get(ctx, url, &data)
 	if err != nil {
 		return nil, err
 	}
