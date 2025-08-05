@@ -3,8 +3,6 @@ package types
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -12,8 +10,6 @@ import (
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
-	"github.com/cordialsys/crosschain/chain/internet_computer/client/types/icp"
-	"github.com/cordialsys/crosschain/chain/internet_computer/client/types/icrc"
 	"github.com/fxamacker/cbor/v2"
 )
 
@@ -234,113 +230,31 @@ func UnknownError() string {
 	return "unknown error"
 }
 
-type ListTransactionEntry struct {
-	IcrcTransaction *icrc.TransactionWithId
-	IcpTransaction  *icp.TransactionWithId[string]
+type TransactionWithId struct {
+	Id          uint64
+	Transaction Transaction
 }
 
-func (t ListTransactionEntry) Hash() (string, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.Hash()
-	} else if t.IcrcTransaction != nil {
-		return t.IcrcTransaction.Transaction.ToFlattened().Hash()
-	}
-	return "", errors.New("no transaction")
+type Transaction interface {
+	Hash() (string, error)
+	TxTime() uint64
+	SourceAddress() string
+	DestinationAddress() string
+	Memo() string
+	Amount() (uint64, error)
+	Fee() uint64
 }
 
-func (t ListTransactionEntry) BlockHeight() (uint64, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Id.BigInt().Uint64(), nil
-	} else if t.IcrcTransaction != nil {
-		return t.IcrcTransaction.Id.BigInt().Uint64(), nil
-	}
-	return 0, errors.New("no transaction")
+type Block interface {
+	Hash() (string, error)
+	Timestamp() (uint64, error)
+	TxHash() (string, error)
+	Transaction() (Transaction, error)
 }
 
-func (t ListTransactionEntry) TxTime() (time.Time, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.Timestamp.ToUnixTime(), nil
-	} else if t.IcrcTransaction != nil {
-		ts := t.IcrcTransaction.Transaction.Timestamp.BigInt().Uint64()
-		seconds := int64(ts / 1_000_000_000)
-		nanos := int64(ts % 1_000_000_000)
+func NanosToUnixTime(nanoseconds uint64) time.Time {
+	seconds := int64(nanoseconds / 1_000_000_000)
+	nanos := int64(nanoseconds % 1_000_000_000)
 
-		return time.Unix(seconds, nanos), nil
-	}
-
-	return time.Time{}, errors.New("no transaction")
-}
-
-func (t ListTransactionEntry) SourceAddress() (string, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.SourceAddress(), nil
-	} else if t.IcrcTransaction != nil {
-		from := t.IcrcTransaction.Transaction.From()
-		if from != nil {
-			return from.Encode(), nil
-		} else {
-			return "", nil
-		}
-	}
-
-	return "", errors.New("no transaction")
-}
-
-func (t ListTransactionEntry) DestinationAddress() (string, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.DestinationAddress(), nil
-	} else if t.IcrcTransaction != nil {
-		to := t.IcrcTransaction.Transaction.To()
-		if to != nil {
-			return to.Encode(), nil
-		} else {
-			return "", nil
-		}
-	}
-
-	return "", errors.New("no transaction")
-}
-
-func (t ListTransactionEntry) Amount() (uint64, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.Amount().E8s, nil
-	} else if t.IcrcTransaction != nil {
-		return t.IcrcTransaction.Transaction.Amount(), nil
-	}
-
-	return 0, errors.New("no transaction")
-}
-
-func (t ListTransactionEntry) Memo() (string, error) {
-	if t.IcpTransaction != nil {
-		if t.IcpTransaction.Transaction.Icrc1Memo != nil {
-			return hex.EncodeToString(*t.IcpTransaction.Transaction.Icrc1Memo), nil
-		} else {
-			return fmt.Sprintf("%d", t.IcpTransaction.Transaction.Memo), nil
-		}
-	} else if t.IcrcTransaction != nil {
-		memo := t.IcrcTransaction.Transaction.Memo()
-		if memo != nil {
-			return hex.EncodeToString(*memo), nil
-		} else {
-			return "", nil
-		}
-	}
-
-	return "", errors.New("no transaction")
-}
-
-func (t ListTransactionEntry) Fee() (uint64, error) {
-	if t.IcpTransaction != nil {
-		return t.IcpTransaction.Transaction.Fee().E8s, nil
-	} else if t.IcrcTransaction != nil {
-		fee := t.IcrcTransaction.Transaction.Fee()
-		if fee != nil {
-			return *fee, nil
-		} else {
-			return 0, nil
-		}
-	}
-
-	return 0, errors.New("no transaction")
+	return time.Unix(seconds, nanos)
 }

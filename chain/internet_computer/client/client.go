@@ -228,7 +228,7 @@ func (client *Client) fetchIndexPrincipal(ctx context.Context, canister icpaddre
 	return *response.Ok, nil
 }
 
-func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Address, canister icpaddress.Principal) ([]types.ListTransactionEntry, error) {
+func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Address, canister icpaddress.Principal) ([]types.TransactionWithId, error) {
 	// Use get_account_transactions for ICRC addresses
 	icrcAccount, err := icrc.DecodeAccount(string(sender))
 	if err == nil {
@@ -252,10 +252,11 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 			return nil, fmt.Errorf("canister error: %s", response.Error.Message)
 		}
 
-		transactions := make([]types.ListTransactionEntry, 0)
+		transactions := make([]types.TransactionWithId, 0)
 		for _, tx := range response.Ok.Transactions {
-			transactions = append(transactions, types.ListTransactionEntry{
-				IcrcTransaction: &tx,
+			transactions = append(transactions, types.TransactionWithId{
+				Transaction: tx.Transaction,
+				Id:          tx.Id.BigInt().Uint64(),
 			})
 		}
 
@@ -284,10 +285,11 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 		return nil, fmt.Errorf("canister error: %s", response.Error.Message)
 	}
 
-	transactions := make([]types.ListTransactionEntry, 0)
+	transactions := make([]types.TransactionWithId, 0)
 	for _, tx := range response.Ok.Transactions {
-		transactions = append(transactions, types.ListTransactionEntry{
-			IcpTransaction: &tx,
+		transactions = append(transactions, types.TransactionWithId{
+			Transaction: tx.Transaction,
+			Id:          tx.Id.BigInt().Uint64(),
 		})
 	}
 
@@ -327,22 +329,34 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 		return xclient.TxInfo{}, err
 	}
 
-	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, block.Timestamp.ToUnixTime())
+	ts, err := block.Timestamp()
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, types.NanosToUnixTime(ts))
 	txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
 
-	sourceAddress := xc.Address(block.Transaction.SourceAddress())
-	destinationAddress := xc.Address(block.Transaction.DestinationAddress())
-	amount := block.Transaction.Amount()
+	transaction, err := block.Transaction()
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
+
+	sourceAddress := xc.Address(transaction.SourceAddress())
+	destinationAddress := xc.Address(transaction.DestinationAddress())
+	amount, err := transaction.Amount()
+	if err != nil {
+		return xclient.TxInfo{}, err
+	}
 	xcAmount := xc.NewAmountBlockchainFromUint64(amount)
 
 	movement := xclient.NewMovement(client.Asset.GetChain().Chain, "")
 	movement.AddSource(sourceAddress, xcAmount, nil)
 	movement.AddDestination(destinationAddress, xcAmount, nil)
-	movement.SetMemo(fmt.Sprintf("%d", block.Transaction.Memo))
+	movement.SetMemo(transaction.Memo())
 
 	txInfo.AddMovement(movement)
 
-	fee := xc.NewAmountBlockchainFromUint64(block.Transaction.Fee())
+	fee := xc.NewAmountBlockchainFromUint64(transaction.Fee())
 	txInfo.AddFee(sourceAddress, "", fee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
@@ -367,67 +381,64 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 	}
 
 	for _, tx := range transactions {
-		th, err := tx.Hash()
+		th, err := tx.Transaction.Hash()
 		if err != nil {
 			return xclient.TxInfo{}, fmt.Errorf("failed to compute tx hash: %w", err)
 		}
 
 		if th == string(txHash) {
-			blockHeight, err := tx.BlockHeight()
+			blockHeight := tx.Id
+			block, err := client.fetchRawBlock(ctx, ledgerCanister, blockHeight)
 			if err != nil {
-				return xclient.TxInfo{}, err
+				return xclient.TxInfo{}, fmt.Errorf("failed to fetch block hash: %w", err)
 			}
 
-			timestamp, err := tx.TxTime()
+			timestamp, err := block.Timestamp()
 			if err != nil {
-				return xclient.TxInfo{}, err
+				return xclient.TxInfo{}, fmt.Errorf("failed to get block timestamp: %w", err)
 			}
-
 			currentHeight, err := client.fetchHeight(ctx, ledgerCanister)
 			if err != nil {
 				return xclient.TxInfo{}, fmt.Errorf("failed to fetch current height: %w", err)
 			}
 
-			xBlock := xclient.NewBlock(xc.ICP, blockHeight, "", timestamp)
+			blockHash, err := block.Hash()
+			if err != nil {
+				return xclient.TxInfo{}, fmt.Errorf("failed to calculate block hash: %w", err)
+			}
+			xBlock := xclient.NewBlock(xc.ICP, blockHeight, blockHash, types.NanosToUnixTime(timestamp))
 			txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), string(txHash), currentHeight-blockHeight, nil)
 
-			sa, err := tx.SourceAddress()
-			if err != nil {
-				return xclient.TxInfo{}, fmt.Errorf("failed to get source address: %w", err)
-			}
+			sa := tx.Transaction.SourceAddress()
 			sourceAddress := xc.Address(sa)
 
-			da, err := tx.DestinationAddress()
-			if err != nil {
-				return xclient.TxInfo{}, fmt.Errorf("failed to get destination address: %w", err)
-			}
-
+			da := tx.Transaction.DestinationAddress()
 			destinationAddress := xc.Address(da)
-			amount, err := tx.Amount()
+
+			amount, err := tx.Transaction.Amount()
 			if err != nil {
 				return xclient.TxInfo{}, fmt.Errorf("failed to get tx amount: %w", err)
 			}
+
 			xcAmount := xc.NewAmountBlockchainFromUint64(amount)
 
-			movement := xclient.NewMovement(client.Asset.GetChain().Chain, xc.ContractAddress(ledgerCanister.String()))
+			contract := xc.ContractAddress("")
+			if ledgerCanister.Encode() != icp.LedgerPrincipal.Encode() {
+				contract = xc.ContractAddress(ledgerCanister.Encode())
+			}
+			movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
 			movement.AddSource(sourceAddress, xcAmount, nil)
 			movement.AddDestination(destinationAddress, xcAmount, nil)
 
-			memo, err := tx.Memo()
-			if err != nil {
-				return xclient.TxInfo{}, err
-			}
+			memo := tx.Transaction.Memo()
 			if memo != "" {
 				movement.SetMemo(memo)
 			}
 
 			txInfo.AddMovement(movement)
-			fee, err := tx.Fee()
-			if err != nil {
-				return xclient.TxInfo{}, err
-			}
-
+			fee := tx.Transaction.Fee()
 			xcFee := xc.NewAmountBlockchainFromUint64(fee)
+
 			txInfo.AddFee(sourceAddress, "", xcFee, nil)
 			txInfo.Fees = txInfo.CalculateFees()
 			txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
@@ -583,11 +594,52 @@ func (client *Client) fetchRawIcpBlock(ctx context.Context, blockIndex uint64) (
 	return icp.Block{}, errors.New("failed to fetch block")
 }
 
-func (client *Client) fetchRawBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (icp.Block, error) {
+func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (icrc.Block, error) {
+	var response icrc.GetBlocksResponse
+	err := client.Agent.Query(
+		canister,
+		icrc.MethodGetBlocks,
+		[]any{[]icrc.GetBlocksRequest{
+			icrc.GetBlocksRequest{
+				Start:  idl.NewNat(uint64(blockIndex)),
+				Length: idl.NewNat(uint64(1)),
+			},
+		}},
+		[]any{&response},
+	)
+	if err != nil {
+		return icrc.Block{}, fmt.Errorf("failed to fetch icrc block: %w", err)
+	}
+
+	if len(response.Blocks) == 1 {
+		return response.Blocks[0].Block, nil
+	}
+
+	if len(response.ArchivedBlocks) == 1 {
+		archive := response.ArchivedBlocks[0]
+		var archiveResponse icrc.GetBlocksResponse
+		err = client.Agent.Query(
+			archive.Callback.Method.Principal,
+			archive.Callback.Method.Method,
+			[]any{archive.Args},
+			[]any{&archiveResponse},
+		)
+		if err != nil {
+			return icrc.Block{}, fmt.Errorf("failed to query archive canister: %w", err)
+		}
+
+		if len(archiveResponse.Blocks) == 1 {
+			return archiveResponse.Blocks[0].Block, nil
+		}
+	}
+	return icrc.Block{}, errors.New("not implemented")
+}
+
+func (client *Client) fetchRawBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (types.Block, error) {
 	if canister.String() == icp.LedgerPrincipal.String() {
 		return client.fetchRawIcpBlock(ctx, blockIndex)
 	} else {
-		return icp.Block{}, errors.New("not implemented")
+		return client.fetchRawIcrcBlock(ctx, canister, blockIndex)
 	}
 
 }
@@ -642,7 +694,12 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate block hash: %w", err)
 	}
-	timestamp := block.Timestamp.ToUnixTime()
+
+	ts, err := block.Timestamp()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block timestamp: %w", err)
+	}
+	timestamp := types.NanosToUnixTime(ts)
 	xcBlock := xclient.NewBlock(xc.ICP, height, hash, timestamp)
 
 	transactions := make([]string, 0, 1)
