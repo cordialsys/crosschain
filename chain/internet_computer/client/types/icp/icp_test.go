@@ -18,7 +18,7 @@ func TestTransferHash(t *testing.T) {
 	require.NoError(t, err)
 
 	transactionByteAddress := icp.Transaction[[]byte]{
-		Memo:          0,
+		IcpMemo:          0,
 		CreatedAtTime: nil,
 		Operation: icp.Operation[[]byte]{
 			Transfer: &icp.Transfer[[]byte]{
@@ -42,7 +42,7 @@ func TestTransferHash(t *testing.T) {
 
 	// Test that `[string]` variant produce the same hash
 	transactionStringAddress := icp.Transaction[string]{
-		Memo:          0,
+		IcpMemo:          0,
 		CreatedAtTime: nil,
 		Operation: icp.Operation[string]{
 			Transfer: &icp.Transfer[string]{
@@ -74,7 +74,7 @@ func TestBurnHash(t *testing.T) {
 	require.NoError(t, err)
 
 	transaction := icp.Transaction[[]byte]{
-		Memo:          0,
+		IcpMemo:          0,
 		CreatedAtTime: &timestamp,
 		Operation: icp.Operation[[]byte]{
 			Burn: &icp.Burn[[]byte]{
@@ -103,7 +103,7 @@ func TestMintHash(t *testing.T) {
 	require.NoError(t, err)
 
 	transaction := icp.Transaction[[]byte]{
-		Memo:          1753130853,
+		IcpMemo:          1753130853,
 		CreatedAtTime: &timestamp,
 		Operation: icp.Operation[[]byte]{
 			Mint: &icp.Mint[[]byte]{

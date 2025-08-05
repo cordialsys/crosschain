@@ -164,7 +164,7 @@ func (tx Tx) Hash() xc.TxHash {
 					Spender: nil,
 				},
 			},
-			Memo:          transfer.Memo,
+			IcpMemo:       transfer.Memo,
 			CreatedAtTime: transfer.CreatedAtTime,
 			Icrc1Memo:     nil,
 			Timestamp:     nil,

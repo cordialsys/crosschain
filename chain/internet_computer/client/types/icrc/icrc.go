@@ -11,7 +11,9 @@ import (
 	"strings"
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
+	"github.com/cordialsys/crosschain/chain/internet_computer/candid"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
+	"github.com/cordialsys/crosschain/chain/internet_computer/client/types"
 	icperrors "github.com/cordialsys/crosschain/chain/internet_computer/client/types/errors"
 	"github.com/fxamacker/cbor/v2"
 )
@@ -25,6 +27,21 @@ const (
 	MethodGetIndexPrincipal      = "icrc106_get_index_principal"
 	MethodName                   = "icrc1_name"
 	MethodTransfer               = "icrc1_transfer"
+
+	blockParentHash  = "phash"
+	blockTimestamp   = "ts"
+	blockTransaction = "tx"
+
+	txCreatedAtTime     = "ts"
+	txMemo              = "memo"
+	txOperation         = "op"
+	txFrom              = "from"
+	txTo                = "to"
+	txSpender           = "spender"
+	txAmount            = "amt"
+	txFee               = "fee"
+	txExpectedAllowance = "expected_allowance"
+	txExpiresAt         = "expires_at"
 )
 
 type Account struct {
@@ -124,11 +141,296 @@ type GetBlocksRequest struct {
 	Length idl.Nat `ic:"length"`
 }
 
+type MapEntry struct {
+	Key   string  `ic:"0"`
+	Value Variant `ic:"1"`
+}
+
+type Variant struct {
+	Nat   *idl.Nat    `ic:"Nat,omitempty,variant"`
+	Blob  *[]byte     `ic:"Blob,omitempty,variant"`
+	Map   *MapWrapper `ic:"Map,omitempty,variant"`
+	Array *[]Variant  `ic:"Array,omitempty,variant"`
+	Text  *string     `ic:"Text,omitempty,variant"`
+}
+
+type MapWrapper []MapEntry
+
+func (m MapWrapper) GetValue(key string, value any) (bool, error) {
+	for _, e := range []MapEntry(m) {
+		if e.Key == key {
+			switch value.(type) {
+			case *idl.Nat:
+				value = e.Value.Nat
+			case *[]byte:
+				value = e.Value.Blob
+			case *MapWrapper:
+				value = e.Value.Map
+			case *[]Variant:
+				value = e.Value.Array
+			case *string:
+				value = e.Value.Text
+			default:
+				return false, errors.New("unsupported type")
+			}
+
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+type Block struct {
+	Map *MapWrapper `ic:"Map,omitempty,variant"`
+}
+
+var _ types.Block = &Block{}
+
+func (b Block) ParentHash() (*[]byte, error) {
+	if b.Map == nil {
+		return nil, errors.New("invalid block")
+	}
+
+	ph := []byte{}
+	_, err := b.Map.GetValue(blockParentHash, &ph)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get phash: %w", err)
+	}
+	return &ph, nil
+}
+
+func (b Block) RawTransaction() (MapWrapper, error) {
+	if b.Map == nil {
+		return MapWrapper{}, errors.New("invalid block")
+	}
+
+	var tx Variant
+	_, err := b.Map.GetValue(blockTransaction, &tx)
+	if err != nil {
+		return MapWrapper{}, fmt.Errorf("failed to get transaction: %w", err)
+	}
+
+	if tx.Map == nil {
+		return MapWrapper{}, fmt.Errorf("transaction should be a Variant.Map %w", err)
+	}
+
+	return *tx.Map, nil
+}
+
+func (b Block) Hash() (string, error) {
+	phash, err := b.ParentHash()
+	if err != nil {
+		return "", fmt.Errorf("failed to get parent hash: %w", err)
+	}
+
+	hasher := sha256.New()
+	hasher.Write(*phash)
+
+	timestamp, err := b.Timestamp()
+	if err != nil {
+		return "", fmt.Errorf("failed to get timestamp: %w", err)
+	}
+	timestampBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(timestampBytes, timestamp)
+	hasher.Write(timestampBytes)
+
+	tx, err := b.FlattenedTransaction()
+	if err != nil {
+		return "", fmt.Errorf("failed to get flattened transaction: %w", err)
+	}
+
+	txBytes, err := candid.Marshal([]interface{}{tx})
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal tx: %w", err)
+	}
+	hasher.Write(txBytes)
+
+	hash := hasher.Sum(nil)
+	return hex.EncodeToString(hash), nil
+}
+
+func (b Block) Timestamp() (uint64, error) {
+	if b.Map == nil {
+		return 0, errors.New("invalid block")
+	}
+
+	var timestamp idl.Nat
+	ok, err := b.Map.GetValue(blockTimestamp, &timestamp)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get block timestamp: %w", err)
+	}
+
+	if !ok {
+		return 0, errors.New("missing block timestamp")
+	}
+	fmt.Printf("ts: %v\n", timestamp)
+
+	return timestamp.BigInt().Uint64(), nil
+}
+
+func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
+	tx, err := b.RawTransaction()
+	if err != nil {
+		return FlattenedTransaction{}, fmt.Errorf("failed to get tx: %w", err)
+	}
+
+	var createdAt idl.Nat
+	ok, err := tx.GetValue(txCreatedAtTime, &createdAt)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var ts *uint64
+	if ok {
+		*ts = createdAt.BigInt().Uint64()
+	}
+
+	var memo []byte
+	_, err = tx.GetValue(txMemo, &memo)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var memoP *[]byte
+	if memo != nil {
+		memoP = &memo
+	}
+
+	var operation string
+	ok, err = tx.GetValue(txOperation, &operation)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	if !ok {
+		return FlattenedTransaction{}, errors.New("missing operation")
+	}
+
+	var from []byte
+	_, err = tx.GetValue(txFrom, &from)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var fromAcc *Account
+	if from != nil {
+		var account Account
+		err := cbor.Unmarshal(from, account)
+		if err != nil {
+			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'from' account: %w", err)
+		}
+		fromAcc = &account
+	}
+
+	var to []byte
+	_, err = tx.GetValue(txTo, &to)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var toAcc *Account
+	if to != nil {
+		var account Account
+		err := cbor.Unmarshal(to, account)
+		if err != nil {
+			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'to' account: %w", err)
+		}
+		toAcc = &account
+	}
+
+	var spender []byte
+	_, err = tx.GetValue(txSpender, &spender)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var spenderAcc *Account
+	if spender != nil {
+		var account Account
+		err := cbor.Unmarshal(spender, account)
+		if err != nil {
+			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'to' account: %w", err)
+		}
+		spenderAcc = &account
+	}
+
+	var amount idl.Nat
+	_, err = tx.GetValue(txAmount, &amount)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+
+	var fee idl.Nat
+	ok, err = tx.GetValue(txFee, &fee)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var feeP *uint64
+	if ok {
+		*feeP = fee.BigInt().Uint64()
+	}
+
+	var expectedAllowance idl.Nat
+	ok, err = tx.GetValue(txExpectedAllowance, &expectedAllowance)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var expectedAllowanceP *uint64
+	if ok {
+		*expectedAllowanceP = expectedAllowance.BigInt().Uint64()
+	}
+
+	var expiresAt idl.Nat
+	ok, err = tx.GetValue(txExpectedAllowance, &expiresAt)
+	if err != nil {
+		return FlattenedTransaction{}, err
+	}
+	var expiresAtP *uint64
+	if ok {
+		*expiresAtP = expiresAt.BigInt().Uint64()
+	}
+
+	return FlattenedTransaction{
+		CreatedAtTime:     ts,
+		Memo:              memoP,
+		Op:                operation,
+		From:              fromAcc,
+		To:                toAcc,
+		Spender:           spenderAcc,
+		Amount:            amount.BigInt().Uint64(),
+		Fee:               feeP,
+		ExpectedAllowance: expectedAllowanceP,
+		ExpiresAt:         expiresAtP,
+	}, nil
+}
+
+func (b Block) TxHash() (string, error) {
+	ft, err := b.FlattenedTransaction()
+	if err != nil {
+		return "", fmt.Errorf("failed to get flattened transaction: %w", err)
+	}
+	return ft.Hash()
+}
+
+func (b Block) Transaction() (types.Transaction, error) {
+	ft, err := b.FlattenedTransaction()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get flattened transaction: %w", err)
+	}
+
+	return ft.ToTransaction(), nil
+}
+
+type BlockWithId struct {
+	Id    idl.Nat `ic:"id"`
+	Block Block   `ic:"block,variant"`
+}
+
+type ArchivedBlocks struct {
+	Args     []GetBlocksRequest `ic:"args"`
+	Callback idl.Function       `ic:"callback"`
+}
+
 type GetBlocksResponse struct {
 	// Total number of blocks in the ledger
-	LogLength      idl.Nat `ic:"log_length"`
-	Blocks         []any   `ic:"blocks"`
-	ArchivedBlocks []any   `ic:"archived_blocks"`
+	LogLength      idl.Nat          `ic:"log_length"`
+	Blocks         []BlockWithId    `ic:"blocks"`
+	ArchivedBlocks []ArchivedBlocks `ic:"archived_blocks"`
 }
 
 type GetIndexPrincipalResponse struct {
@@ -253,6 +555,12 @@ type Transaction struct {
 	Transfer  *Transfer `ic:"transfer,omitempty"`
 }
 
+var _ types.Transaction = &Transaction{}
+
+func (t Transaction) Hash() (string, error) {
+	return t.ToFlattened().Hash()
+}
+
 func (t Transaction) CreatedAtTime() *uint64 {
 	if t.Burn != nil {
 		ts := new(uint64)
@@ -274,17 +582,21 @@ func (t Transaction) CreatedAtTime() *uint64 {
 	return nil
 }
 
-func (t Transaction) Memo() *[]byte {
-	if t.Burn != nil {
-		return t.Burn.Memo
-	} else if t.Mint != nil {
-		return t.Mint.Memo
-	} else if t.Approve != nil {
-		return t.Approve.Memo
-	} else if t.Transfer != nil {
-		return t.Transfer.Memo
+func (t Transaction) TxTime() uint64 {
+	return t.Timestamp.BigInt().Uint64()
+}
+
+func (t Transaction) Memo() string {
+	if t.Burn != nil && t.Burn.Memo != nil {
+		return hex.EncodeToString(*t.Burn.Memo)
+	} else if t.Mint != nil && t.Mint.Memo != nil {
+		return hex.EncodeToString(*t.Mint.Memo)
+	} else if t.Approve != nil && t.Approve.Memo != nil {
+		return hex.EncodeToString(*t.Approve.Memo)
+	} else if t.Transfer != nil && t.Transfer.Memo != nil {
+		return hex.EncodeToString(*t.Transfer.Memo)
 	}
-	return nil
+	return ""
 }
 
 func (t Transaction) Op() string {
@@ -313,6 +625,15 @@ func (t Transaction) From() *Account {
 	return nil
 }
 
+func (t Transaction) SourceAddress() string {
+	acc := t.From()
+	if acc == nil {
+		return ""
+	}
+
+	return acc.Encode()
+}
+
 func (t Transaction) To() *Account {
 	if t.Burn != nil {
 		return nil
@@ -324,6 +645,15 @@ func (t Transaction) To() *Account {
 		return &t.Transfer.To
 	}
 	return nil
+}
+
+func (t Transaction) DestinationAddress() string {
+	acc := t.To()
+	if acc == nil {
+		return ""
+	}
+
+	return acc.Encode()
 }
 
 func (t Transaction) Spender() *Account {
@@ -339,20 +669,20 @@ func (t Transaction) Spender() *Account {
 	return nil
 }
 
-func (t Transaction) Amount() uint64 {
+func (t Transaction) Amount() (uint64, error) {
 	if t.Burn != nil {
-		return t.Burn.Amount.BigInt().Uint64()
+		return t.Burn.Amount.BigInt().Uint64(), nil
 	} else if t.Mint != nil {
-		return t.Mint.Amount.BigInt().Uint64()
+		return t.Mint.Amount.BigInt().Uint64(), nil
 	} else if t.Approve != nil {
-		return t.Approve.Amount.BigInt().Uint64()
+		return t.Approve.Amount.BigInt().Uint64(), nil
 	} else if t.Transfer != nil {
-		return t.Transfer.Amount.BigInt().Uint64()
+		return t.Transfer.Amount.BigInt().Uint64(), nil
 	}
-	return 0
+	return 0, errors.New("invalid transaction, missing operation")
 }
 
-func (t Transaction) Fee() *uint64 {
+func (t Transaction) RawFee() *uint64 {
 	if t.Burn != nil {
 		return nil
 	} else if t.Mint != nil {
@@ -368,6 +698,14 @@ func (t Transaction) Fee() *uint64 {
 	}
 
 	return nil
+}
+
+func (t Transaction) Fee() uint64 {
+	rawFee := t.RawFee()
+	if rawFee == nil {
+		return 0
+	}
+	return *rawFee
 }
 
 func (t Transaction) ExpectedAllowance() *uint64 {
@@ -391,15 +729,23 @@ func (t Transaction) ExpiresAt() *uint64 {
 }
 
 func (t Transaction) ToFlattened() FlattenedTransaction {
+	var memoBytes *[]byte
+	memo := t.Memo()
+	if len(memo) > 0 {
+		mB, _ := hex.DecodeString(memo)
+		memoBytes = &mB
+	}
+
+	amnt, _ := t.Amount()
 	return FlattenedTransaction{
 		CreatedAtTime:     t.CreatedAtTime(),
-		Memo:              t.Memo(),
+		Memo:              memoBytes,
 		Op:                t.Op(),
 		From:              t.From(),
 		To:                t.To(),
 		Spender:           t.Spender(),
-		Amount:            t.Amount(),
-		Fee:               t.Fee(),
+		Amount:            amnt,
+		Fee:               t.RawFee(),
 		ExpectedAllowance: t.ExpectedAllowance(),
 		ExpiresAt:         t.ExpiresAt(),
 	}
@@ -416,6 +762,93 @@ type FlattenedTransaction struct {
 	Fee               *uint64  `cbor:"fee,omitempty"`
 	ExpectedAllowance *uint64  `cbor:"expected_allowance,omitempty"`
 	ExpiresAt         *uint64  `cbor:"expires_at,omitempty"`
+}
+
+func (t FlattenedTransaction) ToTransaction() Transaction {
+	transaction := Transaction{
+		Kind:     t.Op,
+		Burn:     nil,
+		Mint:     nil,
+		Approve:  nil,
+		Transfer: nil,
+	}
+	var createdAtTime *idl.Nat
+	if t.CreatedAtTime != nil {
+		createdAtTime = new(idl.Nat)
+		*createdAtTime = idl.NewNat(*t.CreatedAtTime)
+	}
+
+	amount := idl.NewNat(t.Amount)
+	var fee *idl.Nat
+	if t.Fee != nil {
+		fee = new(idl.Nat)
+		*fee = idl.NewNat(*t.Fee)
+	}
+
+	var mint *Mint
+	// Only 'Mint' operation is missing 'From'
+	if t.From == nil {
+		mint = new(Mint)
+		mint.To = *t.From
+		mint.Memo = t.Memo
+		mint.CreatedAtTime = createdAtTime
+		mint.Amount = amount
+		transaction.Mint = mint
+
+		return transaction
+	}
+
+	// Both 'to' and 'from' is used only for 'Transfer'
+	if t.To != nil {
+		transfer := new(Transfer)
+		transfer.To = *t.To
+		transfer.From = *t.From
+		transfer.Fee = fee
+		transfer.Memo = t.Memo
+		transfer.CreatedAtTime = createdAtTime
+		transfer.Amount = amount
+		transfer.Spender = t.Spender
+		transaction.Transfer = transfer
+
+		return transaction
+	}
+
+	// 'Burn' doesn't have fee
+	if t.Fee == nil {
+		burn := new(Burn)
+		burn.From = *t.From
+		burn.Memo = t.Memo
+		burn.CreatedAtTime = createdAtTime
+		burn.Amount = amount
+		burn.Spender = t.Spender
+		transaction.Burn = burn
+
+		return transaction
+	}
+
+	// Only 'Approve' is left
+	approve := new(Approve)
+	approve.Fee = fee
+	approve.From = *t.From
+	approve.Memo = t.Memo
+	approve.CreatedAtTime = createdAtTime
+	approve.Amount = amount
+	var expectedAllowance *idl.Nat
+	if t.ExpectedAllowance != nil {
+		expectedAllowance = new(idl.Nat)
+		*expectedAllowance = idl.NewNat(*t.ExpectedAllowance)
+	}
+	approve.ExpectedAllowance = expectedAllowance
+	var expiresAt *idl.Nat
+	if t.ExpiresAt != nil {
+		expiresAt = new(idl.Nat)
+		*expiresAt = idl.NewNat(*t.ExpiresAt)
+	}
+	approve.ExpiresAt = expiresAt
+	approve.Spender = *t.Spender
+	transaction.Approve = approve
+
+	return transaction
 }
 
 // TODO: Use proper icrc3 hash implementation when indexing by hash is out.

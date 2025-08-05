@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
+	"github.com/cordialsys/crosschain/chain/internet_computer/client/types"
 	icperrors "github.com/cordialsys/crosschain/chain/internet_computer/client/types/errors"
 	"github.com/fxamacker/cbor/v2"
 )
@@ -51,13 +51,6 @@ func NewTimestamp(timestampNanos uint64) Timestamp {
 	return Timestamp{
 		TimestampNanos: timestampNanos,
 	}
-}
-
-func (t Timestamp) ToUnixTime() time.Time {
-	seconds := int64(t.TimestampNanos / 1_000_000_000)
-	nanos := int64(t.TimestampNanos % 1_000_000_000)
-
-	return time.Unix(seconds, nanos)
 }
 
 type Tokens struct {
@@ -424,8 +417,8 @@ func (tx BlockTransaction) DestinationAddress() string {
 	return tx.Operation.To()
 }
 
-func (tx BlockTransaction) Amount() uint64 {
-	return tx.Operation.Amount()
+func (tx BlockTransaction) Amount() (uint64, error) {
+	return tx.Operation.Amount(), nil
 }
 
 func (tx BlockTransaction) Fee() uint64 {
@@ -434,11 +427,13 @@ func (tx BlockTransaction) Fee() uint64 {
 
 type Transaction[T AddressConstraint] struct {
 	Operation     Operation[T] `ic:"operation,omitempty" cbor:"0,keyasint"`
-	Memo          uint64       `ic:"memo" cbor:"1,keyasint"`
+	IcpMemo       uint64       `ic:"memo" cbor:"1,keyasint"`
 	CreatedAtTime *Timestamp   `ic:"created_at_time,omitempty" cbor:"2,keyasint"`
 	Icrc1Memo     *[]byte      `ic:"icrc1_memo,omitempty" cbor:"3,keyasint,omitempty"`
 	Timestamp     *Timestamp   `ic:"timestamp,omitempty" cbor:"-"`
 }
+
+var _ types.Transaction = &Transaction[string]{}
 
 func (tx Transaction[T]) Hash() (string, error) {
 	cborData, err := cbor.Marshal(tx)
@@ -453,16 +448,20 @@ func (tx Transaction[T]) Hash() (string, error) {
 	return hex.EncodeToString(hash), nil
 }
 
-func (tx Transaction[T]) Amount() Tokens {
-	return Tokens{
-		E8s: tx.Operation.Amount(),
+func (tx Transaction[T]) TxTime() uint64 {
+	if tx.CreatedAtTime == nil {
+		return 0
 	}
+
+	return tx.CreatedAtTime.TimestampNanos
 }
 
-func (tx Transaction[T]) Fee() Tokens {
-	return Tokens{
-		E8s: tx.Operation.Fee(),
-	}
+func (tx Transaction[T]) Amount() (uint64, error) {
+	return tx.Operation.Amount(), nil
+}
+
+func (tx Transaction[T]) Fee() uint64 {
+	return tx.Operation.Fee()
 }
 
 func (tx Transaction[T]) SourceAddress() string {
@@ -473,11 +472,21 @@ func (tx Transaction[T]) DestinationAddress() string {
 	return tx.Operation.To()
 }
 
-type Block struct {
-	ParentHash  *[]byte          `ic:"parent_hash,omitempty" json:"parent_hash,omitempty"`
-	Transaction BlockTransaction `ic:"transaction" json:"transaction"`
-	Timestamp   Timestamp        `ic:"timestamp" json:"timestamp"`
+func (tx Transaction[T]) Memo() string {
+	if tx.Icrc1Memo != nil {
+		return hex.EncodeToString(*tx.Icrc1Memo)
+	} else {
+		return fmt.Sprintf("%d", tx.IcpMemo)
+	}
 }
+
+type Block struct {
+	ParentHash *[]byte          `ic:"parent_hash,omitempty" json:"parent_hash,omitempty"`
+	Tx         BlockTransaction `ic:"transaction" json:"transaction"`
+	Ts         Timestamp        `ic:"timestamp" json:"timestamp"`
+}
+
+var _ types.Block = &Block{}
 
 func (b Block) Hash() (string, error) {
 	if b.ParentHash == nil {
@@ -490,11 +499,11 @@ func (b Block) Hash() (string, error) {
 
 	// Hash timestamp
 	timestampBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(timestampBytes, b.Timestamp.TimestampNanos)
+	binary.LittleEndian.PutUint64(timestampBytes, b.Ts.TimestampNanos)
 	hasher.Write(timestampBytes)
 
 	// Hash transaction (using Candid encoding)
-	txBytes, err := candid.Marshal([]interface{}{b.Transaction})
+	txBytes, err := candid.Marshal([]interface{}{b.Tx})
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal tx: %w", err)
 	}
@@ -504,18 +513,22 @@ func (b Block) Hash() (string, error) {
 	return hex.EncodeToString(hash), nil
 }
 
+func (b Block) Timestamp() (uint64, error) {
+	return b.Ts.TimestampNanos, nil
+}
+
 func (b Block) TxHash() (string, error) {
-	tx := b.Transaction
+	tx := b.Tx
 	var createdAtTime *Timestamp
 	// `get_blocks` and `query_blocks` methods are filling empty `created_at_time` values
 	// which in turn breaks tx hash
-	if tx.CreatedAtTime.TimestampNanos != b.Timestamp.TimestampNanos {
+	if tx.CreatedAtTime.TimestampNanos != b.Ts.TimestampNanos {
 		createdAtTime = &tx.CreatedAtTime
 	}
 
 	t := Transaction[[]byte]{
 		Operation:     *tx.Operation,
-		Memo:          tx.Memo,
+		IcpMemo:       tx.Memo,
 		CreatedAtTime: createdAtTime,
 		Icrc1Memo:     tx.Icrc1Memo,
 		Timestamp:     tx.Timestamp,
@@ -530,6 +543,24 @@ func (b Block) TxHash() (string, error) {
 	hash := hasher.Sum(nil)
 
 	return hex.EncodeToString(hash), nil
+}
+
+func (b Block) Transaction() (types.Transaction, error) {
+	tx := b.Tx
+	var createdAtTime *Timestamp
+	// `get_blocks` and `query_blocks` methods are filling empty `created_at_time` values
+	// which in turn breaks tx hash
+	if tx.CreatedAtTime.TimestampNanos != b.Ts.TimestampNanos {
+		createdAtTime = &tx.CreatedAtTime
+	}
+
+	return Transaction[[]byte]{
+		Operation:     *tx.Operation,
+		IcpMemo:       tx.Memo,
+		CreatedAtTime: createdAtTime,
+		Icrc1Memo:     tx.Icrc1Memo,
+		Timestamp:     tx.Timestamp,
+	}, nil
 }
 
 type QueryBlocksResponse struct {
