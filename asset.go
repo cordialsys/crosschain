@@ -695,6 +695,8 @@ type ChainClientConfig struct {
 	Legacy bool `yaml:"legacy,omitempty"`
 	// Indicate to the driver if additional information should be included for older crosschain clients.
 	IncludeLegacyInformation bool `yaml:"include_legacy_information,omitempty"`
+	// If true, the client will only use confirmed UTXOs for unspent output queries.
+	ConfirmedUtxo bool `yaml:"confirmed_utxo,omitempty"`
 }
 
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
