@@ -59,6 +59,29 @@ func (a *Account) MarshalCBOR() ([]byte, error) {
 	return cbor.Marshal(arr)
 }
 
+func AccountFromCandidVariant(v []Variant) (Account, error) {
+	if len(v) == 0 {
+		return Account{}, errors.New("account requires at least one 'Variant.Array' item")
+	}
+
+	ownerBlob := v[0].Blob
+	if ownerBlob == nil {
+		return Account{}, errors.New("at least one 'Variant.Blob' is required for a valid 'Account'")
+	}
+
+	account := Account{
+		Owner: address.Principal{
+			Raw: *ownerBlob,
+		},
+	}
+
+	if len(v) == 2 {
+		account.Subaccount = v[1].Blob
+	}
+
+	return account, nil
+}
+
 func verifyChecksum(checksum string, principalBytes []byte, subaccount []byte) (bool, error) {
 	var encoding = base32.StdEncoding.WithPadding(base32.NoPadding)
 	checksumBytes, err := encoding.DecodeString(strings.ToUpper(checksum))
@@ -159,19 +182,34 @@ type MapWrapper []MapEntry
 func (m MapWrapper) GetValue(key string, value any) (bool, error) {
 	for _, e := range []MapEntry(m) {
 		if e.Key == key {
-			switch value.(type) {
+			switch v := value.(type) {
 			case *idl.Nat:
-				value = e.Value.Nat
+				if e.Value.Nat == nil {
+					return false, nil
+				}
+				*v = *e.Value.Nat
 			case *[]byte:
-				value = e.Value.Blob
+				if e.Value.Blob == nil {
+					return false, nil
+				}
+				*v = *e.Value.Blob
 			case *MapWrapper:
-				value = e.Value.Map
-			case *[]Variant:
-				value = e.Value.Array
+				if e.Value.Map == nil {
+					return false, nil
+				}
+				*v = *e.Value.Map
 			case *string:
-				value = e.Value.Text
+				if e.Value.Text == nil {
+					return false, nil
+				}
+				*v = *e.Value.Text
+			case *[]Variant:
+				if e.Value.Array == nil {
+					return false, nil
+				}
+				*v = *e.Value.Array
 			default:
-				return false, errors.New("unsupported type")
+				return false, fmt.Errorf("unsupported type: %v", value)
 			}
 
 			return true, nil
@@ -205,17 +243,13 @@ func (b Block) RawTransaction() (MapWrapper, error) {
 		return MapWrapper{}, errors.New("invalid block")
 	}
 
-	var tx Variant
+	var tx MapWrapper
 	_, err := b.Map.GetValue(blockTransaction, &tx)
 	if err != nil {
 		return MapWrapper{}, fmt.Errorf("failed to get transaction: %w", err)
 	}
 
-	if tx.Map == nil {
-		return MapWrapper{}, fmt.Errorf("transaction should be a Variant.Map %w", err)
-	}
-
-	return *tx.Map, nil
+	return tx, nil
 }
 
 func (b Block) Hash() (string, error) {
@@ -264,7 +298,6 @@ func (b Block) Timestamp() (uint64, error) {
 	if !ok {
 		return 0, errors.New("missing block timestamp")
 	}
-	fmt.Printf("ts: %v\n", timestamp)
 
 	return timestamp.BigInt().Uint64(), nil
 }
@@ -304,49 +337,46 @@ func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
 		return FlattenedTransaction{}, errors.New("missing operation")
 	}
 
-	var from []byte
+	from := []Variant{}
 	_, err = tx.GetValue(txFrom, &from)
 	if err != nil {
 		return FlattenedTransaction{}, err
 	}
 	var fromAcc *Account
-	if from != nil {
-		var account Account
-		err := cbor.Unmarshal(from, account)
+	if len(from) > 0 {
+		acc, err := AccountFromCandidVariant(from)
 		if err != nil {
 			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'from' account: %w", err)
 		}
-		fromAcc = &account
+		fromAcc = &acc
 	}
 
-	var to []byte
+	to := []Variant{}
 	_, err = tx.GetValue(txTo, &to)
 	if err != nil {
 		return FlattenedTransaction{}, err
 	}
 	var toAcc *Account
-	if to != nil {
-		var account Account
-		err := cbor.Unmarshal(to, account)
+	if len(to) > 0 {
+		acc, err := AccountFromCandidVariant(to)
 		if err != nil {
 			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'to' account: %w", err)
 		}
-		toAcc = &account
+		toAcc = &acc
 	}
 
-	var spender []byte
+	var spender []Variant
 	_, err = tx.GetValue(txSpender, &spender)
 	if err != nil {
 		return FlattenedTransaction{}, err
 	}
 	var spenderAcc *Account
-	if spender != nil {
-		var account Account
-		err := cbor.Unmarshal(spender, account)
+	if len(spender) > 0 {
+		acc, err := AccountFromCandidVariant(spender)
 		if err != nil {
-			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'to' account: %w", err)
+			return FlattenedTransaction{}, fmt.Errorf("failed to unmarshal 'spender' account: %w", err)
 		}
-		spenderAcc = &account
+		spenderAcc = &acc
 	}
 
 	var amount idl.Nat
@@ -362,6 +392,7 @@ func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
 	}
 	var feeP *uint64
 	if ok {
+		feeP = new(uint64)
 		*feeP = fee.BigInt().Uint64()
 	}
 
@@ -563,18 +594,30 @@ func (t Transaction) Hash() (string, error) {
 
 func (t Transaction) CreatedAtTime() *uint64 {
 	if t.Burn != nil {
+		if t.Burn.CreatedAtTime == nil {
+			return nil
+		}
 		ts := new(uint64)
 		*ts = t.Burn.CreatedAtTime.BigInt().Uint64()
 		return ts
 	} else if t.Mint != nil {
+		if t.Mint.CreatedAtTime == nil {
+			return nil
+		}
 		ts := new(uint64)
 		*ts = t.Mint.CreatedAtTime.BigInt().Uint64()
 		return ts
 	} else if t.Approve != nil {
+		if t.Approve.CreatedAtTime == nil {
+			return nil
+		}
 		ts := new(uint64)
 		*ts = t.Approve.CreatedAtTime.BigInt().Uint64()
 		return ts
 	} else if t.Transfer != nil && t.Transfer.CreatedAtTime != nil {
+		if t.Transfer.CreatedAtTime == nil {
+			return nil
+		}
 		ts := new(uint64)
 		*ts = t.Transfer.CreatedAtTime.BigInt().Uint64()
 		return ts
@@ -607,7 +650,7 @@ func (t Transaction) Op() string {
 	} else if t.Approve != nil {
 		return "approve"
 	} else if t.Transfer != nil {
-		return "transfer"
+		return "xfer"
 	}
 	return ""
 }
@@ -789,7 +832,7 @@ func (t FlattenedTransaction) ToTransaction() Transaction {
 	// Only 'Mint' operation is missing 'From'
 	if t.From == nil {
 		mint = new(Mint)
-		mint.To = *t.From
+		mint.To = *t.To
 		mint.Memo = t.Memo
 		mint.CreatedAtTime = createdAtTime
 		mint.Amount = amount
