@@ -566,7 +566,29 @@ chains:
     chain_name: Internet Computer Protocol
     confirmations_final: 1
     decimals: 8
-    fee_limit: "100.0"
+    # Token list: https://dashboard.internetcomputer.org/tokens
+    # Top ICP tokens by 7d transaction count:
+    native_assets:
+      - asset_id: "ICP"
+        contract_id: "ryjl3-tyaaa-aaaaa-aaaba-cai"
+        fee_limit: "100.0"
+        decimals: 8
+      - asset_id: "ckBTC"
+        contract_id: "mxzaz-hqaaa-aaaar-qaada-cai"
+        fee_limit: "0.0001" # ~ 11usd at the moment, default is '0.00000010',
+        decimals: 8
+      - asset_id: "BOOM"
+        contract_id: "vtrom-gqaaa-aaaaq-aabia-cai"
+        fee_limit: "100.0" # default is '0.1',
+        decimals: 8
+      - asset_id: "WTN"
+        contract_id: "jcmow-hyaaa-aaaaq-aadlq-cai"
+        fee_limit: "100.0" # default is '0.1',
+        decimals: 8
+      - asset_id: "ckUSDT"
+        contract_id: "cngnf-vqaaa-aaaar-qag4q-cai"
+        fee_limit: "10.0" # default is '0.0001',
+        decimals: 6
     external:
       coin_market_cap:
         asset_id: "8916"

@@ -351,11 +351,11 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	}
 	xcAmount := xc.NewAmountBlockchainFromUint64(amount)
 
-	contract := ""
+	contract := xc.ContractAddress("")
 	if canister.Encode() != icp.LedgerPrincipal.Encode() {
-		contract = canister.Encode()
+		contract = xc.ContractAddress(canister.Encode())
 	}
-	movement := xclient.NewMovement(client.Asset.GetChain().Chain, xc.ContractAddress(contract))
+	movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
 	movement.AddSource(sourceAddress, xcAmount, nil)
 	movement.AddDestination(destinationAddress, xcAmount, nil)
 	movement.SetMemo(transaction.Memo())
@@ -363,7 +363,7 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	txInfo.AddMovement(movement)
 
 	fee := xc.NewAmountBlockchainFromUint64(transaction.Fee())
-	txInfo.AddFee(sourceAddress, "", fee, nil)
+	txInfo.AddFee(sourceAddress, contract, fee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
 
