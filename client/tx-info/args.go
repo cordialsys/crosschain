@@ -9,8 +9,8 @@ type Args struct {
 	hash xc.TxHash
 	// Optional contract address
 	contract xc.ContractAddress
-	// Optional sender address
-	sender xc.Address
+	// Optional hex encoded sender public key
+	sender string
 	// Optional sign time
 	sign_time uint64
 }
@@ -31,11 +31,11 @@ func (args *Args) SetContract(contract xc.ContractAddress) {
 	args.contract = contract
 }
 
-func (args *Args) Sender() (xc.Address, bool) {
+func (args *Args) Sender() (string, bool) {
 	return args.sender, args.sender != ""
 }
 
-func (args *Args) SetSender(sender xc.Address) {
+func (args *Args) SetSender(sender string) {
 	args.sender = sender
 }
 
@@ -63,7 +63,7 @@ func OptionContract(contract xc.ContractAddress) Option {
 	}
 }
 
-func OptionSender(sender xc.Address) Option {
+func OptionSender(sender string) Option {
 	return func(args *Args) {
 		args.SetSender(sender)
 	}

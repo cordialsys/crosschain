@@ -11,6 +11,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
@@ -409,7 +410,6 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	// We can fetch the transaction direclty if we receive a block index
 	// Fallback to account history lookup otherwise
 	blockIndex, err := strconv.Atoi(string(args.TxHash()))
-
 	ledgerCanister := icp.LedgerPrincipal
 	contract, ok := args.Contract()
 	if ok {
@@ -425,12 +425,31 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, uint64(blockIndex))
 	} else {
 		hash := args.TxHash()
-		sender, ok := args.Sender()
+		senderPubkey, ok := args.Sender()
 		if !ok {
-			return xclient.TxInfo{}, errors.New("fetching icp transactions by hash requires a sender address")
+			return xclient.TxInfo{}, errors.New("fetching icp transactions by hash requires a sender pubkey")
 		}
 
-		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, sender)
+		addressBuilder, err := address.NewAddressBuilder(nil, xcaddress.OptionContract(contract))
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to create address builder: %w", err)
+		}
+
+		pkbytes, err := hex.DecodeString(senderPubkey)
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to decode sender pubkey: %w", err)
+		}
+
+		senderAddress, err := addressBuilder.GetAddressFromPublicKey(pkbytes)
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to get sender address: %w", err)
+		}
+
+		if ledgerCanister.Encode() == icp.LedgerPrincipal.Encode() {
+		} else {
+
+		}
+		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, senderAddress)
 	}
 }
 
