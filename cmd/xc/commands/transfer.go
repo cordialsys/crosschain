@@ -28,7 +28,6 @@ func CmdTxTransfer() *cobra.Command {
 	var fromSecretRef string
 	var feePayerSecretRef string
 	var previousAttempts []string
-	var sender string
 	var tx_time uint64
 
 	cmd := &cobra.Command{
@@ -70,18 +69,8 @@ func CmdTxTransfer() *cobra.Command {
 			}
 			algorithm, _ := cmd.Flags().GetString("algorithm")
 			addressArgs := []xcaddress.AddressOption{}
-			infoArgs := []txinfo.Option{}
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
-			}
-			if contract != "" {
-				infoArgs = append(infoArgs, txinfo.OptionContract(xc.ContractAddress(contract)))
-			}
-			if sender != "" {
-				infoArgs = append(infoArgs, txinfo.OptionSender(xc.Address(sender)))
-			}
-			if tx_time != 0 {
-				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
 			}
 
 			toWalletAddress := args[0]
@@ -333,6 +322,14 @@ func CmdTxTransfer() *cobra.Command {
 			logrus.Info("fetching transaction...")
 			start := time.Now()
 
+			infoArgs := []txinfo.Option{}
+			infoArgs = append(infoArgs, txinfo.OptionSender(hex.EncodeToString(publicKey)))
+			if contract != "" {
+				infoArgs = append(infoArgs, txinfo.OptionContract(xc.ContractAddress(contract)))
+			}
+			if tx_time != 0 {
+				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
+			}
 			txInfoArgs := txinfo.NewArgs(tx.Hash(), infoArgs...)
 			for time.Since(start) < timeout {
 				info, err := client.FetchTxInfo(context.Background(), txInfoArgs)
@@ -369,7 +366,6 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
 	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
-	cmd.Flags().StringVar(&sender, "sender", "", "Address of the transaction sender")
 	cmd.Flags().Uint64Var(&tx_time, "tx-time", 0, "Block time of the transaction")
 	return cmd
 }
