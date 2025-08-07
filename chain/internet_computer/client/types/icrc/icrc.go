@@ -27,6 +27,7 @@ const (
 	MethodGetIndexPrincipal      = "icrc106_get_index_principal"
 	MethodName                   = "icrc1_name"
 	MethodTransfer               = "icrc1_transfer"
+	MethodMetadata               = "icrc1_metadata"
 
 	blockParentHash  = "phash"
 	blockTimestamp   = "ts"
@@ -42,6 +43,8 @@ const (
 	txFee               = "fee"
 	txExpectedAllowance = "expected_allowance"
 	txExpiresAt         = "expires_at"
+
+	KeyDecimals = "icrc1:decimals"
 )
 
 type Account struct {
