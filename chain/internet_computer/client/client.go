@@ -494,7 +494,28 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return 8, nil
+	if contract == "" {
+		return 8, nil
+	}
+
+	canister, err := address.Decode(string(contract))
+	if err != nil {
+		return 0, fmt.Errorf("failed to decode canister principal: %w", err)
+	}
+
+	var metadata icrc.MapWrapper
+	err = client.Agent.Query(canister, icrc.MethodMetadata, []any{}, []any{&metadata})
+
+	var decimals idl.Nat
+	ok, err := metadata.GetValue(icrc.KeyDecimals, &decimals)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch decimals: %w", err)
+	}
+	if !ok {
+		return 8, nil
+	}
+
+	return int(decimals.BigInt().Uint64()), nil
 }
 
 func (client *Client) fetchHeight(ctx context.Context, canister icpaddress.Principal) (uint64, error) {
