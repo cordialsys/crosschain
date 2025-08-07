@@ -333,7 +333,8 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, types.NanosToUnixTime(ts))
+	blockTimestamp := time.Unix(0, int64(ts)).UTC()
+	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, blockTimestamp)
 	txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
 
 	transaction, err := block.Transaction()
@@ -653,7 +654,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block timestamp: %w", err)
 	}
-	timestamp := types.NanosToUnixTime(ts)
+	timestamp := time.Unix(0, int64(ts)).UTC()
 	xcBlock := xclient.NewBlock(xc.ICP, height, hash, timestamp)
 
 	transactions := make([]string, 0, 1)
