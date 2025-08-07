@@ -315,6 +315,7 @@ func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
 	}
 	var ts *uint64
 	if ok {
+		ts = new(uint64)
 		*ts = createdAt.BigInt().Uint64()
 	}
 
@@ -403,6 +404,7 @@ func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
 	}
 	var expectedAllowanceP *uint64
 	if ok {
+		expectedAllowanceP = new(uint64)
 		*expectedAllowanceP = expectedAllowance.BigInt().Uint64()
 	}
 
@@ -413,6 +415,7 @@ func (b Block) FlattenedTransaction() (FlattenedTransaction, error) {
 	}
 	var expiresAtP *uint64
 	if ok {
+		expiresAtP = new(uint64)
 		*expiresAtP = expiresAt.BigInt().Uint64()
 	}
 
