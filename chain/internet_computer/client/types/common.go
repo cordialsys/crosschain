@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"time"
 
 	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/leb128"
@@ -250,11 +249,4 @@ type Block interface {
 	Timestamp() (uint64, error)
 	TxHash() (string, error)
 	Transaction() (Transaction, error)
-}
-
-func NanosToUnixTime(nanoseconds uint64) time.Time {
-	seconds := int64(nanoseconds / 1_000_000_000)
-	nanos := int64(nanoseconds % 1_000_000_000)
-
-	return time.Unix(seconds, nanos)
 }
