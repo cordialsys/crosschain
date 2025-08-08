@@ -27,16 +27,24 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestGetTokenAddressFromPublicKey(t *testing.T) {
+func TestGetIcrcAddressFromPublicKey(t *testing.T) {
 	pk := "bd08143ec55c47d3be603f8cf395025f8473d0e4d09a72eb83631fc1d745fb31"
 	pkBytes, err := hex.DecodeString(pk)
 	require.NoError(t, err)
 
 	addressArgs := []xcaddress.AddressOption{}
-	addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress("any-works")))
+	addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat("icrc1")))
 	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("ICP").Base(), addressArgs...)
 
 	address, err := builder.GetAddressFromPublicKey(pkBytes)
 	require.Equal(t, xc.Address("mglk4-25zez-he5uh-lsy2a-bontn-pfarj-offxd-5teb2-icnpp-scmni-zae"), address)
 	require.NoError(t, err)
+}
+
+func TestGetInvalidAddressFromPublicKey(t *testing.T) {
+	addressArgs := []xcaddress.AddressOption{}
+	addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat("invalid")))
+	_, err := address.NewAddressBuilder(xc.NewChainConfig("ICP").Base(), addressArgs...)
+	require.ErrorContains(t, err, "unsupported format")
+
 }

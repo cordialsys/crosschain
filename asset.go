@@ -399,6 +399,12 @@ type StakingConfig struct {
 	Providers []StakingProvider `yaml:"providers,omitempty"`
 }
 
+// Optional address configuration
+type AddressConfig struct {
+	// All formats supported by chain, including default
+	Formats []AddressFormat `yaml:"formats,omitempty"`
+}
+
 type AdditionalNativeAsset struct {
 	// The asset ID of the asset to use
 	AssetId string `yaml:"asset_id,omitempty"`
@@ -605,6 +611,9 @@ type ChainBaseConfig struct {
 
 	// Should use `ChainID` instead
 	XChainIDStr string `yaml:"chain_id_str,omitempty"`
+
+	// Optional address configuration
+	Address AddressConfig `yaml:"address,omitempty"`
 }
 
 func (chain *ChainConfig) Configure(httpTimeout time.Duration) {

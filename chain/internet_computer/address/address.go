@@ -16,6 +16,11 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 )
 
+const (
+	FormatIcp   = "icp"
+	FormatIcrc1 = "icrc1"
+)
+
 var (
 	// AnonymousPrincipal is used for anynymous requests. It can query/call without
 	// a signature.
@@ -26,7 +31,7 @@ var (
 
 // AddressBuilder for InternetComputerProtocol
 type AddressBuilder struct {
-	Contract xc.ContractAddress
+	Format xc.AddressFormat
 }
 
 type AccountId []byte
@@ -40,9 +45,17 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig, options ...xcaddress.AddressOpt
 		return AddressBuilder{}, err
 	}
 
-	contract, _ := opts.GetContract()
+	format, ok := opts.GetFormat()
+	if ok {
+		if format != "" && format != FormatIcp && format != FormatIcrc1 {
+			return nil, fmt.Errorf(
+				"unsupported format: %s, expected: ['icp', 'icrc1'] - default: 'icp'",
+				format,
+			)
+		}
+	}
 	return AddressBuilder{
-		Contract: contract,
+		Format: format,
 	}, nil
 }
 
@@ -58,8 +71,8 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", fmt.Errorf("failed to get principal from public key: %w", err)
 	}
 
-	// ICRC1 account representation differs from ICP addresses
-	if ab.Contract == "" {
+	// ICP account format differs from ICRC1
+	if ab.Format == FormatIcp || ab.Format == "" {
 		accountId := NewAccountId(principal)
 		address := accountId.Encode()
 		return xc.Address(address), nil
