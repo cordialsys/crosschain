@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/kaspa"
@@ -246,6 +247,32 @@ func TestLegacyChainCoinConfig(t *testing.T) {
 							chain.Chain, na.AssetId,
 						))
 					}
+				}
+			})
+		}
+	}
+}
+
+func TestSupportedAddressFormats(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				require := require.New(t)
+				if len(chain.Address.Formats) > 1 {
+					for _, format := range chain.Address.Formats {
+						addressArgs := []address.AddressOption{}
+						addressArgs = append(addressArgs, address.OptionFormat(format))
+						_, err := factory.NewDefaultFactory().NewAddressBuilder(
+							chain.ChainBaseConfig, addressArgs...,
+						)
+						require.NoError(err)
+					}
+				} else if len(chain.Address.Formats) == 1 {
+					panic(
+						fmt.Sprintf("invalid address formats configuration for: %s, unnecessary base format", chain.Chain),
+					)
 				}
 			})
 		}

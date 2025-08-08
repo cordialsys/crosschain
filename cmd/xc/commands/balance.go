@@ -15,6 +15,7 @@ func CmdRpcBalance() *cobra.Command {
 	var contract string
 	var decimal bool
 	var privateKeyRef string
+	var format string
 	cmd := &cobra.Command{
 		Use:   "balance [address]",
 		Short: "Check balance of an asset.  Reported as big integer, not accounting for any decimals.",
@@ -24,7 +25,7 @@ func CmdRpcBalance() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 
-			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef, format)
 			if err != nil {
 				return err
 			}
@@ -63,5 +64,6 @@ func CmdRpcBalance() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().BoolVar(&decimal, "decimal", false, "Report balance as a decimal.  If set, the decimals will be looked up.")
+	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
 	return cmd
 }

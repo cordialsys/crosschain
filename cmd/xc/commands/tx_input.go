@@ -27,6 +27,7 @@ func CmdTxInput() *cobra.Command {
 	var feePayerSecretRef string
 	var feePayer bool
 	var feePayerAddress string
+	var format string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input", "transfer-input"},
@@ -37,7 +38,7 @@ func CmdTxInput() *cobra.Command {
 			contract, _ := cmd.Flags().GetString("contract")
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			fromAddress, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
+			fromAddress, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef, format)
 			if err != nil {
 				return err
 			}
@@ -163,6 +164,7 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (uses --fee-payer-secret)")
 	cmd.Flags().StringVar(&feePayerSecretRef, "fee-payer-secret", "env:"+signer.EnvPrivateKeyFeePayer, "Secret reference for the fee-payer address private key")
 	cmd.Flags().StringVar(&feePayerAddress, "fee-payer-address", "", "Use address value as fee-payer")
+	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
 
 	return cmd
 }
