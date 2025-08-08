@@ -144,10 +144,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	return nil
 }
 
-func (tx *Tx) GetSignatures() []xc.TxSignature {
-	return tx.Signatures
-}
-
 func (tx Tx) Serialize() ([]byte, error) {
 	if len(tx.TxEnvelope.Operations()) == 0 {
 		return []byte{}, errors.New("missing transaction operations")

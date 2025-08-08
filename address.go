@@ -3,6 +3,9 @@ package crosschain
 // Address is an address on the blockchain, either sender or recipient
 type Address string
 
+// Address format is a format of an addres, in case the chain support multiple formats
+type AddressFormat string
+
 // ContractAddress is a smart contract address
 type ContractAddress Address
 

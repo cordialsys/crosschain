@@ -21,9 +21,7 @@ func (tx *MockXcTx) Sighashes() ([]*xc.SignatureRequest, error) {
 func (tx *MockXcTx) SetSignatures(...*xc.SignatureResponse) error {
 	panic("not supported")
 }
-func (tx *MockXcTx) GetSignatures() []xc.TxSignature {
-	return tx.Signatures
-}
+
 func (tx *MockXcTx) Serialize() ([]byte, error) {
 	return tx.SerializedSignedTx, nil
 }

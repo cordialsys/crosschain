@@ -6,10 +6,12 @@ import (
 
 type addressOptions struct {
 	algorithm *xc.SignatureType
+	format    *xc.AddressFormat
 }
 
 type AddressOptions interface {
 	GetAlgorithmType() (xc.SignatureType, bool)
+	GetFormat() (xc.AddressFormat, bool)
 }
 
 var _ AddressOptions = &addressOptions{}
@@ -26,12 +28,27 @@ func (opts *addressOptions) GetAlgorithmType() (xc.SignatureType, bool) {
 	return get(opts.algorithm)
 }
 
+func (opts *addressOptions) GetFormat() (xc.AddressFormat, bool) {
+	return get(opts.format)
+}
+
 type AddressOption func(opts *addressOptions) error
 
 func OptionAlgorithm(algorithm xc.SignatureType) AddressOption {
 	return func(opts *addressOptions) error {
 		if algorithm != "" {
 			opts.algorithm = &algorithm
+			return nil
+		}
+
+		return nil
+	}
+}
+
+func OptionFormat(format xc.AddressFormat) AddressOption {
+	return func(opts *addressOptions) error {
+		if string(format) != "" {
+			opts.format = &format
 			return nil
 		}
 

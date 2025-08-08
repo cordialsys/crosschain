@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,7 @@ func CmdTxInfo() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "")
-	cmd.Flags().StringVar(&sender, "sender", "", "Transaction sender")
+	cmd.Flags().StringVar(&sender, "sender", "", "Address of transaction sender")
 	cmd.Flags().Uint64Var(&tx_time, "tx_time", 0, "Time of the transaction")
 	return cmd
 }
