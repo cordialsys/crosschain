@@ -19,6 +19,7 @@ func CmdFund() *cobra.Command {
 	var amountHuman string
 	var decimalsStr string
 	var privateKeyRef string
+	var format string
 	var api string
 	cmd := &cobra.Command{
 		Use:   "fund [address]",
@@ -27,7 +28,7 @@ func CmdFund() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef)
+			address, err := inputAddressOrDerived(xcFactory, chainConfig, args, privateKeyRef, format)
 			if err != nil {
 				return err
 			}
@@ -82,5 +83,6 @@ func CmdFund() *cobra.Command {
 	cmd.Flags().StringVar(&api, "api", "http://127.0.0.1:10001", "API url to use for faucet.")
 	cmd.Flags().StringVar(&amountHuman, "amount", "1", "Decimal-adjusted amount of funds to request.")
 	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
+	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
 	return cmd
 }

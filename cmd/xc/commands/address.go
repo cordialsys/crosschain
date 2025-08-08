@@ -13,6 +13,7 @@ import (
 
 func CmdAddress() *cobra.Command {
 	var privateKeyRef string
+	var format string
 	cmd := &cobra.Command{
 		Use:   "address",
 		Short: fmt.Sprintf("Derive an address from the %s environment variable.", signer.EnvPrivateKey),
@@ -21,13 +22,12 @@ func CmdAddress() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			algorithm, _ := cmd.Flags().GetString("algorithm")
-			contract, _ := cmd.Flags().GetString("contract")
 			addressArgs := []xcaddress.AddressOption{}
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}
-			if contract != "" {
-				addressArgs = append(addressArgs, xcaddress.OptionContract(xc.ContractAddress(contract)))
+			if format != "" {
+				addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat(format)))
 			}
 
 			privateKeyInput, err := config.GetSecret(privateKeyRef)
@@ -65,5 +65,6 @@ func CmdAddress() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	cmd.Flags().String("contract", "", "Contract address of asset to send, if applicable")
+	cmd.Flags().StringVar(&format, "format", "", "Format of the address")
 	return cmd
 }

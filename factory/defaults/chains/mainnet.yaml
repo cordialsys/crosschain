@@ -565,6 +565,8 @@ chains:
     driver: icp
     chain_name: Internet Computer Protocol
     confirmations_final: 1
+    address:
+      formats: ["icp", "icrc1"]
     decimals: 8
     # Token list: https://dashboard.internetcomputer.org/tokens
     # Top ICP tokens by 7d transaction count:

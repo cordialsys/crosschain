@@ -33,7 +33,7 @@ func CmdTxInfo() *cobra.Command {
 				options = append(options, txinfo.OptionContract(xc.ContractAddress(contract)))
 			}
 			if sender != "" {
-				options = append(options, txinfo.OptionSender(sender))
+				options = append(options, txinfo.OptionSender(xc.Address(sender)))
 			}
 			if tx_time != 0 {
 				options = append(options, txinfo.OptionTxTime(tx_time))
@@ -56,7 +56,7 @@ func CmdTxInfo() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "")
-	cmd.Flags().StringVar(&sender, "sender", "", "Public key of transaction sender")
+	cmd.Flags().StringVar(&sender, "sender", "", "Address of transaction sender")
 	cmd.Flags().Uint64Var(&tx_time, "tx_time", 0, "Time of the transaction")
 	return cmd
 }

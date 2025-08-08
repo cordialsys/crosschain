@@ -5,12 +5,13 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
-func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string, keyRef string) (xc.Address, error) {
+func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string, keyRef string, format string) (xc.Address, error) {
 	if len(args) > 0 {
 		return xc.Address(args[0]), nil
 	}
@@ -32,11 +33,13 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 		return "", fmt.Errorf("could not import private key: %v", err)
 	}
 
+	addressArgs := []xcaddress.AddressOption{}
+	addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat(format)))
 	publicKey, err := signer.PublicKey()
 	if err != nil {
 		return "", fmt.Errorf("could not create public key: %v", err)
 	}
-	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 	if err != nil {
 		return "", fmt.Errorf("could not create address builder: %v", err)
 	}
