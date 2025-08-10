@@ -130,12 +130,13 @@ chains:
     chain_id: 1
     confirmations_final: 1
     chain_name: Aptos
-    chain_coin: "0x1::aptos_coin::AptosCoin"
+    # chain_coin: "0x1::aptos_coin::AptosCoin"
     decimals: 8
     fee_limit: "10.0"
     native_assets:
       - asset_id: "APTOS"
         contract_id: "0x1::aptos_coin::AptosCoin"
+        aliases: ["0xa"]
         decimals: 8
         fee_limit: "10.0"
     external:
