@@ -1,10 +1,12 @@
 package normalize_test
 
 import (
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	n "github.com/cordialsys/crosschain/normalize"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -98,8 +100,8 @@ func (s *NormalizeTestSuite) TestNormalizeTransactionHash() {
 	}
 }
 
-func (s *NormalizeTestSuite) TestNormalizeAddress() {
-	require := s.Require()
+func TestNormalizeAddress(t *testing.T) {
+	require := require.New(t)
 
 	type testcase struct {
 		chain xc.NativeAsset
@@ -142,7 +144,7 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 		{
 			chain: xc.APTOS,
 			inp:   "0x0ECE",
-			out:   "0x0ece",
+			out:   "0x0000000000000000000000000000000000000000000000000000000000000ece",
 		},
 		{
 			chain: xc.SUI,
@@ -163,6 +165,21 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 			chain: xc.APTOS,
 			inp:   "other::Thing<0x11AAbbCCdd::coin::NAME>",
 			out:   "other::Thing<0x11aabbccdd::coin::NAME>",
+		},
+		{
+			chain: xc.APTOS,
+			inp:   "0x89556578008574ed3fddda6bc2ea6bee475b042e237bbb2f447c263086edcc5",
+			out:   "0x089556578008574ed3fddda6bc2ea6bee475b042e237bbb2f447c263086edcc5",
+		},
+		{
+			chain: xc.APTOS,
+			inp:   "0x2d91309b5b07a8be428ccd75d0443e81542ffcd059d0ab380cefc552229b1a",
+			out:   "0x002d91309b5b07a8be428ccd75d0443e81542ffcd059d0ab380cefc552229b1a",
+		},
+		{
+			chain: xc.APTOS,
+			inp:   "0xb5b07a8be428ccd75d0443e81542ffcd059d0ab380cefc552229b1a",
+			out:   "0x000000000b5b07a8be428ccd75d0443e81542ffcd059d0ab380cefc552229b1a",
 		},
 		{
 			chain: xc.XDC,
@@ -191,15 +208,17 @@ func (s *NormalizeTestSuite) TestNormalizeAddress() {
 		},
 	}
 	for _, v := range vectors {
-		normalizedOut := n.Normalize(v.inp, v.chain)
-		require.Equal(v.out, normalizedOut)
+		t.Run(fmt.Sprintf("%s-%s", v.chain, v.inp), func(t *testing.T) {
+			normalizedOut := n.Normalize(v.inp, v.chain)
+			require.Equal(v.out, normalizedOut)
 
-		normalizedOut2 := n.Normalize(v.inp, v.chain)
-		require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
+			normalizedOut2 := n.Normalize(v.inp, v.chain)
+			require.Equal(normalizedOut, normalizedOut2, "Normalize should be idempotent")
 
-		addressId := normalizeId(normalizedOut)
-		addressIdNormalizedAgain := n.Normalize(addressId, v.chain)
-		require.Equal(addressId, addressIdNormalizedAgain, "Normalize should not change an address after converted to ID compatible form")
+			addressId := normalizeId(normalizedOut)
+			addressIdNormalizedAgain := n.Normalize(addressId, v.chain)
+			require.Equal(addressId, addressIdNormalizedAgain, "Normalize should not change an address after converted to ID compatible form")
+		})
 	}
 
 }
