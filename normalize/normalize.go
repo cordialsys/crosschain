@@ -102,8 +102,22 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		if strings.Contains(address, ":") {
 			address = strings.Split(address, ":")[1]
 		}
-	case xc.DriverAptos, xc.DriverSui:
+	case xc.DriverSui:
 		address = NormalizeMoveAddress(address)
+	case xc.DriverAptos:
+		address = NormalizeMoveAddress(address)
+		// ensure that 0 padding consistent for normal addresses
+		if strings.HasPrefix(address, "0x") && !strings.Contains(address, ":") && !strings.Contains(address, "-") {
+			address = strings.TrimPrefix(address, "0x")
+			// aptos addresses are always 32 bytes (64 characters long)
+			if len(address) < 64 {
+				padding := 64 - len(address)
+				for i := 0; i < padding; i++ {
+					address = "0" + address
+				}
+			}
+			address = "0x" + address
+		}
 	case xc.DriverCosmos:
 		// nothing to do, bech32
 
