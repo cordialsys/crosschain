@@ -205,18 +205,23 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	chainCfg := client.Asset.GetChain()
-	// Legacy behavior expects that ContractAddress is blank for Aptos native asset -- this is not done
-	// for new txinfo endpoint.
+	// APTOS is inconsistent with how they report the native asset.
+	// It can be either:
+	// - 0x1::aptos_coin::AptosCoin
+	// - 0xa
+	// Also, we need to report it as "APTOS" to be consistent with other chains.
 	for _, endpoint := range sources {
-		if endpoint.ContractAddress == xc.ContractAddress(chainCfg.ChainCoin) {
+		nativeAsset, ok := chainCfg.FindAdditionalNativeAsset(endpoint.ContractAddress)
+		if ok {
 			endpoint.ContractId = endpoint.ContractAddress
-			endpoint.ContractAddress = xc.ContractAddress(chainCfg.Chain)
+			endpoint.ContractAddress = xc.ContractAddress(nativeAsset.AssetId)
 		}
 	}
 	for _, endpoint := range destinations {
-		if endpoint.ContractAddress == xc.ContractAddress(chainCfg.ChainCoin) {
+		nativeAsset, ok := chainCfg.FindAdditionalNativeAsset(endpoint.ContractAddress)
+		if ok {
 			endpoint.ContractId = endpoint.ContractAddress
-			endpoint.ContractAddress = xc.ContractAddress(chainCfg.Chain)
+			endpoint.ContractAddress = xc.ContractAddress(nativeAsset.AssetId)
 		}
 	}
 

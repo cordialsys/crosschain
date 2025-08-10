@@ -458,6 +458,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 		tfs := []*Movement{}
 		for _, source := range legacyTx.Sources {
 			tf := NewMovement(chain, source.ContractAddress)
+			tf.ContractId = source.ContractId
 			balanceChange := tf.AddSource(source.Address, source.Amount, nil)
 			if source.Event != nil {
 				balanceChange.AddEventMeta(source.Event)
@@ -467,6 +468,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 
 		for _, dest := range legacyTx.Destinations {
 			tf := NewMovement(chain, dest.ContractAddress)
+			tf.ContractId = dest.ContractId
 			balanceChange := tf.AddDestination(dest.Address, dest.Amount, nil)
 			if dest.Event != nil {
 				balanceChange.AddEventMeta(dest.Event)
@@ -490,6 +492,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 				}
 			}
 			movement := txInfo.AddSimpleTransfer(fromAddr, dest.Address, dest.ContractAddress, dest.Amount, nil, dest.Memo)
+			movement.ContractId = dest.ContractId
 			if eventMeta != nil {
 				movement.AddEventMeta(eventMeta)
 			}

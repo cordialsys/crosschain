@@ -761,3 +761,15 @@ func (native *ChainConfig) ClientURL() (string, Driver) {
 func (native *ChainConfig) IsChain(contract ContractAddress) bool {
 	return contract == "" || native.Chain == NativeAsset(contract)
 }
+
+func (native *ChainConfig) FindAdditionalNativeAsset(contract ContractAddress) (*AdditionalNativeAsset, bool) {
+	for _, asset := range native.NativeAssets {
+		if asset.ContractId == contract {
+			return asset, true
+		}
+		if slices.Contains(asset.Aliases, string(contract)) {
+			return asset, true
+		}
+	}
+	return nil, false
+}

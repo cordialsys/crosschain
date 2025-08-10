@@ -326,7 +326,15 @@ func TestFetchTxInfo(t *testing.T) {
 			resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 			server, close := testtypes.MockHTTP(t, resp, 0)
 
-			asset := xc.NewChainConfig("APTOS").WithNet("devnet").WithChainCoin("0x1::aptos_coin::AptosCoin")
+			asset := xc.NewChainConfig("APTOS").WithNet("devnet")
+			asset.NativeAssets = []*xc.AdditionalNativeAsset{
+				{
+					AssetId:    "APTOS",
+					ContractId: "0x1::aptos_coin::AptosCoin",
+					Aliases:    []string{"0xa"},
+					Decimals:   8,
+				},
+			}
 			asset.URL = server.URL
 			client, _ := NewClient(asset)
 			server.StatusCodes = v.httpStatusCodes
