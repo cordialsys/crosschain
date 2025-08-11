@@ -150,11 +150,10 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 
 	remainingAmount := transferAmountAndFee
 	unspentOutputs := []tx_input.Output{}
+
+	// We must spend all of the inputs, or else conflict checking will fail for future transfers
+	// (Future transfers will try to spend any unspent utxos in this transfer).
 	for _, input := range local_input.Inputs {
-		if remainingAmount.IsZero() {
-			// stop
-			break
-		}
 		var spendingAddress xc.Address
 		for _, from := range args.Spenders() {
 			if from.GetFrom() == input.Address {
