@@ -27,6 +27,30 @@ func (s *AptosTestSuite) TestNewClient() {
 	require.Nil(err)
 }
 
+// A subset of the gas schedule, just enough to test the gas estimation
+// See the full schedule here:
+// https://api.mainnet.aptoslabs.com/v1/accounts/0x1/resource/0x1::gas_schedule::GasScheduleV2
+var gasSchedule = `{
+  "type": "0x1::gas_schedule::GasScheduleV2",
+  "data": {
+    "entries": [{
+      {
+        "key": "txn.min_transaction_gas_units",
+        "val": "2760000"
+      },
+      {
+        "key": "txn.min_price_per_gas_unit",
+        "val": "100"
+      },
+      {
+        "key": "txn.gas_unit_scaling_factor",
+        "val": "1000000"
+      }
+    ],
+    "feature_version": "36"
+  }
+}`
+
 func (s *AptosTestSuite) TestFetchTxInput() {
 	require := s.Require()
 
@@ -44,6 +68,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"sequence_number":"2","authentication_key":"0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682"}`,
+				gasSchedule,
 			},
 			from: "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 			input: &tx_input.TxInput{
@@ -63,6 +88,7 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524910","oldest_ledger_version":"0","ledger_timestamp":"1683057860656414","node_role":"full_node","oldest_block_height":"0","block_height":"1317171","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"message":"Account not found by Address(0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f681) and Ledger version(3545185)","error_code":"account_not_found","vm_error_code":null}`,
+				gasSchedule,
 			},
 			from:  "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f680",
 			input: &tx_input.TxInput{},
