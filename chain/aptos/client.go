@@ -4,8 +4,11 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/coming-chat/go-aptos/aptosclient"
@@ -52,6 +55,36 @@ func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
 	}
 }
 
+func reserialize(data interface{}, into interface{}) error {
+	bz, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bz, into)
+}
+
+type GasScheduleEntry struct {
+	Key string `json:"key"`
+	Val string `json:"val"`
+}
+
+type GasSchedule struct {
+	Entries []GasScheduleEntry `json:"entries"`
+}
+
+func (gasSchedule *GasSchedule) Get(key string) (uint64, error) {
+	for _, entry := range gasSchedule.Entries {
+		if entry.Key == key {
+			val, err := strconv.ParseUint(entry.Val, 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("could not parse %s: %s: %v", key, entry.Val, err)
+			}
+			return val, nil
+		}
+	}
+	return 0, fmt.Errorf("could not get %s", key)
+}
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
@@ -61,10 +94,33 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return &tx_input.TxInput{}, err
 	}
+	gasScheduleResource, err := client.AptosClient.GetAccountResource("0x1", "0x1::gas_schedule::GasScheduleV2", 0)
+	if err != nil {
+		return &tx_input.TxInput{}, err
+	}
 	gas_price, err := client.EstimateGas(ctx, ledger)
 	if err != nil {
 		return &tx_input.TxInput{}, err
 	}
+
+	gasSchedule := GasSchedule{}
+	err = reserialize(gasScheduleResource.Data, &gasSchedule)
+	if err != nil {
+		return &tx_input.TxInput{}, err
+	}
+	scheduleMinGasUnits, err := gasSchedule.Get("txn.min_transaction_gas_units")
+	if err != nil {
+		return &tx_input.TxInput{}, err
+	}
+	scheduleMinGasPrice, err := gasSchedule.Get("txn.min_price_per_gas_unit")
+	if err != nil {
+		return &tx_input.TxInput{}, err
+	}
+	scheduleScalingFactor, err := gasSchedule.Get("txn.gas_unit_scaling_factor")
+	if err != nil {
+		return &tx_input.TxInput{}, err
+	}
+	calculatedMinGasUnits := uint64(math.Ceil(float64(scheduleMinGasUnits) / float64(scheduleScalingFactor)))
 
 	builder, err := NewTxBuilder(client.Asset.GetChain().Base())
 	if err != nil {
@@ -88,10 +144,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// If the public key is set, we can simulate the tx and get
 	// an accurate gas limit.
 	if pubkey, ok := args.GetPublicKey(); ok {
-		zero := [32]byte{}
-		privateKey := ed25519.NewKeyFromSeed(zero[:])
-		privateKey.Public()
-
 		txI, err := builder.Transfer(args, input)
 		if err != nil {
 			return &tx_input.TxInput{}, fmt.Errorf("could not create tx: %v", err)
@@ -102,12 +154,29 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		if err != nil {
 			return &tx_input.TxInput{}, fmt.Errorf("could not get sighashes: %v", err)
 		}
-		signatureData := ed25519.Sign(privateKey, hashes[0].Payload)
-		tx.SetSignatures(&xc.SignatureResponse{
-			Signature: signatureData,
-			PublicKey: pubkey,
-			Address:   args.GetFrom(),
-		})
+		// Create a (fake) signature for each sign-request so we can simulate the tx gas with accuracy
+		signatures := []*xc.SignatureResponse{}
+		for i, hash := range hashes {
+			zero := [32]byte{}
+			zero[0] = byte(i)
+			privateKey := ed25519.NewKeyFromSeed(zero[:])
+			signatureData := ed25519.Sign(privateKey, hashes[0].Payload)
+			address := args.GetFrom()
+			publicKeyForSigner := pubkey
+			if hash.Signer != "" && hash.Signer != address {
+				publicKeyForSigner, _ = args.GetFeePayerPublicKey()
+				address = hash.Signer
+			}
+			signatures = append(signatures, &xc.SignatureResponse{
+				Signature: signatureData,
+				PublicKey: publicKeyForSigner,
+				Address:   address,
+			})
+		}
+		err = tx.SetSignatures(signatures...)
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not set signatures: %v", err)
+		}
 
 		serialized, err := tx.Serialize()
 		if err != nil {
@@ -126,7 +195,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		var success bool
 		if len(output) > 0 {
 			success = output[0].Success
-			log = log.WithField("status", output[0].VmStatus)
+			log = log.WithField("status", output[0].VmStatus).WithField("gas_used", output[0].GasUsed)
 			if success {
 				input.GasLimit = output[0].GasUsed
 				// increase limit by ~10% for tokens it can vary sometimes.
@@ -141,6 +210,36 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		logrus.WithFields(logrus.Fields{
 			"from": args.GetFrom(),
 		}).Debug("cannot simulate tx, public key is not known")
+	}
+	estimatedGasPrice := input.GasPrice
+	estimatedGasLimit := input.GasLimit
+	if input.GasLimit < calculatedMinGasUnits {
+		input.GasLimit = scheduleMinGasUnits
+	}
+	if input.GasPrice < scheduleMinGasPrice {
+		input.GasPrice = scheduleMinGasPrice
+	}
+	if input.SequenceNumber == 0 {
+		// The estimated gas sometimes is too low for the first txn, so we add a buffer.
+		// Experimentally I found it was short by ~20 units, but couldn't find a good way to account for it,
+		// so a generous buffer is added.
+		input.GasLimit += 250
+	}
+	logrus.WithFields(logrus.Fields{
+		"original_gas_limit":            estimatedGasLimit,
+		"gas_limit":                     input.GasLimit,
+		"original_gas_price":            estimatedGasPrice,
+		"gas_price":                     input.GasPrice,
+		"calculated_min_gas_units":      calculatedMinGasUnits,
+		"txn.min_transaction_gas_units": scheduleMinGasUnits,
+		"txn.min_price_per_gas_unit":    scheduleMinGasPrice,
+		"txn.gas_unit_scaling_factor":   scheduleScalingFactor,
+		"multiplier":                    client.Asset.GetChain().ChainGasMultiplier,
+	}).Debug("gas limit")
+
+	gasMultiplier := client.Asset.GetChain().ChainGasMultiplier
+	if gasMultiplier > 0.01 {
+		input.GasLimit = uint64(float64(input.GasLimit) * gasMultiplier)
 	}
 
 	return input, nil
