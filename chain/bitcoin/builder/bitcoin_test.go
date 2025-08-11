@@ -503,7 +503,7 @@ func TestMultiTransferChange(t *testing.T) {
 				// unused/not needed
 				genInput("tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r", 10000, 5),
 			},
-			totalUtxoSpend: 3 + 4,
+			totalUtxoSpend: 3 + 4 + 5,
 			tos: []tx.Recipient{
 				{
 					To:    xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0"),
@@ -527,6 +527,11 @@ func TestMultiTransferChange(t *testing.T) {
 					// change
 					To:    xc.Address("tb1q60ccgeenqeu6ravga6s9e07pgd5n8t5c72vlhv"),
 					Value: xc.NewAmountBlockchainFromUint64(5900),
+				},
+				{
+					// change
+					To:    xc.Address("tb1qhj56dyrrjceh484szyjzec4snz56kwx4epd04r"),
+					Value: xc.NewAmountBlockchainFromUint64(10000),
 				},
 			},
 		},
@@ -600,16 +605,32 @@ func TestMultiTransferChange(t *testing.T) {
 			require.Equal(tc.expectedRecipients, btcTx.Recipients)
 			require.Equal(tc.totalUtxoSpend, len(btcTx.MsgTx.TxIn))
 
-			// should be only a single change output
-			sumRecipients := int64(0)
-			change := btcTx.Recipients[len(btcTx.Recipients)-1].Value.Int().Int64()
-			for _, recipient := range btcTx.Recipients {
-				sumRecipients += recipient.Value.Int().Int64()
-			}
 			totalTransferAmount := int64(0)
 			for _, recv := range receivers {
 				totalTransferAmount += recv.GetAmount().Int().Int64()
 			}
+
+			sumRecipients := int64(0)
+			for _, recipient := range btcTx.Recipients {
+				sumRecipients += recipient.Value.Int().Int64()
+			}
+
+			// For our tests, we send to distinct addresses.  So any
+			// money coming back to a spender we can assume is change.
+			change := int64(0)
+			for _, recipient := range btcTx.Recipients {
+				isSpender := false
+				for _, spender := range spenders {
+					if spender.GetFrom() == recipient.To {
+						isSpender = true
+						break
+					}
+				}
+				if isSpender {
+					change += recipient.Value.Int().Int64()
+				}
+			}
+
 			// total transfer amount == sum of recipients - change amount
 			require.Equal(totalTransferAmount, sumRecipients-change)
 		})
