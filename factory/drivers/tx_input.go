@@ -1,9 +1,10 @@
 package drivers
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
+
+	ccyjson "github.com/goccy/go-json"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -13,11 +14,11 @@ const SerializedInputTypeKey = "type"
 
 func MarshalTxInput(methodInput xc.TxInput) ([]byte, error) {
 	data := map[string]interface{}{}
-	methodBz, err := json.Marshal(methodInput)
+	methodBz, err := ccyjson.Marshal(methodInput)
 	if err != nil {
 		return nil, err
 	}
-	_ = json.Unmarshal(methodBz, &data)
+	_ = ccyjson.Unmarshal(methodBz, &data)
 	// force union with method type envelope
 	if variant, ok := methodInput.(xc.TxVariantInput); ok {
 		data[SerializedInputTypeKey] = variant.GetVariant()
@@ -25,7 +26,7 @@ func MarshalTxInput(methodInput xc.TxInput) ([]byte, error) {
 		data[SerializedInputTypeKey] = methodInput.GetDriver()
 	}
 
-	bz, _ := json.Marshal(data)
+	bz, _ := ccyjson.Marshal(data)
 	return bz, nil
 }
 
@@ -66,7 +67,7 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	var env xc.TxInputEnvelope
 	buf := []byte(data)
-	err := json.Unmarshal(buf, &env)
+	err := ccyjson.Unmarshal(buf, &env)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 		}
 		input = input2
 	}
-	err = json.Unmarshal(buf, input)
+	err = ccyjson.Unmarshal(buf, input)
 	if err != nil {
 		return nil, err
 	}
@@ -87,15 +88,15 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 
 func MarshalVariantInput(methodInput xc.TxVariantInput) ([]byte, error) {
 	data := map[string]interface{}{}
-	methodBz, err := json.Marshal(methodInput)
+	methodBz, err := ccyjson.Marshal(methodInput)
 	if err != nil {
 		return nil, err
 	}
-	_ = json.Unmarshal(methodBz, &data)
+	_ = ccyjson.Unmarshal(methodBz, &data)
 	// force union with method type envelope
 	data[SerializedInputTypeKey] = methodInput.GetVariant()
 
-	bz, _ := json.Marshal(data)
+	bz, _ := ccyjson.Marshal(data)
 	return bz, nil
 }
 
@@ -119,7 +120,7 @@ func UnmarshalVariantInput(data []byte) (xc.TxVariantInput, error) {
 	}
 	var env variantInputEnvelope
 	buf := []byte(data)
-	err := json.Unmarshal(buf, &env)
+	err := ccyjson.Unmarshal(buf, &env)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func UnmarshalVariantInput(data []byte) (xc.TxVariantInput, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(buf, input)
+	err = ccyjson.Unmarshal(buf, input)
 	if err != nil {
 		return nil, err
 	}

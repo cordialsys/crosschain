@@ -70,6 +70,7 @@ require (
 	github.com/cloudflare/circl v1.6.0
 	github.com/fxamacker/cbor v1.5.1
 	github.com/fxamacker/cbor/v2 v2.8.0
+	github.com/goccy/go-json v0.10.5
 	github.com/holiman/uint256 v1.3.2
 	github.com/kaspanet/kaspad v0.12.22
 	github.com/pkg/errors v0.9.1
