@@ -451,16 +451,35 @@ func (client *Client) EstimateGas(ctx context.Context, ledgerInfo *aptostypes.Le
 	return unit_price, nil
 }
 
+type FungibleAssetMetadata struct {
+	Decimals   int    `json:"decimals"`
+	IconUri    string `json:"icon_uri"`
+	Name       string `json:"name"`
+	ProjectUri string `json:"project_uri"`
+	Symbol     string `json:"symbol"`
+}
+
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().Decimals), nil
 	}
-
-	info, err := client.AptosClient.GetCoinInfo(string(contract))
+	// Try new fungible asset metadata standard first
+	resp, err := client.AptosClient.GetAccountResource(string(contract), "0x1::fungible_asset::Metadata", 0)
 	if err != nil {
-		return 0, nil
+		// Legacy coin info
+		info, err2 := client.AptosClient.GetCoinInfo(string(contract))
+		if err2 != nil {
+			return 0, fmt.Errorf("could not get coin info: %v; or metadata: %v", err, err2)
+		}
+		return info.Decimals, nil
+	} else {
+		metadata := FungibleAssetMetadata{}
+		err = reserialize(resp.Data, &metadata)
+		if err != nil {
+			return 0, fmt.Errorf("could not deserialize fungible_asset metadata: %v", err)
+		}
+		return metadata.Decimals, nil
 	}
-	return info.Decimals, nil
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {

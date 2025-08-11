@@ -33,7 +33,7 @@ func (s *AptosTestSuite) TestNewClient() {
 var gasSchedule = `{
   "type": "0x1::gas_schedule::GasScheduleV2",
   "data": {
-    "entries": [{
+    "entries": [
       {
         "key": "txn.min_transaction_gas_units",
         "val": "2760000"
@@ -51,8 +51,8 @@ var gasSchedule = `{
   }
 }`
 
-func (s *AptosTestSuite) TestFetchTxInput() {
-	require := s.Require()
+func TestFetchTxInput(t *testing.T) {
+	require := require.New(t)
 
 	vectors := []struct {
 		asset xc.ITask
@@ -96,34 +96,36 @@ func (s *AptosTestSuite) TestFetchTxInput() {
 		},
 	}
 
-	for _, v := range vectors {
+	for i, v := range vectors {
+		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
 
-		resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
+			resp := `{"chain_id":38,"epoch":"133","ledger_version":"13087045","oldest_ledger_version":"0","ledger_timestamp":"1669676013555573","node_role":"full_node","oldest_block_height":"0","block_height":"5435983","git_hash":"2c74a456298fcd520241a562119b6fe30abdaae2"}`
 
-		// satisfy the gas estimate to go with default value
-		blockNotFound := `{"message":"block not found","error_code":"block_not_found","vm_error_code":null}`
-		for i := 0; i < 20; i++ {
-			v.resp = append(v.resp, blockNotFound)
-		}
-		server, close := testtypes.MockHTTP(s.T(), resp, 200)
-		asset := v.asset.GetChain()
-		asset.URL = server.URL
-		client, _ := NewClient(asset)
-		if v.err != "" {
-			// errors should return 400 status code.
-			server.StatusCodes = []int{200, 200, 400}
-		}
-		server.Response = v.resp
-		input, err := client.FetchLegacyTxInput(s.Ctx, xc.Address(v.from), "")
+			// satisfy the gas estimate to go with default value
+			blockNotFound := `{"message":"block not found","error_code":"block_not_found","vm_error_code":null}`
+			for i := 0; i < 20; i++ {
+				v.resp = append(v.resp, blockNotFound)
+			}
+			server, close := testtypes.MockHTTP(t, resp, 200)
+			asset := v.asset.GetChain()
+			asset.URL = server.URL
+			client, _ := NewClient(asset)
+			if v.err != "" {
+				// errors should return 400 status code.
+				server.StatusCodes = []int{200, 200, 400}
+			}
+			server.Response = v.resp
+			input, err := client.FetchLegacyTxInput(context.Background(), xc.Address(v.from), "")
 
-		if v.err != "" {
-			require.ErrorContains(err, v.err)
-		} else {
-			require.NoError(err)
-			require.NotNil(input)
-			require.Equal(v.input, input)
-		}
-		close()
+			if v.err != "" {
+				require.ErrorContains(err, v.err)
+			} else {
+				require.NoError(err)
+				require.NotNil(input)
+				require.Equal(v.input, input)
+			}
+			close()
+		})
 	}
 }
 
