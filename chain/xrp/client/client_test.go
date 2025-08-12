@@ -17,8 +17,8 @@ import (
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	testtypes "github.com/cordialsys/crosschain/testutil"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -466,6 +466,8 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 91097810,
+				Final:         true,
+				State:         xclient.Succeeded,
 			},
 			err: "",
 		},
@@ -739,6 +741,8 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 566106,
+				Final:         true,
+				State:         xclient.Succeeded,
 			},
 			err: "",
 		},
@@ -802,6 +806,8 @@ func TestFetchTxInfo(t *testing.T) {
 				Movements:     nil,
 				Fees:          []*xclient.Balance{},
 				Confirmations: 91097810,
+				Final:         true,
+				State:         xclient.Failed,
 			},
 			err: "",
 		},

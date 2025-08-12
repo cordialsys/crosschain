@@ -257,23 +257,18 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	}
 	chainHeadHeight := chainHeadResponse.Result.Height
 
-	chain := client.Asset.GetChain().Chain
+	chainCfg := client.Asset.GetChain()
+	chain := chainCfg.Chain
 	sHash := string(txHash)
 	blockData := chainGetBlockResponse.Result
 	block := xclient.NewBlock(chain, blockData.Height, sHash, time.MillisFromInt64(blockData.Timestamp).ToTime())
-	txInfo := xclient.TxInfo{
-		Name:          xclient.NewTransactionName(chain, sHash),
-		XChain:        chain,
-		Hash:          sHash,
-		Block:         block,
-		Confirmations: chainHeadHeight - block.Height.Uint64(),
-	}
-
+	confirmations := chainHeadHeight - block.Height.Uint64()
+	var errorMsg *string
 	if msgState.Receipt.ExitCode != 0 {
-		errorMsg := fmt.Sprintf("error code %v", msgState.Receipt.ExitCode)
-		txInfo.Error = &errorMsg
-		txInfo.State = xclient.Failed
+		errorMessage := fmt.Sprintf("error code %v", msgState.Receipt.ExitCode)
+		errorMsg = &errorMessage
 	}
+	txInfo := xclient.NewTxInfo(block, chainCfg, sHash, confirmations, errorMsg)
 
 	sourceAddress := xc.Address(msg.From)
 	movement := xclient.NewMovement(chain, "")
@@ -296,9 +291,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	feeAmount := minerFee.Add(&burnFee)
 	txInfo.AddFee(sourceAddress, "", feeAmount, nil)
 	txInfo.Fees = txInfo.CalculateFees()
-	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > chainCfg.ConfirmationsFinal
 
-	return txInfo, nil
+	return *txInfo, nil
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {

@@ -405,6 +405,7 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 1630,
+				State:         xclient.Succeeded,
 			},
 		},
 		{
@@ -502,6 +503,7 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 1630,
+				State:         xclient.Succeeded,
 			},
 		},
 	}
