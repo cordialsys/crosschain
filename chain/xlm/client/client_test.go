@@ -18,8 +18,8 @@ import (
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	txinput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/factory/defaults/chains"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	"github.com/cordialsys/crosschain/factory/defaults/chains"
 	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/require"
 )
@@ -845,6 +845,8 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 5711,
+				Final:         true,
+				State:         xclient.Succeeded,
 			},
 		},
 
@@ -969,6 +971,8 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 1,
+				Final:         true,
+				State:         xclient.Succeeded,
 			},
 		},
 		{

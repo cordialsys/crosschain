@@ -186,9 +186,9 @@ func (client *Client) FetchLedgerTransactions(sequence uint64, limit int, cursor
 
 // Fetch ledger data and create xclient.TxInfo
 func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTransactionResult) (xclient.TxInfo, error) {
-	chain := client.Asset.GetChain().Chain
+	chainCfg := client.Asset.GetChain()
+	chain := chainCfg.Chain
 	sTxHash := string(txHash)
-	name := xclient.NewTransactionName(chain, sTxHash)
 	// TODO: It works, but consider using proper ISO8601 parser
 	time, err := time.Parse(time.RFC3339, transaction.CreatedAt)
 	if err != nil {
@@ -213,15 +213,9 @@ func (client *Client) InitializeTxInfo(txHash xc.TxHash, transaction types.GetTr
 	}
 
 	confirmations := uint64(latestLedger.Sequence) - transaction.Ledger
-	txInfo := xclient.TxInfo{
-		Name:          name,
-		Hash:          sTxHash,
-		XChain:        chain,
-		Block:         block,
-		Error:         errMsg,
-		Confirmations: confirmations,
-	}
-	return txInfo, nil
+	txInfo := xclient.NewTxInfo(block, chainCfg, sTxHash, confirmations, errMsg)
+
+	return *txInfo, nil
 }
 
 // Returns transaction info - new endpoint

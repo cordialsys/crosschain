@@ -191,8 +191,8 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
-	chain := client.Asset.GetChain().Chain
-	name := xclient.NewTransactionName(chain, txResponse.Result.Hash)
+	chainCfg := client.Asset.GetChain()
+	chain := chainCfg.Chain
 
 	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
 
@@ -206,16 +206,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		errMsg = &msg
 	}
 
-	txInfo := xclient.TxInfo{
-		Name:          name,
-		Hash:          txResponse.Result.Hash,
-		XChain:        client.Asset.GetChain().Chain,
-		Block:         block,
-		Movements:     []*xclient.Movement{},
-		Fees:          []*xclient.Balance{},
-		Confirmations: uint64(confirmations),
-		Error:         errMsg,
-	}
+	txInfo := xclient.NewTxInfo(block, chainCfg, txResponse.Result.Hash, uint64(confirmations), errMsg)
 
 	affectedNodes := txResponse.Result.Meta.AffectedNodes
 
@@ -247,7 +238,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		// XRP sometimes reports balances as negative
 		amount = amount.Abs()
 
-		movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
+		movement := xclient.NewMovement(chainCfg.Chain, contract)
 		isSource, err := xrpNode.IsSource(&txResponse)
 		if err != nil {
 			return xclient.TxInfo{}, err
@@ -275,7 +266,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 
 	txInfo.Fees = txInfo.CalculateFees()
 
-	return txInfo, nil
+	return *txInfo, nil
 }
 
 // FetchBalance fetches token balance for a XRP address
