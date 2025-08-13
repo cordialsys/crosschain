@@ -572,7 +572,7 @@ func (e *TransferError) Error() string {
 
 type GetAccountTransactionsArgs struct {
 	MaxResults idl.Nat `ic:"max_results"`
-	Start      *uint64 `ic:"start,omitempty"`
+	Start      *idl.Nat `ic:"start,omitempty"`
 	Account    Account `ic:"account"`
 }
 
