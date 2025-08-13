@@ -643,9 +643,9 @@ func (e *TransferError) Error() string {
 }
 
 type GetAccountIdentifierTransactions struct {
-	MaxResults        uint64   `ic:"max_results"`
-	Start             *idl.Nat `ic:"start,omitempty"`
-	AccountIdentifier string   `ic:"account_identifier"`
+	MaxResults        uint64  `ic:"max_results"`
+	Start             *uint64 `ic:"start,omitempty"`
+	AccountIdentifier string  `ic:"account_identifier"`
 }
 
 type AccountIdentifierTransactions struct {
