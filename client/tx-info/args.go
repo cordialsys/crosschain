@@ -12,7 +12,7 @@ type Args struct {
 	// Optional sender address
 	sender xc.Address
 	// Optional sign time
-	sign_time uint64
+	sign_time int64
 }
 
 func (args *Args) TxHash() xc.TxHash {
@@ -39,11 +39,11 @@ func (args *Args) SetSender(sender xc.Address) {
 	args.sender = sender
 }
 
-func (args *Args) TxSignTime() (uint64, bool) {
+func (args *Args) TxSignTime() (int64, bool) {
 	return args.sign_time, args.sign_time != 0
 }
 
-func (args *Args) SetTxSignTime(tx_time uint64) {
+func (args *Args) SetTxSignTime(tx_time int64) {
 	args.sign_time = tx_time
 }
 
@@ -69,7 +69,7 @@ func OptionSender(sender xc.Address) Option {
 	}
 }
 
-func OptionTxTime(tx_time uint64) Option {
+func OptionSignTime(tx_time int64) Option {
 	return func(args *Args) {
 		args.SetTxSignTime(tx_time)
 	}

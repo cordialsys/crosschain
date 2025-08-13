@@ -28,7 +28,7 @@ func CmdTxTransfer() *cobra.Command {
 	var fromSecretRef string
 	var feePayerSecretRef string
 	var previousAttempts []string
-	var tx_time uint64
+	var txTime int64
 	var addressFormat string
 
 	cmd := &cobra.Command{
@@ -329,8 +329,8 @@ func CmdTxTransfer() *cobra.Command {
 			if contract != "" {
 				infoArgs = append(infoArgs, txinfo.OptionContract(xc.ContractAddress(contract)))
 			}
-			if tx_time != 0 {
-				infoArgs = append(infoArgs, txinfo.OptionTxTime(tx_time))
+			if txTime != 0 {
+				infoArgs = append(infoArgs, txinfo.OptionSignTime(txTime))
 			}
 			txInfoArgs := txinfo.NewArgs(tx.Hash(), infoArgs...)
 			for time.Since(start) < timeout {
@@ -368,7 +368,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
 	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
-	cmd.Flags().Uint64Var(&tx_time, "tx-time", 0, "Block time of the transaction")
+	cmd.Flags().Int64Var(&txTime, "tx-time", 0, "Block time of the transaction")
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
 	return cmd
 }
