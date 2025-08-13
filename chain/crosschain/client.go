@@ -293,19 +293,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 		}
 	}
 	req := &types.SubmitTxReq{
-		Chain:        chain,
-		TxData:       data,
-		TxSignatures: signatures,
+		Chain:              chain,
+		TxData:             data,
+		LegacyTxSignatures: signatures,
+		BroadcastInput:     string(metadataBz),
 	}
-	var reqI xc.Tx = req
-	if len(metadataBz) > 0 {
-		reqI = &types.SubmitTxReqWithMetadata{
-			SubmitTxReq: *req,
-			Metadata:    metadataBz,
-		}
-	}
-
-	res, err := client.legacyApiCall(ctx, "/submit", reqI)
+	res, err := client.legacyApiCall(ctx, "/submit", req)
 	if err != nil {
 		return err
 	}

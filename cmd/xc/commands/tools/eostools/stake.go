@@ -155,7 +155,7 @@ func CmdTxStake() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to marshal packed transaction: %v", err)
 			}
-			binaryTx := xctypes.NewBinaryTx(packedTrxBytes, [][]byte{})
+			binaryTx := xctypes.NewBinaryTx(packedTrxBytes, []byte{})
 			serializedTx, err := binaryTx.Serialize()
 			if err != nil {
 				return fmt.Errorf("failed to serialize transaction: %v", err)

@@ -147,8 +147,9 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 
 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
 	txData := &types.SubmitTxReq{
-		TxData:       []byte("data"),
-		TxSignatures: [][]byte{{1, 2, 3, 4}},
+		TxData:             []byte("data"),
+		LegacyTxSignatures: [][]byte{{1, 2, 3, 4}},
+		BroadcastInput:     `{"x":"y"}`,
 	}
 	err := client.SubmitTx(s.Ctx, txData)
 	require.NoError(err)
