@@ -143,6 +143,8 @@ chains:
     provider: blockbook
     chain_name: Bitcoin (Testnet)
     decimals: 8
+    address:
+      formats: ["segwit", "taproot", "legacy"]
   CELO:
     chain: CELO
     driver: evm

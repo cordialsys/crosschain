@@ -264,14 +264,26 @@ func TestSupportedAddressFormats(t *testing.T) {
 					for _, format := range chain.Address.Formats {
 						addressArgs := []address.AddressOption{}
 						addressArgs = append(addressArgs, address.OptionFormat(format))
-						_, err := factory.NewDefaultFactory().NewAddressBuilder(
+						builder, err := factory.NewDefaultFactory().NewAddressBuilder(
 							chain.ChainBaseConfig, addressArgs...,
 						)
 						require.NoError(err)
+
+						withFormats, ok := builder.(AddressBuilderWithFormats)
+						if !ok {
+							require.Fail(
+								"missing AddressBuilderWithFormats",
+								"address builder %T does not implement AddressBuilderWithFormats despite having multiple formats", builder,
+							)
+						}
+						alg := withFormats.GetSignatureAlgorithm()
+						require.NotEmpty(alg, "address builder %T should have a signature algorithm for format %s", builder, format)
 					}
+
 				} else if len(chain.Address.Formats) == 1 {
-					panic(
-						fmt.Sprintf("invalid address formats configuration for: %s, unnecessary base format", chain.Chain),
+					require.Fail(
+						"invalid address formats configuration",
+						"%s, unnecessary base format", chain.Chain,
 					)
 				}
 			})

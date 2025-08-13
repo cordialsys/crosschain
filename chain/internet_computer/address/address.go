@@ -37,6 +37,7 @@ type AddressBuilder struct {
 type AccountId []byte
 
 var _ xc.AddressBuilder = AddressBuilder{}
+var _ xc.AddressBuilderWithFormats = AddressBuilder{}
 
 // NewAddressBuilder creates a new InternetComputerProtocol AddressBuilder
 func NewAddressBuilder(cfgI *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
@@ -62,6 +63,10 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig, options ...xcaddress.AddressOpt
 type publicKeyInfo struct {
 	Algorithm pkix.AlgorithmIdentifier
 	PublicKey asn1.BitString
+}
+
+func (ab AddressBuilder) GetSignatureAlgorithm() xc.SignatureType {
+	return xc.ICP.Driver().SignatureAlgorithms()[0]
 }
 
 // GetAddressFromPublicKey returns an Address given a public key

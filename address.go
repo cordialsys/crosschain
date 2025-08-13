@@ -14,22 +14,7 @@ type AddressBuilder interface {
 	GetAddressFromPublicKey(publicKeyBytes []byte) (Address, error)
 }
 
-// AddressType represents the type of an address, for discovery purposes
-type AddressType string
-
-// List of known AddressType
-const (
-	AddressTypeSegwit    AddressType = AddressType("Segwit")
-	AddressTypeP2SH      AddressType = AddressType("P2SH")
-	AddressTypeP2PKH     AddressType = AddressType("P2PKH")
-	AddressTypeP2WPKH    AddressType = AddressType("P2WPKH")
-	AddressTypeP2TR      AddressType = AddressType("P2TR")
-	AddressTypeETHKeccak AddressType = AddressType("ETHKeccak")
-	AddressTypeDefault   AddressType = AddressType("Default")
-)
-
-// PossibleAddress is a pair of (Address, AddressType) used to derive all possible addresses from a public key
-type PossibleAddress struct {
-	Address Address
-	Type    AddressType
+type AddressBuilderWithFormats interface {
+	// Returns the signature algorithm to be used for a given address format
+	GetSignatureAlgorithm() SignatureType
 }

@@ -13,12 +13,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type AddressType string
-
 const (
-	AddressTypeLegacy  = "legacy"
-	AddressTypeSegWit  = "segwit"
-	AddressTypeTaproot = "taproot"
+	AddressTypeLegacy  xc.AddressFormat = "legacy"
+	AddressTypeSegWit  xc.AddressFormat = "segwit"
+	AddressTypeTaproot xc.AddressFormat = "taproot"
 )
 
 // AddressBuilder for Bitcoin
@@ -26,9 +24,11 @@ type AddressBuilder struct {
 	params    *chaincfg.Params
 	asset     *xc.ChainBaseConfig
 	algorithm xc.SignatureType
+	format    xc.AddressFormat
 }
 
 var _ xc.AddressBuilder = &AddressBuilder{}
+var _ xc.AddressBuilderWithFormats = &AddressBuilder{}
 
 type AddressDecoder interface {
 	Decode(to xc.Address, params *chaincfg.Params) (btcutil.Address, error)
@@ -71,29 +71,47 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 	} else {
 		algorithm = asset.Driver.SignatureAlgorithms()[0]
 	}
+	var format xc.AddressFormat
+	switch algorithm {
+	case xc.Schnorr:
+		format = AddressTypeTaproot
+	default:
+		if asset.Driver == xc.DriverBitcoinLegacy {
+			format = AddressTypeLegacy
+		} else {
+			format = AddressTypeSegWit
+		}
+	}
 
 	log.Debugf("New bitcoin address builder with algorithm: %s", algorithm)
-	return AddressBuilder{
+	builder := AddressBuilder{
 		asset:     asset,
 		params:    params,
 		algorithm: algorithm,
-	}, nil
+		format:    format,
+	}
+	if format, ok := opts.GetFormat(); ok {
+		builder.format = format
+		switch format {
+		case AddressTypeLegacy:
+			builder.algorithm = xc.K256Sha256
+		case AddressTypeSegWit:
+			builder.algorithm = xc.K256Sha256
+		case AddressTypeTaproot:
+			builder.algorithm = xc.Schnorr
+		default:
+			return AddressBuilder{}, fmt.Errorf("unsupported address type: %s", format)
+		}
+	}
+	return &builder, nil
 }
 
-func (ab AddressBuilder) GetAddressType() (AddressType, error) {
-	if ab.algorithm == xc.Schnorr {
-		return AddressTypeTaproot, nil
-	}
+func (ab AddressBuilder) GetSignatureAlgorithm() xc.SignatureType {
+	return ab.algorithm
+}
 
-	if ab.algorithm == "" || ab.algorithm == xc.K256Sha256 {
-		if ab.asset.Driver == xc.DriverBitcoinLegacy {
-			return AddressTypeLegacy, nil
-		} else {
-			return AddressTypeSegWit, nil
-		}
-	} else {
-		return AddressType(""), fmt.Errorf("bitcoin doesn't support %s address type", ab.algorithm)
-	}
+func (ab AddressBuilder) GetAddressType() xc.AddressFormat {
+	return ab.format
 }
 
 func (ab AddressBuilder) GetLegacyAddress(publicKey []byte) (xc.Address, error) {
@@ -144,10 +162,7 @@ func (ab AddressBuilder) GetTaprootAddress(publicKey []byte) (xc.Address, error)
 
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	addressType, err := ab.GetAddressType()
-	if err != nil {
-		return "", err
-	}
+	addressType := ab.GetAddressType()
 
 	if len(publicKeyBytes) == 32 {
 		// btcec.ParsePubKey requires there be a compressed '2' header
@@ -173,39 +188,4 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	default:
 		return "", errors.New("failed to determine bitcoin address type")
 	}
-}
-
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-
-	possibles := []xc.PossibleAddress{}
-	legacyAddress, err := ab.GetLegacyAddress(publicKeyBytes)
-	if err != nil {
-		return possibles, err
-	}
-
-	segwitAddress, err := ab.GetSegWitAddress(publicKeyBytes)
-	if err != nil {
-		return possibles, err
-	}
-
-	multiSigAddress, err := ab.GetSegWitMultisigAddress(publicKeyBytes)
-	if err != nil {
-		return possibles, err
-	}
-
-	return []xc.PossibleAddress{
-		{
-			Address: legacyAddress,
-			Type:    xc.AddressTypeP2PKH,
-		},
-		{
-			Address: segwitAddress,
-			Type:    xc.AddressTypeP2WPKH,
-		},
-		{
-			Address: multiSigAddress,
-			Type:    "",
-		},
-	}, nil
 }
