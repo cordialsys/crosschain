@@ -198,7 +198,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 
 	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), "", blockTime)
 
-	confirmations := ledger.Result.LedgerCurrentIndex - txResponse.Result.Sequence
+	confirmations := ledger.Result.LedgerCurrentIndex - txResponse.Result.LedgerIndex
 
 	var errMsg *string
 	if txResponse.Result.Meta.TransactionResult != "tesSUCCESS" {
