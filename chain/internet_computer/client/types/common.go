@@ -249,4 +249,6 @@ type Block interface {
 	Timestamp() (uint64, error)
 	TxHash() (string, error)
 	Transaction() (Transaction, error)
+	// Sometimes for ICRC transactions the fee is included in the block object, not transaction
+	Fee() uint64
 }

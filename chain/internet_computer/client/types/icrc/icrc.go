@@ -453,6 +453,17 @@ func (b Block) Transaction() (types.Transaction, error) {
 	return ft.ToTransaction(), nil
 }
 
+func (b Block) Fee() uint64 {
+	var fee idl.Nat
+	_, err := b.Map.GetValue(txFee, &fee)
+
+	if err != nil {
+		return 0
+	}
+
+	return fee.BigInt().Uint64()
+}
+
 type BlockWithId struct {
 	Id    idl.Nat `ic:"id"`
 	Block Block   `ic:"block,variant"`
@@ -740,7 +751,7 @@ func (t Transaction) RawFee() *uint64 {
 		fee := new(uint64)
 		*fee = t.Approve.Fee.BigInt().Uint64()
 		return fee
-	} else if t.Transfer != nil {
+	} else if t.Transfer != nil && t.Transfer.Fee != nil {
 		fee := new(uint64)
 		*fee = t.Transfer.Fee.BigInt().Uint64()
 		return fee

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -360,8 +361,13 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 
 	txInfo.AddMovement(movement)
 
-	fee := xc.NewAmountBlockchainFromUint64(transaction.Fee())
-	txInfo.AddFee(sourceAddress, contract, fee, nil)
+	fee := transaction.Fee()
+	if fee == 0 {
+		fee = block.Fee()
+	}
+
+	xcFee := xc.NewAmountBlockchainFromUint64(fee)
+	txInfo.AddFee(sourceAddress, contract, xcFee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
 
@@ -416,23 +422,36 @@ func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, 
 		return blockHeight, ledgerCanister, true, nil
 	}
 
-	// TODO: try parsing via alternaitve ID
-	blockIndex, err := strconv.Atoi(string(args.TxHash()))
-	if err != nil {
-		return 0, ledgerCanister, false, nil
+	// Check if txHash is in "blockheight.contract" format
+	// Overwrite `args.Contract()` in this case
+	parts := strings.Split(string(args.TxHash()), ".")
+	if len(parts) == 2 {
+		blockHeight, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return 0, icp.LedgerPrincipal, false, fmt.Errorf("failed to parse block height: %w", err)
+		}
+
+		ledgerCanister, err := icpaddress.Decode(parts[1])
+		if err != nil {
+			return 0, icp.LedgerPrincipal, false, fmt.Errorf("failed to decode ledger canister: %w", err)
+		}
+
+		return uint64(blockHeight), ledgerCanister, true, nil
 	}
 
-	return uint64(blockIndex), ledgerCanister, true, nil
+	return 0, icp.LedgerPrincipal, false, nil
 }
 
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+
 	// We can fetch the transaction direclty if we receive a block index
 	// Fallback to account history lookup otherwise
 	block, ledgerCanister, ok, err := getBlockAndContractIndex(args)
 	if err != nil {
 		return xclient.TxInfo{}, err
 	}
+
 	if ok {
 		return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, block)
 	} else {

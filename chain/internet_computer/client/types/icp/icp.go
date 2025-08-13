@@ -563,6 +563,11 @@ func (b Block) Transaction() (types.Transaction, error) {
 	}, nil
 }
 
+// ICP transaction fees are always part of the transaction
+func (b Block) Fee() uint64 {
+	return 0
+}
+
 type QueryBlocksResponse struct {
 	ChainLength     uint64                `ic:"chain_length" json:"chain_length"`
 	Certificate     *[]byte               `ic:"certificate,omitempty" json:"certificate,omitempty"`
