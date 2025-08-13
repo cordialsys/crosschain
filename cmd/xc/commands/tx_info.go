@@ -13,7 +13,7 @@ import (
 func CmdTxInfo() *cobra.Command {
 	var contract string
 	var sender string
-	var tx_time uint64
+	var txTime int64
 	cmd := &cobra.Command{
 		Use:     "tx-info <hash>",
 		Aliases: []string{"tx"},
@@ -35,8 +35,8 @@ func CmdTxInfo() *cobra.Command {
 			if sender != "" {
 				options = append(options, txinfo.OptionSender(xc.Address(sender)))
 			}
-			if tx_time != 0 {
-				options = append(options, txinfo.OptionTxTime(tx_time))
+			if txTime != 0 {
+				options = append(options, txinfo.OptionSignTime(txTime))
 			}
 			txInfoArgs := txinfo.NewArgs(xc.TxHash(hash), options...)
 
@@ -57,6 +57,6 @@ func CmdTxInfo() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "")
 	cmd.Flags().StringVar(&sender, "sender", "", "Address of transaction sender")
-	cmd.Flags().Uint64Var(&tx_time, "tx_time", 0, "Time of the transaction")
+	cmd.Flags().Int64Var(&txTime, "tx_time", 0, "Time of the transaction")
 	return cmd
 }

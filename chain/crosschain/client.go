@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -18,9 +19,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 )
@@ -332,7 +333,20 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	txHashStr := args.TxHash()
 	chain := client.Asset.GetChain().Chain
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s", client.URL, chain, txHashStr)
+
+	query := url.Values{}
+	if contract, ok := args.Contract(); ok {
+		query.Add("contract", string(contract))
+	}
+	if sender, ok := args.Sender(); ok {
+		query.Add("sender", string(sender))
+	}
+	if txTime, ok := args.TxSignTime(); ok {
+		ts := time.Unix(txTime, 0).UTC().Format(time.RFC3339)
+		query.Add("sign_time", ts)
+	}
+
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s?%s", client.URL, chain, txHashStr, query.Encode())
 	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return xclient.TxInfo{}, err
