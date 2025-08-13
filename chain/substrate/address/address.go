@@ -39,17 +39,6 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(addr), nil
 }
 
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	return []xc.PossibleAddress{
-		{
-			Address: address,
-			Type:    xc.AddressTypeDefault,
-		},
-	}, err
-}
-
 func DecodeMulti(addr xc.Address) (types.MultiAddress, error) {
 	decodedVal := base58.Decode(string(addr))
 	if len(decodedVal) < 34 {

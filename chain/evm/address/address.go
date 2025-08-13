@@ -41,17 +41,6 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(strings.ToLower(address)), nil
 }
 
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	return []xc.PossibleAddress{
-		{
-			Address: address,
-			Type:    xc.AddressTypeDefault,
-		},
-	}, err
-}
-
 // FromHex returns a go-ethereum Address decoded Crosschain address (hex string).
 func FromHex(address xc.Address) (common.Address, error) {
 	str := TrimPrefixes(string(address))
