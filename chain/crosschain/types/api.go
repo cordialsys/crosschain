@@ -174,14 +174,12 @@ type TransactionInfoRes struct {
 }
 
 type SubmitTxReq struct {
-	Chain        xc.NativeAsset `json:"chain"`
-	TxData       []byte         `json:"tx_data"`
-	TxSignatures [][]byte       `json:"tx_signatures"`
-}
-
-type SubmitTxReqWithMetadata struct {
-	SubmitTxReq
-	Metadata []byte `json:"metadata,omitempty"`
+	Chain  xc.NativeAsset `json:"chain"`
+	TxData []byte         `json:"tx_data"`
+	// Left to support older clients still using
+	LegacyTxSignatures [][]byte `json:"tx_signatures"`
+	// Mapping for Tx "metadata" embedded JSON
+	BroadcastInput string `json:"input,omitempty"`
 }
 
 type SubmitTxRes struct {
@@ -189,15 +187,13 @@ type SubmitTxRes struct {
 }
 
 var _ xc.Tx = &SubmitTxReq{}
-var _ xc.Tx = &SubmitTxReqWithMetadata{}
-var _ xc.TxWithMetadata = &SubmitTxReqWithMetadata{}
+var _ xc.TxWithMetadata = &SubmitTxReq{}
 var _ xc.TxLegacyGetSignatures = &SubmitTxReq{}
-var _ xc.TxLegacyGetSignatures = &SubmitTxReqWithMetadata{}
 
-func NewBinaryTx(serializedSignedTx []byte, TxSignatures [][]byte) xc.Tx {
+func NewBinaryTx(serializedSignedTx []byte, broadcastInput []byte) xc.Tx {
 	return &SubmitTxReq{
-		TxData:       serializedSignedTx,
-		TxSignatures: TxSignatures,
+		TxData:         serializedSignedTx,
+		BroadcastInput: string(broadcastInput),
 	}
 }
 
@@ -209,13 +205,13 @@ func (tx *SubmitTxReq) Sighashes() ([]*xc.SignatureRequest, error) {
 }
 func (tx *SubmitTxReq) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	for _, sig := range sigs {
-		tx.TxSignatures = append(tx.TxSignatures, sig.Signature)
+		tx.LegacyTxSignatures = append(tx.LegacyTxSignatures, sig.Signature)
 	}
 	return nil
 }
 func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
 	sigs := []xc.TxSignature{}
-	for _, sig := range tx.TxSignatures {
+	for _, sig := range tx.LegacyTxSignatures {
 		sigs = append(sigs, sig)
 	}
 	return sigs
@@ -223,9 +219,8 @@ func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
 func (tx *SubmitTxReq) Serialize() ([]byte, error) {
 	return tx.TxData, nil
 }
-
-func (tx *SubmitTxReqWithMetadata) GetMetadata() ([]byte, error) {
-	return tx.Metadata, nil
+func (tx *SubmitTxReq) GetMetadata() ([]byte, error) {
+	return []byte(tx.BroadcastInput), nil
 }
 
 type BlockResponse struct {
