@@ -12,7 +12,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/agent"
 	"github.com/cordialsys/crosschain/chain/internet_computer/candid/idl"
@@ -39,8 +38,8 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // Not all ledger canisters support `icrc106_get_index_principal` method
-var indexCanisters map[string]address.Principal = map[string]address.Principal{
-	icp.LedgerPrincipal.String(): address.MustDecode("qhbym-qaaaa-aaaaa-aaafq-cai"),
+var indexCanisters map[string]icpaddress.Principal = map[string]icpaddress.Principal{
+	icp.LedgerPrincipal.String(): icpaddress.MustDecode("qhbym-qaaaa-aaaaa-aaafq-cai"),
 }
 
 // NewClient returns a new InternetComputerProtocol Client
@@ -77,7 +76,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 func (client *Client) fetchFee(ctx context.Context, contract xc.ContractAddress) (xc.AmountBlockchain, error) {
 	canister := icp.LedgerPrincipal
 	if contract != "" {
-		c, err := address.Decode(string(contract))
+		c, err := icpaddress.Decode(string(contract))
 		if err != nil {
 			return xc.AmountBlockchain{}, fmt.Errorf("failed to decode contract: %w", err)
 		}
@@ -156,7 +155,7 @@ func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 		return fmt.Errorf("failed to decode metadata: %w", err)
 	}
 
-	identity := address.NewEd25519Identity(metadata.SenderPublicKey)
+	identity := icpaddress.NewEd25519Identity(metadata.SenderPublicKey)
 	agentConfig := agent.AgentConfig{
 		Identity: identity,
 	}
@@ -296,7 +295,7 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 	return transactions, err
 }
 
-func (client *Client) fetchAssetName(ctx context.Context, canister address.Principal) (string, error) {
+func (client *Client) fetchAssetName(ctx context.Context, canister icpaddress.Principal) (string, error) {
 	var response string
 	err := client.Agent.Query(
 		canister,
@@ -404,28 +403,43 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 	return xclient.TxInfo{}, nil
 }
 
+func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, bool, error) {
+	ledgerCanister := icp.LedgerPrincipal
+	if blockHeight, ok := args.BlockHeight(); ok {
+		if contract, ok := args.Contract(); ok {
+			c, err := icpaddress.Decode(string(contract))
+			if err != nil {
+				return 0, ledgerCanister, false, fmt.Errorf("invalid canister contract: %w", err)
+			}
+			ledgerCanister = c
+		}
+		return blockHeight, ledgerCanister, true, nil
+	}
+
+	// TODO: try parsing via alternaitve ID
+	blockIndex, err := strconv.Atoi(string(args.TxHash()))
+	if err != nil {
+		return 0, ledgerCanister, false, nil
+	}
+
+	return uint64(blockIndex), ledgerCanister, true, nil
+}
+
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	// We can fetch the transaction direclty if we receive a block index
 	// Fallback to account history lookup otherwise
-	blockIndex, err := strconv.Atoi(string(args.TxHash()))
-	ledgerCanister := icp.LedgerPrincipal
-	contract, ok := args.Contract()
-	if ok {
-		c, err := icpaddress.Decode(string(contract))
-		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("error canister: %w", err)
-		}
-
-		ledgerCanister = c
+	block, ledgerCanister, ok, err := getBlockAndContractIndex(args)
+	if err != nil {
+		return xclient.TxInfo{}, err
 	}
-
-	if err == nil {
-		return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, uint64(blockIndex))
+	if ok {
+		return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, block)
 	} else {
+		// fallback to account history lookup
 		senderAddress, ok := args.Sender()
 		if !ok {
-			return xclient.TxInfo{}, errors.New("sender address is required for fetching transactions by hash")
+			return xclient.TxInfo{}, errors.New("must use block-height to lookup or specify sender address")
 		}
 		hash := args.TxHash()
 		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, senderAddress)
@@ -477,13 +491,16 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return 8, nil
 	}
 
-	canister, err := address.Decode(string(contract))
+	canister, err := icpaddress.Decode(string(contract))
 	if err != nil {
 		return 0, fmt.Errorf("failed to decode canister principal: %w", err)
 	}
 
 	var metadata icrc.MapWrapper
 	err = client.Agent.Query(canister, icrc.MethodMetadata, []any{}, []any{&metadata})
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch metadata: %w", err)
+	}
 
 	var decimals idl.Nat
 	ok, err := metadata.GetValue(icrc.KeyDecimals, &decimals)
@@ -574,7 +591,7 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 		canister,
 		icrc.MethodGetBlocks,
 		[]any{[]icrc.GetBlocksRequest{
-			icrc.GetBlocksRequest{
+			{
 				Start:  idl.NewNat(uint64(blockIndex)),
 				Length: idl.NewNat(uint64(1)),
 			},
@@ -623,7 +640,7 @@ func (client *Client) fetchIcrcHeight(ctx context.Context, canister icpaddress.P
 	err := client.Agent.Query(
 		canister,
 		icrc.MethodGetBlocks,
-		[]any{[]icrc.GetBlocksRequest{icrc.GetBlocksRequest{
+		[]any{[]icrc.GetBlocksRequest{{
 			Start:  idl.Nat{},
 			Length: idl.Nat{},
 		}}},

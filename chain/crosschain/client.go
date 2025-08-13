@@ -345,6 +345,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		ts := time.Unix(txTime, 0).UTC().Format(time.RFC3339)
 		query.Add("sign_time", ts)
 	}
+	if blockHeight, ok := args.BlockHeight(); ok {
+		query.Add("block.height", strconv.FormatUint(blockHeight, 10))
+	}
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s?%s", client.URL, chain, txHashStr, query.Encode())
 	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)

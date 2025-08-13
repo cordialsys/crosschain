@@ -13,6 +13,8 @@ type Args struct {
 	sender xc.Address
 	// Optional sign time
 	sign_time int64
+	// Optional block height
+	block_height uint64
 }
 
 func (args *Args) TxHash() xc.TxHash {
@@ -43,8 +45,16 @@ func (args *Args) TxSignTime() (int64, bool) {
 	return args.sign_time, args.sign_time != 0
 }
 
+func (args *Args) BlockHeight() (uint64, bool) {
+	return args.block_height, args.block_height > 0
+}
+
 func (args *Args) SetTxSignTime(tx_time int64) {
 	args.sign_time = tx_time
+}
+
+func (args *Args) SetBlockHeight(height uint64) {
+	args.block_height = height
 }
 
 func NewArgs(hash xc.TxHash, options ...Option) *Args {
@@ -72,5 +82,11 @@ func OptionSender(sender xc.Address) Option {
 func OptionSignTime(tx_time int64) Option {
 	return func(args *Args) {
 		args.SetTxSignTime(tx_time)
+	}
+}
+
+func OptionBlockHeight(height uint64) Option {
+	return func(args *Args) {
+		args.SetBlockHeight(height)
 	}
 }
