@@ -310,6 +310,8 @@ chains:
     decimals: 8
     fee_limit: "0.005"
     confirmations_final: 2
+    address:
+      formats: ["segwit", "taproot", "legacy"]
     external:
       dti: 4H95J0R2X
       coin_market_cap:
@@ -595,7 +597,7 @@ chains:
       coin_market_cap:
         asset_id: "8916"
       coin_gecko:
-      asset_id: "internet-computer"
+        asset_id: "internet-computer"
 
   INJ:
     chain: INJ

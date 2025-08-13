@@ -46,16 +46,3 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 
 	return xc.Address(encoded), nil
 }
-
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-// TODO: Consider listing all federation accounts for given public key
-// [Stellar federation documentation]: https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/federation#:~:text=Stellar%20federated%20addresses%20are%20divided,stellar.org%20is%20the%20domain
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	return []xc.PossibleAddress{
-		{
-			Address: address,
-			Type:    xc.AddressTypeDefault,
-		},
-	}, err
-}

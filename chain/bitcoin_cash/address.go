@@ -106,28 +106,6 @@ func (ab AddressBuilder) GetLegacyAddressFromPublicKey(publicKeyBytes []byte) (x
 	return xc.Address(prefix + ":" + encoded), nil
 }
 
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-
-	addr, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	legacy, err := ab.GetLegacyAddressFromPublicKey(publicKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return []xc.PossibleAddress{
-		{
-			Address: addr,
-		},
-		{
-			Address: legacy,
-		},
-	}, nil
-}
-
 func BchAddressFromBytes(addrBytes []byte, params *chaincfg.Params) (btcutil.Address, error) {
 	switch len(addrBytes) - 1 {
 	case ripemd160.Size: // P2PKH or P2SH

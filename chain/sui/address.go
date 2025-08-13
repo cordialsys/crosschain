@@ -43,13 +43,3 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	address := "0x" + hex.EncodeToString(addrBytes[:])[:ADDRESS_LENGTH]
 	return xc.Address(address), nil
 }
-
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	return []xc.PossibleAddress{
-		{
-			Address: address,
-			Type:    xc.AddressTypeDefault,
-		},
-	}, err
-}

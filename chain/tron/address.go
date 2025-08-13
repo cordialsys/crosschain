@@ -25,14 +25,3 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	address, err := tron.GetAddressByPublicKey(hex.EncodeToString(publicKeyBytes))
 	return xc.Address(address), err
 }
-
-// GetAllPossibleAddressesFromPublicKey returns all PossubleAddress(es) given a public key
-func (ab AddressBuilder) GetAllPossibleAddressesFromPublicKey(publicKeyBytes []byte) ([]xc.PossibleAddress, error) {
-	address, err := ab.GetAddressFromPublicKey(publicKeyBytes)
-	return []xc.PossibleAddress{
-		{
-			Address: address,
-			Type:    xc.AddressTypeDefault,
-		},
-	}, err
-}
