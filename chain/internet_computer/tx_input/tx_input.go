@@ -12,12 +12,12 @@ const SafetyTimeoutMargin = (24 * time.Hour) + (30 * time.Minute)
 // TxInput for InternetComputerProtocol
 type TxInput struct {
 	xc.TxInputEnvelope
-	Fee uint64
+	Fee uint64 `json:"fee"`
 	// UnixNano timestamp
-	CreatedAtTime uint64
-	Memo          uint64
-	Canister      xc.ContractAddress
-	ICRC1Memo     *[]byte
+	CreatedAtTime uint64             `json:"created_at_time"`
+	Memo          uint64             `json:"memo"`
+	Canister      xc.ContractAddress `json:"canister"`
+	ICRC1Memo     *[]byte            `json:"icrc1_memo"`
 }
 
 var _ xc.TxInput = &TxInput{}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -227,7 +228,7 @@ func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []an
 	logger := a.Logger.WithFields(log.Fields{
 		"raw_args":         in,
 		"unsigned_payload": unsignedPayload,
-		"payload":          payload,
+		"payload":          hex.EncodeToString(payload),
 		"method":           methodName,
 		"url":              url,
 	})
@@ -249,7 +250,7 @@ func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []an
 		if err != nil {
 			return fmt.Errorf("failed to read response body: %w", err)
 		}
-		logger.Debugf("response body: %v", body)
+		logger.Debugf("response body: %s", hex.EncodeToString(body))
 
 		var resp types.Response
 		if err := cbor.Unmarshal(body, &resp); err != nil {
