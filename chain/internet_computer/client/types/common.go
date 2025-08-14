@@ -252,3 +252,9 @@ type Block interface {
 	// Sometimes for ICRC transactions the fee is included in the block object, not transaction
 	Fee() uint64
 }
+
+// Return a custom transaction hash in "{blockHeight}.{ledgerCanister}" format
+// This is the fastest and the most reliable way to fetch transaction id.
+func GetTransacionHash(blockHeight uint64, ledgerCanister address.Principal) string {
+	return fmt.Sprintf("%d.%s", blockHeight, ledgerCanister)
+}
