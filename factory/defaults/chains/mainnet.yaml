@@ -1100,3 +1100,13 @@ chains:
         asset_id: zetachain
       coin_market_cap:
         asset_id: "21259"
+  FOGO:
+    chain: FOGO
+    driver: solana
+    chain_name: Fogo
+    decimals: 9
+    fee_limit: "100.0"
+    confirmations_final: 200
+    external:
+      coin_gecko:
+        asset_id: fogo
