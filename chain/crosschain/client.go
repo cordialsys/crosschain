@@ -329,17 +329,17 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 
 	query := url.Values{}
 	if contract, ok := args.Contract(); ok {
-		query.Add("contract", string(contract))
+		query.Add(types.QueryTxInfoContract, string(contract))
 	}
 	if sender, ok := args.Sender(); ok {
-		query.Add("sender", string(sender))
+		query.Add(types.QueryTxInfoSender, string(sender))
 	}
 	if txTime, ok := args.TxSignTime(); ok {
 		ts := time.Unix(txTime, 0).UTC().Format(time.RFC3339)
-		query.Add("sign_time", ts)
+		query.Add(types.QueryTxInfoSignTime, ts)
 	}
 	if blockHeight, ok := args.BlockHeight(); ok {
-		query.Add("block.height", strconv.FormatUint(blockHeight, 10))
+		query.Add(types.QueryTxInfoBlockHeight, blockHeight.String())
 	}
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s?%s", client.URL, chain, txHashStr, query.Encode())

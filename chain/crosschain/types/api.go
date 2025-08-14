@@ -12,6 +12,14 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+// Optional query arguments for fetching tx info
+const (
+	QueryTxInfoContract    = "contract"
+	QueryTxInfoSender      = "sender"
+	QueryTxInfoSignTime    = "sign_time"
+	QueryTxInfoBlockHeight = "block.height"
+)
+
 type Status status.Status
 
 func (s *Status) Error() string {

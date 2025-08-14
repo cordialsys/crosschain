@@ -419,7 +419,7 @@ func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, 
 			}
 			ledgerCanister = c
 		}
-		return blockHeight, ledgerCanister, true, nil
+		return blockHeight.Uint64(), ledgerCanister, true, nil
 	}
 
 	// Check if txHash is in "blockheight.contract" format
