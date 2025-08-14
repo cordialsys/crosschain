@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -22,6 +21,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx"
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	log "github.com/sirupsen/logrus"
 )
@@ -140,7 +140,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 	withMetadata, ok := txI.(xc.TxWithMetadata)
 	if !ok {
-		return errors.New("ICP transactions must implement TxWithMetadata")
+		return fmt.Errorf("ICP transactions must implement TxWithMetadata")
 	}
 	serializedSignedTx, err := txI.Serialize()
 	if err != nil {
@@ -212,7 +212,7 @@ func (client *Client) CallIcrcTransaction(a *agent.Agent, id types.RequestID, ca
 
 // Returns transaction info - legacy/old endpoint
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("deprecated")
+	return xclient.LegacyTxInfo{}, fmt.Errorf("deprecated")
 }
 
 func (client *Client) fetchIndexPrincipal(ctx context.Context, canister icpaddress.Principal) (icpaddress.Principal, error) {
@@ -408,7 +408,7 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 			return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, blockHeight)
 		}
 	}
-	return xclient.TxInfo{}, nil
+	return xclient.TxInfo{}, errors.TransactionNotFoundf("no matching transaction found in recent account history")
 }
 
 func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, bool, error) {
@@ -460,7 +460,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		// fallback to account history lookup
 		senderAddress, ok := args.Sender()
 		if !ok {
-			return xclient.TxInfo{}, errors.New("must use block-height to lookup or specify sender address")
+			return xclient.TxInfo{}, fmt.Errorf("must use block-height to lookup or specify sender address")
 		}
 		hash := args.TxHash()
 		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, senderAddress)
@@ -603,7 +603,7 @@ func (client *Client) fetchRawIcpBlock(ctx context.Context, blockIndex uint64) (
 		}
 	}
 
-	return icp.Block{}, errors.New("failed to fetch block")
+	return icp.Block{}, fmt.Errorf("failed to fetch block")
 }
 
 func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (icrc.Block, error) {
@@ -644,7 +644,7 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 			return archiveResponse.Blocks[0].Block, nil
 		}
 	}
-	return icrc.Block{}, errors.New("not implemented")
+	return icrc.Block{}, fmt.Errorf("not implemented")
 }
 
 func (client *Client) fetchRawBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (types.Block, error) {
