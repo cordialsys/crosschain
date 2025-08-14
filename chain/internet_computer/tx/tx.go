@@ -258,16 +258,18 @@ func (tx Tx) Serialize() ([]byte, error) {
 
 type BroadcastMetadata struct {
 	// Encoded as a principal string
-	CanisterID      string          `json:"canister_id"`
-	RequestID       types.RequestID `json:"request_id"`
-	SenderPublicKey []byte          `json:"sender_public_key"`
-	IsIcrcTx        bool
+	CanisterID string `json:"canister_id"`
+	// encoded as hex
+	RequestID       string `json:"request_id"`
+	SenderPublicKey []byte `json:"sender_public_key"`
+	IsIcrcTx        bool   `json:"is_icrc_tx"`
 }
 
 func (tx Tx) GetMetadata() ([]byte, error) {
+	requestID := tx.Request.RequestID()
 	metadata := BroadcastMetadata{
 		CanisterID:      tx.Request.CanisterID.String(),
-		RequestID:       tx.Request.RequestID(),
+		RequestID:       hex.EncodeToString(requestID[:]),
 		SenderPublicKey: tx.Request.Sender.PublicKey,
 		IsIcrcTx:        tx.IsIcrcTx,
 	}

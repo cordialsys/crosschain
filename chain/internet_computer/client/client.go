@@ -155,6 +155,11 @@ func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 	if err != nil {
 		return fmt.Errorf("failed to decode metadata: %w", err)
 	}
+	requestIdHex := metadata.RequestID
+	requestId, err := hex.DecodeString(requestIdHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode request id: %w", err)
+	}
 
 	identity := icpaddress.NewEd25519Identity(metadata.SenderPublicKey)
 	agentConfig := agent.AgentConfig{
@@ -171,9 +176,9 @@ func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 	}
 
 	if metadata.IsIcrcTx {
-		return client.CallIcrcTransaction(agent, metadata.RequestID, canister, serializedSignedTx)
+		return client.CallIcrcTransaction(agent, types.RequestID(requestId), canister, serializedSignedTx)
 	} else {
-		return client.CallIcpTransaction(agent, metadata.RequestID, canister, serializedSignedTx)
+		return client.CallIcpTransaction(agent, types.RequestID(requestId), canister, serializedSignedTx)
 	}
 }
 
