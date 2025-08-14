@@ -319,11 +319,6 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 		return xclient.TxInfo{}, err
 	}
 
-	transactionHash, err := block.TxHash()
-	if err != nil {
-		return xclient.TxInfo{}, err
-	}
-
 	height, err := client.fetchHeight(ctx, canister)
 	if err != nil {
 		return xclient.TxInfo{}, err
@@ -335,6 +330,8 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	}
 	blockTimestamp := time.Unix(0, int64(ts)).UTC()
 	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, blockTimestamp)
+
+	transactionHash := types.GetTransacionHash(blockIndex, canister)
 	txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
 
 	transaction, err := block.Transaction()
@@ -713,10 +710,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	xcBlock := xclient.NewBlock(xc.ICP, height, hash, timestamp)
 
 	transactions := make([]string, 0, 1)
-	txHash, err := block.TxHash()
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate transaction hash: %w", err)
-	}
+	txHash := types.GetTransacionHash(height, canister)
+
 	transactions = append(transactions, txHash)
 	return &xclient.BlockWithTransactions{
 		Block:          *xcBlock,
