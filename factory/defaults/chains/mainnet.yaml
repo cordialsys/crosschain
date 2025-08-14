@@ -575,24 +575,28 @@ chains:
     native_assets:
       - asset_id: "ICP"
         contract_id: "ryjl3-tyaaa-aaaaa-aaaba-cai"
-        fee_limit: "100.0"
+        fee_limit: "18.0"
         decimals: 8
-      - asset_id: "ckBTC"
+      - asset_id: "mxzaz-hqaaa-aaaar-qaada-cai"
         contract_id: "mxzaz-hqaaa-aaaar-qaada-cai"
-        fee_limit: "0.0001" # ~ 11usd at the moment, default is '0.00000010',
+        fee_limit: "0.0008"
         decimals: 8
-      - asset_id: "BOOM"
-        contract_id: "vtrom-gqaaa-aaaaq-aabia-cai"
-        fee_limit: "100.0" # default is '0.1',
-        decimals: 8
-      - asset_id: "WTN"
-        contract_id: "jcmow-hyaaa-aaaaq-aadlq-cai"
-        fee_limit: "100.0" # default is '0.1',
-        decimals: 8
-      - asset_id: "ckUSDT"
-        contract_id: "cngnf-vqaaa-aaaar-qag4q-cai"
-        fee_limit: "10.0" # default is '0.0001',
+        aliases: ["ckBTC"]
+      - asset_id: "xevnm-gaaaa-aaaar-qafnq-cai"
+        contract_id: "xevnm-gaaaa-aaaar-qafnq-cai"
         decimals: 6
+        fee_limit: "100.0"
+        aliases: ["ckUSDC"]
+      - asset_id: "cngnf-vqaaa-aaaar-qag4q-cai"
+        contract_id: "cngnf-vqaaa-aaaar-qag4q-cai"
+        fee_limit: "587.0"
+        decimals: 6
+        aliases: ["ckUSDT"]
+      - asset_id: "lkwrt-vyaaa-aaaaq-aadhq-cai"
+        contract_id: "lkwrt-vyaaa-aaaaq-aadhq-cai"
+        fee_limit: "41054.0"
+        decimals: 8
+        aliases: ["OGY"]
     external:
       coin_market_cap:
         asset_id: "8916"
@@ -764,10 +768,11 @@ chains:
         contract_id: "uluna"
         decimals: 6
         fee_limit: "25000000.0"
-      - asset_id: "USTC"
+      - asset_id: "uusd"
         contract_id: "uusd"
         decimals: 6
         fee_limit: "25000000.0"
+        aliases: ["USTC"]
     external:
       dti: NGXHD2ZFQ
       coin_market_cap:
@@ -837,26 +842,31 @@ chains:
     chain_coin: "uusdc"
     native_assets:
       # https://www.mintscan.io/noble/assets
-      - asset_id: "USDC"
+      - asset_id: "uusdc"
         contract_id: "uusdc"
         decimals: 6
         fee_limit: "20.0"
-      - asset_id: "USDY"
+        aliases: ["USDC"]
+      - asset_id: "ausdy"
         contract_id: "ausdy"
         decimals: 18
         fee_limit: "20.0"
-      - asset_id: "EURe"
+        aliases: ["USDY"]
+      - asset_id: "ueure"
         contract_id: "ueure"
         decimals: 6
         fee_limit: "20.0"
-      - asset_id: "USYC"
+        aliases: ["EURe"]
+      - asset_id: "uusyc"
         contract_id: "uusyc"
         decimals: 6
         fee_limit: "20.0"
-      - asset_id: "USDN"
+        aliases: ["USYC"]
+      - asset_id: "uusdn"
         contract_id: "uusdn"
         decimals: 6
         fee_limit: "20.0"
+        aliases: ["USDN"]
 
   OAS:
     chain: OAS
