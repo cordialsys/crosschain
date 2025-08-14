@@ -535,3 +535,11 @@ chains:
         contract_id: "azeta"
         decimals: 18
         fee_limit: "200.0"
+  FOGO:
+    chain: FOGO
+    driver: solana
+    chain_name: Fogo (testnet)
+    net: testnet
+    decimals: 9
+    chain_gas_multiplier: 1.5
+    fee_limit: "100"

@@ -57,6 +57,7 @@ const (
 	ETH    = NativeAsset("ETH")    // Ethereum
 	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
 	FIL    = NativeAsset("FIL")    // Filecoin
+	FOGO   = NativeAsset("FOGO")   // Fogo
 	FTM    = NativeAsset("FTM")    // Fantom
 	HASH   = NativeAsset("HASH")   // Provenance
 	INJ    = NativeAsset("INJ")    // Injective
@@ -121,6 +122,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ETH,
 	ETHW,
 	FIL,
+	FOGO,
 	FTM,
 	INJ,
 	HASH,
@@ -299,6 +301,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverXlm
 	case FIL:
 		return DriverFilecoin
+	case FOGO:
+		return DriverSolana
 	case DUSK:
 		return DriverDusk
 	case ADA:
