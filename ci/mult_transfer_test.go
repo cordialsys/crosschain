@@ -174,7 +174,7 @@ func TestMultiTransfer(t *testing.T) {
 	awaitBalance(t, client, initialBalance, decimals, balanceArgs...)
 
 	// Create multi-transfer arguments
-	tfArgs, err := builder.NewMultiTransferArgs(chainConfig.Chain, senders, receivers, tfOptions...)
+	tfArgs, err := builder.NewMultiTransferArgs(chainConfig.Base(), senders, receivers, tfOptions...)
 	require.NoError(t, err)
 
 	// Get multi-transfer client

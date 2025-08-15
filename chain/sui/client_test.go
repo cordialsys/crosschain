@@ -804,7 +804,9 @@ func TestTransfers(t *testing.T) {
 			fromPkBz, err := hex.DecodeString(from_pk)
 			require.NoError(err)
 
-			args := buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount_machine, buildertest.OptionPublicKey(fromPkBz))
+			args := buildertest.MustNewTransferArgs(nativeAsset.GetChain().Base(),
+				xc.Address(from), xc.Address(to), amount_machine, buildertest.OptionPublicKey(fromPkBz),
+			)
 			if v.tokenContract != "" {
 				args.SetContract(v.tokenContract)
 			}

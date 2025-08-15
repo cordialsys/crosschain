@@ -24,8 +24,9 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.KAS).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 	)
 	_, err := builder.Transfer(args, input)
 	require.ErrorContains(t, err, "not implemented")
@@ -37,8 +38,9 @@ func TestNewTokenTransfer(t *testing.T) {
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.KAS).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress("contract")),
 	)
 	_, err := builder1.Transfer(args, input)

@@ -126,7 +126,7 @@ func TestTransfer(t *testing.T) {
 		balanceArgs.SetContract(xc.ContractAddress(contract))
 	}
 
-	tfArgs, err := builder.NewTransferArgs(from, toAddress, transferAmountBlockchain, tfOptions...)
+	tfArgs, err := builder.NewTransferArgs(chainConfig.Base(), from, toAddress, transferAmountBlockchain, tfOptions...)
 	require.NoError(t, err)
 
 	initialBalance := xc.NewAmountHumanReadableFromFloat(3.0).ToBlockchain(decimals)

@@ -25,6 +25,7 @@ func TestNewTxBuilder(t *testing.T) {
 		args           buildertest.TransferArgs
 		expectedSigHex string
 	}
+	chainCfg := xc.NewChainConfig(xc.TRX).WithDecimals(6).Base()
 
 	testcases := []testcase{
 		{
@@ -38,6 +39,7 @@ func TestNewTxBuilder(t *testing.T) {
 				MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 			},
 			args: buildertest.MustNewTransferArgs(
+				chainCfg,
 				xc.Address("TFmgAF3HfTJZk2aHkvSu8FDtVArbqp4XE5"),
 				xc.Address("TUz4nTU75z5oK4pYaVipkSDQ3Bi2DXdQT8"),
 				xc.NewAmountBlockchainFromUint64(10000),
@@ -55,6 +57,7 @@ func TestNewTxBuilder(t *testing.T) {
 				MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 			},
 			args: buildertest.MustNewTransferArgs(
+				chainCfg,
 				xc.Address("TFmgAF3HfTJZk2aHkvSu8FDtVArbqp4XE5"),
 				xc.Address("TUz4nTU75z5oK4pYaVipkSDQ3Bi2DXdQT8"),
 				xc.NewAmountBlockchainFromUint64(10000),
@@ -67,7 +70,7 @@ func TestNewTxBuilder(t *testing.T) {
 
 	for i, tc := range testcases {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
-			txBuilder, err := tron.NewTxBuilder(xc.NewChainConfig("TRX").WithDecimals(6).Base())
+			txBuilder, err := tron.NewTxBuilder(chainCfg)
 			require.NoError(t, err)
 			require.NotNil(t, txBuilder)
 

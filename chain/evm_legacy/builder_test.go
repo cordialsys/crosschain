@@ -25,7 +25,8 @@ func TestBuilderLegacyTransfer(t *testing.T) {
 	fmt.Printf("--- %T\n", input)
 
 	input.GasTipCap = builder.GweiToWei(evm_legacy.DefaultMaxTipCapGwei - 1)
-	trans, err := b.Transfer(buildertest.MustNewTransferArgs(xc.Address(from), xc.Address(to), amount), input)
+	chainCfg := xc.NewChainConfig(xc.CELO, xc.DriverEVMLegacy).Base()
+	trans, err := b.Transfer(buildertest.MustNewTransferArgs(chainCfg, xc.Address(from), xc.Address(to), amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, trans)
 

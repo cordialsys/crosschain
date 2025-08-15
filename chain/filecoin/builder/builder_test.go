@@ -29,8 +29,9 @@ func TestNewTransfer(t *testing.T) {
 		GasFeeCap:  xc.NewAmountBlockchainFromStr("150000"),
 		GasPremium: xc.NewAmountBlockchainFromStr("250000"),
 	}
+	chainCfg := xc.NewChainConfig(xc.FIL).Base()
 
-	tf, err := builder1.Transfer(buildertest.MustNewTransferArgs(from, to, amount), input)
+	tf, err := builder1.Transfer(buildertest.MustNewTransferArgs(chainCfg, from, to, amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, tf)
 }

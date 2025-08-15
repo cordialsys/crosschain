@@ -163,6 +163,7 @@ func TestFetchTxInput(t *testing.T) {
 			client.Url = server.URL
 
 			args, err := xcbuilder.NewTransferArgs(
+				cfg.Base(),
 				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
 				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
 				xc.NewAmountBlockchainFromUint64(1_000_000),
@@ -231,6 +232,7 @@ func TestSubmitTx(t *testing.T) {
 			client.Url = server.URL
 
 			args, err := xcbuilder.NewTransferArgs(
+				cfg.Base(),
 				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
 				xc.Address("addr_test1qrfp5xelv2mu7k8zyvwm0c8t5xm55wanwhtd4fgjgtf3ck0rplhn7x9jyhwqg70fwv0ujpmyumqk5td9e9hnsejtlxnq3yqf25"),
 				xc.NewAmountBlockchainFromUint64(1_000_000),

@@ -30,8 +30,9 @@ func TestNewTransfer(t *testing.T) {
 		GasPrice: 1,
 		ChainId:  1,
 	}
+	asset := xc.NewChainConfig(xc.DUSK)
 
-	tf, err := builder.Transfer(buildertest.MustNewTransferArgs(from, to, amount), input)
+	tf, err := builder.Transfer(buildertest.MustNewTransferArgs(asset.Base(), from, to, amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, tf)
 }

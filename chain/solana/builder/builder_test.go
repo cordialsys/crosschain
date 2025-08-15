@@ -62,8 +62,10 @@ func TestNewNativeTransferErr(t *testing.T) {
 func TestNewTokenTransfer(t *testing.T) {
 
 	contract := "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	builder, _ := builder.NewTxBuilder(chainCfg)
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb"),
 		xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11"),
 		xc.NewAmountBlockchainFromUint64(1200000),
@@ -117,6 +119,7 @@ func TestNewTokenTransfer(t *testing.T) {
 
 	// transfer directly to ATA
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		args.GetFrom(),
 		xc.Address(ataToStr),
 		args.GetAmount(),
@@ -134,6 +137,7 @@ func TestNewTokenTransfer(t *testing.T) {
 
 	// invalid: direct to ATA, but ToIsATA: false
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		args.GetFrom(),
 		xc.Address(ataToStr),
 		args.GetAmount(),
@@ -202,7 +206,9 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 			},
 		},
 	}
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from,
 		to,
 		xc.NewAmountBlockchainFromUint64(0),
@@ -259,8 +265,10 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 
 func TestNewTokenTransferErr(t *testing.T) {
 	// invalid from, to
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		"from",
 		"to",
 		xc.AmountBlockchain{},
@@ -271,6 +279,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 
 	// invalid to
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		"Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 		"to",
 		xc.AmountBlockchain{},
@@ -280,6 +289,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 
 	// invalid asset contract
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		"Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 		"BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11",
 		xc.AmountBlockchain{},
@@ -290,6 +300,7 @@ func TestNewTokenTransferErr(t *testing.T) {
 
 	// missing contract
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		"Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
 		"BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11",
 		xc.AmountBlockchain{},
@@ -306,7 +317,9 @@ func TestNewTransfer(t *testing.T) {
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from,
 		to,
 		amount,
@@ -328,7 +341,8 @@ func Bytes32(i byte) []byte {
 
 func TestNewTransferAsToken(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	builder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
@@ -359,7 +373,10 @@ func TestNewTransferAsToken(t *testing.T) {
 	}
 	for _, v := range testcases {
 		args := buildertest.MustNewTransferArgs(
-			from, to, amount,
+			chainCfg,
+			from,
+			to,
+			amount,
 			buildertest.OptionContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", 6),
 		)
 

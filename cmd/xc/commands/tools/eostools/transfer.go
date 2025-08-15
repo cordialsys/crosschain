@@ -122,7 +122,7 @@ func CmdTxTransferEOS() *cobra.Command {
 			}
 			amountHuman, _ := xc.NewAmountHumanReadableFromStr(args[1])
 			amount := amountHuman.ToBlockchain(4)
-			tfArgs, err := xcbuilder.NewTransferArgs(fromAddress, xc.Address(toAccount), amount)
+			tfArgs, err := xcbuilder.NewTransferArgs(chainConfig.Base(), fromAddress, xc.Address(toAccount), amount)
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)
 			}

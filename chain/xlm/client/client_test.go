@@ -270,7 +270,7 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(vector.asset)
 			from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 			to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
-			args, _ := builder.NewTransferArgs(from, to, vector.amount)
+			args, _ := builder.NewTransferArgs(vector.asset.Base(), from, to, vector.amount)
 			if vector.contract != "" {
 				args.SetContract(vector.contract)
 			}

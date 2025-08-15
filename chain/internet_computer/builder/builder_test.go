@@ -25,8 +25,9 @@ func TestNewTransfer(t *testing.T) {
 	to := xc.Address("6c5066261553064a8d4fa8f30fa9d587d9887bce69601cdb5b6cac8780fc8899")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.ICP).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 		buildertest.OptionPublicKey([]byte{1, 2, 3, 4}),
 	)
 	txI, err := builder1.Transfer(args, input)
@@ -52,8 +53,9 @@ func TestNewTransferNoPublicKey(t *testing.T) {
 	to := xc.Address("6c5066261553064a8d4fa8f30fa9d587d9887bce69601cdb5b6cac8780fc8899")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.ICP).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress("contract")),
 	)
 	_, err := builder1.Transfer(args, input)
@@ -66,8 +68,9 @@ func TESTNewTokenTransferInvalidContract(t *testing.T) {
 	to := xc.Address("6c5066261553064a8d4fa8f30fa9d587d9887bce69601cdb5b6cac8780fc8899")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.ICP).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress("asdf")),
 		buildertest.OptionPublicKey([]byte{1, 2, 3, 4}),
 	)
@@ -81,8 +84,9 @@ func TestNewTokenTransfer(t *testing.T) {
 	to := xc.Address("mglk4-25zez-he5uh-lsy2a-bontn-pfarj-offxd-5teb2-icnpp-scmni-zae")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
+	chainCfg := xc.NewChainConfig(xc.ICP).Base()
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chainCfg, from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress("n5wcd-faaaa-aaaar-qaaea-cai")),
 		buildertest.OptionPublicKey([]byte{1, 2, 3, 4}),
 	)

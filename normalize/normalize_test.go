@@ -110,16 +110,6 @@ func TestNormalizeAddress(t *testing.T) {
 	}
 	vectors := []testcase{
 		{
-			chain: xc.BTC,
-			inp:   "myaddress",
-			out:   "myaddress",
-		},
-		{
-			chain: xc.BCH,
-			inp:   "bitcoincash:myaddress",
-			out:   "myaddress",
-		},
-		{
 			// default to ETH if input has 0x
 			chain: "",
 			inp:   "0x0ECE",
@@ -132,29 +122,15 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "0ECE",
 		},
 		{
-			chain: xc.ETH,
-			inp:   "0x0ECE",
-			out:   "0x0ece",
-		},
-		{
-			chain: xc.ETH,
-			inp:   "0ECE", // add the prefix in
-			out:   "0x0ece",
+			// Bech32, should be no variation
+			chain: xc.ADA,
+			inp:   "addr1v9lwqlqytqnd0xgqd20fkfms4mfyvqmlzcxge7dwu6u8w8gpy60eg",
+			out:   "addr1v9lwqlqytqnd0xgqd20fkfms4mfyvqmlzcxge7dwu6u8w8gpy60eg",
 		},
 		{
 			chain: xc.APTOS,
 			inp:   "0x0ECE",
 			out:   "0x0000000000000000000000000000000000000000000000000000000000000ece",
-		},
-		{
-			chain: xc.SUI,
-			inp:   "0x0ECE",
-			out:   "0x0ece",
-		},
-		{
-			chain: xc.SUI,
-			inp:   "coin::Coin<0x11AAbbCCdd::coin::NAME>",
-			out:   "0x11aabbccdd::coin::NAME",
 		},
 		{
 			chain: xc.APTOS,
@@ -182,6 +158,102 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "0x000000000b5b07a8be428ccd75d0443e81542ffcd059d0ab380cefc552229b1a",
 		},
 		{
+			// should remove the bitcoincash: prefix
+			chain: xc.BCH,
+			inp:   "bitcoincash:qrwlh2l2ghsqefzre5xc5caw2nq52sr64v6kt98ymv",
+			out:   "qrwlh2l2ghsqefzre5xc5caw2nq52sr64v6kt98ymv",
+		},
+		{
+			// bech32, no variation
+			chain: xc.BTC,
+			inp:   "bc1pwy7vu875lwufqlcf6rr4fejjjdf0m9lhrpcrgt43kee6rnks262sm2x9ls",
+			out:   "bc1pwy7vu875lwufqlcf6rr4fejjjdf0m9lhrpcrgt43kee6rnks262sm2x9ls",
+		},
+		{
+			// bech32, no variation
+			chain: xc.DOGE,
+			inp:   "15BgrFpAb7kSBYCcCqZPbLDgNrqygmGumT",
+			out:   "15BgrFpAb7kSBYCcCqZPbLDgNrqygmGumT",
+		},
+		{
+			// base58, no variation
+			chain: xc.DOT,
+			inp:   "15EVqvzZ93gqafPTp7x4tCdSSx22mMFw8ypJj61wXH8DBZ3b",
+			out:   "15EVqvzZ93gqafPTp7x4tCdSSx22mMFw8ypJj61wXH8DBZ3b",
+		},
+		{
+			// should be no variation
+			chain: xc.DUSK,
+			inp:   "od2bVPYstYud4N1GFQo9bAP2YmCz3Nxw1iE2hEdooVSRHyLnxufnXRdxZMNZnG2NH3YaCxDCVC46SuRn1ALA6fs8XvyGTxLoWPqhLBM3GyHusbDAVTprjtGdJS8FU8bEqvx",
+			out:   "od2bVPYstYud4N1GFQo9bAP2YmCz3Nxw1iE2hEdooVSRHyLnxufnXRdxZMNZnG2NH3YaCxDCVC46SuRn1ALA6fs8XvyGTxLoWPqhLBM3GyHusbDAVTprjtGdJS8FU8bEqvx",
+		},
+		{
+			// should be no variation
+			chain: xc.EOS,
+			inp:   "EOS6FiFh5HgMKCQoU6NggepL7Xxd3JXUNPNvsLte6SdB8ss2h3Hfq",
+			out:   "EOS6FiFh5HgMKCQoU6NggepL7Xxd3JXUNPNvsLte6SdB8ss2h3Hfq",
+		},
+		{
+			chain: xc.ETH,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.ETH,
+			inp:   "0ECE", // add the prefix in
+			out:   "0x0ece",
+		},
+		{
+			// should be no variation, bech32
+			chain: xc.FIL,
+			inp:   "f12xj3kmjbpmc455c6cse2x43dda4j2xxlterpu5q",
+			out:   "f12xj3kmjbpmc455c6cse2x43dda4j2xxlterpu5q",
+		},
+		{
+			// lowercase hex, no 0x prefix
+			chain: xc.ICP,
+			inp:   "0x7650CC8DB0664F03919F8129BE519E17D5F82BEA7B3E423633B2D02E8D371E9B",
+			out:   "7650cc8db0664f03919f8129be519e17d5f82bea7b3e423633b2d02e8d371e9b",
+		},
+		{
+			chain: xc.ICP,
+			inp:   "rmfui-qzccr-h74j3-hznfm-3w22n-kiyhd-mlggq-y37en-cjlmu-iyw7i-bae",
+			out:   "rmfui-qzccr-h74j3-hznfm-3w22n-kiyhd-mlggq-y37en-cjlmu-iyw7i-bae",
+		},
+		{
+			// required prefix and bech32, no variation
+			chain: xc.KAS,
+			inp:   "kaspa:qze7ykh5cf2uzcctcapf74lfwc4lz5xef25ctwlae0j3pg3wdvv35zhgnjs3e",
+			out:   "kaspa:qze7ykh5cf2uzcctcapf74lfwc4lz5xef25ctwlae0j3pg3wdvv35zhgnjs3e",
+		},
+		{
+			chain: xc.TON,
+			inp:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
+			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
+		},
+
+		{
+			chain: xc.TRX,
+			inp:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+			out:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+		},
+		{
+			// Base58, should be no variation
+			chain: xc.SOL,
+			inp:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
+			out:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
+		},
+		{
+			chain: xc.SUI,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			chain: xc.SUI,
+			inp:   "coin::Coin<0x11AAbbCCdd::coin::NAME>",
+			out:   "0x11aabbccdd::coin::NAME",
+		},
+		{
 			chain: xc.XDC,
 			inp:   "0x0ECE",
 			out:   "xdc0ece",
@@ -192,21 +264,37 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "xdc0ece",
 		},
 		{
-			chain: xc.SOL,
-			inp:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
-			out:   "6MpyCTHuJBZv32RZXGs4Ao46y6YqzarqUkMkWb3WRq5y",
+			// Bech32, should be no variation
+			chain: xc.XPLA,
+			inp:   "xpla12qpz2g6acm42up4229mzqs25c8wx5t448n77um",
+			out:   "xpla12qpz2g6acm42up4229mzqs25c8wx5t448n77um",
 		},
 		{
-			chain: xc.TRX,
-			inp:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
-			out:   "TFrT3EMHdroQ6YSwLZtSLuWxFEbMbLibnE",
+			// Base32, should be no variation
+			chain: xc.XLM,
+			inp:   "GBXGGNNOCK7YOH2OJUDGKCFKLFS47IQBCGYUZ5JHRVV3H7DD754NXH3S",
+			out:   "GBXGGNNOCK7YOH2OJUDGKCFKLFS47IQBCGYUZ5JHRVV3H7DD754NXH3S",
 		},
 		{
-			chain: xc.TON,
-			inp:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
-			out:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSha2",
+			// Base58, should be no variation
+			chain: xc.XRP,
+			inp:   "rPUMVLA9XZwxvKPUGcdDPZRJvhReBCW3CQ",
+			out:   "rPUMVLA9XZwxvKPUGcdDPZRJvhReBCW3CQ",
 		},
 	}
+
+	// test that we have a test vector for each chain
+	for _, chain := range xc.NativeAssetList {
+		found := false
+		for _, v := range vectors {
+			if v.chain.Driver() == chain.Driver() {
+				found = true
+				break
+			}
+		}
+		require.True(found, "No address normalization test vector for driver %s", chain.Driver())
+	}
+
 	for _, v := range vectors {
 		t.Run(fmt.Sprintf("%s-%s", v.chain, v.inp), func(t *testing.T) {
 			normalizedOut := n.Normalize(v.inp, v.chain)

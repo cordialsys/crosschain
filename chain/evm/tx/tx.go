@@ -37,7 +37,7 @@ func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_inp
 		txInner = NewLegacyTx(args, input, chain)
 	} else {
 		if _, ok := args.GetFeePayer(); ok {
-			multiArgs, err := xcbuilder.NewMultiTransferArgsFromSingle(chain.Chain, &args)
+			multiArgs, err := xcbuilder.NewMultiTransferArgsFromSingle(chain, &args)
 			if err != nil {
 				return nil, err
 			}

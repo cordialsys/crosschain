@@ -124,7 +124,7 @@ func (s *CrosschainTestSuite) TestNewTokenTransfer() {
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 	}
-	args, err := xcbuilder.NewTransferArgs(from, to, amount, xcbuilder.OptionContractAddress("1234"))
+	args, err := xcbuilder.NewTransferArgs(chain.Base(), from, to, amount, xcbuilder.OptionContractAddress("1234"))
 	require.NoError(err)
 	_, err = builder.Transfer(args, input)
 	require.ErrorContains(err, "token transfers are not supported")
@@ -143,7 +143,7 @@ func (s *CrosschainTestSuite) TestNewTransfer() {
 		}},
 		GasPricePerByte: xc.NewAmountBlockchainFromUint64(1),
 	}
-	args, err := xcbuilder.NewTransferArgs(from, to, amount)
+	args, err := xcbuilder.NewTransferArgs(chain.Base(), from, to, amount)
 	require.NoError(err)
 	tf, err := builder.Transfer(args, input)
 	require.NotNil(tf)
@@ -418,7 +418,7 @@ func TestMultiTransferChange(t *testing.T) {
 			for _, to := range tc.tos {
 				receivers = append(receivers, buildertest.MustNewReceiver(to.To, to.Value))
 			}
-			args, err := xcbuilder.NewMultiTransferArgs(xc.BTC, spenders, receivers)
+			args, err := xcbuilder.NewMultiTransferArgs(chain.Base(), spenders, receivers)
 			require.NoError(err)
 			tf, err := txBuilder.MultiTransfer(*args, &tx_input.MultiTransferInput{
 				Inputs: tc.fromInputs,

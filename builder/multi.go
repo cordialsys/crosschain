@@ -54,13 +54,14 @@ func NewReceiver(address xc.Address, amount xc.AmountBlockchain, options ...Buil
 }
 
 type MultiTransferArgs struct {
+	chain          *xc.ChainBaseConfig
 	spenders       []*Sender
 	receivers      []*Receiver
 	options        builderOptions
 	appliedOptions []BuilderOption
 }
 
-func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
+func NewMultiTransferArgs(chain *xc.ChainBaseConfig, spenders []*Sender, receivers []*Receiver, options ...BuilderOption) (*MultiTransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	for _, opt := range options {
 		err := opt(&builderOptions)
@@ -68,7 +69,7 @@ func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []
 			return nil, err
 		}
 	}
-	switch chain.Driver() {
+	switch chain.Driver {
 	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy, xc.DriverCardano, xc.DriverSui:
 		// check for address dups
 		for i, s1 := range spenders {
@@ -93,6 +94,7 @@ func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []
 		}
 	}
 	return &MultiTransferArgs{
+		chain,
 		spenders,
 		receivers,
 		builderOptions,
@@ -100,7 +102,7 @@ func NewMultiTransferArgs(chain xc.NativeAsset, spenders []*Sender, receivers []
 	}, nil
 }
 
-func NewMultiTransferArgsFromSingle(chain xc.NativeAsset, single *TransferArgs, options ...BuilderOption) (*MultiTransferArgs, error) {
+func NewMultiTransferArgsFromSingle(chain *xc.ChainBaseConfig, single *TransferArgs, options ...BuilderOption) (*MultiTransferArgs, error) {
 	senderPublicKey, ok := single.GetPublicKey()
 	if !ok {
 		return nil, errors.New("sender public key not set")
@@ -198,7 +200,7 @@ func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {
 		// apply args options last so they take precedence
 		allOptions = append(allOptions, args.appliedOptions...)
 
-		transferArgs, err := NewTransferArgs(spender.address, receiver.address, receiver.amount, allOptions...)
+		transferArgs, err := NewTransferArgs(args.chain, spender.address, receiver.address, receiver.amount, allOptions...)
 		if err != nil {
 			return nil, err
 		}
@@ -221,7 +223,7 @@ func (args *MultiTransferArgs) AsAccountTransfers() ([]*TransferArgs, error) {
 		// apply args options last so they take precedence
 		allOptions = append(allOptions, args.appliedOptions...)
 
-		transferArgs, err := NewTransferArgs(spender.address, receiver.address, receiver.amount, allOptions...)
+		transferArgs, err := NewTransferArgs(args.chain, spender.address, receiver.address, receiver.amount, allOptions...)
 		if err != nil {
 			return nil, err
 		}

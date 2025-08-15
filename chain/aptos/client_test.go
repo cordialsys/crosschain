@@ -155,7 +155,8 @@ func (s *AptosTestSuite) TestSubmitTx() {
 		Timestamp:       12345,
 		ChainId:         1,
 	}
-	args := buildertest.MustNewTransferArgs(from, to, amount, buildertest.OptionPublicKey(pubkey))
+
+	args := buildertest.MustNewTransferArgs(asset.ChainBaseConfig, from, to, amount, buildertest.OptionPublicKey(pubkey))
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
@@ -450,7 +451,7 @@ func (s *AptosTestSuite) TestNewNativeTransfer() {
 		Timestamp:       12345,
 		ChainId:         1,
 	}
-	args := buildertest.MustNewTransferArgs(from, to, amount, buildertest.OptionPublicKey(pubkey))
+	args := buildertest.MustNewTransferArgs(asset.ChainBaseConfig, from, to, amount, buildertest.OptionPublicKey(pubkey))
 	tf, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tf)
@@ -493,7 +494,7 @@ func (s *AptosTestSuite) TestNewTokenTransfer() {
 		ChainId:         1,
 	}
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		native_asset.ChainBaseConfig, from, to, amount,
 		buildertest.OptionContractAddress("0x1::Coin::USDC"),
 		buildertest.OptionPublicKey(pubkey),
 	)
@@ -560,6 +561,7 @@ func (s *AptosTestSuite) TestFeePayerNewTokenTransfer() {
 		ChainId:         1,
 	}
 	args := buildertest.MustNewTransferArgs(
+		native_asset.ChainBaseConfig,
 		from, to, amount,
 		buildertest.OptionContractAddress("0x1::Coin::USDC"),
 		buildertest.OptionFeePayer(feePayer, []byte{}),

@@ -11,12 +11,13 @@ type TransferArgs = builder.TransferArgs
 type StakeArgs = builder.StakeArgs
 
 func MustNewTransferArgs(
+	chain *xc.ChainBaseConfig,
 	from xc.Address,
 	to xc.Address,
 	amount xc.AmountBlockchain,
 	options ...builder.BuilderOption,
 ) builder.TransferArgs {
-	args, err := builder.NewTransferArgs(from, to, amount, options...)
+	args, err := builder.NewTransferArgs(chain, from, to, amount, options...)
 	if err != nil {
 		panic(err)
 	}
