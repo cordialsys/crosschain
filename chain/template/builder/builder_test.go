@@ -13,18 +13,21 @@ import (
 type TxInput = tx_input.TxInput
 
 func TestNewTxBuilder(t *testing.T) {
-	builder1, err := builder.NewTxBuilder(xc.NewChainConfig("XYZ").Base())
+	chainCfg := xc.NewChainConfig("XYZ").Base()
+	builder1, err := builder.NewTxBuilder(chainCfg)
 	require.NotNil(t, builder1)
 	require.EqualError(t, err, "not implemented")
 }
 
 func TestNewNativeTransfer(t *testing.T) {
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("XYZ").Base())
+	chainCfg := xc.NewChainConfig("XYZ").Base()
+	builder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 	)
 	_, err := builder.Transfer(args, input)
@@ -32,12 +35,14 @@ func TestNewNativeTransfer(t *testing.T) {
 }
 
 func TestNewTokenTransfer(t *testing.T) {
-	builder1, _ := builder.NewTxBuilder(xc.NewChainConfig("XYZ").Base())
+	chainCfg := xc.NewChainConfig("XYZ").Base()
+	builder1, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("from")
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress("contract")),
 	)

@@ -132,6 +132,7 @@ func CmdTxInput() *cobra.Command {
 			}
 
 			tfArgs, err := builder.NewTransferArgs(
+				chainConfig.Base(),
 				fromAddress,
 				xc.Address(addressTo),
 				amountBlockchain,

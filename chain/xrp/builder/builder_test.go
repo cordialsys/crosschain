@@ -23,13 +23,15 @@ func TestNewTxBuilder(t *testing.T) {
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.XRP).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &tx_input.TxInput{}
 
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 		buildertest.OptionMemo("999"),
 		buildertest.OptionPublicKey(make([]byte, 32)),
@@ -47,7 +49,8 @@ func TestNewNativeTransfer(t *testing.T) {
 
 func TestNewNativeTransferAccountDelete(t *testing.T) {
 
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.XRP).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
@@ -58,6 +61,7 @@ func TestNewNativeTransferAccountDelete(t *testing.T) {
 	}
 
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 		buildertest.OptionMemo("999"),
 		buildertest.OptionPublicKey(make([]byte, 32)),
@@ -85,11 +89,13 @@ func TestNewNativeTransferAccountDelete(t *testing.T) {
 func TestNewTokenTransfer(t *testing.T) {
 
 	contract := "FMT-rKcAJWccYkYr7Mh2ZYmZFyLzhZD23DvTvB"
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.XRP).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12000000000000000)
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
 		buildertest.OptionMemo("0x999"),
@@ -109,12 +115,14 @@ func TestNewTokenTransfer(t *testing.T) {
 
 func TestNewTransfer(t *testing.T) {
 
-	txBuilder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.XRP).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe")
 	to := xc.Address("rMCcNuTcajgw7YTgBy1sys3b89QqjUrMpH")
 	amount := xc.NewAmountBlockchainFromUint64(12)
 	input := &TxInput{}
 	args := buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount,
 		buildertest.OptionPublicKey(make([]byte, 32)),
 	)
@@ -131,6 +139,7 @@ func TestNewTransfer(t *testing.T) {
 	amount2 := xc.NewAmountBlockchainFromUint64(12000000000000000)
 
 	args = buildertest.MustNewTransferArgs(
+		chainCfg,
 		from, to, amount2,
 		buildertest.OptionContractAddress(xc.ContractAddress(contract), 15),
 		buildertest.OptionPublicKey(make([]byte, 32)),

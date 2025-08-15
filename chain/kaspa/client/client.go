@@ -14,8 +14,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/kaspa/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/cordialsys/crosschain/testutil"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	"github.com/cordialsys/crosschain/testutil"
 	"github.com/kaspanet/kaspad/util/txmass"
 	"github.com/sirupsen/logrus"
 )
@@ -104,7 +104,8 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 }
 
 func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	chainCfg := c.chainCfg.Base()
+	args, _ := xcbuilder.NewTransferArgs(chainCfg, from, to, xc.NewAmountBlockchainFromUint64(1))
 	return c.FetchTransferInput(ctx, args)
 }
 

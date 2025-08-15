@@ -30,8 +30,8 @@ func TestNewTxBuilder(t *testing.T) {
 }
 
 func TestTransferSignCompletes(t *testing.T) {
-
-	builder1, err := builder.NewTxBuilder(xc.NewChainConfig("EOS").WithDecimals(4).Base())
+	chainCfg := xc.NewChainConfig("EOS").WithDecimals(4)
+	builder1, err := builder.NewTxBuilder(chainCfg.Base())
 	require.NoError(t, err)
 
 	type testcase struct {
@@ -45,9 +45,10 @@ func TestTransferSignCompletes(t *testing.T) {
 	testcases := []testcase{
 		{
 			args: buildertest.MustNewTransferArgs(
+				chainCfg.Base(),
 				xc.Address("from"),
 				xc.Address("to"),
-				xc.NewAmountBlockchainFromUint64(10000),
+				xc.NewAmountBlockchainFromUint64(1),
 			),
 			input: &TxInput{
 				Timestamp:    time.Now().Unix(),
@@ -62,6 +63,7 @@ func TestTransferSignCompletes(t *testing.T) {
 		},
 		{
 			args: buildertest.MustNewTransferArgs(
+				chainCfg.Base(),
 				xc.Address("from"),
 				xc.Address("to"),
 				xc.NewAmountBlockchainFromUint64(10000),
@@ -81,6 +83,7 @@ func TestTransferSignCompletes(t *testing.T) {
 		},
 		{
 			args: buildertest.MustNewTransferArgs(
+				chainCfg.Base(),
 				xc.Address("from"),
 				xc.Address("to"),
 				xc.NewAmountBlockchainFromUint64(10000),
@@ -102,6 +105,7 @@ func TestTransferSignCompletes(t *testing.T) {
 		},
 		{
 			args: buildertest.MustNewTransferArgs(
+				chainCfg.Base(),
 				xc.Address("from"),
 				xc.Address("to"),
 				xc.NewAmountBlockchainFromUint64(10000),

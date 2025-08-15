@@ -88,7 +88,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 // Deprecated method - use FetchTransferInput
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	chainCfg := client.Asset.GetChain().Base()
+	args, _ := xcbuilder.NewTransferArgs(chainCfg, from, to, xc.NewAmountBlockchainFromUint64(1))
 	return client.FetchTransferInput(ctx, args)
 }
 

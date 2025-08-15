@@ -322,7 +322,8 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(v.asset)
 			from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 			to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-			args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1), buildertest.OptionContractDecimals(6))
+			chainCfg := v.asset.Base()
+			args := buildertest.MustNewTransferArgs(chainCfg, from, to, xc.NewAmountBlockchainFromUint64(1), buildertest.OptionContractDecimals(6))
 			if v.contract != "" {
 				args.SetContract(v.contract)
 			}

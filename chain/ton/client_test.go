@@ -13,9 +13,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/ton/api"
 	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/time/rate"
 )
@@ -166,7 +166,7 @@ func TestFetchTxInput(t *testing.T) {
 			to := xc.Address("0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm")
 
 			amount := xc.NewAmountBlockchainFromUint64(1)
-			args := buildertest.MustNewTransferArgs(from, to, amount, buildertest.OptionPublicKey(v.publicKey))
+			args := buildertest.MustNewTransferArgs(chain.Base(), from, to, amount, buildertest.OptionPublicKey(v.publicKey))
 			if v.contract != "" {
 				args.SetContract(v.contract)
 			}

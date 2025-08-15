@@ -115,7 +115,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 // Deprecated method - use FetchTransferInput
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	chainCfg := client.Asset.GetChain().Base()
+	args, _ := xcbuilder.NewTransferArgs(chainCfg, from, to, xc.NewAmountBlockchainFromUint64(1))
 	txInput, err := client.FetchTransferInput(ctx, args)
 	if err != nil {
 		return nil, err

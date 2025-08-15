@@ -61,7 +61,8 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 
 // Can use the normal tx-input
 func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
-	tfArgs, _ := xcbuilder.NewTransferArgs(args.GetFrom(), "", args.GetAmount())
+	chainCfg := client.Asset.GetChain().Base()
+	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", args.GetAmount())
 	input, err := client.FetchTransferInput(ctx, tfArgs)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,8 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 
 // Can use the normal tx-input
 func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
-	tfArgs, _ := xcbuilder.NewTransferArgs(args.GetFrom(), "", args.GetAmount())
+	chainCfg := client.Asset.GetChain().Base()
+	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", args.GetAmount())
 	input, err := client.FetchTransferInput(ctx, tfArgs)
 	if err != nil {
 		return nil, err
@@ -83,7 +85,8 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 
 // Can use the normal tx-input
 func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
-	tfArgs, _ := xcbuilder.NewTransferArgs(args.GetFrom(), "", args.GetAmount())
+	chainCfg := client.Asset.GetChain().Base()
+	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", args.GetAmount())
 	input, err := client.FetchTransferInput(ctx, tfArgs)
 	if err != nil {
 		return nil, err

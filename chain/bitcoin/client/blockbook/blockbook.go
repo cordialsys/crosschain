@@ -453,7 +453,7 @@ func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.A
 	defer func() {
 		client.skipAmountFilter = false
 	}()
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	args, _ := xcbuilder.NewTransferArgs(client.Asset.GetChain().Base(), from, to, xc.NewAmountBlockchainFromUint64(1))
 	return client.FetchTransferInput(ctx, args)
 }
 

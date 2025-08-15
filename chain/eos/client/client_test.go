@@ -13,8 +13,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/eos/client"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/testutil"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	"github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,7 +76,7 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(chainCfg)
 			from := xc.Address("EOS8muuPYjH9rEf4KrXzD5fnbcqzAms8pFbREGhQpUKZ3pSZGW9HN")
 			to := xc.Address("EOS8WvdPVMuZW8cqjN18DFfM8hGkfbswHL4zoyqNi6wQexja5bhqE")
-			args, _ := builder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(10000))
+			args, _ := builder.NewTransferArgs(chainCfg.Base(), from, to, xc.NewAmountBlockchainFromUint64(10000))
 			input, err := client.FetchTransferInput(
 				context.Background(),
 				args,

@@ -103,7 +103,8 @@ func (client *Client) BuildReferenceTransfer(gasLimit uint64) (*tx.Tx, error) {
 	input.GasLimit = gasLimit
 	input.GasPrice = 0
 	input.AssetType = tx_input.BANK
-	args, _ := xcbuilder.NewTransferArgs(xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1))
+	chainCfg := client.Asset.GetChain().Base()
+	args, _ := xcbuilder.NewTransferArgs(chainCfg, xc.Address(from), xc.Address(to), xc.NewAmountBlockchainFromUint64(1))
 	args.SetPublicKey(fromPk.Bytes())
 
 	tx1, err := builder.Transfer(args, input)

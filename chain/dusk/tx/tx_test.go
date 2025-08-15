@@ -15,6 +15,7 @@ func TestTxHash(t *testing.T) {
 	from := xc.Address("2293LeWtYGpsBA99HRg2AfMm9oYhikZ83GSW5NP6QtQxDvkBTAdU8LfQj9fXvDt1rK1baqBcf3gQKsLXpw3LUjpdkSMRMrTsfuTo5Yri1xvUDnVcMMpgTG4o7ThCjZuLMp9L")
 	to := xc.Address("26nbWp93it1FF8ChyBUmV2zrXMqsv6xR41UUfcyq37abhoYvvEW4C8MgJPdKnzfQhfa6t1VtVj2QUeDK1aP98TGGtumV897Gtv3M7mh2qZBNK6C4LqvP6GyTeHvC7kPncVvg")
 	args, err := builder.NewTransferArgs(
+		xc.NewChainConfig(xc.DUSK).Base(),
 		from,
 		to,
 		xc.NewAmountBlockchainFromUint64(5_000_000),
@@ -38,6 +39,7 @@ func TestTxMemoHash(t *testing.T) {
 	from := xc.Address("2293LeWtYGpsBA99HRg2AfMm9oYhikZ83GSW5NP6QtQxDvkBTAdU8LfQj9fXvDt1rK1baqBcf3gQKsLXpw3LUjpdkSMRMrTsfuTo5Yri1xvUDnVcMMpgTG4o7ThCjZuLMp9L")
 	to := xc.Address("26nbWp93it1FF8ChyBUmV2zrXMqsv6xR41UUfcyq37abhoYvvEW4C8MgJPdKnzfQhfa6t1VtVj2QUeDK1aP98TGGtumV897Gtv3M7mh2qZBNK6C4LqvP6GyTeHvC7kPncVvg")
 	args, err := builder.NewTransferArgs(
+		xc.NewChainConfig(xc.DUSK).Base(),
 		from,
 		to,
 		xc.NewAmountBlockchainFromUint64(5_000_000),
@@ -84,6 +86,7 @@ func TestTxSighashes(t *testing.T) {
 	from := xc.Address("2293LeWtYGpsBA99HRg2AfMm9oYhikZ83GSW5NP6QtQxDvkBTAdU8LfQj9fXvDt1rK1baqBcf3gQKsLXpw3LUjpdkSMRMrTsfuTo5Yri1xvUDnVcMMpgTG4o7ThCjZuLMp9L")
 	to := xc.Address("26nbWp93it1FF8ChyBUmV2zrXMqsv6xR41UUfcyq37abhoYvvEW4C8MgJPdKnzfQhfa6t1VtVj2QUeDK1aP98TGGtumV897Gtv3M7mh2qZBNK6C4LqvP6GyTeHvC7kPncVvg")
 	args, err := builder.NewTransferArgs(
+		xc.NewChainConfig(xc.DUSK).Base(),
 		from,
 		to,
 		xc.NewAmountBlockchainFromUint64(5_000_000),

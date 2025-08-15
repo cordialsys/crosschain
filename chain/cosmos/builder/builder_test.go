@@ -62,7 +62,7 @@ func TestTransferWithTax(t *testing.T) {
 		input := tx_input.NewTxInput()
 		input.AssetType = tx_input.BANK
 
-		args, err := xcbuilder.NewTransferArgs(xc.Address(addr1), xc.Address(addr2), amount)
+		args, err := xcbuilder.NewTransferArgs(asset.Base(), xc.Address(addr1), xc.Address(addr2), amount)
 		require.NoError(t, err)
 
 		xcTx, err := builder.Transfer(args, input)
@@ -124,7 +124,7 @@ func TestTransferWithMaxGasPrice(t *testing.T) {
 		input.GasPrice = tc.inputPrice
 		input.AssetType = tx_input.BANK
 
-		args, err := xcbuilder.NewTransferArgs(xc.Address(addr1), xc.Address(addr2), amount)
+		args, err := xcbuilder.NewTransferArgs(asset.Base(), xc.Address(addr1), xc.Address(addr2), amount)
 		require.NoError(t, err)
 		xcTx, err := builder.Transfer(args, input)
 		require.NoError(t, err)

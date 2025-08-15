@@ -6,6 +6,7 @@ import (
 	"crypto/x509/pkix"
 	"fmt"
 	"hash/crc32"
+	"strings"
 
 	"encoding/asn1"
 	"encoding/base32"
@@ -124,4 +125,21 @@ func NewAccountId(principal []byte) AccountId {
 
 func (accountId AccountId) Encode() string {
 	return hex.EncodeToString(accountId)
+}
+
+func GetAddressType(addrI xc.Address) (xc.AddressFormat, bool) {
+	addr := string(addrI)
+	_, err := hex.DecodeString(addr)
+	isValidHex := err == nil
+	containsDashes := strings.Contains(addr, "-")
+	if isValidHex && !containsDashes {
+		return FormatIcp, true
+	}
+
+	if containsDashes {
+		return FormatIcrc1, true
+	}
+
+	// unknown
+	return "", false
 }

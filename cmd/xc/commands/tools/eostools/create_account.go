@@ -89,7 +89,7 @@ func CmdTxCreateAccount() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			tfArgs, err := xcbuilder.NewTransferArgs(fromAddress, xc.Address(fromAddress), xc.NewAmountBlockchainFromUint64(1))
+			tfArgs, err := xcbuilder.NewTransferArgs(chainConfig.Base(), fromAddress, xc.Address(fromAddress), xc.NewAmountBlockchainFromUint64(1))
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)
 			}

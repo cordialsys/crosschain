@@ -12,8 +12,8 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -163,7 +163,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
 	// No way to pass the amount in the input using legacy interface, so we estimate using min amount.
-	args, _ := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+	chainCfg := client.chain.Base()
+	args, _ := xcbuilder.NewTransferArgs(chainCfg, from, to, xc.NewAmountBlockchainFromUint64(1))
 	return client.FetchTransferInput(ctx, args)
 }
 

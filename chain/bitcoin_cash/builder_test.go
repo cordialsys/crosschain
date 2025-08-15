@@ -29,7 +29,7 @@ func TestTransfer(t *testing.T) {
 	from := xc.Address("qrgn26exqv2lly6hsl887k8tqjatgr0lwg76fgk2u4")
 	to := xc.Address("qpehj6d2ddf2ptt4fff5deu2wj7dhsr2rg0766dzsc")
 	amount := xc.NewAmountBlockchainFromUint64(100000000)
-	args, err := builder.NewTransferArgs(from, to, amount)
+	args, err := builder.NewTransferArgs(cfg.Base(), from, to, amount)
 	require.NoError(t, err)
 
 	tx, err := txBuilder.Transfer(args, input)

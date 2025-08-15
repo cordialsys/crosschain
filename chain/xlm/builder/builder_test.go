@@ -30,7 +30,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	args := buildertest.MustNewTransferArgs(chain.Base(), from, to, amount)
 	nt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 	require.NotNil(t, nt)
@@ -56,7 +56,7 @@ func TestNewTokenTransfer(t *testing.T) {
 	amount := xc.NewAmountBlockchainFromUint64(10)
 	input := &tx_input.TxInput{}
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chain.Base(), from, to, amount,
 		buildertest.OptionContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
 	)
 	nt, err := txBuilder.Transfer(args, input)
@@ -86,7 +86,7 @@ func TestInvalidTokenTransfer(t *testing.T) {
 	input := &tx_input.TxInput{}
 
 	args := buildertest.MustNewTransferArgs(
-		from, to, amount,
+		chain.Base(), from, to, amount,
 		// Asset code is too long
 		buildertest.OptionContractAddress("USDCCCCCCCCCCCCCCCCCCCCCCCCC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
 	)

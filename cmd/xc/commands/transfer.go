@@ -187,7 +187,7 @@ func CmdTxTransfer() *cobra.Command {
 				tfOptions = append(tfOptions, builder.OptionPriority(priority))
 			}
 
-			tfArgs, err := builder.NewTransferArgs(from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
+			tfArgs, err := builder.NewTransferArgs(chainConfig.Base(), from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)
 			}

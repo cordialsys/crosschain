@@ -137,7 +137,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			tfArgs, err := builder.NewTransferArgs(from, "", amount)
+			tfArgs, err := builder.NewTransferArgs(chain.Base(), from, "", amount)
 			if err != nil {
 				return err
 			}

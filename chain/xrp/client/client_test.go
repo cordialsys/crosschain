@@ -33,6 +33,7 @@ func TestNewClient(t *testing.T) {
 func TestFetchTxInput(t *testing.T) {
 	from := xc.Address("r92tsEZEjK82wra6xaDvjZocKnR78VqpEM")
 	to := xc.Address("rs2x5gvFupB22myz86BUu7m5F4YuizsFna")
+	asset := xc.NewChainConfig(xc.XRP).WithDecimals(types.XRP_NATIVE_DECIMALS)
 
 	vectors := []struct {
 		name string
@@ -46,7 +47,7 @@ func TestFetchTxInput(t *testing.T) {
 	}{
 		{
 			name: "estimate fee",
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -84,7 +85,7 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "estimate fee uses base fee",
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -122,7 +123,7 @@ func TestFetchTxInput(t *testing.T) {
 		},
 		{
 			name: "high median fee",
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("100")),
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromStr("100")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -159,7 +160,7 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			name: "account delete, sending full balance",
 			// The remaining balance is less than the reserve amount, so account delete should be used.
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(10000000-200_000)),
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromUint64(10000000-200_000)),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -197,7 +198,7 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			name: "exceeds balance",
 			// The remaining balance is less than the reserve amount, so account delete should be used.
-			args: buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromStr("10000005")),
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromStr("10000005")),
 			accountInfoResp: types.AccountInfoResponse{
 				Result: types.AccountInfoResultDetails{
 					AccountData: types.AccountData{
@@ -254,7 +255,6 @@ func TestFetchTxInput(t *testing.T) {
 			}
 		}))
 		defer server.Close()
-		asset := xc.NewChainConfig("").WithDecimals(types.XRP_NATIVE_DECIMALS)
 		asset.URL = server.URL
 
 		client, _ := xrpClient.NewClient(asset)

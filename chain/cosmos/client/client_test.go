@@ -310,7 +310,7 @@ func TestFetchTxInput(t *testing.T) {
 			require.NoError(t, err)
 			from := xc.Address(v.from)
 			to := xc.Address(v.to)
-			args, err := xcbuilder.NewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(1))
+			args, err := xcbuilder.NewTransferArgs(v.asset.Base(), from, to, xc.NewAmountBlockchainFromUint64(1))
 			require.NoError(t, err)
 
 			if v.feePayer != "" {

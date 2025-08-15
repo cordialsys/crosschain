@@ -17,8 +17,8 @@ func newTx(t *testing.T) *tx.Tx {
 	fromAddr := xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5")
 	toAddr := xc.Address("addr_test1qrfp5xelv2mu7k8zyvwm0c8t5xm55wanwhtd4fgjgtf3ck0rplhn7x9jyhwqg70fwv0ujpmyumqk5td9e9hnsejtlxnq3yqf25")
 	amount := xc.NewAmountBlockchainFromUint64(1_000_000)
-
-	transferArgs, err := xcbuilder.NewTransferArgs(fromAddr, toAddr, amount)
+	cfg := xc.NewChainConfig(xc.ADA).WithNet("preprod").WithDecimals(6)
+	transferArgs, err := xcbuilder.NewTransferArgs(cfg.Base(), fromAddr, toAddr, amount)
 	require.NoError(t, err)
 
 	transferInput := tx_input.TxInput{

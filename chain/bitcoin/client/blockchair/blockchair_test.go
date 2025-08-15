@@ -88,7 +88,7 @@ func TestFetchTxInput(t *testing.T) {
 
 			from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 			to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-			args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
+			args := buildertest.MustNewTransferArgs(asset.ChainBaseConfig, from, to, xc.NewAmountBlockchainFromUint64(uint64(v.targetAmount)))
 			input, err := client.FetchTransferInput(context.Background(), args)
 			require.NotNil(input)
 			// optimize the utxo amounts
@@ -148,7 +148,7 @@ func TestFetchTxInputUnconfirmedUtxo(t *testing.T) {
 
 	from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
 	to := xc.Address("tb1qtpqqpgadjr2q3f4wrgd6ndclqtfg7cz5evtvs0")
-	args := buildertest.MustNewTransferArgs(from, to, xc.NewAmountBlockchainFromUint64(uint64(100*100_000_000)))
+	args := buildertest.MustNewTransferArgs(asset.ChainBaseConfig, from, to, xc.NewAmountBlockchainFromUint64(uint64(100*100_000_000)))
 	input, err := client.FetchTransferInput(context.Background(), args)
 	require.NoError(err)
 	btcInput := input.(*tx_input.TxInput)

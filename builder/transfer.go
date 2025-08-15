@@ -1,7 +1,10 @@
 package builder
 
 import (
+	"fmt"
+
 	xc "github.com/cordialsys/crosschain"
+	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 )
 
 type TransferArgs struct {
@@ -62,7 +65,7 @@ func (args *TransferArgs) GetToIdentity() (string, bool) {
 	return args.options.GetToIdentity()
 }
 
-func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
+func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
 	args := TransferArgs{
@@ -76,6 +79,15 @@ func NewTransferArgs(from xc.Address, to xc.Address, amount xc.AmountBlockchain,
 		err := opt(&args.options)
 		if err != nil {
 			return args, err
+		}
+	}
+
+	switch chain.Driver {
+	case xc.DriverInternetComputerProtocol:
+		fromFormat, fromOk := icpaddress.GetAddressType(from)
+		toFormat, toOk := icpaddress.GetAddressType(to)
+		if fromOk && toOk && fromFormat != toFormat {
+			return args, fmt.Errorf("can only send between addresses of the same type for ICP")
 		}
 	}
 

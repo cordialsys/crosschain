@@ -20,6 +20,7 @@ func TestNativeTx(t *testing.T) {
 	input := ton.NewTxInput()
 	pubKey, _ := hex.DecodeString("c1172b7926116d2a396bd7d69b9880cc0657e8ba2db9f62b4c210c518321c8b1")
 	args := buildertest.MustNewTransferArgs(
+		chain.Base(),
 		xc.Address(from),
 		xc.Address(to),
 		xc.NewAmountBlockchainFromUint64(10),
@@ -64,6 +65,7 @@ func TestTokenTx(t *testing.T) {
 	from := "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"
 	to := "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G"
 	args := buildertest.MustNewTransferArgs(
+		chain.Base(),
 		xc.Address(from),
 		xc.Address(to),
 		xc.NewAmountBlockchainFromUint64(10),

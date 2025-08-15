@@ -27,7 +27,8 @@ func TestNewTransferFail(t *testing.T) {
 	to := xc.Address("5FUh5YJztrDvQe58YcDr5rDhkx1kSZcxQFu81wamrPuVyZSW")
 	amount := xc.NewAmountBlockchainFromUint64(10000000000)
 	input := &tx_input.TxInput{} // missing metadata
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	chainCfg := xc.NewChainConfig(xc.DOT).Base()
+	args := buildertest.MustNewTransferArgs(chainCfg, from, to, amount)
 	_, err := builder.Transfer(args, input)
 	require.Error(err)
 }
@@ -52,7 +53,8 @@ func TestNewTransfer(t *testing.T) {
 	input := &tx_input.TxInput{}
 	err := json.Unmarshal([]byte(inputBz), input)
 	require.NoError(err)
-	args := buildertest.MustNewTransferArgs(from, to, amount)
+	chainCfg := xc.NewChainConfig(xc.DOT).Base()
+	args := buildertest.MustNewTransferArgs(chainCfg, from, to, amount)
 	tx, err := builder.Transfer(args, input)
 	require.NoError(err)
 	require.NotNil(tx)

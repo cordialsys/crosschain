@@ -12,10 +12,10 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -233,7 +233,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 				}
 				tfOptions = append(tfOptions, builder.OptionPriority(priority))
 			}
-			tfArgs, err := builder.NewMultiTransferArgs(chainConfig.Chain, senders, receivers, tfOptions...)
+			tfArgs, err := builder.NewMultiTransferArgs(chainConfig.Base(), senders, receivers, tfOptions...)
 			if err != nil {
 				return fmt.Errorf("invalid multi-transfer args: %v", err)
 			}

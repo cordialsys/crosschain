@@ -85,25 +85,6 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 
 	address = strings.TrimSpace(address)
 	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
-	case xc.DriverEVM, xc.DriverEVMLegacy:
-		prefix := "0x"
-		if nativeAsset == xc.XDC {
-			// XDC chain uses a different prefix
-			address = strings.TrimPrefix(address, prefix)
-			prefix = "xdc"
-		}
-
-		address = strings.TrimPrefix(address, prefix)
-		address = prefix + address
-		address = strings.ToLower(address)
-
-	case xc.DriverBitcoinCash, xc.DriverBitcoin:
-		// remove bitcoincash: prefix
-		if strings.Contains(address, ":") {
-			address = strings.Split(address, ":")[1]
-		}
-	case xc.DriverSui:
-		address = NormalizeMoveAddress(address)
 	case xc.DriverAptos:
 		address = NormalizeMoveAddress(address)
 		// ensure that 0 padding consistent for normal addresses
@@ -118,25 +99,63 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 			}
 			address = "0x" + address
 		}
+	case xc.DriverBitcoinCash, xc.DriverBitcoin:
+		// remove bitcoincash: prefix
+		if strings.Contains(address, ":") {
+			address = strings.Split(address, ":")[1]
+		}
+	case xc.DriverBitcoinLegacy:
+		// nothing to do, base58
+	case xc.DriverCardano:
+		// nothing to do, bech32 is case sensitive
 	case xc.DriverCosmos:
 		// nothing to do, bech32
-
-	case xc.DriverSolana:
+	case xc.DriverDusk:
 		// nothing to do, base58
-	case xc.DriverTron:
-		// Base58 encoding, case sensitive
+	case xc.DriverEOS:
+		// nothing to do, base58
+	case xc.DriverEVM, xc.DriverEVMLegacy:
+		prefix := "0x"
+		if nativeAsset == xc.XDC {
+			// XDC chain uses a different prefix
+			address = strings.TrimPrefix(address, prefix)
+			prefix = "xdc"
+		}
+
+		address = strings.TrimPrefix(address, prefix)
+		address = prefix + address
+		address = strings.ToLower(address)
+
+	case xc.DriverFilecoin:
+		// nothing to do, bech32
+
 	case xc.DriverTon:
 		// convert the "0:1234" format to base64 if needed
 		address, _ = tonaddress.Normalize(address)
-	case xc.DriverXlm:
-		// nothing to do, case sensitive
-	case xc.DriverXrp:
-		// nothing to do, base58
-	case xc.DriverFilecoin:
-		// nothing to do, bech32
+	case xc.DriverTron:
+		// Base58 encoding, case sensitive
+
+	case xc.DriverInternetComputerProtocol:
+		// ICP addresses are all lowercase, and do not use 0x prefix
+		address = strings.TrimPrefix(address, "0x")
+		address = strings.ToLower(address)
 	case xc.DriverKaspa:
 		// bech32 is used, which is case sensitive.
 		// There is a required prefix that depends on the network (e.g. "kaspa:")
+
+	case xc.DriverSolana:
+		// nothing to do, base58
+	case xc.DriverSubstrate:
+		// nothing to do, base58
+
+	case xc.DriverSui:
+		address = NormalizeMoveAddress(address)
+
+	case xc.DriverXlm:
+		// nothing to do, case sensitive base32
+	case xc.DriverXrp:
+		// nothing to do, base58
+
 	default:
 	}
 	return address
