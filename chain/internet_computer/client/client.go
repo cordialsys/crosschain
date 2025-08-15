@@ -423,14 +423,14 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 
 func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, bool, error) {
 	ledgerCanister := icp.LedgerPrincipal
-	if blockHeight, ok := args.BlockHeight(); ok {
-		if contract, ok := args.Contract(); ok {
-			c, err := icpaddress.Decode(string(contract))
-			if err != nil {
-				return 0, ledgerCanister, false, fmt.Errorf("invalid canister contract: %w", err)
-			}
-			ledgerCanister = c
+	if contract, ok := args.Contract(); ok {
+		c, err := icpaddress.Decode(string(contract))
+		if err != nil {
+			return 0, ledgerCanister, false, fmt.Errorf("invalid canister contract: %w", err)
 		}
+		ledgerCanister = c
+	}
+	if blockHeight, ok := args.BlockHeight(); ok {
 		return blockHeight.Uint64(), ledgerCanister, true, nil
 	}
 
@@ -440,18 +440,18 @@ func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, 
 	if len(parts) == 2 {
 		blockHeight, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return 0, icp.LedgerPrincipal, false, fmt.Errorf("failed to parse block height: %w", err)
+			return 0, ledgerCanister, false, fmt.Errorf("failed to parse block height: %w", err)
 		}
 
 		ledgerCanister, err := icpaddress.Decode(parts[1])
 		if err != nil {
-			return 0, icp.LedgerPrincipal, false, fmt.Errorf("failed to decode ledger canister: %w", err)
+			return 0, ledgerCanister, false, fmt.Errorf("failed to decode ledger canister: %w", err)
 		}
 
 		return uint64(blockHeight), ledgerCanister, true, nil
 	}
 
-	return 0, icp.LedgerPrincipal, false, nil
+	return 0, ledgerCanister, false, nil
 }
 
 // Returns transaction info - new endpoint
