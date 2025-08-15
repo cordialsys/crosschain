@@ -5,19 +5,14 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/cordialsys/crosschain/chain/internet_computer/address"
 	"github.com/cordialsys/crosschain/chain/internet_computer/client/types/icp"
 	"github.com/stretchr/testify/require"
 )
 
 func TestCallAnonymous(t *testing.T) {
 	u, _ := url.Parse("https://icp-api.io")
-	config := AgentConfig{
-		Identity:      address.Ed25519Identity{},
-		IngressExpiry: 0,
-		Url:           u,
-		Logger:        nil,
-	}
+	config := NewAgentConfig()
+	config.SetUrl(u)
 	a, _ := NewAgent(config)
 
 	var balance icp.Balance
@@ -33,12 +28,8 @@ func TestCallAnonymous(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	u, _ := url.Parse("https://icp-api.io")
-	config := AgentConfig{
-		Identity:      address.Ed25519Identity{},
-		IngressExpiry: 0,
-		Url:           u,
-		Logger:        nil,
-	}
+	config := NewAgentConfig()
+	config.SetUrl(u)
 	a, _ := NewAgent(config)
 
 	var balance icp.Balance

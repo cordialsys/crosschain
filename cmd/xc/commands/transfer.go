@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -30,6 +31,7 @@ func CmdTxTransfer() *cobra.Command {
 	var previousAttempts []string
 	var txTime int64
 	var addressFormat string
+	var nonDeterministic bool
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -236,16 +238,36 @@ func CmdTxTransfer() *cobra.Command {
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			// create tx (no network, no private key needed)
-			tx, err := txBuilder.Transfer(tfArgs, input)
-			if err != nil {
-				return fmt.Errorf("could not build transfer: %v", err)
-			}
-
-			// serialize tx for signing
-			sighashes, err := tx.Sighashes()
-			if err != nil {
-				return fmt.Errorf("could not create payloads to sign: %v", err)
+			var tx xc.Tx
+			var sighashes []*xc.SignatureRequest
+			var lastSighashes []*xc.SignatureRequest
+			// Build and request sighashes to test for non-determinism -- in Treasury we need this to be deterministic.
+			for i := range 10 {
+				// create tx (no network, no private key needed)
+				tx, err = txBuilder.Transfer(tfArgs, input)
+				if err != nil {
+					return fmt.Errorf("could not build transfer: %v", err)
+				}
+				// serialize tx for signing
+				sighashes, err = tx.Sighashes()
+				if err != nil {
+					return fmt.Errorf("could not create payloads to sign: %v", err)
+				}
+				if nonDeterministic {
+					break
+				}
+				if i > 0 {
+					// check for non-determinism
+					if len(sighashes) != len(lastSighashes) {
+						return fmt.Errorf("sighashes are not deterministic, differed on trial %d", i)
+					}
+					for j := range sighashes {
+						if !bytes.Equal(sighashes[j].Payload, lastSighashes[j].Payload) {
+							return fmt.Errorf("sighashes are not deterministic, differed on trial %d", i)
+						}
+					}
+				}
+				lastSighashes = sighashes
 			}
 
 			// sign
@@ -370,5 +392,6 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
 	cmd.Flags().Int64Var(&txTime, "tx-time", 0, "Block time of the transaction")
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
+	cmd.Flags().BoolVar(&nonDeterministic, "non-deterministic", false, "Skip implementation checks for determinism (only important in for consensus sensitive contexts)")
 	return cmd
 }
