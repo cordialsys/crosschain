@@ -241,8 +241,13 @@ func CmdTxTransfer() *cobra.Command {
 			var tx xc.Tx
 			var sighashes []*xc.SignatureRequest
 			var lastSighashes []*xc.SignatureRequest
-			// Build and request sighashes to test for non-determinism -- in Treasury we need this to be deterministic.
-			for i := range 10 {
+			// By default we repeat getting .Sighashes() and .Serialize() both to test for non-determinism.
+			// In Treasury we need this to be deterministic.
+			var numberOfTrials = 10
+			if nonDeterministic {
+				numberOfTrials = 1
+			}
+			for i := range numberOfTrials {
 				// create tx (no network, no private key needed)
 				tx, err = txBuilder.Transfer(tfArgs, input)
 				if err != nil {
@@ -253,9 +258,7 @@ func CmdTxTransfer() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("could not create payloads to sign: %v", err)
 				}
-				if nonDeterministic {
-					break
-				}
+
 				if i > 0 {
 					// check for non-determinism
 					if len(sighashes) != len(lastSighashes) {
@@ -271,54 +274,77 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// sign
-			signatures := []*xc.SignatureResponse{}
-			for _, sighash := range sighashes {
-				log := logrus.WithField("payload", hex.EncodeToString(sighash.Payload))
-				if len(sighash.Payload) == 0 {
-					panic("requested to sign empty payload")
+			var lastSerializedTx []byte
+			for i := range numberOfTrials {
+				signatures := []*xc.SignatureResponse{}
+				log := logrus.WithField("trial", i)
+				var level = logrus.InfoLevel
+				if i > 0 {
+					level = logrus.TraceLevel
 				}
-				// sign the tx sighash(es)
-				signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
+				for _, sighash := range sighashes {
+					log = log.WithField("payload", hex.EncodeToString(sighash.Payload))
+					if len(sighash.Payload) == 0 {
+						panic("requested to sign empty payload")
+					}
+					// sign the tx sighash(es)
+					signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
+					if err != nil {
+						panic(err)
+					}
+					signatures = append(signatures, signature)
+					log.
+						WithField("address", signature.Address).
+						WithField("signature", hex.EncodeToString(signature.Signature)).Log(level, "adding signature")
+				}
+
+				// complete the tx by adding its signature
+				// (no network, no private key needed)
+				err = tx.SetSignatures(signatures...)
 				if err != nil {
-					panic(err)
+					return fmt.Errorf("could not add signature(s): %v", err)
 				}
-				signatures = append(signatures, signature)
-				log.
-					WithField("address", signature.Address).
-					WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding signature")
-			}
 
-			// complete the tx by adding its signature
-			// (no network, no private key needed)
-			err = tx.SetSignatures(signatures...)
-			if err != nil {
-				return fmt.Errorf("could not add signature(s): %v", err)
-			}
-
-			if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
-				for {
-					additionalSighashes, err := txMoreSigs.AdditionalSighashes()
-					if err != nil {
-						return fmt.Errorf("could not get additional sighashes: %v", err)
-					}
-					if len(additionalSighashes) == 0 {
-						break
-					}
-					for _, additionalSighash := range additionalSighashes {
-						log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
-						signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
+				if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+					for {
+						additionalSighashes, err := txMoreSigs.AdditionalSighashes()
 						if err != nil {
-							panic(err)
+							return fmt.Errorf("could not get additional sighashes: %v", err)
 						}
-						signatures = append(signatures, signature)
-						log.
-							WithField("address", signature.Address).
-							WithField("signature", hex.EncodeToString(signature.Signature)).Info("adding additional signature")
+						if len(additionalSighashes) == 0 {
+							break
+						}
+						for _, additionalSighash := range additionalSighashes {
+							log = log.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+							signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
+							if err != nil {
+								panic(err)
+							}
+							signatures = append(signatures, signature)
+							log.
+								WithField("address", signature.Address).
+								WithField("signature", hex.EncodeToString(signature.Signature)).Log(level, "adding additional signature")
+						}
+						err = tx.SetSignatures(signatures...)
+						if err != nil {
+							return fmt.Errorf("could not add additional signature(s): %v", err)
+						}
 					}
-					err = tx.SetSignatures(signatures...)
-					if err != nil {
-						return fmt.Errorf("could not add additional signature(s): %v", err)
+				}
+				txBytes, err := tx.Serialize()
+				if err != nil {
+					return fmt.Errorf("could not serialize tx: %v", err)
+				}
+				if i > 0 {
+					if !bytes.Equal(txBytes, lastSerializedTx) {
+						return fmt.Errorf("tx .Serialize() is not deterministic, differed on trial %d", i)
 					}
+				}
+				// record serialized tx + reset the tx for next trial
+				lastSerializedTx = txBytes
+				tx, err = txBuilder.Transfer(tfArgs, input)
+				if err != nil {
+					return fmt.Errorf("could not build transfer: %v", err)
 				}
 			}
 
