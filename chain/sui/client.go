@@ -28,6 +28,8 @@ import (
 type Client struct {
 	Asset     xc.ITask
 	SuiClient *client.Client
+	// for testing
+	LastSignatureCount int
 }
 
 type HttpLogger struct {
@@ -506,12 +508,15 @@ func (c *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 		if err != nil {
 			return err
 		}
-		var metadata BroadcastMetadata
-		err = json.Unmarshal(metadataBz, &metadata)
-		if err != nil {
-			return err
+		if len(metadataBz) > 0 {
+			var metadata BroadcastMetadata
+			err = json.Unmarshal(metadataBz, &metadata)
+			if err != nil {
+				logrus.WithError(err).Warn("could not unmarshal broadcast input")
+			} else {
+				sigs = metadata.Signatures
+			}
 		}
-		sigs = metadata.Signatures
 	}
 
 	if len(sigs) == 0 {
@@ -524,12 +529,12 @@ func (c *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 			return fmt.Errorf("tx does not implement TxWithMetadata or TxLegacyGetSignatures")
 		}
 	}
-
 	sigsB64 := []any{}
 
 	for _, sig := range sigs {
 		sigsB64 = append(sigsB64, lib.Base64Data(sig))
 	}
+	c.LastSignatureCount = len(sigs)
 
 	newTxn, err := c.SuiClient.ExecuteTransactionBlock(
 		ctx,

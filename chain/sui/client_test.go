@@ -9,6 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
+	apitypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -946,5 +947,62 @@ func (s *CrosschainTestSuite) TestFetchBalance() {
 		}
 		require.NoError(err)
 		require.EqualValues(v.amount, bal.ToHuman(9).String())
+	}
+}
+
+// Test that our migrated binary tx interface did not break SUI
+func TestSubmit(t *testing.T) {
+	require := require.New(t)
+	vectors := []struct {
+		name         string
+		binaryTx     xc.Tx
+		expectedSigs int
+		err          error
+	}{
+		{
+			name:         "no signature metadata",
+			binaryTx:     apitypes.NewBinaryTx([]byte("bytes"), []byte(``)),
+			expectedSigs: 0,
+		},
+		{
+			name:         "with signature metadata",
+			binaryTx:     apitypes.NewBinaryTx([]byte("bytes"), []byte(`{"signatures": ["01020304"]}`)),
+			expectedSigs: 1,
+		},
+		{
+			name: "with legacy signatures",
+			binaryTx: &apitypes.SubmitTxReq{
+				LegacyTxSignatures: [][]byte{
+					{1, 2, 3, 4},
+				},
+				TxData: []byte("bytes"),
+			},
+			expectedSigs: 1,
+		},
+	}
+
+	for _, v := range vectors {
+		fmt.Println("Running ", v.name)
+		ctx := context.Background()
+		server, close := testtypes.MockJSONRPC(t, []string{
+			// don't care currently about the responses
+			"{}",
+			"{}",
+			"{}",
+		})
+		defer close()
+		asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
+
+		asset.URL = server.URL
+		client, err := NewClient(asset)
+		require.NoError(err)
+
+		err = client.SubmitTx(ctx, v.binaryTx)
+		if v.err != nil {
+			require.ErrorContains(err, v.err.Error())
+		} else {
+			require.NoError(err)
+		}
+		require.Equal(v.expectedSigs, client.LastSignatureCount)
 	}
 }
