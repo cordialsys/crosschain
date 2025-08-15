@@ -129,6 +129,11 @@ func (r Request) Sign(signature []byte) ([]byte, error) {
 }
 
 func (r *Request) MarshalCBOR() ([]byte, error) {
+	cborEnc, err := cbor.CanonicalEncOptions().EncMode()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create caninocal cbor encoder: %w", err)
+	}
+
 	m := make(map[string]any)
 	if len(r.Type) != 0 {
 		m["request_type"] = r.Type
@@ -162,8 +167,8 @@ func (r *Request) MarshalCBOR() ([]byte, error) {
 	if r.Paths != nil {
 		m["paths"] = r.Paths
 	}
-	return cbor.Marshal(m)
 
+	return cborEnc.Marshal(m)
 }
 
 func hashPaths(paths [][][]byte) [32]byte {
