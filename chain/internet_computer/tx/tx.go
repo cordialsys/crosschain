@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -18,6 +19,14 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/client/types/icrc"
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 )
+
+func NewAgentConfig(pubkey []byte) agent.AgentConfig {
+	agentConfig := agent.NewAgentConfig()
+	identity := address.NewEd25519Identity(pubkey)
+	agentConfig.SetIdentity(identity)
+	agentConfig.SetIngressExpiry(tx_input.TransactionExpiration)
+	return agentConfig
+}
 
 // Tx for InternetComputerProtocol
 type Tx struct {
@@ -66,10 +75,9 @@ func NewIcpTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 		return Tx{}, errors.New("missing public key")
 	}
 	amount := args.GetAmount()
-	identity := address.NewEd25519Identity(pubkey)
-	agentConfig := agent.AgentConfig{
-		Identity: identity,
-	}
+	agentConfig := NewAgentConfig(pubkey)
+	expiration := time.Unix(input.CreateTime, 0).Add(tx_input.TransactionExpiration)
+
 	canister := icp.LedgerPrincipal
 
 	var request types.Request
@@ -77,7 +85,8 @@ func NewIcpTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 	if err != nil {
 		return Tx{}, fmt.Errorf("failed to decode destination address: %w", err)
 	}
-	timestamp := icp.NewTimestamp(input.CreatedAtTime)
+	createTimeNanos := uint64(input.GetCreateTimeNanos())
+	timestamp := icp.NewTimestamp(createTimeNanos)
 
 	transfer := icp.TransferArgs{
 		To:             to,
@@ -87,7 +96,8 @@ func NewIcpTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) {
 		CreatedAtTime:  &timestamp,
 		Amount:         icp.NewTokens(amount.Uint64()),
 	}
-	request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, icp.MethodTransfer, transfer)
+
+	request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, icp.MethodTransfer, input.GetNonce(), expiration, transfer)
 	if err != nil {
 		return Tx{}, fmt.Errorf("failed to create transaction request: %w", err)
 	}
@@ -105,10 +115,8 @@ func NewIcrcTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) 
 		return Tx{}, errors.New("missing public key")
 	}
 	amount := args.GetAmount()
-	identity := address.NewEd25519Identity(pubkey)
-	agentConfig := agent.AgentConfig{
-		Identity: identity,
-	}
+	agentConfig := NewAgentConfig(pubkey)
+	expiration := time.Unix(input.CreateTime, 0).Add(tx_input.TransactionExpiration)
 
 	contract, ok := args.GetContract()
 	if !ok {
@@ -125,6 +133,7 @@ func NewIcrcTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) 
 		return Tx{}, fmt.Errorf("failed to decode destination icrc1 address: %w", err)
 	}
 
+	createTimeNanos := uint64(input.GetCreateTimeNanos())
 	transfer := icrc.TransferArgs{
 		// We don't support subbaccounts at the moment
 		FromSubaccount: nil,
@@ -132,9 +141,9 @@ func NewIcrcTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (Tx, error) 
 		Amount:         idl.NewNat(amount.Uint64()),
 		Fee:            idl.NewNat(input.Fee),
 		Memo:           input.ICRC1Memo,
-		CreatedAtTime:  &input.CreatedAtTime,
+		CreatedAtTime:  &createTimeNanos,
 	}
-	request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, icrc.MethodTransfer, transfer)
+	request, err = agentConfig.CreateUnsignedRequest(canister, types.RequestTypeCall, icrc.MethodTransfer, input.GetNonce(), expiration, transfer)
 	if err != nil {
 		return Tx{}, fmt.Errorf("failed to create transaction request: %w", err)
 	}

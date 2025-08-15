@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -43,6 +44,15 @@ var indexCanisters map[string]icpaddress.Principal = map[string]icpaddress.Princ
 	icp.LedgerPrincipal.String(): icpaddress.MustDecode("qhbym-qaaaa-aaaaa-aaafq-cai"),
 }
 
+func newAgentConfig(identity icpaddress.Ed25519Identity, remote *url.URL, logger *log.Entry) agent.AgentConfig {
+	agentConfig := agent.NewAgentConfig()
+	agentConfig.SetIdentity(identity)
+	agentConfig.SetUrl(remote)
+	agentConfig.SetLogger(logger)
+	agentConfig.SetIngressExpiry(2 * time.Minute)
+	return agentConfig
+}
+
 // NewClient returns a new InternetComputerProtocol Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -55,12 +65,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		"rpc":     cfg.URL,
 		"network": cfg.Network,
 	})
-	config := agent.AgentConfig{
-		Identity:      icpaddress.Ed25519Identity{},
-		IngressExpiry: 0,
-		Url:           url,
-		Logger:        logger,
-	}
+	config := newAgentConfig(icpaddress.Ed25519Identity{}, url, logger)
 	agent, err := agent.NewAgent(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ICP agent: %w", err)
@@ -110,8 +115,14 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	txInput := tx_input.NewTxInput()
 	txInput.Fee = fee.Uint64()
-	txInput.CreatedAtTime = uint64(time.Now().UnixNano())
+	txInput.CreateTime = time.Now().Unix()
 	txInput.Canister = contract
+	randomNonce := make([]byte, 10)
+	_, err = rand.Read(randomNonce)
+	if err != nil {
+		return txInput, err
+	}
+	txInput.Nonce = hex.EncodeToString(randomNonce)
 
 	if hasMemo {
 		if isIcrc {
@@ -162,9 +173,8 @@ func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
 	}
 
 	identity := icpaddress.NewEd25519Identity(metadata.SenderPublicKey)
-	agentConfig := agent.AgentConfig{
-		Identity: identity,
-	}
+	agentConfig := newAgentConfig(identity, client.Url, client.Logger)
+
 	agent, err := agent.NewAgent(agentConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create agent: %w", err)

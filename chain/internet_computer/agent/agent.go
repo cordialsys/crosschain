@@ -26,12 +26,43 @@ const (
 
 type AgentConfig struct {
 	// Agent identity. Anynymous if not set.
-	Identity icpaddress.Ed25519Identity
+	identity icpaddress.Ed25519Identity
 	// Defaults to 2 minutes
-	IngressExpiry time.Duration
+	ingressExpiry time.Duration
 	// Defaults to "https://icp-api.io"
-	Url    *url.URL
-	Logger *log.Entry
+	url    *url.URL
+	logger *log.Entry
+}
+
+func NewAgentConfig() AgentConfig {
+	return AgentConfig{
+		ingressExpiry: 2 * time.Minute,
+		url:           nil,
+		logger:        nil,
+	}
+}
+func (a *AgentConfig) SetIdentity(identity icpaddress.Ed25519Identity) {
+	a.identity = identity
+}
+
+func (a *AgentConfig) SetIngressExpiry(ingressExpiry time.Duration) {
+	a.ingressExpiry = ingressExpiry
+}
+
+func (a *AgentConfig) SetUrl(url *url.URL) {
+	a.url = url
+}
+
+func (a *AgentConfig) SetLogger(logger *log.Entry) {
+	a.logger = logger
+}
+
+func (a *AgentConfig) GetIdentity() icpaddress.Ed25519Identity {
+	return a.identity
+}
+
+func (a *AgentConfig) GetIngressExpiry() time.Duration {
+	return a.ingressExpiry
 }
 
 type Agent struct {
@@ -53,11 +84,11 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 		PublicKey: nil,
 	}
 
-	if config.Identity.PublicKey != nil {
-		identity = config.Identity
+	if config.identity.PublicKey != nil {
+		identity = config.identity
 	}
 
-	url := config.Url
+	url := config.url
 	if url == nil || url.Host == "" {
 		defaultUrl, err := url.Parse("https://icp-api.io")
 		if err != nil {
@@ -66,7 +97,7 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 		url = defaultUrl
 	}
 
-	logger := config.Logger
+	logger := config.logger
 	if logger == nil {
 		raw := log.New()
 		logger = log.NewEntry(raw)
@@ -80,39 +111,30 @@ func NewAgent(config AgentConfig) (*Agent, error) {
 	}, nil
 }
 
-func (config *AgentConfig) ExpiryDate() uint64 {
-	ingressExpiry := config.IngressExpiry
-	if ingressExpiry == 0 {
-		// Defaults to 2 minutes
-		ingressExpiry = 2 * time.Minute
-	}
-	return uint64(time.Now().Add(ingressExpiry).UnixNano())
-}
+// Nonce is 10 bytes to be smaller than the max allowed by the IC (32 bytes)
+type Nonce [10]byte
 
-func newNonce() ([]byte, error) {
-	/* Read 10 bytes of random data, which is smaller than the max allowed by the IC (32 bytes)
-	 * and should still be enough from a practical point of view. */
+// This is unsafe because it should not be called in a transaction builder, as it's not deterministic
+func unsafeGenerateRandomNonce() (Nonce, error) {
 	nonce := make([]byte, 10)
 	_, err := rand.Read(nonce)
-	return nonce, err
+	if err != nil {
+		return Nonce{}, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+	return Nonce(nonce), nil
 }
 
-func (a AgentConfig) CreateUnsignedRequest(canisterID icpaddress.Principal, typ types.RequestType, methodName string, args ...any) (types.Request, error) {
+func (a AgentConfig) CreateUnsignedRequest(canisterID icpaddress.Principal, typ types.RequestType, methodName string, nonce Nonce, expiration time.Time, args ...any) (types.Request, error) {
 	rawArgs, err := candid.Marshal(args)
 	if err != nil {
 		return types.Request{}, fmt.Errorf("failed to marshal args: %w", err)
 	}
 
-	nonce, err := newNonce()
-	if err != nil {
-		return types.Request{}, fmt.Errorf("failed to generate nonce: %w", err)
-	}
-
 	return types.Request{
 		Type:          typ,
-		Sender:        a.Identity,
-		Nonce:         nonce,
-		IngressExpiry: a.ExpiryDate(),
+		Sender:        a.identity,
+		Nonce:         nonce[:],
+		IngressExpiry: uint64(expiration.UnixNano()),
 		CanisterID:    canisterID,
 		MethodName:    methodName,
 		Arguments:     rawArgs,
@@ -198,7 +220,12 @@ func (a Agent) Call(canisterID icpaddress.Principal, requestID types.RequestID, 
 }
 
 func (a Agent) CallAnonymous(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
-	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeCall, methodName, in...)
+	nonce, err := unsafeGenerateRandomNonce()
+	if err != nil {
+		return err
+	}
+	expiration := time.Now().Add(a.Config.ingressExpiry)
+	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeCall, methodName, nonce, expiration, in...)
 	if err != nil {
 		return fmt.Errorf("failed to create payload: %w", err)
 	}
@@ -213,7 +240,12 @@ func (a Agent) CallAnonymous(canisterID icpaddress.Principal, methodName string,
 }
 
 func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
-	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeQuery, methodName, in...)
+	nonce, err := unsafeGenerateRandomNonce()
+	if err != nil {
+		return err
+	}
+	expiration := time.Now().Add(a.Config.ingressExpiry)
+	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeQuery, methodName, nonce, expiration, in...)
 	if err != nil {
 		return fmt.Errorf("failed to create payload: %w", err)
 	}

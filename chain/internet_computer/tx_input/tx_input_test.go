@@ -22,14 +22,14 @@ func TestTxInputConflicts(t *testing.T) {
 		independent     bool
 		doubleSpendSafe bool
 	}
-	now := uint64(time.Now().UnixNano())
+	now := time.Now()
 	vectors := []testcase{
 		{
 			newInput: &TxInput{
-				CreatedAtTime: now,
+				CreateTime: now.Unix(),
 			},
 			oldInput: &TxInput{
-				CreatedAtTime: now - uint64((time.Hour * 5).Nanoseconds()),
+				CreateTime: now.Add(tx_input.SafetyTimeoutMargin / 2).Unix(),
 			},
 			independent:     true,
 			doubleSpendSafe: false,
@@ -43,10 +43,10 @@ func TestTxInputConflicts(t *testing.T) {
 		},
 		{
 			newInput: &TxInput{
-				CreatedAtTime: now,
+				CreateTime: now.Unix(),
 			},
 			oldInput: &TxInput{
-				CreatedAtTime: now - uint64((time.Hour * 25).Nanoseconds()),
+				CreateTime: now.Add(-tx_input.SafetyTimeoutMargin - 1*time.Minute).Unix(),
 			},
 			independent:     true,
 			doubleSpendSafe: true,
