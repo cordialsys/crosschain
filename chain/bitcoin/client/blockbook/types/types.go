@@ -1,8 +1,21 @@
-package blockbook
+package types
 
 import (
+	"context"
+
 	xc "github.com/cordialsys/crosschain"
 )
+
+const BitcoinCashPrefix = "bitcoincash:"
+
+type BlockBookClient interface {
+	LatestStats(ctx context.Context) (StatsResponse, error)
+	SubmitTx(ctx context.Context, txBytes []byte) (string, error)
+	ListUtxo(ctx context.Context, addr string, confirmed bool) (UtxoResponse, error)
+	EstimateFee(ctx context.Context, blocks int) (EstimateFeeResponse, error)
+	GetTx(ctx context.Context, txHash string) (TransactionResponse, error)
+	GetBlock(ctx context.Context, block uint64) (Block, error)
+}
 
 type ErrorResponse struct {
 	ErrorMessage string `json:"error"`
@@ -49,6 +62,10 @@ type BackendStats struct {
 type StatsResponse struct {
 	Blockbook BlockbookStats `json:"blockbook"`
 	Backend   BackendStats   `json:"backend"`
+}
+
+type SubmitResponse struct {
+	Result string `json:"result"`
 }
 
 type UtxoResponse []Utxo
@@ -149,4 +166,18 @@ type Tx struct {
 	Value         string `json:"value"`
 	ValueIn       string `json:"valueIn"`
 	Fees          string `json:"fees"`
+}
+
+type AddressResponse struct {
+	Page               int      `json:"page"`
+	TotalPages         int      `json:"totalPages"`
+	ItemsOnPage        int      `json:"itemsOnPage"`
+	Address            string   `json:"address"`
+	Balance            string   `json:"balance"`
+	TotalReceived      string   `json:"totalReceived"`
+	TotalSent          string   `json:"totalSent"`
+	UnconfirmedBalance string   `json:"unconfirmedBalance"`
+	UnconfirmedTxs     int      `json:"unconfirmedTxs"`
+	Txs                int      `json:"txs"`
+	Txids              []string `json:"txids"`
 }

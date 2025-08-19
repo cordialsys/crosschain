@@ -1,13 +1,9 @@
 package blockbook
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"time"
 
@@ -19,6 +15,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/bbrpc"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/rest"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -32,13 +31,14 @@ import (
 )
 
 type BlockbookClient struct {
-	httpClient http.Client
-	Asset      xc.ITask
-	Chaincfg   *chaincfg.Params
-	Url        string
-	decoder    address.AddressDecoder
+	Asset    xc.ITask
+	Chaincfg *chaincfg.Params
+	Url      string
+	decoder  address.AddressDecoder
 
 	skipAmountFilter bool
+
+	bbClient types.BlockBookClient
 }
 
 var _ xclient.Client = &BlockbookClient{}
@@ -57,25 +57,27 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	url = strings.TrimSuffix(url, "/")
 	decoder := address.NewAddressDecoder()
 
+	var bbClient types.BlockBookClient
+
+	if cfgI.GetChain().IndexerType == "bbrpc" {
+		bbRpc := bbrpc.NewClient(url)
+		bbRpc.SetHttpClient(httpClient)
+		bbClient = bbRpc
+	} else {
+		// Default to the o.g. rest client
+		bbRest := rest.NewClient(url)
+		bbRest.SetHttpClient(httpClient)
+		bbClient = bbRest
+	}
+
 	return &BlockbookClient{
-		*httpClient,
 		asset,
 		chaincfg,
 		url,
 		decoder,
 		false,
+		bbClient,
 	}, nil
-}
-
-func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) {
-	var stats StatsResponse
-
-	err := client.get(ctx, "/api/v2", &stats)
-	if err != nil {
-		return 0, err
-	}
-
-	return uint64(stats.Backend.Blocks), nil
 }
 
 func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
@@ -84,13 +86,8 @@ func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return fmt.Errorf("bad tx: %v", err)
 	}
 
-	postData := hex.EncodeToString(serial)
-	err = client.post(ctx, "/api/v2/sendtx/", "text/plain", []byte(postData), nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	_, err = client.bbClient.SubmitTx(ctx, serial)
+	return err
 }
 
 func (txBuilder *BlockbookClient) WithAddressDecoder(decoder address.AddressDecoder) address.WithAddressDecoder {
@@ -98,14 +95,11 @@ func (txBuilder *BlockbookClient) WithAddressDecoder(decoder address.AddressDeco
 	return txBuilder
 }
 
-const BitcoinCashPrefix = "bitcoincash:"
-
 func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Address) ([]tx_input.Output, error) {
-	var data UtxoResponse
 	var formattedAddr string = string(addr)
 	if client.Asset.GetChain().Chain == xc.BCH {
-		if !strings.HasPrefix(string(addr), BitcoinCashPrefix) {
-			formattedAddr = fmt.Sprintf("%s%s", BitcoinCashPrefix, addr)
+		if !strings.HasPrefix(string(addr), types.BitcoinCashPrefix) {
+			formattedAddr = fmt.Sprintf("%s%s", types.BitcoinCashPrefix, addr)
 		}
 	}
 	url := fmt.Sprintf("api/v2/utxo/%s", formattedAddr)
@@ -113,7 +107,7 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 		url += "?confirmed=true"
 	}
 
-	err := client.get(ctx, url, &data)
+	data, err := client.bbClient.ListUtxo(ctx, formattedAddr, client.Asset.GetChain().ConfirmedUtxo)
 	if err != nil {
 		return nil, err
 	}
@@ -135,10 +129,9 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 }
 
 func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockchain, error) {
-	var data EstimateFeeResponse
-	// fee estimate for last N blocks
 	blocks := 6
-	err := client.get(ctx, fmt.Sprintf("/api/v2/estimatefee/%d", blocks), &data)
+
+	data, err := client.bbClient.EstimateFee(ctx, blocks)
 	if err != nil {
 		return xc.AmountBlockchain{}, err
 	}
@@ -158,7 +151,6 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockc
 }
 
 func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	var data TransactionResponse
 	txWithInfo := &xclient.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
 		Fee:    xc.NewAmountBlockchainFromUint64(0),
@@ -166,9 +158,10 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	expectedTo := ""
 
-	err := client.get(ctx, "/api/v2/tx/"+string(txHash), &data)
+	data, err := client.bbClient.GetTx(ctx, string(txHash))
+
 	if err != nil {
-		if bbErr, ok := err.(*ErrorResponse); ok {
+		if bbErr, ok := err.(*types.ErrorResponse); ok {
 			// they don't use 404 code :/
 			if bbErr.HttpStatus >= 400 && strings.Contains(bbErr.ErrorMessage, "not found") {
 				return *txWithInfo, errors.TransactionNotFoundf("%v", err)
@@ -457,77 +450,6 @@ func (client *BlockbookClient) FetchLegacyTxInput(ctx context.Context, from xc.A
 	return client.FetchTransferInput(ctx, args)
 }
 
-func (client *BlockbookClient) get(ctx context.Context, path string, resp interface{}) error {
-	path = strings.TrimPrefix(path, "/")
-	url := fmt.Sprintf("%s/%s", client.Url, path)
-	logrus.WithFields(logrus.Fields{
-		"url": url,
-	}).Debug("get")
-	res, err := client.httpClient.Get(url)
-	if err != nil {
-		return fmt.Errorf("blockbook get failed: %v", err)
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != 200 && res.StatusCode != 201 {
-		var errResponse ErrorResponse
-		err = json.Unmarshal(body, &errResponse)
-		if err != nil {
-			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
-		}
-		errResponse.HttpStatus = res.StatusCode
-		return &errResponse
-	}
-
-	if resp != nil {
-		err = json.Unmarshal(body, &resp)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (client *BlockbookClient) post(ctx context.Context, path string, contentType string, input []byte, resp interface{}) error {
-	path = strings.TrimPrefix(path, "/")
-	url := fmt.Sprintf("%s/%s", client.Url, path)
-	logrus.WithFields(logrus.Fields{
-		"url":  url,
-		"body": string(input),
-	}).Debug("post")
-	res, err := client.httpClient.Post(url, contentType, bytes.NewReader(input))
-	if err != nil {
-		return fmt.Errorf("blockbook post failed: %v", err)
-	}
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	if res.StatusCode != 200 && res.StatusCode != 201 {
-		var errResponse ErrorResponse
-		err = json.Unmarshal(body, &errResponse)
-		if err != nil {
-			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
-		}
-		errResponse.HttpStatus = res.StatusCode
-		return &errResponse
-	}
-
-	if resp != nil {
-		err = json.Unmarshal(body, &resp)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().Decimals), nil
@@ -536,20 +458,26 @@ func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.Co
 	return 0, fmt.Errorf("unsupported")
 }
 
+func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) {
+	stats, err := client.bbClient.LatestStats(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(stats.Backend.Blocks), nil
+}
+
 func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
-		var stats StatsResponse
-
-		err := client.get(ctx, "/api/v2", &stats)
+		stats, err := client.bbClient.LatestStats(ctx)
 		if err != nil {
 			return nil, err
 		}
 		height = uint64(stats.Backend.Blocks)
 	}
 
-	var blockResponse Block
-	err := client.get(ctx, fmt.Sprintf("/api/v2/block/%d", height), &blockResponse)
+	blockResponse, err := client.bbClient.GetBlock(ctx, height)
 	if err != nil {
 		return nil, err
 	}
