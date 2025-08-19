@@ -124,6 +124,9 @@ func OverrideChainSettings(chain *xc.ChainConfig, args *RpcArgs) {
 		chain.IndexerType = args.Provider
 		chain.IndexerUrl = args.Rpc
 	}
+	if args.IndexerType != "" {
+		chain.IndexerType = args.IndexerType
+	}
 	if args.ApiKey != "" {
 		if args.ApiKey == DefaultApiRef && chain.Auth2 != "" {
 			// do not override existing config setting with default api-ref
@@ -152,6 +155,7 @@ type RpcArgs struct {
 	NotMainnet     bool
 	Provider       string
 	Network        string
+	IndexerType    string
 	ApiKey         config.Secret
 	// ConfigPath     string
 	UseLocalImplementation bool
@@ -169,6 +173,7 @@ func AddRpcArgs(cmd *cobra.Command) {
 	cmd.PersistentFlags().String("algorithm", "", "Override default signing algorithm. Optional, used only by bitcoin.")
 	cmd.PersistentFlags().String("api-key", DefaultApiRef, fmt.Sprintf("Secret reference for API key to use for RPC client (may also set %s).", DefaultTreasuryApiRef))
 	cmd.PersistentFlags().String("rpc-provider", "", "Provider to use for RPC client.  Only valid for bitcoin chains.")
+	cmd.PersistentFlags().String("indexer-type", "", "Indexer type, only valid for some chains.")
 	cmd.PersistentFlags().String("network", "", "Network to use.  Only used for bitcoin chains.")
 	cmd.PersistentFlags().CountP("verbose", "v", "Set verbosity.")
 	cmd.PersistentFlags().Bool("not-mainnet", false, "Do not use mainnets, instead use a test or dev network.")
@@ -208,6 +213,10 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 	if err != nil {
 		return nil, err
 	}
+	indexerType, err := cmd.Flags().GetString("indexer-type")
+	if err != nil {
+		return nil, err
+	}
 
 	return &RpcArgs{
 		Chain:                  chain,
@@ -219,6 +228,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 		ApiKey:                 config.Secret(apikey),
 		UseLocalImplementation: local,
 		Network:                network,
+		IndexerType:            indexerType,
 		// ConfigPath:     config,
 		Overrides: map[string]*ChainOverride{},
 	}, nil
