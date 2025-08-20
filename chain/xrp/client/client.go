@@ -244,6 +244,9 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		if err != nil {
 			return xclient.TxInfo{}, err
 		}
+		if txResponse.Result.DestinationTag != 0 {
+			movement.Memo = fmt.Sprintf("%d", txResponse.Result.DestinationTag)
+		}
 
 		if isSource {
 			movement.AddSource(
