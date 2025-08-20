@@ -176,6 +176,7 @@ type TransactionResult struct {
 	Account            string          `json:"Account"`
 	Amount             *Balance        `json:"Amount,omitempty"`
 	Destination        string          `json:"Destination,omitempty"`
+	DestinationTag     int64           `json:"DestinationTag,omitempty"`
 	Fee                string          `json:"Fee"`
 	Flags              int64           `json:"Flags"`
 	LastLedgerSequence int64           `json:"LastLedgerSequence"`
