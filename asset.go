@@ -61,6 +61,7 @@ const (
 	FTM      = NativeAsset("FTM")      // Fantom
 	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
 	HASH     = NativeAsset("HASH")     // Provenance
+	HYPE     = NativeAsset("HYPE")     // Hyperliquid
 	INJ      = NativeAsset("INJ")      // Injective
 	LinETH   = NativeAsset("LinETH")   // Linea
 	LTC      = NativeAsset("LTC")      // Litecoin
@@ -131,6 +132,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	INJ,
 	LinETH,
 	HASH,
+	HYPE,
 	LUNA,
 	LUNC,
 	KAR,
@@ -180,6 +182,7 @@ const (
 	DriverEVM                      = Driver("evm")
 	DriverEVMLegacy                = Driver("evm-legacy")
 	DriverFilecoin                 = Driver("filecoin")
+	DriverHyperliquid              = Driver("hyperliquid")
 	DriverInternetComputerProtocol = Driver("icp")
 	DriverKaspa                    = Driver("kaspa")
 	DriverSubstrate                = Driver("substrate")
@@ -313,6 +316,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverDusk
 	case ADA:
 		return DriverCardano
+	case HYPE:
+		return DriverHyperliquid
 	}
 	return ""
 }
@@ -325,7 +330,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256, Schnorr}
 	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin, DriverEOS:
 		return []SignatureType{K256Sha256}
-	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron:
+	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid:
 		return []SignatureType{K256Keccak}
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol:
 		return []SignatureType{Ed255}
@@ -334,6 +339,8 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 	case DriverKaspa:
 		return []SignatureType{Schnorr}
 	}
+
+	fmt.Printf("driver: %s", driver)
 	return []SignatureType{}
 }
 
@@ -349,7 +356,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
-	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin:
+	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk, DriverKaspa, DriverInternetComputerProtocol:
 		return Raw

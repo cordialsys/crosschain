@@ -136,6 +136,10 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 	if err != nil {
 		return nil, errors.New("invalid address options")
 	}
+
+	if len(driver.SignatureAlgorithms()) == 0 {
+		return nil, errors.New("expected at least one signature algorithm")
+	}
 	alg := driver.SignatureAlgorithms()[0]
 	algorithmOverride, ok := opts.GetAlgorithmType()
 	if ok {

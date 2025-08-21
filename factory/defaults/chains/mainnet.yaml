@@ -577,6 +577,17 @@ chains:
         asset_id: hyperliquid
       indexing_co:
         chain_id: hyper_evm
+  HYPE:
+    chain: HYPE
+    driver: hyperliquid
+    chain_name: Hyperliquid (Testnet)
+    decimals: 8
+    fee_limit: "100.0"
+    external:
+      coin_market_cap:
+        asset_id: "32196"
+      coin_gecko:
+        asset_id: "hyperliquid"
   ICP:
     chain: ICP
     driver: icp
