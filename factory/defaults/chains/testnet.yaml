@@ -241,6 +241,12 @@ chains:
     chain_name: HyperEVM Testnet
     decimals: 18
     confirmations_final: 30
+  HYPE:
+    chain: HYPE
+    driver: Hyperliquid
+    chain_name: Hyperliquid (Testnet)
+    decimals: 8
+    fee_limit: "100.0"
   KAS:
     chain: KAS
     driver: kaspa

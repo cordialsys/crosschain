@@ -45,6 +45,7 @@ import (
 	filaddress "github.com/cordialsys/crosschain/chain/filecoin/address"
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
+	hypeaddress "github.com/cordialsys/crosschain/chain/hyperliquid/address"
 	icp "github.com/cordialsys/crosschain/chain/internet_computer"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpbuilder "github.com/cordialsys/crosschain/chain/internet_computer/builder"
@@ -243,6 +244,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return eosaddress.NewAddressBuilder(cfg)
 	case DriverInternetComputerProtocol:
 		return icpaddress.NewAddressBuilder(cfg, options...)
+	case DriverHyperliquid:
+		return hypeaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
