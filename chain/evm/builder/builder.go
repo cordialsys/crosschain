@@ -43,7 +43,9 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 	}, nil
 }
 
-func (txBuilder TxBuilder) SupportsFeePayer() {}
+func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
+	return xcbuilder.FeePayerWithConflicts
+}
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {

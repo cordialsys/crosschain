@@ -28,7 +28,9 @@ var _ xcbuilder.BuilderRequiresIdentity = TxBuilder{}
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{cfgI}, nil
 }
-func (txBuilder TxBuilder) SupportsFeePayer()    {}
+func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
+	return xcbuilder.FeePayerNoConflicts
+}
 func (txBuilder TxBuilder) RequiresIdentityEOS() {}
 
 func newTransaction(input *tx_input.TxInput) *eos.Transaction {
