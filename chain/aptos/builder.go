@@ -18,7 +18,8 @@ type TxBuilder struct {
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = TxBuilder{}
 
-func (txBuilder TxBuilder) SupportsFeePayer() {
+func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
+	return xcbuilder.FeePayerNoConflicts
 }
 
 var AptosModuleId *transactionbuilder.ModuleId

@@ -10,9 +10,18 @@ type FullBuilder interface {
 	Staking
 }
 
+type FeePayerType string
+
+const (
+	// For when the fee-payer has it's own nonce/sequence/utxo and can lead to conflicts
+	FeePayerWithConflicts FeePayerType = "has-conflicts"
+	// The fee-payer does not have any cause for conflicts (relies solely on main signer(s))
+	FeePayerNoConflicts FeePayerType = "no-conflicts"
+)
+
 // Marker to indicate if fee payer is supported, until we support it everywhere
 type BuilderSupportsFeePayer interface {
-	SupportsFeePayer()
+	SupportsFeePayer() FeePayerType
 }
 
 // Indicator to show that this chain requires an identity to be set for destination addresses.

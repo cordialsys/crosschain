@@ -16,7 +16,8 @@ type TxBuilder struct {
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
 
-func (txBuilder TxBuilder) SupportsFeePayer() {
+func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
+	return xcbuilder.FeePayerWithConflicts
 }
 
 // NewTxBuilder creates a new Template TxBuilder

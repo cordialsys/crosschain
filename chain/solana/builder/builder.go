@@ -26,7 +26,9 @@ var _ xcbuilder.FullBuilder = &TxBuilder{}
 // Solana driver supports fee payer
 var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
 
-func (txBuilder TxBuilder) SupportsFeePayer() {}
+func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
+	return xcbuilder.FeePayerNoConflicts
+}
 
 type TxInput = tx_input.TxInput
 
