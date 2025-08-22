@@ -21,6 +21,7 @@ import (
 
 const (
 	Hype         = "HYPE"
+	HypeContract = xc.ContractAddress("0x0d01dc56dcaaca66ad901c959b4011ec")
 	HypeDecimals = 8
 )
 
@@ -137,8 +138,23 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return 0, errors.New("not implemented")
+	tokensMeta, err := client.fetchTokensMetadata(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch token metadata: %w")
+	}
+
+	if contract == "" {
+		contract = HypeContract
+	}
+
+	tm, ok := tokensMeta.GetTokenMetaByContract(contract)
+	if !ok {
+		return 0, fmt.Errorf("missing token metadata for %s", contract)
+	}
+
+	return tm.WeiDecimals, nil
 }
+
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
 	return &xclient.BlockWithTransactions{}, errors.New("not implemented")
 }
