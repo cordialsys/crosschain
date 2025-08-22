@@ -46,6 +46,7 @@ import (
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
 	hypeaddress "github.com/cordialsys/crosschain/chain/hyperliquid/address"
+	hypeclient "github.com/cordialsys/crosschain/chain/hyperliquid/client"
 	icp "github.com/cordialsys/crosschain/chain/internet_computer"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpbuilder "github.com/cordialsys/crosschain/chain/internet_computer/builder"
@@ -114,6 +115,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return eosclient.NewClient(cfg)
 	case DriverInternetComputerProtocol:
 		return icpclient.NewClient(cfg)
+	case DriverHyperliquid:
+		return hypeclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
