@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/holiman/uint256"
+	"github.com/sirupsen/logrus"
 )
 
 type evmTx interface {
@@ -23,8 +24,7 @@ type evmTx interface {
 
 // Tx for EVM
 type Tx struct {
-	txInner    evmTx
-	signatures []xc.TxSignature
+	txInner evmTx
 }
 
 var _ xc.Tx = &Tx{}
@@ -48,7 +48,6 @@ func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_inp
 	}
 	return &Tx{
 		txInner,
-		[]xc.TxSignature{},
 	}, nil
 }
 
@@ -64,7 +63,6 @@ func NewMultiTx(chain *xc.ChainBaseConfig, args xcbuilder.MultiTransferArgs, inp
 	txInner := NewFeePayerTx(args, input, chain)
 	return &Tx{
 		txInner,
-		[]xc.TxSignature{},
 	}, nil
 }
 
@@ -103,9 +101,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 		return fmt.Errorf("transaction not initialized")
 	}
 	tx.txInner.AddSignatures(signatures)
-	for _, signature := range signatures {
-		tx.signatures = append(tx.signatures, signature.Signature)
-	}
 	return nil
 }
 
@@ -126,9 +121,14 @@ func (tx Tx) GetMockEthTx() *types.Transaction {
 			Signature: make(xc.TxSignature, 65),
 		},
 	}
-	tx.SetSignatures(sigs...)
+	err := tx.SetSignatures(sigs...)
+	if err != nil {
+		logrus.WithError(err).Warn("failed to set signatures")
+		return nil
+	}
 	ethTx, err := tx.txInner.BuildEthTx()
 	if err != nil {
+		logrus.WithError(err).Warn("failed to build eth tx")
 		return nil
 	}
 	return ethTx

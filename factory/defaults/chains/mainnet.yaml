@@ -562,6 +562,21 @@ chains:
         asset_id: "19960"
       indexing_co:
         chain_id: provenance
+  HyperEVM:
+    chain: HyperEVM
+    driver: evm
+    chain_id: 999
+    chain_name: HyperEVM
+    decimals: 18
+    fee_limit: "20.0"
+    confirmations_final: 30
+    external:
+      coin_market_cap:
+        asset_id: "32196"
+      coin_gecko:
+        asset_id: hyperliquid
+      indexing_co:
+        chain_id: hyper_evm
   ICP:
     chain: ICP
     driver: icp
