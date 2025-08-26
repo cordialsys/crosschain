@@ -234,6 +234,13 @@ chains:
     chain_id: 4002
     chain_name: Fantom (Testnet)
     decimals: 18
+  HyperEVM:
+    chain: HyperEVM
+    driver: evm
+    chain_id: 998
+    chain_name: HyperEVM Testnet
+    decimals: 18
+    confirmations_final: 30
   KAS:
     chain: KAS
     driver: kaspa

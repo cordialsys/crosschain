@@ -28,68 +28,69 @@ type NativeAsset string
 
 // List of supported NativeAsset
 const (
-	ACA    = NativeAsset("ACA")    // Acala
-	ADA    = NativeAsset("ADA")    // Cardano
-	AKT    = NativeAsset("AKT")    // Akash
-	APTOS  = NativeAsset("APTOS")  // APTOS
-	ArbETH = NativeAsset("ArbETH") // Arbitrum
-	ASTR   = NativeAsset("ASTR")   // Astar
-	ATOM   = NativeAsset("ATOM")   // Cosmos
-	AurETH = NativeAsset("AurETH") // Aurora
-	AVAX   = NativeAsset("AVAX")   // Avalanche
-	BAND   = NativeAsset("BAND")   // Band
-	BASE   = NativeAsset("BASE")   // BASE
-	BABY   = NativeAsset("BABY")   // Babylon
-	BERA   = NativeAsset("BERA")   // Berachain
-	BCH    = NativeAsset("BCH")    // Bitcoin Cash
-	BNB    = NativeAsset("BNB")    // Binance Coin
-	BTC    = NativeAsset("BTC")    // Bitcoin
-	CELO   = NativeAsset("CELO")   // Celo
-	CHZ    = NativeAsset("CHZ")    // Chiliz
-	CHZ2   = NativeAsset("CHZ2")   // Chiliz 2.0
-	DOGE   = NativeAsset("DOGE")   // Dogecoin
-	DOT    = NativeAsset("DOT")    // Polkadot
-	DUSK   = NativeAsset("DUSK")   // Dusk
-	ENJ    = NativeAsset("ENJ")    // Enjin
-	EOS    = NativeAsset("EOS")    // EOS
-	ES     = NativeAsset("ES")     // Eclipse
-	ETC    = NativeAsset("ETC")    // Ethereum Classic
-	ETH    = NativeAsset("ETH")    // Ethereum
-	ETHW   = NativeAsset("ETHW")   // Ethereum PoW
-	FIL    = NativeAsset("FIL")    // Filecoin
-	FOGO   = NativeAsset("FOGO")   // Fogo
-	FTM    = NativeAsset("FTM")    // Fantom
-	HASH   = NativeAsset("HASH")   // Provenance
-	INJ    = NativeAsset("INJ")    // Injective
-	LTC    = NativeAsset("LTC")    // Litecoin
-	LUNA   = NativeAsset("LUNA")   // Terra V2
-	LUNC   = NativeAsset("LUNC")   // Terra Classic
-	KAR    = NativeAsset("KAR")    // Karura
-	KAS    = NativeAsset("KAS")    // Kaspa
-	KAVA   = NativeAsset("KAVA")   // Kava
-	KLAY   = NativeAsset("KLAY")   // Klaytn
-	KSM    = NativeAsset("KSM")    // Kusama
-	XDC    = NativeAsset("XDC")    // XinFin
-	MATIC  = NativeAsset("MATIC")  // Polygon
-	MON    = NativeAsset("MON")    // MONAD
-	NOBLE  = NativeAsset("NOBLE")  // Noble Chain
-	OAS    = NativeAsset("OAS")    // Oasys (not Oasis!)
-	OptETH = NativeAsset("OptETH") // Optimism
-	EmROSE = NativeAsset("EmROSE") // Rose (Oasis EVM-compat "Emerald" parachain)
-	SOL    = NativeAsset("SOL")    // Solana
-	SUI    = NativeAsset("SUI")    // SUI
-	XPLA   = NativeAsset("XPLA")   // XPLA
-	TAO    = NativeAsset("TAO")    // Bittensor
-	TIA    = NativeAsset("TIA")    // celestia
-	TON    = NativeAsset("TON")    // TON
-	TRX    = NativeAsset("TRX")    // TRON
-	SEI    = NativeAsset("SEI")    // Sei
-	SeiEVM = NativeAsset("SeiEVM") // SeiEVM
-	XRP    = NativeAsset("XRP")    // XRP
-	XLM    = NativeAsset("XLM")    // XLM
-	ZETA   = NativeAsset("ZETA")   // ZetaChain
-	NIL    = NativeAsset("NIL")    // Nillion
-	ICP    = NativeAsset("ICP")    // Internet Computer Protocol
+	ACA      = NativeAsset("ACA")      // Acala
+	ADA      = NativeAsset("ADA")      // Cardano
+	AKT      = NativeAsset("AKT")      // Akash
+	APTOS    = NativeAsset("APTOS")    // APTOS
+	ArbETH   = NativeAsset("ArbETH")   // Arbitrum
+	ASTR     = NativeAsset("ASTR")     // Astar
+	ATOM     = NativeAsset("ATOM")     // Cosmos
+	AurETH   = NativeAsset("AurETH")   // Aurora
+	AVAX     = NativeAsset("AVAX")     // Avalanche
+	BAND     = NativeAsset("BAND")     // Band
+	BASE     = NativeAsset("BASE")     // BASE
+	BABY     = NativeAsset("BABY")     // Babylon
+	BERA     = NativeAsset("BERA")     // Berachain
+	BCH      = NativeAsset("BCH")      // Bitcoin Cash
+	BNB      = NativeAsset("BNB")      // Binance Coin
+	BTC      = NativeAsset("BTC")      // Bitcoin
+	CELO     = NativeAsset("CELO")     // Celo
+	CHZ      = NativeAsset("CHZ")      // Chiliz
+	CHZ2     = NativeAsset("CHZ2")     // Chiliz 2.0
+	DOGE     = NativeAsset("DOGE")     // Dogecoin
+	DOT      = NativeAsset("DOT")      // Polkadot
+	DUSK     = NativeAsset("DUSK")     // Dusk
+	ENJ      = NativeAsset("ENJ")      // Enjin
+	EOS      = NativeAsset("EOS")      // EOS
+	ES       = NativeAsset("ES")       // Eclipse
+	ETC      = NativeAsset("ETC")      // Ethereum Classic
+	ETH      = NativeAsset("ETH")      // Ethereum
+	ETHW     = NativeAsset("ETHW")     // Ethereum PoW
+	FIL      = NativeAsset("FIL")      // Filecoin
+	FOGO     = NativeAsset("FOGO")     // Fogo
+	FTM      = NativeAsset("FTM")      // Fantom
+	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
+	HASH     = NativeAsset("HASH")     // Provenance
+	INJ      = NativeAsset("INJ")      // Injective
+	LTC      = NativeAsset("LTC")      // Litecoin
+	LUNA     = NativeAsset("LUNA")     // Terra V2
+	LUNC     = NativeAsset("LUNC")     // Terra Classic
+	KAR      = NativeAsset("KAR")      // Karura
+	KAS      = NativeAsset("KAS")      // Kaspa
+	KAVA     = NativeAsset("KAVA")     // Kava
+	KLAY     = NativeAsset("KLAY")     // Klaytn
+	KSM      = NativeAsset("KSM")      // Kusama
+	XDC      = NativeAsset("XDC")      // XinFin
+	MATIC    = NativeAsset("MATIC")    // Polygon
+	MON      = NativeAsset("MON")      // MONAD
+	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
+	OAS      = NativeAsset("OAS")      // Oasys (not Oasis!)
+	OptETH   = NativeAsset("OptETH")   // Optimism
+	EmROSE   = NativeAsset("EmROSE")   // Rose (Oasis EVM-compat "Emerald" parachain)
+	SOL      = NativeAsset("SOL")      // Solana
+	SUI      = NativeAsset("SUI")      // SUI
+	XPLA     = NativeAsset("XPLA")     // XPLA
+	TAO      = NativeAsset("TAO")      // Bittensor
+	TIA      = NativeAsset("TIA")      // celestia
+	TON      = NativeAsset("TON")      // TON
+	TRX      = NativeAsset("TRX")      // TRON
+	SEI      = NativeAsset("SEI")      // Sei
+	SeiEVM   = NativeAsset("SeiEVM")   // SeiEVM
+	XRP      = NativeAsset("XRP")      // XRP
+	XLM      = NativeAsset("XLM")      // XLM
+	ZETA     = NativeAsset("ZETA")     // ZetaChain
+	NIL      = NativeAsset("NIL")      // Nillion
+	ICP      = NativeAsset("ICP")      // Internet Computer Protocol
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -124,6 +125,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	FIL,
 	FOGO,
 	FTM,
+	HyperEVM,
 	INJ,
 	HASH,
 	LUNA,
@@ -271,7 +273,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON:
+	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

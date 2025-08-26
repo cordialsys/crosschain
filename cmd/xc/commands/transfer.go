@@ -342,9 +342,11 @@ func CmdTxTransfer() *cobra.Command {
 				}
 				// record serialized tx + reset the tx for next trial
 				lastSerializedTx = txBytes
-				tx, err = txBuilder.Transfer(tfArgs, input)
-				if err != nil {
-					return fmt.Errorf("could not build transfer: %v", err)
+				if i < numberOfTrials-1 {
+					tx, err = txBuilder.Transfer(tfArgs, input)
+					if err != nil {
+						return fmt.Errorf("could not build transfer: %v", err)
+					}
 				}
 			}
 
