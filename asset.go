@@ -340,7 +340,6 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{Schnorr}
 	}
 
-	fmt.Printf("driver: %s", driver)
 	return []SignatureType{}
 }
 
