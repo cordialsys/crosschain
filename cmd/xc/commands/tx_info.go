@@ -62,7 +62,7 @@ func CmdTxInfo() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&contract, "contract", "", "")
 	cmd.Flags().StringVar(&sender, "sender", "", "Address of transaction sender")
-	cmd.Flags().Int64Var(&txTime, "tx_time", 0, "Time of the transaction")
+	cmd.Flags().Int64Var(&txTime, "tx-time", 0, "Time of the transaction")
 	cmd.Flags().Uint64Var(&blockHeight, "block-height", 0, "Block height of the transaction")
 	return cmd
 }

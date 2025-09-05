@@ -52,8 +52,8 @@ func (args *Args) BlockHeight() (xc.AmountBlockchain, bool) {
 	return *args.blockHeight, true
 }
 
-func (args *Args) SetTxSignTime(tx_time int64) {
-	args.signTime = tx_time
+func (args *Args) SetTxSignTime(txTime int64) {
+	args.signTime = txTime
 }
 
 func (args *Args) SetBlockHeight(height xc.AmountBlockchain) {
@@ -82,9 +82,9 @@ func OptionSender(sender xc.Address) Option {
 	}
 }
 
-func OptionSignTime(tx_time int64) Option {
+func OptionSignTime(txTime int64) Option {
 	return func(args *Args) {
-		args.SetTxSignTime(tx_time)
+		args.SetTxSignTime(txTime)
 	}
 }
 
