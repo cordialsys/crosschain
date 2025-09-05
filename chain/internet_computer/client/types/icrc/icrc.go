@@ -457,7 +457,7 @@ func (b Block) Fee() uint64 {
 	var fee idl.Nat
 	_, err := b.Map.GetValue(txFee, &fee)
 
-	if err != nil {
+	if err != nil || fee.BigInt() == nil {
 		return 0
 	}
 
@@ -476,9 +476,23 @@ type ArchivedBlocks struct {
 
 type GetBlocksResponse struct {
 	// Total number of blocks in the ledger
+	ChainLength idl.Nat `ic:"chain_length"`
+	// Alias for total number of blocks in the ledger
 	LogLength      idl.Nat          `ic:"log_length"`
 	Blocks         []BlockWithId    `ic:"blocks"`
 	ArchivedBlocks []ArchivedBlocks `ic:"archived_blocks"`
+}
+
+func (b GetBlocksResponse) GetHeight() uint64 {
+	if b.ChainLength.BigInt() != nil {
+		return b.ChainLength.BigInt().Uint64()
+	}
+
+	if b.LogLength.BigInt() != nil {
+		return b.LogLength.BigInt().Uint64()
+	}
+
+	return 0
 }
 
 type GetIndexPrincipalResponse struct {
@@ -571,9 +585,9 @@ func (e *TransferError) Error() string {
 }
 
 type GetAccountTransactionsArgs struct {
-	MaxResults idl.Nat `ic:"max_results"`
+	MaxResults idl.Nat  `ic:"max_results"`
 	Start      *idl.Nat `ic:"start,omitempty"`
-	Account    Account `ic:"account"`
+	Account    Account  `ic:"account"`
 }
 
 type GetAccountTransactionsResponse struct {

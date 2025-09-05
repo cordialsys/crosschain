@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -22,7 +23,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx"
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/errors"
+	xcerrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,7 +42,9 @@ var _ xclient.Client = &Client{}
 
 // Not all ledger canisters support `icrc106_get_index_principal` method
 var indexCanisters map[string]icpaddress.Principal = map[string]icpaddress.Principal{
-	icp.LedgerPrincipal.String(): icpaddress.MustDecode("qhbym-qaaaa-aaaaa-aaafq-cai"),
+	icp.LedgerPrincipal.String():  icpaddress.MustDecode("qhbym-qaaaa-aaaaa-aaafq-cai"),
+	"ly36x-wiaaa-aaaai-aqj7q-cai": icpaddress.MustDecode("4cx56-naaaa-aaaai-aqkaa-cai"), // VCHF
+	"wu6g4-6qaaa-aaaan-qmrza-cai": icpaddress.MustDecode("wi24n-jqaaa-aaaan-qmr3a-cai"), // VEUR
 }
 
 func newAgentConfig(identity icpaddress.Ed25519Identity, remote *url.URL, logger *log.Entry) agent.AgentConfig {
@@ -419,7 +422,7 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 			return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, blockHeight)
 		}
 	}
-	return xclient.TxInfo{}, errors.TransactionNotFoundf("no matching transaction found in recent account history")
+	return xclient.TxInfo{}, xcerrors.TransactionNotFoundf("no matching transaction found in recent account history")
 }
 
 func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, bool, error) {
@@ -634,6 +637,11 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 		return icrc.Block{}, fmt.Errorf("failed to fetch icrc block: %w", err)
 	}
 
+	currentHeight := response.GetHeight()
+	if currentHeight < blockIndex {
+		return icrc.Block{}, fmt.Errorf("invalid block(%d), current chain length: %d", blockIndex, currentHeight)
+	}
+
 	if len(response.Blocks) == 1 {
 		return response.Blocks[0].Block, nil
 	}
@@ -655,7 +663,8 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 			return archiveResponse.Blocks[0].Block, nil
 		}
 	}
-	return icrc.Block{}, fmt.Errorf("not implemented")
+
+	return icrc.Block{}, errors.New("coudln't find block")
 }
 
 func (client *Client) fetchRawBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (types.Block, error) {
@@ -683,7 +692,7 @@ func (client *Client) fetchIcrcHeight(ctx context.Context, canister icpaddress.P
 		return 0, fmt.Errorf("failed to query block height: %w", err)
 	}
 
-	return response.LogLength.BigInt().Uint64() - 1, nil
+	return response.GetHeight() - 1, nil
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {

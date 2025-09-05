@@ -14,6 +14,7 @@ func CmdTxInfo() *cobra.Command {
 	var contract string
 	var sender string
 	var txTime int64
+	var blockHeight uint64
 	cmd := &cobra.Command{
 		Use:     "tx-info <hash>",
 		Aliases: []string{"tx"},
@@ -22,7 +23,6 @@ func CmdTxInfo() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
-			hash := args[0]
 
 			options := []txinfo.Option{}
 			contract, err := cmd.Flags().GetString("contract")
@@ -38,6 +38,11 @@ func CmdTxInfo() *cobra.Command {
 			if txTime != 0 {
 				options = append(options, txinfo.OptionSignTime(txTime))
 			}
+			if blockHeight != 0 {
+				options = append(options, txinfo.OptionBlockHeight(xc.NewAmountBlockchainFromUint64(blockHeight)))
+			}
+
+			hash := args[0]
 			txInfoArgs := txinfo.NewArgs(xc.TxHash(hash), options...)
 
 			client, err := xcFactory.NewClient(chainConfig)
@@ -58,5 +63,6 @@ func CmdTxInfo() *cobra.Command {
 	cmd.Flags().StringVar(&contract, "contract", "", "")
 	cmd.Flags().StringVar(&sender, "sender", "", "Address of transaction sender")
 	cmd.Flags().Int64Var(&txTime, "tx_time", 0, "Time of the transaction")
+	cmd.Flags().Uint64Var(&blockHeight, "block-height", 0, "Block height of the transaction")
 	return cmd
 }
