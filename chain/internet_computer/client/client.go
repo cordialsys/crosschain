@@ -663,7 +663,6 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 			return archiveResponse.Blocks[0].Block, nil
 		}
 	}
-
 	return icrc.Block{}, errors.New("coudln't find block")
 }
 
