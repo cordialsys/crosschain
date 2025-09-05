@@ -612,6 +612,16 @@ chains:
         fee_limit: "41054.0"
         decimals: 8
         aliases: ["OGY"]
+      - asset_id: "ly36x-wiaaa-aaaai-aqj7q-cai"
+        contract_id: "ly36x-wiaaa-aaaai-aqj7q-cai"
+        fee_limit: "80.0"
+        decimals: 8
+        aliases: ["VCHF"]
+      - asset_id: "wu6g4-6qaaa-aaaan-qmrza-cai"
+        contract_id: "wu6g4-6qaaa-aaaan-qmrza-cai"
+        fee_limit: "90.0"
+        decimals: 8
+        aliases: ["VEUR"]
     external:
       coin_market_cap:
         asset_id: "8916"
