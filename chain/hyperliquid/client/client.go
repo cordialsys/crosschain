@@ -23,23 +23,25 @@ import (
 )
 
 const (
-	Hype                         = "HYPE"
-	HypeContract                 = xc.ContractAddress("0x0d01dc56dcaaca66ad901c959b4011ec")
-	HypeDecimals                 = 8
-	WebsocketUrlMainnet          = "wss://api.hyperliquid.xyz/ws"
-	WebsocketUrlTestnet          = ""
-	EndpointInfo                 = "info"
-	EndpointExplorer             = "explorer"
-	MethodBlockDetails           = "blockDetails"
-	MethodTxDetails              = "txDetails"
-	MethodSpotMeta               = "spotMeta"
-	MethodSpotClearingHouseState = "spotClearinghouseState"
+	EndpointExplorer                  = "explorer"
+	EndpointInfo                      = "info"
+	Hype                              = "HYPE"
+	HypeContract                      = xc.ContractAddress("0x0d01dc56dcaaca66ad901c959b4011ec")
+	HypeDecimals                      = 8
+	MethodBlockDetails                = "blockDetails"
+	MethodSpotClearingHouseState      = "spotClearinghouseState"
+	MethodSpotMeta                    = "spotMeta"
+	MethodTxDetails                   = "txDetails"
+	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
+	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
+	WebsocketUrlTestnet               = ""
 )
 
 // Client for hyperliquid
 type Client struct {
 	Asset      xc.ITask
-	Url        *url.URL
+	InfoUrl    *url.URL
+	RpcUrl     *url.URL
 	HttpClient *http.Client
 }
 
@@ -53,8 +55,14 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
 
+	rpcUrl, err := url.Parse("https://rpc.hyperliquid.xyz")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse rpc url: %w", err)
+	}
+
 	return &Client{
-		Url:        url,
+		InfoUrl:    url,
+		RpcUrl:     rpcUrl,
 		HttpClient: cfg.DefaultHttpClient(),
 		Asset:      cfgI,
 	}, nil
@@ -90,15 +98,62 @@ func (client *Client) fetchTxDetails(ctx context.Context, hash string) (types.Tr
 	}
 
 	var txDetails response
-	err := client.Call(ctx, EndpointExplorer, MethodTxDetails, map[string]any{
+	err := client.CallExplorer(ctx, MethodTxDetails, map[string]any{
 		"hash": hash,
 	}, &txDetails)
 	return txDetails.Transaction, err
 
 }
 
+// func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Address, hash xc.TxHash) (xc.AmountBlockchain, error) {
+//
+// }
+
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+	contract, _ := args.Contract()
+	txDetails, err := client.fetchTxDetails(ctx, string(args.TxHash()))
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
+	}
+
+	spotSend, ok, err := txDetails.GetSpotSend()
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to get spotSend action: %w", err)
+	}
+	if !ok {
+		return xclient.TxInfo{}, errors.New("tx-info supports only spotSend actions for now")
+	}
+
+	chain := client.Asset.GetChain().Chain
+	blockTime := time.UnixMilli(txDetails.Time)
+	block := xclient.NewBlock(chain, txDetails.Block, txDetails.Hash, blockTime)
+	latestHeight, err := client.fetchBlockHeight(ctx)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest height: %w", err)
+	}
+	confirmations := uint64(0)
+	if latestHeight > block.Height.Uint64() {
+		confirmations = latestHeight - block.Height.Uint64()
+	}
+
+	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), txDetails.Hash, confirmations, &txDetails.Error)
+	sourceAddress := xc.Address(txDetails.User)
+	destinationAddress := xc.Address(spotSend.Destination)
+	hrAmount, err := xc.NewAmountHumanReadableFromStr(spotSend.Amount)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to convert amount to HumanReadable: %w", err)
+	}
+	decimals, err := client.FetchDecimals(ctx, contract)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch token decimals: %w")
+	}
+	amount := hrAmount.ToBlockchain(int32(decimals))
+	movement := xclient.NewMovement(chain, contract)
+	movement.AddSource(sourceAddress, amount, nil)
+	movement.AddDestination(destinationAddress, amount, nil)
+	txInfo.AddMovement(movement)
+
 	return xclient.TxInfo{}, errors.New("not implemented")
 }
 
@@ -121,13 +176,13 @@ func getBlockchainAmount(balance types.SpotBalance, decimals int32) (xc.AmountBl
 
 func (client *Client) fetchTokensMetadata(ctx context.Context) (types.SpotMetaResponse, error) {
 	var tokensMeta types.SpotMetaResponse
-	err := client.Call(ctx, EndpointInfo, MethodSpotMeta, nil, &tokensMeta)
+	err := client.CallInfo(ctx, MethodSpotMeta, nil, &tokensMeta)
 	return tokensMeta, err
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	var spotBalances types.SpotClearinghouseState
-	err := client.Call(ctx, EndpointInfo, MethodSpotClearingHouseState, map[string]any{
+	err := client.CallInfo(ctx, MethodSpotClearingHouseState, map[string]any{
 		"user": args.Address(),
 	}, &spotBalances)
 
@@ -195,7 +250,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		BlockDetails types.BlockDetails `json:"blockDetails"`
 	}
 	var resp response
-	err := client.Call(ctx, EndpointExplorer, MethodBlockDetails, map[string]any{
+	err := client.CallExplorer(ctx, MethodBlockDetails, map[string]any{
 		"height": height,
 	}, &resp)
 
@@ -217,7 +272,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}, nil
 }
 
-func (client *Client) Call(ctx context.Context, endpoint string, method string, params map[string]any, result any) error {
+func (client *Client) callInner(ctx context.Context, url string, method string, params map[string]any, result any) error {
 	if params == nil {
 		params = make(map[string]any)
 	}
@@ -228,7 +283,6 @@ func (client *Client) Call(ctx context.Context, endpoint string, method string, 
 		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/%s", client.Url, endpoint)
 	log := logrus.WithFields(logrus.Fields{
 		"url":    url,
 		"method": method,
@@ -268,6 +322,16 @@ func (client *Client) Call(ctx context.Context, endpoint string, method string, 
 	return nil
 }
 
+func (c *Client) CallInfo(ctx context.Context, method string, params map[string]any, result any) error {
+	url := fmt.Sprintf("%s/%s", c.InfoUrl, EndpointInfo)
+	return c.callInner(ctx, url, method, params, result)
+}
+
+func (c *Client) CallExplorer(ctx context.Context, method string, params map[string]any, result any) error {
+	url := fmt.Sprintf("%s/%s", c.RpcUrl, EndpointExplorer)
+	return c.callInner(ctx, url, method, params, result)
+}
+
 func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 	c, _, err := websocket.DefaultDialer.Dial(WebsocketUrlMainnet, nil)
 	if err != nil {
@@ -285,10 +349,13 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 		Subscription: &subscription,
 	}
 
+	logger := logrus.WithField("url", WebsocketUrlMainnet)
 	payload, err := json.Marshal(request)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal subscription payload: %w", err)
 	}
+
+	logger.Info("subscribing to hype trades")
 	err = c.WriteMessage(websocket.TextMessage, payload)
 	if err != nil {
 		return 0, fmt.Errorf("failed to write ws message: %w", err)
@@ -314,6 +381,8 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 		)
 	}
 
+	logger.WithField("response", response.Data).Debug("got subscription response")
+
 	// Read latest 'HYPE' trade
 	_, m, err = c.ReadMessage()
 	if err != nil {
@@ -325,14 +394,27 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 		return 0, fmt.Errorf("failed to read ws trades response: %w", err)
 	}
 
+	// Don't log 'trades.Data', it's too long even for Debug output
+	logger.WithField("trade_count", len(trades.Data)).Debug("got subscription response")
 	if len(trades.Data) == 0 {
 		return 0, fmt.Errorf("empty block")
 	}
 
-	txDetails, err := client.fetchTxDetails(ctx, trades.Data[0].Hash)
-	if err != nil {
-		return 0, fmt.Errorf("failed to fetch tx-info: %w", err)
+	// Sometimes hashless actions are reported over this subscription, we can safely ignroe
+	// transactions with empty hashes.
+	// TODO: It's unlikely that the block will contain only 'defaultHash' transactions,
+	// but consider wrapping this logic in a retry loop
+	defaultHash := "0x0000000000000000000000000000000000000000000000000000000000000000"
+	for _, tx := range trades.Data {
+		if tx.Hash != defaultHash {
+			txDetails, err := client.fetchTxDetails(ctx, tx.Hash)
+			if err != nil {
+				return 0, fmt.Errorf("failed to fetch tx-info: %w", err)
+			}
+
+			return txDetails.Block, nil
+		}
 	}
 
-	return txDetails.Block, nil
+	return 0, fmt.Errorf("failed to fetch block height")
 }
