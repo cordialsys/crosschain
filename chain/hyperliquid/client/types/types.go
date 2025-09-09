@@ -71,7 +71,7 @@ type SpotSend struct {
 }
 
 type Transaction struct {
-	Time   uint64         `json:"time"`
+	Time   int64          `json:"time"`
 	User   string         `json:"user"`
 	Action map[string]any `json:"action,omitempty"`
 	Block  uint64         `json:"block"`
