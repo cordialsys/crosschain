@@ -71,7 +71,6 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 		return true
 	}
 
-	// Transaqctions with `CreatedAtTime` > 24h cannot be submitted
 	diff := input.CreateTime - oldInput.CreateTime
 	if diff > int64(SafetyTimeoutMargin.Seconds()) {
 		return true

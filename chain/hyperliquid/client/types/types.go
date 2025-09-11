@@ -2,6 +2,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 )
@@ -27,7 +28,17 @@ type SpotMetaResponse struct {
 	Tokens   []Token       `json:"tokens"`
 }
 
-func (s SpotMetaResponse) GetTokenMetaByContract(contract xc.ContractAddress) (Token, bool) {
+func (s SpotMetaResponse) GetTokenMetaByName(name string) (Token, bool) {
+	for _, token := range s.Tokens {
+		if token.Name == name {
+			return token, true
+		}
+	}
+
+	return Token{}, false
+}
+
+func (s SpotMetaResponse) GetTokenMetaByTokenId(contract xc.ContractAddress) (Token, bool) {
 	for _, token := range s.Tokens {
 		if token.TokenId == string(contract) {
 			return token, true
@@ -125,7 +136,9 @@ func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 	if !ok {
 		return SpotSend{}, false, errors.New("failed to get spot send, missing: 'amount'")
 	}
-	timestamp, ok := GetValue[int64](t.Action, "time")
+
+	// json numbers are always float
+	timestamp, ok := GetValue[float64](t.Action, "time")
 	if !ok {
 		return SpotSend{}, false, errors.New("failed to get spot send, missing: 'time'")
 	}
@@ -136,7 +149,7 @@ func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 		Destination:      destination,
 		Token:            token,
 		Amount:           amount,
-		Time:             timestamp,
+		Time:             int64(timestamp),
 	}, true, nil
 }
 
@@ -147,4 +160,48 @@ type BlockDetails struct {
 	Proposer  string        `json:"proposer"`
 	NumTxs    uint64        `json:"numTxs"`
 	Txs       []Transaction `json:"txs,omitempty"`
+}
+
+type UserNonFundingLedgerUpdate struct {
+	Time  int64          `json:"time,omitempty"`
+	Hash  string         `json:"hash,omitempty"`
+	Delta map[string]any `json:"delta,omitempty"`
+}
+
+func (u UserNonFundingLedgerUpdate) GetFee() string {
+	fee, ok := GetValue[string](u.Delta, "fee")
+	if ok {
+		return fee
+	}
+
+	nativeFee, ok := GetValue[string](u.Delta, "nativeTokenFee")
+	if ok {
+		return nativeFee
+	}
+
+	return "0.0"
+}
+
+func (u UserNonFundingLedgerUpdate) GetFeeToken() string {
+	feeToken, _ := GetValue[string](u.Delta, "feeToken")
+	return feeToken
+}
+
+type APIError struct {
+	Code    int    `json:"code"`
+	Message string `json:"msg"`
+	Data    any    `json:"data,omitempty"`
+}
+
+func (e APIError) Error() string {
+	return fmt.Sprintf("API error %d: %s", e.Code, e.Message)
+}
+
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("validation error on field %s: %s", e.Field, e.Message)
 }

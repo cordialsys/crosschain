@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -23,10 +24,11 @@ import (
 )
 
 const (
+	EndpointExchange                  = "exchange"
 	EndpointExplorer                  = "explorer"
 	EndpointInfo                      = "info"
 	Hype                              = "HYPE"
-	HypeContract                      = xc.ContractAddress("0x0d01dc56dcaaca66ad901c959b4011ec")
+	HypeContract                      = xc.ContractAddress("HYPE:0x0d01dc56dcaaca66ad901c959b4011ec")
 	HypeDecimals                      = 8
 	MethodBlockDetails                = "blockDetails"
 	MethodSpotClearingHouseState      = "spotClearinghouseState"
@@ -40,7 +42,7 @@ const (
 // Client for hyperliquid
 type Client struct {
 	Asset      xc.ITask
-	InfoUrl    *url.URL
+	ApiUrl     *url.URL
 	RpcUrl     *url.URL
 	HttpClient *http.Client
 }
@@ -61,7 +63,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}
 
 	return &Client{
-		InfoUrl:    url,
+		ApiUrl:     url,
 		RpcUrl:     rpcUrl,
 		HttpClient: cfg.DefaultHttpClient(),
 		Asset:      cfgI,
@@ -70,7 +72,29 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // FetchTransferInput returns tx input for a hyperliquid tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	return &tx_input.TxInput{}, errors.New("not implemented")
+	txInput := tx_input.NewTxInput()
+	txInput.TransactionTime = time.Now().UnixMilli()
+
+	var phantomAgentSource tx_input.PhantomAgentSource
+	if client.Asset.GetChain().Network == "mainnet" {
+		phantomAgentSource = tx_input.PhantomAgentMainnet
+	} else {
+		phantomAgentSource = tx_input.PhantomAgentTestnet
+	}
+	txInput.Source = phantomAgentSource
+	contract, ok := args.GetContract()
+	if !ok {
+		contract = HypeContract
+	}
+	txInput.Token = contract
+
+	decimals, err := client.FetchDecimals(ctx, contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
+	}
+	txInput.Decimals = int32(decimals)
+
+	return txInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
@@ -83,7 +107,17 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a hyperliquid tx
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	return errors.New("not implemented")
+	payload, err := tx.Serialize()
+	if err != nil {
+		return fmt.Errorf("failed to serialize transaction: %w", err)
+	}
+
+	err = client.CallExchange(ctx, payload)
+	if err != nil {
+		return fmt.Errorf("failed to post transaction: %w", err)
+	}
+
+	return nil
 }
 
 // Returns transaction info - legacy/old endpoint
@@ -105,9 +139,31 @@ func (client *Client) fetchTxDetails(ctx context.Context, hash string) (types.Tr
 
 }
 
-// func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Address, hash xc.TxHash) (xc.AmountBlockchain, error) {
-//
-// }
+func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Address, hash xc.TxHash) (xc.AmountHumanReadable, string, error) {
+	var response []types.UserNonFundingLedgerUpdate
+	err := client.CallInfo(ctx, MethodUserNonFundingLedgerUpdates, map[string]any{
+		"user": address,
+	}, &response)
+	if err != nil {
+		return xc.AmountHumanReadable{}, "", fmt.Errorf("failed to fetch user fees: %w", err)
+	}
+
+	for _, update := range response {
+		if update.Hash == string(hash) {
+			fee := update.GetFee()
+			feeHr, err := xc.NewAmountHumanReadableFromStr(fee)
+			if err != nil {
+				return xc.AmountHumanReadable{}, "", fmt.Errorf("failed to parse amount human readable: %w", err)
+			}
+
+			token := update.GetFeeToken()
+
+			return feeHr, token, nil
+		}
+	}
+
+	return xc.AmountHumanReadable{}, "", fmt.Errorf("coudln't find tx %s in user ledger updates", hash)
+}
 
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
@@ -146,7 +202,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	}
 	decimals, err := client.FetchDecimals(ctx, contract)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch token decimals: %w")
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch token decimals: %w", err)
 	}
 	amount := hrAmount.ToBlockchain(int32(decimals))
 	movement := xclient.NewMovement(chain, contract)
@@ -154,7 +210,26 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	movement.AddDestination(destinationAddress, amount, nil)
 	txInfo.AddMovement(movement)
 
-	return xclient.TxInfo{}, errors.New("not implemented")
+	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, args.TxHash())
+	tokensMetadata, err := client.fetchTokensMetadata(ctx)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
+	}
+
+	feeDecimals := HypeDecimals
+	feeContract := xc.ContractAddress("")
+	tokenMeta, ok := tokensMetadata.GetTokenMetaByName(feeToken)
+	if ok {
+		feeDecimals = tokenMeta.WeiDecimals
+		feeContract = xc.ContractAddress(tokenMeta.TokenId)
+	}
+
+	feeAmount := fee.ToBlockchain(int32(feeDecimals))
+	txInfo.AddFee(sourceAddress, xc.ContractAddress(feeContract), feeAmount, nil)
+	txInfo.Fees = txInfo.CalculateFees()
+	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+
+	return *txInfo, nil
 }
 
 func getBlockchainAmount(balance types.SpotBalance, decimals int32) (xc.AmountBlockchain, error) {
@@ -198,7 +273,11 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 		if err != nil {
 			return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
 		}
-		tokenMeta, ok := tokensMetadata.GetTokenMetaByContract(contract)
+		n, _, ok := strings.Cut(string(contract), ":")
+		if !ok {
+			return xc.AmountBlockchain{}, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
+		}
+		tokenMeta, ok := tokensMetadata.GetTokenMetaByName(n)
 		if !ok {
 			return xc.AmountBlockchain{}, fmt.Errorf("missing token metadata for contract: %s", contract)
 		}
@@ -220,14 +299,19 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	tokensMeta, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to fetch token metadata: %w")
+		return 0, fmt.Errorf("failed to fetch token metadata: %w", err)
 	}
 
 	if contract == "" {
 		contract = HypeContract
 	}
 
-	tm, ok := tokensMeta.GetTokenMetaByContract(contract)
+	name, _, ok := strings.Cut(string(contract), ":")
+	if !ok {
+		return 0, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
+	}
+
+	tm, ok := tokensMeta.GetTokenMetaByName(name)
 	if !ok {
 		return 0, fmt.Errorf("missing token metadata for %s", contract)
 	}
@@ -291,7 +375,7 @@ func (client *Client) callInner(ctx context.Context, url string, method string, 
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		fmt.Errorf("failed to create HTTP request: %w", err)
+		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -323,13 +407,51 @@ func (client *Client) callInner(ctx context.Context, url string, method string, 
 }
 
 func (c *Client) CallInfo(ctx context.Context, method string, params map[string]any, result any) error {
-	url := fmt.Sprintf("%s/%s", c.InfoUrl, EndpointInfo)
+	url := fmt.Sprintf("%s/%s", c.ApiUrl, EndpointInfo)
 	return c.callInner(ctx, url, method, params, result)
 }
 
 func (c *Client) CallExplorer(ctx context.Context, method string, params map[string]any, result any) error {
 	url := fmt.Sprintf("%s/%s", c.RpcUrl, EndpointExplorer)
 	return c.callInner(ctx, url, method, params, result)
+}
+
+func (c *Client) CallExchange(ctx context.Context, payload []byte) error {
+	url := fmt.Sprintf("%s/%s", c.ApiUrl, EndpointExchange)
+	req, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		url,
+		bytes.NewBuffer(payload),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body := []byte{}
+	if resp.Body != nil {
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read response body: %w", err)
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var e types.APIError
+		if err := json.Unmarshal(body, &e); err != nil {
+			return fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+		}
+		return e
+	}
+
+	return nil
 }
 
 func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {

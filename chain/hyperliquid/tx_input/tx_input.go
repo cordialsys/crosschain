@@ -1,55 +1,79 @@
 package tx_input
 
 import (
+	"time"
+
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
-// TxInput for Template
+const UsdcTokenId = "USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
+const SafetyTimeoutMargin = (48 * time.Hour)
+
+type PhantomAgentSource string
+
+const PhantomAgentMainnet = PhantomAgentSource("a")
+const PhantomAgentTestnet = PhantomAgentSource("b")
+
+// TxInput for Hyperliquid
 type TxInput struct {
 	xc.TxInputEnvelope
+	TransactionTime int64 `json:"transaction_time"`
+	// Phantom agent source, "a" for mainnet, "b" for testnet
+	Source PhantomAgentSource `json:"source"`
+	// Token decimals
+	Decimals int32 `json:"decimals"`
+	// Token
+	Token xc.ContractAddress `json:"token"`
 }
 
 var _ xc.TxInput = &TxInput{}
 
 func init() {
-	// Uncomment this line to register the driver input for serialization/derserialization
-	// registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxBaseInput(&TxInput{})
 }
 
 func NewTxInput() *TxInput {
 	return &TxInput{
 		TxInputEnvelope: xc.TxInputEnvelope{
-			Type: "INPUT_DRIVER_HERE",
+			Type: xc.DriverHyperliquid,
 		},
 	}
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
-	return "DRIVER HERE"
+	return xc.DriverHyperliquid
 }
 
+// No gas priority in hyperliquid
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	// multiply the gas price using the default, or apply a strategy according to the enum
-	_ = multiplier
 	return nil
 }
 
+// Most SpotTransfers are free on hyperliquid, with hardcoded 1 USDC fee for Arbitrum withdrawals
+// and first spot transfer
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	// get the max possible fee that could be spent on this transaction
-	return xc.NewAmountBlockchainFromUint64(0), ""
+	return xc.NewAmountBlockchainFromUint64(100_000_000), UsdcTokenId
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
-	// default false
-	return
+	if hypeOther, ok := other.(*TxInput); ok {
+		return input.TransactionTime != hypeOther.TransactionTime
+	}
+
+	return true
 }
+
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	// safe from double send ?
-	// default false
-	return
+	oldInput, ok := other.(*TxInput)
+	if !ok {
+		return true
+	}
+
+	diff := input.TransactionTime - oldInput.TransactionTime
+	if diff > int64(SafetyTimeoutMargin.Seconds()) {
+		return true
+	}
+
+	return false
 }

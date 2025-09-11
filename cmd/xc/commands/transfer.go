@@ -340,6 +340,7 @@ func CmdTxTransfer() *cobra.Command {
 						return fmt.Errorf("tx .Serialize() is not deterministic, differed on trial %d", i)
 					}
 				}
+
 				// record serialized tx + reset the tx for next trial
 				lastSerializedTx = txBytes
 				if i < numberOfTrials-1 {
