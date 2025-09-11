@@ -46,6 +46,7 @@ import (
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
 	hypeaddress "github.com/cordialsys/crosschain/chain/hyperliquid/address"
+	hypebuilder "github.com/cordialsys/crosschain/chain/hyperliquid/builder"
 	hypeclient "github.com/cordialsys/crosschain/chain/hyperliquid/client"
 	icp "github.com/cordialsys/crosschain/chain/internet_computer"
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
@@ -199,6 +200,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return eosbuilder.NewTxBuilder(cfg)
 	case DriverInternetComputerProtocol:
 		return icpbuilder.NewTxBuilder(cfg)
+	case DriverHyperliquid:
+		return hypebuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
