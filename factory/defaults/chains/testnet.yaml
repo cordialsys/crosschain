@@ -550,3 +550,20 @@ chains:
     decimals: 9
     chain_gas_multiplier: 1.5
     fee_limit: "100"
+  LinETH:
+    chain: LinETH
+    driver: evm
+    chain_id: 59141
+    chain_name: Linea Sepolia
+    gas_budget_default: "0.1"
+    decimals: 18
+    fee_limit: "100.0"
+  XPL:
+    chain: XPL
+    driver: evm
+    chain_id: 9746
+    chain_name: Plasma
+    net: Plasma Testnet
+    gas_budget_default: "0.1"
+    decimals: 18
+    fee_limit: "100.0"

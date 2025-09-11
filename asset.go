@@ -62,6 +62,7 @@ const (
 	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
 	HASH     = NativeAsset("HASH")     // Provenance
 	INJ      = NativeAsset("INJ")      // Injective
+	LINEA    = NativeAsset("LINEA")    // Linea
 	LTC      = NativeAsset("LTC")      // Litecoin
 	LUNA     = NativeAsset("LUNA")     // Terra V2
 	LUNC     = NativeAsset("LUNC")     // Terra Classic
@@ -86,6 +87,7 @@ const (
 	TRX      = NativeAsset("TRX")      // TRON
 	SEI      = NativeAsset("SEI")      // Sei
 	SeiEVM   = NativeAsset("SeiEVM")   // SeiEVM
+	XPL      = NativeAsset("XPL")      // Plasma
 	XRP      = NativeAsset("XRP")      // XRP
 	XLM      = NativeAsset("XLM")      // XLM
 	ZETA     = NativeAsset("ZETA")     // ZetaChain
@@ -127,6 +129,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	FTM,
 	HyperEVM,
 	INJ,
+	LINEA,
 	HASH,
 	LUNA,
 	LUNC,
@@ -153,6 +156,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XRP,
 	BASE,
 	NOBLE,
+	XPL,
 	XLM,
 	ZETA,
 	NIL,
@@ -273,7 +277,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM:
+	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LINEA, XPL:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

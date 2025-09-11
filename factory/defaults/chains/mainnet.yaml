@@ -1184,3 +1184,30 @@ chains:
     external:
       coin_gecko:
         asset_id: fogo
+  LinETH:
+    chain: LinETH
+    driver: evm
+    chain_id: 59144
+    chain_name: Linea
+    gas_budget_default: "0.1"
+    decimals: 18
+    fee_limit: "0.5"
+    native_assets:
+      - asset_id: "LinETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # LinETH is settled in ETH
+    external:
+      coin_gecko:
+        asset_id: "linea"
+      coin_market_cap:
+        asset_id: "27657"
+      indexing_co:
+        chain_id: "linea"
+  XPL:
+    # TODO: Update chain_id after mainnet is released
+    chain: XPL
+    driver: evm
+    chain_name: Plasma
+    gas_budget_default: "0.1"
+    decimals: 18
+    fee_limit: "100.0"
