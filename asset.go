@@ -62,7 +62,7 @@ const (
 	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
 	HASH     = NativeAsset("HASH")     // Provenance
 	INJ      = NativeAsset("INJ")      // Injective
-	LINEA    = NativeAsset("LINEA")    // Linea
+	LinETH   = NativeAsset("LinETH")   // Linea
 	LTC      = NativeAsset("LTC")      // Litecoin
 	LUNA     = NativeAsset("LUNA")     // Terra V2
 	LUNC     = NativeAsset("LUNC")     // Terra Classic
@@ -129,7 +129,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	FTM,
 	HyperEVM,
 	INJ,
-	LINEA,
+	LinETH,
 	HASH,
 	LUNA,
 	LUNC,
@@ -277,7 +277,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LINEA, XPL:
+	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
