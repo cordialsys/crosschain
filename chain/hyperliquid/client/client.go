@@ -34,6 +34,7 @@ const (
 	MethodSpotClearingHouseState      = "spotClearinghouseState"
 	MethodSpotMeta                    = "spotMeta"
 	MethodTxDetails                   = "txDetails"
+	MethodUserDetails                 = "userDetails"
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
 	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
 	WebsocketUrlTestnet               = ""
@@ -165,8 +166,7 @@ func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Addres
 	return xc.AmountHumanReadable{}, "", fmt.Errorf("coudln't find tx %s in user ledger updates", hash)
 }
 
-// Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	contract, _ := args.Contract()
 	txDetails, err := client.fetchTxDetails(ctx, string(args.TxHash()))
 	if err != nil {
@@ -230,6 +230,56 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
 
 	return *txInfo, nil
+}
+
+// Lookup hyperliuqid tx hash by provided sender addres and action actionHash
+func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+	sender, ok := args.Sender()
+	if !ok {
+		return xclient.TxInfo{}, fmt.Errorf("missing sender address")
+	}
+
+	var userDetails types.UserDetails
+	err := client.CallExplorer(ctx, MethodUserDetails, map[string]any{
+		"user": string(sender),
+	}, &userDetails)
+
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	for _, tx := range userDetails.Txs {
+		if tx.IsSpotSend() {
+			ah, err := types.GetActionHash(tx.Action)
+			if err != nil {
+				return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
+			}
+
+			if ah == string(args.TxHash()) {
+				args.SetHash(xc.TxHash(tx.Hash))
+				return client.fetchTxInfoByHash(ctx, args)
+			}
+		}
+	}
+
+	return xclient.TxInfo{}, errors.New("couldn't find matching action hash")
+}
+
+// Fetch transaction info
+// - Fetch by Hyperliquid tx hash if no 'Sender' is provided
+// - Fetch by Hyperliquid action hash if 'Sender' is provided
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+	hash := args.TxHash()
+	if !strings.HasPrefix(string(hash), "0x") {
+		return xclient.TxInfo{}, fmt.Errorf("HYPE tx hash should start with '0x'")
+	}
+
+	_, ok := args.Sender()
+	if ok {
+		return client.fetchTxInfoByActionHash(ctx, args)
+	} else {
+		return client.fetchTxInfoByHash(ctx, args)
+	}
 }
 
 func getBlockchainAmount(balance types.SpotBalance, decimals int32) (xc.AmountBlockchain, error) {
