@@ -1,10 +1,14 @@
 package types
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -105,6 +109,11 @@ func GetValue[T any](m map[string]any, key string) (T, bool) {
 	return r, false
 }
 
+func (t Transaction) IsSpotSend() bool {
+	actionType, _ := GetValue[string](t.Action, "type")
+	return actionType == ActionSpotSend
+}
+
 func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 	actionType, ok := GetValue[string](t.Action, "type")
 	if !ok {
@@ -151,6 +160,40 @@ func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 		Amount:           amount,
 		Time:             int64(timestamp),
 	}, true, nil
+}
+
+func GetActionHash(action map[string]any) (string, error) {
+	// Make sure that action time is stored as uint64 for hash consistency
+	floatTs, ok := GetValue[float64](action, "time")
+	if ok {
+		action["time"] = int64(floatTs)
+	}
+
+	var buf bytes.Buffer
+	enc := msgpack.NewEncoder(&buf)
+	enc.SetSortMapKeys(true)
+	enc.UseCompactInts(true)
+	err := enc.Encode(action)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode action: %w", err)
+	}
+
+	data := buf.Bytes()
+
+	timestamp, ok := GetValue[int64](action, "time")
+	if !ok {
+		return "", fmt.Errorf("missing action time")
+	}
+
+	nonceBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(nonceBytes, uint64(timestamp))
+	data = append(data, nonceBytes...)
+
+	// Append vault address, in our case "0x0"
+	data = append(data, 0x00)
+	hash := crypto.Keccak256Hash(data)
+	hexHash := fmt.Sprintf("0x%x", hash)
+	return hexHash, nil
 }
 
 type BlockDetails struct {
@@ -204,4 +247,8 @@ type ValidationError struct {
 
 func (e ValidationError) Error() string {
 	return fmt.Sprintf("validation error on field %s: %s", e.Field, e.Message)
+}
+
+type UserDetails struct {
+	Txs []Transaction `json:"txs,omitempty"`
 }

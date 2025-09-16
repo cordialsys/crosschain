@@ -1,8 +1,6 @@
 package tx
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,12 +8,12 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/hyperliquid/client/types"
 	"github.com/cordialsys/crosschain/chain/hyperliquid/tx_input"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 const ActionSpotSend = "spotSend"
@@ -66,51 +64,39 @@ type SpotTransferAction struct {
 	Time             int64  `json:"time"        msgpack:"time"`
 }
 
-func (tx Tx) GetAction() SpotTransferAction {
+func (tx Tx) GetAction() map[string]any {
 	amount := tx.Amount.ToHuman(tx.Decimals)
-	return SpotTransferAction{
-		Type:             ActionSpotSend,
-		SignatureChainId: "0xa4b1",
-		HyperliquidChain: "Mainnet",
-		Destination:      string(tx.Destination),
-		Token:            string(tx.Token),
-		Amount:           amount.String(),
-		Time:             int64(tx.Nonce),
+
+	return map[string]any{
+		"type":             ActionSpotSend,
+		"signatureChainId": "0xa4b1",
+		"hyperliquidChain": "Mainnet",
+		"destination":      string(tx.Destination),
+		"token":            string(tx.Token),
+		"amount":           amount.String(),
+		"time":             int64(tx.Nonce),
 	}
 }
 
-func (tx Tx) GetActionHash() ([]byte, error) {
+func (tx Tx) GetActionHash() (string, error) {
 	action := tx.GetAction()
-
-	var buf bytes.Buffer
-	enc := msgpack.NewEncoder(&buf)
-	enc.SetSortMapKeys(true)
-	enc.UseCompactInts(true)
-	err := enc.Encode(action)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode action: %w", err)
-	}
-
-	data := buf.Bytes()
-
-	nonceBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(nonceBytes, uint64(tx.Nonce))
-	data = append(data, nonceBytes...)
-
-	// Append vault address, in our case "0x0"
-	data = append(data, 0x00)
-	hash := crypto.Keccak256Hash(data)
-	return hash[:], nil
+	fmt.Printf("\nAction: %+v\n", action)
+	return types.GetActionHash(action)
 }
 
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	return xc.TxHash("not implemented")
+	hash, err := tx.GetActionHash()
+	if err != nil {
+		fmt.Printf("\n\nHash error: %s\n\n", err)
+	}
+	fmt.Printf("\n\nHash: %s\n\n", hash)
+	return xc.TxHash(hash)
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	action := tx.GetAction()
+	// amount := tx.Amount.ToHuman(tx.Decimals)
 
 	chainId := math.HexOrDecimal256(*big.NewInt(42161))
 	typedData := apitypes.TypedData{
@@ -140,7 +126,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 			"hyperliquidChain": "Mainnet",
 			"destination":      string(tx.Destination),
 			"token":            string(tx.Token),
-			"amount":           action.Amount,
+			"amount":           "0.1",
 			"time":             big.NewInt(tx.Nonce),
 		},
 	}
