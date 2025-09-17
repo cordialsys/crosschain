@@ -243,7 +243,7 @@ chains:
     confirmations_final: 30
   HYPE:
     chain: HYPE
-    driver: Hyperliquid
+    driver: hyperliquid
     chain_name: Hyperliquid (Testnet)
     decimals: 8
     fee_limit: "100.0"

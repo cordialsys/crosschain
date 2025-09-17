@@ -84,6 +84,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 	txInput.TransactionTime = time.Now().UnixMilli()
+	txInput.TransactionTime = 1758113197003
 
 	contract, ok := args.GetContract()
 	if !ok {
@@ -116,9 +117,13 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return fmt.Errorf("failed to serialize transaction: %w", err)
 	}
 
-	err = client.CallExchange(ctx, payload)
+	response, err := client.CallExchange(ctx, payload)
 	if err != nil {
 		return fmt.Errorf("failed to post transaction: %w", err)
+	}
+
+	if !response.IsOk() {
+		return fmt.Errorf("failed to submit tx: %s", response.Response)
 	}
 
 	return nil
@@ -469,7 +474,7 @@ func (c *Client) CallExplorer(ctx context.Context, method string, params map[str
 	return c.callInner(ctx, url, method, params, result)
 }
 
-func (c *Client) CallExchange(ctx context.Context, payload []byte) error {
+func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIResponse, error) {
 	url := fmt.Sprintf("%s/%s", c.ApiUrl, EndpointExchange)
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -478,13 +483,13 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) error {
 		bytes.NewBuffer(payload),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return types.APIResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
+		return types.APIResponse{}, fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -492,19 +497,24 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) error {
 	if resp.Body != nil {
 		body, err = io.ReadAll(resp.Body)
 		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
+			return types.APIResponse{}, fmt.Errorf("failed to read response body: %w", err)
 		}
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		var e types.APIError
 		if err := json.Unmarshal(body, &e); err != nil {
-			return fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+			return types.APIResponse{}, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
 		}
-		return e
-	}
+		return types.APIResponse{}, e
+	} else {
+		var r types.APIResponse
+		if err := json.Unmarshal(body, &r); err != nil {
+			return types.APIResponse{}, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+		}
 
-	return nil
+		return r, nil
+	}
 }
 
 func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
