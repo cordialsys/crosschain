@@ -339,7 +339,6 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 	case DriverKaspa:
 		return []SignatureType{Schnorr}
 	}
-
 	return []SignatureType{}
 }
 

@@ -41,6 +41,9 @@ const (
 )
 
 // Client for hyperliquid
+// Hyperliquid is relying on two APIs: "explorer" and "info"
+// - "info" api is main hyperliquid api
+// - "explorer" api is available only via RPC, it provides transaction/user/block details
 type Client struct {
 	Asset            xc.ITask
 	ApiUrl           *url.URL
@@ -84,7 +87,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 	txInput.TransactionTime = time.Now().UnixMilli()
-	txInput.TransactionTime = 1758113197003
 
 	contract, ok := args.GetContract()
 	if !ok {
@@ -174,6 +176,8 @@ func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Addres
 	return xc.AmountHumanReadable{}, "", fmt.Errorf("coudln't find tx %s in user ledger updates", hash)
 }
 
+// Traditional "FetchTxInfo" implementation - use a native Hyperliquid transaction hash for transaction
+// info lookup
 func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	contract, _ := args.Contract()
 	txDetails, err := client.fetchTxDetails(ctx, string(args.TxHash()))
@@ -240,7 +244,9 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) 
 	return *txInfo, nil
 }
 
-// Lookup hyperliuqid tx hash by provided sender addres and action actionHash
+// ActionHash + SenderAddres transaction info lookup. It relies on "fetchTxInfoByHash" under the hood.
+// Required because native hyperliquid transaction hash contains block related data, so we cannot calculate
+// it upfront.
 func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	sender, ok := args.Sender()
 	if !ok {
@@ -307,6 +313,7 @@ func getBlockchainAmount(balance types.SpotBalance, decimals int32) (xc.AmountBl
 	return bTotal.Sub(&bHeld), nil
 }
 
+// Fetch a list of supported hype tokens
 func (client *Client) fetchTokensMetadata(ctx context.Context) (types.SpotMetaResponse, error) {
 	var tokensMeta types.SpotMetaResponse
 	err := client.CallInfo(ctx, MethodSpotMeta, nil, &tokensMeta)
@@ -517,6 +524,9 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 	}
 }
 
+// There is no easy way to fetch blockHeight on hyperliquid l1.
+// As a workaround we use a websocket stream, where we subscribe to ongoing transactions.
+// With this info we are able to fetch block height via 'txDetails' explorer API call.
 func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 	c, _, err := websocket.DefaultDialer.Dial(WebsocketUrlMainnet, nil)
 	if err != nil {
