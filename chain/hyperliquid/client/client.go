@@ -58,7 +58,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	var hyperliquidChain string
 	var rpcUrl *url.URL
 	var err error
-	if cfg.Network == "Mainnet" {
+	if cfg.Network == "mainnet" {
 		rpcUrl, err = url.Parse("https://rpc.hyperliquid.xyz")
 		hyperliquidChain = "Mainnet"
 	} else {
