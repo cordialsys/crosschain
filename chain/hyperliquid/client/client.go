@@ -42,10 +42,11 @@ const (
 
 // Client for hyperliquid
 type Client struct {
-	Asset      xc.ITask
-	ApiUrl     *url.URL
-	RpcUrl     *url.URL
-	HttpClient *http.Client
+	Asset            xc.ITask
+	ApiUrl           *url.URL
+	RpcUrl           *url.URL
+	HyperliquidChain string
+	HttpClient       *http.Client
 }
 
 var _ xclient.Client = &Client{}
@@ -53,21 +54,29 @@ var _ xclient.Client = &Client{}
 // NewClient returns a new hyperliquid Client
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
+
+	var hyperliquidChain string
+	var rpcUrl *url.URL
+	var err error
+	if cfg.Network == "Mainnet" {
+		rpcUrl, err = url.Parse("https://rpc.hyperliquid.xyz")
+		hyperliquidChain = "Mainnet"
+	} else {
+		rpcUrl, err = url.Parse("https://rpc.hyperliquid-testnet.xyz")
+		hyperliquidChain = "Testnet"
+	}
+
 	url, err := url.Parse(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
 
-	rpcUrl, err := url.Parse("https://rpc.hyperliquid.xyz")
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse rpc url: %w", err)
-	}
-
 	return &Client{
-		ApiUrl:     url,
-		RpcUrl:     rpcUrl,
-		HttpClient: cfg.DefaultHttpClient(),
-		Asset:      cfgI,
+		ApiUrl:           url,
+		RpcUrl:           rpcUrl,
+		HyperliquidChain: hyperliquidChain,
+		HttpClient:       cfg.DefaultHttpClient(),
+		Asset:            cfgI,
 	}, nil
 }
 
@@ -76,13 +85,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput := tx_input.NewTxInput()
 	txInput.TransactionTime = time.Now().UnixMilli()
 
-	var phantomAgentSource tx_input.PhantomAgentSource
-	if client.Asset.GetChain().Network == "mainnet" {
-		phantomAgentSource = tx_input.PhantomAgentMainnet
-	} else {
-		phantomAgentSource = tx_input.PhantomAgentTestnet
-	}
-	txInput.Source = phantomAgentSource
 	contract, ok := args.GetContract()
 	if !ok {
 		contract = HypeContract
@@ -94,6 +96,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
 	txInput.Decimals = int32(decimals)
+	txInput.HyperliquidChain = client.HyperliquidChain
 
 	return txInput, nil
 }

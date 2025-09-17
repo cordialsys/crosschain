@@ -10,21 +10,16 @@ import (
 const UsdcTokenId = "USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
 const SafetyTimeoutMargin = (48 * time.Hour)
 
-type PhantomAgentSource string
-
-const PhantomAgentMainnet = PhantomAgentSource("a")
-const PhantomAgentTestnet = PhantomAgentSource("b")
-
 // TxInput for Hyperliquid
 type TxInput struct {
 	xc.TxInputEnvelope
 	TransactionTime int64 `json:"transaction_time"`
-	// Phantom agent source, "a" for mainnet, "b" for testnet
-	Source PhantomAgentSource `json:"source"`
 	// Token decimals
 	Decimals int32 `json:"decimals"`
 	// Token
 	Token xc.ContractAddress `json:"token"`
+	// "Mainnet" or "Testnet"
+	HyperliquidChain string
 }
 
 var _ xc.TxInput = &TxInput{}

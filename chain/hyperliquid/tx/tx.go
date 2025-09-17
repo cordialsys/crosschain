@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -17,6 +18,7 @@ import (
 )
 
 const ActionSpotSend = "spotSend"
+const SignatureChainId = "0xa4b1"
 
 // SignatureResult represents the structured signature result
 type SignatureResult struct {
@@ -31,32 +33,32 @@ func (s SignatureResult) IsEmpty() bool {
 
 // Tx for Template
 type Tx struct {
-	Amount             xc.AmountBlockchain
-	Decimals           int32
-	Destination        xc.Address
-	Token              xc.ContractAddress
-	Nonce              int64
-	PhantomAgentSource tx_input.PhantomAgentSource
-	Signature          SignatureResult
+	Amount           xc.AmountBlockchain
+	Decimals         int32
+	Destination      xc.Address
+	Token            xc.ContractAddress
+	Nonce            int64
+	HyperliquidChain string
+	Signature        SignatureResult
 }
 
 var _ xc.Tx = &Tx{}
 
 func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) Tx {
 	return Tx{
-		Amount:             args.GetAmount(),
-		Decimals:           input.Decimals,
-		Destination:        args.GetTo(),
-		Token:              input.Token,
-		Nonce:              input.TransactionTime,
-		PhantomAgentSource: input.Source,
+		Amount:           args.GetAmount(),
+		Decimals:         input.Decimals,
+		Destination:      args.GetTo(),
+		Token:            input.Token,
+		Nonce:            input.TransactionTime,
+		HyperliquidChain: input.HyperliquidChain,
 	}
 }
 
 // SpotTransferAction represents spot transfer
 type SpotTransferAction struct {
 	Type             string `json:"type"        msgpack:"type"`
-	SignatureChainId string `json:"signatureChainId"` // msgpack:"signatureChainId"`
+	SignatureChainId string `json:"signatureChainId"`
 	HyperliquidChain string `json:"hyperliquidChain" msgpack:"hyperliquidChain"`
 	Destination      string `json:"destination" msgpack:"destination"`
 	Token            string `json:"token"       msgpack:"token"`
@@ -69,8 +71,8 @@ func (tx Tx) GetAction() map[string]any {
 
 	return map[string]any{
 		"type":             ActionSpotSend,
-		"signatureChainId": "0xa4b1",
-		"hyperliquidChain": "Mainnet",
+		"signatureChainId": SignatureChainId,
+		"hyperliquidChain": tx.HyperliquidChain,
 		"destination":      string(tx.Destination),
 		"token":            string(tx.Token),
 		"amount":           amount.String(),
@@ -98,10 +100,11 @@ func (tx Tx) Hash() xc.TxHash {
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	// amount := tx.Amount.ToHuman(tx.Decimals)
 
-	chainId := math.HexOrDecimal256(*big.NewInt(42161))
+	chainId, err := strconv.ParseInt(SignatureChainId, 0, 64)
+	hexChainId := math.HexOrDecimal256(*big.NewInt(chainId))
 	typedData := apitypes.TypedData{
 		Domain: apitypes.TypedDataDomain{
-			ChainId:           &chainId,
+			ChainId:           &hexChainId,
 			Name:              "HyperliquidSignTransaction",
 			Version:           "1",
 			VerifyingContract: "0x0000000000000000000000000000000000000000",
@@ -123,7 +126,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		},
 		PrimaryType: "HyperliquidTransaction:SpotSend",
 		Message: map[string]any{
-			"hyperliquidChain": "Mainnet",
+			"hyperliquidChain": tx.HyperliquidChain,
 			"destination":      string(tx.Destination),
 			"token":            string(tx.Token),
 			"amount":           "0.1",
