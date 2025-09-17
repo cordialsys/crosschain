@@ -283,7 +283,7 @@ func TestNormalizeAddress(t *testing.T) {
 		},
 		{
 			chain: xc.HYPE,
-			inp:   "0ECE", // add the prefix in
+			inp:   "0ECE", // don't add the prefix, it's not always required
 			out:   "0x0ece",
 		},
 	}

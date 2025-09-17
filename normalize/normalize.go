@@ -114,12 +114,16 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverEOS:
 		// nothing to do, base58
-	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverHyperliquid:
+	case xc.DriverEVM, xc.DriverEVMLegacy:
 		prefix := "0x"
 		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix
 			address = strings.TrimPrefix(address, prefix)
 			prefix = "xdc"
+		}
+		if nativeAsset == xc.HYPE {
+			// HYPE doesn't use evm addressing for tokens
+			prefix = ""
 		}
 
 		address = strings.TrimPrefix(address, prefix)
@@ -155,6 +159,14 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, case sensitive base32
 	case xc.DriverXrp:
 		// nothing to do, base58
+	case xc.DriverHyperliquid:
+		// don't normalize token addresses
+		if !strings.Contains(address, ":") {
+			prefix := "0x"
+			address = strings.TrimPrefix(address, "0x")
+			address = prefix + address
+			address = strings.ToLower(address)
+		}
 
 	default:
 	}
