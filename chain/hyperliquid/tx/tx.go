@@ -82,7 +82,6 @@ func (tx Tx) GetAction() map[string]any {
 
 func (tx Tx) GetActionHash() (string, error) {
 	action := tx.GetAction()
-	fmt.Printf("\nAction: %+v\n", action)
 	return types.GetActionHash(action)
 }
 
@@ -90,9 +89,9 @@ func (tx Tx) GetActionHash() (string, error) {
 func (tx Tx) Hash() xc.TxHash {
 	hash, err := tx.GetActionHash()
 	if err != nil {
-		fmt.Printf("\n\nHash error: %s\n\n", err)
+		return xc.TxHash("")
 	}
-	fmt.Printf("\n\nHash: %s\n\n", hash)
+	fmt.Printf("\nTx: %+v\nhash: %s\n", tx, hash)
 	return xc.TxHash(hash)
 }
 
@@ -149,6 +148,8 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	rawData = append(rawData, typedDataHash...)
 	sighash := crypto.Keccak256Hash(rawData)
 
+	fmt.Printf("\nTx: %+v\n", tx)
+	fmt.Printf("\nSighash: %s\n", sighash)
 	return []*xc.SignatureRequest{
 		{
 			Payload: sighash.Bytes(),
@@ -166,6 +167,8 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	}
 
 	signature := signatures[0].Signature
+	fmt.Printf("\nTx: %+v\n", tx)
+	fmt.Printf("\nSignature: %x\n", signature)
 	r := new(big.Int).SetBytes(signature[:32])
 	s := new(big.Int).SetBytes(signature[32:64])
 	v := int(signature[64]) + 27
