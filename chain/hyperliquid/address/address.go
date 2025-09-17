@@ -9,13 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// AddressBuilder for EVM
+// AddressBuilder for Hyperliquid
 type AddressBuilder struct {
 }
 
 var _ xc.AddressBuilder = AddressBuilder{}
 
-// NewAddressBuilder creates a new Template AddressBuilder
+// NewAddressBuilder creates a new Hyperliquid AddressBuilder
 func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
