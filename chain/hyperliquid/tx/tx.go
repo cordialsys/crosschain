@@ -91,7 +91,6 @@ func (tx Tx) Hash() xc.TxHash {
 	if err != nil {
 		return xc.TxHash("")
 	}
-	fmt.Printf("\nTx: %+v\nhash: %s\n", tx, hash)
 	return xc.TxHash(hash)
 }
 
@@ -148,8 +147,6 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	rawData = append(rawData, typedDataHash...)
 	sighash := crypto.Keccak256Hash(rawData)
 
-	fmt.Printf("\nTx: %+v\n", tx)
-	fmt.Printf("\nSighash: %s\n", sighash)
 	return []*xc.SignatureRequest{
 		{
 			Payload: sighash.Bytes(),
@@ -167,8 +164,6 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	}
 
 	signature := signatures[0].Signature
-	fmt.Printf("\nTx: %+v\n", tx)
-	fmt.Printf("\nSignature: %x\n", signature)
 	r := new(big.Int).SetBytes(signature[:32])
 	s := new(big.Int).SetBytes(signature[32:64])
 	v := int(signature[64]) + 27
