@@ -53,6 +53,8 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverInternetComputerProtocol:
 					// pass
+				case DriverHyperliquid:
+					// pass
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)
 				default:
