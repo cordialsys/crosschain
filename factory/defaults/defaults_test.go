@@ -35,6 +35,7 @@ func TestDefaultChainConfigurationLint(t *testing.T) {
 		for _, chain := range xcf.GetAllChains() {
 			require.NotEmpty(t, chain.Chain, "chain configuration entry with no chain set")
 			require.NotEmpty(t, chain.Driver, fmt.Sprintf("chain %s must have driver set", chain.Chain))
+			fmt.Printf("Pubkey format: %s\n", chain.Driver.PublicKeyFormat())
 			require.NotEmpty(t, chain.Driver.PublicKeyFormat(), fmt.Sprintf("chain %s driver '%s' is invalid", chain.Chain, chain.Driver))
 
 			for _, provider := range chain.Staking.Providers {

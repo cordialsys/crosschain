@@ -114,7 +114,7 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverEOS:
 		// nothing to do, base58
-	case xc.DriverEVM, xc.DriverEVMLegacy:
+	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverHyperliquid:
 		prefix := "0x"
 		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix

@@ -230,6 +230,15 @@ func (u UserNonFundingLedgerUpdate) GetFeeToken() string {
 	return feeToken
 }
 
+type APIResponse struct {
+	Status   string `json:"status"`
+	Response any    `json:"response"`
+}
+
+func (r APIResponse) IsOk() bool {
+	return r.Status == "ok"
+}
+
 type APIError struct {
 	Code    int    `json:"code"`
 	Message string `json:"msg"`
