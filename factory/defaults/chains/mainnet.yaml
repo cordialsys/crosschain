@@ -580,7 +580,7 @@ chains:
   HYPE:
     chain: HYPE
     driver: hyperliquid
-    chain_name: Hyperliquid (Testnet)
+    chain_name: Hyperliquid
     decimals: 8
     fee_limit: "100.0"
     external:
