@@ -26,5 +26,9 @@ func CheckError(err error) errors.Status {
 		return errors.TransactionFailure
 	}
 
+	if strings.Contains(errMsg, "TransactionNotFound") {
+		return errors.TransactionNotFound
+	}
+
 	return ""
 }
