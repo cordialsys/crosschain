@@ -88,7 +88,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 // FetchTransferInput returns tx input for a hyperliquid tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := tx_input.NewTxInput()
-	txInput.TransactionTime = time.Now().UnixMilli()
+	txInput.TransactionTime = time.Now()
 
 	contract, ok := args.GetContract()
 	if !ok {

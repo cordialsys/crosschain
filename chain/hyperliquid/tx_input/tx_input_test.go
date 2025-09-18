@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/hyperliquid/tx_input"
@@ -24,20 +25,20 @@ func TestTxInputConflicts(t *testing.T) {
 	vectors := []testcase{
 		{
 			oldInput: &TxInput{
-				TransactionTime: 1758098790757,
+				TransactionTime: time.UnixMilli(1758098790757),
 			},
 			newInput: &TxInput{
-				TransactionTime: 1758098790757,
+				TransactionTime: time.UnixMilli(1758098790757),
 			},
 			independent:     false,
 			doubleSpendSafe: false,
 		},
 		{
 			oldInput: &TxInput{
-				TransactionTime: 1757754534000,
+				TransactionTime: time.UnixMilli(1757754534000),
 			},
 			newInput: &TxInput{
-				TransactionTime: 1758098790757, // old + 3 days
+				TransactionTime: time.UnixMilli(1758098790757), // old + 3 days
 			},
 			independent:     true,
 			doubleSpendSafe: true,

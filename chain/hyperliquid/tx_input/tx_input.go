@@ -13,13 +13,13 @@ const SafetyTimeoutMargin = (48 * time.Hour)
 // TxInput for Hyperliquid
 type TxInput struct {
 	xc.TxInputEnvelope
-	TransactionTime int64 `json:"transaction_time"`
+	TransactionTime time.Time `json:"transaction_time"`
 	// Token decimals
 	Decimals int32 `json:"decimals"`
 	// Token
 	Token xc.ContractAddress `json:"token"`
 	// "Mainnet" or "Testnet"
-	HyperliquidChain string
+	HyperliquidChain string `json:"chain"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -65,8 +65,8 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 		return true
 	}
 
-	diff := input.TransactionTime - oldInput.TransactionTime
-	if diff > int64(SafetyTimeoutMargin.Seconds()) {
+	diff := input.TransactionTime.Sub(oldInput.TransactionTime)
+	if diff > SafetyTimeoutMargin {
 		return true
 	}
 

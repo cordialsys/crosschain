@@ -50,7 +50,7 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) Tx {
 		Decimals:         input.Decimals,
 		Destination:      args.GetTo(),
 		Token:            input.Token,
-		Nonce:            input.TransactionTime,
+		Nonce:            input.TransactionTime.UnixMilli(),
 		HyperliquidChain: input.HyperliquidChain,
 	}
 }
