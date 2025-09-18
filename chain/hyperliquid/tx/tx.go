@@ -96,7 +96,7 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	// amount := tx.Amount.ToHuman(tx.Decimals)
+	amount := tx.Amount.ToHuman(tx.Decimals)
 
 	chainId, err := strconv.ParseInt(SignatureChainId, 0, 64)
 	hexChainId := math.HexOrDecimal256(*big.NewInt(chainId))
@@ -127,7 +127,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 			"hyperliquidChain": tx.HyperliquidChain,
 			"destination":      string(tx.Destination),
 			"token":            string(tx.Token),
-			"amount":           "0.1",
+			"amount":           amount.String(),
 			"time":             big.NewInt(tx.Nonce),
 		},
 	}
