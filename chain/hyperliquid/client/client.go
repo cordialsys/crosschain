@@ -18,6 +18,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/hyperliquid/client/wstypes"
 	"github.com/cordialsys/crosschain/chain/hyperliquid/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	xcerrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ const (
 	MethodTxDetails                   = "txDetails"
 	MethodUserDetails                 = "userDetails"
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
+	ResponseTypeError                 = "error"
 	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
 	WebsocketUrlTestnet               = ""
 )
@@ -140,12 +142,19 @@ func (client *Client) fetchTxDetails(ctx context.Context, hash string) (types.Tr
 	type response struct {
 		Type        string            `json:"type"`
 		Transaction types.Transaction `json:"tx"`
+		// Error message
+		Message string `json:"message"`
 	}
 
 	var txDetails response
 	err := client.CallExplorer(ctx, MethodTxDetails, map[string]any{
 		"hash": hash,
 	}, &txDetails)
+
+	if txDetails.Type == ResponseTypeError {
+		return types.Transaction{}, xcerrors.TransactionNotFoundf("%s", txDetails.Message)
+	}
+
 	return txDetails.Transaction, err
 
 }
@@ -276,7 +285,7 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 		}
 	}
 
-	return xclient.TxInfo{}, errors.New("couldn't find matching action hash")
+	return xclient.TxInfo{}, xcerrors.TransactionNotFoundf("%v", err)
 }
 
 // Fetch transaction info
