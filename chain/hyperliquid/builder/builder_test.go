@@ -2,6 +2,7 @@ package builder_test
 
 import (
 	"testing"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
@@ -30,7 +31,7 @@ func TestNewTransfer(t *testing.T) {
 
 	input := &TxInput{
 		TxInputEnvelope:  xc.TxInputEnvelope{},
-		TransactionTime:  0,
+		TransactionTime:  time.UnixMilli(0),
 		Decimals:         0,
 		Token:            "",
 		HyperliquidChain: "",
