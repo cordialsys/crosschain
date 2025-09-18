@@ -203,6 +203,11 @@ type TxInfo struct {
 	// required: set the chain
 	XChain xc.NativeAsset `json:"chain"` //deprecated
 
+	// Optional: set the lookup id of the transaction
+	// This is for chains that need to use an ID that's only discoverable after the transaction is confirmed on chain,
+	// or some sort of compound ID, like `{block_height}-{tx_index}`.
+	LookupId string `json:"lookup_id,omitempty"`
+
 	State State `json:"state"`
 	Final bool  `json:"final"`
 
@@ -272,11 +277,13 @@ func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmation
 	if int(confirmations) >= chainCfg.ConfirmationsFinal {
 		final = true
 	}
+	lookupId := ""
 
 	return &TxInfo{
 		name,
 		hash,
 		chainCfg.Chain,
+		lookupId,
 		state,
 		final,
 		block,
