@@ -286,6 +286,16 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "0ECE", // don't add the prefix, it's not always required
 			out:   "0x0ece",
 		},
+		{
+			chain: xc.HYPE,
+			inp:   "USDC:0x0ECE",
+			out:   "USDC:0x0ece",
+		},
+		{
+			chain: xc.HYPE,
+			inp:   "USDC-0x0ECE",
+			out:   "USDC-0x0ece",
+		},
 	}
 
 	// test that we have a test vector for each chain
