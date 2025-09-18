@@ -189,7 +189,7 @@ func (client *Client) fetchTxDetails(ctx context.Context, hash string) (types.Tr
 
 }
 
-func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Address, hash xc.TxHash) (xc.AmountHumanReadable, string, error) {
+func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Address, hash string) (xc.AmountHumanReadable, string, error) {
 	var response []types.UserNonFundingLedgerUpdate
 	err := client.CallInfo(ctx, MethodUserNonFundingLedgerUpdates, map[string]any{
 		"user": address,
@@ -217,9 +217,10 @@ func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Addres
 
 // Traditional "FetchTxInfo" implementation - use a native Hyperliquid transaction hash for transaction
 // info lookup
-func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
-	contract, _ := args.Contract()
-	txDetails, err := client.fetchTxDetails(ctx, string(args.TxHash()))
+func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xclient.TxInfo, error) {
+	// TODO we should figure out what the contract/asset is properly
+	contract := xc.ContractAddress("")
+	txDetails, err := client.fetchTxDetails(ctx, txHash)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
 	}
@@ -234,7 +235,7 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) 
 
 	chain := client.Asset.GetChain().Chain
 	blockTime := time.UnixMilli(txDetails.Time)
-	block := xclient.NewBlock(chain, txDetails.Block, txDetails.Hash, blockTime)
+	block := xclient.NewBlock(chain, txDetails.Block, "", blockTime)
 	latestHeight, err := client.fetchBlockHeight(ctx)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest height: %w", err)
@@ -261,7 +262,10 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) 
 	movement.AddDestination(destinationAddress, amount, nil)
 	txInfo.AddMovement(movement)
 
-	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, args.TxHash())
+	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, txHash)
+	if err != nil {
+		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction fee: %w", err)
+	}
 	tokensMetadata, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
@@ -279,6 +283,7 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, args *txinfo.Args) 
 	txInfo.AddFee(sourceAddress, xc.ContractAddress(feeContract), feeAmount, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	txInfo.LookupId = txHash
 
 	return *txInfo, nil
 }
@@ -312,11 +317,10 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 			if err != nil {
 				return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
 			}
+			logrus.WithField("action", ah).WithField("hash", tx.Hash).WithField("spotSend", spotSend).Trace("user action")
 
-			fmt.Printf("Action: %s, hash: %s, spotSend: %+v\n", ah, tx.Hash, spotSend)
 			if ah == string(args.TxHash()) {
-				args.SetHash(xc.TxHash(tx.Hash))
-				return client.fetchTxInfoByHash(ctx, args)
+				return client.fetchTxInfoByHash(ctx, tx.Hash)
 			}
 		}
 	}
@@ -343,7 +347,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	if ok {
 		return client.fetchTxInfoByActionHash(ctx, args)
 	} else {
-		return client.fetchTxInfoByHash(ctx, args)
+		return client.fetchTxInfoByHash(ctx, string(args.TxHash()))
 	}
 }
 
@@ -549,7 +553,7 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 		"method": "POST",
 		"body":   string(payload),
 	})
-	log.Debug("request")
+	log.Trace("exchange request")
 
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
@@ -564,7 +568,7 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 			return types.APIResponse{}, fmt.Errorf("failed to read response body: %w", err)
 		}
 	}
-	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Debug("response")
+	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Trace("exchange response")
 
 	if resp.StatusCode != http.StatusOK {
 		var e types.APIError
