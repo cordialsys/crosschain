@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -147,6 +148,11 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 	response, err := client.CallExchange(ctx, payload)
 	if err != nil {
+		if apiErr, ok := err.(types.APIError); ok {
+			if strings.Contains(apiErr.Response, "duplicate nonce") {
+				return xcerrors.TransactionExistsf("%v", err)
+			}
+		}
 		return fmt.Errorf("failed to post transaction: %w", err)
 	}
 
@@ -324,7 +330,13 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
 	hash := args.TxHash()
 	if !strings.HasPrefix(string(hash), "0x") {
-		return xclient.TxInfo{}, fmt.Errorf("HYPE tx hash should start with '0x'")
+		// normalize the prefix if valid hex
+		_, err := hex.DecodeString(string(hash))
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to decode hash as hex: %w", err)
+		}
+		hash = "0x" + hash
+		args.SetHash(xc.TxHash(hash))
 	}
 
 	_, ok := args.Sender()
@@ -532,6 +544,12 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 		return types.APIResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	log := logrus.WithFields(logrus.Fields{
+		"url":    url,
+		"method": "POST",
+		"body":   string(payload),
+	})
+	log.Debug("request")
 
 	resp, err := c.HttpClient.Do(req)
 	if err != nil {
@@ -546,6 +564,7 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 			return types.APIResponse{}, fmt.Errorf("failed to read response body: %w", err)
 		}
 	}
+	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Debug("response")
 
 	if resp.StatusCode != http.StatusOK {
 		var e types.APIError
@@ -557,6 +576,14 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 		var r types.APIResponse
 		if err := json.Unmarshal(body, &r); err != nil {
 			return types.APIResponse{}, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+		}
+		// unfortunately the API node will return errors on 200 status code
+		if r.Status == "err" {
+			var e types.APIError
+			if err := json.Unmarshal(body, &e); err != nil {
+				return types.APIResponse{}, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+			}
+			return types.APIResponse{}, e
 		}
 
 		return r, nil

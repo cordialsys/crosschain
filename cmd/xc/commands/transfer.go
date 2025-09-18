@@ -17,6 +17,7 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -32,6 +33,7 @@ func CmdTxTransfer() *cobra.Command {
 	var txTime int64
 	var addressFormat string
 	var nonDeterministic bool
+	var transferInputFile string
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -192,10 +194,22 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("invalid transfer args: %v", err)
 			}
 
-			// Get input from RPC
-			input, err := client.FetchTransferInput(context.Background(), tfArgs)
-			if err != nil {
-				return fmt.Errorf("could not fetch transfer input: %v", err)
+			// Get input from RPC or file
+			var input xc.TxInput
+			if transferInputFile != "" {
+				inputBz, err := os.ReadFile(transferInputFile)
+				if err != nil {
+					return fmt.Errorf("could not read transfer input file: %v", err)
+				}
+				input, err = drivers.UnmarshalTxInput(inputBz)
+				if err != nil {
+					return fmt.Errorf("could not unmarshal transfer input: %v", err)
+				}
+			} else {
+				input, err = client.FetchTransferInput(context.Background(), tfArgs)
+				if err != nil {
+					return fmt.Errorf("could not fetch transfer input: %v", err)
+				}
 			}
 
 			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
@@ -422,5 +436,6 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().Int64Var(&txTime, "tx-time", 0, "Block time of the transaction")
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
 	cmd.Flags().BoolVar(&nonDeterministic, "non-deterministic", false, "Skip implementation checks for determinism (only important in for consensus sensitive contexts)")
+	cmd.Flags().StringVar(&transferInputFile, "input", "", "File containing the transfer input.  If used, will skip fetching the input from the RPC.")
 	return cmd
 }
