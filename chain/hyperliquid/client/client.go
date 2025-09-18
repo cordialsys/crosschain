@@ -29,7 +29,8 @@ const (
 	EndpointExplorer                  = "explorer"
 	EndpointInfo                      = "info"
 	Hype                              = "HYPE"
-	HypeContract                      = xc.ContractAddress("HYPE:0x0d01dc56dcaaca66ad901c959b4011ec")
+	HypeContractMainnet               = xc.ContractAddress("HYPE:0x0d01dc56dcaaca66ad901c959b4011ec")
+	HypeContractTestnet               = xc.ContractAddress("HYPE:0x7317beb7cceed72ef0b346074cc8e7ab")
 	HypeDecimals                      = 8
 	MethodBlockDetails                = "blockDetails"
 	MethodSpotClearingHouseState      = "spotClearinghouseState"
@@ -39,7 +40,7 @@ const (
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
 	ResponseTypeError                 = "error"
 	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
-	WebsocketUrlTestnet               = ""
+	WebsocketUrlTestnet               = "wss://api.hyperliquid-testnet.xyz/ws"
 )
 
 // Client for hyperliquid
@@ -50,8 +51,10 @@ type Client struct {
 	Asset            xc.ITask
 	ApiUrl           *url.URL
 	RpcUrl           *url.URL
+	HypeContract     xc.ContractAddress
 	HyperliquidChain string
 	HttpClient       *http.Client
+	WebsocketUrl     *url.URL
 }
 
 var _ xclient.Client = &Client{}
@@ -63,12 +66,31 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	var hyperliquidChain string
 	var rpcUrl *url.URL
 	var err error
+	var hypeContract xc.ContractAddress
+	var wssUrl *url.URL
 	if cfg.Network == "mainnet" {
 		rpcUrl, err = url.Parse("https://rpc.hyperliquid.xyz")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse mainnet rpc url: %w", err)
+		}
+		wssUrl, err = url.Parse(WebsocketUrlMainnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse mainnet wss url: %w", err)
+		}
 		hyperliquidChain = "Mainnet"
+		hypeContract = HypeContractMainnet
 	} else {
 		rpcUrl, err = url.Parse("https://rpc.hyperliquid-testnet.xyz")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse testnet rpc url: %w", err)
+		}
+
+		wssUrl, err = url.Parse(WebsocketUrlTestnet)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse testnet wss url: %w", err)
+		}
 		hyperliquidChain = "Testnet"
+		hypeContract = HypeContractTestnet
 	}
 
 	url, err := url.Parse(cfg.URL)
@@ -79,9 +101,11 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	return &Client{
 		ApiUrl:           url,
 		RpcUrl:           rpcUrl,
+		HypeContract:     hypeContract,
 		HyperliquidChain: hyperliquidChain,
 		HttpClient:       cfg.DefaultHttpClient(),
 		Asset:            cfgI,
+		WebsocketUrl:     wssUrl,
 	}, nil
 }
 
@@ -92,7 +116,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	contract, ok := args.GetContract()
 	if !ok {
-		contract = HypeContract
+		contract = client.HypeContract
 	}
 	txInput.Token = contract
 
@@ -272,12 +296,18 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 	}
 
 	for _, tx := range userDetails.Txs {
-		if tx.IsSpotSend() {
-			ah, err := types.GetActionHash(tx.Action)
+		spotSend, ok, err := tx.GetSpotSend()
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to get tx action: %w", err)
+		}
+
+		if ok {
+			ah, err := types.GetActionHash(spotSend)
 			if err != nil {
 				return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
 			}
 
+			fmt.Printf("Action: %s, hash: %s, spotSend: %+v\n", ah, tx.Hash, spotSend)
 			if ah == string(args.TxHash()) {
 				args.SetHash(xc.TxHash(tx.Hash))
 				return client.fetchTxInfoByHash(ctx, args)
@@ -377,7 +407,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	if contract == "" {
-		contract = HypeContract
+		contract = client.HypeContract
 	}
 
 	name, _, ok := strings.Cut(string(contract), ":")
@@ -537,11 +567,11 @@ func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIRes
 // As a workaround we use a websocket stream, where we subscribe to ongoing transactions.
 // With this info we are able to fetch block height via 'txDetails' explorer API call.
 func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
-	c, _, err := websocket.DefaultDialer.Dial(WebsocketUrlMainnet, nil)
+	wssUrl := client.WebsocketUrl.String()
+	c, _, err := websocket.DefaultDialer.Dial(wssUrl, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to connect websocket: %w", err)
 	}
-
 	defer c.Close()
 
 	subscription := wstypes.CoinSubscription{
@@ -553,7 +583,7 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 		Subscription: &subscription,
 	}
 
-	logger := logrus.WithField("url", WebsocketUrlMainnet)
+	logger := logrus.WithField("url", wssUrl)
 	payload, err := json.Marshal(request)
 	if err != nil {
 		return 0, fmt.Errorf("failed to marshal subscription payload: %w", err)

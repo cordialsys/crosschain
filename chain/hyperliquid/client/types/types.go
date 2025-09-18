@@ -76,13 +76,22 @@ type EvmContract struct {
 	EvmExtraWeiDecimals int    `json:"evm_extra_wei_decimals"` // Additional decimals on EVM
 }
 
+type Action interface {
+	GetTime() uint64
+}
+
 type SpotSend struct {
+	Type             string `json:"type"        msgpack:"type"`
 	SignatureChainId string `json:"signatureChainId"`
-	HyperliquidChain string `json:"hyperliquidChain"`
-	Destination      string `json:"destination"`
-	Token            string `json:"token"`
-	Amount           string `json:"amount"`
-	Time             int64  `json:"time"`
+	HyperliquidChain string `json:"hyperliquidChain" msgpack:"hyperliquidChain"`
+	Destination      string `json:"destination" msgpack:"destination"`
+	Token            string `json:"token"       msgpack:"token"`
+	Amount           string `json:"amount"      msgpack:"amount"`
+	Time             uint64 `json:"time"        msgpack:"time"`
+}
+
+func (s SpotSend) GetTime() uint64 {
+	return s.Time
 }
 
 type Transaction struct {
@@ -153,22 +162,17 @@ func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 	}
 
 	return SpotSend{
+		Type:             actionType,
 		SignatureChainId: sigChainId,
 		HyperliquidChain: hypeChain,
 		Destination:      destination,
 		Token:            token,
 		Amount:           amount,
-		Time:             int64(timestamp),
+		Time:             uint64(timestamp),
 	}, true, nil
 }
 
-func GetActionHash(action map[string]any) (string, error) {
-	// Make sure that action time is stored as uint64 for hash consistency
-	floatTs, ok := GetValue[float64](action, "time")
-	if ok {
-		action["time"] = int64(floatTs)
-	}
-
+func GetActionHash(action Action) (string, error) {
 	var buf bytes.Buffer
 	enc := msgpack.NewEncoder(&buf)
 	enc.SetSortMapKeys(true)
@@ -180,11 +184,7 @@ func GetActionHash(action map[string]any) (string, error) {
 
 	data := buf.Bytes()
 
-	timestamp, ok := GetValue[int64](action, "time")
-	if !ok {
-		return "", fmt.Errorf("missing action time")
-	}
-
+	timestamp := action.GetTime()
 	nonceBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(nonceBytes, uint64(timestamp))
 	data = append(data, nonceBytes...)

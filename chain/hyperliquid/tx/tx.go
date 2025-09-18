@@ -37,7 +37,7 @@ type Tx struct {
 	Decimals         int32
 	Destination      xc.Address
 	Token            xc.ContractAddress
-	Nonce            int64
+	Nonce            uint64
 	HyperliquidChain string
 	Signature        SignatureResult
 }
@@ -50,33 +50,22 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) Tx {
 		Decimals:         input.Decimals,
 		Destination:      args.GetTo(),
 		Token:            input.Token,
-		Nonce:            input.TransactionTime.UnixMilli(),
+		Nonce:            uint64(input.TransactionTime.UnixMilli()),
 		HyperliquidChain: input.HyperliquidChain,
 	}
 }
 
-// SpotTransferAction represents spot transfer
-type SpotTransferAction struct {
-	Type             string `json:"type"        msgpack:"type"`
-	SignatureChainId string `json:"signatureChainId"`
-	HyperliquidChain string `json:"hyperliquidChain" msgpack:"hyperliquidChain"`
-	Destination      string `json:"destination" msgpack:"destination"`
-	Token            string `json:"token"       msgpack:"token"`
-	Amount           string `json:"amount"      msgpack:"amount"`
-	Time             int64  `json:"time"        msgpack:"time"`
-}
-
-func (tx Tx) GetAction() map[string]any {
+func (tx Tx) GetAction() types.SpotSend {
 	amount := tx.Amount.ToHuman(tx.Decimals)
 
-	return map[string]any{
-		"type":             ActionSpotSend,
-		"signatureChainId": SignatureChainId,
-		"hyperliquidChain": tx.HyperliquidChain,
-		"destination":      string(tx.Destination),
-		"token":            string(tx.Token),
-		"amount":           amount.String(),
-		"time":             int64(tx.Nonce),
+	return types.SpotSend{
+		Type:             ActionSpotSend,
+		SignatureChainId: SignatureChainId,
+		HyperliquidChain: tx.HyperliquidChain,
+		Destination:      string(tx.Destination),
+		Token:            string(tx.Token),
+		Amount:           amount.String(),
+		Time:             tx.Nonce,
 	}
 }
 
@@ -128,7 +117,7 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 			"destination":      string(tx.Destination),
 			"token":            string(tx.Token),
 			"amount":           amount.String(),
-			"time":             big.NewInt(tx.Nonce),
+			"time":             big.NewInt(int64(tx.Nonce)),
 		},
 	}
 

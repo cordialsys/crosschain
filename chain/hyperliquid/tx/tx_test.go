@@ -23,7 +23,7 @@ func TestTxHash(t *testing.T) {
 			V: 28,
 		},
 	}
-	require.Equal(t, xc.TxHash("0x5d54f29594463daba97505fb78e6804b8313714c6a91d718c34eecdc530fdacb"), tx.Hash())
+	require.Equal(t, xc.TxHash("0x2a1e9188244dfd737efcfb2e5dabfde8a4f8f2e3adeafbd46189ff32002ac4bc"), tx.Hash())
 }
 
 func TestTxSighashes(t *testing.T) {
