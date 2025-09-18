@@ -247,6 +247,16 @@ chains:
     chain_name: Hyperliquid (Testnet)
     decimals: 8
     fee_limit: "100.0"
+    native_assets:
+      - asset_id: "HYPE"
+        contract_id: "HYPE:0x0d01dc56dcaaca66ad901c959b4011ec"
+        fee_limit: "2.0"
+        decimals: 8
+      - asset_id: "USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
+        contract_id: "USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
+        fee_limit: "100.0"
+        decimals: 8
+        aliases: ["USDC"]
   KAS:
     chain: KAS
     driver: kaspa
