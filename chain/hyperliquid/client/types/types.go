@@ -146,6 +146,11 @@ func (t Transaction) IsSpotSend() bool {
 	return actionType == ActionSpotSend
 }
 
+func (t Transaction) GetContract() xc.ContractAddress {
+	token, _ := GetValue[string](t.Action, "token")
+	return xc.ContractAddress(token)
+}
+
 func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 	actionType, ok := GetValue[string](t.Action, "type")
 	if !ok {

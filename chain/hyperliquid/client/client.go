@@ -220,13 +220,12 @@ func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Addres
 // Traditional "FetchTxInfo" implementation - use a native Hyperliquid transaction hash for transaction
 // info lookup
 func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xclient.TxInfo, error) {
-	// TODO we should figure out what the contract/asset is properly
-	contract := xc.ContractAddress("")
 	txDetails, err := client.fetchTxDetails(ctx, txHash)
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
 	}
 
+	contract := txDetails.GetContract()
 	spotSend, ok, err := txDetails.GetSpotSend()
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to get spotSend action: %w", err)
@@ -278,12 +277,14 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 	tokenMeta, ok := tokensMetadata.GetTokenMetaByName(feeToken)
 	if ok {
 		feeDecimals = tokenMeta.WeiDecimals
-		feeContract = xc.ContractAddress(tokenMeta.TokenId)
+		feeContract = xc.ContractAddress(tokenMeta.Name + ":" + tokenMeta.TokenId)
 	}
 
 	feeAmount := fee.ToBlockchain(int32(feeDecimals))
-	txInfo.AddFee(sourceAddress, xc.ContractAddress(feeContract), feeAmount, nil)
-	txInfo.Fees = txInfo.CalculateFees()
+	if !feeAmount.IsZero() {
+		txInfo.AddFee(sourceAddress, xc.ContractAddress(feeContract), feeAmount, nil)
+		txInfo.Fees = txInfo.CalculateFees()
+	}
 	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
 	txInfo.LookupId = txHash
 
@@ -461,7 +462,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	name, _, ok := strings.Cut(string(contract), ":")
-	if ok {
+	if !ok {
 		return 0, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
 	}
 
