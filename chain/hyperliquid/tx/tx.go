@@ -5,19 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/hyperliquid/client/types"
 	"github.com/cordialsys/crosschain/chain/hyperliquid/tx_input"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-const ActionSpotSend = "spotSend"
 const SignatureChainId = "0xa4b1"
 
 // SignatureResult represents the structured signature result
@@ -55,17 +51,28 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) Tx {
 	}
 }
 
-func (tx Tx) GetAction() types.SpotSend {
+func (tx Tx) GetAction() types.Action {
 	amount := tx.Amount.ToHuman(tx.Decimals)
 
-	return types.SpotSend{
-		Type:             ActionSpotSend,
-		SignatureChainId: SignatureChainId,
-		HyperliquidChain: tx.HyperliquidChain,
-		Destination:      string(tx.Destination),
-		Token:            string(tx.Token),
-		Amount:           amount.String(),
-		Time:             tx.Nonce,
+	if len(tx.Token) == 0 {
+		return types.UsdcSend{
+			Type:             types.ActionUsdSend,
+			SignatureChainId: SignatureChainId,
+			HyperliquidChain: tx.HyperliquidChain,
+			Destination:      string(tx.Destination),
+			Amount:           amount.String(),
+			Time:             tx.Nonce,
+		}
+	} else {
+		return types.SpotSend{
+			Type:             types.ActionSpotSend,
+			SignatureChainId: SignatureChainId,
+			HyperliquidChain: tx.HyperliquidChain,
+			Destination:      string(tx.Destination),
+			Token:            string(tx.Token),
+			Amount:           amount.String(),
+			Time:             tx.Nonce,
+		}
 	}
 }
 
@@ -85,41 +92,7 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	amount := tx.Amount.ToHuman(tx.Decimals)
-
-	chainId, err := strconv.ParseInt(SignatureChainId, 0, 64)
-	hexChainId := math.HexOrDecimal256(*big.NewInt(chainId))
-	typedData := apitypes.TypedData{
-		Domain: apitypes.TypedDataDomain{
-			ChainId:           &hexChainId,
-			Name:              "HyperliquidSignTransaction",
-			Version:           "1",
-			VerifyingContract: "0x0000000000000000000000000000000000000000",
-		},
-		Types: apitypes.Types{
-			"HyperliquidTransaction:SpotSend": []apitypes.Type{
-				{Name: "hyperliquidChain", Type: "string"},
-				{Name: "destination", Type: "string"},
-				{Name: "token", Type: "string"},
-				{Name: "amount", Type: "string"},
-				{Name: "time", Type: "uint64"},
-			},
-			"EIP712Domain": []apitypes.Type{
-				{Name: "name", Type: "string"},
-				{Name: "version", Type: "string"},
-				{Name: "chainId", Type: "uint256"},
-				{Name: "verifyingContract", Type: "address"},
-			},
-		},
-		PrimaryType: "HyperliquidTransaction:SpotSend",
-		Message: map[string]any{
-			"hyperliquidChain": tx.HyperliquidChain,
-			"destination":      string(tx.Destination),
-			"token":            string(tx.Token),
-			"amount":           amount.String(),
-			"time":             big.NewInt(int64(tx.Nonce)),
-		},
-	}
+	typedData, err := tx.GetAction().GetTypedData()
 
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	if err != nil {
