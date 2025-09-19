@@ -42,8 +42,6 @@ const (
 	UsdcDecimals                      = 8
 	UsdcPerps                         = "USDCPerps"
 	UsdcAsset                         = "chains/HYPE/assets/" + UsdcPerps
-	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
-	WebsocketUrlTestnet               = "wss://api.hyperliquid-testnet.xyz/ws"
 )
 
 // Client for hyperliquid
@@ -51,9 +49,11 @@ const (
 // - "info" api is main hyperliquid api
 // - "explorer" api is available only via RPC, it provides transaction/user/block details
 type Client struct {
-	Asset            xc.ITask
-	ApiUrl           *url.URL
-	RpcUrl           *url.URL
+	Asset xc.ITask
+	// Node url
+	Url *url.URL
+	// Explorer/Indexer url
+	IndexerUrl       *url.URL
 	HyperliquidChain string
 	HttpClient       *http.Client
 	WebsocketUrl     *url.URL
@@ -91,8 +91,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}
 
 	return &Client{
-		ApiUrl:           url,
-		RpcUrl:           rpcUrl,
+		Url:              url,
+		IndexerUrl:       rpcUrl,
 		HyperliquidChain: hyperliquidChain,
 		HttpClient:       cfg.DefaultHttpClient(),
 		Asset:            cfgI,
@@ -546,17 +546,17 @@ func (client *Client) callInner(ctx context.Context, url string, method string, 
 }
 
 func (c *Client) CallInfo(ctx context.Context, method string, params map[string]any, result any) error {
-	url := fmt.Sprintf("%s/%s", c.ApiUrl, EndpointInfo)
+	url := fmt.Sprintf("%s/%s", c.Url, EndpointInfo)
 	return c.callInner(ctx, url, method, params, result)
 }
 
 func (c *Client) CallExplorer(ctx context.Context, method string, params map[string]any, result any) error {
-	url := fmt.Sprintf("%s/%s", c.RpcUrl, EndpointExplorer)
+	url := fmt.Sprintf("%s/%s", c.IndexerUrl, EndpointExplorer)
 	return c.callInner(ctx, url, method, params, result)
 }
 
 func (c *Client) CallExchange(ctx context.Context, payload []byte) (types.APIResponse, error) {
-	url := fmt.Sprintf("%s/%s", c.ApiUrl, EndpointExchange)
+	url := fmt.Sprintf("%s/%s", c.Url, EndpointExchange)
 	req, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
