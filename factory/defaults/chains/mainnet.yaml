@@ -598,6 +598,13 @@ chains:
         fee_limit: "100.0"
         decimals: 8
         aliases: ["USDC"]
+      - asset_id: "USDCPerps"
+        # "" means we use usdSend action
+        contract_id: ""
+        fee_limit: "100.0"
+        decimals: 8
+        aliases: ["USDCPerps"]
+        bridged_asset: "chains/HYPE/assets/USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
   ICP:
     chain: ICP
     driver: icp

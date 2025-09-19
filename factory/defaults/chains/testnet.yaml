@@ -257,6 +257,13 @@ chains:
         fee_limit: "100.0"
         decimals: 8
         aliases: ["USDC"]
+      - asset_id: "USDCPerps"
+        # "" means we use usdSend action
+        contract_id: ""
+        fee_limit: "100.0"
+        decimals: 8
+        aliases: ["USDCPerps"]
+        bridged_asset: "chains/HYPE/assets/USDC:0xeb62eee3685fc4c43992febcd9e75443"
   KAS:
     chain: KAS
     driver: kaspa

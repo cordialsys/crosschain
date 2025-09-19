@@ -40,6 +40,8 @@ const (
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
 	ResponseTypeError                 = "error"
 	UsdcDecimals                      = 8
+	UsdcPerps                         = "USDCPerps"
+	UsdcAsset                         = "chains/HYPE/assets/" + UsdcPerps
 	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
 	WebsocketUrlTestnet               = "wss://api.hyperliquid-testnet.xyz/ws"
 )
@@ -248,6 +250,13 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 	movement := xclient.NewMovement(chain, contract)
 	movement.AddSource(sourceAddress, amount, nil)
 	movement.AddDestination(destinationAddress, amount, nil)
+	// Explicitely remove contract for perps transactions
+	if contract == "" {
+		movement.ContractId = ""
+		movement.XContract = ""
+		movement.XAsset = UsdcAsset
+		movement.AssetId = UsdcPerps
+	}
 	txInfo.AddMovement(movement)
 
 	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, txHash)
