@@ -65,30 +65,23 @@ var _ xclient.Client = &Client{}
 func NewClient(cfgI xc.ITask) (*Client, error) {
 	cfg := cfgI.GetChain()
 
+	if cfg.IndexerUrl == "" {
+		return nil, errors.New("hyperliquid driver relies on indexer api")
+	}
+
+	rpcUrl, err := url.Parse(cfg.IndexerUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse mainnet rpc url: %w", err)
+	}
+
+	wssUrl := &url.URL{}
+	*wssUrl = *rpcUrl
+	wssUrl.Scheme = "wss"
+
 	var hyperliquidChain string
-	var rpcUrl *url.URL
-	var err error
-	var wssUrl *url.URL
 	if cfg.Network == "mainnet" {
-		rpcUrl, err = url.Parse("https://rpc.hyperliquid.xyz")
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse mainnet rpc url: %w", err)
-		}
-		wssUrl, err = url.Parse(WebsocketUrlMainnet)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse mainnet wss url: %w", err)
-		}
 		hyperliquidChain = "Mainnet"
 	} else {
-		rpcUrl, err = url.Parse("https://rpc.hyperliquid-testnet.xyz")
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse testnet rpc url: %w", err)
-		}
-
-		wssUrl, err = url.Parse(WebsocketUrlTestnet)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse testnet wss url: %w", err)
-		}
 		hyperliquidChain = "Testnet"
 	}
 
