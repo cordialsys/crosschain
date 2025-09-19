@@ -216,12 +216,9 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 	}
 
 	contract := txDetails.GetContract()
-	spotSend, ok, err := txDetails.GetSpotSend()
+	action, err := txDetails.GetAction()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get spotSend action: %w", err)
-	}
-	if !ok {
-		return xclient.TxInfo{}, errors.New("tx-info supports only spotSend actions for now")
+		return xclient.TxInfo{}, fmt.Errorf("failed to get action: %w", err)
 	}
 
 	chain := client.Asset.GetChain().Chain
@@ -238,8 +235,8 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 
 	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), txDetails.Hash, confirmations, &txDetails.Error)
 	sourceAddress := xc.Address(txDetails.User)
-	destinationAddress := xc.Address(spotSend.Destination)
-	hrAmount, err := xc.NewAmountHumanReadableFromStr(spotSend.Amount)
+	destinationAddress := action.GetDestination()
+	hrAmount, err := action.GetAmount()
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to convert amount to HumanReadable: %w", err)
 	}
@@ -300,21 +297,19 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 	}
 
 	for _, tx := range userDetails.Txs {
-		spotSend, ok, err := tx.GetSpotSend()
+		spotSend, err := tx.GetAction()
 		if err != nil {
 			return xclient.TxInfo{}, fmt.Errorf("failed to get tx action: %w", err)
 		}
 
-		if ok {
-			ah, err := types.GetActionHash(spotSend)
-			if err != nil {
-				return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
-			}
-			logrus.WithField("action", ah).WithField("hash", tx.Hash).WithField("spotSend", spotSend).Trace("user action")
+		ah, err := types.GetActionHash(spotSend)
+		if err != nil {
+			return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
+		}
+		logrus.WithField("action", ah).WithField("hash", tx.Hash).WithField("spotSend", spotSend).Trace("user action")
 
-			if ah == string(args.TxHash()) {
-				return client.fetchTxInfoByHash(ctx, tx.Hash)
-			}
+		if ah == string(args.TxHash()) {
+			return client.fetchTxInfoByHash(ctx, tx.Hash)
 		}
 	}
 

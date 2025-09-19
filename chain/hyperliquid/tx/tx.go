@@ -55,7 +55,7 @@ func (tx Tx) GetAction() types.Action {
 	amount := tx.Amount.ToHuman(tx.Decimals)
 
 	if len(tx.Token) == 0 {
-		return types.UsdcSend{
+		return types.UsdSend{
 			Type:             types.ActionUsdSend,
 			SignatureChainId: SignatureChainId,
 			HyperliquidChain: tx.HyperliquidChain,
