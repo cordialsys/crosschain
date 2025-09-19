@@ -30,8 +30,6 @@ const (
 	EndpointExplorer                  = "explorer"
 	EndpointInfo                      = "info"
 	Hype                              = "HYPE"
-	HypeContractMainnet               = xc.ContractAddress("HYPE:0x0d01dc56dcaaca66ad901c959b4011ec")
-	HypeContractTestnet               = xc.ContractAddress("HYPE:0x7317beb7cceed72ef0b346074cc8e7ab")
 	HypeDecimals                      = 8
 	MethodBlockDetails                = "blockDetails"
 	MethodClearinghouseState          = "clearinghouseState"
@@ -54,7 +52,6 @@ type Client struct {
 	Asset            xc.ITask
 	ApiUrl           *url.URL
 	RpcUrl           *url.URL
-	HypeContract     xc.ContractAddress
 	HyperliquidChain string
 	HttpClient       *http.Client
 	WebsocketUrl     *url.URL
@@ -69,7 +66,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	var hyperliquidChain string
 	var rpcUrl *url.URL
 	var err error
-	var hypeContract xc.ContractAddress
 	var wssUrl *url.URL
 	if cfg.Network == "mainnet" {
 		rpcUrl, err = url.Parse("https://rpc.hyperliquid.xyz")
@@ -81,7 +77,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 			return nil, fmt.Errorf("failed to parse mainnet wss url: %w", err)
 		}
 		hyperliquidChain = "Mainnet"
-		hypeContract = HypeContractMainnet
 	} else {
 		rpcUrl, err = url.Parse("https://rpc.hyperliquid-testnet.xyz")
 		if err != nil {
@@ -93,7 +88,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 			return nil, fmt.Errorf("failed to parse testnet wss url: %w", err)
 		}
 		hyperliquidChain = "Testnet"
-		hypeContract = HypeContractTestnet
 	}
 
 	url, err := url.Parse(cfg.URL)
@@ -104,7 +98,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	return &Client{
 		ApiUrl:           url,
 		RpcUrl:           rpcUrl,
-		HypeContract:     hypeContract,
 		HyperliquidChain: hyperliquidChain,
 		HttpClient:       cfg.DefaultHttpClient(),
 		Asset:            cfgI,
@@ -117,10 +110,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput := tx_input.NewTxInput()
 	txInput.TransactionTime = time.Now()
 
-	contract, ok := args.GetContract()
-	if !ok {
-		contract = client.HypeContract
-	}
+	contract, _ := args.GetContract()
 	txInput.Token = contract
 
 	decimals, err := client.FetchDecimals(ctx, contract)
@@ -448,17 +438,14 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	if contract == "" {
+	// Empty contracts are populated with NativeAsset by default in some cases
+	if contract == "" || contract == Hype {
 		return UsdcDecimals, nil
 	}
 
 	tokensMeta, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch token metadata: %w", err)
-	}
-
-	if contract == "" {
-		contract = client.HypeContract
 	}
 
 	name, _, ok := strings.Cut(string(contract), ":")

@@ -5,14 +5,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
 	ActionSpotSend = "spotSend"
+	ActionUsdSend  = "usdSend"
 )
 
 type SpotClearinghouseState struct {
@@ -101,6 +106,7 @@ type EvmContract struct {
 
 type Action interface {
 	GetTime() uint64
+	GetTypedData() (apitypes.TypedData, error)
 }
 
 type SpotSend struct {
@@ -115,6 +121,103 @@ type SpotSend struct {
 
 func (s SpotSend) GetTime() uint64 {
 	return s.Time
+}
+
+func (s SpotSend) GetTypedData() (apitypes.TypedData, error) {
+	amount := s.Amount
+
+	chainId, err := strconv.ParseInt(s.SignatureChainId, 0, 64)
+	if err != nil {
+		return apitypes.TypedData{}, nil
+	}
+	hexChainId := math.HexOrDecimal256(*big.NewInt(chainId))
+	typedData := apitypes.TypedData{
+		Domain: apitypes.TypedDataDomain{
+			ChainId:           &hexChainId,
+			Name:              "HyperliquidSignTransaction",
+			Version:           "1",
+			VerifyingContract: "0x0000000000000000000000000000000000000000",
+		},
+		Types: apitypes.Types{
+			"HyperliquidTransaction:SpotSend": []apitypes.Type{
+				{Name: "hyperliquidChain", Type: "string"},
+				{Name: "destination", Type: "string"},
+				{Name: "token", Type: "string"},
+				{Name: "amount", Type: "string"},
+				{Name: "time", Type: "uint64"},
+			},
+			"EIP712Domain": []apitypes.Type{
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+		},
+		PrimaryType: "HyperliquidTransaction:SpotSend",
+		Message: map[string]any{
+			"hyperliquidChain": s.HyperliquidChain,
+			"destination":      s.Destination,
+			"token":            s.Token,
+			"amount":           amount,
+			"time":             big.NewInt(int64(s.Time)),
+		},
+	}
+
+	return typedData, nil
+}
+
+type UsdcSend struct {
+	Type             string `json:"type"        msgpack:"type"`
+	SignatureChainId string `json:"signatureChainId"`
+	HyperliquidChain string `json:"hyperliquidChain" msgpack:"hyperliquidChain"`
+	Destination      string `json:"destination" msgpack:"destination"`
+	Amount           string `json:"amount"      msgpack:"amount"`
+	Time             uint64 `json:"time"        msgpack:"time"`
+}
+
+func (s UsdcSend) GetTime() uint64 {
+	return s.Time
+}
+
+func (s UsdcSend) GetTypedData() (apitypes.TypedData, error) {
+	amount := s.Amount
+
+	chainId, err := strconv.ParseInt(s.SignatureChainId, 0, 64)
+	if err != nil {
+		return apitypes.TypedData{}, nil
+	}
+	hexChainId := math.HexOrDecimal256(*big.NewInt(chainId))
+	typedData := apitypes.TypedData{
+		Domain: apitypes.TypedDataDomain{
+			ChainId:           &hexChainId,
+			Name:              "HyperliquidSignTransaction",
+			Version:           "1",
+			VerifyingContract: "0x0000000000000000000000000000000000000000",
+		},
+		Types: apitypes.Types{
+			"HyperliquidTransaction:UsdSend": []apitypes.Type{
+				{Name: "hyperliquidChain", Type: "string"},
+				{Name: "destination", Type: "string"},
+				{Name: "amount", Type: "string"},
+				{Name: "time", Type: "uint64"},
+			},
+			"EIP712Domain": []apitypes.Type{
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+		},
+		PrimaryType: "HyperliquidTransaction:UsdSend",
+		Message: map[string]any{
+			"hyperliquidChain": s.HyperliquidChain,
+			"destination":      s.Destination,
+			"amount":           amount,
+			"time":             big.NewInt(int64(s.Time)),
+		},
+	}
+
+	return typedData, nil
 }
 
 type Transaction struct {
