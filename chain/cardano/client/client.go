@@ -299,7 +299,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	txInfo.Fees = []*xclient.Balance{
 		xclient.NewBalance(xc.ADA, types.Ada, feeAmount, &decimals),
 	}
-	txInfo.Final = int(txInfo.Confirmations) > client.ChainCfg.ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > client.ChainCfg.Confirmations.Final
 
 	return *txInfo, nil
 }

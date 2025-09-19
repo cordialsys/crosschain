@@ -274,7 +274,7 @@ func NewTxInfo(block *Block, chainCfg *xc.ChainConfig, hash string, confirmation
 	}
 
 	final := false
-	if int(confirmations) >= chainCfg.ConfirmationsFinal {
+	if int(confirmations) >= chainCfg.Confirmations.Final {
 		final = true
 	}
 	lookupId := ""

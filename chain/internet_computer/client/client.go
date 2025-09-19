@@ -385,7 +385,7 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	xcFee := xc.NewAmountBlockchainFromUint64(fee)
 	txInfo.AddFee(sourceAddress, contract, xcFee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
-	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().Confirmations.Final
 
 	return *txInfo, nil
 }

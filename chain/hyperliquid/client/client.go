@@ -275,7 +275,7 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 		txInfo.AddFee(sourceAddress, xc.ContractAddress(feeContract), feeAmount, nil)
 		txInfo.Fees = txInfo.CalculateFees()
 	}
-	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().Confirmations.Final
 	txInfo.LookupId = txHash
 
 	return *txInfo, nil

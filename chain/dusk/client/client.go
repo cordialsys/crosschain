@@ -203,7 +203,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	feePrice := gasPrice.Mul(&gasUsed)
 	txInfo.AddFee(sourceAddress, "", feePrice, nil)
 	txInfo.Fees = txInfo.CalculateFees()
-	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > client.Asset.GetChain().Confirmations.Final
 	if response.SpentTransaction.Err != "" {
 		txInfo.Error = &response.SpentTransaction.Err
 	} else {

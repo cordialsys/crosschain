@@ -292,7 +292,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	feeAmount := minerFee.Add(&burnFee)
 	txInfo.AddFee(sourceAddress, "", feeAmount, nil)
 	txInfo.Fees = txInfo.CalculateFees()
-	txInfo.Final = int(txInfo.Confirmations) > chainCfg.ConfirmationsFinal
+	txInfo.Final = int(txInfo.Confirmations) > chainCfg.Confirmations.Final
 
 	return *txInfo, nil
 }

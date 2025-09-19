@@ -24,8 +24,11 @@ func init() {
 		if chain.Network == "" {
 			chain.Network = string(maincfg.Network)
 		}
-		if chain.ConfirmationsFinal == 0 {
-			chain.ConfirmationsFinal = 6
+		if chain.XConfirmationsFinal == 0 {
+			chain.XConfirmationsFinal = 6
+		}
+		if chain.Confirmations.Final == 0 {
+			chain.Confirmations.Final = 6
 		}
 		if chain.CrosschainClient.Network == "" {
 			chain.CrosschainClient.Network = xc.Mainnets
@@ -40,8 +43,11 @@ func init() {
 		if chain.Network == "" {
 			chain.Network = string(testcfg.Network)
 		}
-		if chain.ConfirmationsFinal == 0 {
-			chain.ConfirmationsFinal = 2
+		if chain.XConfirmationsFinal == 0 {
+			chain.XConfirmationsFinal = 2
+		}
+		if chain.Confirmations.Final == 0 {
+			chain.Confirmations.Final = 2
 		}
 		if chain.CrosschainClient.Network == "" {
 			chain.CrosschainClient.Network = xc.NotMainnets
