@@ -27,6 +27,29 @@ type SpotBalance struct {
 	EntryNtl string `json:"entryNtl"`
 }
 
+type MarginSummary struct {
+	AccountValue    string `json:"accountValue"`
+	TotalNtlPos     string `json:"totalNtlPos"`
+	TotalRawUsd     string `json:"totalRawUsd"`
+	TotalMarginUsed string `json:"totalMarginUsed"`
+}
+
+type CrossMarginSummary struct {
+	AccountValue    string `json:"accountValue"`
+	TotalNtlPos     string `json:"totalNtlPos"`
+	TotalRawUsd     string `json:"totalRawUsd"`
+	TotalMarginUsed string `json:"totalMarginUsed"`
+}
+
+type ClearinghouseState struct {
+	MarginSummary              MarginSummary      `json:"marginSummary"`
+	CrossMarginSummary         CrossMarginSummary `json:"crossMarginSummary"`
+	CrossMaintenanceMarginUsed string             `json:"crossMaintenanceMarginUsed"`
+	Withdrawable               string             `json:"withdrawable"`
+	AssetPositions             []interface{}      `json:"assetPositions"`
+	Time                       int64              `json:"time"`
+}
+
 type SpotMetaResponse struct {
 	Universe []TradingPair `json:"universe"`
 	Tokens   []Token       `json:"tokens"`
