@@ -592,3 +592,12 @@ chains:
     gas_budget_default: "0.1"
     decimals: 18
     fee_limit: "100.0"
+  0G:
+    chain: 0G
+    driver: evm
+    chain_id: 1
+    chain_name: 0g
+    decimals: 18
+    fee_limit: "300.0"
+    confirmations_final: 30
+    chain_gas_multiplier: 2000

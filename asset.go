@@ -94,6 +94,7 @@ const (
 	ZETA     = NativeAsset("ZETA")     // ZetaChain
 	NIL      = NativeAsset("NIL")      // Nillion
 	ICP      = NativeAsset("ICP")      // Internet Computer Protocol
+	ZeroG    = NativeAsset("0G")       // 0g
 )
 
 var NativeAssetList []NativeAsset = []NativeAsset{
@@ -163,6 +164,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ZETA,
 	NIL,
 	ICP,
+	ZeroG,
 }
 
 // Driver is the type of a chain
@@ -280,7 +282,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
-	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL:
+	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
