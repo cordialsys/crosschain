@@ -645,6 +645,11 @@ func (chain *ChainConfig) Configure(httpTimeout time.Duration) {
 	}
 }
 
+type ConfirmationsConfig struct {
+	Final   int `yaml:"final,omitempty"`
+	Tracked int `yaml:"tracked,omitempty"`
+}
+
 type ChainClientConfig struct {
 	////////////////////////////////
 	///// RPC / CLIENT CONFIGURATION
@@ -699,7 +704,8 @@ type ChainClientConfig struct {
 	// Example format: "30s" (30 seconds), "2m" (2 minutes), "1h" (1 hour).
 	TransactionActiveTime time.Duration `yaml:"transaction_active_time,omitempty"`
 	// How many confirmations is considered "final" for this chain?
-	ConfirmationsFinal int `yaml:"confirmations_final,omitempty"`
+	XConfirmationsFinal int                 `yaml:"confirmations_final,omitempty"`
+	Confirmations       ConfirmationsConfig `yaml:"confirmations,omitempty"`
 
 	// Gas price oracle address
 	// Currently this is used for EVM L2 chains that have an additional "l1" fee.
@@ -746,6 +752,9 @@ func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
 
 func (chain *ChainClientConfig) Configure() {
 	chain.Limiter = chain.NewClientLimiter()
+	if chain.Confirmations.Final == 0 {
+		chain.Confirmations.Final = chain.XConfirmationsFinal
+	}
 }
 
 var _ ITask = &ChainConfig{}
