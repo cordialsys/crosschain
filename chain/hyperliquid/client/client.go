@@ -34,12 +34,14 @@ const (
 	HypeContractTestnet               = xc.ContractAddress("HYPE:0x7317beb7cceed72ef0b346074cc8e7ab")
 	HypeDecimals                      = 8
 	MethodBlockDetails                = "blockDetails"
-	MethodSpotClearingHouseState      = "spotClearinghouseState"
+	MethodClearinghouseState          = "clearinghouseState"
+	MethodSpotClearinghouseState      = "spotClearinghouseState"
 	MethodSpotMeta                    = "spotMeta"
 	MethodTxDetails                   = "txDetails"
 	MethodUserDetails                 = "userDetails"
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
 	ResponseTypeError                 = "error"
+	UsdcDecimals                      = 8
 	WebsocketUrlMainnet               = "wss://api.hyperliquid.xyz/ws"
 	WebsocketUrlTestnet               = "wss://api.hyperliquid-testnet.xyz/ws"
 )
@@ -375,10 +377,10 @@ func (client *Client) fetchTokensMetadata(ctx context.Context) (types.SpotMetaRe
 	return tokensMeta, err
 }
 
-func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+func (client *Client) fetchSpotBalance(ctx context.Context, address xc.Address, contract xc.ContractAddress) (xc.AmountBlockchain, error) {
 	var spotBalances types.SpotClearinghouseState
-	err := client.CallInfo(ctx, MethodSpotClearingHouseState, map[string]any{
-		"user": args.Address(),
+	err := client.CallInfo(ctx, MethodSpotClearinghouseState, map[string]any{
+		"user": string(address),
 	}, &spotBalances)
 
 	if err != nil {
@@ -387,24 +389,23 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 	decimals := HypeDecimals
 	name := Hype
-	contract, ok := args.Contract()
-	if ok {
-		tokensMetadata, err := client.fetchTokensMetadata(ctx)
-		if err != nil {
-			return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
-		}
-		n, _, ok := strings.Cut(string(contract), ":")
-		if !ok {
-			return xc.AmountBlockchain{}, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
-		}
-		tokenMeta, ok := tokensMetadata.GetTokenMetaByName(n)
-		if !ok {
-			return xc.AmountBlockchain{}, fmt.Errorf("missing token metadata for contract: %s", contract)
-		}
-
-		decimals = tokenMeta.WeiDecimals
-		name = tokenMeta.Name
+	tokensMetadata, err := client.fetchTokensMetadata(ctx)
+	if err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
 	}
+
+	n, _, ok := strings.Cut(string(contract), ":")
+	if !ok {
+		return xc.AmountBlockchain{}, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
+	}
+
+	tokenMeta, ok := tokensMetadata.GetTokenMetaByName(n)
+	if !ok {
+		return xc.AmountBlockchain{}, fmt.Errorf("missing token metadata for contract: %s", contract)
+	}
+
+	decimals = tokenMeta.WeiDecimals
+	name = tokenMeta.Name
 
 	for _, balance := range spotBalances.Balances {
 		if balance.Coin == name {
@@ -416,7 +417,40 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	return xc.NewAmountBlockchainFromUint64(0), nil
 }
 
+func (client *Client) fetchPerpsBalance(ctx context.Context, address xc.Address) (xc.AmountBlockchain, error) {
+	var perpsBalance types.ClearinghouseState
+	err := client.CallInfo(ctx, MethodClearinghouseState, map[string]any{
+		"user": string(address),
+	}, &perpsBalance)
+	if err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch perps balance: %w", err)
+	}
+
+	hrAmount, err := xc.NewAmountHumanReadableFromStr(perpsBalance.MarginSummary.TotalRawUsd)
+	if err != nil {
+		return xc.AmountBlockchain{}, fmt.Errorf("failed to convert to human readable amount: %w", err)
+	}
+
+	return hrAmount.ToBlockchain(UsdcDecimals), nil
+}
+
+func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	address := args.Address()
+	contract, ok := args.Contract()
+	// Fetch spot balance if token address was explicitely passed
+	if ok {
+		return client.fetchSpotBalance(ctx, address, contract)
+	} else { //
+		// Fetch perps balance otherwise
+		return client.fetchPerpsBalance(ctx, address)
+	}
+}
+
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	if contract == "" {
+		return UsdcDecimals, nil
+	}
+
 	tokensMeta, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch token metadata: %w", err)
@@ -427,7 +461,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	name, _, ok := strings.Cut(string(contract), ":")
-	if !ok {
+	if ok {
 		return 0, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
 	}
 
