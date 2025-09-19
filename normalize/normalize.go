@@ -160,24 +160,26 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 	case xc.DriverXrp:
 		// nothing to do, base58
 	case xc.DriverHyperliquid:
-		// Token addresses have a prefix like "USDC:" or "USDC-",
-		// so we need to normalize the part after the prefix.
-		sep := ":"
-		if strings.Contains(address, "-") && !strings.Contains(address, ":") {
-			sep = "-"
+		if address != "USDCPerps" {
+			// Token addresses have a prefix like "USDC:" or "USDC-",
+			// so we need to normalize the part after the prefix.
+			sep := ":"
+			if strings.Contains(address, "-") && !strings.Contains(address, ":") {
+				sep = "-"
+			}
+			parts := strings.Split(address, sep)
+			lastPart := parts[len(parts)-1]
+
+			// lowercase
+			prefix := "0x"
+			lastPart = strings.TrimPrefix(lastPart, "0x")
+			lastPart = prefix + lastPart
+			lastPart = strings.ToLower(lastPart)
+
+			// re-join
+			parts[len(parts)-1] = lastPart
+			address = strings.Join(parts, sep)
 		}
-		parts := strings.Split(address, sep)
-		lastPart := parts[len(parts)-1]
-
-		// lowercase
-		prefix := "0x"
-		lastPart = strings.TrimPrefix(lastPart, "0x")
-		lastPart = prefix + lastPart
-		lastPart = strings.ToLower(lastPart)
-
-		// re-join
-		parts[len(parts)-1] = lastPart
-		address = strings.Join(parts, sep)
 
 	default:
 	}
