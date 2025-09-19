@@ -74,10 +74,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		return nil, fmt.Errorf("failed to parse mainnet rpc url: %w", err)
 	}
 
-	wssUrl := &url.URL{}
-	*wssUrl = *rpcUrl
-	wssUrl.Scheme = "wss"
-
 	var hyperliquidChain string
 	if cfg.Network == "mainnet" {
 		hyperliquidChain = "Mainnet"
@@ -85,13 +81,18 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 		hyperliquidChain = "Testnet"
 	}
 
-	url, err := url.Parse(cfg.URL)
+	nodeurl, err := url.Parse(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse url: %w", err)
 	}
 
+	wssUrl := &url.URL{}
+	*wssUrl = *nodeurl
+	wssUrl.Scheme = "wss"
+	wssUrl.Path = wssUrl.Path + "/ws"
+
 	return &Client{
-		Url:              url,
+		Url:              nodeurl,
 		IndexerUrl:       rpcUrl,
 		HyperliquidChain: hyperliquidChain,
 		HttpClient:       cfg.DefaultHttpClient(),
@@ -640,6 +641,7 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 	}
 
 	logger.Info("subscribing to hype trades")
+	fmt.Printf("payload: %s\n", string(payload))
 	err = c.WriteMessage(websocket.TextMessage, payload)
 	if err != nil {
 		return 0, fmt.Errorf("failed to write ws message: %w", err)
@@ -654,6 +656,7 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 	var response wstypes.Message[wstypes.Request]
 	err = json.Unmarshal(m, &response)
 	if err != nil {
+		fmt.Printf("wss response: %s\n", string(m))
 		return 0, fmt.Errorf("failed to read ws subscription response: %w", err)
 	}
 
