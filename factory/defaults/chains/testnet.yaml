@@ -247,6 +247,8 @@ chains:
     chain_name: Hyperliquid (Testnet)
     decimals: 8
     fee_limit: "100.0"
+    # https://rpc.hyperliquid-testnet.xyz
+    indexer_url: "https://rpc.hyperliquid-testnet.xyz"
     native_assets:
       - asset_id: "HYPE"
         contract_id: "HYPE:0x0d01dc56dcaaca66ad901c959b4011ec"

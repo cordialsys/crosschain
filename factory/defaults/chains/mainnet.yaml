@@ -583,6 +583,8 @@ chains:
     chain_name: Hyperliquid
     decimals: 8
     fee_limit: "100.0"
+    # indexer url, provides explorer api
+    indexer_url: "https://rpc.hyperliquid.xyz"
     external:
       coin_market_cap:
         asset_id: "32196"
