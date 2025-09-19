@@ -107,6 +107,8 @@ type EvmContract struct {
 type Action interface {
 	GetTime() uint64
 	GetTypedData() (apitypes.TypedData, error)
+	GetDestination() xc.Address
+	GetAmount() (xc.AmountHumanReadable, error)
 }
 
 type SpotSend struct {
@@ -121,6 +123,14 @@ type SpotSend struct {
 
 func (s SpotSend) GetTime() uint64 {
 	return s.Time
+}
+
+func (s SpotSend) GetDestination() xc.Address {
+	return xc.Address(s.Destination)
+}
+
+func (s SpotSend) GetAmount() (xc.AmountHumanReadable, error) {
+	return xc.NewAmountHumanReadableFromStr(s.Amount)
 }
 
 func (s SpotSend) GetTypedData() (apitypes.TypedData, error) {
@@ -166,7 +176,7 @@ func (s SpotSend) GetTypedData() (apitypes.TypedData, error) {
 	return typedData, nil
 }
 
-type UsdcSend struct {
+type UsdSend struct {
 	Type             string `json:"type"        msgpack:"type"`
 	SignatureChainId string `json:"signatureChainId"`
 	HyperliquidChain string `json:"hyperliquidChain" msgpack:"hyperliquidChain"`
@@ -175,11 +185,19 @@ type UsdcSend struct {
 	Time             uint64 `json:"time"        msgpack:"time"`
 }
 
-func (s UsdcSend) GetTime() uint64 {
+func (s UsdSend) GetTime() uint64 {
 	return s.Time
 }
 
-func (s UsdcSend) GetTypedData() (apitypes.TypedData, error) {
+func (s UsdSend) GetDestination() xc.Address {
+	return xc.Address(s.Destination)
+}
+
+func (s UsdSend) GetAmount() (xc.AmountHumanReadable, error) {
+	return xc.NewAmountHumanReadableFromStr(s.Amount)
+}
+
+func (s UsdSend) GetTypedData() (apitypes.TypedData, error) {
 	amount := s.Amount
 
 	chainId, err := strconv.ParseInt(s.SignatureChainId, 0, 64)
@@ -254,6 +272,14 @@ func (t Transaction) GetContract() xc.ContractAddress {
 	return xc.ContractAddress(token)
 }
 
+func (t Transaction) GetType() (string, error) {
+	actionType, ok := GetValue[string](t.Action, "type")
+	if !ok {
+		return actionType, errors.New("missing action type")
+	}
+	return actionType, nil
+}
+
 func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 	actionType, ok := GetValue[string](t.Action, "type")
 	if !ok {
@@ -301,6 +327,69 @@ func (t Transaction) GetSpotSend() (SpotSend, bool, error) {
 		Amount:           amount,
 		Time:             uint64(timestamp),
 	}, true, nil
+}
+
+func (t Transaction) GetUsdSend() (UsdSend, bool, error) {
+	actionType, ok := GetValue[string](t.Action, "type")
+	if !ok {
+		return UsdSend{}, false, errors.New("invalid action format")
+	}
+
+	if actionType != ActionUsdSend {
+		return UsdSend{}, false, nil
+	}
+
+	sigChainId, ok := GetValue[string](t.Action, "signatureChainId")
+	if !ok {
+		return UsdSend{}, false, errors.New("failed to get spot send, missing: 'signatureChainId'")
+	}
+	hypeChain, ok := GetValue[string](t.Action, "hyperliquidChain")
+	if !ok {
+		return UsdSend{}, false, errors.New("failed to get spot send, missing: 'hyperliquidChain'")
+	}
+	destination, ok := GetValue[string](t.Action, "destination")
+	if !ok {
+		return UsdSend{}, false, errors.New("failed to get spot send, missing: 'destination'")
+	}
+
+	amount, ok := GetValue[string](t.Action, "amount")
+	if !ok {
+		return UsdSend{}, false, errors.New("failed to get spot send, missing: 'amount'")
+	}
+
+	// json numbers are always float
+	timestamp, ok := GetValue[float64](t.Action, "time")
+	if !ok {
+		return UsdSend{}, false, errors.New("failed to get spot send, missing: 'time'")
+	}
+
+	return UsdSend{
+		Type:             actionType,
+		SignatureChainId: sigChainId,
+		HyperliquidChain: hypeChain,
+		Destination:      destination,
+		Amount:           amount,
+		Time:             uint64(timestamp),
+	}, true, nil
+}
+
+func (t Transaction) GetAction() (Action, error) {
+	actionType, err := t.GetType()
+	if err != nil {
+		return nil, err
+	}
+
+	if actionType == ActionSpotSend {
+		spotSend, _, err := t.GetSpotSend()
+		return spotSend, err
+	}
+
+	if actionType == ActionUsdSend {
+		usdSend, _, err := t.GetUsdSend()
+		return usdSend, err
+	}
+
+	return nil, errors.New("only spotSend and usdSend actions are suppoted for now")
 }
 
 func GetActionHash(action Action) (string, error) {
