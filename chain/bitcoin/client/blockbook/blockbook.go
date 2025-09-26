@@ -17,6 +17,7 @@ import (
 	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/bbrpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/rest"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/rpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
@@ -38,7 +39,8 @@ type BlockbookClient struct {
 
 	skipAmountFilter bool
 
-	bbClient types.BlockBookClient
+	bbClient  types.BlockBookClient
+	rpcClient *rpc.Client
 }
 
 var _ xclient.Client = &BlockbookClient{}
@@ -70,6 +72,9 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		bbClient = bbRest
 	}
 
+	rpcClient := rpc.NewClient(url)
+	rpcClient.SetHttpClient(httpClient)
+
 	return &BlockbookClient{
 		asset,
 		chaincfg,
@@ -77,6 +82,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		decoder,
 		false,
 		bbClient,
+		rpcClient,
 	}, nil
 }
 
@@ -133,6 +139,28 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockc
 
 	data, err := client.bbClient.EstimateFee(ctx, blocks)
 	if err != nil {
+		// Some backends do not support fee estimation
+		if apiErr, ok := err.(*types.ErrorResponse); ok && apiErr.HttpStatus == 404 {
+			logrus.Info("estimate-fee is not supported, trying to use native blockstats endpoint")
+			// try using the native blockstats endpoint to use the avg fee rate
+			stats, err := client.rpcClient.GetBlockStats(ctx)
+			if err != nil {
+				// use the configured default price, if it's set.
+				defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
+				logrus.WithField("chain", client.Asset.GetChain().Chain).
+					WithField("defaultPrice", defaultPrice).
+					WithField("error", err).
+					Warn("using default fee price since estimate-fee is not supported")
+				if client.Asset.GetChain().ChainGasPriceDefault >= 1 {
+					return xc.NewAmountBlockchainFromUint64(uint64(defaultPrice)), nil
+				}
+			}
+			avg := uint64(stats.AvgFeeRate)
+			if avg < 1 {
+				avg = 1
+			}
+			return xc.NewAmountBlockchainFromUint64(avg), nil
+		}
 		return xc.AmountBlockchain{}, err
 	}
 
