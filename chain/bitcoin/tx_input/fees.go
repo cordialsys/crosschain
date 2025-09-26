@@ -5,16 +5,16 @@ import (
 )
 
 // Per chain min
-func MinFeePerByte(chain *xc.ChainConfig) uint64 {
+func MinFeePerByte(chain *xc.ChainConfig) float64 {
 	if chain.ChainMinGasPrice >= 1 {
-		return uint64(chain.ChainMinGasPrice)
+		return chain.ChainMinGasPrice
 	}
 	return 8
 }
 
 // Previously we would apply multiplier during estimation, rather than during tx-building/serialization.
 // This should be removed with the legacy endpoints.
-func LegacyFeeFilter(chain *xc.ChainConfig, satsPerByte uint64, multiplier float64, maxGasPrice float64) uint64 {
+func LegacyFeeFilter(chain *xc.ChainConfig, satsPerByte float64, multiplier float64, maxGasPrice float64) float64 {
 	minSatsPerByte := MinFeePerByte(chain)
 	if satsPerByte < minSatsPerByte {
 		satsPerByte = minSatsPerByte
@@ -34,5 +34,5 @@ func LegacyFeeFilter(chain *xc.ChainConfig, satsPerByte uint64, multiplier float
 	if satsPerByteFloat > max {
 		satsPerByteFloat = max
 	}
-	return uint64(satsPerByteFloat)
+	return satsPerByteFloat
 }

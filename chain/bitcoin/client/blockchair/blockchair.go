@@ -373,10 +373,10 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, args *txinfo.Ar
 	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
 }
 
-func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
+func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountHumanReadable, error) {
 	// estimate using last 1 blocks
 	numBlocks := 1
-	fallbackGasPerByte := xc.NewAmountBlockchainFromUint64(10)
+	fallbackGasPerByte := xc.NewAmountHumanReadableFromFloat(10)
 	satsPerByteFloat, err := client.EstimateGasFee(ctx, int64(numBlocks))
 
 	if err != nil {
@@ -387,9 +387,7 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountBlock
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
 
-	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), uint64(satsPerByteFloat), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
-
-	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
+	return xc.NewAmountHumanReadableFromFloat(satsPerByteFloat), nil
 }
 
 func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

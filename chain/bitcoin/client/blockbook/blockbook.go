@@ -108,10 +108,6 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 			formattedAddr = fmt.Sprintf("%s%s", types.BitcoinCashPrefix, addr)
 		}
 	}
-	url := fmt.Sprintf("api/v2/utxo/%s", formattedAddr)
-	if client.Asset.GetChain().ConfirmedUtxo {
-		url += "?confirmed=true"
-	}
 
 	data, err := client.bbClient.ListUtxo(ctx, formattedAddr, client.Asset.GetChain().ConfirmedUtxo)
 	if err != nil {
@@ -134,7 +130,7 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 	return outputs, nil
 }
 
-func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockchain, error) {
+func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountHumanReadable, error) {
 	blocks := 6
 
 	data, err := client.bbClient.EstimateFee(ctx, blocks)
@@ -152,30 +148,31 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountBlockc
 					WithField("error", err).
 					Warn("using default fee price since estimate-fee is not supported")
 				if client.Asset.GetChain().ChainGasPriceDefault >= 1 {
-					return xc.NewAmountBlockchainFromUint64(uint64(defaultPrice)), nil
+					return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
 				}
 			}
-			avg := uint64(stats.AvgFeeRate)
+			avg := stats.AvgFeeRate
 			if avg < 1 {
 				avg = 1
 			}
-			return xc.NewAmountBlockchainFromUint64(avg), nil
+			return xc.NewAmountHumanReadableFromFloat(avg), nil
 		}
-		return xc.AmountBlockchain{}, err
+		return xc.AmountHumanReadable{}, err
 	}
 
 	btcPerKb, err := decimal.NewFromString(data.Result)
 	if err != nil {
-		return xc.AmountBlockchain{}, err
+		return xc.AmountHumanReadable{}, err
 	}
 	// convert to BTC/byte
 	BtcPerB := btcPerKb.Div(decimal.NewFromInt(1000))
 	// convert to sats/byte
-	satsPerB := xc.AmountHumanReadable(BtcPerB).ToBlockchain(client.Asset.GetDecimals())
+	decimalFactor := decimal.NewFromInt32(10).Pow(decimal.NewFromInt32(client.Asset.GetChain().Decimals))
+	satsPerB := xc.AmountHumanReadable(BtcPerB).Decimal().Mul(decimalFactor)
 
-	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerB.Uint64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
+	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerB.InexactFloat64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
-	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
+	return xc.NewAmountHumanReadableFromFloat(satsPerByte), nil
 }
 
 func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {

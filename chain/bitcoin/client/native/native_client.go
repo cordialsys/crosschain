@@ -458,10 +458,10 @@ func (client *NativeClient) Output(ctx context.Context, outpoint tx_input.Outpoi
 	return output, resp.Confirmations, nil
 }
 
-func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
+func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountHumanReadable, error) {
 	// estimate using last 1 blocks
 	numBlocks := 1
-	fallbackGasPerByte := xc.NewAmountBlockchainFromUint64(2)
+	fallbackGasPerByte := xc.NewAmountHumanReadableFromFloat(2)
 	satsPerByteFloat, err := client.EstimateSmartFee(ctx, int64(numBlocks))
 	if err != nil {
 		return fallbackGasPerByte, err
@@ -471,9 +471,7 @@ func (client *NativeClient) EstimateGas(ctx context.Context) (xc.AmountBlockchai
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
 
-	satsPerByte := uint64(satsPerByteFloat)
-
-	return xc.NewAmountBlockchainFromUint64(satsPerByte), nil
+	return xc.NewAmountHumanReadableFromFloat(satsPerByteFloat), nil
 }
 
 func (client *NativeClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

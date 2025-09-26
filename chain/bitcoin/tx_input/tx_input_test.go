@@ -203,24 +203,41 @@ func TestTxInputConflicts(t *testing.T) {
 
 func TestTxInputGasMultiplier(t *testing.T) {
 	type testcase struct {
-		input      *tx_input.TxInput
-		multiplier string
-		result     uint64
-		err        bool
+		input              *tx_input.TxInput
+		multiplier         string
+		multipliedGasPrice string
+		totalFee           string
+		err                bool
 	}
 	vectors := []testcase{
 		{
-			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
-			multiplier: "1.5",
-			result:     150,
+			input:              &tx_input.TxInput{GasPricePerByte: xc.NewAmountHumanReadableFromFloat(100), EstimatedSizePerSpentUtxo: 10, UnspentOutputs: []tx_input.Output{{}}},
+			multiplier:         "1.5",
+			multipliedGasPrice: "150",
+			totalFee:           "1500",
 		},
 		{
-			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
-			multiplier: "1",
-			result:     100,
+			input:              &tx_input.TxInput{GasPricePerByte: xc.NewAmountHumanReadableFromFloat(100), EstimatedSizePerSpentUtxo: 10, UnspentOutputs: []tx_input.Output{{}}},
+			multiplier:         "1",
+			multipliedGasPrice: "100",
+			totalFee:           "1000",
 		},
 		{
-			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountBlockchainFromUint64(100)},
+			// Gas price less than 1
+			input:              &tx_input.TxInput{GasPricePerByte: xc.NewAmountHumanReadableFromFloat(0.1), EstimatedSizePerSpentUtxo: 100, UnspentOutputs: []tx_input.Output{{}}},
+			multiplier:         "1",
+			multipliedGasPrice: "0.1",
+			totalFee:           "10",
+		},
+		{
+			// Gas price less than 1 with multiplier
+			input:              &tx_input.TxInput{GasPricePerByte: xc.NewAmountHumanReadableFromFloat(0.1), EstimatedSizePerSpentUtxo: 100, UnspentOutputs: []tx_input.Output{{}}},
+			multiplier:         "1.5",
+			multipliedGasPrice: "0.15",
+			totalFee:           "15",
+		},
+		{
+			input:      &tx_input.TxInput{GasPricePerByte: xc.NewAmountHumanReadableFromFloat(100)},
 			multiplier: "abc",
 			err:        true,
 		},
@@ -231,8 +248,12 @@ func TestTxInputGasMultiplier(t *testing.T) {
 		if v.err {
 			require.Error(t, err, desc)
 		} else {
-			require.Equal(t, v.result, v.input.GasPricePerByte.Uint64(), desc)
+			require.Equal(t, v.multipliedGasPrice, v.input.GasPricePerByte.String(), desc)
+
+			maxFee, _ := v.input.GetFeeLimit()
+			require.Equal(t, v.totalFee, maxFee.String(), desc)
 		}
+
 	}
 }
 
