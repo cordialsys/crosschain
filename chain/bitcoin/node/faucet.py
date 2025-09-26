@@ -5,7 +5,6 @@ from flask import request
 app = Flask(__name__)
 
 FAUCET_PORT = int(os.getenv("FAUCET_PORT", "10001"))
-RPC_PORT = int(os.getenv("RPC_PORT", "10000"))
 
 def system(cmd: str):
     print("running:\n"+cmd)

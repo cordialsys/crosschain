@@ -92,7 +92,7 @@ func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return fmt.Errorf("bad tx: %v", err)
 	}
 
-	_, err = client.bbClient.SubmitTx(ctx, serial)
+	_, err = client.rpcClient.SubmitTx(ctx, serial)
 	return err
 }
 

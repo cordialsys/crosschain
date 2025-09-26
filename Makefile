@@ -36,3 +36,6 @@ build-bitcoin-amd:
 	docker buildx bake --set '*.platform=linux/amd64' bitcoin
 build-bitcoin-arm:
 	docker buildx bake --set '*.platform=linux/arm64' bitcoin
+
+build-push-bitcoin:
+	docker buildx bake bitcoin --push
