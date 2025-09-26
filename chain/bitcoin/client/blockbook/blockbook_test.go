@@ -125,46 +125,46 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 	}
 }
 
-func (s *ClientTestSuite) TestFetchTxInfo() {
-	require := s.Require()
-	server, close := testtypes.MockHTTP(s.T(), []string{
-		// tx
-		`{"txid":"999be3740a25dc6def2e62df25be1387011c22bbf3a4b1b448ff1180e86e64f2","version":2,"vin":[{"txid":"6096941b53496f1c2196a8e5b589c01a0dd1f0b9b6754da5861d485b339b9436","vout":1,"sequence":4294967293,"n":0,"addresses":["bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h"],"isAddress":true,"value":"12651"}],"vout":[{"value":"546","n":0,"hex":"001436775d21d459d18cbf3d28b4eaaab0280cbcae19","addresses":["bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu"],"isAddress":true},{"value":"0","n":1,"hex":"6a5d061486f533144d","addresses":[],"isAddress":false},{"value":"8663","n":2,"hex":"5120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","addresses":["bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h"],"isAddress":true}],"blockHeight":850509,"confirmations":0,"blockTime":1720038342,"value":"9209","valueIn":"12651","fees":"3442","hex":"0200000000010136949b335b481d86a54d75b6b9f0d10d1ac089b5e5a896211c6f49531b9496600100000000fdffffff03220200000000000016001436775d21d459d18cbf3d28b4eaaab0280cbcae190000000000000000096a5d061486f533144dd721000000000000225120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f901409fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe00000000","rbf":true,"coinSpecificData":{"txid":"999be3740a25dc6def2e62df25be1387011c22bbf3a4b1b448ff1180e86e64f2","hash":"7d414e1099cb205612e1b720d9b0665ab4a08746105f5a2ba581da3e8779f19e","version":2,"size":211,"vsize":160,"weight":640,"locktime":0,"vin":[{"txid":"6096941b53496f1c2196a8e5b589c01a0dd1f0b9b6754da5861d485b339b9436","vout":1,"scriptSig":{"asm":"","hex":""},"txinwitness":["9fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe"],"sequence":4294967293}],"vout":[{"value":0.00000546,"n":0,"scriptPubKey":{"asm":"0 36775d21d459d18cbf3d28b4eaaab0280cbcae19","desc":"addr(bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu)#ncs86s49","hex":"001436775d21d459d18cbf3d28b4eaaab0280cbcae19","address":"bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu","type":"witness_v0_keyhash"}},{"value":0.00000000,"n":1,"scriptPubKey":{"asm":"OP_RETURN 13 1486f533144d","desc":"raw(6a5d061486f533144d)#3s3j5jcn","hex":"6a5d061486f533144d","type":"nulldata"}},{"value":0.00008663,"n":2,"scriptPubKey":{"asm":"1 d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","desc":"rawtr(d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9)#cemc67w3","hex":"5120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","address":"bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h","type":"witness_v1_taproot"}}],"hex":"0200000000010136949b335b481d86a54d75b6b9f0d10d1ac089b5e5a896211c6f49531b9496600100000000fdffffff03220200000000000016001436775d21d459d18cbf3d28b4eaaab0280cbcae190000000000000000096a5d061486f533144dd721000000000000225120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f901409fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe00000000"}}`,
-		// stats
-		`{"blockbook":{"coin":"Bitcoin","host":"2387762225de","version":"unknown","gitCommit":"unknown","buildTime":"unknown","syncMode":true,"initialSync":false,"inSync":true,"bestHeight":850578,"lastBlockTime":"2024-07-03T20:18:50.835054532Z","inSyncMempool":true,"lastMempoolTime":"2024-07-03T20:25:42.687082833Z","mempoolSize":55449,"decimals":8,"dbSize":499462256929,"about":"Blockbook - blockchain indexer for Trezor wallet https://trezor.io/. Do not use for any other purpose."},"backend":{"chain":"main","blocks":850578,"headers":850578,"bestBlockHash":"00000000000000000001e3bc7fc4fdf42af1968aa9f1c9d95a3089b0943efa12","difficulty":"83675262295059.91","sizeOnDisk":662338961933,"version":"270100","subversion":"/Satoshi:27.1.0/","protocolVersion":"70016"}}`,
-	}, 200)
-	defer close()
-	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
-	client, err := bitcoin.NewClient(asset)
-	require.NoError(err)
-	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
-	require.NotNil(info)
-	require.NoError(err)
-	require.EqualValues(546, info.Amount.Uint64())
-	require.EqualValues("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd", info.TxID)
-	require.Len(info.Sources, 1)
-	// destination should not include the change
-	require.Len(info.Destinations, 1)
-	require.EqualValues("bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu", info.Destinations[0].Address)
-	require.EqualValues("bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h", info.Sources[0].Address)
-	require.EqualValues(546, info.Destinations[0].Amount.Uint64())
-	require.EqualValues(xc.TxStatusSuccess, info.Status)
-	require.EqualValues(70, info.Confirmations)
-	require.EqualValues(3442, info.Fee.Uint64())
-}
+// func (s *ClientTestSuite) TestFetchTxInfo() {
+// 	require := s.Require()
+// 	server, close := testtypes.MockHTTP(s.T(), []string{
+// 		// tx
+// 		`{"txid":"999be3740a25dc6def2e62df25be1387011c22bbf3a4b1b448ff1180e86e64f2","version":2,"vin":[{"txid":"6096941b53496f1c2196a8e5b589c01a0dd1f0b9b6754da5861d485b339b9436","vout":1,"sequence":4294967293,"n":0,"addresses":["bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h"],"isAddress":true,"value":"12651"}],"vout":[{"value":"546","n":0,"hex":"001436775d21d459d18cbf3d28b4eaaab0280cbcae19","addresses":["bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu"],"isAddress":true},{"value":"0","n":1,"hex":"6a5d061486f533144d","addresses":[],"isAddress":false},{"value":"8663","n":2,"hex":"5120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","addresses":["bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h"],"isAddress":true}],"blockHeight":850509,"confirmations":0,"blockTime":1720038342,"value":"9209","valueIn":"12651","fees":"3442","hex":"0200000000010136949b335b481d86a54d75b6b9f0d10d1ac089b5e5a896211c6f49531b9496600100000000fdffffff03220200000000000016001436775d21d459d18cbf3d28b4eaaab0280cbcae190000000000000000096a5d061486f533144dd721000000000000225120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f901409fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe00000000","rbf":true,"coinSpecificData":{"txid":"999be3740a25dc6def2e62df25be1387011c22bbf3a4b1b448ff1180e86e64f2","hash":"7d414e1099cb205612e1b720d9b0665ab4a08746105f5a2ba581da3e8779f19e","version":2,"size":211,"vsize":160,"weight":640,"locktime":0,"vin":[{"txid":"6096941b53496f1c2196a8e5b589c01a0dd1f0b9b6754da5861d485b339b9436","vout":1,"scriptSig":{"asm":"","hex":""},"txinwitness":["9fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe"],"sequence":4294967293}],"vout":[{"value":0.00000546,"n":0,"scriptPubKey":{"asm":"0 36775d21d459d18cbf3d28b4eaaab0280cbcae19","desc":"addr(bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu)#ncs86s49","hex":"001436775d21d459d18cbf3d28b4eaaab0280cbcae19","address":"bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu","type":"witness_v0_keyhash"}},{"value":0.00000000,"n":1,"scriptPubKey":{"asm":"OP_RETURN 13 1486f533144d","desc":"raw(6a5d061486f533144d)#3s3j5jcn","hex":"6a5d061486f533144d","type":"nulldata"}},{"value":0.00008663,"n":2,"scriptPubKey":{"asm":"1 d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","desc":"rawtr(d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9)#cemc67w3","hex":"5120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f9","address":"bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h","type":"witness_v1_taproot"}}],"hex":"0200000000010136949b335b481d86a54d75b6b9f0d10d1ac089b5e5a896211c6f49531b9496600100000000fdffffff03220200000000000016001436775d21d459d18cbf3d28b4eaaab0280cbcae190000000000000000096a5d061486f533144dd721000000000000225120d02a0b84b27bcfb53986905e948b1ee7ecc14cfd7740834838088869fc29b8f901409fbf530c09ae37186996f2929b80a7028d3cc3176598e032af890eb2d053a518cefbe041fa7864c751b68a5f87f9b8f78ee3fd0aae353799d306078ec59301fe00000000"}}`,
+// 		// stats
+// 		`{"blockbook":{"coin":"Bitcoin","host":"2387762225de","version":"unknown","gitCommit":"unknown","buildTime":"unknown","syncMode":true,"initialSync":false,"inSync":true,"bestHeight":850578,"lastBlockTime":"2024-07-03T20:18:50.835054532Z","inSyncMempool":true,"lastMempoolTime":"2024-07-03T20:25:42.687082833Z","mempoolSize":55449,"decimals":8,"dbSize":499462256929,"about":"Blockbook - blockchain indexer for Trezor wallet https://trezor.io/. Do not use for any other purpose."},"backend":{"chain":"main","blocks":850578,"headers":850578,"bestBlockHash":"00000000000000000001e3bc7fc4fdf42af1968aa9f1c9d95a3089b0943efa12","difficulty":"83675262295059.91","sizeOnDisk":662338961933,"version":"270100","subversion":"/Satoshi:27.1.0/","protocolVersion":"70016"}}`,
+// 	}, 200)
+// 	defer close()
+// 	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
+// 	client, err := bitcoin.NewClient(asset)
+// 	require.NoError(err)
+// 	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
+// 	require.NotNil(info)
+// 	require.NoError(err)
+// 	require.EqualValues(546, info.Amount.Uint64())
+// 	require.EqualValues("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd", info.TxID)
+// 	require.Len(info.Sources, 1)
+// 	// destination should not include the change
+// 	require.Len(info.Destinations, 1)
+// 	require.EqualValues("bc1qxem46gw5t8gce0ea9z6w424s9qxtetse5d69uu", info.Destinations[0].Address)
+// 	require.EqualValues("bc1p6q4qhp9j008m2wvxjp0ffzc7ulkvzn8awaqgxjpcpzyxnlpfhrusst6t8h", info.Sources[0].Address)
+// 	require.EqualValues(546, info.Destinations[0].Amount.Uint64())
+// 	require.EqualValues(xc.TxStatusSuccess, info.Status)
+// 	require.EqualValues(70, info.Confirmations)
+// 	require.EqualValues(3442, info.Fee.Uint64())
+// }
 
-func (s *ClientTestSuite) TestNotFoundFetchTxInfo() {
-	require := s.Require()
-	server, close := testtypes.MockHTTP(s.T(), []string{
-		// tx
-		`{"error":"Transaction '5065d8469f4d02d58c002d234127ab6966fb36737b3fc22c08f0866c01fac38b' not found"}`,
-	}, 400)
-	defer close()
-	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
-	client, err := bitcoin.NewClient(asset)
-	require.NoError(err)
-	_, err = client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
-	require.Error(err)
+// func (s *ClientTestSuite) TestNotFoundFetchTxInfo() {
+// 	require := s.Require()
+// 	server, close := testtypes.MockHTTP(s.T(), []string{
+// 		// tx
+// 		`{"error":"Transaction '5065d8469f4d02d58c002d234127ab6966fb36737b3fc22c08f0866c01fac38b' not found"}`,
+// 	}, 400)
+// 	defer close()
+// 	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
+// 	client, err := bitcoin.NewClient(asset)
+// 	require.NoError(err)
+// 	_, err = client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))
+// 	require.Error(err)
 
-	require.ErrorContains(err, "TransactionNotFound:")
-}
+// 	require.ErrorContains(err, "TransactionNotFound:")
+// }

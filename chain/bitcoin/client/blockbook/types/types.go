@@ -46,17 +46,17 @@ type BlockbookStats struct {
 }
 
 type BackendStats struct {
-	Chain           string `json:"chain"`
-	Blocks          int    `json:"blocks"`
-	Headers         int    `json:"headers"`
-	BestBlockHash   string `json:"bestBlockHash"`
-	Difficulty      string `json:"difficulty"`
-	SizeOnDisk      int64  `json:"sizeOnDisk"`
-	Version         string `json:"version"`
-	Subversion      string `json:"subversion"`
-	ProtocolVersion string `json:"protocolVersion"`
-	TimeOffset      int64  `json:"timeOffset"`
-	Warnings        string `json:"warnings"`
+	Chain           string                 `json:"chain"`
+	Blocks          int                    `json:"blocks"`
+	Headers         int                    `json:"headers"`
+	BestBlockHash   string                 `json:"bestBlockHash"`
+	Difficulty      xc.AmountHumanReadable `json:"difficulty"`
+	SizeOnDisk      int64                  `json:"sizeOnDisk"`
+	Version         string                 `json:"version"`
+	Subversion      string                 `json:"subversion"`
+	ProtocolVersion string                 `json:"protocolVersion"`
+	TimeOffset      int64                  `json:"timeOffset"`
+	Warnings        string                 `json:"warnings"`
 }
 
 type StatsResponse struct {
@@ -95,22 +95,22 @@ func (u Utxo) GetIndex() uint32 {
 }
 
 type Vin struct {
-	TxID      string   `json:"txid"`
-	Vout      int      `json:"vout"`
-	Sequence  uint32   `json:"sequence"`
-	N         int      `json:"n"`
-	Addresses []string `json:"addresses"`
-	IsAddress bool     `json:"isAddress"`
-	Value     string   `json:"value"`
-	Hex       string   `json:"hex"`
+	TxID      string              `json:"txid"`
+	Vout      int                 `json:"vout"`
+	Sequence  uint32              `json:"sequence"`
+	N         int                 `json:"n"`
+	Addresses []string            `json:"addresses"`
+	IsAddress bool                `json:"isAddress"`
+	Value     xc.AmountBlockchain `json:"value"`
+	Hex       string              `json:"hex"`
 }
 
 type Vout struct {
-	Value     string   `json:"value"`
-	N         int      `json:"n"`
-	Hex       string   `json:"hex"`
-	Addresses []string `json:"addresses"`
-	IsAddress bool     `json:"isAddress"`
+	Value     xc.AmountBlockchain `json:"value"`
+	N         int                 `json:"n"`
+	Hex       string              `json:"hex"`
+	Addresses []string            `json:"addresses"`
+	IsAddress bool                `json:"isAddress"`
 }
 
 type TransactionResponse struct {
@@ -135,24 +135,40 @@ type EstimateFeeResponse struct {
 	Result string `json:"result"`
 }
 
+type BlockHeader struct {
+	Page              int                    `json:"page"`
+	TotalPages        int                    `json:"totalPages"`
+	ItemsOnPage       int                    `json:"itemsOnPage"`
+	Hash              string                 `json:"hash"`
+	PreviousBlockHash string                 `json:"previousBlockHash"`
+	NextBlockHash     string                 `json:"nextBlockHash"`
+	Height            int                    `json:"height"`
+	Confirmations     int                    `json:"confirmations"`
+	Size              int                    `json:"size"`
+	Time              int64                  `json:"time"`
+	Version           int                    `json:"version"`
+	MerkleRoot        string                 `json:"merkleRoot"`
+	Nonce             xc.AmountBlockchain    `json:"nonce"`
+	Bits              string                 `json:"bits"`
+	Difficulty        xc.AmountHumanReadable `json:"difficulty"`
+	TxCount           int                    `json:"txCount"`
+}
+
 type Block struct {
-	Page              int    `json:"page"`
-	TotalPages        int    `json:"totalPages"`
-	ItemsOnPage       int    `json:"itemsOnPage"`
-	Hash              string `json:"hash"`
-	PreviousBlockHash string `json:"previousBlockHash"`
-	NextBlockHash     string `json:"nextBlockHash"`
-	Height            int    `json:"height"`
-	Confirmations     int    `json:"confirmations"`
-	Size              int    `json:"size"`
-	Time              int64  `json:"time"`
-	Version           int    `json:"version"`
-	MerkleRoot        string `json:"merkleRoot"`
-	Nonce             string `json:"nonce"`
-	Bits              string `json:"bits"`
-	Difficulty        string `json:"difficulty"`
-	TxCount           int    `json:"txCount"`
-	Txs               []Tx   `json:"txs"`
+	BlockHeader
+	Txs []Tx     `json:"txs"`
+	Tx  []string `json:"tx"`
+}
+
+func (b *Block) GetTxIds() []string {
+	if len(b.Txs) > 0 {
+		ids := make([]string, len(b.Txs))
+		for i, tx := range b.Txs {
+			ids[i] = tx.TxID
+		}
+		return ids
+	}
+	return b.Tx
 }
 
 type Tx struct {

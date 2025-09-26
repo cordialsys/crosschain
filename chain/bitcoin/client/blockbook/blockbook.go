@@ -72,7 +72,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		bbClient = bbRest
 	}
 
-	rpcClient := rpc.NewClient(url)
+	rpcClient := rpc.NewClient(url, cfg.Base())
 	rpcClient.SetHttpClient(httpClient)
 
 	return &BlockbookClient{
@@ -186,7 +186,8 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	expectedTo := ""
 
-	data, err := client.bbClient.GetTx(ctx, string(txHash))
+	// data, err := client.bbClient.GetTx(ctx, string(txHash))
+	data, err := client.rpcClient.GetTx(ctx, string(txHash), client.Chaincfg)
 
 	if err != nil {
 		if bbErr, ok := err.(*types.ErrorResponse); ok {
@@ -240,7 +241,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 					Hash:  hash,
 					Index: uint32(in.Vout),
 				},
-				Value: xc.NewAmountBlockchainFromStr(in.Value),
+				Value: in.Value,
 				// PubKeyScript: []byte{},
 			},
 			// SigScript: sigScript,
@@ -265,8 +266,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	for _, out := range data.Vout {
 		recipient := tx.Recipient{
-			// To:    xc.Address(out.Recipient),
-			Value: xc.NewAmountBlockchainFromStr(out.Value),
+			Value: out.Value,
 		}
 		if len(out.Addresses) > 0 {
 			recipient.To = xc.Address(out.Addresses[0])
@@ -283,7 +283,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 			addr := out.Addresses[0]
 			endpoint := &xclient.LegacyTxInfoEndpoint{
 				Address:     xc.Address(addr),
-				Amount:      xc.NewAmountBlockchainFromStr(out.Value),
+				Amount:      out.Value,
 				NativeAsset: xc.NativeAsset(asset),
 				Asset:       string(asset),
 				Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
@@ -487,25 +487,33 @@ func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.Co
 }
 
 func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) {
-	stats, err := client.bbClient.LatestStats(ctx)
+	bestBlockHash, err := client.rpcClient.GetBestBlockHash(ctx)
 	if err != nil {
 		return 0, err
 	}
-
-	return uint64(stats.Backend.Blocks), nil
+	header, err := client.rpcClient.GetBlockHeader(ctx, bestBlockHash)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(header.Height), nil
 }
 
 func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
-		stats, err := client.bbClient.LatestStats(ctx)
+		lastestHeight, err := client.LatestBlock(ctx)
 		if err != nil {
 			return nil, err
 		}
-		height = uint64(stats.Backend.Blocks)
+		height = lastestHeight
 	}
 
-	blockResponse, err := client.bbClient.GetBlock(ctx, height)
+	blockHash, err := client.rpcClient.GetBlockHash(ctx, int(height))
+	if err != nil {
+		return nil, err
+	}
+
+	blockResponse, err := client.rpcClient.GetBlock(ctx, blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -518,8 +526,8 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 			time.Unix(blockResponse.Time, 0),
 		),
 	}
-	for _, tx := range blockResponse.Txs {
-		block.TransactionIds = append(block.TransactionIds, tx.TxID)
+	for _, tx := range blockResponse.GetTxIds() {
+		block.TransactionIds = append(block.TransactionIds, tx)
 	}
 	return block, nil
 }

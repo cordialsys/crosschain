@@ -15,12 +15,14 @@ import (
 type Client struct {
 	httpClient *http.Client
 	Url        string
+	chain      *xc.ChainBaseConfig
 }
 
-func NewClient(url string) *Client {
+func NewClient(url string, chain *xc.ChainBaseConfig) *Client {
 	return &Client{
 		httpClient: http.DefaultClient,
 		Url:        url,
+		chain:      chain,
 	}
 }
 
