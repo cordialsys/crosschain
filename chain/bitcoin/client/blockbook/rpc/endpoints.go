@@ -18,8 +18,13 @@ type GetBlockHashResponse struct {
 }
 
 type GetBlockStatsResponse struct {
-	AvgFeeRate float64 `json:"avgfeerate"`
-	MinFeeRate float64 `json:"minfeerate"`
+	AvgFeeRate xc.AmountHumanReadable `json:"avgfeerate"`
+	MinFeeRate xc.AmountHumanReadable `json:"minfeerate"`
+}
+
+type EstimateSmartFeeResponse struct {
+	Feerate xc.AmountHumanReadable `json:"feerate"`
+	Blocks  int                    `json:"blocks"`
 }
 
 type ScriptSig struct {
@@ -80,6 +85,16 @@ func (client *Client) GetBlockStats(ctx context.Context) (GetBlockStatsResponse,
 		return stats, err
 	}
 	return stats, nil
+}
+
+func (client *Client) EstimateSmartFee(ctx context.Context, blocks int) (EstimateSmartFeeResponse, error) {
+	var result EstimateSmartFeeResponse
+	params := []interface{}{blocks}
+	err := client.call(ctx, "estimatesmartfee", params, &result)
+	if err != nil {
+		return result, fmt.Errorf("failed to estimate smart fee for %d blocks: %w", blocks, err)
+	}
+	return result, nil
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, error) {
@@ -204,41 +219,21 @@ func (client *Client) GetTx(ctx context.Context, txid string, chaincfg *chaincfg
 		}
 
 		addresses := []string{}
-		if false {
-			// // Handle witness data (P2WPKH, P2WSH, etc.)
-			// // For P2WPKH, the witness contains [signature, pubkey]
-			// // For P2WSH, the witness contains [signature1, signature2, ..., script, scriptPubKey]
-			// // This looks like P2WPKH - extract public key from witness
-			// pubKeyHex := input.TxInWitness[len(input.TxInWitness)-1] // Last element is usually the public key
-			// pubKeyBytes, _ := hex.DecodeString(pubKeyHex)
-			// if len(pubKeyBytes) == 33 {
-			// 	// Generate P2WPKH address from the public key
-			// 	pubKeyHash := btcutil.Hash160(pubKeyBytes)
-			// 	witnessAddr, err := btcutil.NewAddressWitnessPubKeyHash(pubKeyHash, chaincfg)
-			// 	if err != nil {
-			// 		logrus.WithError(err).Warn("failed to derive P2WPKH address from witness")
-			// 	} else {
-			// 		addresses = append(addresses, witnessAddr.EncodeAddress())
-			// 		fmt.Println("address:", witnessAddr.String())
-			// 	}
-			// }
-		} else {
 
-			scriptHex := vout.ScriptPubKey.Hex
-			scriptPubKey, err := hex.DecodeString(scriptHex)
-			if err != nil {
-				return types.TransactionResponse{}, fmt.Errorf("failed to decode scriptPubKey hex: %w", err)
-			}
+		scriptHex := vout.ScriptPubKey.Hex
+		scriptPubKey, err := hex.DecodeString(scriptHex)
+		if err != nil {
+			return types.TransactionResponse{}, fmt.Errorf("failed to decode scriptPubKey hex: %w", err)
+		}
 
-			// Extract addresses from the scriptPubKey
-			_, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, chaincfg)
-			if err != nil {
-				return types.TransactionResponse{}, fmt.Errorf("failed to extract addresses from scriptPubKey: %w", err)
-			}
-			// Convert addresses to strings
-			for _, addr := range extracted {
-				addresses = append(addresses, addr.String())
-			}
+		// Extract addresses from the scriptPubKey
+		_, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, chaincfg)
+		if err != nil {
+			return types.TransactionResponse{}, fmt.Errorf("failed to extract addresses from scriptPubKey: %w", err)
+		}
+		// Convert addresses to strings
+		for _, addr := range extracted {
+			addresses = append(addresses, addr.String())
 		}
 		amount := vout.Value.ToBlockchain(decimals)
 

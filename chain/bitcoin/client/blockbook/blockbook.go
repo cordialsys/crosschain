@@ -131,39 +131,34 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 }
 
 func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountHumanReadable, error) {
-	blocks := 6
+	blocks := 4
 
-	data, err := client.bbClient.EstimateFee(ctx, blocks)
+	data, err := client.rpcClient.EstimateSmartFee(ctx, blocks)
 	if err != nil {
 		// Some backends do not support fee estimation
-		if apiErr, ok := err.(*types.ErrorResponse); ok && apiErr.HttpStatus == 404 {
-			logrus.Info("estimate-fee is not supported, trying to use native blockstats endpoint")
-			// try using the native blockstats endpoint to use the avg fee rate
-			stats, err := client.rpcClient.GetBlockStats(ctx)
-			if err != nil {
-				// use the configured default price, if it's set.
-				defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
-				logrus.WithField("chain", client.Asset.GetChain().Chain).
-					WithField("defaultPrice", defaultPrice).
-					WithField("error", err).
-					Warn("using default fee price since estimate-fee is not supported")
-				if client.Asset.GetChain().ChainGasPriceDefault >= 1 {
-					return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
-				}
+		logrus.WithError(err).Info("estimatesmartfee is not supported, trying to use native blockstats endpoint")
+		// try using the native blockstats endpoint to use the avg fee rate
+		stats, err := client.rpcClient.GetBlockStats(ctx)
+		if err != nil {
+			// use the configured default price, if it's set.
+			defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
+			logrus.WithField("chain", client.Asset.GetChain().Chain).
+				WithField("defaultPrice", defaultPrice).
+				WithField("error", err).
+				Warn("using default fee price since estimate-fee is not supported")
+			if client.Asset.GetChain().ChainGasPriceDefault >= 1 {
+				return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
 			}
-			avg := stats.AvgFeeRate
-			if avg < 1 {
-				avg = 1
-			}
-			return xc.NewAmountHumanReadableFromFloat(avg), nil
+			return xc.AmountHumanReadable{}, fmt.Errorf("could not estimate fee: %v", err)
 		}
-		return xc.AmountHumanReadable{}, err
+		avg := stats.AvgFeeRate
+		if avg.IsZero() {
+			avg = xc.NewAmountHumanReadableFromFloat(1)
+		}
+		return avg, nil
 	}
 
-	btcPerKb, err := decimal.NewFromString(data.Result)
-	if err != nil {
-		return xc.AmountHumanReadable{}, err
-	}
+	btcPerKb := data.Feerate.Decimal()
 	// convert to BTC/byte
 	BtcPerB := btcPerKb.Div(decimal.NewFromInt(1000))
 	// convert to sats/byte
@@ -183,7 +178,6 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	expectedTo := ""
 
-	// data, err := client.bbClient.GetTx(ctx, string(txHash))
 	data, err := client.rpcClient.GetTx(ctx, string(txHash), client.Chaincfg)
 
 	if err != nil {
@@ -523,8 +517,6 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 			time.Unix(blockResponse.Time, 0),
 		),
 	}
-	for _, tx := range blockResponse.GetTxIds() {
-		block.TransactionIds = append(block.TransactionIds, tx)
-	}
+	block.TransactionIds = append(block.TransactionIds, blockResponse.GetTxIds()...)
 	return block, nil
 }

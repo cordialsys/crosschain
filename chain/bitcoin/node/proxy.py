@@ -30,10 +30,17 @@ def proxy_request(target_port, path, method, headers, data, params, auth: str = 
         proxy_headers["Authorization"] = f"Basic " + base64.b64encode(auth.encode()).decode()
     
     try:
+        # Prepare auth for requests library
+        requests_auth = None
+        if auth is not None:
+            username, password = auth.split(':')
+            requests_auth = (username, password)
+        
         response = requests.request(
             method=method,
             url=url,
             headers=proxy_headers,
+            auth=requests_auth,
             data=data,
             params=params,
             stream=True
