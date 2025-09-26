@@ -52,7 +52,10 @@ func (client *Client) get(ctx context.Context, path string, resp interface{}) er
 		var errResponse types.ErrorResponse
 		err = json.Unmarshal(body, &errResponse)
 		if err != nil {
-			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
+			return &types.ErrorResponse{
+				ErrorMessage: fmt.Sprintf("failed to get %s: code=%d", path, res.StatusCode),
+				HttpStatus:   res.StatusCode,
+			}
 		}
 		errResponse.HttpStatus = res.StatusCode
 		return &errResponse
@@ -89,7 +92,10 @@ func (client *Client) post(ctx context.Context, path string, contentType string,
 		var errResponse types.ErrorResponse
 		err = json.Unmarshal(body, &errResponse)
 		if err != nil {
-			return fmt.Errorf("failed to get %s: code=%d", path, res.StatusCode)
+			return &types.ErrorResponse{
+				ErrorMessage: fmt.Sprintf("failed to get %s: code=%d", path, res.StatusCode),
+				HttpStatus:   res.StatusCode,
+			}
 		}
 		errResponse.HttpStatus = res.StatusCode
 		return &errResponse
