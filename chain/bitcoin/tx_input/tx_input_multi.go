@@ -8,9 +8,9 @@ import (
 
 // TxInput for Bitcoin
 type MultiTransferInput struct {
-	Inputs          []TxInput           `json:"inputs"`
-	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
-	EstimatedSize   uint64              `json:"estimated_size"`
+	Inputs          []TxInput              `json:"inputs"`
+	GasPricePerByte xc.AmountHumanReadable `json:"gas_price_per_byte"`
+	EstimatedSize   uint64                 `json:"estimated_size"`
 }
 
 // This is a necessary interface so we can check conflicts between:
@@ -47,8 +47,8 @@ func (input *MultiTransferInput) SetGasFeePriority(other xc.GasFeePriority) erro
 	if err != nil {
 		return err
 	}
-	gasPriceMultiplied := multiplier.Mul(decimal.NewFromBigInt(input.GasPricePerByte.Int(), 0)).BigInt()
-	input.GasPricePerByte = xc.AmountBlockchain(*gasPriceMultiplied)
+	gasPriceMultiplied := multiplier.Mul(input.GasPricePerByte.Decimal())
+	input.GasPricePerByte = xc.AmountHumanReadable(gasPriceMultiplied)
 	return nil
 }
 
@@ -58,8 +58,8 @@ func (txInput *MultiTransferInput) GetFeeLimit() (xc.AmountBlockchain, xc.Contra
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
 		txSize,
 	)
-	fee := gasPrice.Mul(&estimatedTxBytesLength)
-	return fee, ""
+	fee := gasPrice.Decimal().Mul(decimal.NewFromBigInt(estimatedTxBytesLength.Int(), 0))
+	return xc.AmountBlockchain(*fee.BigInt()), ""
 }
 
 func (input *MultiTransferInput) IndependentOf(other xc.TxInput) (independent bool) {

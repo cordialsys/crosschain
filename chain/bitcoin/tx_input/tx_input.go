@@ -36,9 +36,10 @@ type Output struct {
 // TxInput for Bitcoin
 type TxInput struct {
 	xc.TxInputEnvelope
-	Address         xc.Address          `json:"address"`
-	UnspentOutputs  []Output            `json:"unspent_outputs"`
-	GasPricePerByte xc.AmountBlockchain `json:"gas_price_per_byte"`
+	Address        xc.Address `json:"address"`
+	UnspentOutputs []Output   `json:"unspent_outputs"`
+	// Satoshi per byte (could be less than 1)
+	GasPricePerByte xc.AmountHumanReadable `json:"gas_price_per_byte"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
 }
@@ -66,8 +67,8 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	if err != nil {
 		return err
 	}
-	gasPriceMultiplied := multiplier.Mul(decimal.NewFromBigInt(input.GasPricePerByte.Int(), 0)).BigInt()
-	input.GasPricePerByte = xc.AmountBlockchain(*gasPriceMultiplied)
+	gasPriceMultiplied := multiplier.Mul(input.GasPricePerByte.Decimal())
+	input.GasPricePerByte = xc.AmountHumanReadable(gasPriceMultiplied)
 	return nil
 }
 
@@ -105,11 +106,13 @@ func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) 
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
 		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),
 	)
-	fee := gasPrice.Mul(&estimatedTxBytesLength)
-	return fee, ""
+	estimatedTxBytesLengthDecimal := decimal.NewFromBigInt(estimatedTxBytesLength.Int(), 0)
+
+	totalFee := gasPrice.Decimal().Mul(estimatedTxBytesLengthDecimal).BigInt()
+	return xc.AmountBlockchain(*totalFee), ""
 }
 
-func (txInput *TxInput) GetGetPricePerByte() xc.AmountBlockchain {
+func (txInput *TxInput) GetGetPricePerByte() xc.AmountHumanReadable {
 	return txInput.GasPricePerByte
 }
 
