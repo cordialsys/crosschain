@@ -386,8 +386,9 @@ func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountHuman
 	if satsPerByteFloat <= 0.0 {
 		return fallbackGasPerByte, fmt.Errorf("invalid sats per byte: %v", satsPerByteFloat)
 	}
+	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerByteFloat, client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
-	return xc.NewAmountHumanReadableFromFloat(satsPerByteFloat), nil
+	return xc.NewAmountHumanReadableFromFloat(satsPerByte), nil
 }
 
 func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {

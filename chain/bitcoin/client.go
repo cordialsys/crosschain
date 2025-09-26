@@ -7,9 +7,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook"
+	bitcoinclient "github.com/cordialsys/crosschain/chain/bitcoin/client"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockchair"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/native"
 	"github.com/cordialsys/crosschain/client"
 )
 
@@ -39,17 +38,14 @@ func NewBitcoinClient(cfgI xc.ITask) (BtcClient, error) {
 	}
 
 	switch BitcoinClient(cfgI.GetChain().Provider) {
-	case Native:
-		log.Debug("using native client")
-		return native.NewNativeClient(cfgI)
 	case Blockchair:
 		log.Debug("using blockchair client")
 		return blockchair.NewBlockchairClient(cfgI)
 	case Blockbook:
 		log.Debug("using blockbook client")
-		return blockbook.NewClient(cfgI)
+		return bitcoinclient.NewClient(cfgI)
 	default:
 		log.Debug("using default (blockbook) client")
-		return blockbook.NewClient(cfgI)
+		return bitcoinclient.NewClient(cfgI)
 	}
 }

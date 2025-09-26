@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/sirupsen/logrus"
 )
 

@@ -9,7 +9,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/shopspring/decimal"
 )
 
@@ -166,7 +166,7 @@ func (client *Client) GetRawTransaction(ctx context.Context, txid string, blockH
 	var result GetRawTransactionResponse
 	err := client.call(ctx, "getrawtransaction", params, &result)
 	if err != nil {
-		return GetRawTransactionResponse{}, fmt.Errorf("failed to get raw transaction for txid %s: %w", txid, err)
+		return GetRawTransactionResponse{}, err
 	}
 	return result, nil
 }
@@ -201,7 +201,7 @@ func (client *Client) GetTx(ctx context.Context, txid string, chaincfg *chaincfg
 	// Get raw transaction data
 	rawTx, err := client.GetRawTransaction(ctx, txid, blockHash...)
 	if err != nil {
-		return types.TransactionResponse{}, fmt.Errorf("failed to get raw transaction: %w", err)
+		return types.TransactionResponse{}, err
 	}
 
 	// Create cache for raw transactions to avoid redundant RPC calls

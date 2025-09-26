@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 )
 
 func (client *Client) LatestStats(ctx context.Context) (types.StatsResponse, error) {
