@@ -1,4 +1,4 @@
-package blockbook
+package client
 
 import (
 	"context"
@@ -14,11 +14,10 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/builder"
-	clientcommon "github.com/cordialsys/crosschain/chain/bitcoin/client"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/bbrpc"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/rest"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/rpc"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/bbrpc"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/rest"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/rpc"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
@@ -34,7 +33,6 @@ import (
 type BlockbookClient struct {
 	Asset    xc.ITask
 	Chaincfg *chaincfg.Params
-	Url      string
 	decoder  address.AddressDecoder
 
 	skipAmountFilter bool
@@ -55,30 +53,37 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	if err != nil {
 		return &BlockbookClient{}, err
 	}
-	url := cfg.URL
-	url = strings.TrimSuffix(url, "/")
+	rpcUrl := cfg.URL
+	rpcUrl = strings.TrimSuffix(rpcUrl, "/")
+
+	indexerUrl := cfg.IndexerUrl
+	if indexerUrl == "" {
+		// default to combined endpoint
+		indexerUrl = rpcUrl
+	}
+	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
+
 	decoder := address.NewAddressDecoder()
 
 	var bbClient types.BlockBookClient
 
 	if cfgI.GetChain().IndexerType == "bbrpc" {
-		bbRpc := bbrpc.NewClient(url)
+		bbRpc := bbrpc.NewClient(indexerUrl)
 		bbRpc.SetHttpClient(httpClient)
 		bbClient = bbRpc
 	} else {
 		// Default to the o.g. rest client
-		bbRest := rest.NewClient(url)
+		bbRest := rest.NewClient(indexerUrl)
 		bbRest.SetHttpClient(httpClient)
 		bbClient = bbRest
 	}
 
-	rpcClient := rpc.NewClient(url, cfg.Base())
+	rpcClient := rpc.NewClient(rpcUrl, cfg.Base())
 	rpcClient.SetHttpClient(httpClient)
 
 	return &BlockbookClient{
 		asset,
 		chaincfg,
-		url,
 		decoder,
 		false,
 		bbClient,
@@ -172,8 +177,7 @@ func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountHumanR
 
 func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
 	txWithInfo := &xclient.LegacyTxInfo{
-		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
-		Fee:    xc.NewAmountBlockchainFromUint64(0),
+		Amount: xc.NewAmountBlockchainFromUint64(0),
 	}
 
 	expectedTo := ""
@@ -181,9 +185,15 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	data, err := client.rpcClient.GetTx(ctx, string(txHash), client.Chaincfg)
 
 	if err != nil {
-		if bbErr, ok := err.(*types.ErrorResponse); ok {
+		if apiErr, ok := err.(*types.ErrorResponse); ok {
 			// they don't use 404 code :/
-			if bbErr.HttpStatus >= 400 && strings.Contains(bbErr.ErrorMessage, "not found") {
+			if apiErr.HttpStatus >= 400 && strings.Contains(apiErr.ErrorMessage, "not found") {
+				return *txWithInfo, errors.TransactionNotFoundf("%v", err)
+			}
+
+		}
+		if apiErr, ok := err.(*types.JsonRPCError); ok {
+			if strings.Contains(strings.ToLower(apiErr.Message), "no such mempool or blockchain transaction") {
 				return *txWithInfo, errors.TransactionNotFoundf("%v", err)
 			}
 		}
@@ -222,9 +232,12 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	// btc chains the native asset and asset are the same
 	asset := client.Asset.GetChain().Chain
 
+	totalIn := xc.NewAmountBlockchainFromUint64(0)
+	totalOut := xc.NewAmountBlockchainFromUint64(0)
+
 	for _, in := range data.Vin {
 		hash, _ := hex.DecodeString(in.TxID)
-		// sigScript, _ := hex.DecodeString(in.ScriptHex)
+		totalIn = totalIn.Add(&in.Value)
 
 		input := tx.Input{
 			Output: tx_input.Output{
@@ -233,10 +246,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 					Index: uint32(in.Vout),
 				},
 				Value: in.Value,
-				// PubKeyScript: []byte{},
 			},
-			// SigScript: sigScript,
-			// Address: xc.Address(in.Addresses[0]),
 		}
 		if len(in.Addresses) > 0 {
 			input.Address = xc.Address(in.Addresses[0])
@@ -244,7 +254,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 		txObject.UnspentOutputs = append(txObject.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
-		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxID), in.Vout)
+		utxoId := NewUtxoId(xc.TxHash(in.TxID), in.Vout)
 		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
@@ -263,13 +273,14 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 			recipient.To = xc.Address(out.Addresses[0])
 		}
 		txObject.Recipients = append(txObject.Recipients, recipient)
+		totalOut = totalOut.Add(&out.Value)
 	}
 
 	// detect from, to, amount
 	from, _ := tx.DetectFrom(inputs)
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for i, out := range data.Vout {
-		utxoId := clientcommon.NewUtxoId(txHash, out.N)
+		utxoId := NewUtxoId(txHash, out.N)
 		if len(out.Addresses) > 0 {
 			addr := out.Addresses[0]
 			endpoint := &xclient.LegacyTxInfoEndpoint{
@@ -279,6 +290,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 				Asset:       string(asset),
 				Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
 			}
+
 			if addr != from {
 				// legacy endpoint drops 'change' movements
 				destinations = append(destinations, endpoint)
@@ -295,6 +307,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	txWithInfo.Amount = amount
 	txWithInfo.Sources = sources
 	txWithInfo.Destinations = destinations
+	txWithInfo.Fee = totalIn.Sub(&totalOut)
 
 	return *txWithInfo, nil
 }

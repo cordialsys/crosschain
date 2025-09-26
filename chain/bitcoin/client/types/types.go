@@ -29,6 +29,16 @@ func (err *ErrorResponse) Error() string {
 	return err.ErrorMessage
 }
 
+type JsonRPCError struct {
+	Message    string `json:"message"`
+	Code       int    `json:"code"`
+	HttpStatus int    `json:"-"`
+}
+
+func (err *JsonRPCError) Error() string {
+	return err.Message
+}
+
 type BlockbookStats struct {
 	Coin            string `json:"coin"`
 	Host            string `json:"host"`

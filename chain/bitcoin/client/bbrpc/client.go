@@ -1,4 +1,4 @@
-package rpc
+package bbrpc
 
 import (
 	"bytes"
@@ -9,20 +9,21 @@ import (
 	"net/http"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/sirupsen/logrus"
 )
 
 type Client struct {
 	httpClient *http.Client
 	Url        string
-	chain      *xc.ChainBaseConfig
 }
 
-func NewClient(url string, chain *xc.ChainBaseConfig) *Client {
+var _ types.BlockBookClient = &Client{}
+
+func NewClient(url string) *Client {
 	return &Client{
 		httpClient: http.DefaultClient,
 		Url:        url,
-		chain:      chain,
 	}
 }
 
@@ -76,7 +77,7 @@ func (client *Client) call(ctx context.Context, method string, params []interfac
 		"method": method,
 		"params": params,
 	})
-	log.Trace("call json-rpc")
+	log.Trace("call blockbook json-rpc")
 
 	req, err := http.NewRequestWithContext(ctx, "POST", client.Url, bytes.NewReader(requestBody))
 	if err != nil {
@@ -96,7 +97,7 @@ func (client *Client) call(ctx context.Context, method string, params []interfac
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Trace("json-rpc response")
+	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Trace("blockbook json-rpc response")
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, string(body))

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/blockbook/types"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 )
 
 type GetBlockHashResponse struct {
