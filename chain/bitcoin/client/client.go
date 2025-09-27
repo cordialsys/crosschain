@@ -351,7 +351,11 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	input.Address = args.GetFrom()
 	input.UnspentOutputs = allUnspentOutputs
 	gasPerByte, err := client.EstimateFee(ctx)
-	input.GasPricePerByte = gasPerByte
+	input.GasPricePerByteV2 = gasPerByte
+	input.XGasPricePerByte = gasPerByte.ToBlockchain(0)
+	if input.XGasPricePerByte.IsZero() {
+		input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
+	}
 	if err != nil {
 		return input, err
 	}

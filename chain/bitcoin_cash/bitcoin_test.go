@@ -81,7 +81,7 @@ func TestNewNativeTransfer(t *testing.T) {
 				UnspentOutputs: []tx_input.Output{{
 					Value: xc.NewAmountBlockchainFromUint64(1000),
 				}},
-				GasPricePerByte: xc.NewAmountHumanReadableFromFloat(1),
+				GasPricePerByteV2: xc.NewAmountHumanReadableFromFloat(1),
 			}
 			tf, err := builder.NewNativeTransfer(from, to, amount, input)
 			require.NoError(err)
@@ -99,7 +99,7 @@ func TestNewNativeTransfer(t *testing.T) {
 				UnspentOutputs: []tx_input.Output{{
 					Value: xc.NewAmountBlockchainFromUint64(5),
 				}},
-				GasPricePerByte: xc.NewAmountHumanReadableFromFloat(1),
+				GasPricePerByteV2: xc.NewAmountHumanReadableFromFloat(1),
 			}
 			_, err = builder.NewNativeTransfer(from, to, amount, input_small)
 			require.Error(err)
