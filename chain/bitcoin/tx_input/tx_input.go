@@ -39,7 +39,8 @@ type TxInput struct {
 	Address        xc.Address `json:"address"`
 	UnspentOutputs []Output   `json:"unspent_outputs"`
 	// Satoshi per byte (could be less than 1)
-	GasPricePerByte xc.AmountHumanReadable `json:"gas_price_per_byte"`
+	XGasPricePerByte  xc.AmountBlockchain    `json:"gas_price_per_byte"`
+	GasPricePerByteV2 xc.AmountHumanReadable `json:"gas_price_per_byte_v2"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
 }
@@ -67,9 +68,20 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	if err != nil {
 		return err
 	}
-	gasPriceMultiplied := multiplier.Mul(input.GasPricePerByte.Decimal())
-	input.GasPricePerByte = xc.AmountHumanReadable(gasPriceMultiplied)
+	gasPricePerByte := input.GetGasPricePerByte()
+	gasPriceMultiplied := multiplier.Mul(gasPricePerByte.Decimal())
+	input.GasPricePerByteV2 = xc.AmountHumanReadable(gasPriceMultiplied)
+	input.XGasPricePerByte = input.GasPricePerByteV2.ToBlockchain(0)
+	if input.XGasPricePerByte.IsZero() {
+		input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
+	}
 	return nil
+}
+func (input *TxInput) GetGasPricePerByte() xc.AmountHumanReadable {
+	if input.GasPricePerByteV2.IsZero() {
+		return xc.AmountHumanReadable(decimal.NewFromBigInt(input.XGasPricePerByte.Int(), 0))
+	}
+	return input.GasPricePerByteV2
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
@@ -102,7 +114,7 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 }
 
 func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	gasPrice := txInput.GasPricePerByte
+	gasPrice := txInput.GetGasPricePerByte()
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
 		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),
 	)
@@ -110,10 +122,6 @@ func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) 
 
 	totalFee := gasPrice.Decimal().Mul(estimatedTxBytesLengthDecimal).BigInt()
 	return xc.AmountBlockchain(*totalFee), ""
-}
-
-func (txInput *TxInput) GetGetPricePerByte() xc.AmountHumanReadable {
-	return txInput.GasPricePerByte
 }
 
 func (txInput *TxInput) GetEstimatedSizePerSpentUtxo() uint64 {

@@ -171,9 +171,13 @@ func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcb
 	}
 	input.UnspentOutputs = allUnspentOutputs
 	gasPerByte, err := client.EstimateGas(ctx)
-	input.GasPricePerByte = gasPerByte
+	input.GasPricePerByteV2 = gasPerByte
 	if err != nil {
 		return input, err
+	}
+	input.XGasPricePerByte = gasPerByte.ToBlockchain(0)
+	if input.XGasPricePerByte.IsZero() {
+		input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
 	}
 	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
 	if !client.skipAmountFilter {
