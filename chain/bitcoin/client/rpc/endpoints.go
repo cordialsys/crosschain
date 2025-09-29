@@ -100,8 +100,7 @@ func (client *Client) EstimateSmartFee(ctx context.Context, blocks int) (Estimat
 func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, error) {
 	params := []interface{}{
 		hex.EncodeToString(txBytes),
-		// accept all fees
-		0,
+		// 2nd param is boolean for DOGE, but numeric for other bitcoin chains, so we just omit it (taking the default).
 	}
 	var result string
 	err := client.call(ctx, "sendrawtransaction", params, &result)
