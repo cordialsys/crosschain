@@ -51,7 +51,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, err
 	}
 	currentSequencePtr := accountInfo.Result.AccountData.Sequence
-	txInput.XSequence = currentSequencePtr
 	txInput.V2Sequence = currentSequencePtr
 
 	txInput.XrpBalance = xc.NewAmountBlockchainFromStr(accountInfo.Result.AccountData.Balance)
@@ -92,7 +91,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	ledgerSequencePtr := ledger.Result.LedgerCurrentIndex
 	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
-	txInput.XLastLedgerSequence = lastLedgerSequence
 	txInput.V2LastLedgerSequence = lastLedgerSequence
 
 	feeInfo, err := client.getFee()

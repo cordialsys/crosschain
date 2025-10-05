@@ -73,9 +73,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				XSequence:            861823,
 				V2Sequence:           861823,
-				XLastLedgerSequence:  1221021,
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
@@ -111,9 +109,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				XSequence:            0,
 				V2Sequence:           0,
-				XLastLedgerSequence:  1221021,
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(10),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
@@ -147,9 +143,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				XSequence:            861823,
 				V2Sequence:           861823,
-				XLastLedgerSequence:  20,
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
@@ -184,9 +178,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				XSequence:            861823,
 				V2Sequence:           861823,
-				XLastLedgerSequence:  20,
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
@@ -222,9 +214,7 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
-				XSequence:            861823,
 				V2Sequence:           861823,
-				XLastLedgerSequence:  20,
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
 				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),

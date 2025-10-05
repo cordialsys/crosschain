@@ -9,19 +9,13 @@ import (
 // TxInput for Template
 type TxInput struct {
 	xc.TxInputEnvelope
-
-	// Included for treasury versions <= 25.6.x
-	XSequence           int64 `json:"Sequence"`
-	XLastLedgerSequence int64 `json:"LastLedgerSequence"`
-
 	// Renamed the fields to use snake_case for consistency
-	V2Sequence           int64 `json:"sequence"`
-	V2LastLedgerSequence int64 `json:"last_ledger_sequence"`
-
-	Fee              xc.AmountBlockchain `json:"fee,omitempty"`
-	AccountDeleteFee xc.AmountBlockchain `json:"delete_account_fee,omitempty"`
-	ReserveAmount    xc.AmountBlockchain `json:"reserve_amount,omitempty"`
-	XrpBalance       xc.AmountBlockchain `json:"xrp_balance,omitempty"`
+	V2Sequence           int64               `json:"sequence"`
+	V2LastLedgerSequence int64               `json:"last_ledger_sequence"`
+	Fee                  xc.AmountBlockchain `json:"fee,omitempty"`
+	AccountDeleteFee     xc.AmountBlockchain `json:"delete_account_fee,omitempty"`
+	ReserveAmount        xc.AmountBlockchain `json:"reserve_amount,omitempty"`
+	XrpBalance           xc.AmountBlockchain `json:"xrp_balance,omitempty"`
 	// Indicate if account-delete is needed to send the full amount requested
 	AccountDelete bool `json:"account_delete,omitempty"`
 }
