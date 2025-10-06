@@ -24,6 +24,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const NativeCoin = "0x2::sui::SUI"
+
 // Client for Sui
 type Client struct {
 	Asset     xc.ITask
@@ -179,7 +181,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	}
 	txHashBz, err := lib.NewBase58(string(txHash))
 	if err != nil || txHashBz == nil || len(*txHashBz) == 0 {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %w", err)
 	}
 
 	resp, err := c.SuiClient.GetTransactionBlock(ctx, *txHashBz, opts)
@@ -187,20 +189,20 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 		if isMissingTransactionErr(err) {
 			return xclient.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 		}
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %w", err)
 	}
 
 	// get latest checkpoint so we can compute our confirmations
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %v", err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %w", err)
 	}
 	if resp.Checkpoint == nil {
 		return xclient.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %v", resp.Checkpoint.Uint64(), err)
+		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %w", resp.Checkpoint.Uint64(), err)
 	}
 	// latestCheckpoint.Epoch
 	sources := []*xclient.LegacyTxInfoEndpoint{}
@@ -314,7 +316,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 func (c *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
 	ref, err := c.SuiClient.GetReferenceGasPrice(ctx)
 	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to get reference gas price: %w", err)
 	}
 	return xc.NewAmountBlockchainFromUint64(ref.Uint64()), nil
 }
@@ -325,7 +327,7 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 
 	fromData, err := move_types.NewAccountAddressHex(string(address))
 	if err != nil {
-		return []*types.Coin{}, fmt.Errorf("could not decode address: %v", err)
+		return []*types.Coin{}, fmt.Errorf("could not decode address: %w", err)
 	}
 	var next *string
 	for {
@@ -346,36 +348,33 @@ func (c *Client) GetAllCoinsFor(ctx context.Context, address xc.Address, contrac
 
 }
 
-func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-
-	// native asset SUI
+func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Address, feePayer xc.Address) (*TxInput, error) {
 	native := c.Asset.GetChain().ChainCoin
 	if native == "" {
-		native = "0x2::sui::SUI"
+		native = NativeCoin
 	}
-	contract := native
-	if contractInput, ok := args.GetContract(); ok {
-		contract = string(contractInput)
+	if contract == "" {
+		contract = native
 	}
 	contract = NormalizeCoinContract(contract)
 
 	input := NewTxInput()
-	suiCoins, err := c.GetAllCoinsFor(ctx, args.GetFrom(), native)
+	suiCoins, err := c.GetAllCoinsFor(ctx, from, native)
 	if err != nil {
-		return &TxInput{}, err
+		return nil, fmt.Errorf("failed to get coins: %w", err)
 	}
 	SortCoins(suiCoins)
 	if len(suiCoins) > 0 {
 		// use the largest SUI coin for gas
 		input.GasCoin = *suiCoins[0]
-		input.GasCoinOwner = args.GetFrom()
+		input.GasCoinOwner = from
 	}
-	feePayer, ok := args.GetFeePayer()
-	if ok {
+
+	if feePayer != "" {
 		input.GasCoin = types.Coin{}
 		sponsorSuiCoins, err := c.GetAllCoinsFor(ctx, feePayer, native)
 		if err != nil {
-			return &TxInput{}, err
+			return nil, fmt.Errorf("failed to get fee payer coins: %w", err)
 		}
 		// use gas coin from sponsor if available
 		SortCoins(sponsorSuiCoins)
@@ -383,23 +382,23 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 			input.GasCoin = *sponsorSuiCoins[0]
 			input.GasCoinOwner = feePayer
 		} else {
-			return &TxInput{}, fmt.Errorf("SUI fee payer %s has no SUI coins", feePayer)
+			return nil, fmt.Errorf("SUI fee payer %s has no SUI coins", feePayer)
 		}
 	}
 
 	transferCoins := suiCoins
 	if contract != native && contract != "" {
 		// If we're not sending SUI, we need to make a separate call to get coins that are being transferred.
-		transferCoins, err = c.GetAllCoinsFor(ctx, args.GetFrom(), contract)
+		transferCoins, err = c.GetAllCoinsFor(ctx, from, contract)
 		if err != nil {
-			return &TxInput{}, err
+			return nil, fmt.Errorf("failed to get contract coins: %w", err)
 		}
 		SortCoins(transferCoins)
 	}
 
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return &TxInput{}, err
+		return nil, fmt.Errorf("failed to fetch latest checkpoint: %w", err)
 	}
 	epoch := xc.NewAmountBlockchainFromStr(latestCheckpoint.Epoch)
 	input.CurrentEpoch = epoch.Uint64()
@@ -416,7 +415,7 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if err != nil {
 		defaultgas := c.Asset.GetChain().ChainGasPriceDefault
 		if defaultgas < 0.1 {
-			return input, err
+			return input, fmt.Errorf("failed to estimate gas: %w", err)
 		}
 		// use the default
 		input.GasPrice = uint64(defaultgas)
@@ -429,69 +428,98 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	input.GasBudget = input.GasBudget + GAS_BUDGET_PER_COIN*uint64(len(input.Coins))
 
 	input.ExcludeGasCoin()
-	inputSim := *input
+	return input, nil
+}
+
+func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.Tx, isNative bool) (uint64, bool, error) {
+	serialized, err := transaction.Serialize()
+	if err != nil {
+		return 0, false, fmt.Errorf("could not serialize tx: %w", err)
+	}
+
+	dryRun, err := c.SuiClient.DryRunTransaction(ctx, serialized)
+	if err != nil {
+		return 0, false, fmt.Errorf("could not dry run tx: %w", err)
+	}
+
+	if dryRun.Effects.Data.V1 == nil {
+		logrus.Error("dry run returned nil effects")
+		return 0, false, nil
+	}
+
+	log := logrus.WithFields(logrus.Fields{
+		"status":      dryRun.Effects.Data.V1.Status.Status,
+		"error":       dryRun.Effects.Data.V1.Status.Error,
+		"native_coin": isNative,
+	})
+	gasFee := uint64(0)
+	ok := dryRun.Effects.Data.V1.Status.Status == "success"
+	if ok {
+		gasUsed := dryRun.Effects.Data.V1.GasUsed
+		// https://docs.sui.io/concepts/tokenomics/gas-in-sui
+		gasFee = gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64()
+		gasRebate := gasUsed.StorageRebate.Uint64()
+		// use the min gas budget for SUI
+		if gasRebate > gasFee {
+			gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
+			if gasFee == 0 {
+				gasFee = 2000000
+			}
+		} else {
+			gasFee = gasFee - gasRebate
+		}
+
+		fmt.Printf("testing fee with native coin: %v", isNative)
+		if !isNative {
+			// increase budget by 10% for 3rd party coins
+			gasFee = (gasFee * 110) / 100
+		}
+
+		log.Debug("simulated tx")
+	}
+
+	log.WithField("gas_budget", gasFee).Debug("simulated tx")
+	return gasFee, ok, nil
+}
+
+func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	native := xc.ContractAddress(c.Asset.GetChain().ChainCoin)
+	if native == "" {
+		native = NativeCoin
+	}
+	contract, _ := args.GetContract()
+	isNative := contract == native || contract == ""
+	feePayer, _ := args.GetFeePayer()
+	input, err := c.fetchBaseInput(ctx, string(contract), args.GetFrom(), feePayer)
+	if err != nil {
+		return input, fmt.Errorf("failed to fetch base input: %w", err)
+	}
 	if _, ok := args.GetPublicKey(); !ok {
 		args.SetPublicKey(make([]byte, 32))
 	}
 
 	builder, err := NewTxBuilder(c.Asset.GetChain().Base())
 	if err != nil {
-		return input, fmt.Errorf("could not create tx builder: %v", err)
+		return input, fmt.Errorf("could not create tx builder: %w", err)
 	}
-	log := logrus.WithField("from", args.GetFrom())
 
-	if len(inputSim.GasCoin.Digest) == 0 {
-		// unable to simulate without budget for gas
-		log.Warn("skipping simulation as the address or fee-payer has no SUI balance")
+	tx, err := builder.Transfer(args, input)
+	if err != nil {
+		return input, fmt.Errorf("could not build tx: %w", err)
+	}
+
+	if len(input.GasCoin.Digest) == 0 {
+		logrus.Warn("skipping simulation as the address or fee-payer has no SUI balance")
 	} else {
-
-		txI, err := builder.Transfer(args, &inputSim)
+		gasFee, ok, err := c.simulateTransactionGasFee(ctx, tx, isNative)
 		if err != nil {
-			return input, fmt.Errorf("could not build tx: %v", err)
+			return nil, fmt.Errorf("failed to get transaction gas fee: %w", err)
 		}
-		tx := txI.(*Tx)
-		serialized, err := tx.Serialize()
-		if err != nil {
-			return input, fmt.Errorf("could not serialize tx: %v", err)
+		if ok {
+			input.GasBudget = gasFee
 		}
-		dryRun, err := c.SuiClient.DryRunTransaction(ctx, lib.Base64Data(serialized))
-		if err != nil {
-			return input, fmt.Errorf("could not dry run tx: %v", err)
-		}
-		if dryRun.Effects.Data.V1 == nil {
-			log.Error("dry run returned nil effects")
-		} else {
-			// outBz, _ := json.MarshalIndent(dryRun, "", "  ")
-			// fmt.Println(string(outBz))
-			log = log.WithField("status", dryRun.Effects.Data.V1.Status.Status)
-			log = log.WithField("error", dryRun.Effects.Data.V1.Status.Error)
-			if dryRun.Effects.Data.V1.Status.Status == "success" {
-				gasUsed := dryRun.Effects.Data.V1.GasUsed
-				// https://docs.sui.io/concepts/tokenomics/gas-in-sui
-				gasFee := gasUsed.ComputationCost.Uint64() + gasUsed.StorageCost.Uint64()
-				gasRebate := gasUsed.StorageRebate.Uint64()
-				// use the min gas budget for SUI
-				if gasRebate > gasFee {
-					gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
-					if gasFee == 0 {
-						gasFee = 2000000
-					}
-				} else {
-					gasFee = gasFee - gasRebate
-				}
-
-				if contract != native {
-					// increase budget by 10% for 3rd party coins
-					log = log.WithField("contract", contract)
-					gasFee = (gasFee * 110) / 100
-				}
-				input.GasBudget = gasFee
-				log = log.WithField("gas_budget", gasFee)
-			}
-			log.Debug("simulated tx")
-		}
-
 	}
+
 	return input, nil
 }
 

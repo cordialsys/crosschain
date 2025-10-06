@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
+	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/cordialsys/go-sui-sdk/v2/types"
 	"github.com/shopspring/decimal"
@@ -238,4 +239,47 @@ func (tx Tx) GetMetadata() ([]byte, error) {
 		return nil, err
 	}
 	return metadataBz, nil
+}
+
+type StakingInput struct {
+	TxInput
+	Validator string `json:"validator"`
+}
+
+var _ xc.TxVariantInput = &StakingInput{}
+var _ xc.StakeTxInput = &StakingInput{}
+
+func (*StakingInput) Staking() {}
+func (*StakingInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewStakingInputType(xc.DriverSui, string(xc.Native))
+}
+
+type Stake struct {
+	Principal xc.AmountBlockchain `json:"principal"`
+	Rewards   xc.AmountBlockchain `json:"rewards"`
+	ObjectId  string              `json:"object_id"`
+	Version   uint64              `json:"version"`
+	Digest    string              `json:"digest"`
+	State     xclient.StakeState  `json:"state"`
+	Validator string              `json:"validator"`
+}
+
+func (s Stake) GetBalance() xc.AmountBlockchain {
+	return s.Principal.Add(&s.Rewards)
+}
+
+type UnstakingInput struct {
+	TxInput
+	// Stakes that can be fully unstaked via `request_withdraw_stake`
+	StakesToUnstake []Stake `json:"stakes_to_unstake"`
+	// Stake to split to split for remaining amount
+	StakeToSplit Stake `json:"stakes_to_merge"`
+}
+
+var _ xc.TxVariantInput = &StakingInput{}
+var _ xc.StakeTxInput = &StakingInput{}
+
+func (*UnstakingInput) Unstaking() {}
+func (*UnstakingInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewUnstakingInputType(xc.DriverSui, string(xc.Native))
 }
