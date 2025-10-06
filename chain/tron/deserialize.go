@@ -35,6 +35,9 @@ func deserialiseTransactionEvents(log []*httpclient.Log, evmTx *evmtypes.Receipt
 		destination := new(xclient.LegacyTxInfoEndpoint)
 		source.NativeAsset = xc.TRX
 		destination.NativeAsset = xc.TRX
+		if len(event.Topics) < 3 {
+			continue
+		}
 
 		// The addresses in the TVM omits the prefix 0x41, so we add it here to allow us to parse the addresses
 		eventContractB58 := base58.CheckEncode(event.Address, 0x41)
