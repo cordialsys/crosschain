@@ -153,7 +153,6 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		return nil, fmt.Errorf("failed to decode objectId: %w", err)
 	}
 
-	remainingToUnstake := args.GetAmount()
 	// prepare unstake commands
 	for _, s := range unstakeInput.StakesToUnstake {
 		stakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
@@ -185,14 +184,12 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 				},
 			},
 		})
-		stakeBalance := s.GetBalance()
-		remainingToUnstake = remainingToUnstake.Sub(&stakeBalance)
 	}
 
 	// check if we have to prepare a split operation
 	if unstakeInput.StakeToSplit.GetBalance().Uint64() != 0 {
-		if remainingToUnstake.IsZero() {
-			return nil, fmt.Errorf("split object is provided, but split amount is incorrect")
+		if unstakeInput.SplitRemainder.IsZero() {
+			return nil, fmt.Errorf("split object is provided, but split remainder is incorrect")
 		}
 		mainStakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
 		mainStakeId, err := HexToObjectID(unstakeInput.StakeToSplit.ObjectId)
@@ -211,11 +208,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 			},
 		})
 
-		// leave only 'remainingToUnstake' balance on splited stake, so we can withdraw it with
+		// leave only 'unstakedInput.SplitRemainder' balance on splited stake, so we can withdraw it with
 		// 'request_withdraw_stake'
-		balanceBeforeSplit := unstakeInput.StakeToSplit.GetBalance()
-		balanceToSlitOff := balanceBeforeSplit.Sub(&remainingToUnstake)
-		pureToSplitOff := U64ToPure(balanceToSlitOff.Uint64())
+		pureToSplitOff := U64ToPure(unstakeInput.SplitRemainder.Uint64())
 		pureToSplitOffArg := ArgumentInput(uint16(len(cmd_inputs)))
 		cmd_inputs = append(cmd_inputs, pureToSplitOff)
 

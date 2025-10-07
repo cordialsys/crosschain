@@ -112,6 +112,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 	stakesToClose := make([]Stake, 0)
 	stakeToSplit := Stake{}
+	splitRemainder := xc.NewAmountBlockchainFromUint64(0)
 	// check if there is any stake which amount is equal to unstake amount
 	// and use it as only input
 	if ok, stakeObject := CanUnstakeAnyObject(stakeBalances, amount); ok {
@@ -180,19 +181,13 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 				continue
 			}
 
-			// there is no way to unstake less than 1SUI
-			// it shouldn't happen - we are checking this above
-			if amountToUnstake.Cmp(&minAmount) == -1 {
-				return nil, fmt.Errorf("invalid unstake split amount")
-			}
-
-			// we found a stake object that can be properly split
-			if remainingStake.Cmp(&minAmount) >= 0 {
+			remainingAfterSplit, ok := s.TrySplit(amountToUnstake, minAmount, decimals)
+			if ok {
 				amountToUnstake = amountToUnstake.Sub(&remainingStake)
 				stakeToSplit = s
+				splitRemainder = remainingAfterSplit
 				break
 			}
-
 		}
 
 		if amountToUnstake.Cmp(&zeroAmount) > 0 {
@@ -208,6 +203,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 		TxInput:         *txInput,
 		StakesToUnstake: stakesToClose,
 		StakeToSplit:    stakeToSplit,
+		SplitRemainder:  splitRemainder,
 	}
 
 	builder, err := NewTxBuilder(c.Asset.GetChain().Base())

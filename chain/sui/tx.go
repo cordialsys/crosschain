@@ -268,12 +268,51 @@ func (s Stake) GetBalance() xc.AmountBlockchain {
 	return s.Principal.Add(&s.Rewards)
 }
 
+// Try to split the stake into specified and remaining amount
+//
+// Sui split's are based on Principal amounts, not Principal + Rewards. We have to calculate
+// principal-to-balance ratio, and check if amount * principalRatio can be split off
+//
+// Returns (remainingPrincipalAmount, true) if the split is possible
+func (s Stake) TrySplit(amount xc.AmountBlockchain, minStakeAmount xc.AmountBlockchain, decimals int32) (xc.AmountBlockchain, bool) {
+	// at least 2 * minStakeAmount is required for a valid SUI stake split to cover min amount
+	// in both stake objects
+	twoDecimal := xc.NewAmountHumanReadableFromFloat(2.0)
+	two := twoDecimal.ToBlockchain(decimals)
+	doubleMinAmount := minStakeAmount.Mul(&two)
+	if s.Principal.Cmp(&doubleMinAmount) < 0 {
+		return xc.AmountBlockchain{}, false
+	}
+
+	// calculate principal/balance ratio
+	principalDecimal := s.Principal.ToHuman(decimals).Decimal()
+	balance := s.GetBalance()
+	balanceDeciamal := balance.ToHuman(decimals).Decimal()
+	principalRatio := principalDecimal.Div(balanceDeciamal)
+
+	// calculate required principal part to split
+	// it cannot be greater than 's.Principal - minStakeAmount'
+	amountDecimal := amount.ToHuman(decimals).Decimal()
+	amountPrincipal := amountDecimal.Mul(principalRatio)
+	minStakeAmountDecimal := minStakeAmount.ToHuman(decimals).Decimal()
+	maxStakeAmount := s.Principal.Sub(&minStakeAmount)
+	maxStakeAmountDecimal := maxStakeAmount.ToHuman(decimals).Decimal()
+	if amountPrincipal.Cmp(minStakeAmountDecimal) < 0 || amountPrincipal.Cmp(maxStakeAmountDecimal) == 1 {
+		return xc.NewAmountBlockchainFromUint64(0), false
+	}
+
+	remainingPrincipal := principalDecimal.Sub(amountPrincipal)
+	return xc.NewAmountBlockchainFromUint64(remainingPrincipal.BigInt().Uint64()), true
+}
+
 type UnstakingInput struct {
 	TxInput
 	// Stakes that can be fully unstaked via `request_withdraw_stake`
 	StakesToUnstake []Stake `json:"stakes_to_unstake"`
 	// Stake to split to split for remaining amount
 	StakeToSplit Stake `json:"stakes_to_merge"`
+	// Stake that will remain after split
+	SplitRemainder xc.AmountBlockchain `json:"split_remainder"`
 }
 
 var _ xc.TxVariantInput = &StakingInput{}

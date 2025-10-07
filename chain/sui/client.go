@@ -469,7 +469,6 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 			gasFee = gasFee - gasRebate
 		}
 
-		fmt.Printf("testing fee with native coin: %v", isNative)
 		if !isNative {
 			// increase budget by 10% for 3rd party coins
 			gasFee = (gasFee * 110) / 100
