@@ -188,9 +188,15 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 			// we found a stake object that can be properly split
 			if remainingStake.Cmp(&minAmount) >= 0 {
+				amountToUnstake = amountToUnstake.Sub(&remainingStake)
 				stakeToSplit = s
+				break
 			}
 
+		}
+
+		if amountToUnstake.Cmp(&zeroAmount) > 0 {
+			return nil, fmt.Errorf("cannot cover unstake amount (total: %v) with current stake objects, uncovered part: %v", args.GetAmount(), amountToUnstake)
 		}
 	}
 
