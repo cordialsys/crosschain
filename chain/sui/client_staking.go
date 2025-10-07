@@ -180,19 +180,15 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 				continue
 			}
 
-			// check if stake can be split properly into two parts
-			// we have to be sure that there is at least 1 sui on both splits
-			if s.State == xclient.Active {
-				// there is no way to unstake less than 1SUI
-				// it shouldn't happen - we are checking this above
-				if amountToUnstake.Cmp(&minAmount) == -1 {
-					return nil, fmt.Errorf("invalid unstake split amount")
-				}
+			// there is no way to unstake less than 1SUI
+			// it shouldn't happen - we are checking this above
+			if amountToUnstake.Cmp(&minAmount) == -1 {
+				return nil, fmt.Errorf("invalid unstake split amount")
+			}
 
-				// we found a stake object that can be properly split
-				if remainingStake.Cmp(&minAmount) >= 0 {
-					stakeToSplit = s
-				}
+			// we found a stake object that can be properly split
+			if remainingStake.Cmp(&minAmount) >= 0 {
+				stakeToSplit = s
 			}
 
 		}
