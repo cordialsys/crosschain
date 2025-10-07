@@ -454,6 +454,11 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 	})
 	gasFee := uint64(0)
 	ok := dryRun.Effects.Data.V1.Status.Status == "success"
+	minGasFee := c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
+	if minGasFee == 0 {
+		minGasFee = 2_000_000
+	}
+
 	if ok {
 		gasUsed := dryRun.Effects.Data.V1.GasUsed
 		// https://docs.sui.io/concepts/tokenomics/gas-in-sui
@@ -461,20 +466,19 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 		gasRebate := gasUsed.StorageRebate.Uint64()
 		// use the min gas budget for SUI
 		if gasRebate > gasFee {
-			gasFee = c.Asset.GetChain().GasBudgetMinimum.ToBlockchain(c.Asset.GetChain().Decimals).Uint64()
-			if gasFee == 0 {
-				gasFee = 2000000
-			}
+			gasFee = minGasFee
 		} else {
 			gasFee = gasFee - gasRebate
+		}
+
+		if gasFee < minGasFee {
+			gasFee = minGasFee
 		}
 
 		if !isNative {
 			// increase budget by 10% for 3rd party coins
 			gasFee = (gasFee * 110) / 100
 		}
-
-		log.Debug("simulated tx")
 	}
 
 	log.WithField("gas_budget", gasFee).Debug("simulated tx")
