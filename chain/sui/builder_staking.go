@@ -21,6 +21,17 @@ const (
 var systemState bcs.ObjectID = MustHexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000005")
 var stakingPackageId bcs.ObjectID = MustHexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000003")
 
+func ValidateStakeObject(stakeObject Stake, validator string, account string) error {
+	if validator != "" && stakeObject.Validator != validator {
+		return fmt.Errorf("input validator and args validator differ")
+	}
+	if account != "" && stakeObject.ObjectId != account {
+		return fmt.Errorf("input account and args stake account differ")
+	}
+
+	return nil
+}
+
 func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	var ok bool
 	stakeInput, ok := input.(*StakingInput)
@@ -117,6 +128,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
 	}
 
+	validator, _ := args.GetValidator()
+	account, _ := args.GetStakeAccount()
+
 	amount := args.GetAmount()
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
@@ -151,7 +165,13 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	})
 
 	// prepare unstake commands
+	unstakedAmount := xc.NewAmountBlockchainFromUint64(0)
 	for _, s := range unstakeInput.StakesToUnstake {
+		err := ValidateStakeObject(unstakeInput.StakeToSplit, validator, account)
+		if err != nil {
+			return nil, fmt.Errorf("invalid input: %w")
+		}
+
 		stakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
 		stakeId, err := HexToObjectID(s.ObjectId)
 		if err != nil {
@@ -181,12 +201,23 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 				},
 			},
 		})
+		stakeBalance := s.GetBalance()
+		unstakedAmount = unstakedAmount.Add(&stakeBalance)
 	}
 
 	// check if we have to prepare a split operation
 	if unstakeInput.StakeToSplit.GetBalance().Uint64() != 0 {
+		err := ValidateStakeObject(unstakeInput.StakeToSplit, validator, account)
+		if err != nil {
+			return nil, fmt.Errorf("invalid input: %w")
+		}
+
 		if unstakeInput.SplitRemainder.IsZero() {
 			return nil, fmt.Errorf("split object is provided, but split remainder is incorrect")
+		}
+		unstakedAmount = unstakedAmount.Add(&unstakeInput.SplitRemainder)
+		if unstakedAmount.Cmp(&amount) != 0 {
+			return nil, fmt.Errorf("input unstake amount and arg amount are different")
 		}
 		mainStakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
 		mainStakeId, err := HexToObjectID(unstakeInput.StakeToSplit.ObjectId)

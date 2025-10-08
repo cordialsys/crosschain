@@ -45,11 +45,6 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 		return nil, errors.New("minimal stake amount is 1.0 sui")
 	}
 
-	validator, ok := args.GetValidator()
-	if !ok {
-		return nil, errors.New("missing staking validator")
-	}
-
 	feePayer, _ := args.GetFeePayer()
 	txInput, err := c.fetchBaseInput(ctx, NativeCoin, args.GetFrom(), feePayer)
 	if err != nil {
@@ -58,7 +53,6 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 
 	stakingInput := &StakingInput{
 		*txInput,
-		validator,
 	}
 	builder, err := NewTxBuilder(c.Asset.GetChain().Base())
 	if err != nil {
