@@ -197,7 +197,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 		TxInput:         *txInput,
 		StakesToUnstake: stakesToClose,
 		StakeToSplit:    stakeToSplit,
-		SplitRemainder:  splitRemainder,
+		SplitAmount:     splitRemainder,
 	}
 
 	builder, err := NewTxBuilder(c.Asset.GetChain().Base())
@@ -323,7 +323,7 @@ func SuiStakesToUnstakeInputs(stakes []types.DelegatedStake, validatorFilter str
 				Rewards:   rewards,
 				ObjectId:  account,
 				State:     state,
-				Validator: validatorFilter,
+				Validator: validator.String(),
 			}
 			unstakeInputs = append(unstakeInputs, s)
 		}
