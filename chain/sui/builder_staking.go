@@ -169,7 +169,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	for _, s := range unstakeInput.StakesToUnstake {
 		err := ValidateStakeObject(unstakeInput.StakeToSplit, validator, account)
 		if err != nil {
-			return nil, fmt.Errorf("invalid input: %w")
+			return nil, fmt.Errorf("invalid input: %w", err)
 		}
 
 		stakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
@@ -209,15 +209,17 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	if unstakeInput.StakeToSplit.GetBalance().Uint64() != 0 {
 		err := ValidateStakeObject(unstakeInput.StakeToSplit, validator, account)
 		if err != nil {
-			return nil, fmt.Errorf("invalid input: %w")
+			return nil, fmt.Errorf("invalid input: %w", err)
 		}
 
-		if unstakeInput.SplitRemainder.IsZero() {
+		if unstakeInput.SplitAmount.IsZero() {
 			return nil, fmt.Errorf("split object is provided, but split remainder is incorrect")
 		}
-		unstakedAmount = unstakedAmount.Add(&unstakeInput.SplitRemainder)
+		balance := unstakeInput.StakeToSplit.GetBalance()
+		remainder := balance.Sub(&unstakeInput.SplitAmount)
+		unstakedAmount = unstakedAmount.Add(&remainder)
 		if unstakedAmount.Cmp(&amount) != 0 {
-			return nil, fmt.Errorf("input unstake amount and arg amount are different")
+			return nil, fmt.Errorf("input unstake(%v) amount and arg amount(%v) are different", unstakedAmount, amount)
 		}
 		mainStakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
 		mainStakeId, err := HexToObjectID(unstakeInput.StakeToSplit.ObjectId)
@@ -238,7 +240,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 
 		// leave only 'unstakedInput.SplitRemainder' balance on splited stake, so we can withdraw it with
 		// 'request_withdraw_stake'
-		pureToSplitOff := U64ToPure(unstakeInput.SplitRemainder.Uint64())
+		pureToSplitOff := U64ToPure(unstakeInput.SplitAmount.Uint64())
 		pureToSplitOffArg := ArgumentInput(uint16(len(cmd_inputs)))
 		cmd_inputs = append(cmd_inputs, pureToSplitOff)
 

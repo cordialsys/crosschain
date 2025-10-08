@@ -276,8 +276,7 @@ func (s Stake) GetBalance() xc.AmountBlockchain {
 func (s Stake) TrySplit(amount xc.AmountBlockchain, minStakeAmount xc.AmountBlockchain, decimals int32) (xc.AmountBlockchain, bool) {
 	// at least 2 * minStakeAmount is required for a valid SUI stake split to cover min amount
 	// in both stake objects
-	twoDecimal := xc.NewAmountHumanReadableFromFloat(2.0)
-	two := twoDecimal.ToBlockchain(decimals)
+	two := xc.NewAmountBlockchainFromUint64(2)
 	doubleMinAmount := minStakeAmount.Mul(&two)
 	if s.Principal.Cmp(&doubleMinAmount) < 0 {
 		return xc.AmountBlockchain{}, false
@@ -301,7 +300,11 @@ func (s Stake) TrySplit(amount xc.AmountBlockchain, minStakeAmount xc.AmountBloc
 	}
 
 	remainingPrincipal := principalDecimal.Sub(amountPrincipal)
-	return xc.NewAmountBlockchainFromUint64(remainingPrincipal.BigInt().Uint64()), true
+	hrRemaining, err := xc.NewAmountHumanReadableFromStr(remainingPrincipal.String())
+	if err != nil {
+		return xc.NewAmountBlockchainFromUint64(0), false
+	}
+	return hrRemaining.ToBlockchain(decimals), true
 }
 
 type UnstakingInput struct {
@@ -310,8 +313,8 @@ type UnstakingInput struct {
 	StakesToUnstake []Stake `json:"stakes_to_unstake"`
 	// Stake to split to split for remaining amount
 	StakeToSplit Stake `json:"stake_to_split"`
-	// Stake that will remain after split
-	SplitRemainder xc.AmountBlockchain `json:"split_remainder"`
+	// Amount to split from staking account
+	SplitAmount xc.AmountBlockchain `json:"split_amount"`
 }
 
 var _ xc.TxVariantInput = &StakingInput{}
