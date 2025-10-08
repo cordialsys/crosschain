@@ -46,13 +46,15 @@ type transactionBase struct {
 	base bcs.TransactionData__V1
 }
 
-func (t *transactionBase) SetInputsAndCommands(inputs []bcs.CallArg, commands []bcs.Command) {
+func (t *transactionBase) Build(inputs []bcs.CallArg, commands []bcs.Command) bcs.TransactionData__V1 {
 	t.base.Value.Kind = &bcs.TransactionKind__ProgrammableTransaction{
 		Value: bcs.ProgrammableTransaction{
 			Inputs:   inputs,
 			Commands: commands,
 		},
 	}
+
+	return t.base
 }
 
 func (txBuilder TxBuilder) newTransactionBase(feePayer xc.Address, from xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (transactionBase, error) {
@@ -280,9 +282,8 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 	}
 	cmd_inputs = append(cmd_inputs, toPure)
 
-	txBase.SetInputsAndCommands(cmd_inputs, commands)
 	xcTx := &Tx{
-		Tx:         txBase.base,
+		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubKey,
 	}
 	if feePayer != from {

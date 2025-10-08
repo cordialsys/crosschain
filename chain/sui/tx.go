@@ -243,7 +243,6 @@ func (tx Tx) GetMetadata() ([]byte, error) {
 
 type StakingInput struct {
 	TxInput
-	Validator string `json:"validator"`
 }
 
 var _ xc.TxVariantInput = &StakingInput{}
@@ -310,7 +309,7 @@ type UnstakingInput struct {
 	// Stakes that can be fully unstaked via `request_withdraw_stake`
 	StakesToUnstake []Stake `json:"stakes_to_unstake"`
 	// Stake to split to split for remaining amount
-	StakeToSplit Stake `json:"stakes_to_merge"`
+	StakeToSplit Stake `json:"stake_to_split"`
 	// Stake that will remain after split
 	SplitRemainder xc.AmountBlockchain `json:"split_remainder"`
 }

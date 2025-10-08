@@ -9,11 +9,28 @@ import (
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 )
 
+const (
+	moduleSuiSystem            = "sui_system"
+	moduleStakingPool          = "staking_pool"
+	methodRequestWithdrawStake = "request_withdraw_stake"
+	methodSplitStakedSui       = "split_staked_sui"
+	methodRequestAddStake      = "request_add_stake"
+)
+
+// both systemState and stakingPackageId are fixed
+var systemState bcs.ObjectID = MustHexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000005")
+var stakingPackageId bcs.ObjectID = MustHexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000003")
+
 func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	var ok bool
 	stakeInput, ok := input.(*StakingInput)
 	if !ok {
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
+	}
+
+	validator, ok := args.GetValidator()
+	if !ok {
+		return &Tx{}, errors.New("empty validator")
 	}
 
 	amount := args.GetAmount()
@@ -58,10 +75,6 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 
 	// add system state input
 	systemStateArg := ArgumentInput(uint16(len(cmd_inputs)))
-	systemState, err := HexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000005")
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode sui system state: %w", err)
-	}
 	cmd_inputs = append(cmd_inputs, &bcs.CallArg__Object{
 		Value: &bcs.ObjectArg__SharedObject{
 			Id:                   systemState,
@@ -70,23 +83,18 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		},
 	})
 
-	validator, err := HexToPure(string(stakeInput.Validator))
+	pureValidator, err := HexToPure(validator)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode validator: %w", err)
 	}
 	validatorArg := ArgumentInput(uint16(len(cmd_inputs)))
-	cmd_inputs = append(cmd_inputs, validator)
+	cmd_inputs = append(cmd_inputs, pureValidator)
 
-	// stake move command
-	packageId, err := HexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000003")
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode objectId: %w", err)
-	}
 	commands = append(commands, &bcs.Command__MoveCall{
 		Value: bcs.ProgrammableMoveCall{
-			Package:       packageId,
-			Module:        "sui_system",
-			Function:      "request_add_stake",
+			Package:       stakingPackageId,
+			Module:        moduleSuiSystem,
+			Function:      methodRequestAddStake,
 			TypeArguments: []bcs.TypeTag{},
 			Arguments: []bcs.Argument{
 				systemStateArg,
@@ -96,11 +104,8 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		},
 	})
 
-	// update transaction with stake commands
-	txBase.SetInputsAndCommands(cmd_inputs, commands)
-
 	xcTx := &Tx{
-		Tx:         txBase.base,
+		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
 	}
 	return xcTx, nil
@@ -137,10 +142,6 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 
 	// prepare system state input - it will be reused 'request_withdraw_stake' commands
 	systemStateInput := ArgumentInput(uint16(len(cmd_inputs)))
-	systemState, err := HexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000005")
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode sui system state: %w", err)
-	}
 	cmd_inputs = append(cmd_inputs, &bcs.CallArg__Object{
 		Value: &bcs.ObjectArg__SharedObject{
 			Id:                   systemState,
@@ -148,10 +149,6 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 			Mutable:              true,
 		},
 	})
-	packageId, err := HexToObjectID("0x0000000000000000000000000000000000000000000000000000000000000003")
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode objectId: %w", err)
-	}
 
 	// prepare unstake commands
 	for _, s := range unstakeInput.StakesToUnstake {
@@ -174,9 +171,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 
 		commands = append(commands, &bcs.Command__MoveCall{
 			Value: bcs.ProgrammableMoveCall{
-				Package:       packageId,
-				Module:        "sui_system",
-				Function:      "request_withdraw_stake",
+				Package:       stakingPackageId,
+				Module:        moduleSuiSystem,
+				Function:      methodRequestWithdrawStake,
 				TypeArguments: []bcs.TypeTag{},
 				Arguments: []bcs.Argument{
 					systemStateInput,
@@ -217,9 +214,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		// prepare split command
 		commands = append(commands, &bcs.Command__MoveCall{
 			Value: bcs.ProgrammableMoveCall{
-				Package:       packageId,
-				Module:        "staking_pool",
-				Function:      "split_staked_sui",
+				Package:       stakingPackageId,
+				Module:        moduleStakingPool,
+				Function:      methodSplitStakedSui,
 				TypeArguments: []bcs.TypeTag{},
 				Arguments: []bcs.Argument{
 					mainStakeIdInput,
@@ -231,9 +228,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		// prepare unstake command, targeting value that remains on 'StakeToSplit' object
 		commands = append(commands, &bcs.Command__MoveCall{
 			Value: bcs.ProgrammableMoveCall{
-				Package:       packageId,
-				Module:        "sui_system",
-				Function:      "request_withdraw_stake",
+				Package:       stakingPackageId,
+				Module:        moduleSuiSystem,
+				Function:      methodRequestWithdrawStake,
 				TypeArguments: []bcs.TypeTag{},
 				Arguments: []bcs.Argument{
 					systemStateInput,
@@ -243,10 +240,8 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		})
 	}
 
-	txBase.SetInputsAndCommands(cmd_inputs, commands)
-
 	xcTx := &Tx{
-		Tx:         txBase.base,
+		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
 	}
 	return xcTx, nil
