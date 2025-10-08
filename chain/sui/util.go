@@ -43,6 +43,14 @@ func HexToObjectID(str string) (bcs.ObjectID, error) {
 	return toObjectID(bytes)
 }
 
+func MustHexToObjectID(str string) bcs.ObjectID {
+	id, err := HexToObjectID(str)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 func U64ToPure(x uint64) *bcs.CallArg__Pure {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, x)
