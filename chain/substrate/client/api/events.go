@@ -17,6 +17,7 @@ type EventI interface {
 	// Or may just be the "name"
 	GetEvent() string
 	GetParam(name string, index int) (interface{}, bool)
+	GetEventDescriptor() (*xcclient.Event, bool)
 }
 
 type EventBind string
@@ -75,6 +76,24 @@ var SupportedEvents = []EventDescriptor{
 			},
 		},
 	},
+	{
+		Module: "NominationPools",
+		Event:  "Withdrawn",
+		Attributes: []*EventAttributeDescriptor{
+			{
+				Name:  "member",
+				Index: 0,
+				Bind:  BindTo,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "balance",
+				Index: 2,
+				Bind:  BindAmount,
+				Type:  EventInteger,
+			},
+		},
+	},
 }
 
 var SupportedStakingEvents = []EventDescriptor{
@@ -116,6 +135,57 @@ var SupportedStakingEvents = []EventDescriptor{
 			},
 			{
 				Name:  "amount",
+				Index: 2,
+				Bind:  BindAmount,
+				Type:  EventInteger,
+			},
+		},
+	},
+	// Nomination Pools events
+	{
+		Module: "NominationPools",
+		Event:  "Bonded",
+		Stake:  true,
+		Attributes: []*EventAttributeDescriptor{
+			{
+				Name:  "member",
+				Index: 0,
+				Bind:  BindFrom,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "pool_id",
+				Index: 1,
+				Bind:  BindValidator,
+				Type:  EventInteger,
+			},
+			{
+				Name:  "bonded",
+				Index: 2,
+				Bind:  BindAmount,
+				Type:  EventInteger,
+			},
+		},
+	},
+	{
+		Module: "NominationPools",
+		Event:  "Unbonded",
+		Stake:  false,
+		Attributes: []*EventAttributeDescriptor{
+			{
+				Name:  "member",
+				Index: 0,
+				Bind:  BindFrom,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "pool_id",
+				Index: 1,
+				Bind:  BindValidator,
+				Type:  EventInteger,
+			},
+			{
+				Name:  "balance",
 				Index: 2,
 				Bind:  BindAmount,
 				Type:  EventInteger,
@@ -180,9 +250,21 @@ func ParseFailed(events []EventI) (string, bool) {
 		}
 		return "transaction failed", true
 	}
-	_, ok = find(events, "System", "ExtrinsicFailed")
+	ev, ok = find(events, "System", "ExtrinsicFailed")
 	if ok {
-		// too difficult to decode further
+		param, ok := ev.GetParam("dispatch_error", 0)
+		if ok {
+			module, ok := param.(map[string]interface{})["Module"].(map[string]interface{})
+			if ok {
+				errCode, ok := module["error"].(string)
+				if ok {
+					return fmt.Sprintf("transaction failed: %s", errCode), true
+				}
+			}
+
+		}
+
+		// too difficult to decode further to sus out an error code or message
 		return "transaction failed", true
 	}
 	return "", false
@@ -225,6 +307,10 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 		}
 		var from, to xc.Address
 		var amount xc.AmountBlockchain
+		var eventDescriptor *xcclient.Event
+		if desc, ok := ev.GetEventDescriptor(); ok {
+			eventDescriptor = desc
+		}
 		for _, attr := range desc.Attributes {
 			param, ok := ev.GetParam(attr.Name, attr.Index)
 			if !ok {
@@ -266,6 +352,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 				Address:     from,
 				NativeAsset: chain,
 				Amount:      amount,
+				Event:       eventDescriptor,
 			})
 		}
 		if to != "" {
@@ -273,6 +360,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 				Address:     to,
 				NativeAsset: chain,
 				Amount:      amount,
+				Event:       eventDescriptor,
 			})
 		}
 	}
@@ -320,6 +408,9 @@ func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []Eve
 				switch attr.Bind {
 				case BindAmount:
 					amount = xc.NewAmountBlockchainFromStr(asString)
+				case BindValidator:
+					// For nomination pools, validator is a pool ID (integer)
+					validator = xc.Address(asString)
 				default:
 					return nil, nil, fmt.Errorf("substrate event %s attribute %s has invalid bind configured: %s", handle, attr.Name, attr.Bind)
 				}

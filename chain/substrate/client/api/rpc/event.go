@@ -11,24 +11,28 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/sirupsen/logrus"
+
+	xcclient "github.com/cordialsys/crosschain/client"
 )
 
 type Event struct {
-	Module string
-	Event  string
-	Raw    *parser.Event
+	Module   string
+	Event    string
+	Raw      *parser.Event
+	Block    int
+	EventIdx int
 }
 
 var _ api.EventI = &Event{}
 
-func NewEvent(raw *parser.Event) *Event {
+func NewEvent(raw *parser.Event, block int, eventIdx int) *Event {
 	parts := strings.Split(raw.Name, ".")
 	module := parts[0]
 	event := ""
 	if len(parts) > 1 {
 		event = parts[1]
 	}
-	return &Event{module, event, raw}
+	return &Event{module, event, raw, block, eventIdx}
 }
 
 // Or may be called "pallet"
@@ -39,6 +43,11 @@ func (ev *Event) GetModule() string {
 // Or may just be the "name"
 func (ev *Event) GetEvent() string {
 	return ev.Event
+}
+
+func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {
+	// This is the native way to identify events
+	return xcclient.NewEvent(fmt.Sprintf("%d-%d", ev.Block, ev.EventIdx), xcclient.MovementVariantNative), true
 }
 
 func unwrap(value *registry.DecodedField) (decoded interface{}) {
