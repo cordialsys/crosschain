@@ -17,6 +17,14 @@ type TxInput struct {
 	CurrentHeight uint64               `json:"current_height,omitempty"`
 	Tip           uint64               `json:"tip,omitempty"`
 	Nonce         uint64               `json:"account_nonce,omitempty"`
+
+	// For nomination pools staking - indicates if account already joined a pool
+	AlreadyJoinedPool bool   `json:"already_joined_pool,omitempty"`
+	JoinedPoolId      uint32 `json:"joined_pool_id,omitempty"`
+	// This should typically be 0, but may need to be larger if the member was slashed.
+	// Pretty unclear why & how this is used by substrate team.
+	// https://substrate.stackexchange.com/questions/5265/how-to-determine-value-for-param-num-slashing-spans-for-a-withdrawunbonded-tx
+	NumSlashingSpans uint32 `json:"num_slashing_spans,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}

@@ -16,9 +16,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -190,6 +190,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz",
 							},
 						},
+						Event: xclient.NewEvent("16097417-2", xclient.MovementVariantNative),
 					},
 					// fee
 					{
@@ -402,6 +403,26 @@ func TestFetchTxInput(t *testing.T) {
 				Name:         "Balances.transfer_keep_alive",
 				SectionIndex: 5,
 				MethodIndex:  3,
+			},
+			{
+				Name:         "NominationPools.join",
+				SectionIndex: 39,
+				MethodIndex:  0,
+			},
+			{
+				Name:         "NominationPools.bond_extra",
+				SectionIndex: 39,
+				MethodIndex:  1,
+			},
+			{
+				Name:         "NominationPools.unbond",
+				SectionIndex: 39,
+				MethodIndex:  3,
+			},
+			{
+				Name:         "NominationPools.withdraw_unbonded",
+				SectionIndex: 39,
+				MethodIndex:  5,
 			},
 		},
 		SignedExtensions: []extensions.SignedExtensionName{

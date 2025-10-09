@@ -62,7 +62,7 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 		}
 		ext := block.Block.Extrinsics[offset]
 
-		matchingEvents, err := client.GetEvents(ctx, blockHash, offset)
+		matchingEvents, err := client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -87,8 +87,8 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 		}
 		extId := fmt.Sprintf("%d-%d", block.Block.Header.Number, offset)
 		logrus.WithField("id", extId).Debug("found extrinsic")
-		client.GetEvents(ctx, blockHash, offset)
-		matchingEvents, err := client.GetEvents(ctx, blockHash, offset)
+		client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
+		matchingEvents, err := client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +103,7 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 
 }
 
-func (client *Client) GetEvents(ctx context.Context, blockHash types.Hash, extrinsicOffset int) ([]api.EventI, error) {
+func (client *Client) GetEvents(ctx context.Context, blockHeight uint64, blockHash types.Hash, extrinsicOffset int) ([]api.EventI, error) {
 	matchingEvents := []api.EventI{}
 	retriever, err := retriever.NewDefaultEventRetriever(state.NewEventProvider(client.rpc.RPC.State), client.rpc.RPC.State)
 	if err != nil {
@@ -114,9 +114,9 @@ func (client *Client) GetEvents(ctx context.Context, blockHash types.Hash, extri
 	if err != nil {
 		return matchingEvents, err
 	}
-	for _, event := range events {
+	for i, event := range events {
 		if event.Phase.AsApplyExtrinsic == uint32(extrinsicOffset) {
-			matchingEvents = append(matchingEvents, NewEvent(event))
+			matchingEvents = append(matchingEvents, NewEvent(event, int(blockHeight), i))
 		}
 	}
 	return matchingEvents, nil

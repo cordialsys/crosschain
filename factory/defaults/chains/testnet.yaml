@@ -312,7 +312,7 @@ chains:
     chain: KSM
     driver: substrate
     decimals: 9
-    chain_name: Bittensor
+    chain_name: Kusama
     chain_prefix: "42"
     disabled: true
   INJ:

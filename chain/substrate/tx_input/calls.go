@@ -15,6 +15,10 @@ var usedSubstrateCalls = []string{
 	"Assets.transfer",
 	"SubtensorModule.add_stake",
 	"SubtensorModule.remove_stake",
+	"NominationPools.join",
+	"NominationPools.bond_extra",
+	"NominationPools.unbond",
+	"NominationPools.withdraw_unbonded",
 }
 
 type CallMeta struct {
@@ -104,7 +108,7 @@ func CreatePayload(meta *Metadata, encodedCall []byte) (*extrinsic.Payload, erro
 			if !ok {
 				logrus.WithFields(logrus.Fields{
 					"extension": signedExtension,
-				}).Warn("signed extension is not supported, transaction may not be accepted")
+				}).Debug("signed extension is not supported, transaction may not be accepted")
 				continue
 			}
 		}
