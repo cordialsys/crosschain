@@ -15,6 +15,7 @@ type TxBuilder struct {
 
 var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
 var _ xcbuilder.BuilderSupportsFeePayer = &TxBuilder{}
+var _ xcbuilder.Staking = &TxBuilder{}
 
 func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
 	return xcbuilder.FeePayerWithConflicts
