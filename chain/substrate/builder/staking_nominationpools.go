@@ -115,13 +115,7 @@ func (pools *NominationPoolsStakingBuilder) Stake(args xcbuilder.StakeArgs, inpu
 		}
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(pools.txBuilder.Asset.Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }
 
 func (pools *NominationPoolsStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
@@ -142,13 +136,7 @@ func (pools *NominationPoolsStakingBuilder) Unstake(args xcbuilder.StakeArgs, in
 		return &tx.Tx{}, err
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(pools.txBuilder.Asset.Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }
 
 func (pools *NominationPoolsStakingBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
@@ -169,11 +157,5 @@ func (pools *NominationPoolsStakingBuilder) Withdraw(args xcbuilder.StakeArgs, i
 		return &tx.Tx{}, err
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(pools.txBuilder.Asset.Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }

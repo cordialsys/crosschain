@@ -12,8 +12,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 )
 
-var DefaultMaxTotalTipHuman, _ = xc.NewAmountHumanReadableFromStr("2")
-
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig

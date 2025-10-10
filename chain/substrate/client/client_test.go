@@ -325,7 +325,7 @@ func TestFetchTxInfo(t *testing.T) {
 					},
 				},
 				Confirmations: 3,
-				Error:         ref("transaction failed"),
+				Error:         ref("TransactionFailure: unable to decode reason"),
 			},
 		},
 	}

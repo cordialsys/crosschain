@@ -16,8 +16,10 @@ import (
 )
 
 type Event struct {
-	Module   string
-	Event    string
+	// An event name is in the format of "<module>.<event-id>"
+	Module string
+	// The event ID, from "<module>.<event-id>"
+	Id       string
 	Raw      *parser.Event
 	Block    int
 	EventIdx int
@@ -28,11 +30,11 @@ var _ api.EventI = &Event{}
 func NewEvent(raw *parser.Event, block int, eventIdx int) *Event {
 	parts := strings.Split(raw.Name, ".")
 	module := parts[0]
-	event := ""
+	id := ""
 	if len(parts) > 1 {
-		event = parts[1]
+		id = parts[1]
 	}
-	return &Event{module, event, raw, block, eventIdx}
+	return &Event{module, id, raw, block, eventIdx}
 }
 
 // Or may be called "pallet"
@@ -41,8 +43,8 @@ func (ev *Event) GetModule() string {
 }
 
 // Or may just be the "name"
-func (ev *Event) GetEvent() string {
-	return ev.Event
+func (ev *Event) GetId() string {
+	return ev.Id
 }
 
 func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {

@@ -120,6 +120,14 @@ func FailedPreconditionf(format string, args ...interface{}) error {
 	}
 }
 
+// Used when an on-chain transaction reverted or failed.
+func TransactionFailuref(format string, args ...interface{}) error {
+	return &Error{
+		Status:  TransactionFailure,
+		Message: fmt.Sprintf(format, args...),
+	}
+}
+
 func Unknownf(format string, args ...interface{}) error {
 	return &Error{
 		Status:  UnknownError,

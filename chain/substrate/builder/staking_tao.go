@@ -65,13 +65,7 @@ func (tao *TaoStakingBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxIn
 		return &tx.Tx{}, err
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(tao.txBuilder.Asset.Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }
 
 func (tao *TaoStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
@@ -100,13 +94,7 @@ func (tao *TaoStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.Unstake
 		return &tx.Tx{}, err
 	}
 
-	tip := txInput.Tip
-	maxTip := DefaultMaxTotalTipHuman.ToBlockchain(tao.txBuilder.Asset.Decimals).Uint64()
-	if tip > maxTip {
-		tip = maxTip
-	}
-
-	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, tip, txInput)
+	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }
 
 func (tao *TaoStakingBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
