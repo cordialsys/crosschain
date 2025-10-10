@@ -10,6 +10,8 @@ import (
 	kaspaclient "github.com/cordialsys/crosschain/chain/kaspa/client"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
+	"github.com/cordialsys/crosschain/chain/zcash"
+	zcashaddress "github.com/cordialsys/crosschain/chain/zcash/address"
 
 	. "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
@@ -118,6 +120,8 @@ func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
 		return icpclient.NewClient(cfg)
 	case DriverHyperliquid:
 		return hypeclient.NewClient(cfg)
+	case DriverZcash:
+		return zcash.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -254,6 +258,8 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 		return icpaddress.NewAddressBuilder(cfg, options...)
 	case DriverHyperliquid:
 		return hypeaddress.NewAddressBuilder(cfg)
+	case DriverZcash:
+		return zcashaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
