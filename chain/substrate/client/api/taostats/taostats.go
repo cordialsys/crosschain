@@ -120,7 +120,7 @@ func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {
 	return xcclient.NewEvent(ev.ID, xcclient.MovementVariantNative), true
 }
 
-func (ev *Event) GetEvent() string {
+func (ev *Event) GetId() string {
 	return ev.Name
 }
 func (ev *Event) GetModule() string {

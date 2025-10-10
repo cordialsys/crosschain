@@ -39,7 +39,7 @@ type Tx struct {
 
 func (tx *Tx) Get(module, event string) (api.EventI, bool) {
 	for _, ev := range tx.Events {
-		if strings.EqualFold(ev.GetModule(), module) && strings.EqualFold(ev.GetEvent(), event) {
+		if strings.EqualFold(ev.GetModule(), module) && strings.EqualFold(ev.GetId(), event) {
 			return ev, true
 		}
 	}

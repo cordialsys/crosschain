@@ -111,7 +111,7 @@ type AccountDisplay struct {
 	Address string `json:"address"`
 }
 
-func (ev *Event) GetEvent() string {
+func (ev *Event) GetId() string {
 	return ev.EventID
 }
 func (ev *Event) GetModule() string {

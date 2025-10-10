@@ -112,7 +112,7 @@ func (s *SubqueryEvent) ParseParams() ([]interface{}, error) {
 	s.parsedParams = params
 	return params, nil
 }
-func (ev *SubqueryEvent) GetEvent() string {
+func (ev *SubqueryEvent) GetId() string {
 	return ev.Event
 }
 func (ev *SubqueryEvent) GetModule() string {
