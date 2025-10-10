@@ -15,8 +15,10 @@ func GetParams(cfg *xc.ChainBaseConfig) (*chaincfg.Params, error) {
 		return DogeNetworks.GetParams(cfg.Network), nil
 	case xc.LTC:
 		return LtcNetworks.GetParams(cfg.Network), nil
+	case xc.ZEC:
+		return ZecNetworks.GetParams(cfg.Network), nil
 	}
-	return &chaincfg.Params{}, errors.New("unsupported utxo asset: " + string(cfg.Chain))
+	return &chaincfg.Params{}, errors.New("unsupported bitcoin chain: " + string(cfg.Chain))
 }
 
 // UTXO chains have mainnet, testnet, and regtest/devnet network types built in.
@@ -58,6 +60,12 @@ func init() {
 	}
 	if err := chaincfg.Register(LtcNetworks.Regtest); err != nil {
 		// litecoin regtest is a dup of another utxo chain, it will fail..
+	}
+	if err := chaincfg.Register(ZecNetworks.Mainnet); err != nil {
+		// panic(err)
+	}
+	if err := chaincfg.Register(ZecNetworks.Testnet); err != nil {
+		// panic(err)
 	}
 }
 
@@ -211,5 +219,35 @@ var LtcNetworks *NetworkTriple = &NetworkTriple{
 		// BIP 173. Dogecoin does not actually support this, but we do not want to
 		// collide with real addresses, so we specify it.
 		Bech32HRPSegwit: "rltc",
+	},
+}
+
+var ZecNetworks *NetworkTriple = &NetworkTriple{
+	Mainnet: &chaincfg.Params{
+		Name: "mainnet",
+		// Net:  0x6427E924,
+		Net: 0xd9b4bef9,
+		// https://zips.z.cash/protocol/protocol.pdf
+		PubKeyHashAddrID: 0x1C,
+		ScriptHashAddrID: 0xB8,
+		PrivateKeyID:     0x80,
+		HDPublicKeyID:    [4]byte{0x00, 0x00, 0x00, 0x00},
+		HDPrivateKeyID:   [4]byte{0x00, 0x00, 0x00, 0x00},
+
+		// not used for zcash
+		Bech32HRPSegwit: "",
+	},
+	Testnet: &chaincfg.Params{
+		Name: "testnet",
+		Net:  0x0709110B,
+		// https://zips.z.cash/protocol/protocol.pdf
+		PubKeyHashAddrID: 0x1D,
+		ScriptHashAddrID: 0x25,
+		PrivateKeyID:     0xEF,
+		HDPublicKeyID:    [4]byte{0x00, 0x00, 0x00, 0x00},
+		HDPrivateKeyID:   [4]byte{0x00, 0x00, 0x00, 0x00},
+
+		// not used for zcash
+		Bech32HRPSegwit: "",
 	},
 }

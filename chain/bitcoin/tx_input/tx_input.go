@@ -43,6 +43,9 @@ type TxInput struct {
 	GasPricePerByteV2 xc.AmountHumanReadable `json:"gas_price_per_byte_v2"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
+
+	// Added for Zcash
+	EstimatedTotalSize xc.AmountBlockchain `json:"estimated_total_fee"`
 }
 
 func init() {
@@ -114,6 +117,12 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 }
 
 func (txInput *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	if !txInput.EstimatedTotalSize.IsZero() {
+		// Zcash style fee
+		return txInput.EstimatedTotalSize, ""
+	}
+
+	// bitcoin style fee sat/byte
 	gasPrice := txInput.GetGasPricePerByte()
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
 		txInput.GetEstimatedSizePerSpentUtxo() * uint64(len(txInput.UnspentOutputs)),

@@ -94,6 +94,7 @@ const (
 	ZETA     = NativeAsset("ZETA")     // ZetaChain
 	NIL      = NativeAsset("NIL")      // Nillion
 	ICP      = NativeAsset("ICP")      // Internet Computer Protocol
+	ZEC      = NativeAsset("ZEC")      // Zcash
 	ZeroG    = NativeAsset("0G")       // 0g
 )
 
@@ -164,6 +165,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ZETA,
 	NIL,
 	ICP,
+	ZEC,
 	ZeroG,
 }
 
@@ -194,6 +196,7 @@ const (
 	DriverTon                      = Driver("ton")
 	DriverXrp                      = Driver("xrp")
 	DriverXlm                      = Driver("xlm")
+	DriverZcash                    = Driver("zcash")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
 )
@@ -218,6 +221,7 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 	DriverXrp,
 	DriverXlm,
+	DriverZcash,
 }
 
 type StakingProvider string
@@ -282,6 +286,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC:
 		return DriverBitcoinLegacy
+	case ZEC:
+		return DriverZcash
 	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
@@ -330,7 +336,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 	switch driver {
 	case DriverBitcoin:
 		return []SignatureType{K256Sha256, Schnorr}
-	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin, DriverEOS:
+	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin, DriverEOS, DriverZcash:
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid:
 		return []SignatureType{K256Keccak}
@@ -352,7 +358,7 @@ var Uncompressed PublicKeyFormat = "uncompressed"
 
 func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	switch driver {
-	case DriverBitcoin, DriverCardano, DriverBitcoinCash, DriverBitcoinLegacy, DriverEOS:
+	case DriverBitcoin, DriverCardano, DriverBitcoinCash, DriverBitcoinLegacy, DriverEOS, DriverZcash:
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed

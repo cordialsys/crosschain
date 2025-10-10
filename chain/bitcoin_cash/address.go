@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/btcutil/base58"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	xc "github.com/cordialsys/crosschain"
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
@@ -45,6 +46,10 @@ func (*BchAddressDecoder) Decode(inputAddr xc.Address, params *chaincfg.Params) 
 		}
 	}
 	return addr, nil
+}
+
+func (*BchAddressDecoder) PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
 }
 
 var (

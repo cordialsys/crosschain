@@ -98,7 +98,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		if err != nil {
 			return nil, err
 		}
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := txBuilder.AddressDecoder.PayToAddrScript(addr)
 		if err != nil {
 			logrus.WithError(err).WithField("to", recipient.To).Error("trying paytoaddr")
 			return nil, err

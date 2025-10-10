@@ -7,6 +7,7 @@ import (
 	btcec "github.com/btcsuite/btcd/btcec/v2"
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/params"
@@ -32,6 +33,7 @@ var _ xc.AddressBuilderWithFormats = &AddressBuilder{}
 
 type AddressDecoder interface {
 	Decode(to xc.Address, params *chaincfg.Params) (btcutil.Address, error)
+	PayToAddrScript(addr btcutil.Address) ([]byte, error)
 }
 
 type WithAddressDecoder interface {
@@ -44,6 +46,10 @@ var _ AddressDecoder = &BtcAddressDecoder{}
 
 func (*BtcAddressDecoder) Decode(addr xc.Address, params *chaincfg.Params) (btcutil.Address, error) {
 	return btcutil.DecodeAddress(string(addr), params)
+}
+
+func (*BtcAddressDecoder) PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
 }
 
 func NewAddressDecoder() *BtcAddressDecoder {
