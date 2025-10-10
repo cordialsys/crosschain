@@ -208,6 +208,8 @@ func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 		return icpbuilder.NewTxBuilder(cfg)
 	case DriverHyperliquid:
 		return hypebuilder.NewTxBuilder(cfg)
+	case DriverZcash:
+		return zcash.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }

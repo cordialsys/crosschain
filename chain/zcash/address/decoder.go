@@ -29,7 +29,7 @@ type TAddress struct {
 var _ btcutil.Address = &TAddress{}
 
 func (t *TAddress) EncodeAddress() string {
-	contents := append([]byte{t.netID}, t.hash[:]...)
+	contents := append([]byte{t.scriptHashId}, t.hash[:]...)
 	return base58.CheckEncode(contents, t.netID)
 }
 
@@ -82,11 +82,26 @@ func (*ZcashAddressDecoder) Decode(inputAddr xc.Address, params *chaincfg.Params
 }
 
 // Copied from btcsuite/btcd/txscript
-func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
-	return txscript.NewScriptBuilder().AddData(serializedPubKey).
-		AddOp(txscript.OP_CHECKSIG).Script()
+func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
+	return txscript.NewScriptBuilder().AddOp(txscript.OP_DUP).AddOp(txscript.OP_HASH160).
+		AddData(pubKeyHash).AddOp(txscript.OP_EQUALVERIFY).AddOp(txscript.OP_CHECKSIG).
+		Script()
 }
 
 func PayToAddrScript(addr *TAddress) ([]byte, error) {
-	return payToPubKeyScript(addr.ScriptAddress())
+	return payToPubKeyHashScript(addr.ScriptAddress())
+
+	// // Check if this is a P2PKH or P2SH address based on scriptHashId
+	// // For Zcash mainnet: 0x1C = P2PKH, 0x1C = P2SH (different from Bitcoin)
+	// // For Zcash testnet: 0x1D = P2PKH, 0x1C = P2SH
+
+	// // For now, assume P2PKH (most common for transparent addresses)
+	// // P2PKH: OP_DUP OP_HASH160 <pubkey_hash> OP_EQUALVERIFY OP_CHECKSIG
+	// return txscript.NewScriptBuilder().
+	// 	AddOp(txscript.OP_DUP).
+	// 	AddOp(txscript.OP_HASH160).
+	// 	AddData(addr.ScriptAddress()).
+	// 	AddOp(txscript.OP_EQUALVERIFY).
+	// 	AddOp(txscript.OP_CHECKSIG).
+	// 	Script()
 }

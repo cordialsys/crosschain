@@ -8,9 +8,10 @@ import (
 
 // TxInput for Bitcoin
 type MultiTransferInput struct {
-	Inputs          []TxInput              `json:"inputs"`
-	GasPricePerByte xc.AmountHumanReadable `json:"gas_price_per_byte"`
-	EstimatedSize   uint64                 `json:"estimated_size"`
+	Inputs             []TxInput              `json:"inputs"`
+	GasPricePerByte    xc.AmountHumanReadable `json:"gas_price_per_byte"`
+	EstimatedTotalSize xc.AmountBlockchain    `json:"estimated_total_fee,omitempty"`
+	EstimatedSize      uint64                 `json:"estimated_size"`
 }
 
 // This is a necessary interface so we can check conflicts between:
@@ -53,6 +54,10 @@ func (input *MultiTransferInput) SetGasFeePriority(other xc.GasFeePriority) erro
 }
 
 func (txInput *MultiTransferInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	if !txInput.EstimatedTotalSize.IsZero() {
+		// zcash style fee
+		return txInput.EstimatedTotalSize, ""
+	}
 	gasPrice := txInput.GasPricePerByte
 	txSize := txInput.EstimatedSize
 	estimatedTxBytesLength := xc.NewAmountBlockchainFromUint64(
