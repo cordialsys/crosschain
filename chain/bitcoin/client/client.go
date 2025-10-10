@@ -134,20 +134,17 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 	return outputs, nil
 }
 
-func (client *BlockbookClient) EstimateFeeZcash(ctx context.Context) (xc.AmountHumanReadable, error) {
-	// TODO should approximate the fee from the equation here:
-	// https://zips.z.cash/zip-0317
+func (client *BlockbookClient) EstimateTotalFeeZcash(ctx context.Context, numActions int) (xc.AmountBlockchain, error) {
+	// Zcash specifies fee in zatoshis per action.
+	// An action is basically creating a utxo.
 	defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
-	if defaultPrice < 0.01 {
-		defaultPrice = 3.0
+	if defaultPrice < 1 {
+		defaultPrice = 10000
 	}
-	return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
+	return xc.NewAmountBlockchainFromUint64(uint64(defaultPrice) * uint64(numActions)), nil
 }
 
-func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountHumanReadable, error) {
-	if client.Asset.GetChain().Chain == xc.ZEC {
-		return client.EstimateFeeZcash(ctx)
-	}
+func (client *BlockbookClient) EstimateSatsPerByteFee(ctx context.Context) (xc.AmountHumanReadable, error) {
 	blocks := 2
 
 	data, err := client.rpcClient.EstimateSmartFee(ctx, blocks)
@@ -362,14 +359,22 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	}
 	input.Address = args.GetFrom()
 	input.UnspentOutputs = allUnspentOutputs
-	gasPerByte, err := client.EstimateFee(ctx)
-	input.GasPricePerByteV2 = gasPerByte
-	input.XGasPricePerByte = gasPerByte.ToBlockchain(0)
-	if input.XGasPricePerByte.IsZero() {
-		input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
-	}
-	if err != nil {
-		return input, err
+	if client.Asset.GetChain().Chain == xc.ZEC {
+		totalFee, err := client.EstimateTotalFeeZcash(ctx, 2)
+		if err != nil {
+			return input, err
+		}
+		input.EstimatedTotalSize = totalFee
+	} else {
+		gasPerByte, err := client.EstimateSatsPerByteFee(ctx)
+		if err != nil {
+			return input, err
+		}
+		input.GasPricePerByteV2 = gasPerByte
+		input.XGasPricePerByte = gasPerByte.ToBlockchain(0)
+		if input.XGasPricePerByte.IsZero() {
+			input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
+		}
 	}
 
 	input.EstimatedSizePerSpentUtxo = tx_input.PerUtxoSizeEstimate(client.Asset.GetChain())
@@ -434,10 +439,18 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 	}
 
 	// Estimate fees
-	gasPerByte, err := client.EstimateFee(ctx)
-	multiInput.GasPricePerByte = gasPerByte
-	if err != nil {
-		return multiInput, err
+	if client.Asset.GetChain().Chain == xc.ZEC {
+		totalFee, err := client.EstimateTotalFeeZcash(ctx, len(args.Receivers())*2)
+		if err != nil {
+			return multiInput, err
+		}
+		multiInput.EstimatedTotalSize = totalFee
+	} else {
+		gasPerByte, err := client.EstimateSatsPerByteFee(ctx)
+		multiInput.GasPricePerByte = gasPerByte
+		if err != nil {
+			return multiInput, err
+		}
 	}
 	size, err := client.EstimateTxSize(ctx, args, *multiInput)
 	if err != nil {
