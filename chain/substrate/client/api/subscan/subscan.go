@@ -8,6 +8,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
+	xcclient "github.com/cordialsys/crosschain/client"
 )
 
 type SubscanExtrinsicResponse struct {
@@ -69,6 +70,10 @@ type Event struct {
 
 var _ api.EventI = &Event{}
 
+func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {
+	return xcclient.NewEvent(ev.EventIndex, xcclient.MovementVariantNative), true
+}
+
 // these pesky events can be reported as:
 // - expected type, json encoded
 // - encoded as an embedded json string
@@ -106,7 +111,7 @@ type AccountDisplay struct {
 	Address string `json:"address"`
 }
 
-func (ev *Event) GetEvent() string {
+func (ev *Event) GetId() string {
 	return ev.EventID
 }
 func (ev *Event) GetModule() string {

@@ -12,8 +12,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 )
 
-var DefaultMaxTotalTipHuman, _ = xc.NewAmountHumanReadableFromStr("2")
-
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
@@ -24,9 +22,10 @@ var _ xcbuilder.Staking = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
-	return TxBuilder{
+	builder := TxBuilder{
 		Asset: cfgI,
-	}, nil
+	}
+	return builder, nil
 }
 
 // NewTransfer creates a new transfer for an Asset, either native or token

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
+	xcclient "github.com/cordialsys/crosschain/client"
 )
 
 type Time struct {
@@ -111,7 +112,7 @@ func (s *SubqueryEvent) ParseParams() ([]interface{}, error) {
 	s.parsedParams = params
 	return params, nil
 }
-func (ev *SubqueryEvent) GetEvent() string {
+func (ev *SubqueryEvent) GetId() string {
 	return ev.Event
 }
 func (ev *SubqueryEvent) GetModule() string {
@@ -133,4 +134,8 @@ func GetSubqueryParam[T any](ev *SubqueryEvent, index int) (T, error) {
 		return value, fmt.Errorf("unexpected type for event %s.%s param %d, recieved %T but expected %T", ev.Module, ev.Event, index, ev.parsedParams[index], value)
 	}
 	return value, nil
+}
+
+func (ev *SubqueryEvent) GetEventDescriptor() (*xcclient.Event, bool) {
+	return nil, false
 }
