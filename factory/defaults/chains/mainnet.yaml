@@ -1255,3 +1255,15 @@ chains:
         asset_id: "38337"
       coin_gecko:
         asset_id: zero-gravity
+  ZEC:
+    chain: ZEC
+    driver: zcash
+    chain_name: Zcash
+    decimals: 8
+    fee_limit: "1.0"
+    confirmations_final: 6
+    external:
+      coin_market_cap:
+        asset_id: "1437"
+      coin_gecko:
+        asset_id: zcash

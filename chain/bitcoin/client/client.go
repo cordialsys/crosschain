@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -123,11 +122,11 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 	data = tx_input.FilterUnconfirmedHeuristic(data)
 	btcAddr, err := client.decoder.Decode(addr, client.Chaincfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode address: %v", err)
 	}
-	script, err := txscript.PayToAddrScript(btcAddr)
+	script, err := client.decoder.PayToAddrScript(btcAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create pay-to-addr-script: %v", err)
 	}
 
 	outputs := tx_input.NewOutputs(data, script, addr)
@@ -135,8 +134,21 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 	return outputs, nil
 }
 
+func (client *BlockbookClient) EstimateFeeZcash(ctx context.Context) (xc.AmountHumanReadable, error) {
+	// TODO should approximate the fee from the equation here:
+	// https://zips.z.cash/zip-0317
+	defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
+	if defaultPrice < 0.01 {
+		defaultPrice = 3.0
+	}
+	return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
+}
+
 func (client *BlockbookClient) EstimateFee(ctx context.Context) (xc.AmountHumanReadable, error) {
-	blocks := 4
+	if client.Asset.GetChain().Chain == xc.ZEC {
+		return client.EstimateFeeZcash(ctx)
+	}
+	blocks := 2
 
 	data, err := client.rpcClient.EstimateSmartFee(ctx, blocks)
 	if err != nil {

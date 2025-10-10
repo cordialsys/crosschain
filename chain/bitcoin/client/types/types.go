@@ -149,22 +149,27 @@ type EstimateFeeResponse struct {
 }
 
 type BlockHeader struct {
-	Page              int                    `json:"page"`
-	TotalPages        int                    `json:"totalPages"`
-	ItemsOnPage       int                    `json:"itemsOnPage"`
-	Hash              string                 `json:"hash"`
-	PreviousBlockHash string                 `json:"previousBlockHash"`
-	NextBlockHash     string                 `json:"nextBlockHash"`
-	Height            int                    `json:"height"`
-	Confirmations     int                    `json:"confirmations"`
-	Size              int                    `json:"size"`
-	Time              int64                  `json:"time"`
-	Version           int                    `json:"version"`
-	MerkleRoot        string                 `json:"merkleRoot"`
-	Nonce             xc.AmountBlockchain    `json:"nonce"`
-	Bits              string                 `json:"bits"`
-	Difficulty        xc.AmountHumanReadable `json:"difficulty"`
-	TxCount           int                    `json:"txCount"`
+	Page              int    `json:"page"`
+	TotalPages        int    `json:"totalPages"`
+	ItemsOnPage       int    `json:"itemsOnPage"`
+	Hash              string `json:"hash"`
+	PreviousBlockHash string `json:"previousBlockHash"`
+	NextBlockHash     string `json:"nextBlockHash"`
+	Height            int    `json:"height"`
+	Confirmations     int    `json:"confirmations"`
+	Size              int    `json:"size"`
+	Time              int64  `json:"time"`
+	Version           int    `json:"version"`
+	MerkleRoot        string `json:"merkleRoot"`
+	// Observed that Nonce can be either a:
+	// - string integer
+	// - integer
+	// - hexdecimal string (no 0x prefix)
+	// between various bitcoin chains.
+	Nonce      interface{}            `json:"nonce"`
+	Bits       string                 `json:"bits"`
+	Difficulty xc.AmountHumanReadable `json:"difficulty"`
+	TxCount    int                    `json:"txCount"`
 }
 
 type Block struct {
