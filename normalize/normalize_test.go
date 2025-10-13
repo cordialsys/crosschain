@@ -296,6 +296,12 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "USDC-0x0ECE",
 			out:   "USDC-0x0ece",
 		},
+		{
+			// Base58, should be no variation
+			chain: xc.ZEC,
+			inp:   "t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS",
+			out:   "t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS",
+		},
 	}
 
 	// test that we have a test vector for each chain

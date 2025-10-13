@@ -22,7 +22,6 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 		return AddressBuilder{}, err
 	}
 
-	// log.Debugf("New zcash address builder")
 	builder := AddressBuilder{
 		params,
 		asset,
@@ -34,7 +33,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 // GetAddressFromPublicKey returns an Address given a public key
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	if len(publicKeyBytes) == 32 {
-		// btcec.ParsePubKey requires there be a compressed '2' header
+		// The 0x2 compressed prefix is required
 		withCompressedHeader := make([]byte, 33)
 		withCompressedHeader[0] = 0x02
 		copy(withCompressedHeader[1:], publicKeyBytes)
@@ -49,7 +48,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	publicKeyBytes = pubkey.SerializeCompressed()
 	hashBytes := [20]byte{}
 	copy(hashBytes[:], btcutil.Hash160(publicKeyBytes))
-	address := TAddress{
+	address := TransparentAddress{
 		hash:         hashBytes,
 		netID:        ab.params.PubKeyHashAddrID,
 		scriptHashId: ab.params.ScriptHashAddrID,

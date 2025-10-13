@@ -34,8 +34,9 @@ type Tx struct {
 	Signed     bool
 	Recipients []Recipient
 	Signatures []xc.TxSignature
+	Zcash      tx_input.Zcash
 
-	UnspentOutputs []tx_input.Output `json:"unspent_outputs"`
+	UnspentOutputs []tx_input.Output
 }
 
 var _ xc.Tx = &Tx{}
