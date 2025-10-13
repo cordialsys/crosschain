@@ -17,9 +17,6 @@ import (
 	// "golang.org/x/crypto/blake2b"
 )
 
-const consensusBranchKeyN5 uint32 = 0xC2D6D0B4
-const consensusBranchKeyN6 uint32 = 0xC8E71055
-
 // Tx for Bitcoin
 type Tx struct {
 	*tx.Tx
@@ -66,16 +63,19 @@ func (output *ZcashTxOutput) Serialize() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// All inputs to match Zcash transaction format + hashing: https://zips.z.cash/zip-0243
 type ZcashTx struct {
-	Version        uint32
-	VersionGroupId uint32
-	Inputs         []ZcashTxInput
-	Outputs        []ZcashTxOutput
-	LockTime       uint32
-	ExpiryHeight   uint32
-	SigHash        txscript.SigHashType
+	Version           uint32
+	VersionGroupId    uint32
+	Inputs            []ZcashTxInput
+	Outputs           []ZcashTxOutput
+	LockTime          uint32
+	ExpiryHeight      uint32
+	SigHash           txscript.SigHashType
+	ConsensusBranchId uint32
 }
 
+// ZIP-0243
 func (tx *ZcashTx) Serialize() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
@@ -147,9 +147,7 @@ func (tx *ZcashTx) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("failed to write joinsplit count: %w", err)
 	}
 
-	bz := buf.Bytes()
-	fmt.Println("ZcashTx Serialize", hex.EncodeToString(bz))
-	return bz, nil
+	return buf.Bytes(), nil
 }
 
 func (tx *ZcashTx) Hash() ([]byte, error) {
@@ -158,8 +156,6 @@ func (tx *ZcashTx) Hash() ([]byte, error) {
 		return nil, fmt.Errorf("failed to serialize transaction: %w", err)
 	}
 
-	// For Zcash v1-v4 transactions, the transaction ID is computed as
-	// the double SHA256 hash of the serialized transaction (same as Bitcoin)
 	firstHash := sha256.Sum256(serialized)
 	secondHash := sha256.Sum256(firstHash[:])
 
@@ -170,7 +166,6 @@ func (tx *ZcashTx) Hash() ([]byte, error) {
 		txid[i], txid[j] = txid[j], txid[i]
 	}
 
-	fmt.Println("ZcashTx Hash", hex.EncodeToString(txid))
 	return txid, nil
 }
 
@@ -194,10 +189,6 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// hashJoinSplit, err := blake2b.New256([]byte("ZcashJSplitsHash"))
-	// if err != nil {
-	// 	return nil, err
-	// }
 	for _, input := range tx.Inputs {
 		hashPrevouts.Write(input.SerializeOutpoint())
 		var bSequence [4]byte
@@ -224,9 +215,7 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 
 	for _, input := range tx.Inputs {
 		key := []byte("ZcashSigHash")
-		// TODO look this up / pull from tx-input
-
-		key = binary.LittleEndian.AppendUint32(key, consensusBranchKeyN6)
+		key = binary.LittleEndian.AppendUint32(key, tx.ConsensusBranchId)
 
 		hashOutputs, err := blake2b.New(blake2bConfig(key))
 		if err != nil {
@@ -248,7 +237,6 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 		binary.Write(hashOutputs, binary.LittleEndian, tx.SigHash)
 
 		// Write the input specific information
-
 		hashOutputs.Write(input.SerializeOutpoint())
 		err = wire.WriteVarBytes(hashOutputs, 0, input.PubkeyScript)
 		if err != nil {
@@ -266,14 +254,17 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 func (tx *Tx) Build() (*ZcashTx, error) {
 	ztx := &ZcashTx{
 		// Version 4 (Sapling) with overwintered bit set
-		Version:        4 | (0x80000000),
-		VersionGroupId: 0x892F2085, // Sapling version group ID
-		// VersionGroupId: 0x26A7270A, // Sapling version group ID
-		Inputs:       make([]ZcashTxInput, len(tx.UnspentOutputs)),
-		Outputs:      make([]ZcashTxOutput, len(tx.Recipients)),
-		LockTime:     0,
-		ExpiryHeight: 0,
-		SigHash:      txscript.SigHashAll,
+		Version: 4 | (0x80000000),
+		// Sapling version group ID
+		VersionGroupId: 0x892F2085,
+		Inputs:         make([]ZcashTxInput, len(tx.UnspentOutputs)),
+		Outputs:        make([]ZcashTxOutput, len(tx.Recipients)),
+		// No locktime
+		LockTime: 0,
+		// No expiry
+		ExpiryHeight:      0,
+		SigHash:           txscript.SigHashAll,
+		ConsensusBranchId: tx.Zcash.ConsensusBranchId,
 	}
 
 	for i, utxo := range tx.UnspentOutputs {
@@ -282,7 +273,8 @@ func (tx *Tx) Build() (*ZcashTx, error) {
 			Index:        utxo.Outpoint.Index,
 			PubkeyScript: utxo.PubKeyScript,
 			Amount:       utxo.Value.Uint64(),
-			NSequence:    0xFFFFFFFF,
+			// Set to all ff -- indicate we do not use locktime.
+			NSequence: 0xFFFFFFFF,
 		}
 		if len(tx.signatures) > i {
 			sig := tx.signatures[i].Signature
@@ -316,7 +308,6 @@ func (tx *Tx) Build() (*ZcashTx, error) {
 	return ztx, nil
 }
 
-// Sighashes returns the tx payload to sign, aka sighash
 func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	ztx, err := tx.Build()
 	if err != nil {

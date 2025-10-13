@@ -33,9 +33,16 @@ type Output struct {
 	Address      xc.Address          `json:"-"`
 }
 
+// Inputs added for Zcash
+type Zcash struct {
+	EstimatedTotalSize xc.AmountBlockchain `json:"estimated_total_fee"`
+	ConsensusBranchId  uint32              `json:"consensus_branch_id"`
+}
+
 // TxInput for Bitcoin
 type TxInput struct {
 	xc.TxInputEnvelope
+	Zcash
 	Address        xc.Address `json:"address"`
 	UnspentOutputs []Output   `json:"unspent_outputs"`
 	// Satoshi per byte (could be less than 1)
@@ -43,9 +50,6 @@ type TxInput struct {
 	GasPricePerByteV2 xc.AmountHumanReadable `json:"gas_price_per_byte_v2"`
 	// Estimated size in bytes, per utxo that gets spent
 	EstimatedSizePerSpentUtxo uint64 `json:"estimated_size_per_spent_utxo"`
-
-	// Added for Zcash
-	EstimatedTotalSize xc.AmountBlockchain `json:"estimated_total_fee"`
 }
 
 func init() {

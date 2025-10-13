@@ -122,6 +122,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 		UnspentOutputs: local_input.UnspentOutputs,
 
 		Recipients: recipients,
+		Zcash:      local_input.Zcash,
 	}
 	return &tx, nil
 }
@@ -221,6 +222,7 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 
 		UnspentOutputs: unspentOutputs,
 		Recipients:     recipients,
+		Zcash:          local_input.Zcash,
 	}
 	return &tx, nil
 }

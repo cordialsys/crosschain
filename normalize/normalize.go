@@ -180,6 +180,8 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 			parts[len(parts)-1] = lastPart
 			address = strings.Join(parts, sep)
 		}
+	case xc.DriverZcash:
+		// nothing to do, base58
 
 	default:
 	}

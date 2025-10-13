@@ -49,7 +49,7 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverCardano, DriverFilecoin, DriverXlm, DriverXrp:
 					// pass
-				case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy:
+				case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverZcash:
 					// pass
 				case DriverInternetComputerProtocol:
 					// pass

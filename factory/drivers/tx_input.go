@@ -49,7 +49,7 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 		}
 		// aliases for fork chains
 		switch driver {
-		case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy:
+		case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy, xc.DriverZcash:
 			if txInput.GetDriver() == xc.DriverBitcoin {
 				return makeCopy(txInput), nil
 			}

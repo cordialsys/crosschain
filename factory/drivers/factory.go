@@ -287,7 +287,7 @@ func CheckError(driver Driver, err error) errors.Status {
 		return solana.CheckError(err)
 	case DriverAptos:
 		return aptos.CheckError(err)
-	case DriverBitcoin, DriverBitcoinLegacy:
+	case DriverBitcoin, DriverBitcoinLegacy, DriverZcash:
 		return bitcoin.CheckError(err)
 	case DriverBitcoinCash:
 		return bitcoin_cash.CheckError(err)
