@@ -145,9 +145,10 @@ func (client *BlockbookClient) EstimateTotalFeeZcash(ctx context.Context, numAct
 }
 
 func (client *BlockbookClient) EstimateSatsPerByteFee(ctx context.Context) (xc.AmountHumanReadable, error) {
-	blocks := 2
+	// Used by estimatefee RPC (number of future blocks to try to get mined within).  Smaller is more aggressive.
+	numBlocksToGetMined := 2
 
-	data, err := client.rpcClient.EstimateSmartFee(ctx, blocks)
+	data, err := client.rpcClient.EstimateSmartFee(ctx, numBlocksToGetMined)
 	if err != nil {
 		// Some backends do not support fee estimation
 		logrus.WithError(err).Info("estimatesmartfee is not supported, trying to use native blockstats endpoint")
