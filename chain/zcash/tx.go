@@ -14,7 +14,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	bitcointx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/harshavardhana/blake2b-simd"
-	// "golang.org/x/crypto/blake2b"
 )
 
 // Tx for Bitcoin

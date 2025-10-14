@@ -35,38 +35,20 @@ type NetworkTriple struct {
 }
 
 func init() {
-	if err := chaincfg.Register(BtcNetworks.Mainnet); err != nil {
-	}
-	if err := chaincfg.Register(BtcNetworks.Testnet); err != nil {
-	}
-	if err := chaincfg.Register(BtcNetworks.Regtest); err != nil {
-	}
-	// TODO re-enable panic'ing on registration error
-	if err := chaincfg.Register(DogeNetworks.Mainnet); err != nil {
-		// panic(err)
-	}
-	if err := chaincfg.Register(DogeNetworks.Testnet); err != nil {
-		// panic(err)
-	}
-	if err := chaincfg.Register(DogeNetworks.Regtest); err != nil {
-		// panic(err)
-	}
+	_ = chaincfg.Register(BtcNetworks.Mainnet)
+	_ = chaincfg.Register(BtcNetworks.Testnet)
+	_ = chaincfg.Register(BtcNetworks.Regtest)
 
-	if err := chaincfg.Register(LtcNetworks.Mainnet); err != nil {
-		// panic(err)
-	}
-	if err := chaincfg.Register(LtcNetworks.Testnet); err != nil {
-		// panic(err)
-	}
-	if err := chaincfg.Register(LtcNetworks.Regtest); err != nil {
-		// litecoin regtest is a dup of another utxo chain, it will fail..
-	}
-	if err := chaincfg.Register(ZecNetworks.Mainnet); err != nil {
-		// panic(err)
-	}
-	if err := chaincfg.Register(ZecNetworks.Testnet); err != nil {
-		// panic(err)
-	}
+	_ = chaincfg.Register(DogeNetworks.Mainnet)
+	_ = chaincfg.Register(DogeNetworks.Testnet)
+	_ = chaincfg.Register(DogeNetworks.Regtest)
+
+	_ = chaincfg.Register(LtcNetworks.Mainnet)
+	_ = chaincfg.Register(LtcNetworks.Testnet)
+	_ = chaincfg.Register(LtcNetworks.Regtest)
+
+	_ = chaincfg.Register(ZecNetworks.Mainnet)
+	_ = chaincfg.Register(ZecNetworks.Testnet)
 }
 
 func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
