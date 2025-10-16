@@ -45,7 +45,9 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 		return err
 	}
 	multipliedGasPrice := multiplier.Mul(decimal.NewFromInt(int64(input.GasPrice)))
+	multipliedGasBudget := multiplier.Mul(decimal.NewFromInt(int64(input.GasBudget)))
 	input.GasPrice = multipliedGasPrice.BigInt().Uint64()
+	input.GasBudget = multipliedGasBudget.BigInt().Uint64()
 	return nil
 }
 
