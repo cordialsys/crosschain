@@ -175,7 +175,11 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	if err != nil {
 		return nil, fmt.Errorf("invalid base58 for validator address: %v", err)
 	}
-	amount := args.GetAmount().Uint64()
+	a, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing unstake amounbt")
+	}
+	amount := a.Uint64()
 	if amount < builder.RentExemptLamportsThreshold {
 		return nil, fmt.Errorf("amount to unstake is below the rent exempt threshold (%s SOL)", builder.RentExemptLamportsThresholdHuman)
 	}

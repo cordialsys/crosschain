@@ -27,10 +27,9 @@ func MustNewTransferArgs(
 func MustNewStakingArgs(
 	chain xc.NativeAsset,
 	from xc.Address,
-	amount xc.AmountBlockchain,
 	options ...builder.BuilderOption,
 ) builder.StakeArgs {
-	args, err := builder.NewStakeArgs(chain, from, amount, options...)
+	args, err := builder.NewStakeArgs(chain, from, options...)
 	if err != nil {
 		panic(err)
 	}
