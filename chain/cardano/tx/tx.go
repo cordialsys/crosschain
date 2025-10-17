@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	xcbuilder "github.com/cordialsys/crosschain/builder"
+	builder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cardano/address"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	"github.com/cosmos/btcutil/bech32"
@@ -17,38 +18,101 @@ import (
 )
 
 const (
+	StakeCredentialKeyHash            = 0
+	StakeCredentialScriptHash         = 1
+	CertTypeDeregistration            = 8
+	CertTypeRegistrationAndDelegation = 11
 	// PolicyId is 28 byte hash of the token policy
 	PolicyIdLen = 56
 
 	// CalcMinAdaValue parameters, defined here: https://github.com/IntersectMBO/cardano-ledger/blob/master/doc/explanations/min-utxo-alonzo.rst
-	// Some names map directly to the formula, while others are speculative on my part, especially if the name isn't clearly derived from the formula above./
-	//
+	// Some names map directly to the formula, while others are speculative on my part, especially if the name isn't clearly derived from the formula above.
+
+	// Size overhead for an empty asset name
+	AssetNameCountMultiplier = 12
+	// Multiplier for the final size of the UTXO.
+	CoinsPerUtxoWord = 37_037
 	// Nameless in above document; however it's probably the size necessary to store ADA tokens
 	NativeTokensHeaderSize = 6
 	// Policy size is always a 28 byte hash
 	PolicyIdSize = 28
-	// Size overhead for an empty asset name
-	AssetNameCountMultiplier = 12
 	// Size of the UTXO entry without any coin values
 	UtxoEntrySizeWithoutVal = 27
-	// Multiplier for the final size of the UTXO.
-	CoinsPerUtxoWord = 37_037
 )
+
+type CertificateCredential struct {
+	_ struct{} `cbor:",toarray"`
+	// Either stake verification key hash or script hash
+	Type       uint32
+	Credential []byte
+}
+
+func NewKeyCredential(pubkey []byte) (CertificateCredential, error) {
+	keyHash, err := address.GetKeyHash(pubkey)
+	if err != nil {
+		return CertificateCredential{}, fmt.Errorf("failed to get keyhash: %w", err)
+	}
+	return CertificateCredential{
+		Type:       StakeCredentialKeyHash,
+		Credential: keyHash,
+	}, nil
+}
+
+type Certificate struct {
+	_                 struct{} `cbor:",toarray"`
+	CertificationType uint32
+	Credential        CertificateCredential
+	PoolId            []byte `cbor:",omitempty,omitzero"`
+	DepositAmount     uint64
+}
+
+func (c *Certificate) MarshalCBOR() ([]byte, error) {
+	arr := make([]interface{}, 0)
+	arr = append(arr, c.CertificationType)
+	arr = append(arr, c.Credential)
+	if c.PoolId != nil && len(c.PoolId) != 0 {
+		arr = append(arr, c.PoolId)
+	}
+	arr = append(arr, c.DepositAmount)
+	return cbor.Marshal(arr)
+}
+
+type Withdrawal struct {
+	StakeAddress []byte
+	Amount       uint64
+}
+
+// Serialize as map of address to amount
+func (w *Withdrawal) MarshalCBOR() ([]byte, error) {
+	data := make([]byte, 0)
+	data = append(data, 0xA1) // CBOR map tag
+	addressCbor, err := cbor.Marshal(w.StakeAddress)
+	if err != nil {
+		return nil, err
+	}
+	data = append(data, addressCbor...)
+
+	amountCbor, err := cbor.Marshal(w.Amount)
+	data = append(data, amountCbor...)
+	return data, err
+}
 
 // Tx for Cardano
 type Tx struct {
-	_       struct{} `cbor:",toarray"`
-	Body    *TxBody
-	Witness *Witness
-	Valid   bool
-	Memo    *string
+	_                           struct{} `cbor:",toarray"`
+	Body                        *TxBody
+	Witness                     *Witness
+	Valid                       bool
+	Memo                        *string
+	RequiresAdditionalSignature bool `cbor:"-"`
 }
 
-func newTx() *Tx {
+func NewTx() *Tx {
 	return &Tx{
 		Body: &TxBody{
-			Inputs:  make([]*Input, 0),
-			Outputs: make([]*Output, 0),
+			Inputs:     make([]*Input, 0),
+			Outputs:    make([]*Output, 0),
+			Withdrawal: nil,
 		},
 		Witness: &Witness{
 			Keys: make([]*VKeyWitness, 0),
@@ -58,28 +122,39 @@ func newTx() *Tx {
 }
 
 type TxBody struct {
-	Inputs   []*Input  `cbor:"0,keyasint"`
-	Outputs  []*Output `cbor:"1,keyasint"`
-	Fee      uint64    `cbor:"2,keyasint"`
-	TTL      uint32    `cbor:"3,keyasint,omitempty"`
-	MemoHash []byte    `cbor:"7,keyasint,omitempty"`
+	Inputs       []*Input      `cbor:"0,keyasint"`
+	Outputs      []*Output     `cbor:"1,keyasint"`
+	Fee          uint64        `cbor:"2,keyasint"`
+	TTL          uint32        `cbor:"3,keyasint,omitempty"`
+	Certificates []Certificate `cbor:"4,keyasint,omitempty"`
+	Withdrawal   *Withdrawal   `cbor:"5,keyasint,omitempty"`
+	MemoHash     []byte        `cbor:"7,keyasint,omitempty"`
 }
 
 func (txBody *TxBody) MarshalCBOR() ([]byte, error) {
 	type Body struct {
-		Inputs  cbor.Tag  `cbor:"0,keyasint"`
-		Outputs []*Output `cbor:"1,keyasint"`
-		Fee     uint64    `cbor:"2,keyasint"`
-		TTL     uint32    `cbor:"3,keyasint,omitempty,omitzero"`
+		Inputs       cbor.Tag    `cbor:"0,keyasint"`
+		Outputs      []*Output   `cbor:"1,keyasint"`
+		Fee          uint64      `cbor:"2,keyasint"`
+		TTL          uint32      `cbor:"3,keyasint,omitempty,omitzero"`
+		Certificates *cbor.Tag   `cbor:"4,keyasint,omitempty"`
+		Withdrawal   *Withdrawal `cbor:"5,keyasint,omitempty"`
 	}
 	txBodyData := Body{
 		Inputs: cbor.Tag{
 			Number:  258,
 			Content: txBody.Inputs,
 		},
-		Outputs: txBody.Outputs,
-		Fee:     txBody.Fee,
-		TTL:     txBody.TTL,
+		Outputs:    txBody.Outputs,
+		Fee:        txBody.Fee,
+		TTL:        txBody.TTL,
+		Withdrawal: txBody.Withdrawal,
+	}
+	if len(txBody.Certificates) > 0 {
+		txBodyData.Certificates = &cbor.Tag{
+			Number:  258,
+			Content: txBody.Certificates,
+		}
 	}
 	return cbor.Marshal(txBodyData)
 }
@@ -403,24 +478,23 @@ func CalcMinAdaValue(policyHashToAmounts *PolicyIdToAmounts) xc.AmountBlockchain
 	return utxoEntrySize
 }
 
-func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output, error) {
-	// Create firt output
-	receiverAddress := args.GetTo()
+// Create output that represents amount sent to receiver address
+func (tx Tx) CreateTransferOutput(to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress) error {
+	receiverAddress := to
 	output, err := NewOutput(receiverAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create output: %w", err)
+		return fmt.Errorf("failed to create transfer output: %w", err)
 	}
 
-	amount := args.GetAmount()
-	contract, ok := args.GetContract()
-	isNative := !ok
+	isNative := contract == "" || contract == types.Lovelace
 	output.AddAmount(contract, amount.Uint64())
 	if !isNative {
 		minLovelace := CalcMinAdaValue(output.TokenAmounts.PolicyIdToAmounts)
 		output.AddAmount(xc.ContractAddress(types.Lovelace), minLovelace.Uint64())
 	}
 
-	return output, nil
+	tx.Body.Outputs = append(tx.Body.Outputs, output)
+	return nil
 }
 
 // CreateChangeOutput creates a change output for the transaction
@@ -428,11 +502,7 @@ func CreateOutput(args xcbuilder.TransferArgs, input tx_input.TxInput) (*Output,
 // 2. Calculate total contract amounts from output
 // 3. Calculate change amounts for both native and token outputs
 // 4. Create change output
-func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.TransferArgs) (*Output, error) {
-	if output == nil {
-		return nil, errors.New("invalid output")
-	}
-
+func (tx Tx) CreateChangeOutput(utxos []types.Utxo, from xc.Address) error {
 	// Calculate total input amounts
 	inputAmounts := make(map[xc.ContractAddress]xc.AmountBlockchain)
 	for _, utxo := range utxos {
@@ -450,34 +520,36 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 	// Make sure that inputs contain lovelace
 	_, ok := inputAmounts[types.Lovelace]
 	if !ok {
-		return nil, errors.New("missing lovelace input")
+		return errors.New("missing lovelace input")
 	}
 
 	// Calculate total output amounts
 	totalOutputs := make(map[xc.ContractAddress]xc.AmountBlockchain)
-	// Include native output first
-	nativeOutput := xc.NewAmountBlockchainFromUint64(output.TokenAmounts.NativeAmount)
-	if nativeOutput.IsZero() {
-		return nil, errors.New("outputs with 0 lovelace are invalid")
-	}
-	totalOutputs[types.Lovelace] = nativeOutput
-	policyIter := output.TokenAmounts.PolicyIdToAmounts.Iter()
-	for ok := policyIter.First(); ok; ok = policyIter.Next() {
-		policyId := policyIter.Key()
-		amounts := policyIter.Value()
-		amountsIter := amounts.Iter()
-		for ok := amountsIter.First(); ok; ok = amountsIter.Next() {
-			assetName := amountsIter.Key()
-			tokenAmount := amountsIter.Value()
-			contract := xc.ContractAddress(string(policyId) + string(assetName))
-			totalOutputs[contract] = xc.NewAmountBlockchainFromUint64(tokenAmount)
+	for _, output := range tx.Body.Outputs {
+		// Include native output first
+		nativeOutput := xc.NewAmountBlockchainFromUint64(output.TokenAmounts.NativeAmount)
+		if nativeOutput.IsZero() {
+			return errors.New("outputs with 0 lovelace are invalid")
+		}
+		totalOutputs[types.Lovelace] = nativeOutput
+		policyIter := output.TokenAmounts.PolicyIdToAmounts.Iter()
+		for ok := policyIter.First(); ok; ok = policyIter.Next() {
+			policyId := policyIter.Key()
+			amounts := policyIter.Value()
+			amountsIter := amounts.Iter()
+			for ok := amountsIter.First(); ok; ok = amountsIter.Next() {
+				assetName := amountsIter.Key()
+				tokenAmount := amountsIter.Value()
+				contract := xc.ContractAddress(string(policyId) + string(assetName))
+				totalOutputs[contract] = xc.NewAmountBlockchainFromUint64(tokenAmount)
+			}
 		}
 	}
 
 	// Iterate over inputs and calculate change amounts
-	changeOutput, err := NewOutput(args.GetFrom())
+	changeOutput, err := NewOutput(from)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create change output: %w", err)
+		return fmt.Errorf("failed to create change output: %w", err)
 	}
 	zeroAmount := xc.NewAmountBlockchainFromUint64(0)
 	for contract, inputAmount := range inputAmounts {
@@ -487,7 +559,7 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 		}
 		changeAmount := inputAmount.Sub(&outputAmount)
 		if changeAmount.Cmp(&zeroAmount) == -1 {
-			return nil, fmt.Errorf("negative change amount for contract %s", contract)
+			return fmt.Errorf("negative change amount for contract %s", contract)
 		}
 		changeOutput.AddAmount(contract, changeAmount.Uint64())
 	}
@@ -495,7 +567,9 @@ func CreateChangeOutput(utxos []types.Utxo, output *Output, args xcbuilder.Trans
 	if log.GetLevel() == log.DebugLevel {
 		DebugAmounts(inputAmounts, totalOutputs, changeOutput)
 	}
-	return changeOutput, nil
+
+	tx.Body.Outputs = append(tx.Body.Outputs, changeOutput)
+	return nil
 }
 
 func DebugAmounts(
@@ -532,32 +606,28 @@ func DebugAmounts(
 	log.WithFields(change).Debug("change amounts, before fee")
 }
 
-// Create Cardano transaction
-// 1. Create raw transaction
-// 2. Create inputs
-// 3. Create recipient output
-// 4. Create change output
-// 5. Create dummy signature for fee estimation
-// 6. Deduct fee from change output
-func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (xc.Tx, error) {
-	tx := newTx()
-
-	inputMemo, ok := args.GetMemo()
-	if ok {
-		tx.Memo = &inputMemo
-		bytes, err := cbor.Marshal(inputMemo)
-		if err != nil {
-			return nil, errors.New("failed to marshal memo")
-		}
-		hash := blake2b.Sum256(bytes)
-		tx.Body.MemoHash = hash[:]
+func (tx *Tx) SetMemo(memo string) error {
+	tx.Memo = &memo
+	bytes, err := cbor.Marshal(memo)
+	if err != nil {
+		return errors.New("failed to marshal memo")
 	}
+	hash := blake2b.Sum256(bytes)
+	tx.Body.MemoHash = hash[:]
+	return nil
+}
 
-	// Create inputs
-	for _, utxo := range input.Utxos {
+func (tx *Tx) SetTTL(ttl uint32) {
+	if ttl > 0 {
+		tx.Body.TTL = ttl
+	}
+}
+
+func (tx *Tx) SetUtxos(utxos []types.Utxo) error {
+	for _, utxo := range utxos {
 		hexHash, err := hex.DecodeString(utxo.TxHash)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode hash: %w", err)
+			return fmt.Errorf("failed to decode hash: %w", err)
 		}
 		txInput := &Input{
 			TxHash: hexHash,
@@ -565,28 +635,87 @@ func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) (xc.Tx, error) {
 		}
 		tx.Body.Inputs = append(tx.Body.Inputs, txInput)
 	}
+	return nil
+}
 
-	// Recipient output
-	output, err := CreateOutput(args, input)
+func (tx *Tx) UpdateChangeAmount(diff int64) error {
+	outLen := len(tx.Body.Outputs)
+	if outLen == 0 {
+		return errors.New("cannot set fee without a change output")
+	}
+
+	if diff < 0 {
+		absDiff := uint64(-diff)
+		if absDiff > tx.Body.Outputs[outLen-1].TokenAmounts.NativeAmount {
+			return errors.New("output will be left with negative amount")
+		}
+
+		tx.Body.Outputs[outLen-1].TokenAmounts.NativeAmount -= absDiff
+	} else {
+
+		tx.Body.Outputs[outLen-1].TokenAmounts.NativeAmount += uint64(diff)
+	}
+
+	return nil
+}
+
+// Set fee and deduce the amount from last output
+func (tx *Tx) SetFee(fee uint64) error {
+	outLen := len(tx.Body.Outputs)
+	if outLen == 0 {
+		return errors.New("cannot set fee without a change output")
+	}
+
+	tx.Body.Fee = fee
+	tx.UpdateChangeAmount(int64(-fee))
+	return nil
+}
+
+// Set certificates and deduce deposit from last output
+func (tx *Tx) SetCertificates(certs []Certificate) error {
+	outLen := len(tx.Body.Outputs)
+	if outLen == 0 {
+		return errors.New("cannot set certificate without a change output")
+	}
+
+	tx.Body.Certificates = certs
+	for _, c := range certs {
+		var changeDiff int64
+		// Increase change output if we are deregistering and decrese in case of registering
+		if c.CertificationType == CertTypeDeregistration {
+			changeDiff = int64(c.DepositAmount)
+		} else if c.CertificationType == CertTypeRegistrationAndDelegation {
+			changeDiff = int64(-c.DepositAmount)
+		}
+		tx.UpdateChangeAmount(changeDiff)
+	}
+
+	tx.RequiresAdditionalSignature = true
+	return nil
+}
+
+// Set withdrawal address and amount, and deduce the amount from last output
+func (tx *Tx) SetWithdrawal(rewardsAddress xc.Address, amount xc.AmountBlockchain) error {
+	outLen := len(tx.Body.Outputs)
+	if outLen == 0 {
+		return errors.New("cannot set withdrawal without a change output")
+	}
+
+	_, addressBytes, err := DecodeToBase256(string(rewardsAddress))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create output: %w", err)
+		return fmt.Errorf("failed to decode rewards address: %w", err)
 	}
-	tx.Body.Outputs = append(tx.Body.Outputs, output)
 
-	// Change output
-	changeOutput, err := CreateChangeOutput(input.Utxos, output, args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create change output: %w", err)
+	tx.Body.Withdrawal = &Withdrawal{
+		StakeAddress: addressBytes,
+		Amount:       amount.Uint64(),
 	}
-	tx.Body.Outputs = append(tx.Body.Outputs, changeOutput)
 
-	// TX will be valid indefinitely if TTL is not set
-	if input.TransactionValidityTime > 0 {
-		tx.Body.TTL = uint32(input.Slot + input.TransactionValidityTime) // 2 hours
-	}
-	tx.Body.Fee = input.Fee
-	tx.Body.Outputs[1].TokenAmounts.NativeAmount -= tx.Body.Fee
-	return tx, nil
+	// Add to change amount - we are withdrawing from stakeRewards address
+	tx.UpdateChangeAmount(int64(amount.Uint64()))
+
+	tx.RequiresAdditionalSignature = true
+	return nil
 }
 
 // Hash returns the tx hash or id
@@ -612,7 +741,12 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		Payload: hash[:],
 	}
 
-	return []*xc.SignatureRequest{signatureData}, nil
+	sighashes := []*xc.SignatureRequest{signatureData}
+	if tx.RequiresAdditionalSignature {
+		sighashes = append(sighashes, signatureData)
+	}
+
+	return sighashes, nil
 }
 
 // SetSignatures adds a signature to Tx
@@ -623,6 +757,17 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 
 	if len(tx.Witness.Keys) != 0 {
 		return errors.New("tx already signed")
+	}
+
+	sighashes, err := tx.Sighashes()
+	if err != nil {
+		return errors.New("failed to get sighashes")
+	}
+	if len(sighashes) != len(signatures) {
+		return fmt.Errorf(
+			"invalid signature count, expected: %d, got: %d",
+			len(sighashes), len(signatures),
+		)
 	}
 
 	for _, sig := range signatures {
@@ -644,4 +789,167 @@ func (tx Tx) Serialize() ([]byte, error) {
 	}
 
 	return txCbor, nil
+}
+
+func NewTransfer(args builder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	txInput, ok := input.(*tx_input.TxInput)
+	if !ok {
+		return nil, fmt.Errorf("invalid input type")
+	}
+
+	tx := NewTx()
+	inputMemo, ok := args.GetMemo()
+	if ok {
+		tx.SetMemo(inputMemo)
+	}
+
+	tx.SetUtxos(txInput.Utxos)
+
+	// Recipient output
+	to := args.GetTo()
+	amount := args.GetAmount()
+	contract, _ := args.GetContract()
+	err := tx.CreateTransferOutput(to, amount, contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create transfer output: %w", err)
+	}
+
+	// Change output
+	err = tx.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create change output: %w", err)
+	}
+
+	tx.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
+
+	err = tx.SetFee(txInput.Fee)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tx fee: %w", err)
+	}
+	return tx, nil
+}
+
+func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
+	stakingInput, ok := input.(*tx_input.StakingInput)
+	if !ok {
+		return nil, fmt.Errorf("invalid input type")
+	}
+	txInput := stakingInput.TxInput
+
+	transaction := NewTx()
+	transaction.SetUtxos(txInput.Utxos)
+
+	// Change output
+	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create change output: %w", err)
+	}
+
+	pubkey, ok := args.GetPublicKey()
+	if !ok {
+		return nil, fmt.Errorf("cardano staking requires public key arg")
+	}
+
+	credential, err := NewKeyCredential(pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create key credential: %w", err)
+	}
+	poolId, ok := args.GetValidator()
+	if !ok {
+		return nil, fmt.Errorf("pool id is required for cardano staking, use '--validator'")
+	}
+	poolBytes, err := hex.DecodeString(poolId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode pool id: %w", err)
+	}
+	transaction.SetCertificates([]Certificate{
+		{
+			CertificationType: CertTypeRegistrationAndDelegation,
+			Credential:        credential,
+			PoolId:            poolBytes,
+			DepositAmount:     stakingInput.KeyDeposit,
+		},
+	})
+
+	transaction.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
+
+	err = transaction.SetFee(txInput.Fee)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tx fee: %w", err)
+	}
+
+	return transaction, nil
+}
+
+func NewUnstake(args builder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
+	unstakingInput, ok := input.(*tx_input.UnstakingInput)
+	if !ok {
+		return nil, fmt.Errorf("invalid input type")
+	}
+	txInput := unstakingInput.TxInput
+
+	transaction := NewTx()
+	transaction.SetUtxos(txInput.Utxos)
+
+	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create change output: %w", err)
+	}
+
+	pubkey, ok := args.GetPublicKey()
+	if !ok {
+		return nil, fmt.Errorf("cardano staking requires public key arg")
+	}
+
+	credential, err := NewKeyCredential(pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create key credential: %w", err)
+	}
+
+	transaction.SetCertificates([]Certificate{
+		{
+			CertificationType: CertTypeDeregistration,
+			Credential:        credential,
+			DepositAmount:     unstakingInput.KeyDeposit,
+		},
+	})
+
+	transaction.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
+
+	err = transaction.SetFee(txInput.Fee)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tx fee: %w", err)
+	}
+
+	return transaction, nil
+}
+
+func NewWithdraw(args builder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
+	withdrawInput, ok := input.(*tx_input.WithdrawInput)
+	if !ok {
+		return nil, fmt.Errorf("invalid input type")
+	}
+	txInput := withdrawInput.TxInput
+
+	transaction := NewTx()
+	transaction.SetUtxos(txInput.Utxos)
+
+	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create change output: %w", err)
+	}
+
+	transaction.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
+
+	err = transaction.SetFee(txInput.Fee)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set tx fee: %w", err)
+	}
+
+	err = transaction.SetWithdrawal(withdrawInput.RewardsAddress, args.GetAmount())
+	if err != nil {
+		return nil, fmt.Errorf("failed to set withdrawal: %w", err)
+	}
+
+	return transaction, nil
 }

@@ -50,6 +50,9 @@ chains:
     chain_id: cardano
     network: mainnet
     chain_name: Cardano
+    address:
+      # legacy addresses don't support staking
+      formats: ["legacy", "payment", "stake"]
     decimals: 6
     default_gas_budget: "3.0"
     fee_limit: "30.0"
