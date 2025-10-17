@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -91,33 +92,40 @@ func TestFetchTxInput(t *testing.T) {
 		addressUtxosResponse       string
 		latestBlockResponse        string
 		protocolParametersResponse string
-		expectedInput              *tx_input.TxInput
+		expectedInput              xc.TxInput
 		err                        bool
 	}{
 		{
 			name:          "NoReplies",
-			expectedInput: nil,
+			expectedInput: &tx_input.TxInput{},
 			err:           true,
 		},
 		{
 			name:                 "NoLatestBlockResponse",
 			addressUtxosResponse: `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
-			expectedInput:        nil,
+			expectedInput:        &tx_input.TxInput{},
 			err:                  true,
 		},
 		{
 			name:                 "NoProtocolParametersResponse",
 			addressUtxosResponse: `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
 			latestBlockResponse:  `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
-			expectedInput:        nil,
+			expectedInput:        &tx_input.TxInput{},
 			err:                  true,
 		},
 		{
 			name:                       "ValidInput",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":"200000"}`,
 			addressUtxosResponse:       `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
 			latestBlockResponse:        `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
-			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310"}`,
 			expectedInput: &tx_input.TxInput{
+				ProtocolParams: types.ProtocolParameters{
+					FeePerByte:       44,
+					FixedFee:         155381,
+					MinUtxoValue:     "4310",
+					CoinsPerUtxoWord: "4310",
+					KeyDeposit:       "200000",
+				},
 				Utxos: []types.Utxo{
 					{
 						Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
@@ -134,6 +142,126 @@ func TestFetchTxInput(t *testing.T) {
 				Slot:                    90_751_416,
 				Fee:                     166265,
 				TransactionValidityTime: 7200,
+			},
+			err: false,
+		},
+		{
+			name:                       "ValidStakeInput",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":"200000"}`,
+			addressUtxosResponse:       `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
+			latestBlockResponse:        `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
+			expectedInput: &tx_input.StakingInput{
+				TxInput: tx_input.TxInput{
+					ProtocolParams: types.ProtocolParameters{
+						FeePerByte:       44,
+						FixedFee:         155381,
+						MinUtxoValue:     "4310",
+						CoinsPerUtxoWord: "4310",
+						KeyDeposit:       "200000",
+					},
+					Utxos: []types.Utxo{
+						{
+							Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+							Amounts: []types.Amount{
+								{
+									Unit:     "lovelace",
+									Quantity: "5333004",
+								},
+							},
+							TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+							Index:  1,
+						},
+					},
+					Slot: 90_751_416,
+					// Fee should be greater than in standard tx - we need two signatured
+					Fee:                     172337,
+					TransactionValidityTime: 7200,
+				},
+				KeyDeposit: 200_000,
+			},
+			err: false,
+		},
+		{
+			name:                       "InvalidKeyDeposit",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":200000}`,
+			expectedInput:              &tx_input.StakingInput{},
+			err:                        true,
+		},
+		{
+			name:                       "ValidUnstakeInput",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":"200000"}`,
+			addressUtxosResponse:       `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
+			latestBlockResponse:        `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
+			expectedInput: &tx_input.UnstakingInput{
+				TxInput: tx_input.TxInput{
+					ProtocolParams: types.ProtocolParameters{
+						FeePerByte:       44,
+						FixedFee:         155381,
+						MinUtxoValue:     "4310",
+						CoinsPerUtxoWord: "4310",
+						KeyDeposit:       "200000",
+					},
+					Utxos: []types.Utxo{
+						{
+							Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+							Amounts: []types.Amount{
+								{
+									Unit:     "lovelace",
+									Quantity: "5333004",
+								},
+							},
+							TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+							Index:  1,
+						},
+					},
+					Slot: 90_751_416,
+					// Fee should be greater than in standard tx, but lower than staking
+					// We are PoolId part of the certificate
+					Fee:                     171017,
+					TransactionValidityTime: 7200,
+				},
+				KeyDeposit: 200_000,
+			},
+			err: false,
+		},
+		{
+			name:                       "InvalidUnstakeKeyDeposit",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":200000}`,
+			expectedInput:              &tx_input.UnstakingInput{},
+			err:                        true,
+		},
+		{
+			name:                       "ValidWithdrawInput",
+			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":"200000"}`,
+			addressUtxosResponse:       `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
+			latestBlockResponse:        `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
+			expectedInput: &tx_input.WithdrawInput{
+				TxInput: tx_input.TxInput{
+					ProtocolParams: types.ProtocolParameters{
+						FeePerByte:       44,
+						FixedFee:         155381,
+						MinUtxoValue:     "4310",
+						CoinsPerUtxoWord: "4310",
+						KeyDeposit:       "200000",
+					},
+					Utxos: []types.Utxo{
+						{
+							Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+							Amounts: []types.Amount{
+								{
+									Unit:     "lovelace",
+									Quantity: "5333004",
+								},
+							},
+							TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+							Index:  1,
+						},
+					},
+					Slot:                    90_751_416,
+					Fee:                     170577,
+					TransactionValidityTime: 7200,
+				},
+				RewardsAddress: xc.Address("stake_test1upp33pdh0nppmxz8ma2def28nz8kju0yqrnmgfelcjf88fqd406dg"),
 			},
 			err: false,
 		},
@@ -162,20 +290,55 @@ func TestFetchTxInput(t *testing.T) {
 			client, _ := client.NewClient(cfg)
 			client.Url = server.URL
 
-			args, err := xcbuilder.NewTransferArgs(
-				cfg.Base(),
-				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-				xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-				xc.NewAmountBlockchainFromUint64(1_000_000),
-			)
-			input, err := client.FetchTransferInput(context.Background(), args)
+			var input xc.TxInput
+			var err error
+			if _, ok := vector.expectedInput.(*tx_input.TxInput); ok {
+				args, _ := xcbuilder.NewTransferArgs(
+					cfg.Base(),
+					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+					xc.NewAmountBlockchainFromUint64(1_000_000),
+				)
+				input, err = client.FetchTransferInput(context.Background(), args)
+			} else if _, ok := vector.expectedInput.(*tx_input.StakingInput); ok {
+				args, _ := xcbuilder.NewStakeArgs(
+					xc.ADA,
+					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+					xc.NewAmountBlockchainFromUint64(20),
+
+					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+					xcbuilder.OptionPublicKey(make([]byte, 32)),
+				)
+				input, err = client.FetchStakingInput(context.Background(), args)
+
+			} else if _, ok := vector.expectedInput.(*tx_input.UnstakingInput); ok {
+				args, _ := xcbuilder.NewStakeArgs(
+					xc.ADA,
+					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+					xc.NewAmountBlockchainFromUint64(20),
+					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+					xcbuilder.OptionPublicKey(make([]byte, 32)),
+				)
+				input, err = client.FetchUnstakingInput(context.Background(), args)
+			} else if _, ok := vector.expectedInput.(*tx_input.WithdrawInput); ok {
+				pk, _ := hex.DecodeString("f0bb6fd00a035b6b6ec18bbb2739265b80f319c0634333fe678928f40750cade")
+				args, _ := xcbuilder.NewStakeArgs(
+					xc.ADA,
+					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+					xc.NewAmountBlockchainFromUint64(20),
+					xcbuilder.OptionPublicKey(pk),
+					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+				)
+				input, err = client.FetchWithdrawInput(context.Background(), args)
+			}
+
 			if vector.err {
 				require.Error(t, err)
 				return
 			}
-
 			require.NoError(t, err)
 			require.Equal(t, vector.expectedInput, input)
+
 		})
 	}
 }
@@ -241,7 +404,7 @@ func TestSubmitTx(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, input)
 
-			tx, err := tx.NewTx(args, *input.(*tx_input.TxInput))
+			tx, err := tx.NewTransfer(args, input)
 			require.NoError(t, err)
 
 			err = client.SubmitTx(context.Background(), tx)

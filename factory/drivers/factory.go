@@ -152,6 +152,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 			}
 			return rpcClient, nil
 		}
+	case DriverCardano:
+		return cardanoclient.NewClient(cfg)
 	case DriverCosmos, DriverCosmosEvmos:
 		return cosmosclient.NewClient(cfg)
 	case DriverSolana:
@@ -251,7 +253,7 @@ func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption)
 	case DriverXlm:
 		return xlmaddress.NewAddressBuilder(cfg)
 	case DriverCardano:
-		return cardanoaddress.NewAddressBuilder(cfg)
+		return cardanoaddress.NewAddressBuilder(cfg, options...)
 	case DriverKaspa:
 		return kaspaaddress.NewAddressBuilder(cfg)
 	case DriverEOS:

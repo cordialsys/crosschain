@@ -1,8 +1,6 @@
 package builder
 
 import (
-	"fmt"
-
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	tx "github.com/cordialsys/crosschain/chain/cardano/tx"
@@ -14,7 +12,8 @@ type TxBuilder struct{}
 
 type TxInput = cardanoinput.TxInput
 
-var _ xcbuilder.FullTransferBuilder = TxBuilder{}
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.Staking = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -23,10 +22,17 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	txInput, ok := input.(*TxInput)
-	if !ok {
-		return nil, fmt.Errorf("invalid input type")
-	}
+	return tx.NewTransfer(args, input)
+}
 
-	return tx.NewTx(args, *txInput)
+func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
+	return tx.NewStake(args, input)
+}
+
+func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
+	return tx.NewUnstake(args, input)
+}
+
+func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
+	return tx.NewWithdraw(args, input)
 }

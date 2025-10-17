@@ -10,10 +10,12 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	clienterrors "github.com/cordialsys/crosschain/chain/cardano/client/errors"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
@@ -24,7 +26,6 @@ import (
 )
 
 const (
-	FeeMargin      = 500
 	TokenDecimals  = 0
 	NativeDecimals = 6
 	ApiVersion     = "/api/v0"
@@ -74,6 +75,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
+func (client *Client) IsMainnet() bool {
+	return client.Network == "" || strings.ToLower(client.Network) == "mainnet"
+}
+
 func (client *Client) FetchProtocolParameters(ctx context.Context) (types.ProtocolParameters, error) {
 	var protocolParameters types.ProtocolParameters
 	err := client.Get(ctx, "/epochs/latest/parameters", &protocolParameters)
@@ -115,33 +120,12 @@ func GetMinUtxoSet(utxos []types.Utxo, targetAmount tx.TokenAmounts, contract xc
 	return utxoSet
 }
 
-// Create dummy Cardano transaction for fee estimation
-func CreateDummyTx(args xcbuilder.TransferArgs, txInput tx_input.TxInput) (xc.Tx, error) {
-	// Create a dummy transaction
-	dummyTx, err := tx.NewTx(args, txInput)
-	if err != nil {
-		return nil, err
-	}
-
-	witness := tx.VKeyWitness{
-		VKey:      make([]byte, 32),
-		Signature: make([]byte, 64),
-	}
-	dummyTx.(*tx.Tx).Witness = &tx.Witness{
-		Keys: []*tx.VKeyWitness{&witness},
-	}
-
-	return dummyTx, nil
-}
-
-// FetchTransferInput returns tx input for a Cardano transfer
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	contract, ok := args.GetContract()
-	if !ok {
+func (client *Client) fetchBaseInput(ctx context.Context, amount xc.AmountBlockchain, contract xc.ContractAddress, from xc.Address, protocolParams types.ProtocolParameters) (*tx_input.TxInput, error) {
+	if contract == "" {
 		contract = types.Lovelace
 	}
 
-	utxos, err := client.FetchUtxos(ctx, args.GetFrom(), contract)
+	utxos, err := client.FetchUtxos(ctx, from, contract)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch utxos: %w", err)
 	}
@@ -149,7 +133,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	gasBudget := client.ClientCfg.GasBudgetDefault.ToBlockchain(NativeDecimals).Uint64()
 	targetAmounts := tx.TokenAmounts{}
 	targetAmounts.AddAmount(types.Lovelace, gasBudget)
-	targetAmounts.AddAmount(contract, args.GetAmount().Uint64())
+	targetAmounts.AddAmount(contract, amount.Uint64())
 	utxos = GetMinUtxoSet(utxos, targetAmounts, contract)
 
 	var latestBlock types.Block
@@ -158,30 +142,52 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
-	protocolParams, err := client.FetchProtocolParameters(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch protocol parameters: %w", err)
-	}
-
 	transactionActiveTime := uint64(client.ClientCfg.TransactionActiveTime.Seconds())
-	txInput := tx_input.TxInput{
+	return &tx_input.TxInput{
 		Utxos:                   utxos,
 		Slot:                    latestBlock.Slot,
 		Fee:                     0,
 		TransactionValidityTime: transactionActiveTime,
-	}
-	dummyTx, err := CreateDummyTx(args, txInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create fee estimation transaction: %w", err)
-	}
-	cbor, err := dummyTx.Serialize()
-	if err != nil {
-		return nil, fmt.Errorf("failed to serialize fee estimation transaction: %w", err)
-	}
-	txSize := len(cbor)
-	txInput.Fee = protocolParams.FeePerByte*uint64(txSize) + protocolParams.FixedFee + FeeMargin
+		ProtocolParams:          protocolParams,
+	}, nil
+}
 
-	return &txInput, nil
+// FetchTransferInput returns tx input for a Cardano transfer
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	protocolParams, err := client.FetchProtocolParameters(ctx)
+	if err != nil {
+		return nil, clienterrors.ProtocolParamsf(err)
+	}
+
+	contract, _ := args.GetContract()
+	baseInput, err := client.fetchBaseInput(
+		ctx,
+		args.GetAmount(),
+		contract,
+		args.GetFrom(),
+		protocolParams,
+	)
+	if err != nil {
+		return nil, clienterrors.BaseInputf(err)
+	}
+
+	transfer, err := tx.NewTransfer(args, baseInput)
+	if err != nil {
+		return nil, clienterrors.FeeEstimationf(err)
+	}
+	transfer.SetSignatures([]*xc.SignatureResponse{
+		{
+			Signature: make([]byte, 64),
+			PublicKey: make([]byte, 32),
+		},
+	}...)
+
+	err = baseInput.CalculateTxFee(transfer)
+	if err != nil {
+		return nil, clienterrors.CalculateTxFee(err)
+	}
+
+	return baseInput, nil
 }
 
 // Deprecated method - use FetchTransferInput
@@ -309,7 +315,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	var getAddressInfoResponse types.GetAddressInfoResponse
 	err := client.Get(ctx, path, &getAddressInfoResponse)
 	if err != nil {
-		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch address info: %w", err)
+		return xc.AmountBlockchain{}, clienterrors.AddressInfof(err)
 	}
 
 	contract, ok := args.Contract()

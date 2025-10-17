@@ -38,8 +38,9 @@ type Amount struct {
 }
 
 type GetAddressInfoResponse struct {
-	Address string   `json:"address"`
-	Amounts []Amount `json:"amount"`
+	Address      string   `json:"address"`
+	Amounts      []Amount `json:"amount"`
+	StakeAddress string   `json:"stake_address"`
 }
 
 type Block struct {
@@ -63,6 +64,7 @@ type ProtocolParameters struct {
 	FixedFee         uint64 `json:"min_fee_b"`
 	MinUtxoValue     string `json:"min_utxo"`
 	CoinsPerUtxoWord string `json:"coins_per_utxo_word"`
+	KeyDeposit       string `json:"key_deposit"`
 }
 
 type Utxo struct {
@@ -85,4 +87,9 @@ func (u *Utxo) GetAssetAmount(contract xc.ContractAddress) xc.AmountBlockchain {
 type TransactionUtxos struct {
 	Inputs  []Utxo `json:"inputs"`
 	Outputs []Utxo `json:"outputs"`
+}
+
+type GetAccountInfoResponse struct {
+	WithdrawableAmount string `json:"withdrawable_amount"`
+	PoolId             string `json:"pool_id"`
 }
