@@ -2,7 +2,6 @@ package staking
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/cordialsys/crosschain/builder"
@@ -26,12 +25,6 @@ func CmdUnstake() *cobra.Command {
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
 			offline = dryRun || offline
 
-			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
-			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
-
 			from, signer, err := LoadPrivateKey(xcFactory, chain, privateKeyRefMaybe)
 			if err != nil {
 				return err
@@ -47,7 +40,14 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, moreArgs.BuilderOptionsWith(signer.MustPublicKey())...)
+			opts := moreArgs.BuilderOptionsWith(signer.MustPublicKey())
+			amountHuman := moreArgs.Amount
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				opts = append(opts, builder.OptionStakeAmount(amount))
+			}
+
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, opts...)
 			if err != nil {
 				return err
 			}

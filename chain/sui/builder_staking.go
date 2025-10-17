@@ -44,7 +44,10 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		return &Tx{}, errors.New("empty validator")
 	}
 
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
 		feePayer = args.GetFrom()
@@ -131,7 +134,10 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	validator, _ := args.GetValidator()
 	account, _ := args.GetStakeAccount()
 
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
 		feePayer = args.GetFrom()

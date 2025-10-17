@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -63,7 +64,11 @@ func (tao *TaoStakingClient) FetchStakeBalance(ctx context.Context, args xclient
 // FetchStakingInput for TAO - uses normal tx-input
 func (tao *TaoStakingClient) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	chainCfg := tao.client.Asset.GetChain().Base()
-	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", args.GetAmount())
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
+	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
 	input, err := tao.client.FetchTransferInput(ctx, tfArgs)
 	if err != nil {
 		return nil, err

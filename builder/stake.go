@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -10,14 +11,15 @@ import (
 type StakeArgs struct {
 	options builderOptions
 	from    xc.Address
-	amount  xc.AmountBlockchain
 }
 
 var _ TransactionOptions = &StakeArgs{}
 
 // Staking arguments
-func (args *StakeArgs) GetFrom() xc.Address            { return args.from }
-func (args *StakeArgs) GetAmount() xc.AmountBlockchain { return args.amount }
+func (args *StakeArgs) GetFrom() xc.Address { return args.from }
+func (args *StakeArgs) GetAmount() (xc.AmountBlockchain, bool) {
+	return args.options.GetStakeAmount()
+}
 
 // Exposed options
 func (args *StakeArgs) GetMemo() (string, bool)                { return args.options.GetMemo() }
@@ -38,13 +40,13 @@ func (args *StakeArgs) GetFeePayerIdentity() (string, bool) {
 }
 func (args *StakeArgs) GetFromIdentity() (string, bool) { return args.options.GetFromIdentity() }
 
-func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (StakeArgs, error) {
+func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOption) (StakeArgs, error) {
 	builderOptions := builderOptions{}
 	args := StakeArgs{
 		builderOptions,
 		from,
-		amount,
 	}
+
 	for _, opt := range options {
 		err := opt(&args.options)
 		if err != nil {
@@ -55,14 +57,36 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, amount xc.AmountBlockch
 	// Chain specific validation of arguments
 	switch chain.Driver() {
 	case xc.DriverEVM:
+		amount, ok := args.GetAmount()
+		if !ok {
+			return args, errors.New("EVM requires proper staking amount, use '--amount'")
+		}
 		// Eth must stake or unstake in increments of 32
-		_, err := validation.Count32EthChunks(args.GetAmount())
+		_, err := validation.Count32EthChunks(xc.NewAmountBlockchainFromUint64(amount.Uint64()))
 		if err != nil {
 			return args, err
 		}
-	case xc.DriverCosmos, xc.DriverSolana, xc.DriverSubstrate:
+	case xc.DriverCardano:
+		_, ok := args.GetAmount()
+		if ok {
+			return args, errors.New("cardano staking doesn't use amounts, skip '--amount'")
+		}
 		if _, ok := args.GetValidator(); !ok {
 			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
+		}
+	case xc.DriverCosmos, xc.DriverSolana, xc.DriverSubstrate:
+		_, ok := args.GetAmount()
+		if !ok {
+			return args, errors.New("missing staking amount, use '--amount'")
+		}
+
+		if _, ok := args.GetValidator(); !ok {
+			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
+		}
+	default:
+		_, ok := args.GetAmount()
+		if !ok {
+			return args, errors.New("missing staking amount, use '--amount'")
 		}
 	}
 

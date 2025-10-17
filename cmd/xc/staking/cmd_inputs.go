@@ -2,7 +2,6 @@ package staking
 
 import (
 	"context"
-	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
@@ -21,19 +20,21 @@ func CmdFetchStakeInput() *cobra.Command {
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
 
+			opts := moreArgs.ToBuilderOptions()
+
 			from := args[0]
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				opts = append(opts, builder.OptionStakeAmount(amount))
 			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
 
 			client, err := xcFactory.NewStakingClient(stakingCfg, chain, moreArgs.Provider)
 			if err != nil {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), opts...)
 			if err != nil {
 				return err
 			}
@@ -62,19 +63,21 @@ func CmdFetchUnstakeInput() *cobra.Command {
 			moreArgs := setup.UnwrapStakingArgs(cmd.Context())
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
 
+			opts := moreArgs.ToBuilderOptions()
+
 			from := args[0]
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				opts = append(opts, builder.OptionStakeAmount(amount))
 			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
 
 			client, err := xcFactory.NewStakingClient(stakingCfg, chain, moreArgs.Provider)
 			if err != nil {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, moreArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), opts...)
 			if err != nil {
 				return err
 			}
@@ -103,19 +106,20 @@ func CmdFetchWithdrawInput() *cobra.Command {
 			stakingArgs := setup.UnwrapStakingArgs(cmd.Context())
 			servicesCfg := setup.UnwrapStakingConfig(cmd.Context())
 
+			opts := stakingArgs.ToBuilderOptions()
 			from := args[0]
 			amountHuman := stakingArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				opts = append(opts, builder.OptionStakeAmount(amount))
 			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
 
 			client, err := xcFactory.NewStakingClient(servicesCfg, chain, stakingArgs.Provider)
 			if err != nil {
 				return err
 			}
 
-			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), amount, stakingArgs.ToBuilderOptions()...)
+			stakeArgs, err := builder.NewStakeArgs(chain.Chain, xc.Address(from), opts...)
 			if err != nil {
 				return err
 			}

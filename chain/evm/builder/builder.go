@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -120,7 +121,11 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTx
 			return nil, fmt.Errorf("invalid input for %T: %v", input, err)
 		}
 		contract := txBuilder.Asset.Staking.StakeContract
-		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), stakeArgs.GetAmount(), data, &input.TxInput)
+		amount, ok := stakeArgs.GetAmount()
+		if !ok {
+			return nil, errors.New("missing stake amount")
+		}
+		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), amount, data, &input.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("could not build tx for %T: %v", input, err)
 		}
@@ -133,8 +138,13 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 	switch input := input.(type) {
 	case *tx_input.ExitRequestInput:
 		evmBuilder := NewEvmTxBuilder()
+		amount, ok := stakeArgs.GetAmount()
+		if !ok {
+			return nil, errors.New("missing unstake amount")
+		}
+		fmt.Printf("got %v amt", amount)
 
-		count, err := validation.Count32EthChunks(stakeArgs.GetAmount())
+		count, err := validation.Count32EthChunks(amount)
 		if err != nil {
 			return nil, err
 		}

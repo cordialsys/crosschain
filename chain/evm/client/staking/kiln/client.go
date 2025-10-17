@@ -2,6 +2,7 @@ package kiln
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -135,7 +136,11 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 }
 
 func (cli *Client) FetchKilnInput(ctx context.Context, args xcbuilder.StakeArgs) (*tx_input.BatchDepositInput, error) {
-	count, err := validation.Count32EthChunks(args.GetAmount())
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
+	count, err := validation.Count32EthChunks(amount)
 	if err != nil {
 		return nil, err
 	}

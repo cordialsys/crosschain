@@ -31,6 +31,8 @@ type builderOptions struct {
 	feePayerIdentity *string
 	// On chain identity of the receiver.
 	toIdentity *string
+	// On some chains staking amount is not required
+	stakeAmount *xc.AmountBlockchain
 }
 
 func newBuilderOptions() builderOptions {
@@ -78,6 +80,9 @@ func (opts *builderOptions) InclusiveFeeSpendingEnabled() bool {
 func (opts *builderOptions) GetFromIdentity() (string, bool)     { return get(opts.fromIdentity) }
 func (opts *builderOptions) GetFeePayerIdentity() (string, bool) { return get(opts.feePayerIdentity) }
 func (opts *builderOptions) GetToIdentity() (string, bool)       { return get(opts.toIdentity) }
+func (opts *builderOptions) GetStakeAmount() (xc.AmountBlockchain, bool) {
+	return *opts.stakeAmount, opts.stakeAmount != nil
+}
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -215,6 +220,14 @@ func OptionToIdentity(toIdentity string) BuilderOption {
 func OptionFeePayerIdentity(feePayerIdentity string) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.feePayerIdentity = &feePayerIdentity
+		return nil
+	}
+}
+
+// Stake/Unstake/Withdrawal amount
+func OptionStakeAmount(amount xc.AmountBlockchain) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.stakeAmount = &amount
 		return nil
 	}
 }

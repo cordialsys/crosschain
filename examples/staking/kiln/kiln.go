@@ -68,11 +68,6 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
-			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
 
 			txBuilder, err := xcFactory.NewTxBuilder(chain.Base())
 			if err != nil {
@@ -121,7 +116,12 @@ func CmdStake() *cobra.Command {
 			if moreArgs.AccountId != "" {
 				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
-			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
+			amountHuman := moreArgs.Amount
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				options = append(options, builder.OptionStakeAmount(amount))
+			}
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, options...)
 			if err != nil {
 				return err
 			}
@@ -205,11 +205,6 @@ func CmdUnstake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
-				return fmt.Errorf("must pass --amount to stake")
-			}
-			amount := amountHuman.ToBlockchain(chain.Decimals)
 
 			txBuilder, err := xcFactory.NewTxBuilder(chain.Base())
 			if err != nil {
@@ -258,7 +253,12 @@ func CmdUnstake() *cobra.Command {
 			if moreArgs.AccountId != "" {
 				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
-			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, amount, options...)
+			amountHuman := moreArgs.Amount
+			if amountHuman.String() != "0" {
+				amount := amountHuman.ToBlockchain(chain.Decimals)
+				options = append(options, builder.OptionStakeAmount(amount))
+			}
+			stakingArgs, err := builder.NewStakeArgs(chain.Chain, from, options...)
 			if err != nil {
 				return err
 			}

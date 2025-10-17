@@ -2,6 +2,7 @@ package builder
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -170,7 +171,10 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	if account, ok := stakingArgs.GetStakeAccount(); ok {
 		fromAccount = account
 	}
-	amount := stakingArgs.GetAmount()
+	amount, ok := stakingArgs.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
 
 	var err error
 	var stakeAction *eos.Action
@@ -213,7 +217,10 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	if account, ok := stakingArgs.GetStakeAccount(); ok {
 		fromAccount = account
 	}
-	amount := stakingArgs.GetAmount()
+	amount, ok := stakingArgs.GetAmount()
+	if !ok {
+		return nil, errors.New("missing unstake amount")
+	}
 
 	var err error
 	var stakeAction *eos.Action

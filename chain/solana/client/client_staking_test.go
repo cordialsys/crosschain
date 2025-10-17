@@ -106,7 +106,7 @@ func TestFetchStakingInput(t *testing.T) {
 			args := buildertest.MustNewStakingArgs(
 				xc.SOL,
 				from,
-				xc.NewAmountBlockchainFromUint64(1000),
+				builder.OptionStakeAmount(xc.NewAmountBlockchainFromUint64(1000)),
 				builder.OptionValidator(v.validator),
 			)
 
@@ -216,7 +216,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 			args := buildertest.MustNewStakingArgs(
 				xc.SOL,
 				from,
-				xc.NewAmountBlockchainFromUint64(100000000),
+				builder.OptionStakeAmount(xc.NewAmountBlockchainFromUint64(100000000)),
 				builder.OptionValidator(v.validator),
 			)
 
@@ -305,10 +305,10 @@ func TestFetchWithdrawInput(t *testing.T) {
 				options = append(options, builder.OptionValidator(v.validator))
 			}
 
+			options = append(options, builder.OptionStakeAmount(xc.NewAmountBlockchainFromUint64(100000000)))
 			args := buildertest.MustNewStakingArgs(
 				xc.SOL,
 				from,
-				xc.NewAmountBlockchainFromUint64(100000000),
 				options...,
 			)
 

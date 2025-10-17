@@ -308,7 +308,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 			client, err := sui.NewClient(asset)
 			require.NoError(t, err)
 
-			stakeArgs, err := builder.NewStakeArgs(asset.Chain, "", v.amount, builder.OptionPublicKey(make([]byte, 0)))
+			stakeArgs, err := builder.NewStakeArgs(asset.Chain, "", builder.OptionStakeAmount(v.amount), builder.OptionPublicKey(make([]byte, 0)))
 
 			require.NoError(t, err)
 
