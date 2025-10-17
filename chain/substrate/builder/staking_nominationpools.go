@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -68,7 +69,10 @@ func NewNominationPoolsStakingBuilder(txBuilder *TxBuilder) *NominationPoolsStak
 
 func (pools *NominationPoolsStakingBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	txInput := input.(*tx_input.TxInput)
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 
 	sender, err := address.DecodeMulti(args.GetFrom())
 	if err != nil {
@@ -120,7 +124,10 @@ func (pools *NominationPoolsStakingBuilder) Stake(args xcbuilder.StakeArgs, inpu
 
 func (pools *NominationPoolsStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
 	txInput := input.(*tx_input.TxInput)
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 
 	sender, err := address.DecodeMulti(args.GetFrom())
 	if err != nil {

@@ -2,6 +2,7 @@ package figment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -101,7 +102,11 @@ func (cli *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeAr
 		return nil, err
 	}
 	_ = partialTxInput
-	count, err := validation.Count32EthChunks(args.GetAmount())
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
+	count, err := validation.Count32EthChunks(amount)
 	if err != nil {
 		return nil, err
 	}

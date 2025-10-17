@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/scale"
@@ -102,7 +103,11 @@ func (pools *NominationPoolsStakingClient) FetchStakeBalance(_ context.Context, 
 
 func (pools *NominationPoolsStakingClient) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	chainCfg := pools.client.Asset.GetChain().Base()
-	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", args.GetAmount())
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
+	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
 	input, err := pools.client.FetchTransferInput(ctx, tfArgs)
 	if err != nil {
 		return nil, err
