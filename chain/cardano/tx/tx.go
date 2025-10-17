@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	builder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/cardano/address"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
@@ -830,6 +831,10 @@ func NewTransfer(args builder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 }
 
 func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	stakingInput, ok := input.(*tx_input.StakingInput)
 	if !ok {
 		return nil, fmt.Errorf("invalid input type")
@@ -882,6 +887,10 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 }
 
 func NewUnstake(args builder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	unstakingInput, ok := input.(*tx_input.UnstakingInput)
 	if !ok {
 		return nil, fmt.Errorf("invalid input type")
@@ -925,6 +934,10 @@ func NewUnstake(args builder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) 
 }
 
 func NewWithdraw(args builder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	withdrawInput, ok := input.(*tx_input.WithdrawInput)
 	if !ok {
 		return nil, fmt.Errorf("invalid input type")
@@ -946,7 +959,7 @@ func NewWithdraw(args builder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error
 		return nil, fmt.Errorf("failed to set tx fee: %w", err)
 	}
 
-	err = transaction.SetWithdrawal(withdrawInput.RewardsAddress, args.GetAmount())
+	err = transaction.SetWithdrawal(withdrawInput.RewardsAddress, withdrawInput.RewardsAmount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set withdrawal: %w", err)
 	}

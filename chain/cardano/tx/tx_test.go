@@ -47,7 +47,6 @@ func newStake(t *testing.T) *tx.Tx {
 	args, _ := xcbuilder.NewStakeArgs(
 		xc.ADA,
 		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-		xc.NewAmountBlockchainFromUint64(20),
 		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 		xcbuilder.OptionPublicKey(make([]byte, 32)),
 	)
@@ -80,7 +79,6 @@ func newUnstake(t *testing.T) *tx.Tx {
 	args, _ := xcbuilder.NewStakeArgs(
 		xc.ADA,
 		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-		xc.NewAmountBlockchainFromUint64(20),
 		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 		xcbuilder.OptionPublicKey(make([]byte, 32)),
 	)
@@ -114,7 +112,6 @@ func newWithdraw(t *testing.T) *tx.Tx {
 	args, _ := xcbuilder.NewStakeArgs(
 		xc.ADA,
 		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-		xc.NewAmountBlockchainFromUint64(20),
 		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 		xcbuilder.OptionPublicKey(pk),
 	)
@@ -181,7 +178,6 @@ func TestUnstakingSighashes(t *testing.T) {
 	args, _ := xcbuilder.NewStakeArgs(
 		xc.ADA,
 		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-		xc.NewAmountBlockchainFromUint64(20),
 		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 		xcbuilder.OptionPublicKey(make([]byte, 32)),
 	)
@@ -230,7 +226,7 @@ func TestWithdrawalSighashes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Double signature is reqauired for withdrawals
-	expectedPayload, _ := hex.DecodeString("3292140cdcda46a9eafcfafe27d9e795dd5032b82ef636a43d9f5b4caba7447e")
+	expectedPayload, _ := hex.DecodeString("1e1069ab901168b036ef74f13d89cbf559d437399bfe72a162bfcecf44b85a39")
 	require.Equal(t, []*xc.SignatureRequest{
 		{
 			Payload: expectedPayload,

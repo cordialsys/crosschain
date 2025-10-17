@@ -2,8 +2,10 @@ package staking
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -57,7 +59,12 @@ func CmdUnstake() *cobra.Command {
 				return err
 			}
 
-			tx, err := stakingBuilder.Unstake(stakingArgs, stakingInput)
+			input, err := xcFactory.TxInputRoundtrip(stakingInput)
+			if err != nil {
+				return fmt.Errorf("failed tx input roundtrip: %w", err)
+			}
+
+			tx, err := stakingBuilder.Unstake(stakingArgs, input.(xc.UnstakeTxInput))
 			if err != nil {
 				return err
 			}

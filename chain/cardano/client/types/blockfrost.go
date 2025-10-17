@@ -38,9 +38,10 @@ type Amount struct {
 }
 
 type GetAddressInfoResponse struct {
-	Address      string   `json:"address"`
-	Amounts      []Amount `json:"amount"`
-	StakeAddress string   `json:"stake_address"`
+	Address            string   `json:"address"`
+	Amounts            []Amount `json:"amount"`
+	StakeAddress       string   `json:"stake_address"`
+	WithdrawableAmount string   `json:"withdrawable_amount"`
 }
 
 type Block struct {

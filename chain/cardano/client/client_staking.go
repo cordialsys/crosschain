@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/cardano/address"
 	clienterrors "github.com/cordialsys/crosschain/chain/cardano/client/errors"
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
@@ -50,6 +51,10 @@ func (c *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalan
 }
 
 func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	protocolParams, err := c.FetchProtocolParameters(ctx)
 	if err != nil {
 		return nil, clienterrors.ProtocolParamsf(err)
@@ -103,6 +108,10 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 
 // Fetch inputs required for a unstaking transaction
 func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	protocolParams, err := c.FetchProtocolParameters(ctx)
 	if err != nil {
 		return nil, clienterrors.ProtocolParamsf(err)
@@ -156,6 +165,10 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 // Fetch input for a withdraw transaction -- not all chains use this as they combine it with unstake
 func (c *Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) (xc.WithdrawTxInput, error) {
+	_, ok := args.GetAmount()
+	if ok {
+		return nil, buildererrors.ErrStakingAmountNotUsed
+	}
 	pubkey, ok := args.GetPublicKey()
 	if !ok {
 		return nil, fmt.Errorf("cardano withdrawals require a valid pubkey")
@@ -184,9 +197,18 @@ func (c *Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs)
 		return nil, clienterrors.BaseInputf(err)
 	}
 
+	rewardsPath := fmt.Sprintf("/accounts/%s", rewardsAddress)
+	var getAccountInfoResponse types.GetAccountInfoResponse
+	err = c.Get(ctx, rewardsPath, &getAccountInfoResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch account info: %w", err)
+	}
+
+	withdrawAmount := xc.NewAmountBlockchainFromStr(getAccountInfoResponse.WithdrawableAmount)
 	withdrawInput := &tx_input.WithdrawInput{
 		TxInput:        *baseInput,
 		RewardsAddress: rewardsAddress,
+		RewardsAmount:  withdrawAmount,
 	}
 	transaction, err := tx.NewWithdraw(args, withdrawInput)
 	if err != nil {
