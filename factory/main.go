@@ -144,6 +144,16 @@ func (f *Factory) UnmarshalTxInput(data []byte) (TxInput, error) {
 	return drivers.UnmarshalTxInput(data)
 }
 
+// Simulate real TxInput life time, by roundtriping it throught factory Marshal/Unmarshal methods
+func (f *Factory) TxInputRoundtrip(input TxInput) (TxInput, error) {
+	inputBytes, err := f.MarshalTxInput(input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal tx input: %w", err)
+	}
+
+	return f.UnmarshalTxInput(inputBytes)
+}
+
 // GetAddressFromPublicKey returns an Address given a public key
 func (f *Factory) GetAddressFromPublicKey(cfg *ChainBaseConfig, publicKey []byte, options ...xcaddress.AddressOption) (Address, error) {
 	return getAddressFromPublicKey(

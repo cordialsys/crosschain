@@ -24,6 +24,9 @@ var _ xc.TxInput = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
 }
 
 func NewTxInput() *TxInput {
