@@ -24,6 +24,9 @@ var _ xc.TxInput = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
 }
 
 func NewTxInput() *TxInput {
@@ -119,6 +122,7 @@ func (*UnstakingInput) GetVariant() xc.TxVariantInputType {
 type WithdrawInput struct {
 	TxInput
 	RewardsAddress xc.Address
+	RewardsAmount  xc.AmountBlockchain
 }
 
 var _ xc.TxVariantInput = &WithdrawInput{}

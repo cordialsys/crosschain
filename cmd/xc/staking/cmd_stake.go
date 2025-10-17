@@ -2,7 +2,9 @@ package staking
 
 import (
 	"encoding/json"
+	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/sirupsen/logrus"
@@ -56,7 +58,12 @@ func CmdStake() *cobra.Command {
 			inputBz, _ := json.MarshalIndent(stakingInput, "", "  ")
 			logrus.WithField("input", string(inputBz)).Debug("input")
 
-			tx, err := stakingBuilder.Stake(stakingArgs, stakingInput)
+			input, err := xcFactory.TxInputRoundtrip(stakingInput)
+			if err != nil {
+				return fmt.Errorf("failed tx input roundtrip: %w", err)
+			}
+
+			tx, err := stakingBuilder.Stake(stakingArgs, input.(xc.StakeTxInput))
 			if err != nil {
 				return err
 			}

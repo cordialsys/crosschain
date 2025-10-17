@@ -92,6 +92,7 @@ func TestFetchTxInput(t *testing.T) {
 		addressUtxosResponse       string
 		latestBlockResponse        string
 		protocolParametersResponse string
+		getAccountInfoResponse     string
 		expectedInput              xc.TxInput
 		err                        bool
 	}{
@@ -235,6 +236,7 @@ func TestFetchTxInput(t *testing.T) {
 			protocolParametersResponse: `{"min_fee_a":44,"min_fee_b":155381,"min_utxo":"4310", "coins_per_utxo_word":"4310","key_deposit":"200000"}`,
 			addressUtxosResponse:       `[{"address":"addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5","tx_hash":"72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1","tx_index":1,"output_index":1,"amount":[{"unit":"lovelace","quantity":"5333004"}],"block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","data_hash":null,"inline_datum":null,"reference_script_hash":null}]`,
 			latestBlockResponse:        `{"time":1746434616,"height":3446505,"hash":"a13ea6bdb4f23caa803274011c0524e4d96eb7cacb4103998d508c257361cd1b","slot":90751416,"epoch":213,"epoch_slot":377016,"slot_leader":"pool1rccstu3l9ty3k0a5cd06fl3szsss9r34dcg5j38fqgq9kvng0tg","size":4,"tx_count":0,"output":null,"fees":null,"block_vrf":"vrf_vk1kkc5ar4jt2fkdcxp5sa0ekxsskfyjgp082xuqwcn7stvwr2dultsuwejcz","op_cert":"bb4f8eb8a07ca955b55a2c917df0475ccc36cf5487e1af0f97f562717d59ba82","op_cert_counter":"7","previous_block":"babb05fe6f3128a398dfce79ad1f836a0031bd6d84969755ce7a043b0c604cec","next_block":null,"confirmations":0}`,
+			getAccountInfoResponse:     `{ "stake_address": "stake_test1upp33pdh0nppmxz8ma2def28nz8kju0yqrnmgfelcjf88fqd406dg", "active": true, "active_epoch": 246, "controlled_amount": "19996777537", "rewards_sum": "0", "withdrawals_sum": "0", "reserves_sum": "0", "treasury_sum": "0", "drep_id": null, "withdrawable_amount": "100000", "pool_id": "pool1m48d9wr228z4pn9rh2xw7d6d5a07sl2avej02c4vn54ujrnkz5e" }`,
 			expectedInput: &tx_input.WithdrawInput{
 				TxInput: tx_input.TxInput{
 					ProtocolParams: types.ProtocolParameters{
@@ -258,10 +260,11 @@ func TestFetchTxInput(t *testing.T) {
 						},
 					},
 					Slot:                    90_751_416,
-					Fee:                     170577,
+					Fee:                     170753,
 					TransactionValidityTime: 7200,
 				},
 				RewardsAddress: xc.Address("stake_test1upp33pdh0nppmxz8ma2def28nz8kju0yqrnmgfelcjf88fqd406dg"),
+				RewardsAmount:  xc.NewAmountBlockchainFromUint64(100000),
 			},
 			err: false,
 		},
@@ -281,6 +284,8 @@ func TestFetchTxInput(t *testing.T) {
 					w.Write([]byte(vector.addressUtxosResponse))
 				} else if strings.Contains(url.Path, "block") {
 					w.Write([]byte(vector.latestBlockResponse))
+				} else if strings.Contains(url.Path, "account") {
+					w.Write([]byte(vector.getAccountInfoResponse))
 				} else {
 					w.Write([]byte(vector.protocolParametersResponse))
 				}
@@ -304,7 +309,6 @@ func TestFetchTxInput(t *testing.T) {
 				args, _ := xcbuilder.NewStakeArgs(
 					xc.ADA,
 					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-					xc.NewAmountBlockchainFromUint64(20),
 
 					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 					xcbuilder.OptionPublicKey(make([]byte, 32)),
@@ -315,7 +319,6 @@ func TestFetchTxInput(t *testing.T) {
 				args, _ := xcbuilder.NewStakeArgs(
 					xc.ADA,
 					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-					xc.NewAmountBlockchainFromUint64(20),
 					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 					xcbuilder.OptionPublicKey(make([]byte, 32)),
 				)
@@ -325,7 +328,6 @@ func TestFetchTxInput(t *testing.T) {
 				args, _ := xcbuilder.NewStakeArgs(
 					xc.ADA,
 					xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
-					xc.NewAmountBlockchainFromUint64(20),
 					xcbuilder.OptionPublicKey(pk),
 					xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
 				)

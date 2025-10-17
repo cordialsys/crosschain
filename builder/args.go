@@ -81,7 +81,11 @@ func (opts *builderOptions) GetFromIdentity() (string, bool)     { return get(op
 func (opts *builderOptions) GetFeePayerIdentity() (string, bool) { return get(opts.feePayerIdentity) }
 func (opts *builderOptions) GetToIdentity() (string, bool)       { return get(opts.toIdentity) }
 func (opts *builderOptions) GetStakeAmount() (xc.AmountBlockchain, bool) {
-	return *opts.stakeAmount, opts.stakeAmount != nil
+	amount := xc.NewAmountBlockchainFromUint64(0)
+	if opts.stakeAmount != nil {
+		amount = *opts.stakeAmount
+	}
+	return amount, opts.stakeAmount != nil
 }
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
