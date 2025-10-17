@@ -25,7 +25,10 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 
 	from := args.GetFrom()
 	denom := txBuilder.GetDenom("")
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, fmt.Errorf("stake amount is required, use -amount")
+	}
 
 	msg := &stakingtypes.MsgDelegate{
 		DelegatorAddress: string(from),
@@ -55,7 +58,10 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	from := args.GetFrom()
 
 	denom := txBuilder.GetDenom("")
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, fmt.Errorf("unstake amount is required, use -amount")
+	}
 
 	msg := &stakingtypes.MsgUndelegate{
 		DelegatorAddress: string(from),
@@ -84,7 +90,10 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 
 	from := args.GetFrom()
 
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, fmt.Errorf("withdraw amount is required, use -amount")
+	}
 
 	// Cosmos automatically withdraws all rewards and unbonded balances (any input amount is ignored)
 	msg := &disttypes.MsgWithdrawDelegatorReward{

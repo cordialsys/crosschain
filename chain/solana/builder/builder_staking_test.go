@@ -21,7 +21,7 @@ func TestNewStakingTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(100000000)
-	args := buildertest.MustNewStakingArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
+	args := buildertest.MustNewStakingArgs(xc.SOL, from, xcbuilder.OptionStakeAmount(amount), xcbuilder.OptionValidator(validator))
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
 
@@ -62,7 +62,7 @@ func TestNewUnstakeTransfer(t *testing.T) {
 	validator := "50_000_000_000"
 
 	amount := xc.NewAmountBlockchainFromUint64(85_000_000_000)
-	args := buildertest.MustNewStakingArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
+	args := buildertest.MustNewStakingArgs(xc.SOL, from, xcbuilder.OptionStakeAmount(amount), xcbuilder.OptionValidator(validator))
 
 	stakeKey, _ := solana.NewRandomPrivateKey()
 
@@ -125,7 +125,7 @@ func TestNewWithdrawTransfer(t *testing.T) {
 	validator := "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp"
 
 	amount := xc.NewAmountBlockchainFromUint64(10000000)
-	args := buildertest.MustNewStakingArgs(xc.SOL, from, amount, xcbuilder.OptionValidator(validator))
+	args := buildertest.MustNewStakingArgs(xc.SOL, from, xcbuilder.OptionStakeAmount(amount), xcbuilder.OptionValidator(validator))
 
 	input := &tx_input.WithdrawInput{
 		TxInput: tx_input.TxInput{

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -40,7 +41,10 @@ func getNetuid(args xcbuilder.StakeArgs) (types.U16, error) {
 
 func (tao *TaoStakingBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	txInput := input.(*tx_input.TxInput)
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 
 	validator, ok := args.GetValidator()
 	if !ok {
@@ -70,7 +74,10 @@ func (tao *TaoStakingBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxIn
 
 func (tao *TaoStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
 	txInput := input.(*tx_input.TxInput)
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 
 	validator, ok := args.GetValidator()
 	if !ok {

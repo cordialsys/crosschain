@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -25,7 +26,11 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	if !ok {
 		return nil, fmt.Errorf("validator to be delegated to is required")
 	}
-	amount := args.GetAmount().Uint64()
+	a, ok := args.GetAmount()
+	if !ok {
+		return nil, fmt.Errorf("missing stake amount")
+	}
+	amount := a.Uint64()
 	if amount < RentExemptLamportsThreshold {
 		return nil, fmt.Errorf("amount to unstake is below the rent exempt threshold (%s SOL)", RentExemptLamportsThresholdHuman)
 	}
@@ -46,7 +51,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 
 	instructions = append(instructions,
 		// create a new account for the stake
-		system.NewCreateAccountInstruction(args.GetAmount().Uint64(), StakeAccountSize, solana.StakeProgramID, stakingAuth, stakeAccountPub).Build(),
+		system.NewCreateAccountInstruction(amount, StakeAccountSize, solana.StakeProgramID, stakingAuth, stakeAccountPub).Build(),
 	)
 	instructions = append(instructions,
 		// initialize the new account as staking account
@@ -70,7 +75,11 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	if !ok {
 		return nil, fmt.Errorf("invalid input %T, expected %T", input, unstakeInput)
 	}
-	amount := args.GetAmount().Uint64()
+	a, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing unstake amount")
+	}
+	amount := a.Uint64()
 	if amount < RentExemptLamportsThreshold {
 		return nil, fmt.Errorf("amount to unstake is below the rent exempt threshold (%s SOL)", RentExemptLamportsThresholdHuman)
 	}
@@ -171,7 +180,11 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 	if !ok {
 		return nil, fmt.Errorf("invalid input %T, expected %T", input, withdrawInput)
 	}
-	amount := args.GetAmount().Uint64()
+	a, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing withdraw amount")
+	}
+	amount := a.Uint64()
 	// the sender/signer is the staking authority & withdraw authority
 	stakingAuth, err := solana.PublicKeyFromBase58(string(args.GetFrom()))
 	if err != nil {

@@ -41,7 +41,11 @@ func (c *Client) isValidStakeAmount(amount xc.AmountBlockchain) bool {
 }
 
 func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error) {
-	if !c.isValidStakeAmount(args.GetAmount()) {
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing stake amount")
+	}
+	if !c.isValidStakeAmount(amount) {
 		return nil, errors.New("minimal stake amount is 1.0 sui")
 	}
 
@@ -78,7 +82,10 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 
 // Fetch inputs required for a unstaking transaction
 func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error) {
-	amount := args.GetAmount()
+	amount, ok := args.GetAmount()
+	if !ok {
+		return nil, errors.New("missing staking amount")
+	}
 	decimals := c.Asset.GetDecimals()
 	minAmount := xc.NewAmountHumanReadableFromFloat(1.0).ToBlockchain(decimals)
 	if amount.Cmp(&minAmount) == -1 {
@@ -184,8 +191,12 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 			}
 		}
 
+		amount, ok := args.GetAmount()
+		if !ok {
+			return nil, errors.New("missing stake amount")
+		}
 		if amountToUnstake.Cmp(&zeroAmount) > 0 {
-			return nil, fmt.Errorf("cannot cover unstake amount (total: %v) with current stake objects, uncovered part: %v", args.GetAmount(), amountToUnstake)
+			return nil, fmt.Errorf("cannot cover unstake amount (total: %v) with current stake objects, uncovered part: %v", amount, amountToUnstake)
 		}
 	}
 
