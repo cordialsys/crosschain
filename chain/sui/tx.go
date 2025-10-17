@@ -33,6 +33,8 @@ var _ xc.TxInput = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
 }
 
 func (input *TxInput) GetDriver() xc.Driver {

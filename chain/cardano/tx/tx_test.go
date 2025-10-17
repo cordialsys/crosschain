@@ -38,14 +38,115 @@ func newTx(t *testing.T) *tx.Tx {
 		Slot: 90_751_416,
 	}
 
-	transaction, err := tx.NewTx(transferArgs, transferInput)
+	transaction, err := tx.NewTransfer(transferArgs, &transferInput)
 	require.NoError(t, err)
 	return transaction.(*tx.Tx)
 }
 
+func newStake(t *testing.T) *tx.Tx {
+	args, _ := xcbuilder.NewStakeArgs(
+		xc.ADA,
+		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+		xc.NewAmountBlockchainFromUint64(20),
+		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+		xcbuilder.OptionPublicKey(make([]byte, 32)),
+	)
+
+	stakeInput := tx_input.StakingInput{
+		TxInput: tx_input.TxInput{
+			Utxos: []types.Utxo{
+				{
+					Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+					Amounts: []types.Amount{
+						{
+							Unit:     "lovelace",
+							Quantity: "5333004",
+						},
+					},
+					TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+					Index:  1,
+				},
+			},
+			Slot: 90_751_416,
+		},
+	}
+
+	stakeTx, err := tx.NewStake(args, &stakeInput)
+	require.NoError(t, err)
+	return stakeTx.(*tx.Tx)
+}
+
+func newUnstake(t *testing.T) *tx.Tx {
+	args, _ := xcbuilder.NewStakeArgs(
+		xc.ADA,
+		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+		xc.NewAmountBlockchainFromUint64(20),
+		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+		xcbuilder.OptionPublicKey(make([]byte, 32)),
+	)
+
+	unstakeInput := tx_input.UnstakingInput{
+		TxInput: tx_input.TxInput{
+			Utxos: []types.Utxo{
+				{
+					Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+					Amounts: []types.Amount{
+						{
+							Unit:     "lovelace",
+							Quantity: "5333004",
+						},
+					},
+					TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+					Index:  1,
+				},
+			},
+			Slot: 90_751_416,
+		},
+	}
+
+	unstakeTx, err := tx.NewUnstake(args, &unstakeInput)
+	require.NoError(t, err)
+	return unstakeTx.(*tx.Tx)
+}
+
+func newWithdraw(t *testing.T) *tx.Tx {
+	pk, _ := hex.DecodeString("f0bb6fd00a035b6b6ec18bbb2739265b80f319c0634333fe678928f40750cade")
+	args, _ := xcbuilder.NewStakeArgs(
+		xc.ADA,
+		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+		xc.NewAmountBlockchainFromUint64(20),
+		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+		xcbuilder.OptionPublicKey(pk),
+	)
+
+	withdrawInput := tx_input.WithdrawInput{
+		TxInput: tx_input.TxInput{
+			Utxos: []types.Utxo{
+				{
+					Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+					Amounts: []types.Amount{
+						{
+							Unit:     "lovelace",
+							Quantity: "5333004",
+						},
+					},
+					TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+					Index:  1,
+				},
+			},
+			Slot: 90_751_416,
+		},
+		RewardsAddress: "stake_test1upp33pdh0nppmxz8ma2def28nz8kju0yqrnmgfelcjf88fqd406dg",
+	}
+
+	withdrawTx, err := tx.NewWithdraw(args, &withdrawInput)
+	require.NoError(t, err)
+	return withdrawTx.(*tx.Tx)
+}
+
 func TestTxHash(t *testing.T) {
 	tx := newTx(t)
-	expectedHash := xc.TxHash("53c1a2f0954b7827da2294a13242fc8cd6046ee346bdff8072e3db82335d1d86")
+	expectedHash := xc.TxHash("b9ef1b6a45fcf1584fcf77b388556c54a9209c4b68c3655168fb9ba676dedef3")
 	require.Equal(t, expectedHash, tx.Hash())
 }
 
@@ -55,7 +156,89 @@ func TestTxSighashes(t *testing.T) {
 	require.NotNil(t, sighashes)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(sighashes))
-	require.Equal(t, "53c1a2f0954b7827da2294a13242fc8cd6046ee346bdff8072e3db82335d1d86", hex.EncodeToString(sighashes[0].Payload))
+	require.Equal(t, "b9ef1b6a45fcf1584fcf77b388556c54a9209c4b68c3655168fb9ba676dedef3", hex.EncodeToString(sighashes[0].Payload))
+}
+
+func TestStakingSighashes(t *testing.T) {
+	stakeTx := newStake(t)
+	sighashes, err := stakeTx.Sighashes()
+
+	require.NoError(t, err)
+
+	// Double signature is reqauired for stakes
+	expectedPayload, _ := hex.DecodeString("b9ee1ef163a1812ed60bc7e828bf0c0de8f3aead8ce6e0e06eccaf62b845762a")
+	require.Equal(t, []*xc.SignatureRequest{
+		{
+			Payload: expectedPayload,
+		},
+		{
+			Payload: expectedPayload,
+		},
+	}, sighashes)
+}
+
+func TestUnstakingSighashes(t *testing.T) {
+	args, _ := xcbuilder.NewStakeArgs(
+		xc.ADA,
+		xc.Address("addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5"),
+		xc.NewAmountBlockchainFromUint64(20),
+		xcbuilder.OptionValidator("dd4ed2b86a51c550cca3ba8cef374da75fe87d5d6664f562ac9d2bc9"),
+		xcbuilder.OptionPublicKey(make([]byte, 32)),
+	)
+
+	unstakeInput := tx_input.UnstakingInput{
+		TxInput: tx_input.TxInput{
+			Utxos: []types.Utxo{
+				{
+					Address: "addr_test1vzjddf57t45k7a04kpr65lakpjmx50pwy7v0eje3t73c02s5zecy5",
+					Amounts: []types.Amount{
+						{
+							Unit:     "lovelace",
+							Quantity: "5333004",
+						},
+					},
+					TxHash: "72cfa181469b48402a50c6652d45c789897ae5025bb01f569a7bd01bffd12bc1",
+					Index:  1,
+				},
+			},
+			Slot: 90_751_416,
+		},
+	}
+
+	unstakeTx, err := tx.NewUnstake(args, &unstakeInput)
+	require.NoError(t, err)
+	sighashes, err := unstakeTx.Sighashes()
+
+	require.NoError(t, err)
+
+	// Double signature is reqauired for unstakes
+	expectedPayload, _ := hex.DecodeString("bb36e9b4984e5d74355d45050940f5e28f1941b1f869403fba2bc838a366337f")
+	require.Equal(t, []*xc.SignatureRequest{
+		{
+			Payload: expectedPayload,
+		},
+		{
+			Payload: expectedPayload,
+		},
+	}, sighashes)
+}
+
+func TestWithdrawalSighashes(t *testing.T) {
+	withdrawTx := newWithdraw(t)
+	sighashes, err := withdrawTx.Sighashes()
+
+	require.NoError(t, err)
+
+	// Double signature is reqauired for withdrawals
+	expectedPayload, _ := hex.DecodeString("3292140cdcda46a9eafcfafe27d9e795dd5032b82ef636a43d9f5b4caba7447e")
+	require.Equal(t, []*xc.SignatureRequest{
+		{
+			Payload: expectedPayload,
+		},
+		{
+			Payload: expectedPayload,
+		},
+	}, sighashes)
 }
 
 func TestTxAddSignature(t *testing.T) {
@@ -98,6 +281,74 @@ func TestTxAddSignature(t *testing.T) {
 			tx:   newTx(t),
 			sigs: []*xc.SignatureResponse{},
 			err:  "no signatures provided",
+		},
+		{
+			name: "StakeSingleSig",
+			tx:   newStake(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				}},
+			err: "invalid signature count",
+		},
+		{
+			name: "ValidStakeSigs",
+			tx:   newStake(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+			},
+			err: "",
+		},
+		{
+			name: "SingleUnstakeSig",
+			tx:   newUnstake(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+			},
+			err: "invalid signature count",
+		},
+		{
+			name: "ValidUnstakeSigs",
+			tx:   newUnstake(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+			},
+			err: "",
+		},
+		{
+			name: "SingleWithdrawalSig",
+			tx:   newWithdraw(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+			},
+			err: "invalid signature count",
+		},
+		{
+			name: "ValidWithdrawalSigs",
+			tx:   newWithdraw(t),
+			sigs: []*xc.SignatureResponse{
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+				{
+					Signature: xc.TxSignature("b9af112fa07e603c08827c2752eaf09ff0afc0726c8c5a3d923e743398e6a0c141b5476623faa88a451ae3fce2518c9502768d777e7c96d509cfbc62502d300a"),
+				},
+			},
+			err: "",
 		},
 	}
 
