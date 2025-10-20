@@ -37,8 +37,8 @@ func (b *Bytes) UnmarshalJSON(inputBz []byte) error {
 
 type TxResult string
 
-var Success TxResult = "SUCCESS"
-var Revert TxResult = "REVERT"
+const Success TxResult = "SUCCESS"
+const Revert TxResult = "REVERT"
 
 type Client struct {
 	baseUrl *url.URL
@@ -55,7 +55,7 @@ func (e *Error) Error() string {
 	if len(e.Code) > 0 && len(e.Message) > 0 {
 		return fmt.Sprintf("%s: %s", e.Code, e.Message)
 	}
-	return fmt.Sprintf("%s", e.ErrorMessage)
+	return e.ErrorMessage
 }
 
 type ContractParameter struct {

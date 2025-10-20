@@ -272,8 +272,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		TimeReceived:    0,
 		Error:           "",
 	}
-	if info.Receipt.Result == httpclient.Revert {
-		txInfo.Error = "transaction reverted"
+	switch info.Receipt.Result {
+	// Tron is not very consistent in how it reports success
+	case httpclient.Success, "", "success":
+		txInfo.Status = xc.TxStatusSuccess
+	default:
+		// assume that it reverted
+		txInfo.Error = string(info.Receipt.Result)
 		txInfo.Sources = nil
 		txInfo.Destinations = nil
 	}
