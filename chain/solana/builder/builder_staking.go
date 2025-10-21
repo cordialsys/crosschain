@@ -22,10 +22,19 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	if !ok {
 		return nil, fmt.Errorf("invalid input %T, expected %T", input, stakeInput)
 	}
-	_, ok = args.GetValidator()
+	validatorAddressStr, ok := args.GetValidator()
 	if !ok {
 		return nil, fmt.Errorf("validator to be delegated to is required")
 	}
+	validatorAddress, err := solana.PublicKeyFromBase58(validatorAddressStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid validator address %s: %w", validatorAddressStr, err)
+	}
+
+	if validatorAddress != stakeInput.ValidatorVoteAccount {
+		return nil, fmt.Errorf("validator address '%s' does not match expected validator vote account", validatorAddress)
+	}
+
 	a, ok := args.GetAmount()
 	if !ok {
 		return nil, buildererrors.ErrStakingAmountRequired
@@ -59,7 +68,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	)
 	instructions = append(instructions,
 		// delegate the stake to the validator
-		stake.NewDelegateStakeInstruction(stakeInput.ValidatorVoteAccount, stakingAuth, stakeAccountPub).Build(),
+		stake.NewDelegateStakeInstruction(validatorAddress, stakingAuth, stakeAccountPub).Build(),
 	)
 	tx, err := txBuilder.buildSolanaTx(args.GetFrom(), args.GetFrom(), instructions, &stakeInput.TxInput)
 	if err != nil {
