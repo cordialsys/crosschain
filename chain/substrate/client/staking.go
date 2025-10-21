@@ -2,10 +2,10 @@ package client
 
 import (
 	"context"
-	"errors"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 )
@@ -40,7 +40,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
@@ -57,7 +57,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 	chainCfg := client.Asset.GetChain().Base()
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
 	input, err := client.FetchTransferInput(ctx, tfArgs)

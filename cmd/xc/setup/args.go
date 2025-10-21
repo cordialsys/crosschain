@@ -237,7 +237,7 @@ func RpcArgsFromCmd(cmd *cobra.Command) (*RpcArgs, error) {
 type StakingArgs struct {
 	ConfigPath string
 	AccountId  string
-	Amount     xc.AmountHumanReadable
+	Amount     *xc.AmountHumanReadable
 	Validator  string
 	Provider   xc.StakingProvider
 }
@@ -321,12 +321,14 @@ func StakingArgsFromCmd(cmd *cobra.Command) (*StakingArgs, error) {
 		return nil, err
 	}
 
-	dec, _ := xc.NewAmountHumanReadableFromStr("0")
+	var dec *xc.AmountHumanReadable
 	if amount != "" {
-		dec, err = xc.NewAmountHumanReadableFromStr(amount)
+		d, err := xc.NewAmountHumanReadableFromStr(amount)
 		if err != nil {
 			return nil, err
 		}
+
+		dec = &d
 	}
 
 	return &StakingArgs{

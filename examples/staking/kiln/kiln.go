@@ -117,7 +117,7 @@ func CmdStake() *cobra.Command {
 				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				options = append(options, builder.OptionStakeAmount(amount))
 			}
@@ -254,7 +254,7 @@ func CmdUnstake() *cobra.Command {
 				options = append(options, builder.OptionStakeAccount(moreArgs.AccountId))
 			}
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				options = append(options, builder.OptionStakeAmount(amount))
 			}
@@ -331,7 +331,10 @@ func CmdKilnTest() *cobra.Command {
 			// rpcArgs := setup.UnwrapArgs(cmd.Context())
 			_ = xcFactory
 			_ = chain
-			bal := moreArgs.Amount.ToBlockchain(chain.Decimals)
+			bal := xc.NewAmountBlockchainFromUint64(0)
+			if moreArgs.Amount != nil {
+				bal = moreArgs.Amount.ToBlockchain(chain.Decimals)
+			}
 			_ = bal
 			apiKey, err := stakingCfg.Kiln.ApiToken.Load()
 			if err != nil {

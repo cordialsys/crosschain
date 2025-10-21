@@ -24,7 +24,7 @@ func CmdFetchStakeInput() *cobra.Command {
 
 			from := args[0]
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				opts = append(opts, builder.OptionStakeAmount(amount))
 			}
@@ -67,7 +67,7 @@ func CmdFetchUnstakeInput() *cobra.Command {
 
 			from := args[0]
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				opts = append(opts, builder.OptionStakeAmount(amount))
 			}
@@ -109,7 +109,7 @@ func CmdFetchWithdrawInput() *cobra.Command {
 			opts := stakingArgs.ToBuilderOptions()
 			from := args[0]
 			amountHuman := stakingArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				opts = append(opts, builder.OptionStakeAmount(amount))
 			}

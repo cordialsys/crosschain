@@ -2,11 +2,11 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/taostats"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -66,7 +66,7 @@ func (tao *TaoStakingClient) FetchStakingInput(ctx context.Context, args xcbuild
 	chainCfg := tao.client.Asset.GetChain().Base()
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing stake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
 	input, err := tao.client.FetchTransferInput(ctx, tfArgs)

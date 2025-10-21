@@ -9,6 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/solana/builder"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
@@ -177,7 +178,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	}
 	a, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing unstake amounbt")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	amount := a.Uint64()
 	if amount < builder.RentExemptLamportsThreshold {

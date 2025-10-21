@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
@@ -43,7 +43,7 @@ func (tao *TaoStakingBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxIn
 	txInput := input.(*tx_input.TxInput)
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	validator, ok := args.GetValidator()
@@ -76,7 +76,7 @@ func (tao *TaoStakingBuilder) Unstake(args xcbuilder.StakeArgs, input xc.Unstake
 	txInput := input.(*tx_input.TxInput)
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	validator, ok := args.GetValidator()

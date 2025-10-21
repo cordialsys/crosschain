@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/client/services/twinstake"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
@@ -27,7 +28,10 @@ func CmdTwinstakeTest() *cobra.Command {
 			// rpcArgs := setup.UnwrapArgs(cmd.Context())
 			_ = xcFactory
 			_ = chain
-			bal := moreArgs.Amount.ToBlockchain(chain.Decimals)
+			bal := xc.NewAmountBlockchainFromUint64(0)
+			if moreArgs.Amount != nil {
+				bal = moreArgs.Amount.ToBlockchain(chain.Decimals)
+			}
 			_ = bal
 			// apiKey, err := stakingCfg.Kiln.ApiToken.Load()
 			// if err != nil {

@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/extrinsic"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/tx"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
@@ -71,7 +71,7 @@ func (pools *NominationPoolsStakingBuilder) Stake(args xcbuilder.StakeArgs, inpu
 	txInput := input.(*tx_input.TxInput)
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	sender, err := address.DecodeMulti(args.GetFrom())
@@ -126,7 +126,7 @@ func (pools *NominationPoolsStakingBuilder) Unstake(args xcbuilder.StakeArgs, in
 	txInput := input.(*tx_input.TxInput)
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	sender, err := address.DecodeMulti(args.GetFrom())

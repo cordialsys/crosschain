@@ -3,13 +3,13 @@ package client
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/scale"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -105,7 +105,7 @@ func (pools *NominationPoolsStakingClient) FetchStakingInput(ctx context.Context
 	chainCfg := pools.client.Asset.GetChain().Base()
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing stake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	tfArgs, _ := xcbuilder.NewTransferArgs(chainCfg, args.GetFrom(), "", amount)
 	input, err := pools.client.FetchTransferInput(ctx, tfArgs)
