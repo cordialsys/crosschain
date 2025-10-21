@@ -42,7 +42,7 @@ func CmdUnstake() *cobra.Command {
 
 			opts := moreArgs.BuilderOptionsWith(signer.MustPublicKey())
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() != "0" {
+			if amountHuman != nil {
 				amount := amountHuman.ToBlockchain(chain.Decimals)
 				opts = append(opts, builder.OptionStakeAmount(amount))
 			}

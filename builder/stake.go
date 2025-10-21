@@ -1,10 +1,10 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/builder/validation"
 )
 
@@ -59,7 +59,7 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOptio
 	case xc.DriverEVM:
 		amount, ok := args.GetAmount()
 		if !ok {
-			return args, errors.New("EVM requires proper staking amount, use '--amount'")
+			return args, buildererrors.ErrStakingAmountRequired
 		}
 		// Eth must stake or unstake in increments of 32
 		_, err := validation.Count32EthChunks(xc.NewAmountBlockchainFromUint64(amount.Uint64()))
@@ -69,7 +69,7 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOptio
 	case xc.DriverCardano:
 		_, ok := args.GetAmount()
 		if ok {
-			return args, errors.New("cardano staking doesn't use amounts, skip '--amount'")
+			return args, fmt.Errorf("%w: cardano always uses the full balance of the address", buildererrors.ErrStakingAmountNotUsed)
 		}
 		if _, ok := args.GetValidator(); !ok {
 			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
@@ -77,7 +77,7 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOptio
 	case xc.DriverCosmos, xc.DriverSolana, xc.DriverSubstrate:
 		_, ok := args.GetAmount()
 		if !ok {
-			return args, errors.New("missing staking amount, use '--amount'")
+			return args, buildererrors.ErrStakingAmountRequired
 		}
 
 		if _, ok := args.GetValidator(); !ok {
@@ -86,7 +86,7 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOptio
 	default:
 		_, ok := args.GetAmount()
 		if !ok {
-			return args, errors.New("missing staking amount, use '--amount'")
+			return args, buildererrors.ErrStakingAmountRequired
 		}
 	}
 

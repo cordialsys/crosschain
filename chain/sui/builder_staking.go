@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 )
 
@@ -46,7 +47,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
@@ -136,7 +137,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	feePayer, ok := args.GetFeePayer()
 	if !ok {

@@ -1,11 +1,11 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/gagliardetto/solana-go"
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
@@ -28,7 +28,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	}
 	a, ok := args.GetAmount()
 	if !ok {
-		return nil, fmt.Errorf("missing stake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	amount := a.Uint64()
 	if amount < RentExemptLamportsThreshold {
@@ -77,7 +77,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	}
 	a, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing unstake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	amount := a.Uint64()
 	if amount < RentExemptLamportsThreshold {
@@ -182,7 +182,7 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 	}
 	a, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing withdraw amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	amount := a.Uint64()
 	// the sender/signer is the staking authority & withdraw authority

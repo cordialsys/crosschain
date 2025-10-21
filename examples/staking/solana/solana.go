@@ -74,7 +74,7 @@ func CmdStake() *cobra.Command {
 			stakingCfg := setup.UnwrapStakingConfig(cmd.Context())
 
 			amountHuman := moreArgs.Amount
-			if amountHuman.String() == "0" {
+			if amountHuman != nil {
 				return fmt.Errorf("must pass --amount to stake")
 			}
 			amount := amountHuman.ToBlockchain(chain.Decimals)

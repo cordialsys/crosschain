@@ -2,13 +2,13 @@ package builder
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/eos/builder/action"
 	"github.com/cordialsys/crosschain/chain/eos/eos-go"
 	"github.com/cordialsys/crosschain/chain/eos/tx"
@@ -173,7 +173,7 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	}
 	amount, ok := stakingArgs.GetAmount()
 	if !ok {
-		return nil, errors.New("missing stake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	var err error
@@ -219,7 +219,7 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	}
 	amount, ok := stakingArgs.GetAmount()
 	if !ok {
-		return nil, errors.New("missing unstake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	var err error

@@ -8,6 +8,7 @@ import (
 	stakingtypes "cosmossdk.io/x/staking/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	"github.com/cosmos/cosmos-sdk/types"
@@ -27,7 +28,7 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	denom := txBuilder.GetDenom("")
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, fmt.Errorf("stake amount is required, use -amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	msg := &stakingtypes.MsgDelegate{
@@ -60,7 +61,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	denom := txBuilder.GetDenom("")
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, fmt.Errorf("unstake amount is required, use -amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	msg := &stakingtypes.MsgUndelegate{
@@ -92,7 +93,7 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, fmt.Errorf("withdraw amount is required, use -amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
 	// Cosmos automatically withdraws all rewards and unbonded balances (any input amount is ignored)

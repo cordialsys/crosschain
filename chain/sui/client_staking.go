@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/go-sui-sdk/v2/move_types"
 	"github.com/cordialsys/go-sui-sdk/v2/sui_types"
@@ -43,7 +44,7 @@ func (c *Client) isValidStakeAmount(amount xc.AmountBlockchain) bool {
 func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error) {
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing stake amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	if !c.isValidStakeAmount(amount) {
 		return nil, errors.New("minimal stake amount is 1.0 sui")
@@ -84,7 +85,7 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs) (xc.UnstakeTxInput, error) {
 	amount, ok := args.GetAmount()
 	if !ok {
-		return nil, errors.New("missing staking amount")
+		return nil, buildererrors.ErrStakingAmountRequired
 	}
 	decimals := c.Asset.GetDecimals()
 	minAmount := xc.NewAmountHumanReadableFromFloat(1.0).ToBlockchain(decimals)
@@ -193,7 +194,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 		amount, ok := args.GetAmount()
 		if !ok {
-			return nil, errors.New("missing stake amount")
+			return nil, buildererrors.ErrStakingAmountRequired
 		}
 		if amountToUnstake.Cmp(&zeroAmount) > 0 {
 			return nil, fmt.Errorf("cannot cover unstake amount (total: %v) with current stake objects, uncovered part: %v", amount, amountToUnstake)

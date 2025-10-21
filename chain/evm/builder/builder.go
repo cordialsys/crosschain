@@ -1,12 +1,12 @@
 package builder
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/builder/validation"
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_batch_deposit"
@@ -123,7 +123,7 @@ func (txBuilder TxBuilder) Stake(stakeArgs xcbuilder.StakeArgs, input xc.StakeTx
 		contract := txBuilder.Asset.Staking.StakeContract
 		amount, ok := stakeArgs.GetAmount()
 		if !ok {
-			return nil, errors.New("missing stake amount")
+			return nil, buildererrors.ErrStakingAmountRequired
 		}
 		tx, err := evmBuilder.BuildTxWithPayload(txBuilder.Asset, xc.Address(contract), amount, data, &input.TxInput)
 		if err != nil {
@@ -140,7 +140,7 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 		evmBuilder := NewEvmTxBuilder()
 		amount, ok := stakeArgs.GetAmount()
 		if !ok {
-			return nil, errors.New("missing unstake amount")
+			return nil, buildererrors.ErrStakingAmountRequired
 		}
 		fmt.Printf("got %v amt", amount)
 
