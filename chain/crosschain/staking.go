@@ -56,14 +56,15 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xcclient.Stake
 
 func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	amount, _ := args.GetAmount()
-
 	var req = &types.StakingInputReq{
 		From:     string(args.GetFrom()),
-		Balance:  amount.String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
 		Extra:    stakingInputReqExtra(args),
+	}
+	amount, ok := args.GetAmount()
+	if ok {
+		req.Balance = amount.String()
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -83,14 +84,16 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 }
 func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.UnstakeTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	amount, _ := args.GetAmount()
 
 	var req = &types.StakingInputReq{
 		From:     string(args.GetFrom()),
-		Balance:  amount.String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
 		Extra:    stakingInputReqExtra(args),
+	}
+	amount, ok := args.GetAmount()
+	if ok {
+		req.Balance = amount.String()
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
@@ -110,13 +113,15 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 }
 func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	amount, _ := args.GetAmount()
 	var req = &types.StakingInputReq{
 		From:     string(args.GetFrom()),
-		Balance:  amount.String(),
 		Provider: client.StakingProvider,
 		FeePayer: types.NewFeePayerInfoOrNil(&args),
 		Extra:    stakingInputReqExtra(args),
+	}
+	amount, ok := args.GetAmount()
+	if ok {
+		req.Balance = amount.String()
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
