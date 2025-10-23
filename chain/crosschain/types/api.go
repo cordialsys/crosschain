@@ -144,7 +144,7 @@ type StakingInputReqExtra struct {
 
 type StakingInputReq struct {
 	From      string               `json:"from"`
-	Balance   string               `json:"balance"`
+	Balance   string               `json:"balance,omitempty"`
 	Validator string               `json:"validator,omitempty"`
 	Account   string               `json:"account,omitempty"`
 	Provider  xc.StakingProvider   `json:"provider,omitempty"`
