@@ -121,6 +121,8 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
+const DefaultGasLimitMultiplier = 1.2
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
 	feePayer, _ := args.GetFeePayer()
@@ -134,9 +136,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	if res.GasInfo.GasUsed > 0 {
 		baseTxInput.GasLimit = res.GasInfo.GasUsed
-		// cosmos is like always a bit off from simulation and prod,
-		// so we need to increase the gas limit slightly
-		gasLimitMultiplier := 1.1
+		// Bump up by 20% generally because cosmos execution can vary a lot.
+		gasLimitMultiplier := DefaultGasLimitMultiplier
 		if client.Asset.GetChain().ChainGasLimitMultiplier > 0.001 {
 			gasLimitMultiplier = client.Asset.GetChain().ChainGasLimitMultiplier
 		}
@@ -209,6 +210,7 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 		if gasPrice == 0 {
 			res.GasInfo.GasUsed = uint64(float64(res.GasInfo.GasUsed) * 1.21)
 		}
+
 		return res, nil
 	}
 	// Sometimes the queried account nonce is not final, so we mark this as something
