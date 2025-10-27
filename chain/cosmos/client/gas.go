@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"math"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -45,10 +46,25 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 		denoms = append(denoms, native.ChainCoin)
 	}
 	minFeeRaw, err := gas.ParseMinGasError(res, denoms)
-	if err != nil {
-		logrus.WithField("chain", native.Chain).WithField("error", err).Error("could not parse min gas error")
+	if err != nil || minFeeRaw.Amount.IsZero() {
+		// This is more common that the hack does not work
+		logrus.WithField("chain", native.Chain).WithField("error", err).Warn("could not parse min gas error")
+
+		// 1. First consider if min gas price is set by the chain config
+		if client.Asset.GetChain().ChainMinGasPrice > 0 {
+			// gas price is in human quantity, need to convert to blockchain quantity
+			factor := math.Pow10(int(client.Asset.GetChain().Decimals))
+			// add additional 1% gas to cover floating point rounding errors
+			factor = factor * 1.01
+			return client.Asset.GetChain().ChainMinGasPrice * factor, nil
+		}
+
+		// 2. If not, use the default budget
 		defaultBudgetHuman := client.Asset.GetChain().GasBudgetDefault
 		defaultBudget := defaultBudgetHuman.ToBlockchain(client.Asset.GetChain().Decimals)
+		if defaultBudget.IsZero() {
+			return 0, fmt.Errorf("could not estimate gas price - contact Cordial Systems to update '%s' chain fee configuration", native.Chain)
+		}
 		return gas.TotalFeeToFeePerGas(defaultBudget.String(), gasLimitForEstimate), nil
 	}
 
