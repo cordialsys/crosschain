@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/okx/go-wallet-sdk/crypto/base58"
 	"github.com/sirupsen/logrus"
 )
 

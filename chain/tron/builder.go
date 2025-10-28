@@ -3,10 +3,11 @@ package tron
 import (
 	"fmt"
 
+	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/golang/protobuf/ptypes"
-	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
-	"github.com/okx/go-wallet-sdk/crypto/base58"
+
+	"github.com/cordialsys/crosschain/chain/tron/core"
 	"golang.org/x/crypto/sha3"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"

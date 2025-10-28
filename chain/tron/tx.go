@@ -6,8 +6,8 @@ import (
 	"errors"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/tron/core"
 	"github.com/golang/protobuf/proto"
-	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 )
 
 // Tx for Template

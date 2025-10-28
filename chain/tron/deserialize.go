@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/ethereum/go-ethereum/common"
 	evmtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/okx/go-wallet-sdk/crypto/base58"
 )
 
 func compareTopics(topics1 []httpclient.Bytes, topics2 []common.Hash) bool {
