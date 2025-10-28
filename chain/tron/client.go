@@ -10,6 +10,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/tron/core"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
@@ -17,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/sirupsen/logrus"
 )
 
