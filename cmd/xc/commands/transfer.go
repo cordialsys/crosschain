@@ -274,7 +274,6 @@ func CmdTxTransfer() *cobra.Command {
 					return fmt.Errorf("could not build transfer: %v", err)
 				}
 
-				// get sighashes for determinism check
 				sighashes, err = tx.Sighashes()
 				if err != nil {
 					return fmt.Errorf("could not create payloads to sign: %v", err)

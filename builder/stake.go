@@ -83,6 +83,8 @@ func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOptio
 		if _, ok := args.GetValidator(); !ok {
 			return args, fmt.Errorf("validator to be delegated to is required for %s chain", chain)
 		}
+	case xc.DriverTron:
+		return args, nil
 	default:
 		_, ok := args.GetAmount()
 		if !ok {

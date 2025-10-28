@@ -17,7 +17,7 @@ import (
 	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/ton"
-	"github.com/cordialsys/crosschain/chain/tron"
+	tron_input "github.com/cordialsys/crosschain/chain/tron/txinput"
 	xrp "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -38,7 +38,7 @@ var LoadedTxInputs = []xc.TxInput{
 	&substratetxinput.TxInput{},
 	&sui.TxInput{},
 	&ton.TxInput{},
-	&tron.TxInput{},
+	&tron_input.TxInput{},
 	&xrp.TxInput{},
 	&bitcointxinput.MultiTransferInput{},
 }

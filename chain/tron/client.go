@@ -10,11 +10,10 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/tron/core"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
+	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
-	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -23,8 +22,10 @@ import (
 
 var _ xclient.Client = &Client{}
 
-const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-const TX_TIMEOUT = 2 * time.Hour
+const (
+	TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	CREATE_TRANSACTION      = "createtransaction"
+)
 
 // Client for Template
 type Client struct {
@@ -32,92 +33,6 @@ type Client struct {
 	client *httpclient.Client
 
 	chain *xc.ChainConfig
-}
-
-// TxInput for Template
-type TxInput struct {
-	xc.TxInputEnvelope
-
-	// 6th to 8th (exclusive) byte of the reference block height
-	RefBlockBytes []byte `json:"ref_block_bytes,omitempty"`
-	// 8th to 16th (exclusive) byte of the reference block hash
-	RefBlockHash []byte `json:"ref_block_hash,omitempty"`
-
-	// Expiration time (seconds)
-	Expiration int64 `json:"expiration,omitempty"`
-	// Transaction creation time (seconds)
-	Timestamp int64 `json:"timestamp,omitempty"`
-	// Max fee budget
-	MaxFee xc.AmountBlockchain `json:"max_fee,omitempty"`
-}
-
-var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithUnix = &TxInput{}
-
-func init() {
-	registry.RegisterTxBaseInput(&TxInput{})
-}
-
-func NewTxInput() *TxInput {
-	return &TxInput{
-		TxInputEnvelope: xc.TxInputEnvelope{
-			Type: xc.DriverTron,
-		},
-	}
-}
-
-func (input *TxInput) GetDriver() xc.Driver {
-	return xc.DriverTron
-}
-
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	// tron doesn't do prioritization
-	_ = multiplier
-	return nil
-}
-
-func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	return input.MaxFee, ""
-}
-
-func (input *TxInput) SetUnix(unix int64) {
-	input.Timestamp = unix
-	input.Expiration = unix + int64((TX_TIMEOUT).Seconds())
-}
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// tron uses recent-block-hash like mechanism like solana, but with explicit timestamps
-	return true
-}
-func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	oldInput, ok := other.(*TxInput)
-	if ok {
-		if input.Timestamp <= oldInput.Expiration {
-			return false
-		}
-	} else {
-		// can't tell (this shouldn't happen) - default false
-		return false
-	}
-	// all others timed out - we're safe
-	return true
-}
-
-func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.TransactionRaw {
-	return &core.TransactionRaw{
-		Contract:      []*core.Transaction_Contract{contract},
-		RefBlockBytes: input.RefBlockBytes,
-		RefBlockHash:  input.RefBlockHash,
-		// tron wants milliseconds
-		Expiration: time.Unix(input.Expiration, 0).UnixMilli(),
-		Timestamp:  time.Unix(input.Timestamp, 0).UnixMilli(),
-
-		// unused ?
-		RefBlockNum: 0,
-	}
 }
 
 // NewClient returns a new Template Client
@@ -139,12 +54,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	input := new(TxInput)
+func (client *Client) FetchBaseInput(ctx context.Context, params map[string]any, method string) (*txinput.TxInput, error) {
+	input := new(txinput.TxInput)
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(string(args.GetFrom()), string(args.GetTo()), 1)
+	dummyTx, err := client.client.CreateTransaction(params, method)
 	if err != nil {
 		return nil, err
 	}
@@ -153,12 +68,20 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	input.RefBlockHash = dummyTx.RawData.RefBlockHashBytes
 	// set timeout period
 	input.Timestamp = time.Now().Unix()
-	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
+	input.Expiration = time.Now().Add(txinput.TX_TIMEOUT).Unix()
 
 	maxFee := client.chain.GasBudgetDefault.ToBlockchain(client.chain.Decimals)
 	input.MaxFee = maxFee
 
 	return input, nil
+}
+
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	return client.FetchBaseInput(ctx, map[string]any{
+		"owner_address": string(args.GetFrom()),
+		"to_address":    string(args.GetTo()),
+		"amount":        1,
+	}, CREATE_TRANSACTION)
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -174,7 +97,20 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	if err != nil {
 		return err
 	}
+	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+	if err != nil {
+		return err
+	}
 
+	// Try to broadcast second transaction
+	bz, err = tx.Serialize()
+	// Tx submites, no follow up tx
+	if err != nil {
+		return nil
+	}
+
+	// We have to submit a follow up tx
+	time.Sleep(time.Second * 20)
 	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 
 	return err

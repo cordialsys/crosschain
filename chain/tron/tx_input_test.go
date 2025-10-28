@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/tron/txinput"
 )
 
 func (s *CrosschainTestSuite) TestTxInputConflicts() {
@@ -18,11 +19,11 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 	}
 	vectors := []testcase{
 		{
-			newInput: &TxInput{
+			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
 			},
-			oldInput: &TxInput{
+			oldInput: &txinput.TxInput{
 				Timestamp:  100,
 				Expiration: 999,
 			},
@@ -30,11 +31,11 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: true,
 		},
 		{
-			newInput: &TxInput{
+			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
 			},
-			oldInput: &TxInput{
+			oldInput: &txinput.TxInput{
 				Timestamp:  100,
 				Expiration: 2001,
 			},
@@ -42,11 +43,11 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
+			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
 			},
-			oldInput: &TxInput{
+			oldInput: &txinput.TxInput{
 				Timestamp:  0,
 				Expiration: 1000000,
 			},
@@ -54,7 +55,7 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: false,
 		},
 		{
-			newInput: &TxInput{
+			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
 			},
