@@ -9,6 +9,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/tron"
+	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	"github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,7 @@ func randomSig() []byte {
 
 func TestNewTxBuilder(t *testing.T) {
 	type testcase struct {
-		input          *tron.TxInput
+		input          *txinput.TxInput
 		args           buildertest.TransferArgs
 		expectedSigHex string
 	}
@@ -30,8 +31,8 @@ func TestNewTxBuilder(t *testing.T) {
 	testcases := []testcase{
 		{
 			// native transfer
-			input: &tron.TxInput{
-				TxInputEnvelope: tron.NewTxInput().TxInputEnvelope,
+			input: &txinput.TxInput{
+				TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 				RefBlockBytes:   testutil.FromHex("5273"),
 				RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
 				Expiration:      200,
@@ -48,8 +49,8 @@ func TestNewTxBuilder(t *testing.T) {
 		},
 		{
 			// token transfer
-			input: &tron.TxInput{
-				TxInputEnvelope: tron.NewTxInput().TxInputEnvelope,
+			input: &txinput.TxInput{
+				TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 				RefBlockBytes:   testutil.FromHex("5273"),
 				RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
 				Expiration:      200,

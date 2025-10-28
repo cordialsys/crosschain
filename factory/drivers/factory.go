@@ -164,6 +164,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provid
 		return eosclient.NewClient(cfg)
 	case DriverSui:
 		return sui.NewClient(cfg)
+	case DriverTron:
+		return tron.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }

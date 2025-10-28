@@ -2,16 +2,15 @@ package staking
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -75,11 +74,6 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 		}
 	}
 
-	bz, err := tx.Serialize()
-	if err != nil {
-		return "", err
-	}
-	fmt.Println(hex.EncodeToString(bz))
 	if !broadcast {
 		// end before submitting
 		return "", nil
@@ -93,7 +87,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 	if err != nil {
 		return "", fmt.Errorf("could not broadcast: %v", err)
 	}
-	fmt.Println("submitted tx", tx.Hash())
+	logrus.WithField("hash", tx.Hash()).Info("submited tx")
 	return string(tx.Hash()), nil
 }
 

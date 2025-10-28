@@ -4,50 +4,86 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/tron/core"
 	"github.com/golang/protobuf/proto"
 )
 
-// Tx for Template
+// Tx for Tron
+//
+// Tron Stake and Unstake operations require two transactions
 type Tx struct {
-	tronTx *core.Transaction
+	tronTxs []*core.Transaction
+	hashes  []xc.TxHash
 }
 
 var _ xc.Tx = &Tx{}
 
+func NewTx() *Tx {
+	return &Tx{
+		tronTxs: make([]*core.Transaction, 0),
+	}
+}
+
+func (tx *Tx) AppendTx(ttx *core.Transaction) {
+	tx.tronTxs = append(tx.tronTxs, ttx)
+	hashBase, _ := proto.Marshal(ttx.RawData)
+	digest := sha256.Sum256(hashBase)
+	hash := hex.EncodeToString(digest[:])
+	tx.hashes = append(tx.hashes, xc.TxHash(hash))
+}
+
 // Hash returns the tx hash or id
 func (tx Tx) Hash() xc.TxHash {
-	hashBase, _ := proto.Marshal(tx.tronTx.RawData)
-	digest := sha256.Sum256(hashBase)
-
-	return xc.TxHash(hex.EncodeToString(digest[:]))
+	if len(tx.hashes) == 0 {
+		return xc.TxHash("")
+	}
+	return tx.hashes[len(tx.hashes)-1]
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	rawData, err := proto.Marshal(tx.tronTx.GetRawData())
-	if err != nil {
-		return nil, errors.New("unable to get raw data")
+	if len(tx.tronTxs) == 0 {
+		return nil, errors.New("invalid transaction")
 	}
 
-	hasher := sha256.New()
-	hasher.Write(rawData)
+	sighashes := make([]*xc.SignatureRequest, len(tx.tronTxs))
+	for i, ttx := range tx.tronTxs {
+		rawData, err := proto.Marshal(ttx.GetRawData())
+		if err != nil {
+			return nil, errors.New("unable to get raw data")
+		}
 
-	return []*xc.SignatureRequest{xc.NewSignatureRequest(hasher.Sum(nil))}, nil
+		hasher := sha256.New()
+		hasher.Write(rawData)
+		sighashes[i] = xc.NewSignatureRequest(hasher.Sum(nil))
+	}
+
+	return sighashes, nil
 
 }
 
 // SetSignatures adds a signature to Tx
 func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
-	for _, sig := range signatures {
-		tx.tronTx.Signature = append(tx.tronTx.Signature, sig.Signature)
+	if len(signatures) != len(tx.tronTxs) {
+		return fmt.Errorf("invalid signature count, expected: %d, got: %d", len(tx.tronTxs), len(signatures))
+	}
+
+	for i, sig := range signatures {
+		tx.tronTxs[i].Signature = append(tx.tronTxs[i].Signature, sig.Signature)
 	}
 	return nil
 }
 
 // Serialize returns the serialized tx
-func (tx Tx) Serialize() ([]byte, error) {
-	return proto.Marshal(tx.tronTx)
+func (tx *Tx) Serialize() ([]byte, error) {
+	if len(tx.tronTxs) == 0 {
+		return nil, errors.New("invalid tx")
+	}
+
+	ttx := tx.tronTxs[0]
+	tx.tronTxs = tx.tronTxs[1:]
+	return proto.Marshal(ttx)
 }

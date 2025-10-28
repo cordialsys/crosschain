@@ -17,6 +17,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type ResourceType string
+
 // Implement basic tron client that use's TRON's http api.
 // This API is exposed on many public endpoints and is supported by private RPC providers.
 
@@ -161,10 +163,54 @@ type TriggerConstantContractResponse struct {
 	ConstantResult []Bytes `json:"constant_result"`
 }
 
+type FreezeV2 struct {
+	StakeType string `json:"type"`
+	Amount    uint64 `json:"amount"`
+}
+
+type UnfreezeV2 struct {
+	StakeType          string `json:"type"`
+	UnfreezeAmount     uint64 `json:"unfreeze_amount"`
+	UnfreezeExpireTime int64  `json:"unfreeze_expire_time"`
+}
+
+type AccountResource struct {
+	DelegatedFrozenBalanceForEnergy uint64 `json:"delegated_frozenV2_balance_for_energy"`
+}
+
+type Vote struct {
+	VoteAddress string `json:"vote_address"`
+	VoteCount   uint64 `json:"vote_count"`
+}
+
 type GetAccountResponse struct {
 	Error
-	Balance uint64 `json:"balance"`
-	Address string `json:"address"`
+	Balance                            uint64          `json:"balance"`
+	Address                            string          `json:"address"`
+	FrozenV2                           []FreezeV2      `json:"frozenV2"`
+	UnfrozenV2                         []UnfreezeV2    `json:"unfrozenV2"`
+	AccountResource                    AccountResource `json:"account_resource"`
+	Votes                              []*Vote         `json:"votes"`
+	DelegatedFrozenBalanceForBandwidth uint64          `json:"delegated_frozenV2_balance_for_bandwidth"`
+	Allowance                          uint64          `json:"allowance"`
+}
+
+func (a GetAccountResponse) GetFrozenBalance() uint64 {
+	totalFrozenBalance := uint64(0)
+
+	// regular (non-delegated) frozen amounts from frozenV2
+	// note: TRON_POWER type appears in frozenV2 but its amount field is often
+	// missing or inaccurate
+	for _, f := range a.FrozenV2 {
+		if f.StakeType != "TRON_POWER" {
+			totalFrozenBalance += f.Amount
+		}
+	}
+
+	// add delegated bandwidth and energy
+	totalFrozenBalance += a.DelegatedFrozenBalanceForBandwidth
+	totalFrozenBalance += a.AccountResource.DelegatedFrozenBalanceForEnergy
+	return totalFrozenBalance
 }
 
 func NewHttpClient(baseUrl string, timeout time.Duration) (*Client, error) {
@@ -238,13 +284,13 @@ func (c *Client) Url(path string) string {
 	return c.baseUrl.JoinPath(path).String()
 }
 
-func (c *Client) CreateTransaction(from string, to string, amount int) (*CreateTransactionResponse, error) {
-	req, err := postRequest(c.Url("wallet/createtransaction"), map[string]interface{}{
-		"owner_address": from,
-		"to_address":    to,
-		"amount":        amount,
-		"visible":       true,
-	})
+func (c *Client) CreateTransaction(params map[string]interface{}, endpoint string) (*CreateTransactionResponse, error) {
+	url := fmt.Sprintf("%s/wallet/%s", c.baseUrl, endpoint)
+	if _, ok := params["visible"]; !ok {
+		params["visible"] = true
+	}
+
+	req, err := postRequest(url, params)
 
 	if err != nil {
 		return nil, err
@@ -514,6 +560,7 @@ func (c *Client) GetAccount(address string) (*GetAccountResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	err = checkError(parsed.Error)
 	if err != nil {
 		return parsed, err
