@@ -23,8 +23,9 @@ import (
 var _ xclient.Client = &Client{}
 
 const (
-	TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-	CREATE_TRANSACTION      = "createtransaction"
+	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	CREATE_TRANSACTION         = "createtransaction"
+	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
 )
 
 // Client for Template
@@ -93,6 +94,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Tron tx
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+	hash := tx.Hash()
 	bz, err := tx.Serialize()
 	if err != nil {
 		return err
@@ -102,15 +104,32 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return err
 	}
 
-	// Try to broadcast second transaction
+	// Try to broadcast a second transaction
 	bz, err = tx.Serialize()
 	// Tx submites, no follow up tx
 	if err != nil {
 		return nil
 	}
 
+	start := time.Now()
 	// We have to submit a follow up tx
-	time.Sleep(time.Second * 20)
+	infoArgs := txinfo.NewArgs(hash)
+	for time.Since(start) < STAKE_TRANSACTION_MAX_WAIT {
+		info, err := client.FetchTxInfo(context.Background(), infoArgs)
+		if err != nil {
+			logrus.WithField("hash", tx.Hash()).WithError(err).Info("couldnt find first transaction on chain, trying again in 3s")
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		if info.Confirmations < 1 {
+			logrus.Info("waiting for confirmation...")
+			time.Sleep(3 * time.Second)
+			continue
+		} else {
+			break
+		}
+	}
 	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 
 	return err
