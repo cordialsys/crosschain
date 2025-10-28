@@ -62,10 +62,10 @@ func TestTransfer(t *testing.T) {
 
 	// request funds for gas if needed
 	if feePayer {
-		fundWallet(t, chainConfig, feePayerWalletAddress, "0.1", "", chainConfig.Decimals)
+		fundWallet(t, chainConfig, feePayerWalletAddress, "0.3", "", chainConfig.Decimals)
 	} else {
 		if contract != "" {
-			fundWallet(t, chainConfig, fromWalletAddress, "0.1", "", chainConfig.Decimals)
+			fundWallet(t, chainConfig, fromWalletAddress, "0.3", "", chainConfig.Decimals)
 		}
 	}
 

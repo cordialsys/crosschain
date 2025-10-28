@@ -325,6 +325,7 @@ chains:
     chain_coin_hd_path: 60
     gas_budget_default: "0.10"
     decimals: 18
+    chain_min_gas_price: 0.0000000008
     native_assets:
       - asset_id: "INJ"
         contract_id: "inj"
@@ -451,6 +452,7 @@ chains:
     chain_coin: axpla
     chain_coin_hd_path: 60
     decimals: 18
+    chain_min_gas_price: 0.0000005
     native_assets:
       - asset_id: "XPLA"
         contract_id: "axpla"
