@@ -79,6 +79,21 @@ func TestTxInputConflicts(t *testing.T) {
 			independent:     true,
 			doubleSpendSafe: false,
 		},
+		{
+			// using different input types
+			newInput: &StakingInput{
+				TxInput: TxInput{
+					RecentBlockHash: solana.Hash([32]byte{1}),
+					Timestamp:       startTime,
+				},
+			},
+			oldInput: &TxInput{
+				RecentBlockHash: solana.Hash([32]byte{2}),
+				Timestamp:       startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+			},
+			independent:     true,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
 		newBz, _ := json.Marshal(v.newInput)

@@ -48,17 +48,19 @@ func TestTxInputConflicts(t *testing.T) {
 		},
 	}
 	for i, v := range vectors {
-		newBz, _ := json.Marshal(v.newInput)
-		oldBz, _ := json.Marshal(v.oldInput)
-		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
-		fmt.Println()
-		require.Equal(t,
-			v.newInput.IndependentOf(v.oldInput),
-			v.independent,
-		)
-		require.Equal(t,
-			v.newInput.SafeFromDoubleSend(v.oldInput),
-			v.doubleSpendSafe,
-		)
+		t.Run(fmt.Sprintf("testcase %d", i), func(t *testing.T) {
+			newBz, _ := json.Marshal(v.newInput)
+			oldBz, _ := json.Marshal(v.oldInput)
+			fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
+			fmt.Println()
+			require.Equal(t,
+				v.newInput.IndependentOf(v.oldInput),
+				v.independent,
+			)
+			require.Equal(t,
+				v.newInput.SafeFromDoubleSend(v.oldInput),
+				v.doubleSpendSafe,
+			)
+		})
 	}
 }

@@ -42,7 +42,13 @@ type TxInput struct {
 	EosBalance   xc.AmountBlockchain `json:"eos_balance"`
 }
 
+type GetTxInfo interface {
+	GetTimestamp() int64
+	GetHeadBlockID() []byte
+}
+
 var _ xc.TxInput = &TxInput{}
+var _ GetTxInfo = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
 func init() {
@@ -59,6 +65,14 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverEOS,
 		},
 	}
+}
+
+func (input *TxInput) GetTimestamp() int64 {
+	return input.Timestamp
+}
+
+func (input *TxInput) GetHeadBlockID() []byte {
+	return input.HeadBlockID
 }
 
 func (input *TxInput) SetUnix(unix int64) {
@@ -83,13 +97,13 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(other, input) {
+	if _, ok := other.(GetTxInfo); !ok {
 		return false
 	}
-	oldInput, ok := other.(*TxInput)
+	oldInput, ok := other.(GetTxInfo)
 	if ok {
-		diff := input.Timestamp - oldInput.Timestamp
-		if diff < int64((ExpirationPeriod+ExpirationGracePeriod).Seconds()) || bytes.Equal(input.HeadBlockID, oldInput.HeadBlockID) {
+		diff := input.Timestamp - oldInput.GetTimestamp()
+		if diff < int64((ExpirationPeriod+ExpirationGracePeriod).Seconds()) || bytes.Equal(input.HeadBlockID, oldInput.GetHeadBlockID()) {
 			// not yet safe
 			return false
 		}

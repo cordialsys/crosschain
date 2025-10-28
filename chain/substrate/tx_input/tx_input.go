@@ -28,9 +28,14 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ NonceGetter = &TxInput{}
 var _ xc.StakeTxInput = &TxInput{}
 var _ xc.UnstakeTxInput = &TxInput{}
 var _ xc.WithdrawTxInput = &TxInput{}
+
+type NonceGetter interface {
+	GetNonce() uint64
+}
 
 // NewTxInput returns a new Substrate TxInput
 func NewTxInput() *TxInput {
@@ -42,6 +47,10 @@ func NewTxInput() *TxInput {
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
 	registry.RegisterTxVariantInput(&TxInput{})
+}
+
+func (input *TxInput) GetNonce() uint64 {
+	return input.Nonce
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -66,13 +75,13 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
-	if substrateOther, ok := other.(*TxInput); ok {
-		return substrateOther.Nonce != input.Nonce
+	if substrateOther, ok := other.(NonceGetter); ok {
+		return substrateOther.GetNonce() != input.Nonce
 	}
 	return
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(other, input) {
+	if _, ok := other.(NonceGetter); !ok {
 		return false
 	}
 	// all same sequence means no double send

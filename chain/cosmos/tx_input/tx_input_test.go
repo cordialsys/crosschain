@@ -11,6 +11,9 @@ import (
 )
 
 type TxInput = tx_input.TxInput
+type StakingInput = tx_input.StakingInput
+type UnstakingInput = tx_input.UnstakingInput
+type WithdrawInput = tx_input.WithdrawInput
 
 func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
@@ -52,6 +55,25 @@ func TestTxInputConflicts(t *testing.T) {
 			// default false, not always independent
 			independent:     false,
 			doubleSpendSafe: false,
+		},
+		// Confirm checking works on different types of inputs
+		{
+			newInput:        &StakingInput{TxInput: TxInput{Sequence: 10}},
+			oldInput:        &TxInput{Sequence: 9},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			newInput:        &UnstakingInput{TxInput: TxInput{Sequence: 10}},
+			oldInput:        &TxInput{Sequence: 10},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			newInput:        &UnstakingInput{TxInput: TxInput{Sequence: 10}},
+			oldInput:        &WithdrawInput{TxInput: TxInput{Sequence: 10}},
+			independent:     false,
+			doubleSpendSafe: true,
 		},
 	}
 	for i, v := range vectors {

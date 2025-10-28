@@ -20,7 +20,12 @@ type TxInput struct {
 	ProtocolParams          types.ProtocolParameters `json:"protocol_params"`
 }
 
+type UtxoGetter interface {
+	GetUtxos() []types.Utxo
+}
+
 var _ xc.TxInput = &TxInput{}
+var _ UtxoGetter = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -35,6 +40,10 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverCardano,
 		},
 	}
+}
+
+func (input *TxInput) GetUtxos() []types.Utxo {
+	return input.Utxos
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -52,13 +61,13 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 // check if any utxo is spent twice
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	cardanoOther, ok := other.(*TxInput)
+	cardanoOther, ok := other.(UtxoGetter)
 	if !ok {
 		return
 	}
 
-	for _, utxo1 := range input.Utxos {
-		for _, utxo2 := range cardanoOther.Utxos {
+	for _, utxo1 := range input.GetUtxos() {
+		for _, utxo2 := range cardanoOther.GetUtxos() {
 			if utxo1.TxHash == utxo2.TxHash && utxo1.Index == utxo2.Index {
 				// not independent
 				return false
@@ -70,7 +79,7 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// check if of the same types
-	if _, ok := other.(*TxInput); !ok {
+	if _, ok := other.(UtxoGetter); !ok {
 		return false
 	}
 

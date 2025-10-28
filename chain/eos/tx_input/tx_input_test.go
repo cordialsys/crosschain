@@ -12,6 +12,9 @@ import (
 )
 
 type TxInput = tx_input.TxInput
+type StakingInput = tx_input.StakingInput
+type UnstakingInput = tx_input.UnstakingInput
+type WithdrawInput = tx_input.WithdrawInput
 
 func TestSafeFromDoubleSpend(t *testing.T) {
 
@@ -92,6 +95,21 @@ func TestTxInputConflicts(t *testing.T) {
 			},
 
 			doubleSpendSafe: false,
+		},
+		// using different input types
+		{
+			oldInput: &StakingInput{
+				TxInput: TxInput{
+					Timestamp:   now.Add(-(tx_input.ExpirationPeriod + tx_input.ExpirationGracePeriod + 1*time.Second)).Unix(),
+					HeadBlockID: []byte{1},
+				},
+			},
+			newInput: &TxInput{
+				Timestamp:   now.Unix(),
+				HeadBlockID: []byte{2},
+			},
+
+			doubleSpendSafe: true,
 		},
 	}
 	for i, v := range vectors {
