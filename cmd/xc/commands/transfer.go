@@ -324,7 +324,6 @@ func CmdTxTransfer() *cobra.Command {
 				return nil
 			}
 
-			fmt.Printf("submit??\n")
 			// submit the tx, wait a bit, fetch the tx info (network needed)
 			err = client.SubmitTx(context.Background(), tx)
 			if err != nil {

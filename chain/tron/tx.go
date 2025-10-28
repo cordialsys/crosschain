@@ -40,7 +40,7 @@ func (tx Tx) Hash() xc.TxHash {
 	if len(tx.hashes) == 0 {
 		return xc.TxHash("")
 	}
-	return tx.hashes[len(tx.hashes)-1]
+	return tx.hashes[0]
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
