@@ -7,6 +7,7 @@ import (
 	stakingtypes "cosmossdk.io/x/staking/types"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/cosmos/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cosmos/cosmos-sdk/types/query"
@@ -67,6 +68,19 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 	if err != nil {
 		return nil, err
 	}
+
+	res, err := client.Simulate(ctx, *baseTxInput, func(input xc.TxInput) (xc.Tx, error) {
+		txBuilder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+		if err != nil {
+			return nil, err
+		}
+		return txBuilder.Stake(args, &tx_input.StakingInput{TxInput: *input.(*tx_input.TxInput)})
+	})
+	if err != nil {
+		return nil, err
+	}
+	baseTxInput.GasLimit = uint64(float64(res.GasInfo.GasUsed) * DefaultGasLimitMultiplier)
+
 	return &tx_input.StakingInput{
 		TxInput: *baseTxInput,
 	}, nil
@@ -78,6 +92,19 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	if err != nil {
 		return nil, err
 	}
+
+	res, err := client.Simulate(ctx, *baseTxInput, func(input xc.TxInput) (xc.Tx, error) {
+		txBuilder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+		if err != nil {
+			return nil, err
+		}
+		return txBuilder.Unstake(args, &tx_input.UnstakingInput{TxInput: *input.(*tx_input.TxInput)})
+	})
+	if err != nil {
+		return nil, err
+	}
+	baseTxInput.GasLimit = uint64(float64(res.GasInfo.GasUsed) * DefaultGasLimitMultiplier)
+
 	return &tx_input.UnstakingInput{
 		TxInput: *baseTxInput,
 	}, nil
@@ -89,6 +116,19 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 	if err != nil {
 		return nil, err
 	}
+
+	res, err := client.Simulate(ctx, *baseTxInput, func(input xc.TxInput) (xc.Tx, error) {
+		txBuilder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+		if err != nil {
+			return nil, err
+		}
+		return txBuilder.Withdraw(args, &tx_input.WithdrawInput{TxInput: *input.(*tx_input.TxInput)})
+	})
+	if err != nil {
+		return nil, err
+	}
+	baseTxInput.GasLimit = uint64(float64(res.GasInfo.GasUsed) * DefaultGasLimitMultiplier)
+
 	return &tx_input.WithdrawInput{
 		TxInput: *baseTxInput,
 	}, nil
