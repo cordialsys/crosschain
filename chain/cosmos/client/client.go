@@ -130,7 +130,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
-	res, err := client.SimulateTransfer(ctx, args, *baseTxInput)
+	res, err := client.Simulate(ctx, *baseTxInput, func(input xc.TxInput) (xc.Tx, error) {
+		txBuilder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
+		if err != nil {
+			return nil, err
+		}
+		return txBuilder.Transfer(args, input)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -154,11 +160,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	return baseTxInput, nil
 }
 
-func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.TransferArgs, input tx_input.TxInput) (*cosmostx.SimulateResponse, error) {
-	builder, err := builder.NewTxBuilder(client.Asset.GetChain().Base())
-	if err != nil {
-		return nil, err
-	}
+type txBuilder func(input xc.TxInput) (xc.Tx, error)
+
+func (client *Client) Simulate(ctx context.Context, input tx_input.TxInput, txBuilder txBuilder) (*cosmostx.SimulateResponse, error) {
 	var simErr error
 	for _, gasPrice := range []float64{
 		// Try simulation with gas price, as this will produce a more accurate gas limit
@@ -168,7 +172,8 @@ func (client *Client) SimulateTransfer(ctx context.Context, args xcbuilder.Trans
 	} {
 		// Note: interestingly, if 0, this will cause the gas limit to lower by 16k gas or 20%
 		input.GasPrice = gasPrice
-		cosmosTxI, err := builder.Transfer(args, &input)
+
+		cosmosTxI, err := txBuilder(&input)
 		if err != nil {
 			return nil, err
 		}
