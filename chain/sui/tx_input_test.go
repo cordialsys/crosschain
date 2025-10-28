@@ -202,6 +202,27 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			independent:     false,
 			doubleSpendSafe: false,
 		},
+		{
+			// using different input types
+			newInput: &sui.TxInput{
+				GasCoin: *newPoint("00", 100),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.StakingInput{
+				TxInput: sui.TxInput{
+					GasCoin: *newPoint("00", 100), //conflict
+					Coins: []*types.Coin{
+						newPoint("00", 11),
+						newPoint("00", 21),
+					},
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
 		newBz, _ := json.Marshal(v.newInput)

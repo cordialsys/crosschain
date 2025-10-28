@@ -10,6 +10,9 @@ import (
 )
 
 type TxInput = tx_input.TxInput
+type StakingInput = tx_input.StakingInput
+type UnstakingInput = tx_input.UnstakingInput
+type WithdrawInput = tx_input.WithdrawInput
 
 func TestTxInputConflicts(t *testing.T) {
 	type testcase struct {
@@ -70,6 +73,29 @@ func TestTxInputConflicts(t *testing.T) {
 					{
 						TxHash: "hash1",
 						Index:  0,
+					},
+				},
+			},
+			oldInput: &TxInput{
+				Utxos: []types.Utxo{
+					{
+						TxHash: "hash1",
+						Index:  0,
+					},
+				},
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			name: "stake vs transfer",
+			newInput: &StakingInput{
+				TxInput: TxInput{
+					Utxos: []types.Utxo{
+						{
+							TxHash: "hash1",
+							Index:  0,
+						},
 					},
 				},
 			},

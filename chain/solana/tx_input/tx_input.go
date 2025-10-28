@@ -26,6 +26,10 @@ type TxInput struct {
 	// The estimated compute units used by the transaction (basically the gas usage)
 	UnitsConsumed uint64 `json:"units_consumed,omitempty"`
 }
+type GetTxInfo interface {
+	GetTimestamp() int64
+	GetRecentBlockhash() solana.Hash
+}
 
 type TokenAccount struct {
 	Account solana.PublicKey    `json:"account,omitempty"`
@@ -33,6 +37,7 @@ type TokenAccount struct {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ GetTxInfo = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
 func init() {
@@ -40,6 +45,14 @@ func init() {
 	registry.RegisterTxVariantInput(&StakingInput{})
 	registry.RegisterTxVariantInput(&UnstakingInput{})
 	registry.RegisterTxVariantInput(&WithdrawInput{})
+}
+
+func (input *TxInput) GetTimestamp() int64 {
+	return input.Timestamp
+}
+
+func (input *TxInput) GetRecentBlockhash() solana.Hash {
+	return input.RecentBlockHash
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -100,15 +113,15 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 }
 
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(other, input) {
+	if _, ok := other.(GetTxInfo); !ok {
 		return false
 	}
-	oldInput, ok := other.(*TxInput)
+	oldInput, ok := other.(GetTxInfo)
 	if ok {
-		diff := input.Timestamp - oldInput.Timestamp
+		diff := input.Timestamp - oldInput.GetTimestamp()
 		// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
 		// and different hash to consider it safe from double-send.
-		if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.RecentBlockHash.Equals(input.RecentBlockHash) {
+		if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.GetRecentBlockhash().Equals(input.GetRecentBlockhash()) {
 			// not yet safe
 			return false
 		}

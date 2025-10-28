@@ -10,6 +10,13 @@ import (
 	// injectivecryptocodec "github.com/InjectiveLabs/sdk-go/chain/crypto/codec"
 )
 
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+	registry.RegisterTxVariantInput(&StakingInput{})
+	registry.RegisterTxVariantInput(&UnstakingInput{})
+	registry.RegisterTxVariantInput(&WithdrawInput{})
+}
+
 type CosmoAssetType string
 
 // Cosmos assets can be managed by completely different modules (e.g. cosmwasm cw20, x/bank, etc)
@@ -32,12 +39,19 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ GetAccountInfo = &TxInput{}
 
-func init() {
-	registry.RegisterTxBaseInput(&TxInput{})
-	registry.RegisterTxVariantInput(&StakingInput{})
-	registry.RegisterTxVariantInput(&UnstakingInput{})
-	registry.RegisterTxVariantInput(&WithdrawInput{})
+type GetAccountInfo interface {
+	GetAccountNumber() uint64
+	GetSequence() uint64
+}
+
+func (input *TxInput) GetAccountNumber() uint64 {
+	return input.AccountNumber
+}
+
+func (input *TxInput) GetSequence() uint64 {
+	return input.Sequence
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -70,15 +84,15 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
-	if cosmosOther, ok := other.(*TxInput); ok {
+	if cosmosOther, ok := other.(GetAccountInfo); ok {
 		// cosmos address could own multiple accounts too which each have independent sequence.
-		return cosmosOther.AccountNumber != input.AccountNumber ||
-			cosmosOther.Sequence != input.Sequence
+		return cosmosOther.GetAccountNumber() != input.GetAccountNumber() ||
+			cosmosOther.GetSequence() != input.GetSequence()
 	}
 	return
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(other, input) {
+	if _, ok := other.(GetAccountInfo); !ok {
 		return false
 	}
 	// all same sequence means no double send
