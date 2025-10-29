@@ -3,6 +3,8 @@ package tron
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -13,6 +15,7 @@ import (
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	xclient "github.com/cordialsys/crosschain/client"
+	xcerrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -94,45 +97,62 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Tron tx
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	hash := tx.Hash()
-	bz, err := tx.Serialize()
-	if err != nil {
-		return err
+	withMetadata, ok := tx.(xc.TxWithMetadata)
+	if !ok {
+		return fmt.Errorf("TRON transactions must implement TxWithMetadata")
 	}
-	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+	metaBz, err := withMetadata.GetMetadata()
 	if err != nil {
-		return err
-	}
-
-	// Try to broadcast a second transaction
-	bz, err = tx.Serialize()
-	// Tx submites, no follow up tx
-	if err != nil {
-		return nil
+		return fmt.Errorf("failed to get tx metadata: %w", err)
 	}
 
-	start := time.Now()
-	// We have to submit a follow up tx
-	infoArgs := txinfo.NewArgs(hash)
-	for time.Since(start) < STAKE_TRANSACTION_MAX_WAIT {
-		info, err := client.FetchTxInfo(context.Background(), infoArgs)
+	var txMeta BroadcastMetadata
+	if err = json.Unmarshal(metaBz, &txMeta); err != nil {
+		return fmt.Errorf("failed to unmarshal tx metadata: %w", err)
+	}
+
+	// traditional, single tx submit
+	if len(txMeta.TransactionsData) == 1 {
+		// staking/unstaking/withdrawal contains two transactions to submit
+		bz, err := tx.Serialize()
 		if err != nil {
-			logrus.WithField("hash", tx.Hash()).WithError(err).Info("couldnt find first transaction on chain, trying again in 3s")
-			time.Sleep(3 * time.Second)
-			continue
+			return err
 		}
+		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+		if err != nil {
+			return err
+		}
+		return nil
+	} else if len(txMeta.TransactionsData) == 2 {
+		txbytes, err := tx.Serialize()
+		if err != nil {
+			return fmt.Errorf("failed to deserialize tx: %w", err)
+		}
+		meta := txMeta.TransactionsData[0]
+		hash := meta.Hash
+		// We have to submit a follow up tx
+		infoArgs := txinfo.NewArgs(xc.TxHash(hash))
+		_, err = client.FetchTxInfo(context.Background(), infoArgs)
+		if err != nil && strings.Contains(err.Error(), string(xcerrors.TransactionNotFound)) {
+			// submit first tx and return
+			bz := txbytes[:meta.Length]
+			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+			if err != nil {
+				return fmt.Errorf("failed first tx submission: %w", err)
+			}
 
-		if info.Confirmations < 1 {
-			logrus.Info("waiting for confirmation...")
-			time.Sleep(3 * time.Second)
-			continue
-		} else {
-			break
+			return ErrRequiresResubmission
+		} else if err == nil {
+			// submit second tx and return
+			bz := txbytes[meta.Length:]
+			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+			return err
+		} else if err != nil {
+			return fmt.Errorf("failed to fetch tx info: %w", err)
 		}
 	}
-	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 
-	return err
+	return errors.New("invalid tron transaction")
 }
 
 // Some data is available via the EVM RPC methods, but not the native methods :/

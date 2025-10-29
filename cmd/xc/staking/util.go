@@ -3,6 +3,7 @@ package staking
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -83,9 +84,22 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 	if err != nil {
 		return "", err
 	}
-	err = rpcCli.SubmitTx(context.Background(), tx)
-	if err != nil {
-		return "", fmt.Errorf("could not broadcast: %v", err)
+
+	start := time.Now()
+	for {
+		if time.Since(start) > 2*time.Minute {
+			return "", fmt.Errorf("failed transaction resubmission")
+		}
+
+		err = rpcCli.SubmitTx(context.Background(), tx)
+		if err != nil && strings.Contains(err.Error(), "ResubmissionRequired") {
+			time.Sleep(3 * time.Second)
+		} else if err != nil {
+			return "", fmt.Errorf("could not broadcast: %v", err)
+		} else {
+			break
+		}
+
 	}
 	logrus.WithField("hash", tx.Hash()).Info("submited tx")
 	return string(tx.Hash()), nil
