@@ -40,5 +40,5 @@ build-bitcoin-arm:
 build-push-bitcoin:
 	docker buildx bake bitcoin --push
 
-build-proto:
+build-tron-proto:
 	./chain/tron/core/generate_proto.sh # generate tron protobufs

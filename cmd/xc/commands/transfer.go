@@ -16,6 +16,7 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
+	xclienterrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
@@ -455,13 +456,13 @@ func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.Transf
 	return tx, nil
 }
 
-// Submit transaction and properly handle ResubmissionRequired errors
+// Submit transaction and properly handle PreconditionFailed errors
 func SubmitTransaction(client xclient.Client, tx xc.Tx, timeout time.Duration) error {
 	start := time.Now()
 	for time.Since(start) < timeout {
 		// submit the tx, wait a bit, fetch the tx info (network needed)
 		err := client.SubmitTx(context.Background(), tx)
-		if err != nil && strings.Contains(err.Error(), "ResubmissionRequired") {
+		if err != nil && strings.Contains(err.Error(), string(xclienterrors.FailedPrecondition)) {
 			time.Sleep(time.Second * 3)
 			continue
 		}

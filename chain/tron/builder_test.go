@@ -85,7 +85,7 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				VoteInput: txinput.TxInput{
+				FreezeInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
@@ -124,7 +124,7 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				VoteInput: txinput.TxInput{
+				FreezeInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
@@ -133,6 +133,36 @@ func TestNewTxBuilder(t *testing.T) {
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
 				Votes: []*httpclient.Vote{},
+				// Freezed balance means that we will be able to vote, without explicit freeze call
+				FreezedBalance: 2_000_000,
+				Decimals:       6,
+			},
+			stake_args: buildertest.MustNewStakingArgs(
+				chainCfg.Chain,
+				xc.Address("TFmgAF3HfTJZk2aHkvSu8FDtVArbqp4XE5"),
+				builder.OptionStakeAmount(xc.NewAmountBlockchainFromUint64(1_000_000)),
+				builder.OptionValidator("TUz4nTU75z5oK4pYaVipkSDQ3Bi2DXdQT8"),
+			),
+			expectedSigHex: []string{
+				"6d2116a25cf575b9e0e4a9f7337c6ef3d72024cdba43ec27b2e0356d5b281175",
+			},
+			expectedTransactions: []core.Transaction_Contract_ContractType{
+				core.Transaction_Contract_VoteWitnessContract,
+			},
+		},
+		{
+			name: "vote only stake, no freeze input",
+			input: &txinput.StakeInput{
+				TxInput: txinput.TxInput{
+					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
+					RefBlockBytes:   testutil.FromHex("5273"),
+					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
+					Expiration:      200,
+					Timestamp:       100,
+					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
+				},
+				FreezeInput: nil,
+				Votes:       []*httpclient.Vote{},
 				// Freezed balance means that we will be able to vote, without explicit freeze call
 				FreezedBalance: 2_000_000,
 				Decimals:       6,
@@ -161,7 +191,7 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				UnfreezeInput: txinput.TxInput{
+				VoteInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
@@ -205,7 +235,7 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				UnfreezeInput: txinput.TxInput{
+				VoteInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
@@ -242,7 +272,7 @@ func TestNewTxBuilder(t *testing.T) {
 			},
 		},
 		{
-			name: "unfreeze only unstake",
+			name: "unfreeze only unstake, no vote input",
 			input: &txinput.UnstakeInput{
 				TxInput: txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
@@ -252,7 +282,47 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				UnfreezeInput: txinput.TxInput{
+				VoteInput: nil,
+				Votes: []*httpclient.Vote{
+					{
+						VoteAddress: "TJmka325yjJKeFpQDwKSQAoNwEyNGhsaEV",
+						VoteCount:   2,
+					},
+				},
+				// Freezed balance means that we can unfreeze if no validator is specified
+				// Please note that freezed balance should be greater than used votes
+				// In this case:
+				// 2 votes = 2TRX
+				// 3 TRX freezed = 3 total votes
+				// 1 TRX is left to unfreeze
+				FreezedBalance: 3_000_000,
+				Decimals:       6,
+			},
+			stake_args: buildertest.MustNewStakingArgs(
+				chainCfg.Chain,
+				xc.Address("TFmgAF3HfTJZk2aHkvSu8FDtVArbqp4XE5"),
+				builder.OptionStakeAmount(xc.NewAmountBlockchainFromUint64(1_000_000)),
+				// no validator
+			),
+			expectedSigHex: []string{
+				"3b382c12231fcd509583eff02be2ca6c5843ea4f06eaad74452a5e4737eaea26",
+			},
+			expectedTransactions: []core.Transaction_Contract_ContractType{
+				core.Transaction_Contract_UnfreezeBalanceV2Contract,
+			},
+		},
+		{
+			name: "explicit validator unstake",
+			input: &txinput.UnstakeInput{
+				TxInput: txinput.TxInput{
+					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
+					RefBlockBytes:   testutil.FromHex("5273"),
+					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
+					Expiration:      200,
+					Timestamp:       100,
+					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
+				},
+				VoteInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),
@@ -298,7 +368,7 @@ func TestNewTxBuilder(t *testing.T) {
 					Timestamp:       100,
 					MaxFee:          xc.NewAmountBlockchainFromUint64(1000000),
 				},
-				UnfreezeInput: txinput.TxInput{
+				VoteInput: &txinput.TxInput{
 					TxInputEnvelope: txinput.NewTxInput().TxInputEnvelope,
 					RefBlockBytes:   testutil.FromHex("5273"),
 					RefBlockHash:    testutil.FromHex("40c45983779ab5f8"),

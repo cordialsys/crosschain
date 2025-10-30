@@ -58,12 +58,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchBaseInput(ctx context.Context, params map[string]any, method string) (*txinput.TxInput, error) {
+func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.CreateInputParams) (*txinput.TxInput, error) {
 	input := new(txinput.TxInput)
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(params, method)
+	dummyTx, err := client.client.CreateTransaction(params)
 	if err != nil {
 		return nil, err
 	}
@@ -81,11 +81,12 @@ func (client *Client) FetchBaseInput(ctx context.Context, params map[string]any,
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	return client.FetchBaseInput(ctx, map[string]any{
-		"owner_address": string(args.GetFrom()),
-		"to_address":    string(args.GetTo()),
-		"amount":        1,
-	}, CREATE_TRANSACTION)
+	params := httpclient.CreateTransactionParams{
+		From:   args.GetFrom(),
+		To:     args.GetTo(),
+		Amount: args.GetAmount(),
+	}
+	return client.FetchBaseInput(ctx, params)
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -97,23 +98,25 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Tron tx
 // Submission of unstake/stake/withdraw transactions relies on proper handling
-// of "ErrRequiresResubmission" error. It's modeled this way to avoid blocking and match
+// of "FailedPrecondition" error. It's modeled this way to avoid blocking and match
 // treasury behavior.
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	// Submit legacy transactions that doesn't contain any metadata
-	withMetadata, ok := tx.(xc.TxWithMetadata)
-	if !ok {
+	// TODO: Refactor SubmitTx interface to accept SubmitTxReq instead of tx
+	// This check will always return 'ok == true' at the moment
+	withMetadata, _ := tx.(xc.TxWithMetadata)
+	metaBz, err := withMetadata.GetMetadata()
+	if err != nil {
+		return fmt.Errorf("failed to get tx metadata: %w", err)
+	}
+
+	// no metadata provided, submit standard tx
+	if len(metaBz) == 0 {
 		bz, err := tx.Serialize()
 		if err != nil {
 			return err
 		}
 		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 		return err
-	}
-
-	metaBz, err := withMetadata.GetMetadata()
-	if err != nil {
-		return fmt.Errorf("failed to get tx metadata: %w", err)
 	}
 
 	var txMeta BroadcastMetadata
@@ -149,7 +152,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 				return fmt.Errorf("failed first tx submission: %w", err)
 			}
 
-			return ErrRequiresResubmission
+			return xcerrors.FailedPreconditionf("required resubmission")
 		}
 
 		// FetchTxInfo returned error

@@ -24,6 +24,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type UnstakeVoteAction string
+
+const (
+	VoteForSpecificValidator UnstakeVoteAction = "validator"
+	VoteForAnyValidator      UnstakeVoteAction = "any"
+	NoVoteRequired           UnstakeVoteAction = "no_vote"
+)
+
+var ErrVotingInputRequired error = errors.New("voting required but no vote input provided")
+var ErrFreezeInputRequired error = errors.New("freezing required but no vote input provided")
+
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
@@ -284,8 +295,11 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
-	stakeVotes := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
-	err := validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
+	stakeVotes, err := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
+	err = validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
 	if err != nil {
 		return nil, err
 	}
@@ -299,18 +313,23 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 		}
 	}
 	freezedBalance := xc.NewAmountBlockchainFromUint64(stakingInput.FreezedBalance)
-	availableVotes := common.TrxToVotes(freezedBalance, stakingInput.Decimals)
+	availableVotes, err := common.TrxToVotes(freezedBalance, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
 	unusedVotes := availableVotes - usedVotes
 
 	from := stakingArgs.GetFrom()
 	tx := NewTx()
 
-	// we have to freeze additional TRX amount to satisfy stake requirements
+	// check if we have to freeze additional TRX amount to satisfy stake requirements
 	if unusedVotes < stakeVotes {
+		if stakingInput.FreezeInput == nil {
+			return nil, ErrFreezeInputRequired
+		}
 		missingVotes := stakeVotes - unusedVotes
-		d := math.Pow10(stakingInput.Decimals)
-		rawAmt := uint64(float64(missingVotes) * d)
-		freezeBalance := xc.NewAmountBlockchainFromUint64(rawAmt)
+
+		freezeBalance := common.VotesToTrx(missingVotes, stakingInput.Decimals)
 		freeze, err := txBuilder.NewFreeze(from, freezeBalance, &stakingInput.TxInput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create freeze tx: %w", err)
@@ -338,6 +357,95 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	return tx, nil
 }
 
+// Iterate through votes and remove exactly reduceCount votes
+func ReduceTotalVoteCount(votes []*httpclient.Vote, reduceCount uint64) error {
+	sort.Slice(votes, func(i, j int) bool {
+		return votes[i].VoteCount < votes[j].VoteCount
+	})
+	for _, v := range votes {
+		removedVotes := uint64(0)
+		if v.VoteCount < reduceCount {
+			removedVotes = v.VoteCount
+		} else {
+			removedVotes = reduceCount
+		}
+		reduceCount -= removedVotes
+		v.VoteCount -= reduceCount
+
+		if reduceCount == 0 {
+			break
+		}
+	}
+
+	if reduceCount > 0 {
+		return errors.New("insufficient stake balance")
+	}
+
+	return nil
+}
+
+type UnstakeVoteDecision struct {
+	Action         UnstakeVoteAction
+	ValidatorVotes *httpclient.Vote
+}
+
+// we have to create a new vote tx in two cases:
+// 1. user requested to unstake from a specific validator (super representative)
+// 2. remaining votes are not sufficient to cover unstake amount
+func DetermineUnstakeVoteAction(input *txinput.UnstakeInput, validator string, votesToUnstake uint64) (UnstakeVoteDecision, error) {
+	var validatorVotes *httpclient.Vote
+	usedVotes := uint64(0)
+	for _, v := range input.Votes {
+		usedVotes += v.VoteCount
+		if validator != "" && validator == v.VoteAddress {
+			validatorVotes = v
+		}
+	}
+
+	if validator != "" && validatorVotes == nil {
+		return UnstakeVoteDecision{}, errors.New("cannot unstake from validator %s: no active votes for this validator")
+	}
+
+	if validatorVotes != nil {
+		if input.VoteInput == nil {
+			return UnstakeVoteDecision{}, ErrVotingInputRequired
+		}
+
+		if validatorVotes.VoteCount < votesToUnstake {
+			return UnstakeVoteDecision{}, fmt.Errorf(
+				"not enought votes on validator: %s, required: %d, got: %d",
+				validator,
+				votesToUnstake,
+				validatorVotes.VoteCount,
+			)
+		}
+
+		return UnstakeVoteDecision{
+			Action:         VoteForSpecificValidator,
+			ValidatorVotes: validatorVotes,
+		}, nil
+	}
+
+	freezedBalance := xc.NewAmountBlockchainFromUint64(input.FreezedBalance)
+	totalVotes, err := common.TrxToVotes(freezedBalance, input.Decimals)
+	if err != nil {
+		return UnstakeVoteDecision{}, ErrFailedTrxToVotesConversion
+	}
+	remainingVotes := totalVotes - usedVotes
+	if remainingVotes < votesToUnstake {
+		if input.VoteInput == nil {
+			return UnstakeVoteDecision{}, ErrVotingInputRequired
+		}
+		return UnstakeVoteDecision{
+			Action: VoteForAnyValidator,
+		}, nil
+	} else {
+		return UnstakeVoteDecision{
+			Action: NoVoteRequired,
+		}, nil
+	}
+}
+
 func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
 	stakingInput, ok := input.(*txinput.UnstakeInput)
 	if !ok {
@@ -348,85 +456,51 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 		return nil, buildererrors.ErrStakingAmountRequired
 	}
 
-	stakeVotes := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
+	stakeVotes, err := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
 
-	err := validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
+	err = validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
 	if err != nil {
 		return nil, err
 	}
 
 	from := stakingArgs.GetFrom()
-	tx := &Tx{TronTxs: make([]*core.Transaction, 0)}
+	tx := NewTx()
 
-	// we have to create a new vote tx in two cases:
-	// 1. user requested to unstake from a specific validator (super representative)
-	// 2. remaining votes are not sufficient to cover unstake amount
-	var validatorVotes *httpclient.Vote
 	validator, _ := stakingArgs.GetValidator()
-	usedVotes := uint64(0)
-	for _, v := range stakingInput.Votes {
-		usedVotes += v.VoteCount
-		if validator != "" && validator == v.VoteAddress {
-			validatorVotes = v
-		}
+	voteDecision, err := DetermineUnstakeVoteAction(stakingInput, validator, stakeVotes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine vote action: %w", err)
 	}
 
-	// unstake from explicit validator
-	if validatorVotes != nil {
-		if validatorVotes.VoteCount < stakeVotes {
-			return nil, fmt.Errorf(
-				"not enought votes on validator: %s, required: %d, got: %d",
-				validator,
-				stakeVotes,
-				validatorVotes.VoteCount,
-			)
+	switch voteDecision.Action {
+	case VoteForSpecificValidator:
+		if voteDecision.ValidatorVotes == nil {
+			return nil, errors.New("expected to unstake from validator, but votes were not provided")
 		}
-		validatorVotes.VoteCount -= stakeVotes
-		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, &stakingInput.TxInput)
+		voteDecision.ValidatorVotes.VoteCount -= stakeVotes
+		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vote tx: %w", err)
 		}
-
 		tx.AppendTx(votes)
-	} else {
-		freezedBalance := xc.NewAmountBlockchainFromUint64(stakingInput.FreezedBalance)
-		totalVotes := common.TrxToVotes(freezedBalance, stakingInput.Decimals)
-		remainingVotes := totalVotes - usedVotes
-		// not enough votes to unstake without unfreeze transaction
-		// remove votes from validators until stakeVotes amount is exhausted
-		if remainingVotes < stakeVotes {
-			sort.Slice(stakingInput.Votes, func(i, j int) bool {
-				return stakingInput.Votes[i].VoteCount < stakingInput.Votes[j].VoteCount
-			})
-			votesToRemove := stakeVotes
-			for _, v := range stakingInput.Votes {
-				removedVotes := uint64(0)
-				if v.VoteCount < votesToRemove {
-					removedVotes = v.VoteCount
-				} else {
-					removedVotes = votesToRemove
-				}
-				votesToRemove -= removedVotes
-				v.VoteCount -= votesToRemove
-
-				if votesToRemove == 0 {
-					break
-				}
-			}
-
-			if votesToRemove > 0 {
-				return nil, errors.New("insufficient stake balance")
-			}
-
-			votes, err := txBuilder.NewVotes(from, stakingInput.Votes, &stakingInput.TxInput)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create vote tx: %w", err)
-			}
-			tx.AppendTx(votes)
+	case VoteForAnyValidator:
+		err = ReduceTotalVoteCount(stakingInput.Votes, stakeVotes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unstake votes: %w", err)
 		}
+		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create vote tx: %w", err)
+		}
+		tx.AppendTx(votes)
+	case NoVoteRequired:
+		// skip
 	}
 
-	unfreeze, err := txBuilder.NewUnfreeze(from, stakeAmount, &stakingInput.UnfreezeInput)
+	unfreeze, err := txBuilder.NewUnfreeze(from, stakeAmount, &stakingInput.TxInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create unfreeze transaction: %w", err)
 	}

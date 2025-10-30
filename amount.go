@@ -179,6 +179,11 @@ func NewAmountHumanReadableFromFloat(float float64) AmountHumanReadable {
 	return AmountHumanReadable(decimal.NewFromFloat(float))
 }
 
+// NewAmountHumanReadableFromBlockchain creates a new AmountHumanReadable from an AmountBlockchain
+func NewAmountHumanReadableFromBlockchain(amt AmountBlockchain) AmountHumanReadable {
+	return AmountHumanReadable(decimal.NewFromBigInt(amt.Int(), 0))
+}
+
 func (amount AmountHumanReadable) Decimal() decimal.Decimal {
 	return decimal.Decimal(amount)
 }
