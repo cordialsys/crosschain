@@ -8,6 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
+	xcclienterrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
@@ -92,7 +93,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 		}
 
 		err = rpcCli.SubmitTx(context.Background(), tx)
-		if err != nil && strings.Contains(err.Error(), "ResubmissionRequired") {
+		if err != nil && strings.Contains(err.Error(), string(xcclienterrors.FailedPrecondition)) {
 			time.Sleep(3 * time.Second)
 		} else if err != nil {
 			return "", fmt.Errorf("could not broadcast: %v", err)

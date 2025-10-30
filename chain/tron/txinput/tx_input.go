@@ -28,14 +28,28 @@ type TxInput struct {
 	MaxFee xc.AmountBlockchain `json:"max_fee,omitempty"`
 }
 
+var _ TimestampGetter = &TxInput{}
 var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
+
+type TimestampGetter interface {
+	GetTimestamp() int64
+	GetExpiration() int64
+}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
 	registry.RegisterTxVariantInput(&StakeInput{})
 	registry.RegisterTxVariantInput(&UnstakeInput{})
 	registry.RegisterTxVariantInput(&WithdrawInput{})
+}
+
+func (i TxInput) GetTimestamp() int64 {
+	return i.Timestamp
+}
+
+func (i TxInput) GetExpiration() int64 {
+	return i.Expiration
 }
 
 func NewTxInput() *TxInput {
@@ -73,9 +87,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	oldInput, ok := other.(*TxInput)
+	oldInput, ok := other.(TimestampGetter)
 	if ok {
-		if input.Timestamp <= oldInput.Expiration {
+		if input.GetTimestamp() <= oldInput.GetExpiration() {
 			return false
 		}
 	} else {
@@ -106,8 +120,8 @@ type Vote struct {
 }
 
 type StakeInput struct {
-	TxInput                           // Freeze input
-	VoteInput      TxInput            `json:"vote_input"`
+	TxInput                           // Vote input
+	FreezeInput    *TxInput           `json:"vote_input"`
 	Votes          []*httpclient.Vote `json:"votes"`
 	FreezedBalance uint64             `json:"freezed_balance"`
 	Decimals       int                `json:"decimals"`
@@ -121,8 +135,8 @@ func (*StakeInput) GetVariant() xc.TxVariantInputType {
 }
 
 type UnstakeInput struct {
-	TxInput                           // Vote input
-	UnfreezeInput  TxInput            `json:"vote_input"`
+	TxInput                           // Unfreeze input
+	VoteInput      *TxInput           `json:"vote_input"`
 	Votes          []*httpclient.Vote `json:"votes"`
 	FreezedBalance uint64             `json:"freezed_balance"`
 	Decimals       int                `json:"decimals"`
@@ -138,6 +152,28 @@ func (*UnstakeInput) GetVariant() xc.TxVariantInputType {
 type WithdrawInput struct {
 	*TxInput                      // withdraw unfreezenbalancev2 input
 	WithdrawRewardsInput *TxInput // get rewards input
+}
+
+func (w WithdrawInput) GetTimestamp() int64 {
+	if w.TxInput != nil {
+		return w.TxInput.Timestamp
+	} else if w.WithdrawRewardsInput != nil {
+		return w.WithdrawRewardsInput.Timestamp
+	} else {
+		// invalid input
+		return 0
+	}
+}
+
+func (w WithdrawInput) GetExpiration() int64 {
+	if w.TxInput != nil {
+		return w.TxInput.Expiration
+	} else if w.WithdrawRewardsInput != nil {
+		return w.WithdrawRewardsInput.Expiration
+	} else {
+		// invalid input
+		return 0
+	}
 }
 
 var _ xc.WithdrawTxInput = &WithdrawInput{}

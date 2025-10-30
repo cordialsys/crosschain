@@ -8,15 +8,10 @@ import (
 )
 
 var ErrFailedToFetchBaseInput = errors.New("failed to fetch base input")
-var ErrRequiresResubmission = errors.New("ResubmissionRequired")
+var ErrFailedTrxToVotesConversion = errors.New("failed TRX to votes conversion")
 
 func CheckError(err error) clienterrors.Status {
 	e := err.Error()
-	// Map to NetworkError so resubmission is guaranteed on the treasury side
-	// TODO: Add proper error handling on the Treasury side, and remove this mapping
-	if strings.Contains(e, "ResubmissionRequired") {
-		return clienterrors.NetworkError
-	}
 	if strings.Contains(e, "SIGERROR") {
 		return clienterrors.TransactionFailure
 	}

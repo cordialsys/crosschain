@@ -284,13 +284,11 @@ func (c *Client) Url(path string) string {
 	return c.baseUrl.JoinPath(path).String()
 }
 
-func (c *Client) CreateTransaction(params map[string]interface{}, endpoint string) (*CreateTransactionResponse, error) {
-	url := fmt.Sprintf("%s/wallet/%s", c.baseUrl, endpoint)
-	if _, ok := params["visible"]; !ok {
-		params["visible"] = true
-	}
-
-	req, err := postRequest(url, params)
+func (c *Client) CreateTransaction(params CreateInputParams) (*CreateTransactionResponse, error) {
+	paramsMap := params.ToMap()
+	method := params.Method()
+	url := fmt.Sprintf("%s/wallet/%s", c.baseUrl, method)
+	req, err := postRequest(url, paramsMap)
 
 	if err != nil {
 		return nil, err
