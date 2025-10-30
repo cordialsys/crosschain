@@ -97,7 +97,8 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx submits a Tron tx
 // Submission of unstake/stake/withdraw transactions relies on proper handling
-// of "ErrRequiresResubmission" error. It's modeled this way to match treasury behavior
+// of "ErrRequiresResubmission" error. It's modeled this way to avoid blocking and match
+// treasury behavior.
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	withMetadata, ok := tx.(xc.TxWithMetadata)
 	if !ok {
@@ -160,7 +161,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 			return err
 		} else {
-			return fmt.Errorf("on chain transaction error: %w", info.Error)
+			return fmt.Errorf("on chain transaction error: %s", *info.Error)
 		}
 	}
 
