@@ -100,10 +100,17 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 // of "ErrRequiresResubmission" error. It's modeled this way to avoid blocking and match
 // treasury behavior.
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+	// Submit legacy transactions that doesn't contain any metadata
 	withMetadata, ok := tx.(xc.TxWithMetadata)
 	if !ok {
-		return fmt.Errorf("TRON transactions must implement TxWithMetadata")
+		bz, err := tx.Serialize()
+		if err != nil {
+			return err
+		}
+		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+		return err
 	}
+
 	metaBz, err := withMetadata.GetMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to get tx metadata: %w", err)
@@ -121,10 +128,7 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 			return err
 		}
 		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	} else if len(txMeta.TransactionsData) == 2 {
 		// staking/unstaking/withdrawal could contain two transactions to submit
 		txbytes, err := tx.Serialize()

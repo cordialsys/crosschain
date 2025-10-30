@@ -32,7 +32,6 @@ func NewTx() *Tx {
 
 func (tx *Tx) AppendTx(ttx *core.Transaction) {
 	txHash := TronTxHash(ttx)
-	// tx.tronTxs = append(tx.tronTxs, ttx)
 	tx.metadata = append(tx.metadata, &TxMetadata{
 		Hash:   string(txHash),
 		Length: 0, // length is affected by the signature
