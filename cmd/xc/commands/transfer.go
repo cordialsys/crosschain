@@ -8,12 +8,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
+	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
@@ -325,7 +327,7 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
-			err = client.SubmitTx(context.Background(), tx)
+			err = SubmitTransaction(client, tx, timeout)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
@@ -451,4 +453,25 @@ func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.Transf
 	}
 
 	return tx, nil
+}
+
+// Submit transaction and properly handle ResubmissionRequired errors
+func SubmitTransaction(client xclient.Client, tx xc.Tx, timeout time.Duration) error {
+	start := time.Now()
+	for time.Since(start) < timeout {
+		// submit the tx, wait a bit, fetch the tx info (network needed)
+		err := client.SubmitTx(context.Background(), tx)
+		if err != nil && strings.Contains(err.Error(), "ResubmissionRequired") {
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		if err != nil {
+			return fmt.Errorf("could not broadcast: %v", err)
+		}
+
+		return nil
+	}
+
+	return nil
 }
