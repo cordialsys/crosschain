@@ -96,6 +96,8 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Tron tx
+// Submission of unstake/stake/withdraw transactions relies on proper handling
+// of "ErrRequiresResubmission" error. It's modeled this way to match treasury behavior
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	withMetadata, ok := tx.(xc.TxWithMetadata)
 	if !ok {
@@ -113,7 +115,6 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 
 	// traditional, single tx submit
 	if len(txMeta.TransactionsData) == 1 {
-		// staking/unstaking/withdrawal contains two transactions to submit
 		bz, err := tx.Serialize()
 		if err != nil {
 			return err
@@ -124,15 +125,17 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		}
 		return nil
 	} else if len(txMeta.TransactionsData) == 2 {
+		// staking/unstaking/withdrawal could contain two transactions to submit
 		txbytes, err := tx.Serialize()
 		if err != nil {
 			return fmt.Errorf("failed to deserialize tx: %w", err)
 		}
+
 		meta := txMeta.TransactionsData[0]
 		hash := meta.Hash
-		// We have to submit a follow up tx
 		infoArgs := txinfo.NewArgs(xc.TxHash(hash))
-		_, err = client.FetchTxInfo(context.Background(), infoArgs)
+		info, err := client.FetchTxInfo(context.Background(), infoArgs)
+		// first transaction is not on chain yet, we have to submit it
 		if err != nil && strings.Contains(err.Error(), string(xcerrors.TransactionNotFound)) {
 			// submit first tx and return
 			bz := txbytes[:meta.Length]
@@ -142,17 +145,26 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 			}
 
 			return ErrRequiresResubmission
-		} else if err == nil {
+		}
+
+		// FetchTxInfo returned error
+		if err != nil {
+			return fmt.Errorf("failed to fetch tx info: %w", err)
+		}
+
+		// We found info about transaction
+		isValidTx := (info.Error == nil || *info.Error == "")
+		if isValidTx {
 			// submit second tx and return
 			bz := txbytes[meta.Length:]
 			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 			return err
-		} else if err != nil {
-			return fmt.Errorf("failed to fetch tx info: %w", err)
+		} else {
+			return fmt.Errorf("on chain transaction error: %w", info.Error)
 		}
 	}
 
-	return errors.New("invalid tron transaction")
+	return errors.New("tron submittx supports max 2 transactions")
 }
 
 // Some data is available via the EVM RPC methods, but not the native methods :/

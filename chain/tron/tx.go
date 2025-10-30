@@ -16,7 +16,7 @@ import (
 //
 // Tron Stake and Unstake operations require two transactions
 type Tx struct {
-	tronTxs  []*core.Transaction
+	TronTxs  []*core.Transaction
 	metadata []*TxMetadata
 }
 
@@ -25,7 +25,7 @@ var _ xc.TxWithMetadata = &Tx{}
 
 func NewTx() *Tx {
 	return &Tx{
-		tronTxs:  make([]*core.Transaction, 0),
+		TronTxs:  make([]*core.Transaction, 0),
 		metadata: make([]*TxMetadata, 0),
 	}
 }
@@ -37,7 +37,7 @@ func (tx *Tx) AppendTx(ttx *core.Transaction) {
 		Hash:   string(txHash),
 		Length: 0, // length is affected by the signature
 	})
-	tx.tronTxs = append(tx.tronTxs, ttx)
+	tx.TronTxs = append(tx.TronTxs, ttx)
 }
 
 func TronTxHash(ttx *core.Transaction) xc.TxHash {
@@ -58,12 +58,12 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	if len(tx.tronTxs) == 0 {
+	if len(tx.TronTxs) == 0 {
 		return nil, errors.New("invalid transaction")
 	}
 
-	sighashes := make([]*xc.SignatureRequest, len(tx.tronTxs))
-	for i, ttx := range tx.tronTxs {
+	sighashes := make([]*xc.SignatureRequest, len(tx.TronTxs))
+	for i, ttx := range tx.TronTxs {
 		rawData, err := proto.Marshal(ttx.GetRawData())
 		if err != nil {
 			return nil, errors.New("unable to get raw data")
@@ -80,13 +80,13 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 
 // SetSignatures adds a signature to Tx
 func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
-	if len(signatures) != len(tx.tronTxs) && len(tx.tronTxs) == len(tx.metadata) {
-		return fmt.Errorf("invalid signature count, expected: %d, got: %d", len(tx.tronTxs), len(signatures))
+	if len(signatures) != len(tx.TronTxs) && len(tx.TronTxs) == len(tx.metadata) {
+		return fmt.Errorf("invalid signature count, expected: %d, got: %d", len(tx.TronTxs), len(signatures))
 	}
 
 	for i, sig := range signatures {
-		tx.tronTxs[i].Signature = append(tx.tronTxs[i].Signature, sig.Signature)
-		bz, err := SerializeTronTx(tx.tronTxs[i])
+		tx.TronTxs[i].Signature = append(tx.TronTxs[i].Signature, sig.Signature)
+		bz, err := SerializeTronTx(tx.TronTxs[i])
 		if err != nil {
 			return err
 		}
@@ -101,12 +101,12 @@ func SerializeTronTx(ttx *core.Transaction) ([]byte, error) {
 
 // Serialize returns the serialized tx
 func (tx *Tx) Serialize() ([]byte, error) {
-	if len(tx.tronTxs) == 0 {
+	if len(tx.TronTxs) == 0 {
 		return nil, errors.New("invalid tx")
 	}
 
 	transactionsBytes := []byte{}
-	for _, ttx := range tx.tronTxs {
+	for _, ttx := range tx.TronTxs {
 		bz, err := proto.Marshal(ttx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to serialize tx: %w", err)

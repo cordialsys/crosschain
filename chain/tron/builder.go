@@ -356,7 +356,7 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	}
 
 	from := stakingArgs.GetFrom()
-	tx := &Tx{tronTxs: make([]*core.Transaction, 0)}
+	tx := &Tx{TronTxs: make([]*core.Transaction, 0)}
 
 	// we have to create a new vote tx in two cases:
 	// 1. user requested to unstake from a specific validator (super representative)
@@ -442,7 +442,7 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 	}
 
 	txWrapper := NewTx()
-	if withdrawInput.TxInput == nil {
+	if withdrawInput.TxInput != nil {
 		from_bytes, err := GetAddressHash(string(stakingArgs.GetFrom()))
 		if err != nil {
 			return nil, err
@@ -491,7 +491,7 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 
 	}
 
-	if len(txWrapper.tronTxs) == 0 {
+	if len(txWrapper.TronTxs) == 0 {
 		return nil, errors.New("no rewards to withdraw")
 	}
 
