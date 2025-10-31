@@ -364,27 +364,27 @@ func TestTxAddSignature(t *testing.T) {
 }
 
 func TestCalcMinAdaValue(t *testing.T) {
-	onePolicyNoAssetNames := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	onePolicyNoAssetNames := btree.NewMap[tx.PolicyHash, *tx.TokenNameHexToAmount](1)
 	assetsToAmounts := btree.NewMap[tx.TokenName, uint64](1)
 	assetsToAmounts.Set(tx.TokenName(""), 1_000_000)
 	onePolicyNoAssetNames.Set(
 		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
-		tx.TokenNameHexToAmount{assetsToAmounts})
+		&tx.TokenNameHexToAmount{assetsToAmounts})
 
-	onePolicyOne1LenName := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	onePolicyOne1LenName := btree.NewMap[tx.PolicyHash, *tx.TokenNameHexToAmount](1)
 	assetsToAmounts1 := btree.NewMap[tx.TokenName, uint64](1)
 	assetsToAmounts1.Set(tx.TokenName("0"), 1_000_000)
 	onePolicyOne1LenName.Set(
 		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
-		tx.TokenNameHexToAmount{assetsToAmounts1})
+		&tx.TokenNameHexToAmount{assetsToAmounts1})
 
-	onePolicyOne32LenName := btree.NewMap[tx.PolicyHash, tx.TokenNameHexToAmount](1)
+	onePolicyOne32LenName := btree.NewMap[tx.PolicyHash, *tx.TokenNameHexToAmount](1)
 	assetsToAmount32 := btree.NewMap[tx.TokenName, uint64](1)
 	name32 := "01234567890123456789012345678901"
 	assetsToAmount32.Set(tx.TokenName(name32), 1_000_000)
 	onePolicyOne32LenName.Set(
 		tx.PolicyHash("00000000000000000000000000000000000000000000000000000000"),
-		tx.TokenNameHexToAmount{assetsToAmount32})
+		&tx.TokenNameHexToAmount{assetsToAmount32})
 
 	vectors := []struct {
 		Name            string

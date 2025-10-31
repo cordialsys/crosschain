@@ -186,13 +186,15 @@ func TestFetchTxInput(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				reqBuff, _ := io.ReadAll(r.Body)
 				rawReq := string(reqBuff)
+				var err error
 				if strings.Contains(rawReq, types.MethodChainHead) {
-					w.Write([]byte(v.getChainHeadResult))
+					_, err = w.Write([]byte(v.getChainHeadResult))
 				} else if strings.Contains(rawReq, types.MethodMpoolGetNonce) {
-					w.Write([]byte(v.getNonceResult))
+					_, err = w.Write([]byte(v.getNonceResult))
 				} else {
-					w.Write([]byte(v.estimateGasFeesResult))
+					_, err = w.Write([]byte(v.estimateGasFeesResult))
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -282,7 +284,8 @@ func TestSubmitTx(t *testing.T) {
 	for _, v := range vec {
 		t.Run(v.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte(v.response))
+				_, err := w.Write([]byte(v.response))
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -513,17 +516,19 @@ func TestFetchTxInfo(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				reqBuff, _ := io.ReadAll(r.Body)
 				rawReq := string(reqBuff)
+				var err error
 				if strings.Contains(rawReq, types.MethodChainGetMessage) {
-					w.Write([]byte(v.chainGetMessageResponse))
+					_, err = w.Write([]byte(v.chainGetMessageResponse))
 				} else if strings.Contains(rawReq, types.MethodStateSearchMsg) {
-					w.Write([]byte(v.stateSearchMsgResponse))
+					_, err = w.Write([]byte(v.stateSearchMsgResponse))
 				} else if strings.Contains(rawReq, types.MethodChainGetBlock) {
-					w.Write([]byte(v.chainGetBlockResponse))
+					_, err = w.Write([]byte(v.chainGetBlockResponse))
 				} else if strings.Contains(rawReq, types.MethodEthGetMessageCidByTransactionHash) {
-					w.Write([]byte(v.evmHashToCidResponse))
+					_, err = w.Write([]byte(v.evmHashToCidResponse))
 				} else {
-					w.Write([]byte(v.chainGetHeadResponse))
+					_, err = w.Write([]byte(v.chainGetHeadResponse))
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 

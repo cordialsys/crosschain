@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,7 +152,7 @@ func GetSecret(uri string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		result, err := ioutil.ReadAll(file)
+		result, err := io.ReadAll(file)
 		if err != nil {
 			return "", err
 		}

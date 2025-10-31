@@ -302,7 +302,10 @@ func (s *Signer) PublicKey() (PublicKey, error) {
 		return schnorr.SerializePubKey(publicKey), nil
 	case xc.Bls12_381G2Blake2:
 		var blsKey bls.PrivateKey[bls.G2]
-		blsKey.UnmarshalBinary(s.privateKey)
+		err := blsKey.UnmarshalBinary(s.privateKey)
+		if err != nil {
+			return nil, err
+		}
 		return blsKey.PublicKey().MarshalBinary()
 	default:
 		return nil, fmt.Errorf("unsupported alg %v for driver: %v", s.algorithm, s.driver)

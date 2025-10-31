@@ -19,7 +19,7 @@ type TxInput = tx_input.TxInput
 
 func randomSig() []byte {
 	sig := make([]byte, 65)
-	rand.Read(sig)
+	_, _ = rand.Read(sig)
 	return sig
 }
 

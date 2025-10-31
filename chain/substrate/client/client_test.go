@@ -22,14 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// reserialize will drop internal fields set by constructors
-func reserialize(tx *xclient.TxInfo) *xclient.TxInfo {
-	bz, _ := json.Marshal(tx)
-	var info xclient.TxInfo
-	json.Unmarshal(bz, &info)
-	return &info
-}
-
 func ref[T any](tx T) *T {
 	return &tx
 }

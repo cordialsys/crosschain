@@ -19,7 +19,10 @@ import (
 func tryTon() error {
 	client := liteclient.NewConnectionPool()
 	configUrl := "https://ton-blockchain.github.io/testnet-global.config.json"
-	client.AddConnectionsFromConfigUrl(context.Background(), configUrl)
+	err := client.AddConnectionsFromConfigUrl(context.Background(), configUrl)
+	if err != nil {
+		return err
+	}
 	api := ton.NewAPIClient(client)
 	_ = api
 	fmt.Println("querying ton")
@@ -47,6 +50,9 @@ func tryTon() error {
 	fmt.Println("transfer message: ", hex.EncodeToString(c.ToBOCWithFlags(false)))
 
 	err = w.Send(context.Background(), tf, true)
+	if err != nil {
+		return err
+	}
 
 	token := jetton.NewJettonMasterClient(api, address.MustParseAddr("kQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY_Di"))
 

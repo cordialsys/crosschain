@@ -87,7 +87,7 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 	}
 
 	// staking requires 2 signatures
-	transaction.SetSignatures([]*xc.SignatureResponse{
+	err = transaction.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: make([]byte, 64),
 			PublicKey: make([]byte, 32),
@@ -97,6 +97,9 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 			PublicKey: make([]byte, 32),
 		},
 	}...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set signatures: %w", err)
+	}
 
 	err = stakeInput.CalculateTxFee(transaction)
 	if err != nil {
@@ -144,7 +147,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 	}
 
 	// unstaking requires 2 signatures
-	transaction.SetSignatures([]*xc.SignatureResponse{
+	err = transaction.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: make([]byte, 64),
 			PublicKey: make([]byte, 32),
@@ -154,6 +157,9 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 			PublicKey: make([]byte, 32),
 		},
 	}...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set signatures: %w", err)
+	}
 
 	err = unstakeInput.CalculateTxFee(transaction)
 	if err != nil {
@@ -216,7 +222,7 @@ func (c *Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs)
 	}
 
 	// withdrawal requires 2 signatures
-	transaction.SetSignatures([]*xc.SignatureResponse{
+	err = transaction.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: make([]byte, 64),
 			PublicKey: make([]byte, 32),
@@ -226,6 +232,9 @@ func (c *Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs)
 			PublicKey: make([]byte, 32),
 		},
 	}...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set signatures: %w", err)
+	}
 
 	err = withdrawInput.CalculateTxFee(transaction)
 	if err != nil {

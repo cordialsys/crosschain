@@ -93,6 +93,9 @@ func (tx Tx) Hash() xc.TxHash {
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	typedData, err := tx.GetAction().GetTypedData()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get action typed data: %w", err)
+	}
 
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	if err != nil {

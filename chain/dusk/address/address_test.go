@@ -30,15 +30,18 @@ func TestGetPublicKeyFromAddress(t *testing.T) {
 	require.NoError(t, err)
 
 	var blsKey bls.PrivateKey[bls.G2]
-	blsKey.UnmarshalBinary(skBytes)
+	err = blsKey.UnmarshalBinary(skBytes)
+	require.NoError(t, err)
 	pk := blsKey.PublicKey()
 	pkBytes, err := pk.MarshalBinary()
+	require.NoError(t, err)
 
 	addr := xc.Address("rZ92eN72ju1usfFhbr3bbu1MuNyRJWPne71pW9A6BZbjLpVr6P9eURoof3qMdkn3FnzYv7EA1kjef5HCVdJ5yhpbF5DwkFDBzDsD11DpBar8w8P4qWTRP9Xw72AFVnugFUt")
 	addrPk, err := address.GetPublicKeyFromAddress(addr)
 	require.NoError(t, err)
 
 	addrPkBytes, err := addrPk.MarshalBinary()
+	require.NoError(t, err)
 
 	// Raw `bls.PublicKey` can differ, we have to compare raw bytes
 	require.Equal(t, pkBytes, addrPkBytes)

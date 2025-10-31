@@ -159,20 +159,6 @@ func parseScript(script []byte) ([]parsedOpcode, error) {
 	return parseScriptTemplate(script, &opcodeArray)
 }
 
-// unparseScript reversed the action of parseScript and returns the
-// parsedOpcodes as a list of bytes
-func unparseScript(pops []parsedOpcode) ([]byte, error) {
-	script := make([]byte, 0, len(pops))
-	for _, pop := range pops {
-		b, err := pop.bytes()
-		if err != nil {
-			return nil, err
-		}
-		script = append(script, b...)
-	}
-	return script, nil
-}
-
 // DisasmString formats a disassembled script for one line printing. When the
 // script fails to parse, the returned string will contain the disassembled
 // script up to the point the failure occurred along with the string '[error]'
