@@ -2,16 +2,17 @@ package staking
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcclient "github.com/cordialsys/crosschain/client"
+	xcclienterrors "github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -75,11 +76,6 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 		}
 	}
 
-	bz, err := tx.Serialize()
-	if err != nil {
-		return "", err
-	}
-	fmt.Println(hex.EncodeToString(bz))
 	if !broadcast {
 		// end before submitting
 		return "", nil
@@ -89,11 +85,24 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 	if err != nil {
 		return "", err
 	}
-	err = rpcCli.SubmitTx(context.Background(), tx)
-	if err != nil {
-		return "", fmt.Errorf("could not broadcast: %v", err)
+
+	start := time.Now()
+	for {
+		if time.Since(start) > 2*time.Minute {
+			return "", fmt.Errorf("failed transaction resubmission")
+		}
+
+		err = rpcCli.SubmitTx(context.Background(), tx)
+		if err != nil && strings.Contains(err.Error(), string(xcclienterrors.FailedPrecondition)) {
+			time.Sleep(3 * time.Second)
+		} else if err != nil {
+			return "", fmt.Errorf("could not broadcast: %v", err)
+		} else {
+			break
+		}
+
 	}
-	fmt.Println("submitted tx", tx.Hash())
+	logrus.WithField("hash", tx.Hash()).Info("submited tx")
 	return string(tx.Hash()), nil
 }
 

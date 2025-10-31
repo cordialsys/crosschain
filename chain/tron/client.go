@@ -3,6 +3,8 @@ package tron
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -11,20 +13,23 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
+	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	xclient "github.com/cordialsys/crosschain/client"
+	xcerrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
-	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
 	"github.com/sirupsen/logrus"
 )
 
 var _ xclient.Client = &Client{}
 
-const TRANSFER_EVENT_HASH_HEX = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-const TX_TIMEOUT = 2 * time.Hour
+const (
+	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	CREATE_TRANSACTION         = "createtransaction"
+	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
+)
 
 // Client for Template
 type Client struct {
@@ -32,92 +37,6 @@ type Client struct {
 	client *httpclient.Client
 
 	chain *xc.ChainConfig
-}
-
-// TxInput for Template
-type TxInput struct {
-	xc.TxInputEnvelope
-
-	// 6th to 8th (exclusive) byte of the reference block height
-	RefBlockBytes []byte `json:"ref_block_bytes,omitempty"`
-	// 8th to 16th (exclusive) byte of the reference block hash
-	RefBlockHash []byte `json:"ref_block_hash,omitempty"`
-
-	// Expiration time (seconds)
-	Expiration int64 `json:"expiration,omitempty"`
-	// Transaction creation time (seconds)
-	Timestamp int64 `json:"timestamp,omitempty"`
-	// Max fee budget
-	MaxFee xc.AmountBlockchain `json:"max_fee,omitempty"`
-}
-
-var _ xc.TxInput = &TxInput{}
-var _ xc.TxInputWithUnix = &TxInput{}
-
-func init() {
-	registry.RegisterTxBaseInput(&TxInput{})
-}
-
-func NewTxInput() *TxInput {
-	return &TxInput{
-		TxInputEnvelope: xc.TxInputEnvelope{
-			Type: xc.DriverTron,
-		},
-	}
-}
-
-func (input *TxInput) GetDriver() xc.Driver {
-	return xc.DriverTron
-}
-
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
-	if err != nil {
-		return err
-	}
-	// tron doesn't do prioritization
-	_ = multiplier
-	return nil
-}
-
-func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	return input.MaxFee, ""
-}
-
-func (input *TxInput) SetUnix(unix int64) {
-	input.Timestamp = unix
-	input.Expiration = unix + int64((TX_TIMEOUT).Seconds())
-}
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	// tron uses recent-block-hash like mechanism like solana, but with explicit timestamps
-	return true
-}
-func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	oldInput, ok := other.(*TxInput)
-	if ok {
-		if input.Timestamp <= oldInput.Expiration {
-			return false
-		}
-	} else {
-		// can't tell (this shouldn't happen) - default false
-		return false
-	}
-	// all others timed out - we're safe
-	return true
-}
-
-func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.TransactionRaw {
-	return &core.TransactionRaw{
-		Contract:      []*core.Transaction_Contract{contract},
-		RefBlockBytes: input.RefBlockBytes,
-		RefBlockHash:  input.RefBlockHash,
-		// tron wants milliseconds
-		Expiration: time.Unix(input.Expiration, 0).UnixMilli(),
-		Timestamp:  time.Unix(input.Timestamp, 0).UnixMilli(),
-
-		// unused ?
-		RefBlockNum: 0,
-	}
 }
 
 // NewClient returns a new Template Client
@@ -139,12 +58,12 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	input := new(TxInput)
+func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.CreateInputParams) (*txinput.TxInput, error) {
+	input := new(txinput.TxInput)
 
 	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
 	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(string(args.GetFrom()), string(args.GetTo()), 1)
+	dummyTx, err := client.client.CreateTransaction(params)
 	if err != nil {
 		return nil, err
 	}
@@ -153,12 +72,21 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	input.RefBlockHash = dummyTx.RawData.RefBlockHashBytes
 	// set timeout period
 	input.Timestamp = time.Now().Unix()
-	input.Expiration = time.Now().Add(TX_TIMEOUT).Unix()
+	input.Expiration = time.Now().Add(txinput.TX_TIMEOUT).Unix()
 
 	maxFee := client.chain.GasBudgetDefault.ToBlockchain(client.chain.Decimals)
 	input.MaxFee = maxFee
 
 	return input, nil
+}
+
+func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	params := httpclient.CreateTransactionParams{
+		From:   args.GetFrom(),
+		To:     args.GetTo(),
+		Amount: args.GetAmount(),
+	}
+	return client.FetchBaseInput(ctx, params)
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -169,15 +97,82 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Tron tx
+// Submission of unstake/stake/withdraw transactions relies on proper handling
+// of "FailedPrecondition" error. It's modeled this way to avoid blocking and match
+// treasury behavior.
 func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	bz, err := tx.Serialize()
+	// TODO: Refactor SubmitTx interface to accept SubmitTxReq instead of tx
+	// This check will always return 'ok == true' at the moment
+	withMetadata, _ := tx.(xc.TxWithMetadata)
+	metaBz, err := withMetadata.GetMetadata()
 	if err != nil {
+		return fmt.Errorf("failed to get tx metadata: %w", err)
+	}
+
+	// no metadata provided, submit standard tx
+	if len(metaBz) == 0 {
+		bz, err := tx.Serialize()
+		if err != nil {
+			return err
+		}
+		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
 		return err
 	}
 
-	_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+	var txMeta BroadcastMetadata
+	if err = json.Unmarshal(metaBz, &txMeta); err != nil {
+		return fmt.Errorf("failed to unmarshal tx metadata: %w", err)
+	}
 
-	return err
+	// traditional, single tx submit
+	if len(txMeta.TransactionsData) == 1 {
+		bz, err := tx.Serialize()
+		if err != nil {
+			return err
+		}
+		_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+		return err
+	} else if len(txMeta.TransactionsData) == 2 {
+		// staking/unstaking/withdrawal could contain two transactions to submit
+		txbytes, err := tx.Serialize()
+		if err != nil {
+			return fmt.Errorf("failed to deserialize tx: %w", err)
+		}
+
+		meta := txMeta.TransactionsData[0]
+		hash := meta.Hash
+		infoArgs := txinfo.NewArgs(xc.TxHash(hash))
+		info, err := client.FetchTxInfo(context.Background(), infoArgs)
+		// first transaction is not on chain yet, we have to submit it
+		if err != nil && strings.Contains(err.Error(), string(xcerrors.TransactionNotFound)) {
+			// submit first tx and return
+			bz := txbytes[:meta.Length]
+			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+			if err != nil {
+				return fmt.Errorf("failed first tx submission: %w", err)
+			}
+
+			return xcerrors.FailedPreconditionf("required resubmission")
+		}
+
+		// FetchTxInfo returned error
+		if err != nil {
+			return fmt.Errorf("failed to fetch tx info: %w", err)
+		}
+
+		// We found info about transaction
+		isValidTx := (info.Error == nil || *info.Error == "")
+		if isValidTx {
+			// submit second tx and return
+			bz := txbytes[meta.Length:]
+			_, err = client.client.BroadcastHex(hex.EncodeToString(bz))
+			return err
+		} else {
+			return fmt.Errorf("on chain transaction error: %s", *info.Error)
+		}
+	}
+
+	return errors.New("tron submittx supports max 2 transactions")
 }
 
 // Some data is available via the EVM RPC methods, but not the native methods :/

@@ -404,8 +404,6 @@ github.com/cordialsys/go-json v0.10.5-sonic-replace h1:9wdSnZ7KBekIZ9tLiCEQAkY6k
 github.com/cordialsys/go-json v0.10.5-sonic-replace/go.mod h1:uwUxqlxlq1Bf1VxJpxbWfMbQgM8w30PKKZrg94/NcTk=
 github.com/cordialsys/go-sui-sdk/v2 v2.1.1 h1:JyPHD6SJB5+QOzxhRMVSUxGrO0sYNM9N8yrRLeuT3bM=
 github.com/cordialsys/go-sui-sdk/v2 v2.1.1/go.mod h1:tJVBrbkHwlmOkPW1YCxOpZT8bFYeaK1MXBK+Qy4+PGU=
-github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e h1:+7Qlxur12FHCy565/p4Bz9e1WpaeNZ3dqhWAHotcspw=
-github.com/cordialsys/go-wallet-sdk/coins/tron v0.0.0-20241219175717-a3599669026e/go.mod h1:N2GL3FT9suJEPh4wRxEGD0nobzxzGIyVbzCAye7BbfA=
 github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7 h1:ZAA2/Yf95GS8TLky0JYpYMunzRjBdhJPk9+P0knrRus=
 github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7/go.mod h1:l/qqqIN6qJJPtxW/G1PF4JtcE3Zg2vD2EliZrr9Gn5k=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
@@ -919,10 +917,6 @@ github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a h1:dl
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a/go.mod h1:hVoHR2EVESiICEMbg137etN/Lx+lSrHPTD39Z/uE+2s=
 github.com/oklog/run v1.1.0 h1:GEenZ1cK0+q0+wsJew9qUg/DyD8k3JzYsZAi5gYi2mA=
 github.com/oklog/run v1.1.0/go.mod h1:sVPdnTZT1zYwAJeCMu2Th4T21pA3FPOQRfWjQlk7DVU=
-github.com/okx/go-wallet-sdk/crypto v0.0.2 h1:y4z8iDzsSr4ftcC1JOtsWiaCGazFDyHIVfQgikOJNpI=
-github.com/okx/go-wallet-sdk/crypto v0.0.2/go.mod h1:34DRo5pd9ewldzcjm6BTwkuXTckTgYNtHlFbJihqZbg=
-github.com/okx/go-wallet-sdk/util v0.0.2 h1:TV9pbul7+WR8xyj/Zy1yBw7PespsYKojc4d3ro7OdaQ=
-github.com/okx/go-wallet-sdk/util v0.0.2/go.mod h1:myV08jQqyCQl6f9gFKJiWtXHnn06i5KCUwtvjeSXq78=
 github.com/olekukonko/tablewriter v0.0.5 h1:P2Ga83D34wi1o9J6Wh1mRuqd4mF/x/lgBS7N7AbDhec=
 github.com/olekukonko/tablewriter v0.0.5/go.mod h1:hPp6KlRPjbx+hW8ykQs1w3UBbZlj6HuIJcUGPhkA7kY=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

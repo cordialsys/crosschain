@@ -1,25 +1,47 @@
 package tron
 
 import (
+	"errors"
 	"fmt"
+	"math"
+	"sort"
 
+	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/golang/protobuf/ptypes"
-	core "github.com/okx/go-wallet-sdk/coins/tron/pb"
-	"github.com/okx/go-wallet-sdk/crypto/base58"
+
+	"github.com/cordialsys/crosschain/chain/tron/common"
+	"github.com/cordialsys/crosschain/chain/tron/core"
+	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
+	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	"golang.org/x/crypto/sha3"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	eABI "github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 )
+
+type UnstakeVoteAction string
+
+const (
+	VoteForSpecificValidator UnstakeVoteAction = "validator"
+	VoteForAnyValidator      UnstakeVoteAction = "any"
+	NoVoteRequired           UnstakeVoteAction = "no_vote"
+)
+
+var ErrVotingInputRequired error = errors.New("voting required but no vote input provided")
+var ErrFreezeInputRequired error = errors.New("freezing required but no vote input provided")
 
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
 }
+
+var _ xcbuilder.FullTransferBuilder = &TxBuilder{}
+var _ xcbuilder.Staking = &TxBuilder{}
 
 // NewTxBuilder creates a new Template TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -72,13 +94,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	}
 	contract.Parameter = param
 
-	i := input.(*TxInput)
-	tx := new(core.Transaction)
-	tx.RawData = i.ToRawData(contract)
-
-	return &Tx{
-		tronTx: tx,
-	}, nil
+	i := input.(*txinput.TxInput)
+	tx := i.ToTronTx(contract)
+	return NewTx([]*core.Transaction{tx})
 }
 
 // Signature of a method
@@ -125,7 +143,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 
 	paramBz, err := args.PackValues([]interface{}{
-		common.BytesToAddress(to_bytes),
+		ethcommon.BytesToAddress(to_bytes),
 		amount.Int(),
 	})
 	if err != nil {
@@ -148,9 +166,9 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	}
 	contractParam.Parameter = param
 
-	i := input.(*TxInput)
-	tx := &core.Transaction{}
-	tx.RawData = i.ToRawData(contractParam)
+	i := input.(*txinput.TxInput)
+	tx := i.ToTronTx(contractParam)
+
 	// set limit for token contracts
 	tx.RawData.FeeLimit = int64(i.MaxFee.Uint64())
 	if tx.RawData.FeeLimit == 0 {
@@ -159,7 +177,408 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		tx.RawData.FeeLimit = 200_000_000
 	}
 
-	return &Tx{
-		tronTx: tx,
-	}, nil
+	return NewTx([]*core.Transaction{tx})
+}
+
+func (txBuilder TxBuilder) NewFreeze(from xc.Address, balance xc.AmountBlockchain, input xc.TxInput) (*core.Transaction, error) {
+	from_bytes, err := GetAddressHash(string(from))
+	if err != nil {
+		return nil, err
+	}
+
+	contract := &core.FreezeBalanceV2Contract{}
+	contract.OwnerAddress = from_bytes
+	contract.FrozenBalance = balance.Int().Int64()
+	contract.Resource = core.ResourceCode_BANDWIDTH
+
+	params, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal any params: %w", err)
+	}
+
+	txContract := &core.Transaction_Contract{
+		Type:      core.Transaction_Contract_FreezeBalanceV2Contract,
+		Parameter: params,
+	}
+
+	i := input.(*txinput.TxInput)
+	tx := i.ToTronTx(txContract)
+
+	return tx, nil
+}
+
+func (txBuilder TxBuilder) NewUnfreeze(from xc.Address, balance xc.AmountBlockchain, input xc.TxInput) (*core.Transaction, error) {
+	from_bytes, err := GetAddressHash(string(from))
+	if err != nil {
+		return nil, err
+	}
+
+	contract := &core.UnfreezeBalanceV2Contract{}
+	contract.OwnerAddress = from_bytes
+	contract.UnfreezeBalance = balance.Int().Int64()
+	contract.Resource = core.ResourceCode_BANDWIDTH
+
+	params, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal any params: %w", err)
+	}
+
+	txContract := &core.Transaction_Contract{
+		Type:      core.Transaction_Contract_UnfreezeBalanceV2Contract,
+		Parameter: params,
+	}
+
+	i := input.(*txinput.TxInput)
+	tx := i.ToTronTx(txContract)
+	return tx, nil
+}
+
+func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, input *txinput.TxInput) (*core.Transaction, error) {
+	from_bytes, err := GetAddressHash(string(from))
+	if err != nil {
+		return nil, err
+	}
+
+	contract := &core.VoteWitnessContract{}
+	contract.OwnerAddress = from_bytes
+	contract.Votes = make([]*core.VoteWitnessContract_Vote, 0)
+
+	for _, v := range votes {
+		addrhash, err := GetAddressHash(string(v.VoteAddress))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get super representative address hash: %w", err)
+		}
+
+		// Don't serialize empty votes
+		if v.VoteCount == 0 {
+			continue
+		}
+		contract.Votes = append(contract.Votes, &core.VoteWitnessContract_Vote{
+			VoteAddress: addrhash,
+			VoteCount:   int64(v.VoteCount),
+		})
+	}
+
+	params, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal any params: %w", err)
+	}
+
+	txContract := &core.Transaction_Contract{
+		Type:      core.Transaction_Contract_VoteWitnessContract,
+		Parameter: params,
+	}
+	tx := input.ToTronTx(txContract)
+	return tx, nil
+}
+
+func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
+	stakingInput, ok := input.(*txinput.StakeInput)
+	if !ok {
+		return nil, errors.New("invalid input type")
+	}
+
+	validator, ok := stakingArgs.GetValidator()
+	if !ok {
+		return nil, buildererrors.ErrValidatorRequired
+	}
+
+	stakeAmount, ok := stakingArgs.GetAmount()
+	if !ok {
+		return nil, buildererrors.ErrStakingAmountRequired
+	}
+
+	stakeVotes, err := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
+	err = validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
+	if err != nil {
+		return nil, err
+	}
+
+	var validatorVotes *httpclient.Vote
+	usedVotes := uint64(0)
+	for _, v := range stakingInput.Votes {
+		usedVotes += v.VoteCount
+		if v.VoteAddress == validator {
+			validatorVotes = v
+		}
+	}
+	freezedBalance := xc.NewAmountBlockchainFromUint64(stakingInput.FreezedBalance)
+	availableVotes, err := common.TrxToVotes(freezedBalance, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
+	unusedVotes := availableVotes - usedVotes
+
+	from := stakingArgs.GetFrom()
+
+	transactions := make([]*core.Transaction, 0)
+	// check if we have to freeze additional TRX amount to satisfy stake requirements
+	if unusedVotes < stakeVotes {
+		if stakingInput.FreezeInput == nil {
+			return nil, ErrFreezeInputRequired
+		}
+		missingVotes := stakeVotes - unusedVotes
+
+		freezeBalance := common.VotesToTrx(missingVotes, stakingInput.Decimals)
+		freeze, err := txBuilder.NewFreeze(from, freezeBalance, &stakingInput.TxInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create freeze tx: %w", err)
+		}
+		transactions = append(transactions, freeze)
+	}
+
+	// tron VoteWitnessContract requires a full list of votes
+	// append a vote for the validator if we didn't vote for it in the past
+	if validatorVotes == nil {
+		stakingInput.Votes = append(stakingInput.Votes, &httpclient.Vote{
+			VoteAddress: validator,
+			VoteCount:   stakeVotes,
+		})
+	} else {
+		validatorVotes.VoteCount += stakeVotes
+	}
+	votes, err := txBuilder.NewVotes(from, stakingInput.Votes, &stakingInput.TxInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create vote tx: %w", err)
+	}
+
+	transactions = append(transactions, votes)
+	return NewTx(transactions)
+}
+
+// Iterate through votes and remove exactly reduceCount votes
+func ReduceTotalVoteCount(votes []*httpclient.Vote, reduceCount uint64) error {
+	sort.Slice(votes, func(i, j int) bool {
+		return votes[i].VoteCount < votes[j].VoteCount
+	})
+	for _, v := range votes {
+		removedVotes := uint64(0)
+		if v.VoteCount < reduceCount {
+			removedVotes = v.VoteCount
+		} else {
+			removedVotes = reduceCount
+		}
+		reduceCount -= removedVotes
+		v.VoteCount -= removedVotes
+
+		if reduceCount == 0 {
+			break
+		}
+	}
+
+	if reduceCount > 0 {
+		return errors.New("insufficient stake balance")
+	}
+
+	return nil
+}
+
+type UnstakeVoteDecision struct {
+	Action         UnstakeVoteAction
+	ValidatorVotes *httpclient.Vote
+}
+
+// we have to create a new vote tx in two cases:
+// 1. user requested to unstake from a specific validator (super representative)
+// 2. remaining votes are not sufficient to cover unstake amount
+func DetermineUnstakeVoteAction(input *txinput.UnstakeInput, validator string, votesToUnstake uint64) (UnstakeVoteDecision, error) {
+	var validatorVotes *httpclient.Vote
+	usedVotes := uint64(0)
+	for _, v := range input.Votes {
+		usedVotes += v.VoteCount
+		if validator != "" && validator == v.VoteAddress {
+			validatorVotes = v
+		}
+	}
+
+	if validator != "" && validatorVotes == nil {
+		return UnstakeVoteDecision{}, errors.New("cannot unstake from validator %s: no active votes for this validator")
+	}
+
+	if validatorVotes != nil {
+		if input.VoteInput == nil {
+			return UnstakeVoteDecision{}, ErrVotingInputRequired
+		}
+
+		if validatorVotes.VoteCount < votesToUnstake {
+			return UnstakeVoteDecision{}, fmt.Errorf(
+				"not enought votes on validator: %s, required: %d, got: %d",
+				validator,
+				votesToUnstake,
+				validatorVotes.VoteCount,
+			)
+		}
+
+		return UnstakeVoteDecision{
+			Action:         VoteForSpecificValidator,
+			ValidatorVotes: validatorVotes,
+		}, nil
+	}
+
+	freezedBalance := xc.NewAmountBlockchainFromUint64(input.FreezedBalance)
+	totalVotes, err := common.TrxToVotes(freezedBalance, input.Decimals)
+	if err != nil {
+		return UnstakeVoteDecision{}, ErrFailedTrxToVotesConversion
+	}
+	remainingVotes := totalVotes - usedVotes
+	if remainingVotes < votesToUnstake {
+		if input.VoteInput == nil {
+			return UnstakeVoteDecision{}, ErrVotingInputRequired
+		}
+		return UnstakeVoteDecision{
+			Action: VoteForAnyValidator,
+		}, nil
+	} else {
+		return UnstakeVoteDecision{
+			Action: NoVoteRequired,
+		}, nil
+	}
+}
+
+func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) {
+	stakingInput, ok := input.(*txinput.UnstakeInput)
+	if !ok {
+		return nil, errors.New("invalid input type")
+	}
+	stakeAmount, ok := stakingArgs.GetAmount()
+	if !ok {
+		return nil, buildererrors.ErrStakingAmountRequired
+	}
+
+	stakeVotes, err := common.TrxToVotes(stakeAmount, stakingInput.Decimals)
+	if err != nil {
+		return nil, ErrFailedTrxToVotesConversion
+	}
+
+	err = validateStakeAmount(stakeAmount, stakeVotes, stakingInput.Decimals)
+	if err != nil {
+		return nil, err
+	}
+
+	from := stakingArgs.GetFrom()
+
+	validator, _ := stakingArgs.GetValidator()
+	voteDecision, err := DetermineUnstakeVoteAction(stakingInput, validator, stakeVotes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine vote action: %w", err)
+	}
+
+	transactions := make([]*core.Transaction, 0)
+	switch voteDecision.Action {
+	case VoteForSpecificValidator:
+		if voteDecision.ValidatorVotes == nil {
+			return nil, errors.New("expected to unstake from validator, but votes were not provided")
+		}
+		voteDecision.ValidatorVotes.VoteCount -= stakeVotes
+		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create vote tx: %w", err)
+		}
+		transactions = append(transactions, votes)
+	case VoteForAnyValidator:
+		err = ReduceTotalVoteCount(stakingInput.Votes, stakeVotes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unstake votes: %w", err)
+		}
+		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create vote tx: %w", err)
+		}
+		transactions = append(transactions, votes)
+	case NoVoteRequired:
+		// skip
+	}
+
+	unfreeze, err := txBuilder.NewUnfreeze(from, stakeAmount, &stakingInput.TxInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create unfreeze transaction: %w", err)
+	}
+	transactions = append(transactions, unfreeze)
+
+	return NewTx(transactions)
+}
+
+func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
+	withdrawInput, ok := input.(*txinput.WithdrawInput)
+	if !ok {
+		return nil, errors.New("invalid input type")
+	}
+
+	transactions := make([]*core.Transaction, 0)
+	if withdrawInput.TxInput != nil {
+		from_bytes, err := GetAddressHash(string(stakingArgs.GetFrom()))
+		if err != nil {
+			return nil, err
+		}
+
+		contract := &core.WithdrawExpireUnfreezeContract{}
+		contract.OwnerAddress = from_bytes
+
+		params, err := ptypes.MarshalAny(contract)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal any params: %w", err)
+		}
+
+		txContract := &core.Transaction_Contract{
+			Type:      core.Transaction_Contract_WithdrawExpireUnfreezeContract,
+			Parameter: params,
+		}
+
+		tx := withdrawInput.TxInput.ToTronTx(txContract)
+		transactions = append(transactions, tx)
+	}
+
+	if withdrawInput.WithdrawRewardsInput != nil {
+		from_bytes, err := GetAddressHash(string(stakingArgs.GetFrom()))
+		if err != nil {
+			return nil, err
+		}
+
+		contract := &core.WithdrawBalanceContract{}
+		contract.OwnerAddress = from_bytes
+
+		params, err := ptypes.MarshalAny(contract)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal any params: %w", err)
+		}
+
+		txContract := &core.Transaction_Contract{
+			Type:      core.Transaction_Contract_WithdrawBalanceContract,
+			Parameter: params,
+		}
+
+		tx := withdrawInput.WithdrawRewardsInput.ToTronTx(txContract)
+		transactions = append(transactions, tx)
+	}
+
+	if len(transactions) == 0 {
+		return nil, errors.New("no rewards to withdraw")
+	}
+
+	return NewTx(transactions)
+}
+
+// check that input is following 1 vote == 1 trx logic
+// 1. make sure that stake amount is >= to vote amount
+// 2. make sure that stakeAmount - voteTrxAmount is no greater than 1 TRX
+func validateStakeAmount(argsAmount xc.AmountBlockchain, votes uint64, decimals int) error {
+	decimalMultiplier := math.Pow10(decimals)
+	votesAmount := uint64(decimalMultiplier * float64(votes))
+	xcVotesAmount := xc.NewAmountBlockchainFromUint64(votesAmount)
+
+	if argsAmount.Cmp(&xcVotesAmount) == -1 {
+		return errors.New("stake amount is lesser than vote amount in trx")
+	}
+
+	one := xc.NewAmountHumanReadableFromFloat(1.0)
+	bcOne := one.ToBlockchain(int32(decimals))
+	amountDiff := argsAmount.Sub(&xcVotesAmount)
+	if amountDiff.Cmp(&bcOne) > 0 {
+		return errors.New("difference between requested amount and input vote amount is too big")
+	}
+
+	return nil
 }

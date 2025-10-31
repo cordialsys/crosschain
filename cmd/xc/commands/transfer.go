@@ -8,12 +8,15 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
+	xclient "github.com/cordialsys/crosschain/client"
+	xclienterrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
@@ -257,25 +260,31 @@ func CmdTxTransfer() *cobra.Command {
 			bz, _ := json.Marshal(input)
 			logrus.WithField("input", string(bz)).Debug("transfer input")
 
-			var tx xc.Tx
-			var sighashes []*xc.SignatureRequest
-			var lastSighashes []*xc.SignatureRequest
 			// By default we repeat getting .Sighashes() and .Serialize() both to test for non-determinism.
 			// In Treasury we need this to be deterministic.
 			var numberOfTrials = 10
 			if nonDeterministic {
-				numberOfTrials = 1
+				numberOfTrials = 0
 			}
+			var sighashes []*xc.SignatureRequest
+			var lastSighashes []*xc.SignatureRequest
+			var lastSerializedTx []byte
 			for i := range numberOfTrials {
 				// create tx (no network, no private key needed)
-				tx, err = txBuilder.Transfer(tfArgs, input)
+				// use TraceLevel for checks
+				tx, err := PrepareTransferForSubmit(txBuilder, tfArgs, input, signerCollection, logrus.TraceLevel)
 				if err != nil {
 					return fmt.Errorf("could not build transfer: %v", err)
 				}
-				// serialize tx for signing
+
 				sighashes, err = tx.Sighashes()
 				if err != nil {
 					return fmt.Errorf("could not create payloads to sign: %v", err)
+				}
+
+				txBytes, err := tx.Serialize()
+				if err != nil {
+					return fmt.Errorf("could not serialize tx: %v", err)
 				}
 
 				if i > 0 {
@@ -288,86 +297,21 @@ func CmdTxTransfer() *cobra.Command {
 							return fmt.Errorf("sighashes are not deterministic, differed on trial %d", i)
 						}
 					}
-				}
-				lastSighashes = sighashes
-			}
 
-			// sign
-			var lastSerializedTx []byte
-			for i := range numberOfTrials {
-				signatures := []*xc.SignatureResponse{}
-				log := logrus.WithField("trial", i)
-				var level = logrus.InfoLevel
-				if i > 0 {
-					level = logrus.TraceLevel
-				}
-				for _, sighash := range sighashes {
-					log = log.WithField("payload", hex.EncodeToString(sighash.Payload))
-					if len(sighash.Payload) == 0 {
-						panic("requested to sign empty payload")
-					}
-					// sign the tx sighash(es)
-					signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
-					if err != nil {
-						panic(err)
-					}
-					signatures = append(signatures, signature)
-					log.
-						WithField("address", signature.Address).
-						WithField("signature", hex.EncodeToString(signature.Signature)).Log(level, "adding signature")
-				}
-
-				// complete the tx by adding its signature
-				// (no network, no private key needed)
-				err = tx.SetSignatures(signatures...)
-				if err != nil {
-					return fmt.Errorf("could not add signature(s): %v", err)
-				}
-
-				if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
-					for {
-						additionalSighashes, err := txMoreSigs.AdditionalSighashes()
-						if err != nil {
-							return fmt.Errorf("could not get additional sighashes: %v", err)
-						}
-						if len(additionalSighashes) == 0 {
-							break
-						}
-						for _, additionalSighash := range additionalSighashes {
-							log = log.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
-							signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
-							if err != nil {
-								panic(err)
-							}
-							signatures = append(signatures, signature)
-							log.
-								WithField("address", signature.Address).
-								WithField("signature", hex.EncodeToString(signature.Signature)).Log(level, "adding additional signature")
-						}
-						err = tx.SetSignatures(signatures...)
-						if err != nil {
-							return fmt.Errorf("could not add additional signature(s): %v", err)
-						}
-					}
-				}
-				txBytes, err := tx.Serialize()
-				if err != nil {
-					return fmt.Errorf("could not serialize tx: %v", err)
-				}
-				if i > 0 {
 					if !bytes.Equal(txBytes, lastSerializedTx) {
 						return fmt.Errorf("tx .Serialize() is not deterministic, differed on trial %d", i)
 					}
 				}
-
-				// record serialized tx + reset the tx for next trial
+				lastSighashes = sighashes
 				lastSerializedTx = txBytes
-				if i < numberOfTrials-1 {
-					tx, err = txBuilder.Transfer(tfArgs, input)
-					if err != nil {
-						return fmt.Errorf("could not build transfer: %v", err)
-					}
-				}
+			}
+
+			// recreate tx after determinism checks
+			// create tx (no network, no private key needed)
+			// use Info lvl for proper transaction
+			tx, err := PrepareTransferForSubmit(txBuilder, tfArgs, input, signerCollection, logrus.InfoLevel)
+			if err != nil {
+				return fmt.Errorf("could not build transfer: %v", err)
 			}
 
 			if dryRun {
@@ -384,7 +328,7 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
-			err = client.SubmitTx(context.Background(), tx)
+			err = SubmitTransaction(client, tx, timeout)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
@@ -443,4 +387,92 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().BoolVar(&nonDeterministic, "non-deterministic", false, "Skip implementation checks for determinism (only important in for consensus sensitive contexts)")
 	cmd.Flags().StringVar(&transferInputFile, "input", "", "File containing the transfer input.  If used, will skip fetching the input from the RPC.")
 	return cmd
+}
+
+func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.TransferArgs, input xc.TxInput, signerCollection *signer.Collection, logLevel logrus.Level) (xc.Tx, error) {
+	// create tx (no network, no private key needed)
+	tx, err := b.Transfer(args, input)
+	if err != nil {
+		return nil, fmt.Errorf("could not build transfer: %v", err)
+	}
+
+	signatures := []*xc.SignatureResponse{}
+
+	sighashes, err := tx.Sighashes()
+	if err != nil {
+		return nil, fmt.Errorf("could not create payloads to sign: %v", err)
+	}
+
+	for _, sighash := range sighashes {
+		log := logrus.WithField("payload", hex.EncodeToString(sighash.Payload))
+		if len(sighash.Payload) == 0 {
+			panic("requested to sign empty payload")
+		}
+		// sign the tx sighash(es)
+		signature, err := signerCollection.Sign(sighash.Signer, sighash.Payload)
+		if err != nil {
+			panic(err)
+		}
+		signatures = append(signatures, signature)
+		log.
+			WithField("address", signature.Address).
+			WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding signature")
+	}
+
+	// complete the tx by adding its signature
+	// (no network, no private key needed)
+	err = tx.SetSignatures(signatures...)
+	if err != nil {
+		return nil, fmt.Errorf("could not add signature(s): %v", err)
+	}
+
+	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
+		for {
+			additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+			if err != nil {
+				return nil, fmt.Errorf("could not get additional sighashes: %v", err)
+			}
+			if len(additionalSighashes) == 0 {
+				break
+			}
+			for _, additionalSighash := range additionalSighashes {
+				log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+				signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
+				if err != nil {
+					panic(err)
+				}
+				signatures = append(signatures, signature)
+				log.
+					WithField("address", signature.Address).
+					WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding additional signature")
+			}
+			err = tx.SetSignatures(signatures...)
+			if err != nil {
+				return nil, fmt.Errorf("could not add additional signature(s): %v", err)
+			}
+		}
+	}
+
+	return tx, nil
+}
+
+// Submit transaction and properly handle PreconditionFailed errors
+func SubmitTransaction(client xclient.Client, tx xc.Tx, timeout time.Duration) error {
+	start := time.Now()
+	for time.Since(start) < timeout {
+		// submit the tx, wait a bit, fetch the tx info (network needed)
+		err := client.SubmitTx(context.Background(), tx)
+		if err != nil && strings.Contains(err.Error(), string(xclienterrors.FailedPrecondition)) {
+			time.Sleep(time.Second * 3)
+			continue
+		}
+
+		if err != nil {
+			return fmt.Errorf("could not broadcast: %v", err)
+		}
+
+		return nil
+	}
+
+	return nil
 }
