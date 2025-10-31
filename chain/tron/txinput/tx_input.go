@@ -114,6 +114,12 @@ func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.Trans
 	}
 }
 
+func (input *TxInput) ToTronTx(contract *core.Transaction_Contract) *core.Transaction {
+	ttx := new(core.Transaction)
+	ttx.RawData = input.ToRawData(contract)
+	return ttx
+}
+
 type Vote struct {
 	Address xc.Address
 	Count   uint64

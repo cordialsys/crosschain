@@ -95,12 +95,8 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	contract.Parameter = param
 
 	i := input.(*txinput.TxInput)
-	tx := new(core.Transaction)
-	tx.RawData = i.ToRawData(contract)
-
-	txWrapper := NewTx()
-	txWrapper.AppendTx(tx)
-	return txWrapper, nil
+	tx := i.ToTronTx(contract)
+	return NewTx([]*core.Transaction{tx})
 }
 
 // Signature of a method
@@ -171,8 +167,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	contractParam.Parameter = param
 
 	i := input.(*txinput.TxInput)
-	tx := &core.Transaction{}
-	tx.RawData = i.ToRawData(contractParam)
+	tx := i.ToTronTx(contractParam)
+
 	// set limit for token contracts
 	tx.RawData.FeeLimit = int64(i.MaxFee.Uint64())
 	if tx.RawData.FeeLimit == 0 {
@@ -181,9 +177,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 		tx.RawData.FeeLimit = 200_000_000
 	}
 
-	txWrapper := NewTx()
-	txWrapper.AppendTx(tx)
-	return txWrapper, nil
+	return NewTx([]*core.Transaction{tx})
 }
 
 func (txBuilder TxBuilder) NewFreeze(from xc.Address, balance xc.AmountBlockchain, input xc.TxInput) (*core.Transaction, error) {
@@ -202,14 +196,13 @@ func (txBuilder TxBuilder) NewFreeze(from xc.Address, balance xc.AmountBlockchai
 		return nil, fmt.Errorf("failed to marshal any params: %w", err)
 	}
 
-	tx_contract := &core.Transaction_Contract{
+	txContract := &core.Transaction_Contract{
 		Type:      core.Transaction_Contract_FreezeBalanceV2Contract,
 		Parameter: params,
 	}
 
 	i := input.(*txinput.TxInput)
-	tx := new(core.Transaction)
-	tx.RawData = i.ToRawData(tx_contract)
+	tx := i.ToTronTx(txContract)
 
 	return tx, nil
 }
@@ -230,15 +223,13 @@ func (txBuilder TxBuilder) NewUnfreeze(from xc.Address, balance xc.AmountBlockch
 		return nil, fmt.Errorf("failed to marshal any params: %w", err)
 	}
 
-	tx_contract := &core.Transaction_Contract{
+	txContract := &core.Transaction_Contract{
 		Type:      core.Transaction_Contract_UnfreezeBalanceV2Contract,
 		Parameter: params,
 	}
 
 	i := input.(*txinput.TxInput)
-	tx := new(core.Transaction)
-	tx.RawData = i.ToRawData(tx_contract)
-
+	tx := i.ToTronTx(txContract)
 	return tx, nil
 }
 
@@ -250,17 +241,22 @@ func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, i
 
 	contract := &core.VoteWitnessContract{}
 	contract.OwnerAddress = from_bytes
-	contract.Votes = make([]*core.VoteWitnessContract_Vote, len(votes))
+	contract.Votes = make([]*core.VoteWitnessContract_Vote, 0)
 
-	for i, v := range votes {
+	for _, v := range votes {
 		addrhash, err := GetAddressHash(string(v.VoteAddress))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get super representative address hash: %w", err)
 		}
-		contract.Votes[i] = &core.VoteWitnessContract_Vote{
+
+		// Don't serialize empty votes
+		if v.VoteCount == 0 {
+			continue
+		}
+		contract.Votes = append(contract.Votes, &core.VoteWitnessContract_Vote{
 			VoteAddress: addrhash,
 			VoteCount:   int64(v.VoteCount),
-		}
+		})
 	}
 
 	params, err := ptypes.MarshalAny(contract)
@@ -268,14 +264,11 @@ func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, i
 		return nil, fmt.Errorf("failed to marshal any params: %w", err)
 	}
 
-	tx_contract := &core.Transaction_Contract{
+	txContract := &core.Transaction_Contract{
 		Type:      core.Transaction_Contract_VoteWitnessContract,
 		Parameter: params,
 	}
-
-	tx := new(core.Transaction)
-	tx.RawData = input.ToRawData(tx_contract)
-
+	tx := input.ToTronTx(txContract)
 	return tx, nil
 }
 
@@ -320,8 +313,8 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	unusedVotes := availableVotes - usedVotes
 
 	from := stakingArgs.GetFrom()
-	tx := NewTx()
 
+	transactions := make([]*core.Transaction, 0)
 	// check if we have to freeze additional TRX amount to satisfy stake requirements
 	if unusedVotes < stakeVotes {
 		if stakingInput.FreezeInput == nil {
@@ -334,7 +327,7 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 		if err != nil {
 			return nil, fmt.Errorf("failed to create freeze tx: %w", err)
 		}
-		tx.AppendTx(freeze)
+		transactions = append(transactions, freeze)
 	}
 
 	// tron VoteWitnessContract requires a full list of votes
@@ -352,9 +345,8 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 		return nil, fmt.Errorf("failed to create vote tx: %w", err)
 	}
 
-	tx.AppendTx(votes)
-
-	return tx, nil
+	transactions = append(transactions, votes)
+	return NewTx(transactions)
 }
 
 // Iterate through votes and remove exactly reduceCount votes
@@ -370,7 +362,7 @@ func ReduceTotalVoteCount(votes []*httpclient.Vote, reduceCount uint64) error {
 			removedVotes = reduceCount
 		}
 		reduceCount -= removedVotes
-		v.VoteCount -= reduceCount
+		v.VoteCount -= removedVotes
 
 		if reduceCount == 0 {
 			break
@@ -467,7 +459,6 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	}
 
 	from := stakingArgs.GetFrom()
-	tx := NewTx()
 
 	validator, _ := stakingArgs.GetValidator()
 	voteDecision, err := DetermineUnstakeVoteAction(stakingInput, validator, stakeVotes)
@@ -475,6 +466,7 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 		return nil, fmt.Errorf("failed to determine vote action: %w", err)
 	}
 
+	transactions := make([]*core.Transaction, 0)
 	switch voteDecision.Action {
 	case VoteForSpecificValidator:
 		if voteDecision.ValidatorVotes == nil {
@@ -485,7 +477,7 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vote tx: %w", err)
 		}
-		tx.AppendTx(votes)
+		transactions = append(transactions, votes)
 	case VoteForAnyValidator:
 		err = ReduceTotalVoteCount(stakingInput.Votes, stakeVotes)
 		if err != nil {
@@ -495,7 +487,7 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vote tx: %w", err)
 		}
-		tx.AppendTx(votes)
+		transactions = append(transactions, votes)
 	case NoVoteRequired:
 		// skip
 	}
@@ -504,9 +496,9 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	if err != nil {
 		return nil, fmt.Errorf("failed to create unfreeze transaction: %w", err)
 	}
-	tx.AppendTx(unfreeze)
+	transactions = append(transactions, unfreeze)
 
-	return tx, nil
+	return NewTx(transactions)
 }
 
 func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
@@ -515,7 +507,7 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 		return nil, errors.New("invalid input type")
 	}
 
-	txWrapper := NewTx()
+	transactions := make([]*core.Transaction, 0)
 	if withdrawInput.TxInput != nil {
 		from_bytes, err := GetAddressHash(string(stakingArgs.GetFrom()))
 		if err != nil {
@@ -530,14 +522,13 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 			return nil, fmt.Errorf("failed to marshal any params: %w", err)
 		}
 
-		tx_contract := &core.Transaction_Contract{
+		txContract := &core.Transaction_Contract{
 			Type:      core.Transaction_Contract_WithdrawExpireUnfreezeContract,
 			Parameter: params,
 		}
 
-		tx := new(core.Transaction)
-		tx.RawData = withdrawInput.TxInput.ToRawData(tx_contract)
-		txWrapper.AppendTx(tx)
+		tx := withdrawInput.TxInput.ToTronTx(txContract)
+		transactions = append(transactions, tx)
 	}
 
 	if withdrawInput.WithdrawRewardsInput != nil {
@@ -554,22 +545,20 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 			return nil, fmt.Errorf("failed to marshal any params: %w", err)
 		}
 
-		tx_contract := &core.Transaction_Contract{
+		txContract := &core.Transaction_Contract{
 			Type:      core.Transaction_Contract_WithdrawBalanceContract,
 			Parameter: params,
 		}
 
-		tx := new(core.Transaction)
-		tx.RawData = withdrawInput.WithdrawRewardsInput.ToRawData(tx_contract)
-		txWrapper.AppendTx(tx)
-
+		tx := withdrawInput.WithdrawRewardsInput.ToTronTx(txContract)
+		transactions = append(transactions, tx)
 	}
 
-	if len(txWrapper.TronTxs) == 0 {
+	if len(transactions) == 0 {
 		return nil, errors.New("no rewards to withdraw")
 	}
 
-	return txWrapper, nil
+	return NewTx(transactions)
 }
 
 // check that input is following 1 vote == 1 trx logic
