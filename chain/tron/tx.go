@@ -23,14 +23,23 @@ type Tx struct {
 var _ xc.Tx = &Tx{}
 var _ xc.TxWithMetadata = &Tx{}
 
-func NewTx() *Tx {
-	return &Tx{
+func NewTx(tronTransactions []*core.Transaction) (*Tx, error) {
+	if len(tronTransactions) == 0 {
+		return nil, errors.New("cannot build transactions with no operations")
+	}
+
+	tx := &Tx{
 		TronTxs:  make([]*core.Transaction, 0),
 		metadata: make([]*TxMetadata, 0),
 	}
+
+	for _, ttx := range tronTransactions {
+		tx.appendTx(ttx)
+	}
+	return tx, nil
 }
 
-func (tx *Tx) AppendTx(ttx *core.Transaction) {
+func (tx *Tx) appendTx(ttx *core.Transaction) {
 	txHash := TronTxHash(ttx)
 	tx.metadata = append(tx.metadata, &TxMetadata{
 		Hash:   string(txHash),
