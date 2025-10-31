@@ -25,8 +25,8 @@ func TestTxInfoFees(t *testing.T) {
 
 	// adding simple transfers should never add a fee
 	for i := 0; i < 10; i++ {
-		var from xc.Address = xc.Address(fmt.Sprintf("from-%d", i))
-		var to xc.Address = xc.Address(fmt.Sprintf("to-%d", i))
+		from := xc.Address(fmt.Sprintf("from-%d", i))
+		to := xc.Address(fmt.Sprintf("to-%d", i))
 
 		tx.AddSimpleTransfer(from, to, "", xc.NewAmountBlockchainFromUint64(10), nil, "")
 		require.Len(t, tx.CalculateFees(), 0)

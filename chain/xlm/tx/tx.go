@@ -48,11 +48,11 @@ func HashEnvelope(envelope *xdr.TransactionEnvelope, passphrase string) ([]byte,
 	case xdr.EnvelopeTypeEnvelopeTypeTx:
 		return HashTransactionV1(envelope.V1.Tx, passphrase)
 	case xdr.EnvelopeTypeEnvelopeTypeTxV0:
-		return []byte{}, errors.New("XLM Transaction type 0 is unsupported")
+		return []byte{}, errors.New("xlm transaction type 0 is unsupported")
 	case xdr.EnvelopeTypeEnvelopeTypeTxFeeBump:
-		return []byte{}, errors.New("XLM FeeBump transaction is unsupported")
+		return []byte{}, errors.New("xlm fee bump transaction is unsupported")
 	default:
-		return []byte{}, errors.New("Invalid transaction type")
+		return []byte{}, errors.New("invalid transaction type")
 	}
 }
 

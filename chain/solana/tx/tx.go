@@ -13,7 +13,6 @@ import (
 // Tx for Solana, encapsulating a solana.Transaction and other info
 type Tx struct {
 	SolTx            *solana.Transaction
-	parsedTransfer   interface{}
 	inputSignatures  []xc.TxSignature
 	transientSigners []solana.PrivateKey
 	extraFeePayer    xc.Address

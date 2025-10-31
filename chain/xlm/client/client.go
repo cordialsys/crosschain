@@ -269,13 +269,19 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		// Regular transfer from SourceAccount to Destination
 		payment, isPayment := operation.Body.GetPaymentOp()
 		if isPayment {
-			ProcessPayment(&txInfo, GetAssetCode(payment.Asset), sourceAccount, payment.Destination, payment.Amount)
+			err := ProcessPayment(&txInfo, GetAssetCode(payment.Asset), sourceAccount, payment.Destination, payment.Amount)
+			if err != nil {
+				return xclient.TxInfo{}, FailedToProceedPayment(err)
+			}
 		}
 
 		// CreateAccount operation - this can be treated as a regular payment, because it involves the same movements
 		createAccount, isCreateAccount := operation.Body.GetCreateAccountOp()
 		if isCreateAccount {
-			ProcessPayment(&txInfo, "XLM", sourceAccount, createAccount.Destination.ToMuxedAccount(), createAccount.StartingBalance)
+			err := ProcessPayment(&txInfo, "XLM", sourceAccount, createAccount.Destination.ToMuxedAccount(), createAccount.StartingBalance)
+			if err != nil {
+				return xclient.TxInfo{}, FailedToProceedPayment(err)
+			}
 		}
 
 		// PathPayments involve different source and destination assets
@@ -283,7 +289,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		if isPathSend {
 			sendAsset := GetAssetCode(pathPaymentSend.SendAsset)
 			destAsset := GetAssetCode(pathPaymentSend.DestAsset)
-			ProcessPathPayment(
+			err := ProcessPathPayment(
 				&txInfo,
 				sendAsset,
 				destAsset,
@@ -291,6 +297,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 				pathPaymentSend.Destination,
 				pathPaymentSend.SendAmount,
 				pathPaymentSend.DestMin)
+			if err != nil {
+				return xclient.TxInfo{}, FailedToProceedPathPayment(err)
+			}
 		}
 
 		// PathPayments involve different source and destination assets
@@ -298,7 +307,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		if isPathReceive {
 			sendAsset := GetAssetCode(pathPaymentReceive.SendAsset)
 			destAsset := GetAssetCode(pathPaymentReceive.DestAsset)
-			ProcessPathPayment(
+			err := ProcessPathPayment(
 				&txInfo,
 				sendAsset,
 				destAsset,
@@ -306,6 +315,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 				pathPaymentReceive.Destination,
 				pathPaymentReceive.SendMax,
 				pathPaymentReceive.DestAmount)
+			if err != nil {
+				return xclient.TxInfo{}, FailedToProceedPathPayment(err)
+			}
 		}
 	}
 	// cast the memo param to a simple string
@@ -565,4 +577,12 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}
 
 	return block, nil
+}
+
+func FailedToProceedPayment(err error) error {
+	return fmt.Errorf("failed to process payment: %w", err)
+}
+
+func FailedToProceedPathPayment(err error) error {
+	return fmt.Errorf("failed to process path payment: %w", err)
 }

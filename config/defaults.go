@@ -55,8 +55,6 @@ func RecusiveOverride(defaults map[string]interface{}, overrides map[string]inte
 			} else {
 				if IsAllowedOverrideType(existingVal, val) {
 					defaults[key] = val
-				} else {
-					// should not overwrite full arrays or maps
 				}
 			}
 		} else {

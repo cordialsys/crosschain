@@ -251,12 +251,12 @@ func (t *TokenNameHexToAmount) MarshalCBOR() ([]byte, error) {
 }
 
 type PolicyIdToAmounts struct {
-	*btree.Map[PolicyHash, TokenNameHexToAmount]
+	*btree.Map[PolicyHash, *TokenNameHexToAmount]
 }
 
-func (p *PolicyIdToAmounts) Iter() btree.MapIter[PolicyHash, TokenNameHexToAmount] {
+func (p *PolicyIdToAmounts) Iter() btree.MapIter[PolicyHash, *TokenNameHexToAmount] {
 	if p == nil {
-		p = &PolicyIdToAmounts{btree.NewMap[PolicyHash, TokenNameHexToAmount](1)}
+		p = &PolicyIdToAmounts{btree.NewMap[PolicyHash, *TokenNameHexToAmount](1)}
 	}
 	return p.Map.Iter()
 }
@@ -283,23 +283,23 @@ func (ta *TokenAmounts) AddAmount(contract xc.ContractAddress, amount uint64) {
 
 	policyId, assetName := ContractAddressToPolicyAndName(contract)
 	if ta.PolicyIdToAmounts == nil {
-		ta.PolicyIdToAmounts = &PolicyIdToAmounts{btree.NewMap[PolicyHash, TokenNameHexToAmount](1)}
+		ta.PolicyIdToAmounts = &PolicyIdToAmounts{btree.NewMap[PolicyHash, *TokenNameHexToAmount](1)}
 	}
 
 	_, ok := ta.PolicyIdToAmounts.Get(policyId)
 	if !ok {
 		ta.PolicyIdToAmounts.Set(
 			policyId,
-			TokenNameHexToAmount{btree.NewMap[TokenName, uint64](1)},
+			&TokenNameHexToAmount{btree.NewMap[TokenName, uint64](1)},
 		)
 	}
 
 	// We just inserted a new policyId, skip check
 	tokenAmounts, _ := ta.PolicyIdToAmounts.Get(policyId)
-
 	assetAmounts, ok := tokenAmounts.Get(assetName)
 	if ok {
 		assetAmounts += amount
+		tokenAmounts.Set(assetName, assetAmounts)
 	} else {
 		tokenAmounts.Set(assetName, amount)
 	}
@@ -668,8 +668,8 @@ func (tx *Tx) SetFee(fee uint64) error {
 	}
 
 	tx.Body.Fee = fee
-	tx.UpdateChangeAmount(int64(-fee))
-	return nil
+	err := tx.UpdateChangeAmount(int64(-fee))
+	return err
 }
 
 // Set certificates and deduce deposit from last output
@@ -688,7 +688,10 @@ func (tx *Tx) SetCertificates(certs []Certificate) error {
 		} else if c.CertificationType == CertTypeRegistrationAndDelegation {
 			changeDiff = int64(-c.DepositAmount)
 		}
-		tx.UpdateChangeAmount(changeDiff)
+		err := tx.UpdateChangeAmount(changeDiff)
+		if err != nil {
+			return fmt.Errorf("failed to update change amount: %w", err)
+		}
 	}
 
 	tx.RequiresAdditionalSignature = true
@@ -713,10 +716,10 @@ func (tx *Tx) SetWithdrawal(rewardsAddress xc.Address, amount xc.AmountBlockchai
 	}
 
 	// Add to change amount - we are withdrawing from stakeRewards address
-	tx.UpdateChangeAmount(int64(amount.Uint64()))
+	err = tx.UpdateChangeAmount(int64(amount.Uint64()))
 
 	tx.RequiresAdditionalSignature = true
-	return nil
+	return err
 }
 
 // Hash returns the tx hash or id
@@ -801,16 +804,22 @@ func NewTransfer(args builder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	tx := NewTx()
 	inputMemo, ok := args.GetMemo()
 	if ok {
-		tx.SetMemo(inputMemo)
+		err := tx.SetMemo(inputMemo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set memo: %w", err)
+		}
 	}
 
-	tx.SetUtxos(txInput.Utxos)
+	err := tx.SetUtxos(txInput.Utxos)
+	if err != nil {
+		return nil, ErrFailedToSetUtxos(err)
+	}
 
 	// Recipient output
 	to := args.GetTo()
 	amount := args.GetAmount()
 	contract, _ := args.GetContract()
-	err := tx.CreateTransferOutput(to, amount, contract)
+	err = tx.CreateTransferOutput(to, amount, contract)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transfer output: %w", err)
 	}
@@ -842,10 +851,13 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	txInput := stakingInput.TxInput
 
 	transaction := NewTx()
-	transaction.SetUtxos(txInput.Utxos)
+	err := transaction.SetUtxos(txInput.Utxos)
+	if err != nil {
+		return nil, ErrFailedToSetUtxos(err)
+	}
 
 	// Change output
-	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	err = transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create change output: %w", err)
 	}
@@ -867,7 +879,7 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode pool id: %w", err)
 	}
-	transaction.SetCertificates([]Certificate{
+	err = transaction.SetCertificates([]Certificate{
 		{
 			CertificationType: CertTypeRegistrationAndDelegation,
 			Credential:        credential,
@@ -875,6 +887,9 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 			DepositAmount:     stakingInput.KeyDeposit,
 		},
 	})
+	if err != nil {
+		return nil, ErrFailedToSetCerts(err)
+	}
 
 	transaction.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
 
@@ -898,9 +913,12 @@ func NewUnstake(args builder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) 
 	txInput := unstakingInput.TxInput
 
 	transaction := NewTx()
-	transaction.SetUtxos(txInput.Utxos)
+	err := transaction.SetUtxos(txInput.Utxos)
+	if err != nil {
+		return nil, ErrFailedToSetUtxos(err)
+	}
 
-	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	err = transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create change output: %w", err)
 	}
@@ -915,13 +933,16 @@ func NewUnstake(args builder.StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error) 
 		return nil, fmt.Errorf("failed to create key credential: %w", err)
 	}
 
-	transaction.SetCertificates([]Certificate{
+	err = transaction.SetCertificates([]Certificate{
 		{
 			CertificationType: CertTypeDeregistration,
 			Credential:        credential,
 			DepositAmount:     unstakingInput.KeyDeposit,
 		},
 	})
+	if err != nil {
+		return nil, ErrFailedToSetCerts(err)
+	}
 
 	transaction.SetTTL(uint32(txInput.Slot + txInput.TransactionValidityTime))
 
@@ -945,9 +966,12 @@ func NewWithdraw(args builder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error
 	txInput := withdrawInput.TxInput
 
 	transaction := NewTx()
-	transaction.SetUtxos(txInput.Utxos)
+	err := transaction.SetUtxos(txInput.Utxos)
+	if err != nil {
+		return nil, ErrFailedToSetUtxos(err)
+	}
 
-	err := transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
+	err = transaction.CreateChangeOutput(txInput.Utxos, args.GetFrom())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create change output: %w", err)
 	}
@@ -965,4 +989,12 @@ func NewWithdraw(args builder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error
 	}
 
 	return transaction, nil
+}
+
+func ErrFailedToSetUtxos(err error) error {
+	return fmt.Errorf("failed to set utxos: %w", err)
+}
+
+func ErrFailedToSetCerts(err error) error {
+	return fmt.Errorf("failed to set certificates: %w", err)
 }

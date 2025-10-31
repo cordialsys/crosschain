@@ -50,7 +50,8 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 			// error => send RPC error
 			if e, ok := curResponse.(error); ok {
 				rw.WriteHeader(400)
-				rw.Write([]byte(wrapRPCError(e.Error())))
+				_, err := rw.Write([]byte(wrapRPCError(e.Error())))
+				require.NoError(t, err)
 				return
 			}
 
@@ -81,7 +82,8 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 			} else {
 				log.Println("<<rpc", string(responseBody))
 			}
-			rw.Write(responseBody)
+			_, err = rw.Write(responseBody)
+			require.NoError(t, err)
 		})),
 	}
 	return mock, func() { mock.Close() }
@@ -119,7 +121,8 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 			if e, ok := curResponse.(error); ok {
 				rw.WriteHeader(400)
 				errBz, _ := json.Marshal(e)
-				rw.Write([]byte(wrapRPCError(string(errBz))))
+				_, err := rw.Write([]byte(wrapRPCError(string(errBz))))
+				require.NoError(t, err)
 				return
 			}
 			if status == 0 {
@@ -146,7 +149,8 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 				require.NoError(t, err)
 			}
 			log.Printf("<<http(%d) %s\n", status, string(responseBody))
-			rw.Write(responseBody)
+			_, err = rw.Write(responseBody)
+			require.NoError(t, err)
 		})),
 	}
 	return mock, func() { mock.Close() }
@@ -156,7 +160,7 @@ func MockHTTP(t *testing.T, response interface{}, status int) (mock *MockHTTPSer
 func Reserialize[T any](val *T) *T {
 	var newVal T
 	bz, _ := json.Marshal(val)
-	json.Unmarshal(bz, &newVal)
+	_ = json.Unmarshal(bz, &newVal)
 	return &newVal
 }
 

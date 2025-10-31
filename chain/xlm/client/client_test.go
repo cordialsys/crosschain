@@ -254,13 +254,15 @@ func TestFetchTxInput(t *testing.T) {
 		t.Run(vector.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL.String()
+				var err error
 				if strings.Contains(url, "/accounts/") {
-					json.NewEncoder(w).Encode(vector.getAccountResult)
+					err = json.NewEncoder(w).Encode(vector.getAccountResult)
 				} else if strings.Contains(url, "/ledgers") {
-					json.NewEncoder(w).Encode(vector.getLatestLedgerResult)
+					err = json.NewEncoder(w).Encode(vector.getLatestLedgerResult)
 				} else {
 					t.Errorf("unexpected url: %s", url)
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -670,7 +672,8 @@ func TestSubmitTx(t *testing.T) {
 	for _, vector := range vectors {
 		t.Run(vector.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte(vector.response))
+				_, err := w.Write([]byte(vector.response))
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -995,15 +998,17 @@ func TestFetchTxInfo(t *testing.T) {
 				w.WriteHeader(http.StatusBadRequest)
 			}
 
+			var err error
 			if strings.Contains(url, "/transactions/") {
-				w.Write([]byte(vector.getTxResult))
+				_, err = w.Write([]byte(vector.getTxResult))
 			} else if strings.Contains(url, "/ledgers/") {
-				w.Write([]byte(vector.getLedgerResult))
+				_, err = w.Write([]byte(vector.getLedgerResult))
 			} else if strings.Contains(url, "/ledgers?order=desc&limit=1") {
-				w.Write([]byte(vector.getLatestLedgerResult))
+				_, err = w.Write([]byte(vector.getLatestLedgerResult))
 			} else {
 				t.Errorf("unexpected url: %s", url)
 			}
+			require.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -1144,7 +1149,8 @@ func TestFetchBalance(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			url := r.URL.String()
 			if strings.Contains(url, "/accounts/") {
-				w.Write([]byte(vector.getAccountResult))
+				_, err := w.Write([]byte(vector.getAccountResult))
+				require.NoError(t, err)
 			} else {
 				t.Errorf("unexpected url: %s", url)
 			}

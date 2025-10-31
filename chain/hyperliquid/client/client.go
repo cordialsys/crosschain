@@ -376,8 +376,6 @@ func (client *Client) fetchSpotBalance(ctx context.Context, address xc.Address, 
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to call hyperliquid api: %w", err)
 	}
 
-	decimals := HypeDecimals
-	name := Hype
 	tokensMetadata, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
@@ -393,8 +391,8 @@ func (client *Client) fetchSpotBalance(ctx context.Context, address xc.Address, 
 		return xc.AmountBlockchain{}, fmt.Errorf("missing token metadata for contract: %s", contract)
 	}
 
-	decimals = tokenMeta.WeiDecimals
-	name = tokenMeta.Name
+	decimals := tokenMeta.WeiDecimals
+	name := tokenMeta.Name
 
 	for _, balance := range spotBalances.Balances {
 		if balance.Coin == name {
@@ -623,7 +621,12 @@ func (client *Client) fetchBlockHeight(ctx context.Context) (uint64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to connect websocket: %w", err)
 	}
-	defer c.Close()
+	defer func() {
+		err := c.Close()
+		if err != nil {
+			logrus.Warnf("failed to close websocket connection: %s", err)
+		}
+	}()
 
 	subscription := wstypes.CoinSubscription{
 		Type: "trades",

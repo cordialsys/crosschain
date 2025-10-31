@@ -352,8 +352,6 @@ func Request(client *Client, rr types.RuesRequest, resp interface{}) error {
 	}
 
 	switch resp.(type) {
-	case string:
-		resp = string(buff)
 	case *[]byte:
 		respBuff := resp.(*[]byte)
 		*respBuff = buff

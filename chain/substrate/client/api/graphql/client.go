@@ -35,7 +35,10 @@ func Post(ctx context.Context, url string, inputJson []byte, outputData any, arg
 		req.Header.Add("X-API-Key", args.ApiKey)
 	}
 	if args.Limiter != nil {
-		args.Limiter.Wait(ctx)
+		err := args.Limiter.Wait(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to wait on linter: %w", err)
+		}
 	}
 
 	explorerClient := &http.Client{

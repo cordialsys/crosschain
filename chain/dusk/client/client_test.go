@@ -98,9 +98,11 @@ func TestFetchTxInput(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL
 				if strings.Contains(url.Path, "account") {
-					w.Write([]byte(vector.accountStatusResult))
+					_, err := w.Write([]byte(vector.accountStatusResult))
+					require.NoError(t, err)
 				} else {
-					w.Write([]byte(vector.chainIdResult))
+					_, err := w.Write([]byte(vector.chainIdResult))
+					require.NoError(t, err)
 				}
 			}))
 			defer server.Close()
@@ -116,7 +118,8 @@ func TestFetchTxInput(t *testing.T) {
 			input, err := client.FetchLegacyTxInput(context.Background(), xc.Address("from"), xc.Address("to"))
 			require.NoError(t, err)
 			if vector.gasFeePriority != nil {
-				input.SetGasFeePriority(*vector.gasFeePriority)
+				err := input.SetGasFeePriority(*vector.gasFeePriority)
+				require.NoError(t, err)
 			}
 			dusk_input := input.(*tx_input.TxInput)
 			require.Equal(t, vector.expected.Nonce, dusk_input.Nonce)
@@ -171,10 +174,12 @@ func TestSubmitTx(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if vector.err != "" {
 					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(vector.err))
+					_, err := w.Write([]byte(vector.err))
+					require.NoError(t, err)
 				} else {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(""))
+					_, err := w.Write([]byte(""))
+					require.NoError(t, err)
 				}
 			}))
 			defer server.Close()
@@ -268,9 +273,11 @@ func TestFetchTxInfo(t *testing.T) {
 				reqBuff, _ := io.ReadAll(r.Body)
 				rawReq := string(reqBuff)
 				if strings.Contains(rawReq, "lastBlockPair") {
-					w.Write([]byte(vector.lastBlockResult))
+					_, err := w.Write([]byte(vector.lastBlockResult))
+					require.NoError(t, err)
 				} else {
-					w.Write([]byte(vector.getTransactionResult))
+					_, err := w.Write([]byte(vector.getTransactionResult))
+					require.NoError(t, err)
 				}
 			}))
 			defer server.Close()
@@ -285,6 +292,7 @@ func TestFetchTxInfo(t *testing.T) {
 
 			args := txinfo.NewArgs(xc.TxHash(vector.expectedInfo.Hash))
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
+			require.NoError(t, err)
 			require.Equal(t, vector.expectedInfo, txInfo)
 		})
 	}

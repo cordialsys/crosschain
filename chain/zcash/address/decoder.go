@@ -9,7 +9,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	xc "github.com/cordialsys/crosschain"
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
-	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/ripemd160" //nolint:all
 )
 
 type ZcashAddressDecoder struct{}

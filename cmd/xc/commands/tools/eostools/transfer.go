@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cordialsys/crosschain"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
@@ -43,7 +42,7 @@ func signEosTx(mainSigner *signer.Signer, eosTx *eos.Transaction, input *tx_inpu
 		if err != nil {
 			return nil, fmt.Errorf("failed to create sighash: %v", err)
 		}
-		sig, err := mainSigner.Sign(&crosschain.SignatureRequest{
+		sig, err := mainSigner.Sign(&xc.SignatureRequest{
 			Payload: sigDigest,
 		})
 		if err != nil {
@@ -64,9 +63,8 @@ func signEosTx(mainSigner *signer.Signer, eosTx *eos.Transaction, input *tx_inpu
 			signedTx = eos.NewSignedTransaction(eosTx)
 			signedTx.Signatures = []ecc.Signature{sigFormatted}
 			break
-		} else {
-			// keep trying ...
 		}
+		// keep trying ...
 	}
 	return signedTx, nil
 }

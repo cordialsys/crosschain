@@ -95,6 +95,7 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 			require.NoError(t, err)
 
 			pubkeyBytes, err := hex.DecodeString(v.pubkey)
+			require.NoError(t, err)
 			address, err := builder.GetAddressFromPublicKey(pubkeyBytes)
 			if v.error == "" {
 				require.NoError(t, err)

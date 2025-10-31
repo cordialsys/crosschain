@@ -101,15 +101,18 @@ crosschain:
 
 `)
 	file, _ := os.CreateTemp(os.TempDir(), "xctest")
-	file.Write(cfgBz)
+	_, err := file.Write(cfgBz)
+	require.NoError(err)
 
-	os.Setenv(constants.ConfigEnv, file.Name())
+	err = os.Setenv(constants.ConfigEnv, file.Name())
+	require.NoError(err)
 	defer os.Unsetenv(constants.ConfigEnv)
 	var wrapper ConfigWrapper
 	wrapper.Parse()
-	yaml.Unmarshal(cfgBz, &wrapper)
+	err = yaml.Unmarshal(cfgBz, &wrapper)
+	require.NoError(err)
 	var cfg factoryconfig.Config
-	err := config.RequireConfig("crosschain", &cfg, nil)
+	err = config.RequireConfig("crosschain", &cfg, nil)
 	require.NoError(err)
 	cfg.Parse()
 
@@ -127,7 +130,8 @@ crosschain:
       url: 'myurl'
 `)
 	file, _ := os.CreateTemp(os.TempDir(), "xctest")
-	file.Write(cfgBz)
+	_, err := file.Write(cfgBz)
+	require.NoError(err)
 	os.Setenv(constants.ConfigEnv, file.Name())
 
 	xcf := factory.NewFactory(&factory.FactoryOptions{
@@ -229,13 +233,15 @@ crosschain:
 	} {
 		fmt.Println("testcase ", i)
 		file, _ := os.CreateTemp(os.TempDir(), "xctest")
-		file.Write([]byte(tc.cfg))
-		os.Setenv(constants.ConfigEnv, file.Name())
+		_, err := file.Write([]byte(tc.cfg))
+		require.NoError(err)
+		err = os.Setenv(constants.ConfigEnv, file.Name())
+		require.NoError(err)
 		f := factory.NewFactory(&factory.FactoryOptions{
 			UseDisabledChains: true,
 		})
 		count := 0
-		for _ = range f.AllChains {
+		for range f.AllChains {
 			count += 1
 		}
 
@@ -246,7 +252,6 @@ crosschain:
 		require.Equal(xc.ETH, eth.GetChain().Chain)
 
 		var secret string
-		var err error
 		if eth.GetChain().Auth2 != "" {
 			secret, err = eth.GetChain().Auth2.Load()
 			require.NoError(err)

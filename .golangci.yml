@@ -1,0 +1,18 @@
+version: "2"
+linters:
+  settings:
+    staticcheck:
+      checks:
+        # disable "github.com/golang/protobug/proto" deprecation checks
+        - '-SA1019'
+  exclusions:
+    # Exclude directories that contain generated or external code
+    paths:
+      - chain/kaspa/tx/txscript
+      - chain/eos/eos-go
+      - chain/sui/generated
+    rules:
+      - linters:
+        - errcheck
+        # Exclude 'defer r.Body.Close()' errors
+        text: 'Error return value of (..*.Close|..*.Unsetenv|..*.Setenv). is not checked'

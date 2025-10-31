@@ -315,18 +315,6 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 	return transactions, err
 }
 
-func (client *Client) fetchAssetName(ctx context.Context, canister icpaddress.Principal) (string, error) {
-	var response string
-	err := client.Agent.Query(
-		canister,
-		icrc.MethodName,
-		[]any{},
-		[]any{&response},
-	)
-
-	return response, err
-}
-
 func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (xclient.TxInfo, error) {
 	block, err := client.fetchRawBlock(ctx, canister, blockIndex)
 	if err != nil {

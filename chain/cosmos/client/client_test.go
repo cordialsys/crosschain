@@ -29,10 +29,6 @@ func TestNewClient(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func ignoreError(val []byte, err error) []byte {
-	return val
-}
-
 func makeSimulateResponse(gasUsed uint64, gasRequested uint64) string {
 	response := cosmostx.SimulateResponse{
 		GasInfo: &types.GasInfo{

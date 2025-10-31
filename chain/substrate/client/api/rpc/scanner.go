@@ -87,7 +87,11 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 		}
 		extId := fmt.Sprintf("%d-%d", block.Block.Header.Number, offset)
 		logrus.WithField("id", extId).Debug("found extrinsic")
-		client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
+		// TODO: Can we just... ignore events from this call?
+		_, err = client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get events: %w", err)
+		}
 		matchingEvents, err := client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
 		if err != nil {
 			return nil, err
@@ -134,14 +138,16 @@ func (client *Client) ScanBlocksForExtrinsic(ctx context.Context, extrinsicHash 
 	}
 	scans := 0
 	for scans < client.maxDepth {
-		client.limiter.Wait(ctx)
+		err := client.limiter.Wait(ctx)
+		if err != nil {
+			return nil, blockHash, ext, -1, false, fmt.Errorf("failed to wait on limiter: %w", err)
+		}
 		scans++
 		block, err = client.rpc.RPC.Chain.GetBlock(blockHash)
 		if err != nil {
 			return nil, blockHash, ext, -1, false, err
 		}
 		// fmt.Println("-- block", block.Block.Header.Number)
-		index = -1
 		for i, ext := range block.Block.Extrinsics {
 			if bytes.Equal(extrinsicHash, HashExtrinsic(&ext)) {
 				return block, blockHash, &ext, i, true, nil
@@ -172,9 +178,6 @@ type v4Extrinsic struct {
 }
 
 func (e v4Extrinsic) Encode(encoder scale.Encoder) error {
-	if e.Type() != types.ExtrinsicVersion4 {
-		// ignore
-	}
 	var bb = bytes.Buffer{}
 	tempEnc := scale.NewEncoder(&bb)
 

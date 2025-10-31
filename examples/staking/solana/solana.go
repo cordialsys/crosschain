@@ -16,7 +16,6 @@ package solana
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -32,11 +31,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-func jsonprint(a any) {
-	bz, _ := json.MarshalIndent(a, "", "  ")
-	fmt.Println(string(bz))
-}
 
 func buildSolanaTx(instructions []solana.Instruction, accountFrom solana.PublicKey, recentHash solana.Hash) (*solana.Transaction, error) {
 	tx, err := solana.NewTransaction(

@@ -56,16 +56,18 @@ func TestFetchTxInput(t *testing.T) {
 			accountIndexCounter := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL.String()
+				var err error
 				if strings.HasSuffix(url, "/v1/chain/get_info") {
-					json.NewEncoder(w).Encode(vector.getInfoResult)
+					err = json.NewEncoder(w).Encode(vector.getInfoResult)
 				} else if strings.Contains(url, "/v1/chain/get_accounts_by_authorizers") {
-					json.NewEncoder(w).Encode(vector.getAccountResults[accountIndexCounter])
+					err = json.NewEncoder(w).Encode(vector.getAccountResults[accountIndexCounter])
 					accountIndexCounter++
 				} else if strings.Contains(url, "/v1/chain/get_account") {
-					json.NewEncoder(w).Encode(vector.getAccountInfoResult)
+					err = json.NewEncoder(w).Encode(vector.getAccountInfoResult)
 				} else {
 					t.Errorf("unexpected url: %s", url)
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -155,13 +157,15 @@ func TestFetchTxInfo(t *testing.T) {
 		t.Run(vector.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL.String()
+				var err error
 				if strings.HasSuffix(url, "/v1/chain/get_info") {
-					json.NewEncoder(w).Encode(vector.getInfoResult)
+					err = json.NewEncoder(w).Encode(vector.getInfoResult)
 				} else if strings.Contains(url, "/v2/history/get_transaction") {
-					json.NewEncoder(w).Encode(vector.getTxResult)
+					err = json.NewEncoder(w).Encode(vector.getTxResult)
 				} else {
 					t.Errorf("unexpected url: %s", url)
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 

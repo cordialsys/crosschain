@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -101,7 +101,7 @@ func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
 		return err
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -211,7 +211,7 @@ func (client *BlockchairClient) send(ctx context.Context, resp interface{}, meth
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		log.Error(err)
 		return nil, err

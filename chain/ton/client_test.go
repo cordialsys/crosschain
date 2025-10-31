@@ -3,7 +3,6 @@ package ton_test
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -27,14 +26,6 @@ func fromHex(s string) []byte {
 		panic(err)
 	}
 	return bz
-}
-
-// reserialize will drop internal fields set by constructors
-func reserialize(tx *xcclient.TxInfo) *xcclient.TxInfo {
-	bz, _ := json.Marshal(tx)
-	var info xcclient.TxInfo
-	json.Unmarshal(bz, &info)
-	return &info
 }
 
 func TestFetchTxInput(t *testing.T) {

@@ -60,7 +60,10 @@ func CmdDebug() *cobra.Command {
 				return fmt.Errorf("failed to marshal tx: %w", err)
 			}
 			var m map[string]interface{}
-			json.Unmarshal(bzJson, &m)
+			err = json.Unmarshal(bzJson, &m)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal tx: %w", err)
+			}
 			bzJsonIndent, err := json.MarshalIndent(m, "", "  ")
 			if err != nil {
 				return fmt.Errorf("failed to marshal tx: %w", err)

@@ -118,8 +118,14 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 	var err error
 	if data != nil {
 		buf := new(bytes.Buffer)
-		json.NewEncoder(buf).Encode(data)
+		err := json.NewEncoder(buf).Encode(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode data: %w", err)
+		}
 		req, err = http.NewRequestWithContext(ctx, method, url, buf)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create context request: %w", err)
+		}
 	} else {
 		// provide untyped nil to use no body. any "typed" nil will cause panic.
 		req, err = http.NewRequestWithContext(ctx, method, url, nil)

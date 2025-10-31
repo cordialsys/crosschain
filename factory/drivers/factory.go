@@ -13,7 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/zcash"
 	zcashaddress "github.com/cordialsys/crosschain/chain/zcash/address"
 
-	. "github.com/cordialsys/crosschain"
+	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/aptos"
@@ -78,238 +78,238 @@ import (
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
-func NewClient(cfg ITask, driver Driver) (xclient.Client, error) {
+func NewClient(cfg xc.ITask, driver xc.Driver) (xclient.Client, error) {
 	switch driver {
-	case DriverCardano:
+	case xc.DriverCardano:
 		return cardanoclient.NewClient(cfg)
-	case DriverEVM:
+	case xc.DriverEVM:
 		return evmclient.NewClient(cfg)
-	case DriverEVMLegacy:
+	case xc.DriverEVMLegacy:
 		return evm_legacy.NewClient(cfg)
-	case DriverFilecoin:
+	case xc.DriverFilecoin:
 		return filclient.NewClient(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
 		return cosmosclient.NewClient(cfg)
-	case DriverSolana:
+	case xc.DriverSolana:
 		return solanaclient.NewClient(cfg)
-	case DriverAptos:
+	case xc.DriverAptos:
 		return aptos.NewClient(cfg)
-	case DriverSui:
+	case xc.DriverSui:
 		return sui.NewClient(cfg)
-	case DriverBitcoin, DriverBitcoinLegacy:
+	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
 		return bitcoin.NewClient(cfg)
-	case DriverBitcoinCash:
+	case xc.DriverBitcoinCash:
 		return bitcoin_cash.NewClient(cfg)
-	case DriverSubstrate:
+	case xc.DriverSubstrate:
 		return substrateclient.NewClient(cfg)
-	case DriverTron:
+	case xc.DriverTron:
 		return tron.NewClient(cfg)
-	case DriverTon:
+	case xc.DriverTon:
 		return ton.NewClient(cfg)
-	case DriverXrp:
+	case xc.DriverXrp:
 		return xrpclient.NewClient(cfg)
-	case DriverXlm:
+	case xc.DriverXlm:
 		return xlmclient.NewClient(cfg)
-	case DriverDusk:
+	case xc.DriverDusk:
 		return duskclient.NewClient(cfg)
-	case DriverKaspa:
+	case xc.DriverKaspa:
 		return kaspaclient.NewClient(cfg)
-	case DriverEOS:
+	case xc.DriverEOS:
 		return eosclient.NewClient(cfg)
-	case DriverInternetComputerProtocol:
+	case xc.DriverInternetComputerProtocol:
 		return icpclient.NewClient(cfg)
-	case DriverHyperliquid:
+	case xc.DriverHyperliquid:
 		return hypeclient.NewClient(cfg)
-	case DriverZcash:
+	case xc.DriverZcash:
 		return zcash.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
 
-func NewStakingClient(servicesConfig *services.ServicesConfig, cfg ITask, provider StakingProvider) (xclient.StakingClient, error) {
+func NewStakingClient(servicesConfig *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error) {
 	driver := cfg.GetChain().Driver
 	switch driver {
-	case DriverEVM:
+	case xc.DriverEVM:
 		switch provider {
-		case Kiln:
+		case xc.Kiln:
 			rpcClient, err := evmclient.NewClient(cfg)
 			if err != nil {
 				return nil, err
 			}
 			return kiln.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Kiln)
-		case Figment:
+		case xc.Figment:
 			rpcClient, err := evmclient.NewClient(cfg)
 			if err != nil {
 				return nil, err
 			}
 			return figment.NewClient(rpcClient, cfg.GetChain(), &servicesConfig.Figment)
-		case Twinstake:
+		case xc.Twinstake:
 			return nil, fmt.Errorf("not implemented")
-		case Native:
+		case xc.Native:
 			rpcClient, err := evmclient.NewClient(cfg)
 			if err != nil {
 				return nil, err
 			}
 			return rpcClient, nil
 		}
-	case DriverCardano:
+	case xc.DriverCardano:
 		return cardanoclient.NewClient(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
 		return cosmosclient.NewClient(cfg)
-	case DriverSolana:
+	case xc.DriverSolana:
 		return solanaclient.NewClient(cfg)
-	case DriverSubstrate:
+	case xc.DriverSubstrate:
 		return substrateclient.NewClient(cfg)
-	case DriverEOS:
+	case xc.DriverEOS:
 		return eosclient.NewClient(cfg)
-	case DriverSui:
+	case xc.DriverSui:
 		return sui.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no staking client defined for %s on %s", provider, driver)
 }
 
-func NewTxBuilder(cfg *ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
-	switch Driver(cfg.Driver) {
-	case DriverCardano:
+func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
+	switch xc.Driver(cfg.Driver) {
+	case xc.DriverCardano:
 		return cardanobuilder.NewTxBuilder(cfg)
-	case DriverEVM:
+	case xc.DriverEVM:
 		return evmbuilder.NewTxBuilder(cfg)
-	case DriverEVMLegacy:
+	case xc.DriverEVMLegacy:
 		return evm_legacy.NewTxBuilder(cfg)
-	case DriverCosmos, DriverCosmosEvmos:
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
 		return cosmosbuilder.NewTxBuilder(cfg)
-	case DriverSolana:
+	case xc.DriverSolana:
 		return solanabuilder.NewTxBuilder(cfg)
-	case DriverAptos:
+	case xc.DriverAptos:
 		return aptos.NewTxBuilder(cfg)
-	case DriverSui:
+	case xc.DriverSui:
 		return sui.NewTxBuilder(cfg)
-	case DriverBitcoin, DriverBitcoinLegacy:
+	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
 		return bitcoinbuilder.NewTxBuilder(cfg)
-	case DriverBitcoinCash:
+	case xc.DriverBitcoinCash:
 		return bitcoin_cash.NewTxBuilder(cfg)
-	case DriverSubstrate:
+	case xc.DriverSubstrate:
 		return substratebuilder.NewTxBuilder(cfg)
-	case DriverTron:
+	case xc.DriverTron:
 		return tron.NewTxBuilder(cfg)
-	case DriverTon:
+	case xc.DriverTon:
 		return ton.NewTxBuilder(cfg)
-	case DriverXrp:
+	case xc.DriverXrp:
 		return xrpbuilder.NewTxBuilder(cfg)
-	case DriverXlm:
+	case xc.DriverXlm:
 		return xlmbuilder.NewTxBuilder(cfg)
-	case DriverFilecoin:
+	case xc.DriverFilecoin:
 		return filbuilder.NewTxBuilder(cfg)
-	case DriverDusk:
+	case xc.DriverDusk:
 		return duskbuilder.NewTxBuilder(cfg)
-	case DriverKaspa:
+	case xc.DriverKaspa:
 		return kaspabuilder.NewTxBuilder(cfg)
-	case DriverEOS:
+	case xc.DriverEOS:
 		return eosbuilder.NewTxBuilder(cfg)
-	case DriverInternetComputerProtocol:
+	case xc.DriverInternetComputerProtocol:
 		return icpbuilder.NewTxBuilder(cfg)
-	case DriverHyperliquid:
+	case xc.DriverHyperliquid:
 		return hypebuilder.NewTxBuilder(cfg)
-	case DriverZcash:
+	case xc.DriverZcash:
 		return zcash.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
 
-func NewSigner(chain *ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+func NewSigner(chain *xc.ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
 	return signer.New(chain.Driver, secret, chain, options...)
 }
 
-func NewAddressBuilder(cfg *ChainBaseConfig, options ...xcaddress.AddressOption) (AddressBuilder, error) {
-	switch Driver(cfg.Driver) {
-	case DriverDusk:
+func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
+	switch xc.Driver(cfg.Driver) {
+	case xc.DriverDusk:
 		return duskaddress.NewAddressBuilder(cfg)
-	case DriverEVM:
+	case xc.DriverEVM:
 		return evmaddress.NewAddressBuilder(cfg)
-	case DriverEVMLegacy:
+	case xc.DriverEVMLegacy:
 		return evm_legacy.NewAddressBuilder(cfg)
-	case DriverFilecoin:
+	case xc.DriverFilecoin:
 		return filaddress.NewAddressBuilder(cfg, options...)
-	case DriverCosmos, DriverCosmosEvmos:
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
 		return cosmosaddress.NewAddressBuilder(cfg)
-	case DriverSolana:
+	case xc.DriverSolana:
 		return solanaaddress.NewAddressBuilder(cfg)
-	case DriverAptos:
+	case xc.DriverAptos:
 		return aptos.NewAddressBuilder(cfg)
-	case DriverBitcoin, DriverBitcoinLegacy:
+	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
 		return bitcoinaddress.NewAddressBuilder(cfg, options...)
-	case DriverBitcoinCash:
+	case xc.DriverBitcoinCash:
 		return bitcoin_cash.NewAddressBuilder(cfg)
-	case DriverSui:
+	case xc.DriverSui:
 		return sui.NewAddressBuilder(cfg)
-	case DriverSubstrate:
+	case xc.DriverSubstrate:
 		return substrateaddress.NewAddressBuilder(cfg)
-	case DriverTron:
+	case xc.DriverTron:
 		return tron.NewAddressBuilder(cfg)
-	case DriverTon:
+	case xc.DriverTon:
 		return tonaddress.NewAddressBuilder(cfg)
-	case DriverXrp:
+	case xc.DriverXrp:
 		return xrpaddress.NewAddressBuilder(cfg)
-	case DriverXlm:
+	case xc.DriverXlm:
 		return xlmaddress.NewAddressBuilder(cfg)
-	case DriverCardano:
+	case xc.DriverCardano:
 		return cardanoaddress.NewAddressBuilder(cfg, options...)
-	case DriverKaspa:
+	case xc.DriverKaspa:
 		return kaspaaddress.NewAddressBuilder(cfg)
-	case DriverEOS:
+	case xc.DriverEOS:
 		return eosaddress.NewAddressBuilder(cfg)
-	case DriverInternetComputerProtocol:
+	case xc.DriverInternetComputerProtocol:
 		return icpaddress.NewAddressBuilder(cfg, options...)
-	case DriverHyperliquid:
+	case xc.DriverHyperliquid:
 		return hypeaddress.NewAddressBuilder(cfg)
-	case DriverZcash:
+	case xc.DriverZcash:
 		return zcashaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
 
-func CheckError(driver Driver, err error) errors.Status {
+func CheckError(driver xc.Driver, err error) errors.Status {
 	if err, ok := err.(*errors.Error); ok {
 		return err.Status
 	}
 	switch driver {
-	case DriverCardano:
+	case xc.DriverCardano:
 		return cardano.CheckError(err)
-	case DriverDusk:
+	case xc.DriverDusk:
 		return dusk.CheckError(err)
-	case DriverEVM:
+	case xc.DriverEVM:
 		return evm.CheckError(err)
-	case DriverEVMLegacy:
+	case xc.DriverEVMLegacy:
 		return evm.CheckError(err)
-	case DriverFilecoin:
+	case xc.DriverFilecoin:
 		return fil.CheckError(err)
-	case DriverCosmos, DriverCosmosEvmos:
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
 		return cosmos.CheckError(err)
-	case DriverSolana:
+	case xc.DriverSolana:
 		return solana.CheckError(err)
-	case DriverAptos:
+	case xc.DriverAptos:
 		return aptos.CheckError(err)
-	case DriverBitcoin, DriverBitcoinLegacy, DriverZcash:
+	case xc.DriverBitcoin, xc.DriverBitcoinLegacy, xc.DriverZcash:
 		return bitcoin.CheckError(err)
-	case DriverBitcoinCash:
+	case xc.DriverBitcoinCash:
 		return bitcoin_cash.CheckError(err)
-	case DriverSui:
+	case xc.DriverSui:
 		return sui.CheckError(err)
-	case DriverSubstrate:
+	case xc.DriverSubstrate:
 		return substrate.CheckError(err)
-	case DriverTron:
+	case xc.DriverTron:
 		return tron.CheckError(err)
-	case DriverTon:
+	case xc.DriverTon:
 		return ton.CheckError(err)
-	case DriverXrp:
+	case xc.DriverXrp:
 		return xrp.CheckError(err)
-	case DriverXlm:
+	case xc.DriverXlm:
 		return xlm.CheckError(err)
-	case DriverKaspa:
+	case xc.DriverKaspa:
 		return kaspa.CheckError(err)
-	case DriverEOS:
+	case xc.DriverEOS:
 		return eos.CheckError(err)
-	case DriverInternetComputerProtocol:
+	case xc.DriverInternetComputerProtocol:
 		return icp.CheckError(err)
 	}
 	return errors.UnknownError

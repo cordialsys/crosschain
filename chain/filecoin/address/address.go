@@ -307,19 +307,6 @@ func uvarintSize(num uint64) int {
 	return size
 }
 
-func base32decode(s string) ([]byte, error) {
-	decoded, err := Encoding.WithPadding(-1).DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	reencoded := Encoding.WithPadding(-1).EncodeToString(decoded)
-	if reencoded != s {
-		return nil, errors.New("invalid encoding")
-	}
-	return decoded, nil
-}
-
 func validateChecksum(ingest, expect []byte) bool {
 	digest, err := hash(ingest, checksumHashSize)
 	if err != nil {
