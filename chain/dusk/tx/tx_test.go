@@ -100,6 +100,7 @@ func TestTxSighashes(t *testing.T) {
 		GasPrice:        1,
 		ChainId:         1,
 	})
+	require.NoError(t, err)
 	sighashes, err := tx.Sighashes()
 	require.NoError(t, err)
 	if len(sighashes) != 1 {

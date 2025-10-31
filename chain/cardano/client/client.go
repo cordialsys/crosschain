@@ -175,12 +175,15 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, clienterrors.FeeEstimationf(err)
 	}
-	transfer.SetSignatures([]*xc.SignatureResponse{
+	err = transfer.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: make([]byte, 64),
 			PublicKey: make([]byte, 32),
 		},
 	}...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set signatures: %w", err)
+	}
 
 	err = baseInput.CalculateTxFee(transfer)
 	if err != nil {
@@ -458,7 +461,7 @@ func NewContractToMovement() ContractToMovement {
 }
 
 func (c *ContractToMovement) GetOrInit(contract xc.ContractAddress) *xclient.Movement {
-	contractMovement, ok := c.Get(contract)
+	_, ok := c.Get(contract)
 	if !ok {
 		movement := xclient.NewMovement(
 			xc.ADA,
@@ -467,6 +470,6 @@ func (c *ContractToMovement) GetOrInit(contract xc.ContractAddress) *xclient.Mov
 		c.Set(contract, movement)
 	}
 
-	contractMovement, _ = c.Get(contract)
+	contractMovement, _ := c.Get(contract)
 	return contractMovement
 }

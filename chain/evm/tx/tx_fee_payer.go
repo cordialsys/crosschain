@@ -191,12 +191,13 @@ func (tx *FeePayerTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	dataBody = append(dataBody, structDigest[:]...)
 	dataDigest := crypto.Keccak256(dataBody)
 
+	authSighash, err := auth.Sighash()
 	return []*xc.SignatureRequest{
 		// first signature is the authorization by the main signer
-		xc.NewSignatureRequest(auth.Sighash(), mainSigner),
+		xc.NewSignatureRequest(authSighash, mainSigner),
 		// second signature is the data by the main signer
 		xc.NewSignatureRequest(dataDigest, mainSigner),
-	}, nil
+	}, err
 }
 
 func (tx *FeePayerTx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {

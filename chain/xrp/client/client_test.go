@@ -229,17 +229,21 @@ func TestFetchTxInput(t *testing.T) {
 	for _, vector := range vectors {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var reqBody map[string]interface{}
-			json.NewDecoder(r.Body).Decode(&reqBody)
+			err := json.NewDecoder(r.Body).Decode(&reqBody)
+			require.NoError(t, err)
 
 			method := reqBody["method"].(string)
 			if method == "account_info" {
 				// Respond with AccountInfoResponse
-				json.NewEncoder(w).Encode(vector.accountInfoResp)
+				err := json.NewEncoder(w).Encode(vector.accountInfoResp)
+				require.NoError(t, err)
 			} else if method == "ledger" {
 				// Respond with LedgerResponse
-				json.NewEncoder(w).Encode(vector.ledgerResp)
+				err := json.NewEncoder(w).Encode(vector.ledgerResp)
+				require.NoError(t, err)
 			} else if method == "fee" {
-				json.NewEncoder(w).Encode(vector.feeResp)
+				err := json.NewEncoder(w).Encode(vector.feeResp)
+				require.NoError(t, err)
 			} else {
 				t.Errorf("unexpected method: %s", method)
 			}
@@ -808,15 +812,18 @@ func TestFetchTxInfo(t *testing.T) {
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var reqBody map[string]interface{}
-				json.NewDecoder(r.Body).Decode(&reqBody)
+				err := json.NewDecoder(r.Body).Decode(&reqBody)
+				require.NoError(t, err)
 
 				method := reqBody["method"].(string)
 				if method == "tx" {
 					// Respond with AccountInfoResponse
-					w.Write([]byte(vector.txResp))
+					_, err := w.Write([]byte(vector.txResp))
+					require.NoError(t, err)
 				} else if method == "ledger" {
 					// Respond with LedgerResponse
-					json.NewEncoder(w).Encode(vector.ledgerResp)
+					err := json.NewEncoder(w).Encode(vector.ledgerResp)
+					require.NoError(t, err)
 				} else {
 					t.Errorf("unexpected method: %s", method)
 				}

@@ -196,7 +196,8 @@ func TestConfigDefaults(t *testing.T) {
 	cfg = f.GetConfig()
 	require.EqualValues("testnet", cfg.Network)
 
-	os.RemoveAll(tmpPath)
+	err = os.RemoveAll(tmpPath)
+	require.NoError(err)
 }
 
 func TestTxInputSerDeser(t *testing.T) {

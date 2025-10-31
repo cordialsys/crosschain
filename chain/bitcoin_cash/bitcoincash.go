@@ -65,7 +65,7 @@ func CalculateBchBip143Sighash(subScript []byte, sigHashes *txscript.TxSigHashes
 	// For p2wsh outputs, and future outputs, the script code is the
 	// original script, with all code separators removed, serialized
 	// with a var int length prefix.
-	wire.WriteVarBytes(&sigHash, 0, subScript)
+	_ = wire.WriteVarBytes(&sigHash, 0, subScript)
 
 	// Next, add the input amount, and sequence number of the input being
 	// signed.
@@ -85,7 +85,7 @@ func CalculateBchBip143Sighash(subScript []byte, sigHashes *txscript.TxSigHashes
 		sigHash.Write(sigHashes.HashOutputsV0[:])
 	} else if hashType&SighashMask == txscript.SigHashSingle && idx < len(tx.TxOut) {
 		var b bytes.Buffer
-		wire.WriteTxOut(&b, 0, 0, tx.TxOut[idx])
+		_ = wire.WriteTxOut(&b, 0, 0, tx.TxOut[idx])
 		sigHash.Write(chainhash.DoubleHashB(b.Bytes()))
 	} else {
 		sigHash.Write(zeroHash[:])

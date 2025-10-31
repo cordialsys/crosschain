@@ -27,6 +27,7 @@ func TestNewNativeTransfer(t *testing.T) {
 
 	toAddr := xc.Address("addr_test1qrfp5xelv2mu7k8zyvwm0c8t5xm55wanwhtd4fgjgtf3ck0rplhn7x9jyhwqg70fwv0ujpmyumqk5td9e9hnsejtlxnq3yqf25")
 	_, expectedToKey, err := tx.DecodeToBase256(string(toAddr))
+	require.NoError(t, err)
 
 	amount := xc.NewAmountBlockchainFromUint64(1_000_000)
 	transferArgs, err := xcbuilder.NewTransferArgs(cfg.Base(), fromAddr, toAddr, amount)

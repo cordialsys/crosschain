@@ -35,7 +35,10 @@ func NewClient(baseUrl string, apiKey string, limiter *rate.Limiter) *Client {
 }
 
 func (client *Client) Get(ctx context.Context, url string, outputData any) error {
-	client.limiter.Wait(ctx)
+	err := client.limiter.Wait(ctx)
+	if err != nil {
+		return fmt.Errorf("failed waint on limiter: %w", err)
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err

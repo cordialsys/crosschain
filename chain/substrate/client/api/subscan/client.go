@@ -31,7 +31,10 @@ func Post(ctx context.Context, url string, inputJson []byte, outputData any, arg
 	}
 	req.Header.Add("Content-Type", "application/json")
 	if args.Limiter != nil {
-		args.Limiter.Wait(ctx)
+		err := args.Limiter.Wait(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to wait on limiter: %w", err)
+		}
 	}
 
 	if args.ApiKey != "" {

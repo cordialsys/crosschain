@@ -280,15 +280,17 @@ func TestFetchTxInput(t *testing.T) {
 				} else {
 					w.WriteHeader(http.StatusOK)
 				}
+				var err error
 				if strings.Contains(url.Path, "utxo") {
-					w.Write([]byte(vector.addressUtxosResponse))
+					_, err = w.Write([]byte(vector.addressUtxosResponse))
 				} else if strings.Contains(url.Path, "block") {
-					w.Write([]byte(vector.latestBlockResponse))
+					_, err = w.Write([]byte(vector.latestBlockResponse))
 				} else if strings.Contains(url.Path, "account") {
-					w.Write([]byte(vector.getAccountInfoResponse))
+					_, err = w.Write([]byte(vector.getAccountInfoResponse))
 				} else {
-					w.Write([]byte(vector.protocolParametersResponse))
+					_, err = w.Write([]byte(vector.protocolParametersResponse))
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -377,10 +379,11 @@ func TestSubmitTx(t *testing.T) {
 		t.Run(vector.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL
+				var err error
 				if strings.Contains(url.Path, "utxo") {
-					w.Write([]byte(vector.addressUtxosResponse))
+					_, err = w.Write([]byte(vector.addressUtxosResponse))
 				} else if strings.Contains(url.Path, "block") {
-					w.Write([]byte(vector.latestBlockResponse))
+					_, err = w.Write([]byte(vector.latestBlockResponse))
 				} else if strings.Contains(url.Path, "submit") {
 					if vector.submitSuccess {
 						w.WriteHeader(http.StatusOK)
@@ -388,8 +391,9 @@ func TestSubmitTx(t *testing.T) {
 						w.WriteHeader(http.StatusBadRequest)
 					}
 				} else {
-					w.Write([]byte(vector.protocolParametersResponse))
+					_, err = w.Write([]byte(vector.protocolParametersResponse))
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -402,6 +406,7 @@ func TestSubmitTx(t *testing.T) {
 				xc.Address("addr_test1qrfp5xelv2mu7k8zyvwm0c8t5xm55wanwhtd4fgjgtf3ck0rplhn7x9jyhwqg70fwv0ujpmyumqk5td9e9hnsejtlxnq3yqf25"),
 				xc.NewAmountBlockchainFromUint64(1_000_000),
 			)
+			require.NoError(t, err)
 			input, err := client.FetchTransferInput(context.Background(), args)
 			require.NoError(t, err)
 			require.NotNil(t, input)
@@ -550,15 +555,17 @@ func TestFetchTxInfo(t *testing.T) {
 		t.Run(vector.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				url := r.URL
+				var err error
 				if strings.Contains(url.Path, "blocks/latest") {
-					w.Write([]byte(vector.getLatestBlockResponse))
+					_, err = w.Write([]byte(vector.getLatestBlockResponse))
 				} else if strings.Contains(url.Path, "utxos") {
-					w.Write([]byte(vector.getTxUtxos))
+					_, err = w.Write([]byte(vector.getTxUtxos))
 				} else if strings.Contains(url.Path, "txs") {
-					w.Write([]byte(vector.getTxInfoResponse))
+					_, err = w.Write([]byte(vector.getTxInfoResponse))
 				} else if strings.Contains(url.Path, "blocks") {
-					w.Write([]byte(vector.getBlockInfo))
+					_, err = w.Write([]byte(vector.getBlockInfo))
 				}
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 

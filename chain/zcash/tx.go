@@ -11,22 +11,21 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	bitcointx "github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/harshavardhana/blake2b-simd"
 )
 
 // Tx for Bitcoin
 type Tx struct {
-	*tx.Tx
+	*bitcointx.Tx
 	signatures []*xc.SignatureResponse
 }
 
-func NewTx(tx *tx.Tx) *Tx {
+func NewTx(tx *bitcointx.Tx) *Tx {
 	return &Tx{Tx: tx}
 }
 
-var _ xc.Tx = &tx.Tx{}
+var _ xc.Tx = &bitcointx.Tx{}
 
 type ZcashTxInput struct {
 	TxID         []byte
@@ -39,11 +38,11 @@ type ZcashTxInput struct {
 	SignatureScript []byte
 }
 
-func (input *ZcashTxInput) SerializeOutpoint() []byte {
+func (input *ZcashTxInput) SerializeOutpoint() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	buf.Write(input.TxID)
-	binary.Write(buf, binary.LittleEndian, input.Index)
-	return buf.Bytes()
+	err := binary.Write(buf, binary.LittleEndian, input.Index)
+	return buf.Bytes(), err
 }
 
 type ZcashTxOutput struct {
@@ -53,9 +52,12 @@ type ZcashTxOutput struct {
 
 func (output *ZcashTxOutput) Serialize() ([]byte, error) {
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.LittleEndian, output.Amount)
+	err := binary.Write(buf, binary.LittleEndian, output.Amount)
+	if err != nil {
+		return nil, err
+	}
 
-	err := wire.WriteVarBytes(buf, 0, output.ScriptPubkey)
+	err = wire.WriteVarBytes(buf, 0, output.ScriptPubkey)
 	if err != nil {
 		return nil, err
 	}
@@ -79,13 +81,19 @@ func (tx *ZcashTx) Serialize() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// Header: Version (4 bytes)
-	binary.Write(buf, binary.LittleEndian, tx.Version)
+	err := binary.Write(buf, binary.LittleEndian, tx.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write version header: %w", err)
+	}
 
 	// Header: VersionGroupId (4 bytes)
-	binary.Write(buf, binary.LittleEndian, tx.VersionGroupId)
+	err = binary.Write(buf, binary.LittleEndian, tx.VersionGroupId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write version group id header: %w", err)
+	}
 
 	// Transparent inputs: count (varint)
-	err := wire.WriteVarInt(buf, 0, uint64(len(tx.Inputs)))
+	err = wire.WriteVarInt(buf, 0, uint64(len(tx.Inputs)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to write input count: %w", err)
 	}
@@ -93,15 +101,24 @@ func (tx *ZcashTx) Serialize() ([]byte, error) {
 	// Transparent inputs: each input
 	for _, input := range tx.Inputs {
 		// Prevout: hash (32 bytes)
-		buf.Write(input.TxID)
+		_, err := buf.Write(input.TxID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write hash: %w", err)
+		}
 		// Prevout: index (4 bytes)
-		binary.Write(buf, binary.LittleEndian, input.Index)
-		err := wire.WriteVarBytes(buf, 0, input.SignatureScript)
+		err = binary.Write(buf, binary.LittleEndian, input.Index)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write index: %w", err)
+		}
+		err = wire.WriteVarBytes(buf, 0, input.SignatureScript)
 		if err != nil {
 			return nil, fmt.Errorf("failed to write input script: %w", err)
 		}
 		// Sequence (4 bytes)
-		binary.Write(buf, binary.LittleEndian, input.NSequence)
+		err = binary.Write(buf, binary.LittleEndian, input.NSequence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write sequence: %w", err)
+		}
 	}
 
 	// Transparent outputs: count (varint)
@@ -120,13 +137,22 @@ func (tx *ZcashTx) Serialize() ([]byte, error) {
 	}
 
 	// LockTime (4 bytes)
-	binary.Write(buf, binary.LittleEndian, tx.LockTime)
+	err = binary.Write(buf, binary.LittleEndian, tx.LockTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write lock time: %w", err)
+	}
 
 	// ExpiryHeight (4 bytes)
-	binary.Write(buf, binary.LittleEndian, tx.ExpiryHeight)
+	err = binary.Write(buf, binary.LittleEndian, tx.ExpiryHeight)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write expiry height: %w", err)
+	}
 
 	// ValueBalance (8 bytes, int64) - always 0 for transparent-only transactions
-	binary.Write(buf, binary.LittleEndian, int64(0))
+	err = binary.Write(buf, binary.LittleEndian, int64(0))
+	if err != nil {
+		return nil, fmt.Errorf("failed to write value balance: %w", err)
+	}
 
 	// nShieldedSpend (varint) - 0 for transparent-only transactions
 	err = wire.WriteVarInt(buf, 0, uint64(0))
@@ -189,7 +215,11 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 		return nil, err
 	}
 	for _, input := range tx.Inputs {
-		hashPrevouts.Write(input.SerializeOutpoint())
+		ioutput, err := input.SerializeOutpoint()
+		if err != nil {
+			return nil, err
+		}
+		hashPrevouts.Write(ioutput)
 		var bSequence [4]byte
 		binary.LittleEndian.PutUint32(bSequence[:], input.NSequence)
 		hashSequence.Write(bSequence[:])
@@ -222,27 +252,55 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 		}
 
 		// Write all of the transaction information
-		binary.Write(hashOutputs, binary.LittleEndian, tx.Version)
-		binary.Write(hashOutputs, binary.LittleEndian, tx.VersionGroupId)
+		err = binary.Write(hashOutputs, binary.LittleEndian, tx.Version)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write version: %w", err)
+		}
+		err = binary.Write(hashOutputs, binary.LittleEndian, tx.VersionGroupId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write version group id: %w", err)
+		}
 		hashOutputs.Write(hashPrevoutsBz)
 		hashOutputs.Write(hashSequenceBz)
 		hashOutputs.Write(hashOutputsBz)
 		hashOutputs.Write(hashJoinSplitBz)
 		hashOutputs.Write(hashShieldedSpendsBz)
 		hashOutputs.Write(hashShieldedOutputsBz)
-		binary.Write(hashOutputs, binary.LittleEndian, tx.LockTime)
-		binary.Write(hashOutputs, binary.LittleEndian, tx.ExpiryHeight)
-		binary.Write(hashOutputs, binary.LittleEndian, int64(0)) //value balance
-		binary.Write(hashOutputs, binary.LittleEndian, tx.SigHash)
+		err = binary.Write(hashOutputs, binary.LittleEndian, tx.LockTime)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write lock time: %w", err)
+		}
+		err = binary.Write(hashOutputs, binary.LittleEndian, tx.ExpiryHeight)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write expiry height: %w", err)
+		}
+		err = binary.Write(hashOutputs, binary.LittleEndian, int64(0)) //value balance
+		if err != nil {
+			return nil, fmt.Errorf("failed to write value balance: %w", err)
+		}
+		err = binary.Write(hashOutputs, binary.LittleEndian, tx.SigHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write sighash: %w", err)
+		}
 
+		ioutput, err := input.SerializeOutpoint()
+		if err != nil {
+			return nil, err
+		}
 		// Write the input specific information
-		hashOutputs.Write(input.SerializeOutpoint())
+		hashOutputs.Write(ioutput)
 		err = wire.WriteVarBytes(hashOutputs, 0, input.PubkeyScript)
 		if err != nil {
 			return nil, err
 		}
-		binary.Write(hashOutputs, binary.LittleEndian, input.Amount)
-		binary.Write(hashOutputs, binary.LittleEndian, input.NSequence)
+		err = binary.Write(hashOutputs, binary.LittleEndian, input.Amount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write amount: %w", err)
+		}
+		err = binary.Write(hashOutputs, binary.LittleEndian, input.NSequence)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write nsequence: %w", err)
+		}
 
 		sighashes = append(sighashes, hashOutputs.Sum(nil))
 	}
@@ -268,8 +326,8 @@ func (tx *Tx) Build() (*ZcashTx, error) {
 
 	for i, utxo := range tx.UnspentOutputs {
 		ztx.Inputs[i] = ZcashTxInput{
-			TxID:         utxo.Outpoint.Hash,
-			Index:        utxo.Outpoint.Index,
+			TxID:         utxo.Hash,
+			Index:        utxo.Index,
 			PubkeyScript: utxo.PubKeyScript,
 			Amount:       utxo.Value.Uint64(),
 			// Set to all ff -- indicate we do not use locktime.

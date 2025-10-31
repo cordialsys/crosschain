@@ -593,8 +593,11 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 		t.Run(v.name, func(t *testing.T) {
 			fmt.Println("testing ", v.name)
 			for k, v := range v.env {
-				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				_ = os.Setenv(k, v)
+				defer func() {
+					_ = os.Unsetenv(k)
+				}()
+
 			}
 			server, close := testtypes.MockJSONRPC(t, v.resp)
 			defer close()

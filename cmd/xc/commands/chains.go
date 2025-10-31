@@ -59,7 +59,10 @@ func CmdChains() *cobra.Command {
 					return err
 				}
 				var data any
-				json.Unmarshal(res, &data)
+				err = json.Unmarshal(res, &data)
+				if err != nil {
+					return err
+				}
 				err = printer(data)
 				if err != nil {
 					return err

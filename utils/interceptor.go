@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -49,7 +48,7 @@ func (i *HttpInterceptor) RoundTrip(req *http.Request) (*http.Response, error) {
 				_ = res.Body.Close()
 			}
 		}()
-		body, _ := ioutil.ReadAll(res.Body)
+		body, _ := io.ReadAll(res.Body)
 
 		newBody := i.bodyReplacer(body)
 

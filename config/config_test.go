@@ -41,8 +41,10 @@ func (s *CrosschainTestSuite) TestRequireConfigNotFound() {
 	// different error if looking in directory for config file
 	os.Unsetenv(constants.ConfigEnv)
 	// change dir to somewhere that config files are not present
-	os.Chdir(os.TempDir())
-	os.Setenv(constants.DefaultHomeEnv, os.TempDir())
+	err = os.Chdir(os.TempDir())
+	require.NoError(err)
+	err = os.Setenv(constants.DefaultHomeEnv, os.TempDir())
+	require.NoError(err)
 	err = RequireConfig("crosschain", &cfg, nil)
 	require.Error(err)
 	require.Contains(strings.ToLower(err.Error()), notFoundIn)
@@ -55,7 +57,7 @@ func (s *CrosschainTestSuite) TestRequireConfigParsesYaml() {
 	require := s.Require()
 	file, err := os.CreateTemp(os.TempDir(), "xctest")
 	require.NoError(err)
-	file.Write([]byte(`
+	_, err = file.Write([]byte(`
 crosschain:
   chains:
     - asset: XYZ
@@ -65,6 +67,7 @@ service2:
     - asset: 123
     - asset: 456
 `))
+	require.NoError(err)
 	os.Setenv(constants.ConfigEnv, file.Name())
 	defer os.Unsetenv(constants.ConfigEnv)
 
@@ -206,8 +209,10 @@ func (s *CrosschainTestSuite) TestGetSecretFileTrimmed() {
 	file, err := os.CreateTemp(dir, "config-test")
 	require.NoError(err)
 	defer file.Close()
-	file.Write([]byte("MYSECRET"))
-	file.Sync()
+	_, err = file.Write([]byte("MYSECRET"))
+	require.NoError(err)
+	err = file.Sync()
+	require.NoError(err)
 
 	sec, err := GetSecret("file:" + file.Name())
 	require.NoError(err)
@@ -217,8 +222,10 @@ func (s *CrosschainTestSuite) TestGetSecretFileTrimmed() {
 	require.NoError(err)
 	defer file2.Close()
 	// add whitespace
-	file2.Write([]byte(" MY SECRET \n"))
-	file2.Sync()
+	_, err = file2.Write([]byte(" MY SECRET \n"))
+	require.NoError(err)
+	err = file2.Sync()
+	require.NoError(err)
 
 	sec, err = GetSecret("file:" + file2.Name())
 	require.NoError(err)
@@ -250,7 +257,7 @@ func WriteConfig(cfg string) {
 		panic(err)
 	}
 
-	file.Write([]byte(cfg))
+	_, _ = file.Write([]byte(cfg))
 	os.Setenv(constants.ConfigEnv, file.Name())
 }
 
