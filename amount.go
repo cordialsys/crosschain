@@ -174,6 +174,14 @@ func NewAmountHumanReadableFromStr(str string) (AmountHumanReadable, error) {
 	return AmountHumanReadable(decimal), err
 }
 
+func MustNewAmountHumanReadableFromStr(str string) AmountHumanReadable {
+	decimal, err := decimal.NewFromString(str)
+	if err != nil {
+		panic(err)
+	}
+	return AmountHumanReadable(decimal)
+}
+
 // NewAmountHumanReadableFromFloat creates a new AmountHumanReadable from a float
 func NewAmountHumanReadableFromFloat(float float64) AmountHumanReadable {
 	return AmountHumanReadable(decimal.NewFromFloat(float))
@@ -200,6 +208,14 @@ func (amount AmountHumanReadable) String() string {
 
 func (amount AmountHumanReadable) Div(x AmountHumanReadable) AmountHumanReadable {
 	return AmountHumanReadable(decimal.Decimal(amount).Div(decimal.Decimal(x)))
+}
+
+func (amount AmountHumanReadable) Mul(x AmountHumanReadable) AmountHumanReadable {
+	return AmountHumanReadable(decimal.Decimal(amount).Mul(decimal.Decimal(x)))
+}
+
+func (amount AmountHumanReadable) Cmp(x AmountHumanReadable) int {
+	return decimal.Decimal(amount).Cmp(decimal.Decimal(x))
 }
 
 var _ json.Marshaler = AmountHumanReadable{}

@@ -570,6 +570,15 @@ chains:
         asset_id: "19960"
       indexing_co:
         chain_id: provenance
+  HBAR:
+    chain: HBAR
+    chain_id: "0.0.3"
+    driver: hedera
+    chain_name: Hedera
+    decimals: 8
+    fee_limit: "200.0"
+    confirmations_final: 3
+    indexer_url: "https://mainnet-public.mirrornode.hedera.com"
   HyperEVM:
     chain: HyperEVM
     driver: evm
