@@ -10,6 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
+	"github.com/cordialsys/crosschain/chain/hedera"
 	"github.com/cordialsys/crosschain/chain/kaspa"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/factory"
@@ -56,6 +57,8 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverHyperliquid:
 					// pass
+				case DriverHedera:
+					hedera.Validate(t, chain)
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)
 				default:

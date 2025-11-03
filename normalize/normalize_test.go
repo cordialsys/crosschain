@@ -302,6 +302,18 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS",
 			out:   "t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS",
 		},
+		{
+			// normalize evm addresses
+			chain: xc.HBAR,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
+			// leave hedera addressing intact
+			chain: xc.HBAR,
+			inp:   "0.0.111",
+			out:   "0.0.111",
+		},
 	}
 
 	// test that we have a test vector for each chain

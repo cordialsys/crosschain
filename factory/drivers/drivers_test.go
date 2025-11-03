@@ -88,6 +88,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	if driver == xc.DriverTron {
 		fakeAsset.GasBudgetDefault = xc.NewAmountHumanReadableFromFloat(2.0)
 	}
+	if driver == xc.DriverHedera {
+		fakeAsset.ChainID = "0.0.3"
+	}
 	return fakeAsset
 }
 
@@ -101,7 +104,7 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 		}
 
 		res, err := drivers.NewClient(createChainFor(driver), driver)
-		require.NoError(err, "Missing driver for NewClient: "+driver)
+		require.NoError(err, "Missing driver for NewClient: "+string(driver))
 		require.NotNil(res)
 	}
 }
