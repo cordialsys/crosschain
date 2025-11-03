@@ -48,6 +48,10 @@ import (
 	filaddress "github.com/cordialsys/crosschain/chain/filecoin/address"
 	filbuilder "github.com/cordialsys/crosschain/chain/filecoin/builder"
 	filclient "github.com/cordialsys/crosschain/chain/filecoin/client"
+	hedera "github.com/cordialsys/crosschain/chain/hedera"
+	hederaaddress "github.com/cordialsys/crosschain/chain/hedera/address"
+	hederabuilder "github.com/cordialsys/crosschain/chain/hedera/builder"
+	hederaclient "github.com/cordialsys/crosschain/chain/hedera/client"
 	hypeaddress "github.com/cordialsys/crosschain/chain/hyperliquid/address"
 	hypebuilder "github.com/cordialsys/crosschain/chain/hyperliquid/builder"
 	hypeclient "github.com/cordialsys/crosschain/chain/hyperliquid/client"
@@ -123,6 +127,8 @@ func NewClient(cfg xc.ITask, driver xc.Driver) (xclient.Client, error) {
 		return hypeclient.NewClient(cfg)
 	case xc.DriverZcash:
 		return zcash.NewClient(cfg)
+	case xc.DriverHedera:
+		return hederaclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -215,6 +221,8 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return hypebuilder.NewTxBuilder(cfg)
 	case xc.DriverZcash:
 		return zcash.NewTxBuilder(cfg)
+	case xc.DriverHedera:
+		return hederabuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -267,6 +275,8 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 		return hypeaddress.NewAddressBuilder(cfg)
 	case xc.DriverZcash:
 		return zcashaddress.NewAddressBuilder(cfg)
+	case xc.DriverHedera:
+		return hederaaddress.NewAddressBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
@@ -314,6 +324,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return eos.CheckError(err)
 	case xc.DriverInternetComputerProtocol:
 		return icp.CheckError(err)
+	case xc.DriverHedera:
+		return hedera.CheckError(err)
 	}
 	return errors.UnknownError
 }
