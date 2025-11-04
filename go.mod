@@ -68,9 +68,12 @@ require (
 	github.com/cloudflare/circl v1.6.0
 	github.com/fxamacker/cbor v1.5.1
 	github.com/fxamacker/cbor/v2 v2.8.0
+	github.com/gorilla/websocket v1.5.3
+	github.com/harshavardhana/blake2b-simd v0.0.0-20160628082310-f6a3512276ac
 	github.com/holiman/uint256 v1.3.2
 	github.com/kaspanet/kaspad v0.12.22
 	github.com/pkg/errors v0.9.1
+	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/time v0.9.0
 )
 
@@ -170,12 +173,10 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.5 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/gtank/merlin v0.1.1 // indirect
 	github.com/gtank/ristretto255 v0.1.2 // indirect
-	github.com/harshavardhana/blake2b-simd v0.0.0-20160628082310-f6a3512276ac // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-getter v1.7.5 // indirect
@@ -260,7 +261,6 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
-	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zondax/hid v0.9.2 // indirect
@@ -303,5 +303,5 @@ replace (
 	github.com/coming-chat/go-aptos => github.com/cordialsys/go-aptos-sdk v0.0.0-20250509215447-cc739925dd04
 	github.com/cosmos/cosmos-sdk => github.com/cosmos/cosmos-sdk v0.52.0-rc.1
 	// Patch adds support for transfer-fee-extension
-	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7
+	github.com/gagliardetto/solana-go => github.com/cordialsys/solana-go v0.0.0-20251104174834-fa1e3d35d810
 )

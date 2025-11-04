@@ -404,8 +404,8 @@ github.com/cordialsys/go-json v0.10.5-sonic-replace h1:9wdSnZ7KBekIZ9tLiCEQAkY6k
 github.com/cordialsys/go-json v0.10.5-sonic-replace/go.mod h1:uwUxqlxlq1Bf1VxJpxbWfMbQgM8w30PKKZrg94/NcTk=
 github.com/cordialsys/go-sui-sdk/v2 v2.1.1 h1:JyPHD6SJB5+QOzxhRMVSUxGrO0sYNM9N8yrRLeuT3bM=
 github.com/cordialsys/go-sui-sdk/v2 v2.1.1/go.mod h1:tJVBrbkHwlmOkPW1YCxOpZT8bFYeaK1MXBK+Qy4+PGU=
-github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7 h1:ZAA2/Yf95GS8TLky0JYpYMunzRjBdhJPk9+P0knrRus=
-github.com/cordialsys/solana-go v0.0.0-20250717144134-88249c400cf7/go.mod h1:l/qqqIN6qJJPtxW/G1PF4JtcE3Zg2vD2EliZrr9Gn5k=
+github.com/cordialsys/solana-go v0.0.0-20251104174834-fa1e3d35d810 h1:FMcLvS3uwaDp9Ydos708BhDo7NXB6gnMt2/KtIn4Ycw=
+github.com/cordialsys/solana-go v0.0.0-20251104174834-fa1e3d35d810/go.mod h1:l/qqqIN6qJJPtxW/G1PF4JtcE3Zg2vD2EliZrr9Gn5k=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/cosmos/btcutil v1.0.5 h1:t+ZFcX77LpKtDBhjucvnOH8C2l2ioGsBNEQ3jef8xFk=
 github.com/cosmos/btcutil v1.0.5/go.mod h1:IyB7iuqZMJlthe2tkIFL33xPyzbFYP0XVdS8P5lUPis=

@@ -615,6 +615,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		result.AddStakeEvent(xcStake)
 	}
+	for i, instr := range tx.GetMemos() {
+		message := instr.Instruction.Message
+		if i < len(dests) {
+			// Report nth memo to nth movement.
+			// Shouldn't matter if we assign to dest or source here, as they are the same movement.
+			dests[i].Memo = string(message)
+		}
+	}
 
 	if len(sources) > 0 {
 		result.From = sources[0].Address
