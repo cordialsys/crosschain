@@ -87,14 +87,9 @@ func (client *Client) GetTx(ctx context.Context, extrinsicHash string) (*Tx, err
 		}
 		extId := fmt.Sprintf("%d-%d", block.Block.Header.Number, offset)
 		logrus.WithField("id", extId).Debug("found extrinsic")
-		// TODO: Can we just... ignore events from this call?
-		_, err = client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get events: %w", err)
-		}
 		matchingEvents, err := client.GetEvents(ctx, uint64(block.Block.Header.Number), blockHash, offset)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get events: %w", err)
 		}
 		return &Tx{
 			BlockHash:     blockHash,
