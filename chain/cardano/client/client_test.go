@@ -175,7 +175,7 @@ func TestFetchTxInput(t *testing.T) {
 					},
 					Slot: 90_751_416,
 					// Fee should be greater than in standard tx - we need two signatured
-					Fee:                     172337,
+					Fee:                     172469,
 					TransactionValidityTime: 7200,
 				},
 				KeyDeposit: 200_000,

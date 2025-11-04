@@ -40,14 +40,18 @@ func (c *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalan
 		return nil, fmt.Errorf("failed to fetch account info: %w", err)
 	}
 
-	stakedBalance := xclient.NewStakedBalance(
-		active,
-		xclient.Active,
-		getAccountInfoResponse.PoolId,
-		"",
-	)
-	stakedBalance.Balance.Inactive = xc.NewAmountBlockchainFromStr(getAccountInfoResponse.WithdrawableAmount)
-	return []*xclient.StakedBalance{stakedBalance}, nil
+	balances := make([]*xclient.StakedBalance, 0)
+	if getAccountInfoResponse.PoolId != "" {
+		stakedBalance := xclient.NewStakedBalance(
+			active,
+			xclient.Active,
+			getAccountInfoResponse.PoolId,
+			"",
+		)
+		stakedBalance.Balance.Inactive = xc.NewAmountBlockchainFromStr(getAccountInfoResponse.WithdrawableAmount)
+		balances = append(balances, stakedBalance)
+	}
+	return balances, nil
 }
 
 func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (xc.StakeTxInput, error) {

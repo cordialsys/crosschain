@@ -19,10 +19,11 @@ import (
 )
 
 const (
-	StakeCredentialKeyHash            = 0
-	StakeCredentialScriptHash         = 1
-	CertTypeDeregistration            = 8
-	CertTypeRegistrationAndDelegation = 11
+	StakeCredentialKeyHash                     = 0
+	StakeCredentialScriptHash                  = 1
+	CertTypeDeregistration                     = 8
+	CertTypeRegistrationStakeAndVoteDelegation = 13
+	DelegVoteTypeAlwaysAbstain                 = 2
 	// PolicyId is 28 byte hash of the token policy
 	PolicyIdLen = 56
 
@@ -59,11 +60,21 @@ func NewKeyCredential(pubkey []byte) (CertificateCredential, error) {
 	}, nil
 }
 
+type DelegVote struct {
+	_        struct{} `cbor:",toarray"`
+	VoteType uint64
+}
+
+func NewDelegVoteAlwaysAbstain() DelegVote {
+	return DelegVote{VoteType: DelegVoteTypeAlwaysAbstain}
+}
+
 type Certificate struct {
 	_                 struct{} `cbor:",toarray"`
 	CertificationType uint32
 	Credential        CertificateCredential
-	PoolId            []byte `cbor:",omitempty,omitzero"`
+	PoolId            []byte    `cbor:",omitempty,omitzero"`
+	Vote              DelegVote `cbor:",omitempty,omitzero"`
 	DepositAmount     uint64
 }
 
@@ -73,6 +84,13 @@ func (c *Certificate) MarshalCBOR() ([]byte, error) {
 	arr = append(arr, c.Credential)
 	if c.PoolId != nil && len(c.PoolId) != 0 {
 		arr = append(arr, c.PoolId)
+	}
+	if c.Vote.VoteType != 0 {
+		vb, err := cbor.Marshal(c.Vote)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal delegation vote: %w", err)
+		}
+		arr = append(arr, vb)
 	}
 	arr = append(arr, c.DepositAmount)
 	return cbor.Marshal(arr)
@@ -685,7 +703,7 @@ func (tx *Tx) SetCertificates(certs []Certificate) error {
 		// Increase change output if we are deregistering and decrese in case of registering
 		if c.CertificationType == CertTypeDeregistration {
 			changeDiff = int64(c.DepositAmount)
-		} else if c.CertificationType == CertTypeRegistrationAndDelegation {
+		} else if c.CertificationType == CertTypeRegistrationStakeAndVoteDelegation {
 			changeDiff = int64(-c.DepositAmount)
 		}
 		err := tx.UpdateChangeAmount(changeDiff)
@@ -881,9 +899,10 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	}
 	err = transaction.SetCertificates([]Certificate{
 		{
-			CertificationType: CertTypeRegistrationAndDelegation,
+			CertificationType: CertTypeRegistrationStakeAndVoteDelegation,
 			Credential:        credential,
 			PoolId:            poolBytes,
+			Vote:              NewDelegVoteAlwaysAbstain(),
 			DepositAmount:     stakingInput.KeyDeposit,
 		},
 	})
