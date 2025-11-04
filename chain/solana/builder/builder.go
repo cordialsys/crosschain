@@ -12,6 +12,7 @@ import (
 	"github.com/gagliardetto/solana-go"
 	ata "github.com/gagliardetto/solana-go/programs/associated-token-account"
 	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
+	"github.com/gagliardetto/solana-go/programs/memo"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
 )
@@ -58,14 +59,18 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		if !ok {
 			return nil, fmt.Errorf("cannot send solana token transfer without knowing the decimals")
 		}
-		return txBuilder.NewTokenTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), contract, decimals, input)
+		return txBuilder.NewTokenTransfer(feePayer, args, contract, decimals, input)
 	} else {
-		return txBuilder.NewNativeTransfer(feePayer, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
+		return txBuilder.NewNativeTransfer(feePayer, args, input)
 	}
 }
 
 // NewNativeTransfer creates a new transfer for a native asset
-func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, txInput xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, args xcbuilder.TransferArgs, txInput xc.TxInput) (xc.Tx, error) {
+	amount := args.GetAmount()
+	from := args.GetFrom()
+	to := args.GetTo()
+	memoMaybe, _ := args.GetMemo()
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {
 		return nil, err
@@ -90,11 +95,15 @@ func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, from xc.Addres
 		)
 	}
 
-	return txBuilder.buildSolanaTx(feePayer, from, instructions, input)
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, input, memoMaybe)
 }
 
 // NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, decimals int, input xc.TxInput) (xc.Tx, error) {
+func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, args xcbuilder.TransferArgs, contract xc.ContractAddress, decimals int, input xc.TxInput) (xc.Tx, error) {
+	from := args.GetFrom()
+	to := args.GetTo()
+	amount := args.GetAmount()
+	memoMaybe, _ := args.GetMemo()
 	txInput := input.(*TxInput)
 	if contract == "" {
 		return nil, errors.New("asset does not have a contract")
@@ -226,13 +235,19 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address
 		)
 	}
 
-	return txBuilder.buildSolanaTx(feePayer, from, instructions, txInput)
+	return txBuilder.buildSolanaTx(feePayer, from, instructions, txInput, memoMaybe)
 }
 
-func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, instructions []solana.Instruction, txInput *TxInput) (*tx.Tx, error) {
+func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, instructions []solana.Instruction, txInput *TxInput, memoMaybe string) (*tx.Tx, error) {
 	accountFeePayer, err := solana.PublicKeyFromBase58(string(feePayer))
 	if err != nil {
 		return nil, err
+	}
+	accountFrom, _ := solana.PublicKeyFromBase58(string(from))
+	if memoMaybe != "" {
+		instructions = append(instructions,
+			memo.NewMemoInstruction([]byte(memoMaybe), accountFrom).Build(),
+		)
 	}
 
 	tx1, err := solana.NewTransaction(
@@ -270,5 +285,5 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 		token.NewCloseAccountInstruction(ataFrom, accountFrom, accountFrom, nil).Build(),
 	}
 
-	return txBuilder.buildSolanaTx(from, from, instructions, txInput)
+	return txBuilder.buildSolanaTx(from, from, instructions, txInput, "")
 }

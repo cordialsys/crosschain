@@ -6,6 +6,7 @@ import (
 
 	bin "github.com/gagliardetto/binary"
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/programs/memo"
 	"github.com/gagliardetto/solana-go/programs/stake"
 	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
@@ -135,6 +136,16 @@ func getall[T any, Y SolanaInstruction](
 	solanaProgram solana.PublicKey,
 	solTx TxData,
 ) []instructionAtIndex[T] {
+	return getallForVariant[T, Y](cache, decoder, solanaProgram, solTx, bin.NewVariantDefinition(bin.Uint32TypeIDEncoding, nil))
+}
+
+func getallForVariant[T any, Y SolanaInstruction](
+	cache *Decoder,
+	decoder func(accounts []*solana.AccountMeta, data []byte) (Y, error),
+	solanaProgram solana.PublicKey,
+	solTx TxData,
+	variantDef *bin.VariantDefinition,
+) []instructionAtIndex[T] {
 	results := []instructionAtIndex[T]{}
 	if solTx == nil {
 		return []instructionAtIndex[T]{}
@@ -153,7 +164,7 @@ func getall[T any, Y SolanaInstruction](
 			if err != nil {
 				continue
 			}
-			_, _, impl = inst.Obtain(bin.NewVariantDefinition(bin.Uint32TypeIDEncoding, nil))
+			_, _, impl = inst.Obtain(variantDef)
 			cache.cache[instruction.ID()] = impl
 		}
 		castedInst, ok := impl.(T)
@@ -258,6 +269,10 @@ func (tx Decoder) GetSplitStakes() []instructionAtIndex[*stake.Split] {
 
 func (tx Decoder) GetStakeWithdraws() []instructionAtIndex[*stake.Withdraw] {
 	return getall[*stake.Withdraw](&tx, stake.DecodeInstruction, solana.StakeProgramID, tx.txData)
+}
+
+func (tx Decoder) GetMemos() []instructionAtIndex[*memo.Create] {
+	return getallForVariant[*memo.Create](&tx, memo.DecodeInstruction, solana.MemoProgramID, tx.txData, memo.InstructionImplDef)
 }
 
 func (tx Decoder) GetAccountKeys() []solana.PublicKey {

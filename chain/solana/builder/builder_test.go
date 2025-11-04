@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/token"
+	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,35 +27,59 @@ func TestNewTxBuilder(t *testing.T) {
 
 func TestNewNativeTransfer(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	builder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
 	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
 	amount := xc.NewAmountBlockchainFromUint64(1200000) // 1.2 SOL
 	input := &tx_input.TxInput{}
-	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(
+		chainCfg,
+		from,
+		to,
+		amount,
+		buildertest.OptionMemo("AAAA"),
+	)
+	trxn, err := builder.NewNativeTransfer(from, args, input)
 	require.NoError(t, err)
-	require.NotNil(t, tx)
-	solTx := tx.(*Tx).SolTx
+	require.NotNil(t, trxn)
+	solTx := trxn.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
-	require.Equal(t, 1, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x2), solTx.Message.Instructions[0].ProgramIDIndex) // system tx
+
+	// Decode the transaction and verify.
+	decoder := tx.NewDecoderFromNativeTx(solTx, &rpc.TransactionMeta{})
+
+	// 1 system transfer
+	transfers := decoder.GetSystemTransfers()
+	require.Equal(t, 1, len(transfers))
+	require.Equal(t, uint64(1200000), *transfers[0].Instruction.Lamports)
+
+	// 1 memo
+	memos := decoder.GetMemos()
+	require.Equal(t, 1, len(memos))
+	require.Equal(t, "AAAA", string(memos[0].Instruction.Message))
 }
 
 func TestNewNativeTransferErr(t *testing.T) {
 
-	builder, _ := builder.NewTxBuilder(xc.NewChainConfig("").Base())
-
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	builder, _ := builder.NewTxBuilder(chainCfg)
 	from := xc.Address("from") // fails on parsing from
 	to := xc.Address("to")
 	amount := xc.AmountBlockchain{}
 	input := &TxInput{}
-	tx, err := builder.NewNativeTransfer(from, from, to, amount, input)
+	args := buildertest.MustNewTransferArgs(
+		chainCfg,
+		from,
+		to,
+		amount,
+	)
+	tx, err := builder.NewNativeTransfer(from, args, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 3")
 
-	from = xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
-	// fails on parsing to
-	tx, err = builder.NewNativeTransfer(from, from, to, amount, input)
+	args.SetFrom(xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb"))
+	tx, err = builder.NewNativeTransfer(from, args, input)
 	require.Nil(t, tx)
 	require.EqualError(t, err, "invalid length, expected 32, got 2")
 }
