@@ -7,6 +7,12 @@ test:
 lint:
 	@golangci-lint run
 
+format:
+	@golangci-lint fmt
+
+cid:
+	make format lint test
+
 fmt:
 	@go fmt ./...
 

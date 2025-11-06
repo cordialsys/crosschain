@@ -6,9 +6,9 @@ import (
 	"os"
 
 	"github.com/cordialsys/crosschain"
+	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 )
 
 func TxInfo(ctx context.Context, xc *factory.Factory, nativeAsset crosschain.NativeAsset, txHash string) {

@@ -6,7 +6,7 @@
 A Go library to interact with multiple blockchains. This library is used by the [Cordial Treasury](https://cordialsystems.com/) custody product to interact with various blockchains securely.
 Cordial Treasury will be able to support any chain supported in this library.
 
-Crosschain's main design principle is to isolate functionality into separate Client, Signer and TxBuilder interfaces.  
+Crosschain's main design principle is to isolate functionality into separate Client, Signer and TxBuilder interfaces.
 In addition to providing unified interfaces, it allows blockchains to be safely used in secure contexts.
 
 ## Example usage
@@ -130,21 +130,30 @@ xc tx-input 0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5 --chain ETH
 
 ### Blockchains
 
+- [x] 0g
 - [x] Aptos
 - [x] Bitcoin
 - [x] Bitcoin derived: Bitcoin Cash, Dogecoin
 - [x] Bittensor
+- [x] Cardano
 - [x] Cosmos
 - [x] Cosmos derived: Terra, Injective, XPLA, ...
+- [x] Dusk
+- [x] Eos
 - [x] Ethereum
 - [x] EVMs: Polygon, Binance Smart Chain, ...
-- [ ] Filecoin
+- [x] Filecoin
+- [x] Fogo
+- [x] Hyperliquid
+- [x] Internet Computer Protocol
 - [x] Polkadot
 - [x] Solana
+- [x] Stellar
 - [x] Sui
 - [x] TON
 - [x] Tron
-- [ ] XRP
+- [x] XRP
+- [x] Zcash
 
 ### Assets
 
@@ -196,6 +205,10 @@ To add a new chain, we recommend you first study existing implementations in `ch
 Normally it's easiest to start with the client methods (reporting a balance), and then incrementally get to building a transaction and broadcasting it.
 
 Just open an issue to discuss what you'd like to contribute and then submit a PR.
+
+### Dependencies
+
+XC uses `golangci-lint` tool for linting and formatting. Use `make ci` to run CI checks locally.
 
 ## Notes
 
