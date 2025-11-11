@@ -6,7 +6,6 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
-	"github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 )
@@ -71,11 +70,15 @@ func TestParseMinGasErr(t *testing.T) {
 			Denoms: []string{"uluna", "axpla"},
 			Err:    "could not parse min gas error",
 		},
+		{
+			RawLog:        "error in json rpc client, with http response metadata: (Status: 200 OK, Protocol HTTP/2.0). RPC error -32603 - Internal error: broadcast error on transaction validation: tx 92E8CFA81F3C57F9A47FFE0E6858DEE92DB9C634097EA0675ECA7F34E42F2E7A is invalid: code=13, data=, log='insufficient fees; got: 0inj required: 160000000000000inj: insufficient fee', codespace='sdk'",
+			Denoms:        []string{"inj"},
+			ExpectedDenom: "inj",
+			Amount:        160000000000000,
+		},
 	} {
 		fmt.Println("test case ", i, tc.RawLog)
-		coin, err := gas.ParseMinGasError(&types.TxResponse{
-			RawLog: tc.RawLog,
-		}, tc.Denoms)
+		coin, err := gas.ParseMinGasError(tc.RawLog, tc.Denoms)
 		if tc.Err != "" {
 			require.ErrorContains(t, err, tc.Err)
 		} else {

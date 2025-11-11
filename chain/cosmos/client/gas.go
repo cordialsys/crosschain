@@ -22,6 +22,14 @@ import (
 // EstimateGas estimates gas price for a Cosmos chain
 func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 	zero := float64(0)
+	native := client.Asset.GetChain()
+	denoms := []string{}
+	if native.GasCoin != "" {
+		denoms = append(denoms, native.GasCoin)
+	}
+	if native.ChainCoin != "" && native.ChainCoin != native.GasCoin {
+		denoms = append(denoms, native.ChainCoin)
+	}
 
 	gasLimitForEstimate := uint64(1_000_000)
 	tx, err := client.BuildReferenceTransfer(gasLimitForEstimate)
@@ -33,20 +41,20 @@ func (client *Client) EstimateGasPrice(ctx context.Context) (float64, error) {
 		return zero, fmt.Errorf("could not serialize tx: %v", err)
 	}
 
+	var minFeeRaw sdk.Coin
+	var minFeeErr error
+	// The min fee error may come from the RPC error message, or in the res.RawLog field.
 	res, err := client.Ctx.BroadcastTx(txBytes)
 	if err != nil {
-		return zero, fmt.Errorf("could not broadcast tx: %v", err)
+		minFeeRaw, minFeeErr = gas.ParseMinGasError(err.Error(), denoms)
+		if minFeeErr != nil {
+			return zero, fmt.Errorf("could not broadcast tx: %v", err)
+		}
+	} else {
+		minFeeRaw, minFeeErr = gas.ParseMinGasError(res.RawLog, denoms)
 	}
-	native := client.Asset.GetChain()
-	denoms := []string{}
-	if native.GasCoin != "" {
-		denoms = append(denoms, native.GasCoin)
-	}
-	if native.ChainCoin != "" && native.ChainCoin != native.GasCoin {
-		denoms = append(denoms, native.ChainCoin)
-	}
-	minFeeRaw, err := gas.ParseMinGasError(res, denoms)
-	if err != nil || minFeeRaw.Amount.IsZero() {
+
+	if minFeeErr != nil || minFeeRaw.Amount.IsZero() {
 		// This is more common that the hack does not work
 		logrus.WithField("chain", native.Chain).WithField("error", err).Warn("could not parse min gas error")
 

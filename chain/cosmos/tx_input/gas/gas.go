@@ -38,11 +38,11 @@ func TotalFeeToFeePerGas(totalFee string, totalGas uint64) float64 {
 	return minFeePerGas
 }
 
-func ParseMinGasError(res *sdk.TxResponse, denoms []string) (sdk.Coin, error) {
+func ParseMinGasError(rawLog string, denoms []string) (sdk.Coin, error) {
 	// need to pick out the required amount
 	// example: "insufficient fees; got: 0uluna required: 60000uluna: insufficient fee"
 	// The approach will detect coins with valid denoms, then take the max.
-	log := res.RawLog
+	log := rawLog
 	for _, char := range []string{";", ":", "}", "{", ")", "(", "]", "[", "."} {
 		log = strings.ReplaceAll(log, char, " ")
 	}
@@ -80,7 +80,7 @@ func ParseMinGasError(res *sdk.TxResponse, denoms []string) (sdk.Coin, error) {
 	}
 
 	if len(maxFees) == 0 || len(maxFees) > 2 {
-		return sdk.Coin{}, errors.New("could not parse min gas error: " + res.RawLog)
+		return sdk.Coin{}, errors.New("could not parse min gas error: " + rawLog)
 	}
 	// sort and take max
 	sort.Slice(maxFees, func(i, j int) bool {
