@@ -68,6 +68,8 @@ func (tx *Tx) build() error {
 		extrinsic.WithTransactionVersion(tx.rv.TransactionVersion),
 		extrinsic.WithGenesisHash(tx.genesisHash),
 		extrinsic.WithMetadataMode(extensions.CheckMetadataModeDisabled, extensions.CheckMetadataHash{Hash: types.NewEmptyOption[types.H256]()}),
+		// AssetID is required for the asset-hub substrate chains
+		extrinsic.WithAssetID(types.NewEmptyOption[types.AssetID]()),
 	}
 	for _, opt := range opts {
 		opt(fieldValues)
