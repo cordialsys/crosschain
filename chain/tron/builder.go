@@ -233,10 +233,10 @@ func (txBuilder TxBuilder) NewUnfreeze(from xc.Address, balance xc.AmountBlockch
 	return tx, nil
 }
 
-func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, input *txinput.TxInput) (*core.Transaction, error) {
+func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, input *txinput.TxInput) (*core.Transaction, bool, error) {
 	from_bytes, err := GetAddressHash(string(from))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	contract := &core.VoteWitnessContract{}
@@ -246,22 +246,27 @@ func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, i
 	for _, v := range votes {
 		addrhash, err := GetAddressHash(string(v.VoteAddress))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get super representative address hash: %w", err)
+			return nil, false, fmt.Errorf("failed to get super representative address hash: %w", err)
 		}
 
 		// Don't serialize empty votes
 		if v.VoteCount == 0 {
 			continue
 		}
+
 		contract.Votes = append(contract.Votes, &core.VoteWitnessContract_Vote{
 			VoteAddress: addrhash,
 			VoteCount:   int64(v.VoteCount),
 		})
 	}
 
+	// We don't have to create vote transaction if we are going to remove all votes
+	if len(contract.Votes) == 0 {
+		return nil, false, nil
+	}
 	params, err := ptypes.MarshalAny(contract)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal any params: %w", err)
+		return nil, false, fmt.Errorf("failed to marshal any params: %w", err)
 	}
 
 	txContract := &core.Transaction_Contract{
@@ -269,7 +274,7 @@ func (txBuilder TxBuilder) NewVotes(from xc.Address, votes []*httpclient.Vote, i
 		Parameter: params,
 	}
 	tx := input.ToTronTx(txContract)
-	return tx, nil
+	return tx, true, nil
 }
 
 func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
@@ -340,9 +345,13 @@ func (txBuilder TxBuilder) Stake(stakingArgs xcbuilder.StakeArgs, input xc.Stake
 	} else {
 		validatorVotes.VoteCount += stakeVotes
 	}
-	votes, err := txBuilder.NewVotes(from, stakingInput.Votes, &stakingInput.TxInput)
+	votes, ok, err := txBuilder.NewVotes(from, stakingInput.Votes, &stakingInput.TxInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vote tx: %w", err)
+	}
+	// this shouldn't happen - min freeze balance is 1.0 TRX, which equals to 1 vote
+	if !ok {
+		return nil, errors.New("invalid stake operation")
 	}
 
 	transactions = append(transactions, votes)
@@ -473,21 +482,25 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 			return nil, errors.New("expected to unstake from validator, but votes were not provided")
 		}
 		voteDecision.ValidatorVotes.VoteCount -= stakeVotes
-		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
+		votes, ok, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vote tx: %w", err)
 		}
-		transactions = append(transactions, votes)
+		if ok {
+			transactions = append(transactions, votes)
+		}
 	case VoteForAnyValidator:
 		err = ReduceTotalVoteCount(stakingInput.Votes, stakeVotes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unstake votes: %w", err)
 		}
-		votes, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
+		votes, ok, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vote tx: %w", err)
 		}
-		transactions = append(transactions, votes)
+		if ok {
+			transactions = append(transactions, votes)
+		}
 	case NoVoteRequired:
 		// skip
 	}

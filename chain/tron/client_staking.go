@@ -108,14 +108,9 @@ func (c Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (
 		return nil, fmt.Errorf("failed to fetch account: %w", err)
 	}
 
-	voteParams := httpclient.VoteWitnessAccountParams{
-		Owner: args.GetFrom(),
-		Votes: account.Votes,
-	}
-
 	// use 'freezebalancev2' for vote input - the operation is not important, and we
 	// could fail in case the account never frozen any TRX in the past
-	voteInput, err := c.FetchBaseInput(ctx, voteParams)
+	voteInput, err := c.FetchBaseInput(ctx, freezeParams)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrFailedToFetchBaseInput, err)
 	}
