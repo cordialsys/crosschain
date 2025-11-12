@@ -2,6 +2,7 @@ package crosschain
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -68,6 +69,9 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
+	publicKey, _ := args.GetPublicKey()
+	req.FromPublicKey = hex.EncodeToString(publicKey)
+	req.Memo, _ = args.GetMemo()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/stakes", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
@@ -97,6 +101,9 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
+	publicKey, _ := args.GetPublicKey()
+	req.FromPublicKey = hex.EncodeToString(publicKey)
+	req.Memo, _ = args.GetMemo()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/unstakes", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
@@ -125,6 +132,9 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 	}
 	req.Validator, _ = args.GetValidator()
 	req.Account, _ = args.GetStakeAccount()
+	publicKey, _ := args.GetPublicKey()
+	req.FromPublicKey = hex.EncodeToString(publicKey)
+	req.Memo, _ = args.GetMemo()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/withdraws", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
