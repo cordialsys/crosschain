@@ -1,13 +1,13 @@
 package types
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/pkg/hex"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 )
@@ -79,9 +79,8 @@ type TransferInputReq struct {
 
 type FeePayerInfo struct {
 	// Address of the fee payer
-	Address string `json:"address"`
-	// Hex encoded public key
-	PublicKey string `json:"public_key"`
+	Address   string  `json:"address"`
+	PublicKey hex.Hex `json:"public_key"`
 
 	Identity string `json:"identity,omitempty"`
 }
@@ -103,7 +102,7 @@ func NewFeePayerInfoOrNil(feePayerGetter FeePayerGetter) *FeePayerInfo {
 	}
 	identity, _ := feePayerGetter.GetFeePayerIdentity()
 
-	return &FeePayerInfo{Address: string(address), PublicKey: hex.EncodeToString(publicKey), Identity: identity}
+	return &FeePayerInfo{Address: string(address), PublicKey: publicKey, Identity: identity}
 }
 
 type SenderExtra struct {
@@ -111,9 +110,8 @@ type SenderExtra struct {
 	Identity string `json:"identity,omitempty"`
 }
 type Sender struct {
-	Address xc.Address `json:"address"`
-	// hex-encoded
-	PublicKey string `json:"public_key"`
+	Address   xc.Address `json:"address"`
+	PublicKey hex.Hex    `json:"public_key"`
 
 	Extra SenderExtra `json:"extra,omitempty"`
 }
@@ -148,9 +146,8 @@ type StakingInputReqExtra struct {
 }
 
 type StakingInputReq struct {
-	From string `json:"from"`
-	// hex encoded public key
-	FromPublicKey string               `json:"from_public_key,omitempty"`
+	From          string               `json:"from"`
+	FromPublicKey hex.Hex              `json:"from_public_key,omitempty"`
 	Balance       string               `json:"balance,omitempty"`
 	Validator     string               `json:"validator,omitempty"`
 	Account       string               `json:"account,omitempty"`
