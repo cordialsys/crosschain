@@ -623,7 +623,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				testtypes.JsonPrint(txInfo)
 				require.NoError(t, err)
 				require.NotNil(t, txInfo)
-				require.Equal(t, v.val, txInfo)
+				require.Equal(t, testtypes.Reserialize(&v.val), testtypes.Reserialize(&txInfo))
 			}
 		})
 	}

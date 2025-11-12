@@ -235,7 +235,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		fromIdentityMaybe, _ := sender.GetFromIdentity()
 		senders = append(senders, &types.Sender{
 			Address:   sender.GetFrom(),
-			PublicKey: hex.EncodeToString(sender.GetPublicKey()),
+			PublicKey: sender.GetPublicKey(),
 			Extra:     types.SenderExtra{Identity: fromIdentityMaybe},
 		})
 	}
