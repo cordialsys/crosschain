@@ -57,3 +57,8 @@ func (h *Hex) UnmarshalText(data []byte) error {
 func (h Hex) MarshalText() ([]byte, error) {
 	return []byte(h.String()), nil
 }
+
+func FromString(s string) (Hex, error) {
+	var h Hex
+	return h, h.UnmarshalText([]byte(s))
+}

@@ -182,6 +182,14 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		}
 	case xc.DriverZcash:
 		// nothing to do, base58
+	case xc.DriverHedera:
+		// normalize evm addresses
+		prefix := "0x"
+		if !(strings.Contains(address, ".") || strings.Contains(address, "-")) {
+			address = strings.TrimPrefix(address, prefix)
+			address = prefix + address
+			address = strings.ToLower(address)
+		}
 
 	default:
 	}
@@ -260,6 +268,16 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 		hash = strings.ToLower(hash)
 	case xc.DriverFilecoin:
 		// nothing to do, bech32
+	case xc.DriverHedera:
+		// normalize only evm transaction hashes
+		prefix := "0x"
+		if !strings.Contains(hash, ".") {
+			hash = zeroPadHex(prefix, hash, 64)
+
+			hash = strings.TrimPrefix(hash, prefix)
+			hash = prefix + hash
+			hash = strings.ToLower(hash)
+		}
 	default:
 	}
 	return hash
