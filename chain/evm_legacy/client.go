@@ -10,7 +10,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
@@ -122,15 +123,15 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
 	return client.EvmClient.SubmitTx(ctx, txInput)
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	return client.EvmClient.FetchLegacyTxInfo(ctx, txHash)
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	return client.EvmClient.FetchTxInfo(ctx, args)
 }
 
@@ -145,6 +146,6 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return client.EvmClient.FetchDecimals(ctx, contract)
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	return client.EvmClient.FetchBlock(ctx, args)
 }

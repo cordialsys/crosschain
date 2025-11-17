@@ -16,7 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
@@ -134,7 +134,7 @@ func TestFetchTxInfo(t *testing.T) {
 		hash         string
 		responses    []string
 		rcpResponses []string
-		expectedTx   xclient.TxInfo
+		expectedTx   txinfo.TxInfo
 		indexerType  string
 	}
 	var testcases = []testcase{
@@ -149,56 +149,56 @@ func TestFetchTxInfo(t *testing.T) {
 				// seem some endpoints are inconsistent and do not mix scale encoding
 				asRpcResult(&types.Header{Number: 16097420}),
 			},
-			expectedTx: xclient.TxInfo{
+			expectedTx: txinfo.TxInfo{
 				Name:   "chains/DOT/transactions/0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				Hash:   "0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				XChain: xc.DOT,
-				State:  xclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.DOT,
 					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 					Time:   testtypes.FromTimeStamp("2023-06-23T19:10:12Z"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/DOT/assets/DOT",
 						XContract: "DOT",
 						AssetId:   "DOT",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(872321233400),
-								XAddress:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+								XAddress:  txinfo.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
 								AddressId: "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2",
 							},
 						},
-						To: []*xclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(872321233400),
-								XAddress:  xclient.NewAddressName(xc.DOT, "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"),
+								XAddress:  txinfo.NewAddressName(xc.DOT, "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz"),
 								AddressId: "12nr7GiDrYHzAYT9L8HdeXnMfWcBuYfAXpgfzf3upujeCciz",
 							},
 						},
-						Event: xclient.NewEvent("16097417-2", xclient.MovementVariantNative),
+						Event: txinfo.NewEvent("16097417-2", txinfo.MovementVariantNative),
 					},
 					// fee
 					{
 						XAsset:    "chains/DOT/assets/DOT",
 						XContract: "DOT",
 						AssetId:   "DOT",
-						To:        []*xclient.BalanceChange{},
-						From: []*xclient.BalanceChange{
+						To:        []*txinfo.BalanceChange{},
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(157316518),
-								XAddress:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+								XAddress:  txinfo.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
 								AddressId: "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2",
 							},
 						},
-						Event: xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
 				Confirmations: 3,
@@ -216,35 +216,35 @@ func TestFetchTxInfo(t *testing.T) {
 				// seem some endpoints are inconsistent and do not mix scale encoding
 				asRpcResult(&types.Header{Number: 3401825}),
 			},
-			expectedTx: xclient.TxInfo{
+			expectedTx: txinfo.TxInfo{
 				Name:   "chains/TAO/transactions/0x88a147c2e869ec68827c1db6bba7e5923f555adbc658ad58ad74b730e5eae3e2",
 				Hash:   "0x88a147c2e869ec68827c1db6bba7e5923f555adbc658ad58ad74b730e5eae3e2",
 				XChain: xc.TAO,
-				State:  xclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.TAO,
 					Height: xc.NewAmountBlockchainFromUint64(3401817),
 					Hash:   "0x9d264b95980880a3ce28024e093af7f39c434bfc2dd0472fffdcbb924a369b25",
 					Time:   testtypes.FromTimeStamp("2024-07-17T01:17:24Z"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/TAO/assets/TAO",
 						XContract: "TAO",
 						AssetId:   "TAO",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(10000000),
-								XAddress:  xclient.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
+								XAddress:  txinfo.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
 								AddressId: "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4",
 							},
 						},
-						To: []*xclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(10000000),
-								XAddress:  xclient.NewAddressName(xc.TAO, "5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ"),
+								XAddress:  txinfo.NewAddressName(xc.TAO, "5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ"),
 								AddressId: "5FpzwkKW7zwbDP5aUuBfzzTCMseCoxwTjxAjK8oKjziQsoyQ",
 							},
 						},
@@ -253,16 +253,16 @@ func TestFetchTxInfo(t *testing.T) {
 						XAsset:    "chains/TAO/assets/TAO",
 						XContract: "TAO",
 						AssetId:   "TAO",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							// fee
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(124557),
-								XAddress:  xclient.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
+								XAddress:  txinfo.NewAddressName(xc.TAO, "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4"),
 								AddressId: "5HP3f2acWoEKj9AVZGa9DtA4bykmoSBSovoSZTL2vD2DgqV4",
 							},
 						},
-						To:    []*xclient.BalanceChange{},
-						Event: xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						To:    []*txinfo.BalanceChange{},
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
 				Confirmations: 8,
@@ -286,34 +286,34 @@ func TestFetchTxInfo(t *testing.T) {
 				// seem some endpoints are inconsistent and do not mix scale encoding
 				asRpcResult(&types.Header{Number: 16097420}),
 			},
-			expectedTx: xclient.TxInfo{
+			expectedTx: txinfo.TxInfo{
 				Name:   "chains/DOT/transactions/0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				Hash:   "0x47cf6465b5288b5bb1e1107ff9f8a7ac9e690dc6eead5fb3fa12f47213c028cb",
 				XChain: xc.DOT,
-				State:  xclient.Failed,
+				State:  txinfo.Failed,
 				Final:  true,
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.DOT,
 					Height: xc.NewAmountBlockchainFromUint64(16097417),
 					Hash:   "0x5031ce3733226cfd2c877811d0779760cf3cc29f0ba0cea500ef380c19e72fa4",
 					Time:   testtypes.FromTimeStamp("2023-06-23T19:10:12Z"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					// fee
 					{
 						XAsset:    "chains/DOT/assets/DOT",
 						XContract: "DOT",
 						AssetId:   "DOT",
-						To:        []*xclient.BalanceChange{},
-						From: []*xclient.BalanceChange{
+						To:        []*txinfo.BalanceChange{},
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(157316518),
-								XAddress:  xclient.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
+								XAddress:  txinfo.NewAddressName(xc.DOT, "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2"),
 								AddressId: "138DFvwTQfQN9ZttPm1HDBVRcEwGfsPxdWRfKktrquziu8c2",
 							},
 						},
-						Event: xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
 				Confirmations: 3,

@@ -7,6 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/template/client"
 	"github.com/cordialsys/crosschain/chain/template/tx"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,9 @@ func TestFetchTxInput(t *testing.T) {
 func TestSubmitTx(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
-	err := client.SubmitTx(context.Background(), &tx.Tx{})
+	tx, err := xctypes.SubmitTxReqFromTx(&tx.Tx{})
+	require.EqualError(t, err, "failed to serialize tx: not implemented")
+	err = client.SubmitTx(context.Background(), tx)
 	require.EqualError(t, err, "not implemented")
 }
 

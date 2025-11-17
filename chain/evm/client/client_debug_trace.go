@@ -9,7 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
-	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/sirupsen/logrus"
@@ -99,18 +99,18 @@ func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.
 		}
 
 		xcAmount := xc.AmountBlockchain(*trace.Value.ToInt())
-		event := xclient.NewEvent(trace.traceId, xclient.MovementVariantInternal)
+		event := txinfo.NewEvent(trace.traceId, txinfo.MovementVariantInternal)
 		if trace.traceId == "" {
 			// this is just the native eth transfer (.value in the tx).
-			event = xclient.NewEvent("", xclient.MovementVariantNative)
+			event = txinfo.NewEvent("", txinfo.MovementVariantNative)
 		}
-		sourcesAndDests.Sources = append(sourcesAndDests.Sources, &xclient.LegacyTxInfoEndpoint{
+		sourcesAndDests.Sources = append(sourcesAndDests.Sources, &txinfo.LegacyTxInfoEndpoint{
 			Event:       event,
 			Address:     xc.Address(trace.From.String()),
 			Amount:      xcAmount,
 			NativeAsset: native,
 		})
-		sourcesAndDests.Destinations = append(sourcesAndDests.Destinations, &xclient.LegacyTxInfoEndpoint{
+		sourcesAndDests.Destinations = append(sourcesAndDests.Destinations, &txinfo.LegacyTxInfoEndpoint{
 			Event:       event,
 			Address:     xc.Address(trace.To.String()),
 			Amount:      xcAmount,

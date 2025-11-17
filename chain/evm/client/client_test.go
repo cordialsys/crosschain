@@ -11,9 +11,8 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/evm/client"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
-	xcclient "github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
@@ -250,7 +249,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 		name       string
 		txHash     string
 		resp       interface{}
-		val        xclient.LegacyTxInfo
+		val        txinfo.LegacyTxInfo
 		err        string
 		forceError int
 		env        map[string]string
@@ -269,7 +268,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0xc","difficulty":"0x0","extraData":"0x506f776572656420627920626c6f58726f757465","gasLimit":"0x1c9c380","gasUsed":"0x6370e2","hash":"0x6731d229b8ee277afb29ef9f0505aa628642842e6ba9ba484ec26f3d74cb5e14","logsBloom":"0x00200800024010000018000280010080000d0000014000080045001088000010012210010001220200000001010400840000100440020304040016048024004000060000047020804900000b00a002240008c2000500300180088000a08800200080310002000000000000a40010084080000804010000000124041488000000410222200000100a2440001080000402000044810004008800800145102200400200000010000010000000020010000000400200204c00400100014000a20002006040020180000885422001050240080048000000814010000122000aa2a10a28100229340042008400436020002800000111000a0040d00000400000000041","miner":"0x8dc847af872947ac18d5d63fa646eb65d4d99560","mixHash":"0x0fcc735f658e8a7a25ae8d8230a683f9408a1d9bc0e9b3526b0c5c3807d492c6","nonce":"0x0000000000000000","number":"0x8914ec","parentHash":"0x705a0b921245d4e480933e5fd1cab446ded464600b374aaa21bb9d2fbf6dd071","receiptsRoot":"0xc3853474f16acbc611eb5ca71dd8c54ace3100d878363c57a882ae8378955988","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x16b26","stateRoot":"0x26f735fceea3cfb2c72749da246e7f53934a6585f4727e1b0709d5c74995807f","timestamp":"0x645d6e84","totalDifficulty":"0xa4a470","transactions":["0x638e9ead7eaddf7a8ad32f1729f4a6991815f8c04846b92245557370a52cdafc","0x52726e2b57c4a32e29f0ac293207f25d77875595a4ee6b181adfb06146b0fffe","0xe93306de0a0c500013e05c6ffb7c501c6def1045fb8a559796b953c1e466260d","0x4dd95cc5c4fe7aa435643ae51248cee90ded85ad992ac99f8079957806c203d3","0x308553ae908896a3a78cc4bce5e9fa32b8449213a9a8003bdad3e2daa09076b5","0x47364731e2320f460d9272c13c76fd9dce80e91fda3b8ce80fe08a64086d59e3","0xc6f77048dfa354af3f77d69245dc62106af2738d33d4f5f8b468141f897b148f","0xdbad6020b3387db9f0cb1e464bf1ec765526d5fbeed0d780bb70ce5495f72303","0xbde8d289ad2a3d90e5678acef02b3b042b61626be0a39ed639b0a38879d0a8e1","0x884a4f9d6e3af9fd2f5c72b93b903dc1792df52001e12b114dc6bf44e01c4ead","0x662ed8fa609854f586e3f4eafdec3d55f5531499b7a23bd80644e79ed6b2b053","0x69026737fc70002e523e7703ce1e0d89af7390d529d308cb5e08e2c55c3fc1e1","0x542890dad9bea30d477893415eda3d8f3f2a3bf18e709f3f4e24c167d5dd10dc","0xdd33d366802312281f4f872097805e519ae4617733fcd978b22d1f7e1abbb7d9","0x79dfc706d7581c697ebe08d540894daaca00d496b8ba3e6c49bcf800e7a0aa22","0x4b90fc9584f3084f82c75dc676830e87b3669f9773f7611a64562683bcf09f92","0x482a3358d2a18c264e73e1e11036241f50554a78b854b35c6d1adfc2d1d4c218","0x2e8ffa43bfc5a9916f8eb469e343b841fa4bd56ff388b4194e9cf9be9133bc9f","0x5faeaf922157d605c19f8a5a75f449960ded61297a50a7ed0afc887c209bcab1","0x935c2426af0ce34c53d7a9c074b3c6182740c943612315f08269a0cc010055e7","0x04ff942582a2504fb39a6be111f9db97d9827d27fd0c2841cc7961935fd1be6c","0xa46de5b9bbf3848ca4572cc45c4c2d694a9c7f2d45edaea75f492342f0715226","0xad77b0c03769ceeb226f41ab8edc4e202b14b3efc1c83a7e3eb78bc3599c7dbe","0x82bdfff652050b14a56dfc839b7d160114976ccb3da037f3c272d4b1aa101439","0x2ebfffde39cdc03beaf4bccc62c3a08a351fbd1f62303a7aad437ce696794e45","0xea05481bc288c83aa859e3ee29f838ec69e145f5dbd5d9ca5d3c4ae9b281cd80","0xf3fe1622f73fb60d92794266d980bbe9a35abf475a5e25d36a60773a1b9ca09a","0x5b349c397c4a5635a6b3804e375c0682835fbba2e0d705310b1c64d258c49dab","0xc7b07bdd5677c3c346f49bd2d54d65370c34a9dd8c29ea6d4bb1729ab6e13639"],"transactionsRoot":"0x73be4e736e029b9fdcbda4813ad4731eb0b394f37577f150e637a5a40926ca2f","uncles":[],"withdrawals":[{"index":"0x4fd174","validatorIndex":"0x9f40","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1d48af"},{"index":"0x4fd175","validatorIndex":"0x9f41","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1e3c54"},{"index":"0x4fd176","validatorIndex":"0x9f42","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1eccb3"},{"index":"0x4fd177","validatorIndex":"0x9f43","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1ed7a0"},{"index":"0x4fd178","validatorIndex":"0x9f44","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1e48b5"},{"index":"0x4fd179","validatorIndex":"0x9f45","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1db4e6"},{"index":"0x4fd17a","validatorIndex":"0x9f46","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1a460a7"},{"index":"0x4fd17b","validatorIndex":"0x9f47","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1ee461"},{"index":"0x4fd17c","validatorIndex":"0x9f48","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1e3be4"},{"index":"0x4fd17d","validatorIndex":"0x9f49","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1e9651"},{"index":"0x4fd17e","validatorIndex":"0x9f4a","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1defd9"},{"index":"0x4fd17f","validatorIndex":"0x9f4b","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1e8c12"},{"index":"0x4fd180","validatorIndex":"0x9f4c","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1dd8c7"},{"index":"0x4fd181","validatorIndex":"0x9f4d","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1ec5c4"},{"index":"0x4fd182","validatorIndex":"0x9f4e","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1df604"},{"index":"0x4fd183","validatorIndex":"0x9f4f","address":"0xf36f155486299ecaff2d4f5160ed5114c1f66000","amount":"0x1ec6f6"}],"withdrawalsRoot":"0x5579318dff536da3ea63a244c27453e29654b9c97a235ca1c00934663fe1f26c"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				BlockHash:     "0xd090a9e97e00aa135710a92c827def07e4c8ff2269fd69411c48402e0a6a2a89",
 				TxID:          "bca068cf854af49fc6b28ff5405068d51d3cefb870e624d22d046005a22349d0",
 				From:          "0x17519be39a6b67a19468dfbdc1d795c38232c274",
@@ -277,20 +276,20 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				BlockIndex:    8983756,
 				BlockTime:     1683844272,
 				Confirmations: 32,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0x17519be39a6b67a19468dfbdc1d795c38232c274",
 						Amount:      xc.NewAmountBlockchainFromStr("5321609027609419494"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("", xcclient.MovementVariantNative),
+						Event:       txinfo.NewEvent("", txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xa0a5c02f0371ccc142ad5ad170c291c86c3e6379",
 						Amount:      xc.NewAmountBlockchainFromStr("5321609027609419494"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("", xcclient.MovementVariantNative),
+						Event:       txinfo.NewEvent("", txinfo.MovementVariantNative),
 					},
 				},
 				Fee:      xc.NewAmountBlockchainFromStr("89668526728137000"),
@@ -312,7 +311,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0xa","difficulty":"0x0","extraData":"0xd883010b05846765746888676f312e32302e32856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0xe7023b","hash":"0x7041515bf99b52262d4faeb17ba2a5f772ea463c30db9798371ff2094aa75ddc","logsBloom":"0x006408484088f02c801010009515008412eb29040002580c858101128851002004aa84e00080800041110000150401a4485110540020082012001624c124a26100026032947080805802020800801224020d82404007202080518105888b08010010350492478080804004a604102b0000080036000c50c48020125602001040132020621880ad0a20442c44400305264001800102100a880001014914668040660c000638880202101200222518830026000220a04402400702018408a2000390a144a3014020082402204345126444000814000080229030432739098261821810002120628114a854032c1280501001012300000812508106400802100080","miner":"0xc6e2459991bfe27cca6d86722f35da23a1e4cb97","mixHash":"0x522990debf63b7812eb8b6b96e0c56f91d567b8e2109e0a5f77450e7315ca21d","nonce":"0x0000000000000000","number":"0x89153b","parentHash":"0x41957451a5214e3420e12199c702016f2aa6a2d4848d429eefdfccc98661afd9","receiptsRoot":"0x01d943be32594c16c5c7558ca9b0fed2bfbb159e4e607835aeb22a827916f552","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xfb37","stateRoot":"0x0d2abf67da6fd97a434c3d39058eff6acdf45b276e40b387eb32390c576fc413","timestamp":"0x645d72e0","totalDifficulty":"0xa4a470","transactions":["0x1aae2d96b2aee3ecfb01d95c33b32493df758a99b93046ff7dd50172b8cf6d30","0xa498121ad49d5dfc5b46d24b85ea857b426a1ed0cf4133c2cb96561a478d8e08","0xbd4de1c91760f3123402e74a6814fd972fa9a5c03fd18b13ffb7ec7586883425","0xce48fb1ee75beb40acee9bc54dda29e7811a4d3eed1d635ce7ba184979a6d883","0xe532067ac4b74deffca708c1eec3cfe7ba79dbac70518fb752d86941d828e4eb","0x7eb0a23f03525a0830befde8bfa3fa7c1bccef491711356c4880d401b62eb671","0xde51711ca74c63e8d9afdd8152d0a2c0c4f125ba3f6a9126c7d490fdd032c4cf","0xbd6aa59ce286c4221afd9000f834ddc207a93a7bc2a9ae068713ce8a43ee2742","0x746f05148b6ce98fc136d7c4ed00a73cc5c2ea68ab80bd3c5d3bd94402e20cc7","0x32991b9b8a1b1ba7ff7a9763f59e2ea1543acd28d6e2789d328a8317b4f74244","0x5a21a15f8736d513c48ce432ef3640c647f22d2ebb3dba833b0edfc92f27ef1d","0x4ee9cb1837031eb167b1357e8c9c19701ef6295729c2c580f9f7b9dee3b03f7c","0x4d5d016a4067cac522a426f12698d10915546fb65136074eb971cffbb8d6169e","0x68007016d532e43af452ef414a95040259ba86dcc26f380985673601e6692522","0xea0a297b661d014fedfdb2da3268fa1798db565d90ca9596bdf71df8b573df80","0x81058b8e6beef482f6a93e74c8cc5eaec892466465c3094713a950179c1a8785","0x786824ed4919c538506cfa100ee2e96869dca946d9e2be02401a8f7e1f66c6a8","0xdee6f95049d81f0d8375db35e5d0a668d8492032b1448a94b0f7912ec6c2ac64","0x61134262a45b0cdeb52d96e90c97780bc08779af8b086036d61d0657623dda01","0xbe825ab6ca9760557b9fa90e88c0d5f3fc58f5dd197bc2454f27d5e05b482f10","0xd71385e6984b41eafa8ef8e8614ec7c955e0c6c0073b2ae0073d4be11c1f7610","0x5e4ce86d4b6b09ef361f873a8ccb02c6b28f203b54a5a299ff5b3a486a5591e0","0x0ce8a4a79d39c3d8f57eb632deefd3901c23ae9cb9f49fc8811bc815195e7ec1","0xbd5f6f91610afd56a4d80483e38c14b7b479876e6f156828590c75bc09a317f4","0x824a8744c6cc856e49239d0e6547396d8435944bdb8fe89ca868f5a6c31a9c3f","0xf46646fc9e738b4079367c8d950b6037315ecff744b6fefa52afe1943c88a45e","0xb77420a96f2b4be4a4bedac65b41bdd98e5e7541edfa022451cfc927ec46c60f","0x5d4fa90d7fd3fe0571f403149cd88869f9185ce6854a323ed8d454e319f4d80a","0x6dbdd47cdaa9cd3c391c67d6d623e7bbeb3302c09ea7b4770ee0649245dfc80e","0x50e6add79c2895a3f78f748eff4778d52f5e428e2672e23fa38b9347559e451d","0xd0f55fd2c13714ba6aee6cff8851733545ce2a2b1a89723f88d039a0d68f68d8","0xd4965e1587ec7256dbdda89b73d961cd5d4d5623ddbe78bca33eb00de141f236","0x62ccd2c5e3b5bff5be54f95f5f26e70043edb8e3dc875ae4c7aa9ca7bb26f4fa","0xea90ddc11b18a323704f9b488f854e915ed1f85e47a5aa97d92490c3cb104f6b","0x23d2bd4b44bff5517b1302d15fa69195ddd288ec666cf7ac06c091ed415324d0","0xdc6d15f3e70d77a059570e8f797c8bd77bc1a763e03351175dcafe80235c8654","0xfba6bed9ee750c686a7f97fb1639a9eadd746ba47d367221caa9a3d6ca8e76b3","0x382510b2ee498a11dfc79c13ccc881221b5d22ac1079c42ece5a9ca481a83299","0xbee5e61838f19180bf3b2d6a1f5457be9449060a77cf997f9899c2c0abbe8bcb","0xb8772fe626c2a3151e5c2947b51f80519df6cdff0ba34d9b22a148d9e88740b1","0x89a3606507a02b2b879ded73d8a21240dd53f5e8b3a2733458d773de8368022c","0xd87c56af4fdc483cb66935d7b47afcc0f545098a0c689f6baa102ed52debdef2","0x7b49ea42028f098d46b330bd4b15422004cfdab6194de4307d6465fe3842dffb"],"transactionsRoot":"0xd6a76734c1194ba7a54efdf597b6bbd71a7c258df83e17ae24c61ef55ed6f5a6","uncles":[],"withdrawals":[{"index":"0x4fd5dc","validatorIndex":"0x343b9","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e3737"},{"index":"0x4fd5dd","validatorIndex":"0x343ba","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e6b61"},{"index":"0x4fd5de","validatorIndex":"0x343bb","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e609a"},{"index":"0x4fd5df","validatorIndex":"0x343bc","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e446a"},{"index":"0x4fd5e0","validatorIndex":"0x343bd","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1ec58a"},{"index":"0x4fd5e1","validatorIndex":"0x343be","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f08f0"},{"index":"0x4fd5e2","validatorIndex":"0x343bf","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e388e"},{"index":"0x4fd5e3","validatorIndex":"0x343c0","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1de6e9"},{"index":"0x4fd5e4","validatorIndex":"0x343c1","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d8671"},{"index":"0x4fd5e5","validatorIndex":"0x343c2","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d921d"},{"index":"0x4fd5e6","validatorIndex":"0x343c3","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e47be"},{"index":"0x4fd5e7","validatorIndex":"0x343c4","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e68a0"},{"index":"0x4fd5e8","validatorIndex":"0x343c5","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d4535"},{"index":"0x4fd5e9","validatorIndex":"0x343c6","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e9eee"},{"index":"0x4fd5ea","validatorIndex":"0x343c7","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1eb96d"},{"index":"0x4fd5eb","validatorIndex":"0x343c8","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1da634"}],"withdrawalsRoot":"0x5f2d20dfa1ed20da2588eea50327afc1b477e2ad628b8d40c5eaddabbf7d32be"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				BlockHash:       "0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7",
 				TxID:            "7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b",
 				From:            "0xe8be958f910fb1bb439eafbcfd0475509ab6d43f",
@@ -321,22 +320,22 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				BlockTime:       1683845580,
 				Confirmations:   19,
 				ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "0xe8be958f910fb1bb439eafbcfd0475509ab6d43f",
 						Amount:          xc.NewAmountBlockchainFromStr("10000000000000"),
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(24, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(24, txinfo.MovementVariantToken),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "0x5d2ebdf613d50dc598a09d8ebdc3f285be6cf8ed",
 						Amount:          xc.NewAmountBlockchainFromStr("10000000000000"),
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(24, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(24, txinfo.MovementVariantToken),
 					},
 				},
 				Fee:      xc.NewAmountBlockchainFromStr("51970500381117"),
@@ -358,7 +357,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0xb","difficulty":"0x0","extraData":"0x4e65746865726d696e64","gasLimit":"0x1c9c380","gasUsed":"0x411183","hash":"0xfab7fb7e5d36366c47ae086992949daf4f1ff56488b0da8003591c162e54ccb0","logsBloom":"0x8000120080284004000020030195024400030100004110080008000008000000034880010080820000020108000000400000100400000020020404100160800020004000988000000000000a000810060225004000800080004841004008000001002104020480400000000000500f8100014000002043810000401c00000008002a000008001000a0000924020a041000050010000002000000000100400410020400041100040800001000144082100441428680c801424002000601020020809000020100000085026000000000000000d00040000080100900110100240208900801246000102034020d02c4003082010110001902848002000001010440","miner":"0x000095e79eac4d76aab57cb2c1f091d553b36ca0","mixHash":"0x79788fc0b75dcc9523901ae5aa44a6bce981cc88a03006998fdd686e0c497f32","nonce":"0x0000000000000000","number":"0x89155e","parentHash":"0xb54b4ee55f85cbad2545bcd2e65949d8c9141849a3c8e63a3ecfdf47a15ac11a","receiptsRoot":"0xba2c9155ca1d0c30b8df13f7edb42da9f5d0982eeadf449c68eff01bdaf608b0","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xbb5b","stateRoot":"0x7d3e4185f85f2dedc56263238cf0c6b1f20c190a913f7a0d313017c605c381ac","timestamp":"0x645d74f0","totalDifficulty":"0xa4a470","transactions":["0xd1f8c9dc13e95674313b1a68d6886c4af50b0db585e51fbccfc542039b2906c1","0x6eef6929d592942fc33f320fc1eeab297374823ee4288e85647c4a7272dfcd30","0x062899dbee1eadb3e04750e3d634605da9f3810a36c9506b96f8581fd46782f3","0x7d60969bee5d67c811d5e3be122fee29b29502691f26dfdf2ee0ad066cebfc16","0x5fa5fe97b5df6d1b4228b5440d72d19591e6a6fef0cc4f5149f2662a777fc072","0x326c0541499679643dfe5d1e68418e8f1ac1638141edbd1ea9aa81466893b064","0xc22781323752fbf5db6650b5111f3d32e5d935a9fd395ed677191f1ded0996a2","0x23daed3af731f2c1783956fbfefef441541d39e9fcc3f5fd03f769423f8e07dd","0x8c549220b3a0c1de2be998412ff96562e5a4d0e7c4916d59f2d58cdfbbe15c9a","0xaf72951e96959ebd188e012eb4097180c0c3aef0a4e01ccff895a02bbc9f467d","0xc49ff950234d88cba3f26ff19ea19a73e4d3dc5d29d2f194249f1b1dfff51a64","0x4d6a46d288144b179f34e812d32770dd7771f7aa9981d8eb710eff806d82cf07","0x4e52ff96e4a1b3a402b4cc204bc744a6bf0cfb899f9ec9d954d9c9a6b299ba85","0xeda7afa61cbae6af5d59a37939fdb3c45c19e90c5dbb1763c0615a4434ea12a1","0x7536b273e1d95f89776a7e554bfeb7e31829abe1b744ae9500945810d5786d4b","0xb3300adbb2dff7f02e5d95e9f6d2d382d8751a4d508eff96c5cae876e0a7c525","0x6c69ada417dd8f85ce552a65284a8df0f01ca47c1f4f11e23ea160e4b59177a4","0x8a209655a148cedd506fd293820f7e81f044a77e54c534d4cc5a8f47c294b6d5","0xdc4ba5332200de1bde9be4077ddd14534748cc5f08099198c4ec265b9902f505","0xe0929869936568afd6a855af710392f2b31b5c6ceddbbb2d27efb53cac13dc55","0x6a3aa8a16fd622ca47d3ff684737acbda22d5d984c9d0a60d533b7c077f5b4d6","0x9623aded68f1a26022e873d0407e5cd436e6e21540733794db1ae8a906e73946","0xd479b0dd8f09e13cb1c05cf7f558a025ef7cf0a4b9af6e59c092b5288ee56b53","0xab9da6e93e805971b7ed4048e1931f2a9a83711792f62c3cdcff9acf98ffbbbb","0x658042508ec734452144a452c049403df152e84267ee5119fcf5d32e1f552c45","0x774e2df2c49b185bace3af75cb788ec162ebc4976f319d54b19832428045748d"],"transactionsRoot":"0xe8cd884359b2604683ff552a25dcd20a6d44a8eb11f5a23f32760160fafe0cd3","uncles":[],"withdrawals":[{"index":"0x4fd80c","validatorIndex":"0x345e9","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1ec58e"},{"index":"0x4fd80d","validatorIndex":"0x345ea","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f03e2"},{"index":"0x4fd80e","validatorIndex":"0x345eb","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d9006"},{"index":"0x4fd80f","validatorIndex":"0x345ec","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1edc15"},{"index":"0x4fd810","validatorIndex":"0x345ed","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1ec0d3"},{"index":"0x4fd811","validatorIndex":"0x345ee","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1dfa69"},{"index":"0x4fd812","validatorIndex":"0x345ef","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f1c2d"},{"index":"0x4fd813","validatorIndex":"0x345f0","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1dece2"},{"index":"0x4fd814","validatorIndex":"0x345f1","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d6d25"},{"index":"0x4fd815","validatorIndex":"0x345f2","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1eb680"},{"index":"0x4fd816","validatorIndex":"0x345f3","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f2c57"},{"index":"0x4fd817","validatorIndex":"0x345f4","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d92b0"},{"index":"0x4fd818","validatorIndex":"0x345f5","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e1b8e"},{"index":"0x4fd819","validatorIndex":"0x345f6","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e480d"},{"index":"0x4fd81a","validatorIndex":"0x345f7","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f37d6"},{"index":"0x4fd81b","validatorIndex":"0x345f8","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e3d26"}],"withdrawalsRoot":"0xd35e7c907fbcafc91dfef93f1db5e612de63a16e3d60484e61c708420415bff2"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				BlockHash: "0x17d3a092ad1855a468fd1cbfeb03245ab09367272daf2433aa93ebb41e570f2d",
 				TxID:      "b3dcb32a7bb4856845898033522c676c1d2d50e0b07e5ec36880cd2d8b2a6b0f",
 				From:      "0x489a3aa83c1f204f0647c67c9fbf3e7ee1463bc5",
@@ -367,64 +366,64 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				BlockIndex:    8983855,
 				BlockTime:     1683845688,
 				Confirmations: 47,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "0x489a3aa83c1f204f0647c67c9fbf3e7ee1463bc5",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEvent("", xcclient.MovementVariantNative),
+						Event:           txinfo.NewEvent("", txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(30, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(30, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0xb3a16c2b68bbb0111ebd27871a5934b949837d95",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(31, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(31, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x805fe47d1fe7d86496753bb4b36206953c1ae660",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(36, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(36, txinfo.MovementVariantToken),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "0x805fe47d1fe7d86496753bb4b36206953c1ae660",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEvent("", xcclient.MovementVariantNative),
+						Event:           txinfo.NewEvent("", txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "0xb3a16c2b68bbb0111ebd27871a5934b949837d95",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(30, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(30, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x805fe47d1fe7d86496753bb4b36206953c1ae660",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(31, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(31, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x00007d0ba516a2ba02d77907d3a1348c1187ae62",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(36, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(36, txinfo.MovementVariantToken),
 					},
 				},
 				Fee:      xc.NewAmountBlockchainFromStr("248127001985016"),
@@ -452,7 +451,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				// trace_transaction
 				`[{"action":{"from":"0x96a3206512d4e65739229e445d14699f4f530250","callType":"call","gas":"0x3a6b4","input":"0x791ac947000000000000000000000000000000000000000000000000001ea12c05fdb994000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000096a3206512d4e65739229e445d14699f4f53025000000000000000000000000000000000000000000000000000000196362bc3000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000d059821f0c64d3fc7a882ee860e76e263a6b92a3000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","to":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x23c81","output":"0x"},"subtraces":7,"traceAddress":[],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"call","gas":"0x3861b","input":"0x23b872dd00000000000000000000000096a3206512d4e65739229e445d14699f4f530250000000000000000000000000092338cdae84595e85fa07e716f3d9f3e529a1fc000000000000000000000000000000000000000000000000001ea12c05fdb994","to":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0xd32c","output":"0x0000000000000000000000000000000000000000000000000000000000000001"},"subtraces":3,"traceAddress":[0],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","callType":"staticcall","gas":"0x34814","input":"0xad5c4648","to":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x113","output":"0x000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"},"subtraces":0,"traceAddress":[0,0],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","callType":"staticcall","gas":"0x342ae","input":"0xd06ca61f00000000000000000000000000000000000000000000000029a2241af62c000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000d059821f0c64d3fc7a882ee860e76e263a6b92a3","to":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x2186","output":"0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000029a2241af62c0000000000000000000000000000000000000000000000000000001375fc9893a615"},"subtraces":1,"traceAddress":[0,1],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"staticcall","gas":"0x323af","input":"0x0902f1ac","to":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x9c8","output":"0x000000000000000000000000000000000000000000000001344c127569372a9e00000000000000000000000000000000000000000000000000a400dbb383266d0000000000000000000000000000000000000000000000000000000067fd7bcf"},"subtraces":0,"traceAddress":[0,1,0],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","callType":"call","gas":"0x8fc","input":"0x","to":"0x78fa5331a373713856c191cfc84f8581388acae9","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x0","output":"0x"},"subtraces":0,"traceAddress":[0,2],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"staticcall","gas":"0x2af83","input":"0x0902f1ac","to":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x1f8","output":"0x000000000000000000000000000000000000000000000001344c127569372a9e00000000000000000000000000000000000000000000000000a400dbb383266d0000000000000000000000000000000000000000000000000000000067fd7bcf"},"subtraces":0,"traceAddress":[1],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"staticcall","gas":"0x2ab8a","input":"0x70a08231000000000000000000000000092338cdae84595e85fa07e716f3d9f3e529a1fc","to":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x269","output":"0x00000000000000000000000000000000000000000000000000c2a207b980e001"},"subtraces":0,"traceAddress":[2],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"call","gas":"0x2a321","input":"0x022c0d9f0000000000000000000000000000000000000000000000003064f29c096623c400000000000000000000000000000000000000000000000000000000000000000000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000","to":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0xfda8","output":"0x"},"subtraces":3,"traceAddress":[3],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","callType":"call","gas":"0x26527","input":"0xa9059cbb0000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d0000000000000000000000000000000000000000000000003064f29c096623c4","to":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x750a","output":"0x0000000000000000000000000000000000000000000000000000000000000001"},"subtraces":0,"traceAddress":[3,0],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","callType":"staticcall","gas":"0x1ef84","input":"0x70a08231000000000000000000000000092338cdae84595e85fa07e716f3d9f3e529a1fc","to":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x216","output":"0x00000000000000000000000000000000000000000000000103e71fd95fd106da"},"subtraces":0,"traceAddress":[3,1],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x092338cdae84595e85fa07e716f3d9f3e529a1fc","callType":"staticcall","gas":"0x1ebe1","input":"0x70a08231000000000000000000000000092338cdae84595e85fa07e716f3d9f3e529a1fc","to":"0xd059821f0c64d3fc7a882ee860e76e263a6b92a3","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x269","output":"0x00000000000000000000000000000000000000000000000000c2a207b980e001"},"subtraces":0,"traceAddress":[3,2],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"staticcall","gas":"0x1a7a2","input":"0x70a082310000000000000000000000007a250d5630b4cf539739df2c5dacb4c659f2488d","to":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x216","output":"0x0000000000000000000000000000000000000000000000003064f29c096623c4"},"subtraces":0,"traceAddress":[4],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"call","gas":"0x1a3ec","input":"0x2e1a7d4d0000000000000000000000000000000000000000000000003064f29c096623c4","to":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","value":"0x0"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x2407","output":"0x"},"subtraces":1,"traceAddress":[5],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","callType":"call","gas":"0x8fc","input":"0x","to":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","value":"0x3064f29c096623c4"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x53","output":"0x"},"subtraces":0,"traceAddress":[5,0],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"},{"action":{"from":"0x7a250d5630b4cf539739df2c5dacb4c659f2488d","callType":"call","gas":"0x1651d","input":"0x","to":"0x96a3206512d4e65739229e445d14699f4f530250","value":"0x3064f29c096623c4"},"blockHash":"0xb8e023e3a1311366a68194f33c94822c020935b9c6aca1c41682704bdfab108d","blockNumber":22269867,"result":{"gasUsed":"0x0","output":"0x"},"subtraces":0,"traceAddress":[6],"transactionHash":"0xb5b15d3a273418e4f95fc5e6f619083ea03a0459510a28a339579e237359af94","transactionPosition":116,"type":"call"}]`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				BlockHash: "0x17d3a092ad1855a468fd1cbfeb03245ab09367272daf2433aa93ebb41e570f2d",
 				TxID:      "b3dcb32a7bb4856845898033522c676c1d2d50e0b07e5ec36880cd2d8b2a6b0f",
 				// don't care where from is mapped to (legacy)
@@ -463,74 +462,74 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				BlockTime:       1684954511,
 				Confirmations:   8348364,
 				ContractAddress: "",
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
 						Amount:      xc.NewAmountBlockchainFromStr("3487178763478115268"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("5_0", xcclient.MovementVariantInternal),
+						Event:       txinfo.NewEvent("5_0", txinfo.MovementVariantInternal),
 					},
 					{
 						Address:     "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
 						Amount:      xc.NewAmountBlockchainFromStr("3487178763478115268"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("6", xcclient.MovementVariantInternal),
+						Event:       txinfo.NewEvent("6", txinfo.MovementVariantInternal),
 					},
 					{
 						Address:         "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(30, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(30, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0xb3a16c2b68bbb0111ebd27871a5934b949837d95",
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(31, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(31, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x805fe47d1fe7d86496753bb4b36206953c1ae660",
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(36, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(36, txinfo.MovementVariantToken),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0x7a250d5630b4cf539739df2c5dacb4c659f2488d",
 						Amount:      xc.NewAmountBlockchainFromStr("3487178763478115268"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("5_0", xcclient.MovementVariantInternal),
+						Event:       txinfo.NewEvent("5_0", txinfo.MovementVariantInternal),
 					},
 					{
 						Address:     "0x96a3206512d4e65739229e445d14699f4f530250",
 						Amount:      xc.NewAmountBlockchainFromStr("3487178763478115268"),
 						NativeAsset: "ETH",
-						Event:       xcclient.NewEvent("6", xcclient.MovementVariantInternal),
+						Event:       txinfo.NewEvent("6", txinfo.MovementVariantInternal),
 					},
 					{
 						Address:         "0xb3a16c2b68bbb0111ebd27871a5934b949837d95",
 						ContractAddress: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
 						Amount:          xc.NewAmountBlockchainFromStr("30000000000000000"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(30, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(30, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x805fe47d1fe7d86496753bb4b36206953c1ae660",
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(31, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(31, txinfo.MovementVariantToken),
 					},
 					{
 						Address:         "0x00007d0ba516a2ba02d77907d3a1348c1187ae62",
 						ContractAddress: "0xcc7bb2d219a0fc08033e130629c2b854b7ba9195",
 						Amount:          xc.NewAmountBlockchainFromStr("3402810116999927725"),
 						NativeAsset:     "ETH",
-						Event:           xcclient.NewEventFromIndex(36, xcclient.MovementVariantToken),
+						Event:           txinfo.NewEventFromIndex(36, txinfo.MovementVariantToken),
 					},
 				},
 				Fee:      xc.NewAmountBlockchainFromStr("6866360226660528"),
@@ -551,7 +550,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0xa","difficulty":"0x0","extraData":"0xd883010b05846765746888676f312e32302e32856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0xe7023b","hash":"0x7041515bf99b52262d4faeb17ba2a5f772ea463c30db9798371ff2094aa75ddc","logsBloom":"0x006408484088f02c801010009515008412eb29040002580c858101128851002004aa84e00080800041110000150401a4485110540020082012001624c124a26100026032947080805802020800801224020d82404007202080518105888b08010010350492478080804004a604102b0000080036000c50c48020125602001040132020621880ad0a20442c44400305264001800102100a880001014914668040660c000638880202101200222518830026000220a04402400702018408a2000390a144a3014020082402204345126444000814000080229030432739098261821810002120628114a854032c1280501001012300000812508106400802100080","miner":"0xc6e2459991bfe27cca6d86722f35da23a1e4cb97","mixHash":"0x522990debf63b7812eb8b6b96e0c56f91d567b8e2109e0a5f77450e7315ca21d","nonce":"0x0000000000000000","number":"0x89153b","parentHash":"0x41957451a5214e3420e12199c702016f2aa6a2d4848d429eefdfccc98661afd9","receiptsRoot":"0x01d943be32594c16c5c7558ca9b0fed2bfbb159e4e607835aeb22a827916f552","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xfb37","stateRoot":"0x0d2abf67da6fd97a434c3d39058eff6acdf45b276e40b387eb32390c576fc413","timestamp":"0x645d72e0","totalDifficulty":"0xa4a470","transactions":["0x1aae2d96b2aee3ecfb01d95c33b32493df758a99b93046ff7dd50172b8cf6d30","0xa498121ad49d5dfc5b46d24b85ea857b426a1ed0cf4133c2cb96561a478d8e08","0xbd4de1c91760f3123402e74a6814fd972fa9a5c03fd18b13ffb7ec7586883425","0xce48fb1ee75beb40acee9bc54dda29e7811a4d3eed1d635ce7ba184979a6d883","0xe532067ac4b74deffca708c1eec3cfe7ba79dbac70518fb752d86941d828e4eb","0x7eb0a23f03525a0830befde8bfa3fa7c1bccef491711356c4880d401b62eb671","0xde51711ca74c63e8d9afdd8152d0a2c0c4f125ba3f6a9126c7d490fdd032c4cf","0xbd6aa59ce286c4221afd9000f834ddc207a93a7bc2a9ae068713ce8a43ee2742","0x746f05148b6ce98fc136d7c4ed00a73cc5c2ea68ab80bd3c5d3bd94402e20cc7","0x32991b9b8a1b1ba7ff7a9763f59e2ea1543acd28d6e2789d328a8317b4f74244","0x5a21a15f8736d513c48ce432ef3640c647f22d2ebb3dba833b0edfc92f27ef1d","0x4ee9cb1837031eb167b1357e8c9c19701ef6295729c2c580f9f7b9dee3b03f7c","0x4d5d016a4067cac522a426f12698d10915546fb65136074eb971cffbb8d6169e","0x68007016d532e43af452ef414a95040259ba86dcc26f380985673601e6692522","0xea0a297b661d014fedfdb2da3268fa1798db565d90ca9596bdf71df8b573df80","0x81058b8e6beef482f6a93e74c8cc5eaec892466465c3094713a950179c1a8785","0x786824ed4919c538506cfa100ee2e96869dca946d9e2be02401a8f7e1f66c6a8","0xdee6f95049d81f0d8375db35e5d0a668d8492032b1448a94b0f7912ec6c2ac64","0x61134262a45b0cdeb52d96e90c97780bc08779af8b086036d61d0657623dda01","0xbe825ab6ca9760557b9fa90e88c0d5f3fc58f5dd197bc2454f27d5e05b482f10","0xd71385e6984b41eafa8ef8e8614ec7c955e0c6c0073b2ae0073d4be11c1f7610","0x5e4ce86d4b6b09ef361f873a8ccb02c6b28f203b54a5a299ff5b3a486a5591e0","0x0ce8a4a79d39c3d8f57eb632deefd3901c23ae9cb9f49fc8811bc815195e7ec1","0xbd5f6f91610afd56a4d80483e38c14b7b479876e6f156828590c75bc09a317f4","0x824a8744c6cc856e49239d0e6547396d8435944bdb8fe89ca868f5a6c31a9c3f","0xf46646fc9e738b4079367c8d950b6037315ecff744b6fefa52afe1943c88a45e","0xb77420a96f2b4be4a4bedac65b41bdd98e5e7541edfa022451cfc927ec46c60f","0x5d4fa90d7fd3fe0571f403149cd88869f9185ce6854a323ed8d454e319f4d80a","0x6dbdd47cdaa9cd3c391c67d6d623e7bbeb3302c09ea7b4770ee0649245dfc80e","0x50e6add79c2895a3f78f748eff4778d52f5e428e2672e23fa38b9347559e451d","0xd0f55fd2c13714ba6aee6cff8851733545ce2a2b1a89723f88d039a0d68f68d8","0xd4965e1587ec7256dbdda89b73d961cd5d4d5623ddbe78bca33eb00de141f236","0x62ccd2c5e3b5bff5be54f95f5f26e70043edb8e3dc875ae4c7aa9ca7bb26f4fa","0xea90ddc11b18a323704f9b488f854e915ed1f85e47a5aa97d92490c3cb104f6b","0x23d2bd4b44bff5517b1302d15fa69195ddd288ec666cf7ac06c091ed415324d0","0xdc6d15f3e70d77a059570e8f797c8bd77bc1a763e03351175dcafe80235c8654","0xfba6bed9ee750c686a7f97fb1639a9eadd746ba47d367221caa9a3d6ca8e76b3","0x382510b2ee498a11dfc79c13ccc881221b5d22ac1079c42ece5a9ca481a83299","0xbee5e61838f19180bf3b2d6a1f5457be9449060a77cf997f9899c2c0abbe8bcb","0xb8772fe626c2a3151e5c2947b51f80519df6cdff0ba34d9b22a148d9e88740b1","0x89a3606507a02b2b879ded73d8a21240dd53f5e8b3a2733458d773de8368022c","0xd87c56af4fdc483cb66935d7b47afcc0f545098a0c689f6baa102ed52debdef2","0x7b49ea42028f098d46b330bd4b15422004cfdab6194de4307d6465fe3842dffb"],"transactionsRoot":"0xd6a76734c1194ba7a54efdf597b6bbd71a7c258df83e17ae24c61ef55ed6f5a6","uncles":[],"withdrawals":[{"index":"0x4fd5dc","validatorIndex":"0x343b9","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e3737"},{"index":"0x4fd5dd","validatorIndex":"0x343ba","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e6b61"},{"index":"0x4fd5de","validatorIndex":"0x343bb","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e609a"},{"index":"0x4fd5df","validatorIndex":"0x343bc","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e446a"},{"index":"0x4fd5e0","validatorIndex":"0x343bd","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1ec58a"},{"index":"0x4fd5e1","validatorIndex":"0x343be","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1f08f0"},{"index":"0x4fd5e2","validatorIndex":"0x343bf","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e388e"},{"index":"0x4fd5e3","validatorIndex":"0x343c0","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1de6e9"},{"index":"0x4fd5e4","validatorIndex":"0x343c1","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d8671"},{"index":"0x4fd5e5","validatorIndex":"0x343c2","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d921d"},{"index":"0x4fd5e6","validatorIndex":"0x343c3","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e47be"},{"index":"0x4fd5e7","validatorIndex":"0x343c4","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e68a0"},{"index":"0x4fd5e8","validatorIndex":"0x343c5","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1d4535"},{"index":"0x4fd5e9","validatorIndex":"0x343c6","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1e9eee"},{"index":"0x4fd5ea","validatorIndex":"0x343c7","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1eb96d"},{"index":"0x4fd5eb","validatorIndex":"0x343c8","address":"0x9427a30991170f917d7b83def6e44d26577871ed","amount":"0x1da634"}],"withdrawalsRoot":"0x5f2d20dfa1ed20da2588eea50327afc1b477e2ad628b8d40c5eaddabbf7d32be"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				BlockHash:       "0x03d633a561d2217f8d7ae529ed90f3f4709fd62a5fb1b0ff6f7ce487f2113ba7",
 				TxID:            "7fba5ad368aab2490731a31d490e22d905c9b47ac2ca03e41b2021bfb76b423b",
 				From:            "0xe8be958f910fb1bb439eafbcfd0475509ab6d43f",
@@ -583,7 +582,7 @@ func TestFetchLegacyTxInfo(t *testing.T) {
 				"message": "not found"
 			}`,
 			},
-			val:        xclient.LegacyTxInfo{},
+			val:        txinfo.LegacyTxInfo{},
 			err:        "TransactionNotFound:",
 			forceError: 200,
 		},
@@ -634,7 +633,7 @@ func TestFetchTxInfo(t *testing.T) {
 		name   string
 		txHash string
 		resp   interface{}
-		val    xcclient.TxInfo
+		val    txinfo.TxInfo
 		err    string
 	}{
 		// Send ether normal tx
@@ -651,32 +650,32 @@ func TestFetchTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0x8","blobGasUsed":"0x20000","difficulty":"0x0","excessBlobGas":"0x0","extraData":"0xd883010d0b846765746888676f312e32312e36856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0x3ce0d8","hash":"0x260e687044ff9c5ca8cc579e1bad21ee3f295cdefa80c15fafadf757061bd503","logsBloom":"0x26810080002280d00108001400808000040d810004581008000a000040801422020208004080400660000000058004046000b802060485a00020003600a4000004113900002042c8888c002a000000001040080444860053c10000021c0a00010c300150021850400804018110018800200040004080120000100018055080000084020d4801002029120004008804135000b80002ae0988000803406403802008080143030a4204a10041a2010022003208031812808842102270080401500041101c8281280110040000110100401002900080c000080860000100400a60982000020400a8c00008100000242100000206800008a20400a10800801cb80000","miner":"0xbcff060f601684a0dbf5b0ea48d8dcc112f4ff2f","mixHash":"0xd37a9dc759cfb108a6d1c979906c1a0fd5d936858d85e643213a86113d46b1e4","nonce":"0x0000000000000000","number":"0x1decc2","parentBeaconBlockRoot":"0x4bf94a7a2913c3fb8312edd4ac35a4f6360206a7cfa0739bcb5c95a3bf0ebcfc","parentHash":"0x1fb39b27d7411e049a3bdf829d6dab4831e561b98daa13a4c0779b0038dce437","receiptsRoot":"0x5e3ea7489d9f892727d82f108fdbcf06233cc9b8d642749796e9002100f57a5f","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0xa5fc","stateRoot":"0xf311e89a321b3b0417f51e198a0fe65badaacd776bbadae32ae7e526e4eef439","timestamp":"0x669ac980","totalDifficulty":"0x1","transactions":["0xcf5bb6ab11621efdab87029351e16b91d0e585ecb6b4081866d4737b13656d50","0xcf527b32ed6f445fe8cf2cc83f888d42a77db51de6e17588fb063f6e07d1d75b","0x45ede5541c8db657887e3a1077849a66ba9c0b3f9a71f6103993f9c5ab30801e","0xd1a023345df0e5c7190e98ac9e5aff98bfd4a33c2b536dd5e33437f0cfbf7458","0x3d78aba4e6a6ebfb6660e2519d133b91b1f7d0ed467e114476a96b753bae5342","0xfda82bf6e88bf5dfd2213261b59393f20d3c53a785b83c14118a64a6d5556636","0xe8b802239bae75165cdd80945b097c47b540f1550099438ce88dfccafa03d78c","0xded6775ec607d82f2582be35ca843ca4d7093dd71bbe0cf54b0ee96d8436f509","0xd0f0ec209fb3e95a6e587db5decd52747f6e13688a89585ade6e6b4fdcfbb8dc","0x4d306f2a2e3b1e0f0e58916b1bb828f176373b7cca3eca6c7000cb74a6ed523c","0x498092e9a2dfb9bbf3ddae343943e96081c1c204bef053456ef8e172e5689db0","0x9f66053103d2a315cf8376a982eb8d42d1bce1bf266b9abe0eaa6f705e1c68ed","0x91c92899ae82f4ed283aa3f5b2c6627c6d3787660cc72ac44258a99a44037035","0xe266424020b68192e164c58c1a83b8c329eb04fbf3ef6253263329c1c725291f","0x728aa316a3bc92831996dca5214e3a044cccfa5b32d9c9383505df0c1c38ba33","0x36753fb363e9d3f3d3e81ce29cd2831dcf4f4f6db9d0e2f725306aa5e3866ab5","0xc54bc3f4064a9d54dd5797aae145436013049589e0030ff3b0b9362a590b9cf0","0x552530592d6031ccffa988a878945b44ff44e4d1eadbe7a3f4a299e7bb206119","0xfe5da35bca364d5f59c8e5d4c2cd04c7f8d11a200fa7877487ef8b7d09a09aca","0x3166fa77050e18879c40f2e7047b20455c438f5480895f02b288dce137ef4e63","0xe0b94c1b9ac46ab4c57d7d95f3e9f61579908f485cccf208ab8ef25ae73ba8a3","0xb8f6e85651b9481fe88722fa4fa04ca7392841e5506407055c3e7093cd9acc98"],"transactionsRoot":"0x7c06ad31fc7bca0dfbfefd10c6b57f2ed79619f14fe8a174b175ec6f450fac27","uncles":[],"withdrawals":[{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x709564","index":"0x1dc1d4e","validatorIndex":"0x181dd0"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x717fc8","index":"0x1dc1d4f","validatorIndex":"0x181dd1"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x71a66b","index":"0x1dc1d50","validatorIndex":"0x181dd2"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6f9be4","index":"0x1dc1d51","validatorIndex":"0x181dd3"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x7191e0","index":"0x1dc1d52","validatorIndex":"0x181dd4"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x707c9e","index":"0x1dc1d53","validatorIndex":"0x181dd5"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70304d","index":"0x1dc1d54","validatorIndex":"0x181dd6"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70a858","index":"0x1dc1d55","validatorIndex":"0x181dd7"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70e9a2","index":"0x1dc1d56","validatorIndex":"0x181dd8"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70d504","index":"0x1dc1d57","validatorIndex":"0x181dd9"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x714ec3","index":"0x1dc1d58","validatorIndex":"0x181dda"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6fc48e","index":"0x1dc1d59","validatorIndex":"0x181ddb"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x715b55","index":"0x1dc1d5a","validatorIndex":"0x181ddc"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x70f1ed","index":"0x1dc1d5b","validatorIndex":"0x181ddd"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x6f3971","index":"0x1dc1d5c","validatorIndex":"0x181dde"},{"address":"0x3b41d9736ed9bfc15a87d8fbb69c616190aed6c6","amount":"0x7097ab","index":"0x1dc1d5d","validatorIndex":"0x181ddf"}],"withdrawalsRoot":"0x50c61c5b07f60722110b2beaa76a271bd33d1a56e691ae0818b57f6c138cc619"}`,
 			},
-			xcclient.TxInfo{
+			txinfo.TxInfo{
 				Name:   "chains/ETH/transactions/0x4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
 				Hash:   "4b5de71be34adb19106bcec808d8ee3280e44eb0852a1370e5426d5b76315343",
 				XChain: "ETH",
-				State:  xcclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xcclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "ETH",
 					Height: xc.NewAmountBlockchainFromUint64(1960505),
 					Hash:   "0xb2cf3002b615c6213c4e6241a8a14afa9087a84db1f035812f2a54807851b934",
 					Time:   testtypes.FromTimeStamp("2024-07-19T17:53:24Z"),
 				},
 				Confirmations: 649,
-				Movements: []*xcclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/ETH/assets/ETH",
 						XContract: "ETH",
 						AssetId:   "ETH",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("32000000000000000000"),
 								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
-						To: []*xcclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromStr("32000000000000000000"),
@@ -684,24 +683,24 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "0x0866af1d55bb1e9c2f63b1977926276f8d51b806",
 							},
 						},
-						Event: xcclient.NewEvent("", xcclient.MovementVariantNative),
+						Event: txinfo.NewEvent("", txinfo.MovementVariantNative),
 					},
 					{
 						XAsset:    "chains/ETH/assets/ETH",
 						XContract: "ETH",
 						AssetId:   "ETH",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("2047469337720"),
 								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
-						To:    []*xcclient.BalanceChange{},
-						Event: xcclient.NewEventFromIndex(0, xcclient.MovementVariantFee),
+						To:    []*txinfo.BalanceChange{},
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
-				Stakes: []*xcclient.Stake{
+				Stakes: []*txinfo.Stake{
 					{
 						Balance:   testtypes.HumanToBlockchain("32", 18),
 						Validator: "0x850f24e0a4b2b5568340891fcaecc2d08a788f03f13d2295419e6860545499a24975f2e4154992ebc401925e93a80b3c",
@@ -725,36 +724,36 @@ func TestFetchTxInfo(t *testing.T) {
 				// eth_getBlockByNumber
 				`{"baseFeePerGas":"0x8","blobGasUsed":"0x20000","difficulty":"0x0","excessBlobGas":"0x0","extraData":"0xd883010d0b846765746888676f312e32312e36856c696e7578","gasLimit":"0x1c9c380","gasUsed":"0x1b6c4a","hash":"0x2911c7074fded3632ef8ab20b0dc1345218256cdbab353aa2c0a658a19c0522b","logsBloom":"0x000000200004006000000400000800001008010000080000124000004040400000000800008000000080200001840000200080000000020900001000002000000000080004006200000c0028000040000000000000400000480008000c0800000030031002001040081400000000080008000000000000200010001800020000000000040001000000100100000080000000a00800840800800083002000000002008140020010000000002008000000300804002000004210002000000001020008040200000100000010010000000201100080000000000000500000002690001000000020804000100100000000000004800000000c100000000048100000","miner":"0x65fdc9a172746d54a5b05e6ac5130b991abaf079","mixHash":"0x99cf77019aed1a40749697f38e92db0d5fb34685a28b433fa948a7f938fc2d30","nonce":"0x0000000000000000","number":"0x1e6e73","parentBeaconBlockRoot":"0xebb4c4b339592d25eb40382feef5e4ed1961f644f5cf55ec45d3b51a3646edba","parentHash":"0x67dba09f04c1524ddc4ec38d8c460984b84cc3ad179156a5aa4a6e9167e89dc3","receiptsRoot":"0x514043203efac1dd1ef956bf2654829ec5cefad45e3e04d60eb570db373011d1","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","size":"0x29c1","stateRoot":"0x81d6876d14e806ee3aaf7542b90f6593447a231fc17fa6928a79f9b0da79ba28","timestamp":"0x66a15d64","totalDifficulty":"0x1","transactions":["0x7f67e03f8772bcf895349c7fd153e8921be2d23e1cea4a430b49480419c263de","0x4dc2920ccb656048b096e8879afa25259c1ad71cf7dfed2c30fffde518d4723e","0xea5b250bb1b687cf37f8af913c74bf6c00987cbf795c42505e46016c709eec15","0xcc45fb6c2cda441dae26de40aea637d57cff2b8e6c1df8aeb23bed98ec6ae5cb","0x3ad6490d40e543faaa5dc3e21f5a180516a919bc06eaf7839ec26418a8eca0f1","0xb790136eaff12f2ba9108d3c979e21d3eb77f7c17f93b4dffdc26f0bd4ea84c1","0xf9b36d7c74393869bcef2cbbfd85528c5840552370cc406b03b7895065e71e35","0x09f5fb83f061fabd15f27a2c0b4b1a39fd6e0b2bd614907ccc11a1b73bc5e1cd","0x87e0670f3bcb08d684e9e7f66ff01825f17d649e0ccd6e368dd791fcbae737a6","0xfe2747c02456240ae407f8b77f54d559157a785256a55c812b9d6b8bbba8a741","0x1da7d25bb9057520a83eeffbb9490be50144427cd7aea399d3af4ff48ee34fd8","0xbb17f76ee239dee7bbd82f65f46fbb7cdcf8f61273d98b80fbf8c6fd2ff4cd22","0x59bc4671a65ac4e386e9887d29f40a71a3cc77b5ae9351496e096357c36fc150"],"transactionsRoot":"0xca5fedf5b5726bbc095f0f259b1393a0b8e623aaccad08c4647295f01a43d94c","uncles":[],"withdrawals":[{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x739ca6","index":"0x1e434e6","validatorIndex":"0x1779f2"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73d864","index":"0x1e434e7","validatorIndex":"0x1779f3"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x7359af","index":"0x1e434e8","validatorIndex":"0x1779f4"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x740a77","index":"0x1e434e9","validatorIndex":"0x1779f5"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x737580","index":"0x1e434ea","validatorIndex":"0x1779f6"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x740072","index":"0x1e434eb","validatorIndex":"0x1779f7"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x74120c","index":"0x1e434ec","validatorIndex":"0x1779f8"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x742b9d","index":"0x1e434ed","validatorIndex":"0x1779f9"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x732127","index":"0x1e434ee","validatorIndex":"0x1779fa"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73a0e4","index":"0x1e434ef","validatorIndex":"0x1779fb"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73972f","index":"0x1e434f0","validatorIndex":"0x1779fc"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x734a28","index":"0x1e434f1","validatorIndex":"0x1779fd"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x73d3b6","index":"0x1e434f2","validatorIndex":"0x1779fe"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72e5bf","index":"0x1e434f3","validatorIndex":"0x1779ff"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72dea0","index":"0x1e434f4","validatorIndex":"0x177a00"},{"address":"0xc13618a7fbdc01f56cfcddb6d6b0d69c7d9d12c4","amount":"0x72f973","index":"0x1e434f5","validatorIndex":"0x177a01"}],"withdrawalsRoot":"0x8c92f054a4fcf52b2fb74c040f5af9a7942cae9615d6ed9af4b1a6cfcd2972d3"}`,
 			},
-			xcclient.TxInfo{
+			txinfo.TxInfo{
 				Name:   "chains/ETH/transactions/0xfbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
 				Hash:   "fbedd96b56883eccdfed7ba60fa7a0f1858b81f724e73dcad467fa88ecfd2d44",
 				XChain: "ETH",
-				State:  xcclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xcclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "ETH",
 					Height: xc.NewAmountBlockchainFromUint64(1988490),
 					Hash:   "0x626eac5c41b2cf1c5ec9bdc3edc0d939e46eea3fb4dea387c0f3f0bd87ad9963",
 					Time:   testtypes.FromTimeStamp("2024-07-23T22:52:24Z"),
 				},
 				Confirmations: 5865,
-				Movements: []*xcclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/ETH/assets/ETH",
 						XContract: "ETH",
 						AssetId:   "ETH",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("4757340142368"),
 								XAddress:  "chains/ETH/addresses/0x273b437645ba723299d07b1bdffcf508be64771f",
 								AddressId: "0x273b437645ba723299d07b1bdffcf508be64771f",
 							},
 						},
-						To:    []*xcclient.BalanceChange{},
-						Event: xcclient.NewEventFromIndex(0, xcclient.MovementVariantFee),
+						To:    []*txinfo.BalanceChange{},
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
-				Unstakes: []*xcclient.Unstake{
+				Unstakes: []*txinfo.Unstake{
 					{
 						Balance:   testtypes.HumanToBlockchain("32", 18),
 						Validator: "0xabe9c4a070f77e0da097306a9d7e63407f2f0099c3622aea9b1cf95b490a79cbc91878b40b69c96c36a2cf63be827a6c",
@@ -778,7 +777,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if v.err != "" {
-				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
+				require.Equal(t, txinfo.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(t, err, v.err)
 			} else {
 				// for _, movement := range txInfo.Sources {

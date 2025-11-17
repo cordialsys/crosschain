@@ -6,8 +6,8 @@ import (
 
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
-	xcclient "github.com/cordialsys/crosschain/client"
 	xcerrors "github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,7 +18,7 @@ type EventI interface {
 	// Or may just be the "name" or id
 	GetId() string
 	GetParam(name string, index int) (interface{}, bool)
-	GetEventDescriptor() (*xcclient.Event, bool)
+	GetEventDescriptor() (*txinfo.Event, bool)
 }
 
 type EventBind string
@@ -299,7 +299,7 @@ func ParseFee(ab xc.AddressBuilder, events []EventI) (xc.Address, xc.AmountBlock
 	// no fee detected
 	return "", xc.AmountBlockchain{}, false, nil
 }
-func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*xcclient.LegacyTxInfoEndpoint, destinations []*xcclient.LegacyTxInfoEndpoint, err error) {
+func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (sources []*txinfo.LegacyTxInfoEndpoint, destinations []*txinfo.LegacyTxInfoEndpoint, err error) {
 	for _, ev := range events {
 		handle := eventHandle(ev.GetModule(), ev.GetId())
 		desc, ok := supportedEventMap[handle]
@@ -308,7 +308,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 		}
 		var from, to xc.Address
 		var amount xc.AmountBlockchain
-		var eventDescriptor *xcclient.Event
+		var eventDescriptor *txinfo.Event
 		if desc, ok := ev.GetEventDescriptor(); ok {
 			eventDescriptor = desc
 		}
@@ -349,7 +349,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 		}
 
 		if from != "" {
-			sources = append(sources, &xcclient.LegacyTxInfoEndpoint{
+			sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 				Address:     from,
 				NativeAsset: chain,
 				Amount:      amount,
@@ -357,7 +357,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 			})
 		}
 		if to != "" {
-			destinations = append(destinations, &xcclient.LegacyTxInfoEndpoint{
+			destinations = append(destinations, &txinfo.LegacyTxInfoEndpoint{
 				Address:     to,
 				NativeAsset: chain,
 				Amount:      amount,
@@ -368,7 +368,7 @@ func ParseEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (s
 	return
 }
 
-func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (stakes []*xcclient.Stake, unstakes []*xcclient.Unstake, err error) {
+func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []EventI) (stakes []*txinfo.Stake, unstakes []*txinfo.Unstake, err error) {
 	for _, ev := range events {
 		handle := eventHandle(ev.GetModule(), ev.GetId())
 		desc, ok := supportedStakingEventMap[handle]
@@ -419,13 +419,13 @@ func ParseStakingEvents(ab xc.AddressBuilder, chain xc.NativeAsset, events []Eve
 		}
 
 		if desc.Stake {
-			stakes = append(stakes, &xcclient.Stake{
+			stakes = append(stakes, &txinfo.Stake{
 				Validator: string(validator),
 				Balance:   amount,
 				Address:   string(from),
 			})
 		} else {
-			unstakes = append(unstakes, &xcclient.Unstake{
+			unstakes = append(unstakes, &txinfo.Unstake{
 				Validator: string(validator),
 				Balance:   amount,
 				Address:   string(from),

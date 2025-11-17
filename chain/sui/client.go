@@ -16,7 +16,8 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/go-sui-sdk/v2/client"
 	"github.com/cordialsys/go-sui-sdk/v2/lib"
 	"github.com/cordialsys/go-sui-sdk/v2/move_types"
@@ -170,7 +171,7 @@ func isMissingTransactionErr(err error) bool {
 	return false
 }
 
-func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	opts := types.SuiTransactionBlockResponseOptions{
 		ShowInput:          true,
 		ShowEffects:        true,
@@ -181,32 +182,32 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	}
 	txHashBz, err := lib.NewBase58(string(txHash))
 	if err != nil || txHashBz == nil || len(*txHashBz) == 0 {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %w", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not decode txHash: %w", err)
 	}
 
 	resp, err := c.SuiClient.GetTransactionBlock(ctx, *txHashBz, opts)
 	if err != nil {
 		if isMissingTransactionErr(err) {
-			return xclient.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+			return txinfo.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 		}
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %w", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not get transaction block: %w", err)
 	}
 
 	// get latest checkpoint so we can compute our confirmations
 	latestCheckpoint, err := c.FetchLatestCheckpoint(ctx)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %w", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not get latest checkpoint: %w", err)
 	}
 	if resp.Checkpoint == nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("sui endpoint failed to provide checkpoint")
 	}
 	txCheckpoint, err := c.FetchCheckpoint(ctx, resp.Checkpoint.Uint64())
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %w", resp.Checkpoint.Uint64(), err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not get checkpoint %d: %w", resp.Checkpoint.Uint64(), err)
 	}
 	// latestCheckpoint.Epoch
-	sources := []*xclient.LegacyTxInfoEndpoint{}
-	destinations := []*xclient.LegacyTxInfoEndpoint{}
+	sources := []*txinfo.LegacyTxInfoEndpoint{}
+	destinations := []*txinfo.LegacyTxInfoEndpoint{}
 
 	from := ""
 	to := ""
@@ -241,13 +242,13 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 			if isSui {
 				totalSuiSent = totalSuiSent.Add(&abs)
 			}
-			sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+			sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          abs,
 				Address:         xc.Address(from),
 				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
-				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
+				Event:           txinfo.NewEventFromIndex(uint64(i), txinfo.MovementVariantNative),
 			})
 		} else {
 			to, _ = AddressOrObjectOwner(&bal.Owner)
@@ -255,13 +256,13 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 			if isSui {
 				totalSuiReceived = totalSuiReceived.Add(&amt)
 			}
-			destinations = append(destinations, &xclient.LegacyTxInfoEndpoint{
+			destinations = append(destinations, &txinfo.LegacyTxInfoEndpoint{
 				Asset:           asset,
 				ContractAddress: xc.ContractAddress(contract),
 				Amount:          amt,
 				Address:         xc.Address(to),
 				NativeAsset:     xc.NativeAsset(c.Asset.GetChain().Chain),
-				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
+				Event:           txinfo.NewEventFromIndex(uint64(i), txinfo.MovementVariantNative),
 			})
 		}
 	}
@@ -279,7 +280,7 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 		status = xc.TxStatusFailure
 	}
 
-	return xclient.LegacyTxInfo{
+	return txinfo.LegacyTxInfo{
 		BlockHash:       txCheckpoint.Digest,
 		TxID:            resp.Digest.String(),
 		From:            xc.Address(from),
@@ -299,18 +300,18 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	}, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHashStr := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	// delete the fee to avoid double counting.
 	// Sui, like btc, counts fee as difference between total sent and recv, which is already automatically counted.
 	legacyTx.Fee = xc.NewAmountBlockchainFromUint64(0)
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Utxo), nil
+	return txinfo.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, txinfo.Utxo), nil
 }
 
 func (c *Client) EstimateGas(ctx context.Context) (xc.AmountBlockchain, error) {
@@ -527,37 +528,33 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 }
 
 // SubmitTx submits a Sui tx
-func (c *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
+func (c *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) error {
 	tx_bz, err := txI.Serialize()
 	if err != nil {
 		return err
 	}
 
 	var sigs [][]byte
-	if txWithMetadata, ok := txI.(xc.TxWithMetadata); ok {
-		metadataBz, err := txWithMetadata.GetMetadata()
+	metadataBz, err := txI.GetMetadata()
+	if err != nil {
+		return err
+	}
+	if len(metadataBz) > 0 {
+		var metadata BroadcastMetadata
+		err = json.Unmarshal(metadataBz, &metadata)
+		fmt.Printf("metbz: %v\n", string(metadataBz))
+		fmt.Printf("met: %v\n", metadata)
 		if err != nil {
-			return err
-		}
-		if len(metadataBz) > 0 {
-			var metadata BroadcastMetadata
-			err = json.Unmarshal(metadataBz, &metadata)
-			if err != nil {
-				logrus.WithError(err).Warn("could not unmarshal broadcast input")
-			} else {
-				sigs = metadata.Signatures
-			}
+			logrus.WithError(err).Warn("could not unmarshal broadcast input")
+		} else {
+			sigs = metadata.Signatures
 		}
 	}
 
 	if len(sigs) == 0 {
-		if txLegacyGetSignatures, ok := txI.(xc.TxLegacyGetSignatures); ok {
-			fromLegacy := txLegacyGetSignatures.GetSignatures()
-			for _, sig := range fromLegacy {
-				sigs = append(sigs, []byte(sig))
-			}
-		} else {
-			return fmt.Errorf("tx does not implement TxWithMetadata or TxLegacyGetSignatures")
+		fromLegacy := txI.GetSignatures()
+		for _, sig := range fromLegacy {
+			sigs = append(sigs, []byte(sig))
 		}
 	}
 	sigsB64 := []any{}
@@ -619,7 +616,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return int(meta.Decimals), nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
 		seq, err := client.SuiClient.GetLatestCheckpointSequenceNumber(ctx)
@@ -641,8 +638,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}
 
 	timestampMs, _ := strconv.ParseUint(checkpoint.TimestampMs, 10, 64)
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			height,
 			checkpoint.Digest,

@@ -6,7 +6,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
-	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -26,14 +26,14 @@ func init() {
 }
 
 type SourcesAndDests struct {
-	Sources      []*xclient.LegacyTxInfoEndpoint
-	Destinations []*xclient.LegacyTxInfoEndpoint
+	Sources      []*txinfo.LegacyTxInfoEndpoint
+	Destinations []*txinfo.LegacyTxInfoEndpoint
 }
 
 // ParseTransfer parses a tx and extracts higher-level transfer information
 func ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesAndDests {
-	loggedSources := []*xclient.LegacyTxInfoEndpoint{}
-	loggedDestinations := []*xclient.LegacyTxInfoEndpoint{}
+	loggedSources := []*txinfo.LegacyTxInfoEndpoint{}
+	loggedDestinations := []*txinfo.LegacyTxInfoEndpoint{}
 	for _, log := range receipt.Logs {
 		if len(log.Topics) == 0 {
 			continue
@@ -49,15 +49,15 @@ func ParseTokenLogs(receipt *types.Receipt, nativeAsset xc.NativeAsset) SourcesA
 				logrus.WithError(err).WithField("index", log.Index).Warn("could not parse log")
 				continue
 			}
-			eventMeta := xclient.NewEventFromIndex(uint64(log.Index), xclient.MovementVariantToken)
-			loggedDestinations = append(loggedDestinations, &xclient.LegacyTxInfoEndpoint{
+			eventMeta := txinfo.NewEventFromIndex(uint64(log.Index), txinfo.MovementVariantToken)
+			loggedDestinations = append(loggedDestinations, &txinfo.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.To.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),
 				NativeAsset:     nativeAsset,
 				Event:           eventMeta,
 			})
-			loggedSources = append(loggedSources, &xclient.LegacyTxInfoEndpoint{
+			loggedSources = append(loggedSources, &txinfo.LegacyTxInfoEndpoint{
 				Address:         xc.Address(tf.From.String()),
 				ContractAddress: xc.ContractAddress(log.Address.String()),
 				Amount:          xc.AmountBlockchain(*tf.Tokens),

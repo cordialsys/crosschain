@@ -1,4 +1,4 @@
-package client_test
+package txinfo
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,8 +14,8 @@ func TestTxInfoFees(t *testing.T) {
 	chainCfg := xc.NewChainConfig(xc.ETH)
 	chainCfg.Confirmations.Final = 3
 
-	tx := client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx := NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		3,
@@ -33,7 +32,7 @@ func TestTxInfoFees(t *testing.T) {
 	}
 
 	// manually add a fee
-	tf := client.NewMovement(tx.XChain, "")
+	tf := NewMovement(tx.XChain, "")
 	tf.AddSource("feepayer", xc.NewAmountBlockchainFromUint64(55), nil)
 	tx.AddMovement(tf)
 	require.Len(t, tx.CalculateFees(), 1)
@@ -54,7 +53,7 @@ func TestTxInfoFees(t *testing.T) {
 	require.Equal(t, "memo", tx.Movements[len(tx.Movements)-1].Memo)
 
 	require.Equal(t, true, tx.Final)
-	require.Equal(t, client.Succeeded, tx.State)
+	require.Equal(t, Succeeded, tx.State)
 
 }
 
@@ -62,15 +61,15 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 
 	chainCfg := xc.NewChainConfig(xc.BTC)
 	chainCfg.Confirmations.Final = 3
-	tx := client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx := NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		3,
 		nil,
 	)
 
-	tf := client.NewMovement(tx.XChain, "")
+	tf := NewMovement(tx.XChain, "")
 	for i := 0; i < 10; i++ {
 		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 	}
@@ -89,20 +88,20 @@ func TestTxInfoMultiLegFees(t *testing.T) {
 func TestTxInfoMultiLegCoalesce(t *testing.T) {
 	chainCfg := xc.NewChainConfig(xc.BTC)
 	chainCfg.Confirmations.Final = 3
-	tx := client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx := NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		3,
 		nil,
 	)
 	for i := 0; i < 10; i++ {
-		tf := client.NewMovement(tx.XChain, "")
+		tf := NewMovement(tx.XChain, "")
 		tf.AddSource("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 		tx.AddMovement(tf)
 	}
 	for i := 0; i < 8; i++ {
-		tf := client.NewMovement(tx.XChain, "")
+		tf := NewMovement(tx.XChain, "")
 		tf.AddDestination("sender", xc.NewAmountBlockchainFromUint64(100), nil)
 		tx.AddMovement(tf)
 	}
@@ -125,47 +124,47 @@ func TestTxInfoState(t *testing.T) {
 	chainCfg.Confirmations.Final = 3
 
 	// succeeded, final
-	tx := client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx := NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		3,
 		nil,
 	)
 	require.True(t, tx.Final, "final")
-	require.Equal(t, client.Succeeded, tx.State)
+	require.Equal(t, Succeeded, tx.State)
 
 	// succeeded, not final
-	tx = client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx = NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		2,
 		nil,
 	)
 	require.False(t, tx.Final, "final")
-	require.Equal(t, client.Succeeded, tx.State)
+	require.Equal(t, Succeeded, tx.State)
 
 	// failed
 	errMsg := "err"
-	tx = client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
+	tx = NewTxInfo(
+		NewBlock(chainCfg.Chain, 1, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		2,
 		&errMsg,
 	)
 	require.False(t, tx.Final, "final")
-	require.Equal(t, client.Failed, tx.State)
+	require.Equal(t, Failed, tx.State)
 
 	// mining
-	tx = client.NewTxInfo(
-		client.NewBlock(chainCfg.Chain, 0, "1234", time.Unix(1, 0)),
+	tx = NewTxInfo(
+		NewBlock(chainCfg.Chain, 0, "1234", time.Unix(1, 0)),
 		chainCfg,
 		"0x1234",
 		0,
 		nil,
 	)
 	require.False(t, tx.Final, "final")
-	require.Equal(t, client.Mining, tx.State)
+	require.Equal(t, Mining, tx.State)
 }

@@ -5,6 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/filecoin/address"
+	"github.com/cordialsys/crosschain/chain/filecoin/client/types"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx"
 	"github.com/test-go/testify/require"
 )
@@ -54,7 +55,7 @@ func TestTxHash(t *testing.T) {
 					Method:     0,
 					Params:     []byte{},
 				},
-				Signature: tx.Signature{
+				Signature: types.Signature{
 					Type: address.ProtocolSecp256k1,
 					Data: []byte("btOGs/+MfKwi02EQIdhvPdj8fw6xizsfCN6nMWCaR9YTSm8+ZjqYP5ggE8GzW0UrJd1zDgc1FNEwJYT6cxWElgE=\\"),
 				},
@@ -97,7 +98,7 @@ func TestTxSighashes(t *testing.T) {
 					Method:     0,
 					Params:     []byte{},
 				},
-				Signature: tx.Signature{
+				Signature: types.Signature{
 					Type: address.ProtocolSecp256k1,
 					Data: []byte("btOGs/+MfKwi02EQIdhvPdj8fw6xizsfCN6nMWCaR9YTSm8+ZjqYP5ggE8GzW0UrJd1zDgc1FNEwJYT6cxWElgE=\\"),
 				},
@@ -120,7 +121,7 @@ func TestTxSighashes(t *testing.T) {
 					Method:     0,
 					Params:     []byte{},
 				},
-				Signature: tx.Signature{
+				Signature: types.Signature{
 					Type: address.ProtocolSecp256k1,
 					Data: []byte("btOGs/+MfKwi02EQIdhvPdj8fw6xizsfCN6nMWCaR9YTSm8+ZjqYP5ggE8GzW0UrJd1zDgc1FNEwJYT6cxWElgE=\\"),
 				},
@@ -185,7 +186,7 @@ func TestTxAddSignature(t *testing.T) {
 	require.EqualError(t, err, "only one signature is allowed")
 
 	signedTx := tx.Tx{
-		Signature: tx.Signature{
+		Signature: types.Signature{
 			Type: address.ProtocolSecp256k1,
 			Data: []byte("signature"),
 		},

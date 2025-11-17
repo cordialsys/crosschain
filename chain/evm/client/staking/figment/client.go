@@ -16,6 +16,7 @@ import (
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/client/services/figment"
+	"github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -226,7 +227,7 @@ func (cli *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeA
 // We only want to unstake from a predetermined list of validators, as opposed to asking the provider to unstake
 // N validators for us.  This is because we don't want to risk a double-unstake (unstaking double the amount we intended).
 // By only unstaking from a predetermined list, we can ensure this is safely idempotent.
-func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclient.Unstake) error {
+func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *txinfo.Unstake) error {
 	val, err := cli.providerClient.GetValidator(unstake.Validator)
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	xcclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -188,11 +189,13 @@ func TestTransfer(t *testing.T) {
 		}
 	}
 
-	err = client.SubmitTx(context.Background(), tx)
+	req, err := xctypes.SubmitTxReqFromTx(tx)
+	require.NoError(t, err)
+	err = client.SubmitTx(context.Background(), req)
 	require.NoError(t, err)
 
 	// submitting again should work or return a detectable error
-	err = client.SubmitTx(context.Background(), tx)
+	err = client.SubmitTx(context.Background(), req)
 	if err == nil {
 		// ok
 		fmt.Println("No error on resubmit")

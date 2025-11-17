@@ -14,6 +14,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/cosmos/cosmos-sdk/types"
 	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
@@ -331,7 +333,9 @@ func TestSubmitTxErr(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
 	tx := &tx.Tx{ChainCfg: xc.NewChainConfig("").Base()}
-	err := client.SubmitTx(context.Background(), tx)
+	req, err := xctypes.SubmitTxReqFromTx(tx)
+	require.NoError(t, err)
+	err = client.SubmitTx(context.Background(), req)
 	require.ErrorContains(t, err, "no Host in request URL")
 }
 
@@ -341,7 +345,7 @@ func TestFetchTxInfo(t *testing.T) {
 		asset xc.ITask
 		tx    string
 		resp  interface{}
-		val   xclient.LegacyTxInfo
+		val   txinfo.LegacyTxInfo
 		err   string
 	}{
 		{
@@ -356,7 +360,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"terra","version":"v2.2.0","last_block_height":"2803726","last_block_app_hash":"Ds7V/wiEMX5P06kXiX6Ye1G08MfLPJhdTXl95lBydZ0="}}}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				TxID:            "E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 				From:            "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 				To:              "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
@@ -369,23 +373,23 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1668891362,
 				Confirmations:   48860,
 				Status:          0,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1h8ljdmae7lx05kjj79c9ekscwsyjd3yr8wyvdn",
 						ContractAddress: "LUNA",
 						ContractId:      "uluna",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
-						Event:           xclient.NewEventFromIndex(10, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(10, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "terra1dp3q305hgttt8n34rt8rg9xpanc42z4ye7upfg",
 						ContractAddress: "LUNA",
 						ContractId:      "uluna",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000),
 						Memo:            "faucet",
-						Event:           xclient.NewEventFromIndex(10, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(10, txinfo.MovementVariantNative),
 					},
 				},
 			},
@@ -403,7 +407,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"1359640","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
@@ -416,22 +420,22 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1669849454,
 				Confirmations:   107,
 				Status:          0,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 						ContractAddress: "XPLA",
 						ContractId:      "axpla",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
-						Event:           xclient.NewEventFromIndex(10, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(10, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
 						ContractAddress: "XPLA",
 						ContractId:      "axpla",
 						Amount:          xc.NewAmountBlockchainFromUint64(5000000000000000),
-						Event:           xclient.NewEventFromIndex(10, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(10, txinfo.MovementVariantNative),
 					},
 				},
 			},
@@ -449,7 +453,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"4855889","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				TxID:            "2C5A473586E23BEC60A92CE81AD36D7E7D5F09437B370C61C3F44CB5562FFB7F",
 				From:            "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 				To:              "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
@@ -462,73 +466,73 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1669849454,
 				Confirmations:   198,
 				Status:          0,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(18480304),
-						Event:           xclient.NewEventFromIndex(12, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(12, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
-						Event:           xclient.NewEventFromIndex(16, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(16, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
-						Event:           xclient.NewEventFromIndex(20, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(20, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
-						Event:           xclient.NewEventFromIndex(24, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(24, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1cdty03fzqzqpkvf4zpmpl9rnlffjeey7fa5n47",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
-						Event:           xclient.NewEventFromIndex(28, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(28, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "xpla1erxzt0cegdqtvrhuuadhq6yeaenkkmsv8de2ra",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(18480304),
 						Memo:            "129333-dearella",
-						Event:           xclient.NewEventFromIndex(12, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(12, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1m7e4yy2kr8y9efdg36y2hsu5etyucj222ywy6j",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
 						Memo:            "129333-dearella",
-						Event:           xclient.NewEventFromIndex(16, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(16, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1q4xns7eu3z8u3acj4nd8za3nz3xvz7wcm73cp0",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(190519),
 						Memo:            "129333-dearella",
-						Event:           xclient.NewEventFromIndex(20, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(20, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla12xxryljjxarwgycjejf7ssrupaj78nmq8kccz6",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
 						Memo:            "129333-dearella",
-						Event:           xclient.NewEventFromIndex(24, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(24, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "xpla1g8hkzkgfa3uq0cg9d6h99jk5nlg92lwx2jme2l",
 						ContractAddress: "xpla1hz3svgdhmv67lsqlduu0tcnd3f75c0xr0mu48l6ywuwlz43zssjqc0z2h4",
 						Amount:          xc.NewAmountBlockchainFromUint64(95260),
 						Memo:            "129333-dearella",
-						Event:           xclient.NewEventFromIndex(28, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(28, txinfo.MovementVariantNative),
 					},
 				},
 			},
@@ -546,7 +550,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// abci_info
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"data":"Xpla","version":"v1.1.2-cube","last_block_height":"1359640","last_block_app_hash":"wCZpDOY0V6x0WXmcW+P7kUTD3DJpZatwEdRyrgDZaK0="}}}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				TxID:            "7a13cb946589d07834119e3d9f3bf27e38da9990894e24850323582a404de46b",
 				From:            "xpla1hdvf6vv5amc7wp84js0ls27apekwxpr0ge96kg",
 				To:              "xpla1a8f3wnn7qwvwdzxkc9w849kfzhrr6gdvy4c8wv",
@@ -569,35 +573,35 @@ func TestFetchTxInfo(t *testing.T) {
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`{}`,
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			`null`,
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"response ID (0) does not match request ID (1)",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			fmt.Errorf(`{"message": "custom RPC error", "code": 123}`),
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"custom RPC error",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"",
 			"",
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"error unmarshalling: invalid character",
 		},
 		{
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"invalid-sig",
 			"",
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"encoding/hex: invalid byte",
 		},
 		{
@@ -605,7 +609,7 @@ func TestFetchTxInfo(t *testing.T) {
 			xc.NewChainConfig(xc.LUNA).WithChainCoin("uluna").WithChainPrefix("terra"),
 			"E9C24C2E23CDCA56C8CE87A583149F8F88E75923F0CD958C003A84F631948978",
 			fmt.Errorf(`{"message": "RPC error -32603 - Internal error: tx (E97DB7DB40A02F0773EFE3AA5328292EDB27BEB089DF0972A26E8683068BCFA7) not found"}`),
-			xclient.LegacyTxInfo{},
+			txinfo.LegacyTxInfo{},
 			"TransactionNotFound:",
 		},
 	}

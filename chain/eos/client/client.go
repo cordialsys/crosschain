@@ -8,7 +8,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cordialsys/crosschain/chain/eos/builder"
@@ -16,6 +16,7 @@ import (
 	eos "github.com/cordialsys/crosschain/chain/eos/eos-go"
 	"github.com/cordialsys/crosschain/chain/eos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 )
 
 // Client for Template
@@ -146,7 +147,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	// This should be the JSON serialized transaction
 	bz, err := tx.Serialize()
 	if err != nil {
@@ -161,32 +162,32 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, errors.New("not implemented")
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	tx, err := client.api.GetTransactionFromAnySupportedEndpoint(ctx, string(txHash))
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get EOS tx: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get EOS tx: %w", err)
 	}
 	err = tx.Validate()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to validate EOS tx: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to validate EOS tx: %w", err)
 	}
 
 	native := client.chain.Chain
 
 	chainInfo, err := client.api.GetInfo(ctx)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get EOS chain info: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get EOS chain info: %w", err)
 	}
 	// TODO is there an tx with an error?
 
-	txInfo := xclient.NewTxInfo(
-		xclient.NewBlock(native, tx.GetBlockNum(), tx.GetBlockId(), tx.GetBlockTime()),
+	txInfo := txinfo.NewTxInfo(
+		txinfo.NewBlock(native, tx.GetBlockNum(), tx.GetBlockId(), tx.GetBlockTime()),
 		client.chain,
 		tx.GetTxId(),
 		uint64(chainInfo.HeadBlockNum-uint32(tx.GetBlockNum())),
@@ -211,14 +212,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 			data := action.Transfer{}
 			err = json.Unmarshal(trace.GetData(), &data)
 			if err != nil {
-				return xclient.TxInfo{}, err
+				return txinfo.TxInfo{}, err
 			}
 
 			contract := xc.ContractAddress(trace.GetAccount() + "/" + data.Quantity.Symbol.Symbol)
 			if contract == "eosio.token/EOS" {
 				contract = ""
 			}
-			movement := xclient.NewMovement(native, contract)
+			movement := txinfo.NewMovement(native, contract)
 
 			decimals := 4
 			amount := xc.NewAmountBlockchainFromUint64(uint64(data.Quantity.Amount))
@@ -229,7 +230,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 			data := action.DelegateBWOutputOnly{}
 			err = json.Unmarshal(trace.GetData(), &data)
 			if err != nil {
-				return xclient.TxInfo{}, err
+				return txinfo.TxInfo{}, err
 			}
 
 			var rawAddress string
@@ -242,7 +243,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 				rawAddress = accountInfo.GetRawAddressFromPermissions()
 			}
 
-			staking := xclient.Stake{
+			staking := txinfo.Stake{
 				Validator: "",
 				Balance:   data.CPUQuantity.ToBlockchain(action.Decimals),
 				Account:   string(data.From),
@@ -263,7 +264,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 			data := action.UnDelegateBWOutputOnly{}
 			err = json.Unmarshal(trace.GetData(), &data)
 			if err != nil {
-				return xclient.TxInfo{}, err
+				return txinfo.TxInfo{}, err
 			}
 
 			var rawAddress string
@@ -276,7 +277,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 				rawAddress = accountInfo.GetRawAddressFromPermissions()
 			}
 
-			unstaking := xclient.Unstake{
+			unstaking := txinfo.Unstake{
 				Balance:   data.CPUQuantity.ToBlockchain(action.Decimals),
 				Account:   string(data.From),
 				Address:   rawAddress,
@@ -341,7 +342,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return 4, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
 		info, err := client.api.GetInfo(ctx)
@@ -361,6 +362,6 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		transactions = append(transactions, tx.Transaction.ID.String())
 	}
 
-	block := xclient.NewBlock(native, height, resp.ID.String(), resp.Timestamp.Time)
-	return &xclient.BlockWithTransactions{Block: *block, TransactionIds: transactions}, nil
+	block := txinfo.NewBlock(native, height, resp.ID.String(), resp.Timestamp.Time)
+	return &txinfo.BlockWithTransactions{Block: *block, TransactionIds: transactions}, nil
 }

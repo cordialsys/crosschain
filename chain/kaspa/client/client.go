@@ -14,7 +14,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/kaspa/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/testutil"
 	"github.com/kaspanet/kaspad/util/txmass"
 	"github.com/sirupsen/logrus"
@@ -109,7 +110,7 @@ func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.
 	return c.FetchTransferInput(ctx, args)
 }
 
-func (c *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (c *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
 	serializedSigned, err := txInput.Serialize()
 	if err != nil {
 		return err
@@ -127,33 +128,33 @@ func (c *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 	return nil
 }
 
-func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, fmt.Errorf("not implemented")
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
-func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	tx, err := c.client.GetTransaction(string(txHash))
 	if apiErr, ok := err.(*rest.ErrorResponse); ok {
 		if apiErr.Code == 404 {
-			return xclient.TxInfo{}, errors.TransactionNotFoundf("%s", apiErr.Error())
+			return txinfo.TxInfo{}, errors.TransactionNotFoundf("%s", apiErr.Error())
 		}
 	}
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	lastestBlueScore, err := c.client.GetVirtualChainBlueScore()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
-	movement := xclient.Movement{
+	movement := txinfo.Movement{
 		AssetId: xc.ContractAddress(c.chain),
 	}
 
 	for _, input := range derefOrZero(tx.Inputs) {
-		movement.From = append(movement.From, xclient.NewBalanceChange(
+		movement.From = append(movement.From, txinfo.NewBalanceChange(
 			c.chain,
 			xc.Address(*input.PreviousOutpointAddress),
 			xc.NewAmountBlockchainFromUint64(uint64(*input.PreviousOutpointAmount)),
@@ -162,7 +163,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 	}
 
 	for _, output := range derefOrZero(tx.Outputs) {
-		movement.To = append(movement.To, xclient.NewBalanceChange(
+		movement.To = append(movement.To, txinfo.NewBalanceChange(
 			c.chain,
 			xc.Address(*output.ScriptPublicKeyAddress),
 			xc.NewAmountBlockchainFromUint64(uint64(output.Amount)),
@@ -185,7 +186,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		txId = *tx.TransactionId
 	}
 
-	txInfo := xclient.NewTxInfo(&xclient.Block{
+	txInfo := txinfo.NewTxInfo(&txinfo.Block{
 		Chain: c.chain,
 		// The "blue score" is basically the block height.
 		// Although it seems there could be multiple "blocks" at a given height?
@@ -229,7 +230,7 @@ func (c *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress)
 	}
 	return c.decimals, nil
 }
-func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var blocks []*rest.BlockModel
 	var err error
 	height, ok := args.Height()
@@ -262,8 +263,8 @@ func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xcli
 	}
 	firstBlock := blocks[0]
 
-	res := &xclient.BlockWithTransactions{
-		Block: xclient.Block{
+	res := &txinfo.BlockWithTransactions{
+		Block: txinfo.Block{
 			Chain:  c.chain,
 			Height: xc.NewAmountBlockchainFromUint64(height),
 			Hash:   *firstBlock.VerboseData.Hash,

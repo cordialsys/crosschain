@@ -20,7 +20,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/hyperliquid/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	xcerrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 )
@@ -128,7 +129,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a hyperliquid tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	payload, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize transaction: %w", err)
@@ -152,8 +153,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, errors.New("not implemented")
 }
 
 func (client *Client) fetchTxDetails(ctx context.Context, hash string) (types.Transaction, error) {
@@ -205,43 +206,43 @@ func (client *Client) fetchTransactionFee(ctx context.Context, address xc.Addres
 
 // Traditional "FetchTxInfo" implementation - use a native Hyperliquid transaction hash for transaction
 // info lookup
-func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xclient.TxInfo, error) {
+func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (txinfo.TxInfo, error) {
 	txDetails, err := client.fetchTxDetails(ctx, txHash)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
 	}
 
 	contract := txDetails.GetContract()
 	action, err := txDetails.GetAction()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get action: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get action: %w", err)
 	}
 
 	chain := client.Asset.GetChain().Chain
 	blockTime := time.UnixMilli(txDetails.Time)
-	block := xclient.NewBlock(chain, txDetails.Block, "", blockTime)
+	block := txinfo.NewBlock(chain, txDetails.Block, "", blockTime)
 	latestHeight, err := client.fetchBlockHeight(ctx)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest height: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch latest height: %w", err)
 	}
 	confirmations := uint64(0)
 	if latestHeight > block.Height.Uint64() {
 		confirmations = latestHeight - block.Height.Uint64()
 	}
 
-	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), txDetails.Hash, confirmations, &txDetails.Error)
+	txInfo := txinfo.NewTxInfo(block, client.Asset.GetChain(), txDetails.Hash, confirmations, &txDetails.Error)
 	sourceAddress := xc.Address(txDetails.User)
 	destinationAddress := action.GetDestination()
 	hrAmount, err := action.GetAmount()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to convert amount to HumanReadable: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to convert amount to HumanReadable: %w", err)
 	}
 	decimals, err := client.FetchDecimals(ctx, contract)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch token decimals: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch token decimals: %w", err)
 	}
 	amount := hrAmount.ToBlockchain(int32(decimals))
-	movement := xclient.NewMovement(chain, contract)
+	movement := txinfo.NewMovement(chain, contract)
 	movement.AddSource(sourceAddress, amount, nil)
 	movement.AddDestination(destinationAddress, amount, nil)
 	// Explicitely remove contract for perps transactions
@@ -255,11 +256,11 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 
 	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, txHash)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction fee: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction fee: %w", err)
 	}
 	tokensMetadata, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
 	}
 
 	feeDecimals := HypeDecimals
@@ -284,10 +285,10 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (xcl
 // ActionHash + SenderAddres transaction info lookup. It relies on "fetchTxInfoByHash" under the hood.
 // Required because native hyperliquid transaction hash contains block related data, so we cannot calculate
 // it upfront.
-func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	sender, ok := args.Sender()
 	if !ok {
-		return xclient.TxInfo{}, fmt.Errorf("missing sender address")
+		return txinfo.TxInfo{}, fmt.Errorf("missing sender address")
 	}
 
 	var userDetails types.UserDetails
@@ -296,18 +297,18 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 	}, &userDetails)
 
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch user details: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
 	for _, tx := range userDetails.Txs {
 		spotSend, err := tx.GetAction()
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to get tx action: %w", err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to get tx action: %w", err)
 		}
 
 		ah, err := types.GetActionHash(spotSend)
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to calculate action hash for tx %s: %w", tx.Hash, err)
 		}
 		logrus.WithField("action", ah).WithField("hash", tx.Hash).WithField("spotSend", spotSend).Trace("user action")
 
@@ -316,19 +317,19 @@ func (client *Client) fetchTxInfoByActionHash(ctx context.Context, args *txinfo.
 		}
 	}
 
-	return xclient.TxInfo{}, xcerrors.TransactionNotFoundf("%v", err)
+	return txinfo.TxInfo{}, xcerrors.TransactionNotFoundf("%v", err)
 }
 
 // Fetch transaction info
 // - Fetch by Hyperliquid tx hash if no 'Sender' is provided
 // - Fetch by Hyperliquid action hash if 'Sender' is provided
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	hash := args.TxHash()
 	if !strings.HasPrefix(string(hash), "0x") {
 		// normalize the prefix if valid hex
 		_, err := hex.DecodeString(string(hash))
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to decode hash as hex: %w", err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to decode hash as hex: %w", err)
 		}
 		hash = "0x" + hash
 		args.SetHash(xc.TxHash(hash))
@@ -457,7 +458,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return tm.WeiDecimals, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
 		h, err := client.fetchBlockHeight(ctx)
@@ -486,11 +487,11 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	}
 
 	timestamp := time.UnixMilli(resp.BlockDetails.BlockTime)
-	block := xclient.NewBlock(client.Asset.GetChain().Chain, height, resp.BlockDetails.Hash, timestamp)
-	return &xclient.BlockWithTransactions{
+	block := txinfo.NewBlock(client.Asset.GetChain().Chain, height, resp.BlockDetails.Hash, timestamp)
+	return &txinfo.BlockWithTransactions{
 		Block:          *block,
 		TransactionIds: transactions,
-		SubBlocks:      []*xclient.SubBlockWithTransactions{},
+		SubBlocks:      []*txinfo.SubBlockWithTransactions{},
 	}, nil
 }
 

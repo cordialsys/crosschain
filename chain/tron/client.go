@@ -16,7 +16,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/tron/txinput"
 	xclient "github.com/cordialsys/crosschain/client"
 	xcerrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -100,11 +101,10 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 // Submission of unstake/stake/withdraw transactions relies on proper handling
 // of "FailedPrecondition" error. It's modeled this way to avoid blocking and match
 // treasury behavior.
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	// TODO: Refactor SubmitTx interface to accept SubmitTxReq instead of tx
 	// This check will always return 'ok == true' at the moment
-	withMetadata, _ := tx.(xc.TxWithMetadata)
-	metaBz, err := withMetadata.GetMetadata()
+	metaBz, err := tx.GetMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to get tx metadata: %w", err)
 	}
@@ -192,28 +192,28 @@ func (client *Client) ConnectEvmJsonRpc(ctx context.Context) (*ethclient.Client,
 	return rpcClient, nil
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	rpcClient, err := client.ConnectEvmJsonRpc(ctx)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 	tx, err := client.client.GetTransactionByID(string(txHash))
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 
 	info, err := client.client.GetTransactionInfoByID(string(txHash))
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 	evmTx, err := rpcClient.TransactionReceipt(ctx, common.HexToHash(string(txHash)))
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("failed to get transaction by hash from EVM RPC: %v", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("failed to get transaction by hash from EVM RPC: %v", err)
 	}
 
 	latestBlockResp, err := client.client.GetBlockByLatest(1)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 	latestBlock := latestBlockResp.Block[0]
 
@@ -227,18 +227,18 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			logrus.WithError(err).Warn("unknown transaction")
 		} else {
-			source := new(xclient.LegacyTxInfoEndpoint)
+			source := new(txinfo.LegacyTxInfoEndpoint)
 			source.Address = from
 			source.Amount = amount
 			source.Asset = string(client.chain.Chain)
 			source.NativeAsset = client.chain.Chain
 
-			destination := new(xclient.LegacyTxInfoEndpoint)
+			destination := new(txinfo.LegacyTxInfoEndpoint)
 			destination.Address = to
 			destination.Amount = amount
 			destination.Asset = string(client.chain.Chain)
 			destination.NativeAsset = client.chain.Chain
-			destination.Event = xclient.NewEvent("", xclient.MovementVariantNative)
+			destination.Event = txinfo.NewEvent("", txinfo.MovementVariantNative)
 
 			sources = append(sources, source)
 			destinations = append(destinations, destination)
@@ -249,7 +249,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	// Tron natively doesn't use 0x prefix.
 	blockHash = strings.TrimPrefix(blockHash, "0x")
 
-	txInfo := xclient.LegacyTxInfo{
+	txInfo := txinfo.LegacyTxInfo{
 		BlockHash:       blockHash,
 		TxID:            string(txHash),
 		From:            from,
@@ -281,14 +281,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return txInfo, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.chain, legacyTx, xclient.Account), nil
+	return txinfo.TxInfoFromLegacy(client.chain, legacyTx, txinfo.Account), nil
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -323,7 +323,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 	return int(dec.Uint64()), nil
 }
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var tronBlock *httpclient.BlockResponse
 	height, ok := args.Height()
 	if !ok {
@@ -346,8 +346,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 	txs := tronBlock.Transactions
 
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.chain.Chain,
 			height,
 			tronBlock.BlockId,

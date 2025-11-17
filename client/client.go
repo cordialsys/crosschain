@@ -5,7 +5,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	"github.com/cordialsys/crosschain/client/types"
 )
 
 // Client is a client that can fetch data and submit tx to a public blockchain
@@ -14,13 +15,13 @@ type Client interface {
 	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
 
 	// Broadcast a signed transaction to the chain
-	SubmitTx(ctx context.Context, tx xc.Tx) error
+	SubmitTx(ctx context.Context, submitRex types.SubmitTxReq) error
 
 	// Fetching transaction info - legacy endpoint
-	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (LegacyTxInfo, error)
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error)
 
 	// Fetching transaction info
-	FetchTxInfo(ctx context.Context, args *txinfo.Args) (TxInfo, error)
+	FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error)
 
 	// Fetch the balance of the given asset that the client is configured with
 	FetchBalance(ctx context.Context, args *BalanceArgs) (xc.AmountBlockchain, error)
@@ -29,7 +30,7 @@ type Client interface {
 	FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error)
 
 	// Fetch a specific block or the latest block
-	FetchBlock(ctx context.Context, args *BlockArgs) (*BlockWithTransactions, error)
+	FetchBlock(ctx context.Context, args *BlockArgs) (*txinfo.BlockWithTransactions, error)
 }
 
 type MultiTransferClient interface {
@@ -52,7 +53,7 @@ type StakingClient interface {
 
 // Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
 type ManualUnstakingClient interface {
-	CompleteManualUnstaking(ctx context.Context, unstake *Unstake) error
+	CompleteManualUnstaking(ctx context.Context, unstake *txinfo.Unstake) error
 }
 
 type StakeState string

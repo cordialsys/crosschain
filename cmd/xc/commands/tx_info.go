@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
 )

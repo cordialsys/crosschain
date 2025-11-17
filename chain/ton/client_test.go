@@ -11,8 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/ton"
 	"github.com/cordialsys/crosschain/chain/ton/api"
-	xcclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/cordialsys/crosschain/testutil"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
@@ -183,7 +182,7 @@ func TestFetchTxInfo(t *testing.T) {
 		hash       string
 		desc       string
 		resp       interface{}
-		tx         *xcclient.TxInfo
+		tx         *txinfo.TxInfo
 		err        string
 		httpStatus int
 	}{
@@ -196,36 +195,36 @@ func TestFetchTxInfo(t *testing.T) {
 				// get transactions
 				`{"transactions":[{"account":"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A","hash":"zDx7EjkQvC/Bi2QM5yqmaKDrKf+tN20o3k8u8/e6T3E=","lt":"23692407000001","now":1721063820,"orig_status":"active","end_status":"active","total_fees":"1960116","prev_trans_hash":"A2KdHQ6PD7mcRfmWKIoiPNFFooBCzLOCFXoj+4hAjh0=","prev_trans_lt":"23688590000001","description":{"type":"ord","action":{"valid":true,"success":true,"no_funds":false,"result_code":0,"tot_actions":1,"msgs_created":1,"spec_actions":0,"tot_msg_size":{"bits":"761","cells":"1"},"status_change":"unchanged","total_fwd_fees":"400000","skipped_actions":0,"action_list_hash":"XSD5j5fbmBMcz2qKGqBU7K8PcybknHZls74NH2I+Qo0=","total_action_fees":"133331"},"aborted":false,"credit_ph":{"credit":"16298225961743024383"},"destroyed":false,"compute_ph":{"mode":0,"type":"vm","success":true,"gas_fees":"1197600","gas_used":"2994","vm_steps":66,"exit_code":0,"gas_limit":"0","gas_credit":"10000","msg_state_used":false,"account_activated":false,"vm_init_state_hash":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","vm_final_state_hash":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="},"storage_ph":{"status_change":"unchanged","storage_fees_collected":"385"},"credit_first":true},"block_ref":{"workchain":0,"shard":"2000000000000000","seqno":22624217},"in_msg":{"hash":"WkQx6xKpNhRBMMfHXykhcPknSc8IuNclmCEXFBily+8=","source":null,"destination":"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A","value":null,"fwd_fee":null,"ihr_fee":null,"created_lt":null,"created_at":null,"opcode":"0x3235ff9b","ihr_disabled":null,"bounce":null,"bounced":null,"import_fee":"0","message_content":{"hash":"pSgu2pfIEFeWo31xHfheCFt4EG+mSA2vEvMSq/K/PXo=","body":"te6cckEBAgEAjQABmjI1/5uuQ3CjJrTQdqqr0xo0vViP5AYh+2aKxqNmwmRYM3Kx99Qdft6cPlj64q88NjfJNEyxCLVcdWRegP7/mw8pqaMXZpV1qgAAAA0DAQB2QgBQ0W5RAWpH1WaAtnh+c6mZWe/lumKmdm/NW2CsXqGOcaAKfYwAAAAAAAAAAAAAAAAAAAAAAABoaWkpu9mU","decoded":null},"init_state":null},"out_msgs":[{"hash":"XexvuJ+FOdF7mNAC0/zjXEtrwO6Kh+XRlTa+FinuLuI=","source":"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A","destination":"0:A1A2DCA202D48FAACD016CF0FCE75332B3DFCB74C54CECDF9AB6C158BD431CE3","value":"22000000","fwd_fee":"266669","ihr_fee":"0","created_lt":"23692407000002","created_at":"1721063820","opcode":"0x00000000","ihr_disabled":true,"bounce":false,"bounced":false,"import_fee":null,"message_content":{"hash":"JwaRlXkBSbE/FgE1Cic6QMP4p4grFvQ05deNWMgRx2E=","body":"te6cckEBAQEACQAADgAAAABoaWne1AAn","decoded":{"type":"text_comment","comment":"hii"}},"init_state":null}],"account_state_before":{"hash":"Bzi9TGeoGnU0mzAFJmVZYk4jSALMK946n9dpq33SdwQ=","balance":"684739799","account_status":"active","frozen_hash":null,"code_hash":"hNr6RJ+Ypph3ibojI1gHK8D3bcRSQAKl0JGLmnXS1Zk=","data_hash":"frmHnmWTx6frq0IYa2yjcUZfEI3BXT25xvIEKzK9nUw="},"account_state_after":{"hash":"RgAvzmATiYRNS8GJ102gwwSjwJmQ0ZBBUHXUkayIIiE=","balance":"660513014","account_status":"active","frozen_hash":null,"code_hash":"hNr6RJ+Ypph3ibojI1gHK8D3bcRSQAKl0JGLmnXS1Zk=","data_hash":"NrUyclIYraMXbxHHxy6NrK40cmR1sFexCd6KWC9eRqM="},"mc_block_seqno":21080779}],"address_book":{"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A":{"user_friendly":"0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"},"0:A1A2DCA202D48FAACD016CF0FCE75332B3DFCB74C54CECDF9AB6C158BD431CE3":{"user_friendly":"0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"}}}`,
 			},
-			tx: &xcclient.TxInfo{
+			tx: &txinfo.TxInfo{
 				Name:   "chains/TON/transactions/5a4431eb12a936144130c7c75f292170f92749cf08b8d7259821171418a5cbef",
 				Hash:   "5a4431eb12a936144130c7c75f292170f92749cf08b8d7259821171418a5cbef",
 				XChain: xc.TON,
-				State:  xcclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xcclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "TON",
 					Height: xc.NewAmountBlockchainFromUint64(21080779),
 					Hash:   "0:2000000000000000:22624217",
 					Time:   testtypes.FromTimeStamp("2024-07-15T17:17:00Z"),
 				},
-				Movements: []*xcclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/TON/assets/TON",
 						XContract: "TON",
 						AssetId:   "TON",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(22000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 								AddressId: "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5",
 							},
 						},
-						To: []*xcclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(22000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm"),
 								AddressId: "0QChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc48Jm",
 							},
 						},
@@ -236,16 +235,16 @@ func TestFetchTxInfo(t *testing.T) {
 						XAsset:    "chains/TON/assets/TON",
 						XContract: "TON",
 						AssetId:   "TON",
-						To:        []*xcclient.BalanceChange{},
-						From: []*xcclient.BalanceChange{
+						To:        []*txinfo.BalanceChange{},
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(1960116),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 								AddressId: "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5",
 							},
 						},
-						Event: xcclient.NewEventFromIndex(0, xcclient.MovementVariantFee),
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
 				Confirmations: 1885,
@@ -264,37 +263,37 @@ func TestFetchTxInfo(t *testing.T) {
 				// get jetton transfers (to resolve mint token addr)
 				`{"jetton_transfers":[{"query_id":"1721068295","source":"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A","destination":"0:A1A2DCA202D48FAACD016CF0FCE75332B3DFCB74C54CECDF9AB6C158BD431CE3","amount":"22000000","source_wallet":"0:3D340B150EAC0392F5F428ABFFDF3C33BED68468A7F7F607C4A13D8013EF56B1","jetton_master":"0:226E80C4BFFA91ADC11DAD87706D52CD397047C128456ED2866D0549D8E2B163","transaction_hash":"A6ekLavrmSQOHKrmXCX396NJx0RPP4dtZlHVcrXxhlc=","transaction_lt":"23694319000003","transaction_now":1721068303,"response_destination":"0:237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A","custom_payload":"te6cckEBAQEACQAADgAAAABoaWne1AAn","forward_ton_amount":null,"forward_payload":null}]}`,
 			},
-			tx: &xcclient.TxInfo{
+			tx: &txinfo.TxInfo{
 				// should report/use the msg-hash
 				Name:   "chains/TON/transactions/ce2c0eeb0dd69d5a5d108869fa29f9943055e42c127b67256aeb6eddb688024f",
 				Hash:   "ce2c0eeb0dd69d5a5d108869fa29f9943055e42c127b67256aeb6eddb688024f",
 				XChain: xc.TON,
-				State:  xcclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xcclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "TON",
 					Height: xc.NewAmountBlockchainFromUint64(21082496),
 					Hash:   "0:2000000000000000:22626042",
 					Time:   testtypes.FromTimeStamp("2024-07-15T18:31:43Z"),
 				},
-				Movements: []*xcclient.Movement{
+				Movements: []*txinfo.Movement{
 					// input TON movement
 					{
 						XAsset:    "chains/TON/assets/TON",
 						XContract: "TON",
 						AssetId:   "TON",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(200000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 								AddressId: "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5",
 							},
 						},
-						To: []*xcclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(200000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G"),
 								AddressId: "kQA9NAsVDqwDkvX0KKv_3zwzvtaEaKf39gfEoT2AE-9Wse1G",
 							},
 						},
@@ -304,18 +303,18 @@ func TestFetchTxInfo(t *testing.T) {
 						XAsset:    "chains/TON/assets/EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
 						XContract: "EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
 						AssetId:   "EQAiboDEv_qRrcEdrYdwbVLNOXBHwShFbtKGbQVJ2OKxY0to",
-						From: []*xcclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(22000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 								AddressId: "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5",
 							},
 						},
-						To: []*xcclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(22000000),
-								XAddress:  xcclient.NewAddressName(xc.TON, "EQChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc4yQp"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "EQChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc4yQp"),
 								AddressId: "EQChotyiAtSPqs0BbPD851Mys9_LdMVM7N-atsFYvUMc4yQp",
 							},
 						},
@@ -326,16 +325,16 @@ func TestFetchTxInfo(t *testing.T) {
 						XAsset:    "chains/TON/assets/TON",
 						XContract: "TON",
 						AssetId:   "TON",
-						To:        []*xcclient.BalanceChange{},
-						From: []*xcclient.BalanceChange{
+						To:        []*txinfo.BalanceChange{},
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromUint64(2432322),
-								XAddress:  xcclient.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
+								XAddress:  txinfo.NewAddressName(xc.TON, "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5"),
 								AddressId: "0QAjflEZ_6KgKMxPlcnKN1ZoUvHdTT6hVwTW95EGVQfeSvD5",
 							},
 						},
-						Event: xcclient.NewEventFromIndex(0, xcclient.MovementVariantFee),
+						Event: txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					},
 				},
 				Confirmations: 168,

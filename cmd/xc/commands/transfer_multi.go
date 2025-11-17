@@ -12,7 +12,8 @@ import (
 	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	xcclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -340,7 +341,11 @@ func CmdTxMultiTransfer() *cobra.Command {
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
-			err = client.SubmitTx(context.Background(), tx)
+			req, err := xctypes.SubmitTxReqFromTx(tx)
+			if err != nil {
+				return fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
+			}
+			err = client.SubmitTx(context.Background(), req)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}

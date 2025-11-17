@@ -13,10 +13,10 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/filecoin/client/types"
-	filtx "github.com/cordialsys/crosschain/chain/filecoin/tx"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/stellar/go/support/time"
 )
@@ -149,19 +149,19 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a filecoin tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
-	filTx := tx.(*filtx.Tx)
-	var msg types.Message
-	msg.FromTxMsg(&filTx.Message)
-	mpoolPushParams := types.NewParams(types.MethodMpoolPush, types.MpoolPush{
-		Message: msg,
-		Signature: types.Signature{
-			Type: filTx.Signature.Type,
-			Data: filTx.Signature.Data,
-		},
-	})
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+	paramsBytes, err := tx.Serialize()
+	if err != nil {
+		return fmt.Errorf("failed to serialize tx: %w", err)
+	}
+
+	var mpoolPushParams types.Params[types.MpoolPush]
+	if err := json.Unmarshal(paramsBytes, &mpoolPushParams); err != nil {
+		return fmt.Errorf("failed to unmarshal FIL tx: %w", err)
+	}
+
 	mpoolPushResponse := types.NewMpoolPushResponse()
-	err := Post(client, mpoolPushParams, mpoolPushResponse)
+	err = Post(client, mpoolPushParams, mpoolPushResponse)
 	if err != nil {
 		return fmt.Errorf("failed submit tx: %w", err)
 	}
@@ -170,8 +170,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, errors.New("not implemented")
 }
 
 // Call `Filecoin.EthGetMessageCidByTransactionHash` to convert EVM hash to CID
@@ -201,13 +201,13 @@ func (client *Client) ConvertEvmHashToCid(txHash xc.TxHash) (xc.TxHash, error) {
 //
 // There is a small penalty for overestimating the gas limit, which is not included in calculations
 // at the moment
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	isEvmHash := strings.HasPrefix(string(txHash), "0x")
 	if isEvmHash {
 		cid, err := client.ConvertEvmHashToCid(txHash)
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to convert EVM hash to CID: %w", err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to convert EVM hash to CID: %w", err)
 		}
 		txHash = cid
 	}
@@ -219,7 +219,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	chainGetMessageResponse := types.NewChainGetMessageResponse()
 	err := Post(client, chainGetMessageParams, chainGetMessageResponse)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get chain message: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get chain message: %w", err)
 	}
 	msg := chainGetMessageResponse.Result
 
@@ -232,11 +232,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	stateSearchMsgResponse := types.NewStateSearchMsgResponse()
 	err = Post(client, stateSearchMsgParams, stateSearchMsgResponse)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to search message state: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to search message state: %w", err)
 	}
 	msgState := stateSearchMsgResponse.Result
 	if msgState == nil {
-		return xclient.TxInfo{}, errors.New("transaction not found")
+		return txinfo.TxInfo{}, errors.New("transaction not found")
 	}
 
 	// Filecoin head is a set of bloks called tipset.
@@ -247,14 +247,14 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	chainGetBlockResponse := types.NewChainGetBlockResponse()
 	err = Post(client, chainGetBlockParams, chainGetBlockResponse)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get chain block: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get chain block: %w", err)
 	}
 
 	chainHeadParams := types.NewEmptyParams(types.MethodChainHead)
 	chainHeadResponse := types.NewChainHeadResponse()
 	err = Post(client, chainHeadParams, chainHeadResponse)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get chain head: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get chain head: %w", err)
 	}
 	chainHeadHeight := chainHeadResponse.Result.Height
 
@@ -262,17 +262,17 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	chain := chainCfg.Chain
 	sHash := string(txHash)
 	blockData := chainGetBlockResponse.Result
-	block := xclient.NewBlock(chain, blockData.Height, sHash, time.MillisFromInt64(blockData.Timestamp).ToTime())
+	block := txinfo.NewBlock(chain, blockData.Height, sHash, time.MillisFromInt64(blockData.Timestamp).ToTime())
 	confirmations := chainHeadHeight - block.Height.Uint64()
 	var errorMsg *string
 	if msgState.Receipt.ExitCode != 0 {
 		errorMessage := fmt.Sprintf("error code %v", msgState.Receipt.ExitCode)
 		errorMsg = &errorMessage
 	}
-	txInfo := xclient.NewTxInfo(block, chainCfg, sHash, confirmations, errorMsg)
+	txInfo := txinfo.NewTxInfo(block, chainCfg, sHash, confirmations, errorMsg)
 
 	sourceAddress := xc.Address(msg.From)
-	movement := xclient.NewMovement(chain, "")
+	movement := txinfo.NewMovement(chain, "")
 	amount := xc.NewAmountBlockchainFromStr(msg.Value)
 	movement.AddSource(xc.Address(msg.From), amount, nil)
 	movement.AddDestination(sourceAddress, amount, nil)
@@ -280,7 +280,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 
 	gasLimit, ok := xc.NewAmountBlockchainFromInt64(int64(msg.GasLimit))
 	if !ok {
-		return xclient.TxInfo{}, fmt.Errorf("failed to convert gas limit: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to convert gas limit: %w", err)
 	}
 	gasPremium := xc.NewAmountBlockchainFromStr(msg.GasPremium)
 	minerFee := gasLimit.Mul(&gasPremium)
@@ -327,7 +327,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 // It is really important to use `Filecoin.ChainGetTipSetAfterHeight` method instead of
 // `Filecoin.ChainGetTipSetMessages` because the later one can include duplicated messages.
 // TODO: Once `ChainGetMessagesInTipset` method is fixed, we should use it instead of `ChainGetParentMessages`
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	var blockCid types.Cid
 	if ok {
@@ -339,11 +339,11 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		chainGetTipSetAfterHeightResponse := types.NewChainGetTipSetAfterHeightResponse()
 		err := Post(client, chainGetTipSetAfterHeightParams, chainGetTipSetAfterHeightResponse)
 		if err != nil {
-			return &xclient.BlockWithTransactions{}, fmt.Errorf("failed to get tipset after height: %w", err)
+			return &txinfo.BlockWithTransactions{}, fmt.Errorf("failed to get tipset after height: %w", err)
 		}
 		tipset := chainGetTipSetAfterHeightResponse.Result.TipsetKey
 		if len(tipset) == 0 {
-			return &xclient.BlockWithTransactions{}, errors.New("tipset contains no blocks")
+			return &txinfo.BlockWithTransactions{}, errors.New("tipset contains no blocks")
 		}
 		blockCid = chainGetTipSetAfterHeightResponse.Result.TipsetKey[0]
 	} else {
@@ -351,11 +351,11 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		chainGetHeadResponse := types.NewChainHeadResponse()
 		err := Post(client, chainGetHeadParams, chainGetHeadResponse)
 		if err != nil {
-			return &xclient.BlockWithTransactions{}, fmt.Errorf("failed to get chain head: %w", err)
+			return &txinfo.BlockWithTransactions{}, fmt.Errorf("failed to get chain head: %w", err)
 		}
 		tipset := chainGetHeadResponse.Result.TipsetKey
 		if len(tipset) == 0 {
-			return &xclient.BlockWithTransactions{}, errors.New("tipset contains no blocks")
+			return &txinfo.BlockWithTransactions{}, errors.New("tipset contains no blocks")
 		}
 		blockCid = chainGetHeadResponse.Result.TipsetKey[0]
 		height = chainGetHeadResponse.Result.Height
@@ -367,10 +367,10 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	chainGetParentMessagesResponse := types.NewChainGetParentMessagesResponse()
 	err := Post(client, chainGetParentMessagesParams, chainGetParentMessagesResponse)
 	if err != nil {
-		return &xclient.BlockWithTransactions{}, fmt.Errorf("failed to get tipset messages: %w", err)
+		return &txinfo.BlockWithTransactions{}, fmt.Errorf("failed to get tipset messages: %w", err)
 	}
 	if chainGetParentMessagesResponse.Result == nil {
-		return &xclient.BlockWithTransactions{}, errors.New("failed to get tipset messages")
+		return &txinfo.BlockWithTransactions{}, errors.New("failed to get tipset messages")
 	}
 
 	// Filecoin head is a set of bloks called tipset.
@@ -381,17 +381,17 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	chainGetBlockResponse := types.NewChainGetBlockResponse()
 	err = Post(client, chainGetBlockParams, chainGetBlockResponse)
 	if err != nil {
-		return &xclient.BlockWithTransactions{}, fmt.Errorf("failed to get block: %w", err)
+		return &txinfo.BlockWithTransactions{}, fmt.Errorf("failed to get block: %w", err)
 	}
 	blockTimestamp := time.MillisFromInt64(chainGetBlockResponse.Result.Timestamp)
 
 	parentHash := chainGetBlockResponse.Result.Parents[0]
-	block := xclient.NewBlock(client.Asset.GetChain().Chain, height, parentHash.Value, blockTimestamp.ToTime())
+	block := txinfo.NewBlock(client.Asset.GetChain().Chain, height, parentHash.Value, blockTimestamp.ToTime())
 	transactions := make([]string, 0, len(*chainGetParentMessagesResponse.Result))
 	for _, message := range *chainGetParentMessagesResponse.Result {
 		transactions = append(transactions, message.Cid.Value)
 	}
-	return &xclient.BlockWithTransactions{
+	return &txinfo.BlockWithTransactions{
 		Block:          *block,
 		TransactionIds: transactions,
 	}, nil

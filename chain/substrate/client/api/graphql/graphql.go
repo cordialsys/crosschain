@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
-	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 )
 
 type Time struct {
@@ -136,6 +136,6 @@ func GetSubqueryParam[T any](ev *SubqueryEvent, index int) (T, error) {
 	return value, nil
 }
 
-func (ev *SubqueryEvent) GetEventDescriptor() (*xcclient.Event, bool) {
+func (ev *SubqueryEvent) GetEventDescriptor() (*txinfo.Event, bool) {
 	return nil, false
 }

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	xcclient "github.com/cordialsys/crosschain/client"
 	xcclienterrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -92,7 +92,11 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 			return "", fmt.Errorf("failed transaction resubmission")
 		}
 
-		err = rpcCli.SubmitTx(context.Background(), tx)
+		req, err := xctypes.SubmitTxReqFromTx(tx)
+		if err != nil {
+			return "", fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
+		}
+		err = rpcCli.SubmitTx(context.Background(), req)
 		if err != nil && strings.Contains(err.Error(), string(xcclienterrors.FailedPrecondition)) {
 			time.Sleep(3 * time.Second)
 		} else if err != nil {
@@ -106,7 +110,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 	return string(tx.Hash()), nil
 }
 
-func WaitForTx(xcFactory *factory.Factory, chain *xc.ChainConfig, hash string, confirmations uint64) (*xcclient.TxInfo, error) {
+func WaitForTx(xcFactory *factory.Factory, chain *xc.ChainConfig, hash string, confirmations uint64) (*txinfo.TxInfo, error) {
 	rpcCli, err := xcFactory.NewClient(chain)
 	if err != nil {
 		return nil, err

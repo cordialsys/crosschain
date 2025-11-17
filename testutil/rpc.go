@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/stretchr/testify/require"
 )
 
@@ -165,7 +165,7 @@ func Reserialize[T any](val *T) *T {
 }
 
 // Produces more readable diffs when comparing TxInfo in unit tests
-func TxInfoEqual(t *testing.T, expected, actual xclient.TxInfo) {
+func TxInfoEqual(t *testing.T, expected, actual txinfo.TxInfo) {
 	a := Reserialize(&expected)
 	b := Reserialize(&actual)
 

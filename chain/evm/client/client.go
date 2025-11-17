@@ -20,8 +20,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/normalize"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -117,7 +118,7 @@ func NewClient(asset xc.ITask) (*Client, error) {
 }
 
 // SubmitTx submits a EVM tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	bz, err := tx.Serialize()
 	if err != nil {
 		return err
@@ -146,12 +147,12 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a EVM tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	nativeAsset := client.Asset.GetChain()
 	txHashHex := address.TrimPrefixes(string(txHashStr))
 	txHash := common.HexToHash(txHashHex)
 
-	result := xclient.LegacyTxInfo{
+	result := txinfo.LegacyTxInfo{
 		TxID: txHashHex,
 	}
 
@@ -259,17 +260,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 		if from != "" && amount.Cmp(zero) > 0 {
 			ethMovements = tx.SourcesAndDests{
-				Sources: []*xclient.LegacyTxInfoEndpoint{{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:     xc.Address(from),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
-					Event:       xclient.NewEvent("", xclient.MovementVariantNative),
+					Event:       txinfo.NewEvent("", txinfo.MovementVariantNative),
 				}},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:     xc.Address(to),
 					NativeAsset: nativeAsset.Chain,
 					Amount:      xc.AmountBlockchain(*amount),
-					Event:       xclient.NewEvent("", xclient.MovementVariantNative),
+					Event:       txinfo.NewEvent("", txinfo.MovementVariantNative),
 				}},
 			}
 		}
@@ -299,7 +300,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 				address = hex.EncodeToString(dep.WithdrawalCredentials[len(dep.WithdrawalCredentials)-common.AddressLength:])
 			}
 
-			result.AddStakeEvent(&xclient.Stake{
+			result.AddStakeEvent(&txinfo.Stake{
 				Balance:   dep.Amount,
 				Validator: normalize.NormalizeAddressString(hex.EncodeToString(dep.Pubkey), nativeAsset.Chain),
 				Address:   normalize.NormalizeAddressString(address, nativeAsset.Chain),
@@ -314,7 +315,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 			}
 			// assume 32 ether
 			inc, _ := xc.NewAmountHumanReadableFromStr("32")
-			result.AddStakeEvent(&xclient.Unstake{
+			result.AddStakeEvent(&txinfo.Unstake{
 				Balance:   inc.ToBlockchain(client.Asset.GetChain().Decimals),
 				Validator: normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Pubkey), nativeAsset.Chain),
 				Address:   normalize.NormalizeAddressString(hex.EncodeToString(exitLog.Caller[:]), nativeAsset.Chain),
@@ -363,15 +364,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	return result, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain()
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil
+	return txinfo.TxInfoFromLegacy(chain, legacyTx, txinfo.Account), nil
 }
 
 // Fetch the balance of the native asset that this client is configured for
@@ -431,7 +432,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return int(dec), nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var err error
 	height, ok := args.Height()
 	if !ok {
@@ -459,8 +460,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, fmt.Errorf("could not parse downloaded timestamp: %s", evmBlock.Timestamp)
 	}
 
-	block := &xclient.BlockWithTransactions{
-		Block:          *xclient.NewBlock(client.Asset.GetChain().Chain, returnedNumber.Uint64(), evmBlock.Hash, time.Unix(int64(unix.Uint64()), 0)),
+	block := &txinfo.BlockWithTransactions{
+		Block:          *txinfo.NewBlock(client.Asset.GetChain().Chain, returnedNumber.Uint64(), evmBlock.Hash, time.Unix(int64(unix.Uint64()), 0)),
 		TransactionIds: evmBlock.Transactions,
 	}
 

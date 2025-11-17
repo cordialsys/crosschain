@@ -22,7 +22,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -86,7 +87,7 @@ func (client *BlockchairClient) LatestBlock(ctx context.Context) (uint64, error)
 	return stats.Data.Blocks, nil
 }
 
-func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *BlockchairClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	serial, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("bad tx: %v", err)
@@ -250,9 +251,9 @@ func (client *BlockchairClient) send(ctx context.Context, resp interface{}, meth
 	return &apiData.Context, err
 }
 
-func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	var data blockchairTransactionData
-	txWithInfo := &xclient.LegacyTxInfo{
+	txWithInfo := &txinfo.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0), // prevent nil pointer exception
 		Fee:    xc.NewAmountBlockchainFromUint64(0),
 	}
@@ -275,8 +276,8 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	}
 	txWithInfo.TxID = data.Transaction.Hash
 
-	sources := []*xclient.LegacyTxInfoEndpoint{}
-	destinations := []*xclient.LegacyTxInfoEndpoint{}
+	sources := []*txinfo.LegacyTxInfoEndpoint{}
+	destinations := []*txinfo.LegacyTxInfoEndpoint{}
 
 	// build Tx
 	txObject := &tx.Tx{
@@ -309,13 +310,13 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 		inputs = append(inputs, input)
 
 		utxoId := clientcommon.NewUtxoId(xc.TxHash(in.TxHash), int(in.Index))
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
 			Asset:           string(asset),
-			Event:           xclient.NewEvent(utxoId, xclient.MovementVariantNative),
+			Event:           txinfo.NewEvent(utxoId, txinfo.MovementVariantNative),
 		})
 	}
 
@@ -333,12 +334,12 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	to, amount, _ := txObject.DetectToAndAmount(from, expectedTo)
 	for i, out := range data.Outputs {
 		utxoId := clientcommon.NewUtxoId(txHash, int(out.Index))
-		endpoint := &xclient.LegacyTxInfoEndpoint{
+		endpoint := &txinfo.LegacyTxInfoEndpoint{
 			Address:     xc.Address(out.Recipient),
 			Amount:      xc.NewAmountBlockchainFromUint64(out.Value),
 			NativeAsset: xc.NativeAsset(asset),
 			Asset:       string(asset),
-			Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
+			Event:       txinfo.NewEvent(utxoId, txinfo.MovementVariantNative),
 		}
 		if out.Recipient != from {
 			// legacy endpoint drops 'change' movements
@@ -359,10 +360,10 @@ func (client *BlockchairClient) FetchLegacyTxInfo(ctx context.Context, txHash xc
 	return *txWithInfo, nil
 }
 
-func (client *BlockchairClient) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *BlockchairClient) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain()
 
@@ -374,7 +375,7 @@ func (client *BlockchairClient) FetchTxInfo(ctx context.Context, args *txinfo.Ar
 	legacyTx.Destinations = legacyTx.GetDroppedBtcDestinations()
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
+	return txinfo.TxInfoFromLegacy(chain, legacyTx, txinfo.Utxo), nil
 }
 
 func (client *BlockchairClient) EstimateGas(ctx context.Context) (xc.AmountHumanReadable, error) {
@@ -403,6 +404,6 @@ func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.C
 	return 0, fmt.Errorf("unsupported")
 }
 
-func (client *BlockchairClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *BlockchairClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	panic("unimplemented")
 }

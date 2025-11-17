@@ -17,7 +17,8 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
 	xclienterrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
@@ -328,7 +329,7 @@ func CmdTxTransfer() *cobra.Command {
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
-			err = SubmitTransaction(client, tx, timeout)
+			err = SubmitTransaction(chainConfig.Chain, client, tx, timeout)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
@@ -457,11 +458,38 @@ func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.Transf
 }
 
 // Submit transaction and properly handle PreconditionFailed errors
-func SubmitTransaction(client xclient.Client, tx xc.Tx, timeout time.Duration) error {
+func SubmitTransaction(chain xc.NativeAsset, client xclient.Client, tx xc.Tx, timeout time.Duration) error {
 	start := time.Now()
 	for time.Since(start) < timeout {
+		data, err := tx.Serialize()
+		if err != nil {
+			return fmt.Errorf("failed to serialize tx: %w", err)
+		}
+		var metadataBz []byte
+		if txMeta, ok := tx.(xc.TxWithMetadata); ok {
+			bz, err := txMeta.GetMetadata()
+			if err != nil {
+				return fmt.Errorf("failed to get tx metadata: %w", err)
+			}
+			metadataBz = bz
+		}
+
+		var signatures [][]byte
+		if txLegacySignatures, ok := tx.(xc.TxLegacyGetSignatures); ok {
+			for _, sig := range txLegacySignatures.GetSignatures() {
+				signatures = append(signatures, sig)
+			}
+		}
+
+		req := xctypes.SubmitTxReq{
+			Chain:              chain,
+			TxData:             data,
+			LegacyTxSignatures: signatures,
+			BroadcastInput:     string(metadataBz),
+		}
+
 		// submit the tx, wait a bit, fetch the tx info (network needed)
-		err := client.SubmitTx(context.Background(), tx)
+		err = client.SubmitTx(context.Background(), req)
 		if err != nil && strings.Contains(err.Error(), string(xclienterrors.FailedPrecondition)) {
 			time.Sleep(time.Second * 3)
 			continue

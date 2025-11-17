@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	"github.com/cordialsys/crosschain/chain/filecoin/tx"
 )
 
 const (
@@ -107,19 +106,6 @@ type Message struct {
 	GasPremium string `json:"GasPremium"`
 	Method     int    `json:"Method"`
 	Params     []byte `json:"Params"`
-}
-
-func (msg *Message) FromTxMsg(txMsg *tx.Message) {
-	msg.Version = int(txMsg.Version)
-	msg.To = txMsg.To
-	msg.From = txMsg.From
-	msg.Nonce = txMsg.Nonce
-	msg.Value = txMsg.Value.String()
-	msg.GasLimit = txMsg.GasLimit
-	msg.GasFeeCap = txMsg.GasFeeCap.String()
-	msg.GasPremium = txMsg.GasPremium.String()
-	msg.Method = int(txMsg.Method)
-	msg.Params = txMsg.Params
 }
 
 type ChainGetMessageResponse Message

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
@@ -219,27 +220,7 @@ func (a Agent) Call(canisterID icpaddress.Principal, requestID types.RequestID, 
 	}
 }
 
-func (a Agent) CallAnonymous(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
-	nonce, err := unsafeGenerateRandomNonce()
-	if err != nil {
-		return err
-	}
-	expiration := time.Now().Add(a.Config.ingressExpiry)
-	unsignedPayload, err := a.Config.CreateUnsignedRequest(canisterID, types.RequestTypeCall, methodName, nonce, expiration, in...)
-	if err != nil {
-		return fmt.Errorf("failed to create payload: %w", err)
-	}
-	requestID := unsignedPayload.RequestID()
-
-	payload, err := unsignedPayload.Sign(nil)
-	if err != nil {
-		return fmt.Errorf("failed to sign the payload: %w", err)
-	}
-
-	return a.Call(canisterID, requestID, payload, out)
-}
-
-func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
+func (a Agent) Query(ctx context.Context, canisterID icpaddress.Principal, methodName string, in []any, out []any) error {
 	nonce, err := unsafeGenerateRandomNonce()
 	if err != nil {
 		return err
@@ -266,7 +247,14 @@ func (a Agent) Query(canisterID icpaddress.Principal, methodName string, in []an
 	})
 	logger.Debug("posting request")
 
-	resp, err := http.Post(url, "application/cbor", bytes.NewBuffer(payload))
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	request.WithContext(ctx)
+	request.Header.Add("Content-Type", "application/cbor")
+
+	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to post the request: %w", err)
 	}
