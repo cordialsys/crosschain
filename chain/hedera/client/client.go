@@ -276,21 +276,12 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		txErr = &tx.Result
 	}
 
-	hash, err := tx.GetHash()
-	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get hash: %w", err)
-	}
 	block := xclient.NewBlock(c.Asset.Chain, b.Number, b.Hash, bTimestamp)
-	txInfo := xclient.NewTxInfo(block, c.Asset.GetChain(), hash, confirmations, txErr)
+	txInfo := xclient.NewTxInfo(block, c.Asset.GetChain(), tx.GetHash(), confirmations, txErr)
 	txInfo.LookupId = string(tx.TransactionId)
 	sourceAddress, err := tx.GetSourceAddress()
 	if err != nil {
 		return xclient.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
-	}
-
-	memo, err := tx.GetMemo()
-	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to decode memo: %w", err)
 	}
 
 	allTransfers := append(tx.Transfers, tx.TokenTransfers...)
@@ -308,7 +299,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		amount := xc.NewAmountBlockchainFromUint64(absAmount)
 		movement.AddSource(xc.Address(sourceAddress), amount, nil)
 		movement.AddDestination(xc.Address(transfer.Account), amount, nil)
-		movement.Memo = memo
+		movement.Memo = tx.GetMemo()
 		txInfo.AddMovement(movement)
 	}
 

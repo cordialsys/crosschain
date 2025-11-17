@@ -1,7 +1,6 @@
 package resttypes
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -108,8 +107,8 @@ func (t TransactionId) GetPayerAccount() (string, error) {
 type Transaction struct {
 	ConsensusTimestamp string        `json:"consensus_timestamp"`
 	ChargedTxFee       uint64        `json:"charged_tx_fee"`
-	HashBase64         string        `json:"transaction_hash"`
-	MemoBase64         string        `json:"memo_base64"`
+	Hash               []byte        `json:"transaction_hash"`
+	Memo               []byte        `json:"memo_base64"`
 	Node               string        `json:"node"`
 	Nonce              int32         `json:"nonce"`
 	Result             string        `json:"result"`
@@ -126,21 +125,12 @@ func (t Transaction) BlockTimeParam() (string, string) {
 	return KEY_TIMESTAMP, "gt:" + t.ConsensusTimestamp
 }
 
-func (t Transaction) GetMemo() (string, error) {
-	decoded, err := base64.StdEncoding.DecodeString(t.MemoBase64)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode memo: %w", err)
-	}
-	return string(decoded), nil
+func (t Transaction) GetMemo() string {
+	return string(t.Memo)
 }
 
-func (t Transaction) GetHash() (string, error) {
-	decoded, err := base64.StdEncoding.DecodeString(t.HashBase64)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode tx hash: %w", err)
-	}
-	hexHash := hex.EncodeToString(decoded)
-	return "0x" + hexHash, nil
+func (t Transaction) GetHash() string {
+	return "0x" + hex.EncodeToString(t.Hash)
 }
 
 type Links struct {
