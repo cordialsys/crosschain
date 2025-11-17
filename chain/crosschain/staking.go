@@ -10,6 +10,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/cordialsys/crosschain/factory/drivers"
 )
 
@@ -147,7 +148,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 }
 
 // func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.WithdrawTxInput, error) {
-func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *xcclient.Unstake) error {
+func (cli *Client) CompleteManualUnstaking(ctx context.Context, unstake *txinfo.Unstake) error {
 	chain := cli.Asset.GetChain().Chain
 
 	var req = &types.StakingInputReq{

@@ -6,7 +6,8 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -36,17 +37,17 @@ func (m *MockedClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, 
 }
 
 // FetchTxInfo fetches tx info, mocked
-func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (m *MockedClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	args := m.Called(ctx, txHash)
-	return args.Get(0).(xclient.LegacyTxInfo), args.Error(1)
+	return args.Get(0).(txinfo.LegacyTxInfo), args.Error(1)
 }
-func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *txinfo.Args) (xclient.TxInfo, error) {
+func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *txinfo.Args) (txinfo.TxInfo, error) {
 	args := m.Called(ctx, txInfoArgs)
-	return args.Get(0).(xclient.TxInfo), args.Error(1)
+	return args.Get(0).(txinfo.TxInfo), args.Error(1)
 }
 
 // SubmitTx submits a tx, mocked
-func (m *MockedClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (m *MockedClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	args := m.Called(ctx, tx)
 	return args.Error(0)
 }
@@ -77,6 +78,6 @@ func (m *MockedClient) UpdateAsset(assetCfg xc.ITask) error {
 	args := m.Called(assetCfg)
 	return args.Error(1)
 }
-func (client *MockedClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *MockedClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	panic("unimplemented")
 }

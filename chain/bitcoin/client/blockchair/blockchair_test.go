@@ -11,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cordialsys/crosschain/builder/buildertest"
@@ -190,9 +191,11 @@ func TestSubmitTx(t *testing.T) {
 	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
-	err = client.SubmitTx(context.Background(), &tx.Tx{
+	tx, err := xctypes.SubmitTxReqFromTx(&tx.Tx{
 		MsgTx: wire.NewMsgTx(2),
 	})
+	require.NoError(err)
+	err = client.SubmitTx(context.Background(), tx)
 	require.NoError(err)
 }
 

@@ -22,7 +22,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -88,9 +89,9 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 type TxInfoClient interface {
 	// Fetching transaction info - legacy endpoint
-	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error)
+	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error)
 	// Fetching transaction info
-	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error)
+	FetchTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.TxInfo, error)
 }
 
 func (client *Client) FetchTxInputChain() (*types.Metadata, *tx_input.TxInput, error) {
@@ -199,7 +200,7 @@ func AsRpcErrorMaybe(inputError error) error {
 }
 
 // SubmitTx submits a Substrate tx
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
 	data, err := txInput.Serialize()
 	if err != nil {
 		return err
@@ -220,12 +221,12 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Substrate tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	var tx xclient.LegacyTxInfo
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	var tx txinfo.LegacyTxInfo
 
 	addressBuilder, err := address.NewAddressBuilder(client.Asset.GetChain().Base())
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 	chain := client.Asset.GetChain().Chain
 	var eventsI = []api.EventI{}
@@ -242,16 +243,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var response graphql.SubqueryExtrinsicResponse
 		err := graphql.Post(ctx, client.indexerUrl, []byte(extrinsicQuery), &response, args)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 
 		if len(response.Data.Extrinsics.Nodes) == 0 {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("no transaction found by hash %s", txHash)
+			return txinfo.LegacyTxInfo{}, fmt.Errorf("no transaction found by hash %s", txHash)
 		}
 		ext := response.Data.Extrinsics.Nodes[0]
 		height, offset, err := ext.ID.Parse()
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 		eventsQuery := fmt.Sprintf(
 			`{"query":"query {      events(first: 100, offset: 0, filter: {blockHeight:{equalTo:\"%d\"} extrinsicId:{equalTo: %d}}, orderBy: ID_DESC) { nodes { module event data } } blocks(first: 1, offset: 0, filter: {height:{equalTo:\"%d\"} }, orderBy: ID_DESC) { nodes { timestamp hash } } } "}`,
@@ -260,16 +261,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var eventsResponse graphql.SubqueryEventResponse
 		err = graphql.Post(ctx, client.indexerUrl, []byte(eventsQuery), &eventsResponse, args)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 		if len(eventsResponse.Data.Blocks.Nodes) == 0 {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("no block found at height %d", height)
+			return txinfo.LegacyTxInfo{}, fmt.Errorf("no block found at height %d", height)
 		}
 		block := eventsResponse.Data.Blocks.Nodes[0]
 		for _, ev := range eventsResponse.Data.Events.Nodes {
 			_, err := ev.ParseParams()
 			if err != nil {
-				return xclient.LegacyTxInfo{}, err
+				return txinfo.LegacyTxInfo{}, err
 			}
 			eventsI = append(eventsI, ev)
 		}
@@ -282,17 +283,17 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		taostatClient := taostats.NewClient(client.indexerUrl, client.apiKey, client.Asset.GetChain().Limiter)
 		ext, err := taostatClient.GetTransaction(ctx, string(txHash))
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 
 		block, err := taostatClient.GetBlock(ctx, ext.BlockNumber)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 
 		events, err := taostatClient.GetEvents(ctx, ext)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 
 		for _, event := range events {
@@ -327,16 +328,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		var txInfoResp subscan.SubscanExtrinsicResponse
 		err = subscan.Post(ctx, client.indexerUrl+"/api/scan/extrinsic", []byte(reqBody), &txInfoResp, args)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("failed to lookup extrinsic: %v", err)
+			return txinfo.LegacyTxInfo{}, fmt.Errorf("failed to lookup extrinsic: %v", err)
 		}
 		if len(txInfoResp.Data.BlockHash) == 0 {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("not found")
+			return txinfo.LegacyTxInfo{}, fmt.Errorf("not found")
 		}
 
 		for _, ev := range txInfoResp.Data.Event {
 			_, err := ev.ParseParams()
 			if err != nil {
-				return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse event params: %v", err)
+				return txinfo.LegacyTxInfo{}, fmt.Errorf("could not parse event params: %v", err)
 			}
 			eventsI = append(eventsI, ev)
 		}
@@ -358,7 +359,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		rawClient := rpc.NewClient(client.DotClient, maxDepth, client.Asset.GetChain().Limiter)
 		txInfo, err := rawClient.GetTx(ctx, string(txHash))
 		if err != nil {
-			return xclient.LegacyTxInfo{}, err
+			return txinfo.LegacyTxInfo{}, err
 		}
 		eventsI = txInfo.Events
 		tx.TxID = "0x" + hex.EncodeToString(txInfo.ExtrinsicHash)
@@ -387,12 +388,12 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	tx.Sources, tx.Destinations, err = api.ParseEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse events: %v", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not parse events: %v", err)
 	}
 
 	stakes, unstakes, err := api.ParseStakingEvents(addressBuilder, chain, eventsI)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, fmt.Errorf("could not staking events: %v", err)
+		return txinfo.LegacyTxInfo{}, fmt.Errorf("could not staking events: %v", err)
 	}
 	for _, ev := range stakes {
 		tx.AddStakeEvent(ev)
@@ -412,7 +413,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		// check for fee from events
 		from, fee, ok, err := api.ParseFee(addressBuilder, eventsI)
 		if err != nil {
-			return xclient.LegacyTxInfo{}, fmt.Errorf("could not parse fee: %v", err)
+			return txinfo.LegacyTxInfo{}, fmt.Errorf("could not parse fee: %v", err)
 		}
 		if ok {
 			if tx.From == "" {
@@ -425,18 +426,18 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return tx, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
 		// TODO should test each provider instead
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {
-			return xclient.TxInfo{}, errors.TransactionNotFoundf("%v", err)
+			return txinfo.TxInfo{}, errors.TransactionNotFoundf("%v", err)
 		}
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Account), nil
+	return txinfo.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, txinfo.Account), nil
 }
 
 // FetchNativeBalance fetches account balance for a Substrate address
@@ -515,7 +516,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 
 	return 0, fmt.Errorf("unsupported asset: %v", contract)
 }
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var subBlock *types.SignedBlock
 	var err error
 	height, ok := args.Height()
@@ -536,8 +537,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, err
 	}
 
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			uint64(subBlock.Block.Header.Number),
 			blockHash.Hex(),

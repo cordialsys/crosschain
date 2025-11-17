@@ -7,7 +7,7 @@ import (
 
 	"github.com/coming-chat/go-aptos/aptostypes"
 	xc "github.com/cordialsys/crosschain"
-	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,7 +37,7 @@ type FungibleAssetEvent struct {
 	Store  string `json:"store"`
 }
 
-func ParseEvents(tx *aptostypes.Transaction, txHash xc.TxHash) (sources []*xclient.LegacyTxInfoEndpoint, destinations []*xclient.LegacyTxInfoEndpoint, err error) {
+func ParseEvents(tx *aptostypes.Transaction, txHash xc.TxHash) (sources []*txinfo.LegacyTxInfoEndpoint, destinations []*txinfo.LegacyTxInfoEndpoint, err error) {
 	log := logrus.WithField("txhash", txHash)
 
 	changes := []*ParsedChange{}
@@ -83,11 +83,11 @@ func ParseEvents(tx *aptostypes.Transaction, txHash xc.TxHash) (sources []*xclie
 				continue
 			}
 
-			endpoint := &xclient.LegacyTxInfoEndpoint{
+			endpoint := &txinfo.LegacyTxInfoEndpoint{
 				ContractAddress: xc.ContractAddress(contract),
 				Address:         xc.Address(event.Guid.AccountAddress),
 				Amount:          xc.NewAmountBlockchainFromStr(withdraw.Amount),
-				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
+				Event:           txinfo.NewEventFromIndex(uint64(i), txinfo.MovementVariantNative),
 			}
 			if event.Type == "0x1::coin::WithdrawEvent" {
 				fmt.Println("adding destination", endpoint.Address)
@@ -139,11 +139,11 @@ func ParseEvents(tx *aptostypes.Transaction, txHash xc.TxHash) (sources []*xclie
 				log.WithField("event", event.Type).Warn("could not find contract for fungible asset event")
 				continue
 			}
-			endpoint := &xclient.LegacyTxInfoEndpoint{
+			endpoint := &txinfo.LegacyTxInfoEndpoint{
 				ContractAddress: xc.ContractAddress(contract),
 				Address:         address,
 				Amount:          xc.NewAmountBlockchainFromStr(withdraw.Amount),
-				Event:           xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative),
+				Event:           txinfo.NewEventFromIndex(uint64(i), txinfo.MovementVariantNative),
 			}
 			if event.Type == "0x1::fungible_asset::Withdraw" {
 				sources = append(sources, endpoint)

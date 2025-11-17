@@ -19,7 +19,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/sirupsen/logrus"
@@ -278,33 +279,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits via a Crosschain endpoint
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
-	chain := client.Asset.GetChain().Chain
-	data, err := txInput.Serialize()
-	if err != nil {
-		return err
-	}
-	var metadataBz []byte
-	if txWithMetadata, ok := txInput.(xc.TxWithMetadata); ok {
-		bz, err := txWithMetadata.GetMetadata()
-		if err != nil {
-			return err
-		}
-		metadataBz = bz
-	}
-
-	var signatures [][]byte
-	if txLegacyGetSignatures, ok := txInput.(xc.TxLegacyGetSignatures); ok {
-		for _, sig := range txLegacyGetSignatures.GetSignatures() {
-			signatures = append(signatures, sig)
-		}
-	}
-	req := &types.SubmitTxReq{
-		Chain:              chain,
-		TxData:             data,
-		LegacyTxSignatures: signatures,
-		BroadcastInput:     string(metadataBz),
-	}
+func (client *Client) SubmitTx(ctx context.Context, req xctypes.SubmitTxReq) error {
 	res, err := client.legacyApiCall(ctx, "/submit", req)
 	if err != nil {
 		return err
@@ -316,13 +291,13 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info from a Crosschain endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	res, err := client.legacyApiCall(ctx, "/info", &types.TxInfoReq{
 		Chain:  client.Asset.GetChain().Chain,
 		TxHash: string(txHash),
 	})
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 
 	var r types.TxLegacyInfoRes
@@ -330,7 +305,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return r.LegacyTxInfo, err
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHashStr := args.TxHash()
 	chain := client.Asset.GetChain().Chain
 
@@ -352,7 +327,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/transactions/%s?%s", client.URL, chain, txHashStr, query.Encode())
 	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	r := types.TransactionInfoRes{}
@@ -412,7 +387,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return dec, err
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/block", client.URL, client.Asset.GetChain().Chain)
 	height, ok := args.Height()
 	if ok {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
 	xc "github.com/cordialsys/crosschain"
 	bin "github.com/gagliardetto/binary"
@@ -22,6 +22,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/rpc"
 )
@@ -217,7 +218,7 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	return txInput, nil
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
 	txData, err := txInput.Serialize()
 	if err != nil {
 		return fmt.Errorf("send transaction: encode transaction: %w", err)
@@ -279,8 +280,8 @@ func processTransactionWithAddressLookups(ctx context.Context, txx *solana.Trans
 }
 
 // FetchLegacyTxInfo returns tx info for a Solana tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	result := xclient.LegacyTxInfo{}
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	result := txinfo.LegacyTxInfo{}
 
 	txSig, err := solana.SignatureFromBase58(string(txHash))
 	if err != nil {
@@ -348,20 +349,20 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	result.TxID = string(txHash)
 
-	sources := []*xclient.LegacyTxInfoEndpoint{}
-	dests := []*xclient.LegacyTxInfoEndpoint{}
+	sources := []*txinfo.LegacyTxInfoEndpoint{}
+	dests := []*txinfo.LegacyTxInfoEndpoint{}
 
 	for _, instr := range tx.GetSystemTransfers() {
 		from := instr.Instruction.GetFundingAccount().PublicKey.String()
 		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 			Event:   event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 			Event:   event,
@@ -371,13 +372,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		from := instr.Instruction.GetWithdrawAuthorityAccount().PublicKey.String()
 		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 			Event:   event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 			Event:   event,
@@ -387,13 +388,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		from := instr.Instruction.GetStakeAccount().PublicKey.String()
 		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  amount,
 			Event:   event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  amount,
 			Event:   event,
@@ -413,14 +414,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
 			Event:           event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
@@ -442,14 +443,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
 			Event:           event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
@@ -480,14 +481,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 
 		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from),
 			Amount:          amount,
 			ContractAddress: contract,
 			Event:           event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(to),
 			Amount:          amount,
 			ContractAddress: contract,
@@ -511,14 +512,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			logrus.WithError(toErr).Warn("failed to lookup to token account")
 		}
 
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from.PublicKey.String()),
 			Amount:          amount,
 			Event:           event,
 			ContractAddress: contract,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address:         to,
 			Amount:          amount,
 			Event:           event,
@@ -542,14 +543,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			logrus.WithError(toErr).Warn("failed to lookup to token account")
 		}
 
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(from.PublicKey.String()),
 			Amount:          amount,
 			Event:           event,
 			ContractAddress: contract,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address:         to,
 			Amount:          amount,
 			Event:           event,
@@ -568,13 +569,13 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		if err != nil {
 			return result, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
 		}
-		event := xclient.NewEvent(instr.ID, xclient.MovementVariantNative)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(from),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
 			Event:   event,
 		})
-		dests = append(dests, &xclient.LegacyTxInfoEndpoint{
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
 			Address: xc.Address(to),
 			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
 			Event:   event,
@@ -582,7 +583,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}
 
 	for _, instr := range tx.GetDelegateStake() {
-		xcStake := &xclient.Stake{
+		xcStake := &txinfo.Stake{
 			Account:   instr.Instruction.GetStakeAccount().PublicKey.String(),
 			Validator: instr.Instruction.GetVoteAccount().PublicKey.String(),
 			Address:   instr.Instruction.GetStakeAuthority().PublicKey.String(),
@@ -598,7 +599,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		result.AddStakeEvent(xcStake)
 	}
 	for _, instr := range tx.GetDeactivateStakes() {
-		xcStake := &xclient.Unstake{
+		xcStake := &txinfo.Unstake{
 			Account: instr.Instruction.GetStakeAccount().PublicKey.String(),
 			Address: instr.Instruction.GetStakeAuthority().PublicKey.String(),
 
@@ -645,15 +646,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return result, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHashStr := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, xclient.Account), nil
+	return txinfo.TxInfoFromLegacy(client.Asset.GetChain(), legacyTx, txinfo.Account), nil
 }
 
 func (client *Client) LookupTokenMint(ctx context.Context, tokenContract solana.PublicKey) (types.MintAccountInfo, error) {
@@ -823,7 +824,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 
 	return int(mintInfo.Parsed.Info.Decimals), nil
 }
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var err error
 	height, ok := args.Height()
 	if !ok {
@@ -844,8 +845,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if solBlock.BlockTime != nil {
 		blockTime = solBlock.BlockTime.Time()
 	}
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(client.Asset.GetChain().Chain, height, solBlock.Blockhash.String(), blockTime),
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(client.Asset.GetChain().Chain, height, solBlock.Blockhash.String(), blockTime),
 	}
 	for _, tx := range solBlock.Transactions {
 		parsed, err := tx.GetTransaction()

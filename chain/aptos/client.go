@@ -19,7 +19,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -254,7 +255,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Aptos tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	tx_bz, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("could not serialize tx: %v", err)
@@ -265,24 +266,24 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
 	if err != nil {
 		if aptosErr, ok := err.(*aptostypes.RestError); ok {
 			if aptosErr.Code == http.StatusNotFound {
-				return xclient.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
+				return txinfo.LegacyTxInfo{}, errors.TransactionNotFoundf("%v", err)
 			}
 		}
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 
 	block, err := client.AptosClient.GetBlockByVersion(fmt.Sprintf("%d", tx.Version), false)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 	ledger, err := client.AptosClient.LedgerInfo()
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 
 	tx_height := block.BlockHeight
@@ -301,7 +302,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 
 	sources, destinations, err := events.ParseEvents(tx, txHash)
 	if err != nil {
-		return xclient.LegacyTxInfo{}, err
+		return txinfo.LegacyTxInfo{}, err
 	}
 
 	chainCfg := client.Asset.GetChain()
@@ -340,7 +341,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
-	return xclient.LegacyTxInfo{
+	return txinfo.LegacyTxInfo{
 		To:            to,
 		From:          xc.Address(tx.Sender),
 		Amount:        amount,
@@ -358,16 +359,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	}, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHashStr := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain()
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
+	return txinfo.TxInfoFromLegacy(chain, legacyTx, txinfo.Utxo), nil
 }
 
 // FetchBalance fetches balance for an Aptos address
@@ -483,7 +484,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
 		ledger, err := client.AptosClient.LedgerInfo()
@@ -497,8 +498,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return nil, err
 	}
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			aptosBlock.BlockHeight,
 			aptosBlock.BlockHash,

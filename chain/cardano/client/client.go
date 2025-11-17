@@ -20,7 +20,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/btree"
 )
@@ -204,7 +205,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Template tx
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	bytes, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)
@@ -220,43 +221,43 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("deprecated")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, errors.New("deprecated")
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	var latestBlock types.Block
 	err := client.Get(ctx, "/blocks/latest", &latestBlock)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch latest block: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 
 	var transactionInfo types.TransactionInfo
 	transactionPath := fmt.Sprintf("/txs/%s", string(txHash))
 	err = client.Get(ctx, transactionPath, &transactionInfo)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction info: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction info: %w", err)
 	}
 
 	var blockInfo types.Block
 	blockPath := fmt.Sprintf("/blocks/%d", transactionInfo.BlockHeight)
 	err = client.Get(ctx, blockPath, &blockInfo)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch block info: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
 	chain := client.ChainCfg.Chain
 	timestamp := time.Unix(blockInfo.Time, 0)
-	block := xclient.NewBlock(
+	block := txinfo.NewBlock(
 		chain,
 		uint64(transactionInfo.BlockHeight),
 		blockInfo.Hash,
 		timestamp,
 	)
 
-	txInfo := xclient.NewTxInfo(
+	txInfo := txinfo.NewTxInfo(
 		block,
 		client.ChainCfg,
 		string(txHash),
@@ -268,7 +269,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	transactionUtxosPath := fmt.Sprintf("%s/utxos", transactionPath)
 	err = client.Get(ctx, transactionUtxosPath, &transactionUtxos)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction utxos: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction utxos: %w", err)
 	}
 	contractToMovement := NewContractToMovement()
 	for _, input := range transactionUtxos.Inputs {
@@ -295,7 +296,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		}
 	}
 
-	movements := make([]*xclient.Movement, 0)
+	movements := make([]*txinfo.Movement, 0)
 	for _, movement := range contractToMovement.Values() {
 		movements = append(movements, movement)
 	}
@@ -303,12 +304,12 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 
 	decimals, err := client.FetchDecimals(ctx, types.Ada)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch decimals: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
 
 	feeAmount := xc.NewAmountBlockchainFromStr(transactionInfo.Fees)
-	txInfo.Fees = []*xclient.Balance{
-		xclient.NewBalance(xc.ADA, types.Ada, feeAmount, &decimals),
+	txInfo.Fees = []*txinfo.Balance{
+		txinfo.NewBalance(xc.ADA, types.Ada, feeAmount, &decimals),
 	}
 	txInfo.Final = int(txInfo.Confirmations) > client.ChainCfg.Confirmations.Final
 
@@ -346,7 +347,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return TokenDecimals, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	var blockPath string
 	if ok {
@@ -360,7 +361,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, fmt.Errorf("failed to fetch block info: %w", err)
 	}
 
-	xBlock := xclient.NewBlock(
+	xBlock := txinfo.NewBlock(
 		client.ChainCfg.Chain,
 		block.Height,
 		block.Hash,
@@ -374,7 +375,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, fmt.Errorf("failed to fetch block transactions: %w", err)
 	}
 
-	return &xclient.BlockWithTransactions{
+	return &txinfo.BlockWithTransactions{
 		Block:          *xBlock,
 		TransactionIds: transactionHashes,
 	}, nil
@@ -408,6 +409,7 @@ func (client *Client) request(ctx context.Context, method string, path string, c
 		request.Header.Set("project_id", client.BlockfrostProjectId)
 	}
 
+	request.WithContext(ctx)
 	response, err := client.HttpClient.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
@@ -455,17 +457,17 @@ func (client *Client) Post(ctx context.Context, path string, cbor []byte, resp a
 }
 
 type ContractToMovement struct {
-	*btree.Map[xc.ContractAddress, *xclient.Movement]
+	*btree.Map[xc.ContractAddress, *txinfo.Movement]
 }
 
 func NewContractToMovement() ContractToMovement {
-	return ContractToMovement{btree.NewMap[xc.ContractAddress, *xclient.Movement](1)}
+	return ContractToMovement{btree.NewMap[xc.ContractAddress, *txinfo.Movement](1)}
 }
 
-func (c *ContractToMovement) GetOrInit(contract xc.ContractAddress) *xclient.Movement {
+func (c *ContractToMovement) GetOrInit(contract xc.ContractAddress) *txinfo.Movement {
 	_, ok := c.Get(contract)
 	if !ok {
-		movement := xclient.NewMovement(
+		movement := txinfo.NewMovement(
 			xc.ADA,
 			contract,
 		)

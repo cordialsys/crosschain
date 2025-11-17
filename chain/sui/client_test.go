@@ -9,10 +9,11 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
-	apitypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
 	xclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/cordialsys/go-sui-sdk/v2/lib"
 	"github.com/cordialsys/go-sui-sdk/v2/move_types"
@@ -42,7 +43,7 @@ func TestFetchTxInfo(t *testing.T) {
 	vectors := []struct {
 		name string
 		resp interface{}
-		val  xclient.LegacyTxInfo
+		val  txinfo.LegacyTxInfo
 		err  string
 	}{
 		{
@@ -55,7 +56,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// grab the checkpoint for the tx
 				`{"epoch":"18","sequenceNumber":"1953362","digest":"BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB","networkTotalTransactions":"4594815","previousDigest":"QnwDCY5dJgpY9rRGbYseG8pQgdacHGtXgjC9TPVyKh8","epochRollingGasCostSummary":{"computationCost":"256697889685794","storageCost":"781589532800","storageRebate":"744825062520","nonRefundableStorageFee":"7523485480"},"timestampMs":"1683124849673","transactions":["UMeT2asZr2hsqT3n3vHmfE4UaNMjkVpoQvUpkRpfddd","3V6WU3ofLCd4pfujYnsEY95y4DxQhW8JM6m2Hy8XTbqg","7NHKPiWjTPM84ZBdi9othG3HCw2LUbxfFe183SWdTwhh","9i1bZ9mtMjMsjzvLRwP2YF9DUvLztiY1QbQVWfgGNrRJ","A5w6t3SkpHTUmCA14L7q9bnVQXsKWv5XRrKTP7wM7xCd","FohJy8o9qf3Qwag6wdWA6XCJeJEvjUmMzWgDhVPxMUnU","GAgWaGyeUoRSKGJQS3Mbs3PYeqfFLHtHpyXmHXGAiMAe","Hbo9qbYRj5XncBtpyzEro2aXYgWiThFEJTj8XmR5ArBg","J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9"],"checkpointCommitments":[],"validatorSignature":"k7orjPUoopsGMd6eR3JDie70DwppJ3t/F2BVMNDN06vX1FMDgscBuXf970TXoD9z"}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9",
 				From:          "0x7d20dcdb2bca4f508ea9613994683eb4e76e9c4ed371169677c1be02aaf0b58e",
@@ -63,22 +64,22 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:    1953362,
 				BlockTime:     1683124849,
 				Confirmations: 15705,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0x7d20dcdb2bca4f508ea9613994683eb4e76e9c4ed371169677c1be02aaf0b58e",
 						Amount:      xc.NewAmountBlockchainFromStr("10001997880"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
-						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+						Event:       txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("10000000000"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
-						Event:       xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+						Event:       txinfo.NewEventFromIndex(1, txinfo.MovementVariantNative),
 					},
 				},
 				Fee:    xc.NewAmountBlockchainFromStr("1997880"),
@@ -97,7 +98,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// grab the checkpoint for the tx
 				`{"epoch":"18","sequenceNumber":"1953362","digest":"BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB","networkTotalTransactions":"4594815","previousDigest":"QnwDCY5dJgpY9rRGbYseG8pQgdacHGtXgjC9TPVyKh8","epochRollingGasCostSummary":{"computationCost":"256697889685794","storageCost":"781589532800","storageRebate":"744825062520","nonRefundableStorageFee":"7523485480"},"timestampMs":"1683124849673","transactions":["UMeT2asZr2hsqT3n3vHmfE4UaNMjkVpoQvUpkRpfddd","3V6WU3ofLCd4pfujYnsEY95y4DxQhW8JM6m2Hy8XTbqg","7NHKPiWjTPM84ZBdi9othG3HCw2LUbxfFe183SWdTwhh","9i1bZ9mtMjMsjzvLRwP2YF9DUvLztiY1QbQVWfgGNrRJ","A5w6t3SkpHTUmCA14L7q9bnVQXsKWv5XRrKTP7wM7xCd","FohJy8o9qf3Qwag6wdWA6XCJeJEvjUmMzWgDhVPxMUnU","GAgWaGyeUoRSKGJQS3Mbs3PYeqfFLHtHpyXmHXGAiMAe","Hbo9qbYRj5XncBtpyzEro2aXYgWiThFEJTj8XmR5ArBg","J2Vkui75vgoLvCmNiREVKwpeTVPCq5EQ71i2ETahP6R9"],"checkpointCommitments":[],"validatorSignature":"k7orjPUoopsGMd6eR3JDie70DwppJ3t/F2BVMNDN06vX1FMDgscBuXf970TXoD9z"}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				BlockHash:     "BHeEq9rUuc2kdh1k7vk4oN22oK7TtpTpVuaM32fs6UrB",
 				TxID:          "9aFfSrP7jvvteSS4q8L8RMC71NbfBeK1FK8aWcw8c8py",
 				From:          "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
@@ -105,16 +106,16 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:    2652859,
 				BlockTime:     1683667808,
 				Confirmations: 15705,
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("1079040"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
-						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+						Event:       txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{},
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{},
 				Fee:          xc.NewAmountBlockchainFromStr("1079040"),
 				Error:        "InsufficientCoinBalance in command 2",
 				Status:       xc.TxStatusFailure,
@@ -131,7 +132,7 @@ func TestFetchTxInfo(t *testing.T) {
 				// sui_getCheckpoint
 				`{"epoch":"1","sequenceNumber":"213114","digest":"8S4qJohEmkdebSt2t9nHmtWquK39KZVJK5bKrARYNBYP","networkTotalTransactions":"1673546","previousDigest":"93hv9hGLRfRZXt78mV6fytQYWXM9grW81H72eyqJYDco","epochRollingGasCostSummary":{"computationCost":"785450001460","storageCost":"1810842150400","storageRebate":"1744678497672","nonRefundableStorageFee":"17623015128"},"timestampMs":"1683903105617","transactions":["26jr9a6RR8G9TKpXySwnArwMTtqGSoN5BPddp9tsuKLo","2fy33DVLoKw1Qfe4PBEpyYZyTDSsy4UTVLZvUsEASEZt","3SV6qmb4wXKYWTnivjHQL8xH41MRq7Vj7hsZsspWfERf","4d3MhqoRk2gESQUoVNyNDWQxGVLoTWbFxhdhjtsNcEPb","7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP","8xUKJfoJKyC8GbMPnNM4iWjEER5CEsru6XQ4adax3HBN","DrJegZcM4kWEMyEcJp18UiymaqFnWZBpTUhPGSKW2gir","EKrnLwFDrtYVcmPC8pFwZAJQQC4e1LhorPbHa3EG6E2H","G9tReX5eo1REF1Vxrn4yxGd4WM7PsVZ1oMRQBnNUnYWh"],"checkpointCommitments":[],"validatorSignature":"iEOUB8jhgUky5jAE45hhAuQ0o4lUjphOTc79jtTjBo/aajRlO2UMIuzXUXAgBwyq"}`,
 			},
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				BlockHash:       "8S4qJohEmkdebSt2t9nHmtWquK39KZVJK5bKrARYNBYP",
 				TxID:            "7uepPpd7LLqittQmViGyobWrTYv5RDZCeyh6Ja8ZJCWP",
 				From:            "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
@@ -140,29 +141,29 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockTime:       1683903105,
 				Confirmations:   8838,
 				ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-				Sources: []*xclient.LegacyTxInfoEndpoint{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:         "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:          xc.NewAmountBlockchainFromStr("1500000000000"),
 						NativeAsset:     "SUI",
 						ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-						Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(1, txinfo.MovementVariantNative),
 					},
 				},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
 						Address:     "0xbb8a8269cf96ba2ec27dc9becd79836394dbe7946c7ac211928be4a0b1de66b9",
 						Amount:      xc.NewAmountBlockchainFromStr("1611816"),
 						Asset:       "SUI",
 						NativeAsset: "SUI",
-						Event:       xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+						Event:       txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 					},
 					{
 						Address:         "0xfe33ab3ab64a92088402fc22d850f04f0770d899695104447ffd93d7b83cfeb8",
 						Amount:          xc.NewAmountBlockchainFromStr("1500000000000"),
 						NativeAsset:     "SUI",
 						ContractAddress: "0x3821e4ae13d37a1c55a03a86eab613450c1302e6b4df461e1c79bdf8381dde47::iusdc::IUSDC",
-						Event:           xclient.NewEventFromIndex(2, xclient.MovementVariantNative),
+						Event:           txinfo.NewEventFromIndex(2, txinfo.MovementVariantNative),
 					},
 				},
 				// believe it or not SUI will rebate (pay you) fee if you merge enough coins
@@ -175,7 +176,7 @@ func TestFetchTxInfo(t *testing.T) {
 			"sui_missing_tx",
 			// sui_getTransactionBlock
 			fmt.Errorf(`{"code":-32602,"message":"Could not find the referenced transaction [TransactionDigest(7xZ5AAjrybwwPjXh7ojKert5v7eSYgzWEREtKrhSGQ7d)]."}`),
-			xclient.LegacyTxInfo{
+			txinfo.LegacyTxInfo{
 				TxID: "7xZ5AAjrybwwPjXh7ojKert5v7eSYgzWEREtKrhSGQ7d",
 			},
 			"TransactionNotFound: ",
@@ -194,7 +195,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.val.TxID))
 
 			if v.err != "" {
-				require.Equal(xclient.LegacyTxInfo{}, txInfo)
+				require.Equal(txinfo.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(err, v.err)
 			} else {
 				require.Nil(err)
@@ -890,7 +891,9 @@ func TestTransfers(t *testing.T) {
 			})
 			require.NoError(err)
 
-			err = client.SubmitTx(context.Background(), tx)
+			req, err := xctypes.SubmitTxReqFromTx(tx)
+			require.NoError(err)
+			err = client.SubmitTx(context.Background(), req)
 			require.NoError(err)
 		})
 	}
@@ -958,23 +961,29 @@ func TestSubmit(t *testing.T) {
 	require := require.New(t)
 	vectors := []struct {
 		name         string
-		binaryTx     xc.Tx
+		binaryTx     xctypes.SubmitTxReq
 		expectedSigs int
 		err          error
 	}{
 		{
-			name:         "no signature metadata",
-			binaryTx:     apitypes.NewBinaryTx([]byte("bytes"), []byte(``)),
+			name: "no signature metadata",
+			binaryTx: xctypes.SubmitTxReq{
+				TxData:         []byte("bytes"),
+				BroadcastInput: "",
+			},
 			expectedSigs: 0,
 		},
 		{
-			name:         "with signature metadata",
-			binaryTx:     apitypes.NewBinaryTx([]byte("bytes"), []byte(`{"signatures": ["01020304"]}`)),
+			name: "with signature metadata",
+			binaryTx: xctypes.SubmitTxReq{
+				TxData:         []byte("bytes"),
+				BroadcastInput: `{"signatures": ["01020304"]}`,
+			},
 			expectedSigs: 1,
 		},
 		{
 			name: "with legacy signatures",
-			binaryTx: &apitypes.SubmitTxReq{
+			binaryTx: xctypes.SubmitTxReq{
 				LegacyTxSignatures: [][]byte{
 					{1, 2, 3, 4},
 				},
@@ -985,27 +994,28 @@ func TestSubmit(t *testing.T) {
 	}
 
 	for _, v := range vectors {
-		fmt.Println("Running ", v.name)
-		ctx := context.Background()
-		server, close := testtypes.MockJSONRPC(t, []string{
-			// don't care currently about the responses
-			"{}",
-			"{}",
-			"{}",
-		})
-		defer close()
-		asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
+		t.Run(v.name, func(t *testing.T) {
+			ctx := context.Background()
+			server, close := testtypes.MockJSONRPC(t, []string{
+				// don't care currently about the responses
+				"{}",
+				"{}",
+				"{}",
+			})
+			defer close()
+			asset := xc.NewChainConfig(xc.SUI).WithNet("devnet").WithUrl(server.URL)
 
-		asset.URL = server.URL
-		client, err := NewClient(asset)
-		require.NoError(err)
-
-		err = client.SubmitTx(ctx, v.binaryTx)
-		if v.err != nil {
-			require.ErrorContains(err, v.err.Error())
-		} else {
+			asset.URL = server.URL
+			client, err := NewClient(asset)
 			require.NoError(err)
-		}
-		require.Equal(v.expectedSigs, client.LastSignatureCount)
+
+			err = client.SubmitTx(ctx, v.binaryTx)
+			if v.err != nil {
+				require.ErrorContains(err, v.err.Error())
+			} else {
+				require.NoError(err)
+			}
+			require.Equal(v.expectedSigs, client.LastSignatureCount)
+		})
 	}
 }

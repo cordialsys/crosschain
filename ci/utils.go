@@ -17,7 +17,7 @@ import (
 	"time"
 
 	xcclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory"
@@ -192,7 +192,7 @@ func awaitBalance(t *testing.T, client xcclient.Client, expectedBalance xc.Amoun
 }
 
 // Fetch the tx, waiting for it to be confirmed and the balance to change
-func awaitTx(t *testing.T, client xcclient.Client, txHash xc.TxHash, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) xcclient.TxInfo {
+func awaitTx(t *testing.T, client xcclient.Client, txHash xc.TxHash, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) txinfo.TxInfo {
 	start := time.Now()
 	timeout := time.Minute * 1
 	for {
@@ -223,7 +223,7 @@ func awaitTx(t *testing.T, client xcclient.Client, txHash xc.TxHash, initialBala
 
 // We poll until we the "full" expected balance change, as sometimes
 // the balance can partially update (e.g. deducts network fee first...).
-func verifyBalanceChanges(t *testing.T, client xcclient.Client, txInfo xcclient.TxInfo, assetId string, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) {
+func verifyBalanceChanges(t *testing.T, client xcclient.Client, txInfo txinfo.TxInfo, assetId string, initialBalance xc.AmountBlockchain, balanceArgs ...*xcclient.BalanceArgs) {
 	var finalWalletBalance xc.AmountBlockchain
 	var remainder xc.AmountBlockchain
 	addresses := []xc.Address{}

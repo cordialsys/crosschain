@@ -1,12 +1,14 @@
 package tx
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/filecoin/address"
+	"github.com/cordialsys/crosschain/chain/filecoin/client/types"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
 	"github.com/fxamacker/cbor"
 	"github.com/sirupsen/logrus"
@@ -49,22 +51,16 @@ func NewMessage(args xcbuilder.TransferArgs, txInput tx_input.TxInput) Message {
 	}
 }
 
-// Filecoin signature type.
-type Signature struct {
-	Type byte
-	Data []byte
-}
-
 // Filecoint transaction
 type Tx struct {
 	Message      Message
 	XcSignatures []xc.TxSignature
-	Signature    Signature
+	Signature    types.Signature
 }
 
 type SignedTx struct {
 	Tx        *Tx
-	Signature Signature
+	Signature types.Signature
 }
 
 var _ xc.Tx = &Tx{}
@@ -93,7 +89,30 @@ func (tx Tx) Hash() xc.TxHash {
 
 // Sighashes returns the tx payload to sign, aka sighash
 func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	bytes, err := tx.Serialize()
+	to, err := address.AddressToBytes(tx.Message.To)
+	if err != nil {
+		return nil, fmt.Errorf("invalid `to` address: %w", err)
+	}
+
+	from, err := address.AddressToBytes(tx.Message.From)
+	if err != nil {
+		return nil, fmt.Errorf("invalid `from` address: %w", err)
+	}
+
+	i := []any{
+		tx.Message.Version,
+		to,
+		from,
+		tx.Message.Nonce,
+		append([]byte{0}, tx.Message.Value.Bytes()...),
+		tx.Message.GasLimit,
+		append([]byte{0}, tx.Message.GasFeeCap.Bytes()...),
+		append([]byte{0}, tx.Message.GasPremium.Bytes()...),
+		tx.Message.Method,
+		append([]byte{}, tx.Message.Params...),
+	}
+
+	bytes, err := cbor.Marshal(i, cbor.CanonicalEncOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize tx: %v", err)
 	}
@@ -125,7 +144,7 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	tx.XcSignatures = []xc.TxSignature{signatures[0].Signature}
 
 	signature := signatures[0]
-	tx.Signature = Signature{
+	tx.Signature = types.Signature{
 		Type: address.ProtocolSecp256k1,
 		Data: signature.Signature,
 	}
@@ -135,30 +154,25 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 
 // Serialize filecoin transaction using CBOR
 func (tx Tx) Serialize() ([]byte, error) {
-	to, err := address.AddressToBytes(tx.Message.To)
-	if err != nil {
-		return nil, fmt.Errorf("invalid `to` address: %w", err)
+	msg := types.Message{
+		Version:    int(tx.Message.Version),
+		To:         tx.Message.To,
+		From:       tx.Message.From,
+		Nonce:      tx.Message.Nonce,
+		Value:      tx.Message.Value.String(),
+		GasLimit:   tx.Message.GasLimit,
+		GasFeeCap:  tx.Message.GasFeeCap.String(),
+		GasPremium: tx.Message.GasPremium.String(),
+		Method:     int(tx.Message.Method),
+		Params:     tx.Message.Params,
 	}
 
-	from, err := address.AddressToBytes(tx.Message.From)
-	if err != nil {
-		return nil, fmt.Errorf("invalid `from` address: %w", err)
-	}
+	mpoolPushParams := types.NewParams(types.MethodMpoolPush, types.MpoolPush{
+		Message:   msg,
+		Signature: tx.Signature,
+	})
 
-	i := []interface{}{
-		tx.Message.Version,
-		to,
-		from,
-		tx.Message.Nonce,
-		append([]byte{0}, tx.Message.Value.Bytes()...),
-		tx.Message.GasLimit,
-		append([]byte{0}, tx.Message.GasFeeCap.Bytes()...),
-		append([]byte{0}, tx.Message.GasPremium.Bytes()...),
-		tx.Message.Method,
-		append([]byte{}, tx.Message.Params...),
-	}
-
-	return cbor.Marshal(i, cbor.CanonicalEncOptions())
+	return json.Marshal(mpoolPushParams)
 }
 
 // Serialize signed filecoin transaction using CBOR
@@ -177,8 +191,8 @@ func (tx Tx) SerializeSigned() ([]byte, error) {
 		return nil, fmt.Errorf("invalid `from` address: %w", err)
 	}
 
-	i := []interface{}{
-		[]interface{}{
+	i := []any{
+		[]any{
 			tx.Message.Version,
 			to,
 			from,

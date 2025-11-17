@@ -9,6 +9,7 @@ import (
 	"time"
 
 	xcclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -36,7 +37,7 @@ func TestFetchBlock(t *testing.T) {
 	require.NoError(t, err, "Failed creating client")
 
 	// get latest (attempt multiple times, as head of chain can be flakey)
-	var latest *xcclient.BlockWithTransactions
+	var latest *txinfo.BlockWithTransactions
 	for range 8 {
 		latest, err = client.FetchBlock(ctx, xcclient.LatestHeight())
 		if err != nil {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
-	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 )
 
 type GetExtrinicResponse struct {
@@ -116,8 +116,8 @@ type Event struct {
 
 var _ api.EventI = &Event{}
 
-func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {
-	return xcclient.NewEvent(ev.ID, xcclient.MovementVariantNative), true
+func (ev *Event) GetEventDescriptor() (*txinfo.Event, bool) {
+	return txinfo.NewEvent(ev.ID, txinfo.MovementVariantNative), true
 }
 
 func (ev *Event) GetId() string {

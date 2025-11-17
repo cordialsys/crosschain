@@ -15,8 +15,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/dusk/client"
 	tx "github.com/cordialsys/crosschain/chain/dusk/tx"
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
-	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -189,7 +189,9 @@ func TestSubmitTx(t *testing.T) {
 			client, err := client.NewClient(config)
 			require.NoError(t, err)
 
-			err = client.SubmitTx(context.Background(), vector.tx)
+			tx, err := xctypes.SubmitTxReqFromTx(vector.tx)
+			require.NoError(t, err)
+			err = client.SubmitTx(context.Background(), tx)
 			if vector.err != "" {
 				require.ErrorContains(t, err, vector.err)
 				return
@@ -203,37 +205,37 @@ func TestFetchTxInfo(t *testing.T) {
 		testName             string
 		lastBlockResult      string
 		getTransactionResult string
-		expectedInfo         xclient.TxInfo
+		expectedInfo         txinfo.TxInfo
 		err                  string
 	}{
 		{
 			testName:             "ValidTx",
 			lastBlockResult:      `{"lastBlockPair":{"json":{"last_block":[732552,"53a33b68a16a2d109ef6709c9f9a555b68005114d9ca5d2107df359c8cd70e43"],"last_finalized_block":[732551,"b929b84337f3c42552df162d015f2d93a4c5d6c8d439bb789e90a7c6525db139"]}}}`,
 			getTransactionResult: `{"tx":{"blockHash":"2c85f57c99b3b038b204a7119acb6356d97fc8c5dab0a5738bae0edb493867d4","blockHeight":723067,"blockTimestamp":1743489829,"err":null,"gasSpent":103396,"id":"98f64bce83ff51a179ca04ed5fa41d63b58b5d4044f575f12457d7151da4401d","tx":{"json":"{\"type\":\"moonlight\",\"sender\":\"zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL\",\"receiver\":\"23jFPiYSVEabmdo3zENKt4qSdBsVMDRTcneZ7LYKhfuB7E8UHXCLiPKDwXWTx4DAQirk2PhVkh6PiZKzaYhAkHuRwsKc7EAaB44yETLLzaWPoBGYDeoiwE82x9oY913RFUPH\",\"value\":1450000000000,\"nonce\":41,\"deposit\":0,\"fee\":{\"gas_limit\":\"100000000\",\"gas_price\":\"1\",\"refund_address\":\"zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL\"},\"call\":null,\"is_deploy\":false,\"memo\":null}"}}}`,
-			expectedInfo: xclient.TxInfo{
-				Name:   xclient.TransactionName("chains/DUSK/transactions/98f64bce83ff51a179ca04ed5fa41d63b58b5d4044f575f12457d7151da4401d"),
+			expectedInfo: txinfo.TxInfo{
+				Name:   txinfo.TransactionName("chains/DUSK/transactions/98f64bce83ff51a179ca04ed5fa41d63b58b5d4044f575f12457d7151da4401d"),
 				Hash:   "98f64bce83ff51a179ca04ed5fa41d63b58b5d4044f575f12457d7151da4401d",
 				XChain: xc.NativeAsset("DUSK"),
-				State:  xclient.Succeeded,
+				State:  txinfo.Succeeded,
 				Final:  true,
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.NativeAsset("DUSK"),
 					Height: xc.NewAmountBlockchainFromUint64(723067),
 					Hash:   "2c85f57c99b3b038b204a7119acb6356d97fc8c5dab0a5738bae0edb493867d4",
 					Time:   MustParseTime("2025-04-01T08:43:49+02:00"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					NewMovement(
 						"DUSK",
 						"DUSK",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(1450000000000),
 								XAddress:  "chains/DUSK/addresses/zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL",
 								AddressId: "zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL",
 							},
 						},
-						[]*xclient.BalanceChange{{
+						[]*txinfo.BalanceChange{{
 							Balance:   xc.NewAmountBlockchainFromUint64(1450000000000),
 							XAddress:  "chains/DUSK/addresses/23jFPiYSVEabmdo3zENKt4qSdBsVMDRTcneZ7LYKhfuB7E8UHXCLiPKDwXWTx4DAQirk2PhVkh6PiZKzaYhAkHuRwsKc7EAaB44yETLLzaWPoBGYDeoiwE82x9oY913RFUPH",
 							AddressId: "23jFPiYSVEabmdo3zENKt4qSdBsVMDRTcneZ7LYKhfuB7E8UHXCLiPKDwXWTx4DAQirk2PhVkh6PiZKzaYhAkHuRwsKc7EAaB44yETLLzaWPoBGYDeoiwE82x9oY913RFUPH",
@@ -243,18 +245,18 @@ func TestFetchTxInfo(t *testing.T) {
 					NewMovement(
 						"DUSK",
 						"DUSK",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(103396),
 								XAddress:  "chains/DUSK/addresses/zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL",
 								AddressId: "zFVXTQZfY6gB2rWZFEm4ToWY2NKrpgeswTboWMAe7cjzaqHjsdGuADp8GsYzeruRkP3ZozA34mhWedEHkEiUr73iv8EcK3A192Y5b2uQYxLgprkZ2u8WKZyfDuZiyy4yEuL",
 							},
 						},
-						[]*xclient.BalanceChange{},
-						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						[]*txinfo.BalanceChange{},
+						txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					),
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/DUSK/assets/DUSK",
 						Contract: "DUSK",
@@ -301,11 +303,11 @@ func TestFetchTxInfo(t *testing.T) {
 func NewMovement(
 	chain string,
 	contract string,
-	from []*xclient.BalanceChange,
-	to []*xclient.BalanceChange,
-	event *xclient.Event,
-) *xclient.Movement {
-	movement := xclient.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
+	from []*txinfo.BalanceChange,
+	to []*txinfo.BalanceChange,
+	event *txinfo.Event,
+) *txinfo.Movement {
+	movement := txinfo.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
 	movement.From = from
 	movement.To = to
 	movement.Event = event

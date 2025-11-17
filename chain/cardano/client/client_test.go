@@ -15,8 +15,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/cardano/client/types"
 	"github.com/cordialsys/crosschain/chain/cardano/tx"
 	"github.com/cordialsys/crosschain/chain/cardano/tx_input"
-	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -415,7 +415,9 @@ func TestSubmitTx(t *testing.T) {
 			tx, err := tx.NewTransfer(args, input)
 			require.NoError(t, err)
 
-			err = client.SubmitTx(context.Background(), tx)
+			req, err := xctypes.SubmitTxReqFromTx(tx)
+			require.NoError(t, err)
+			err = client.SubmitTx(context.Background(), req)
 			if vector.err {
 				require.Error(t, err)
 				return
@@ -433,7 +435,7 @@ func TestFetchTxInfo(t *testing.T) {
 		getTxInfoResponse      string
 		getBlockInfo           string
 		getTxUtxos             string
-		expectedInfo           xclient.TxInfo
+		expectedInfo           txinfo.TxInfo
 	}{
 		{
 			name:                   "ValidResponse",
@@ -441,23 +443,23 @@ func TestFetchTxInfo(t *testing.T) {
 			getTxInfoResponse:      `{"hash":"3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610","block":"fc83ca908ded9ae5043276fcc54ea7438d0d2b02a429e80ce48aca57c2d08623","block_height":3436192,"block_time":1746168211,"slot":90485011,"index":0,"output_amount":[{"unit":"lovelace","quantity":"19758792833"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"210000"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"194249999"},{"unit":"553cbd1862bfb5ff69b6ebdcbb6165beb47171a04b841c79c72e75a94745542d415554482d544b4e","quantity":"1"}],"fees":"1402193","deposit":"0","size":13268,"invalid_before":null,"invalid_hereafter":null,"utxo_count":4,"withdrawal_count":0,"mir_cert_count":0,"delegation_count":0,"stake_cert_count":0,"pool_update_count":0,"pool_retire_count":0,"asset_mint_or_burn_count":0,"redeemer_count":1,"valid_contract":true}`,
 			getBlockInfo:           `{"time":1746168211,"height":3436192,"hash":"fc83ca908ded9ae5043276fcc54ea7438d0d2b02a429e80ce48aca57c2d08623","slot":90485011,"epoch":213,"epoch_slot":110611,"slot_leader":"pool1ytvs2jlrtftapsgdhtlm8ch0xa2d3e3lsnf59jz68mtk5pml699","size":13272,"tx_count":1,"output":"19758792833","fees":"1402193","block_vrf":"vrf_vk1cham4jns9uc5rg0yk7fufpyc2pcz67tnhyh96g48l2u00skkmrlqnp8xmp","op_cert":"fa27bd7afb410ac7d9e16d6da1a4b487305424289336d0a0035f52bb3b3830c8","op_cert_counter":"2","previous_block":"8b58c40edccfbe2b852ed75e4c4f680da383fcc3298a177db84d80ba78a5b94b","next_block":"962e871831aa0fcdbb457bcf147a553df4ab87d32a7fcfd09901cd2a331d750f","confirmations":10727}`,
 			getTxUtxos:             `{"hash":"3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610","inputs":[{"address":"addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283","amount":[{"unit":"lovelace","quantity":"1796623"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"10000"},{"unit":"553cbd1862bfb5ff69b6ebdcbb6165beb47171a04b841c79c72e75a94745542d415554482d544b4e","quantity":"1"}],"tx_hash":"bcda48666026306d1b958256cb94ad4cef0fe14d1dc44165b25947642e1eae1e","output_index":0,"data_hash":"2d9bfbb2e1b6e1af2f55f268a3ad8281f218661fd38c66abf91ed8d9f69a3cf7","inline_datum":"d8799f43474554192710192710581c2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a5820476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429ff","reference_script_hash":null,"collateral":false,"reference":false},{"address":"addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42","amount":[{"unit":"lovelace","quantity":"19758398403"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"194449999"}],"tx_hash":"bcda48666026306d1b958256cb94ad4cef0fe14d1dc44165b25947642e1eae1e","output_index":1,"data_hash":null,"inline_datum":null,"reference_script_hash":null,"collateral":false,"reference":false},{"address":"addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf","amount":[{"unit":"lovelace","quantity":"489053618"}],"tx_hash":"6cda8edb61295ddd017ec83f330f049e0704a622b78484a3361865e12837fbd3","output_index":3,"data_hash":null,"inline_datum":null,"reference_script_hash":null,"collateral":true,"reference":false}],"outputs":[{"address":"addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283","amount":[{"unit":"lovelace","quantity":"1796623"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"210000"},{"unit":"553cbd1862bfb5ff69b6ebdcbb6165beb47171a04b841c79c72e75a94745542d415554482d544b4e","quantity":"1"}],"output_index":0,"data_hash":"db96855ad4f7d869a68d8b236dd2c80ef6c810fa34ee150150d3274aef4250ce","inline_datum":"d8799f434745541a000334501a00033450581c2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a5820476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429ff","collateral":false,"reference_script_hash":null,"consumed_by_tx":"b32a89380c217f3aede4b95d5acc7cd9d5e704d4f3fb924b9ffa6b3558494978"},{"address":"addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42","amount":[{"unit":"lovelace","quantity":"19756996210"},{"unit":"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429","quantity":"194249999"}],"output_index":1,"data_hash":null,"inline_datum":null,"collateral":false,"reference_script_hash":null,"consumed_by_tx":"b32a89380c217f3aede4b95d5acc7cd9d5e704d4f3fb924b9ffa6b3558494978"}]}`,
-			expectedInfo: xclient.TxInfo{
+			expectedInfo: txinfo.TxInfo{
 				Name:   "chains/ADA/transactions/3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610",
 				Hash:   "3b28dc6d6cc32280a2738799a6b5defc96b66999a17481a7cdaa27e8c00bd610",
 				XChain: "ADA",
 				State:  "succeeded",
 				Final:  true,
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "ADA",
 					Height: xc.NewAmountBlockchainFromUint64(3_436_192),
 					Hash:   "fc83ca908ded9ae5043276fcc54ea7438d0d2b02a429e80ce48aca57c2d08623",
 					Time:   MustParseTime("2025-05-02T08:43:31+02:00"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					NewMovement(
 						"ADA",
 						"2682a9b99553406c39f693bb450d6001954e3504c96238c6b96ad79a476c6f62616c20456e7465727461696e6d656e7420546f6b656e202847455429",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(10_000),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
@@ -469,7 +471,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "addr_test1qzyf6t5qq037n0srm4r84w3hchgvmgu45ks9pf5f27qhnykxp572eea783cccv2fmpqs5s6va4n7pusy097meenje88s6p7x42",
 							},
 						},
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(210_000),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
@@ -486,14 +488,14 @@ func TestFetchTxInfo(t *testing.T) {
 					NewMovement(
 						"ADA",
 						"553cbd1862bfb5ff69b6ebdcbb6165beb47171a04b841c79c72e75a94745542d415554482d544b4e",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(1),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
 								AddressId: "addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
 							},
 						},
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(1),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
@@ -505,7 +507,7 @@ func TestFetchTxInfo(t *testing.T) {
 					NewMovement(
 						"ADA",
 						"ADA",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
@@ -522,7 +524,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "addr_test1qqdqfz660junmjs96qxyh760e9h6zme5jrvectx4tznhk8q72rs5hptlwsvhwphrfrkuyftnxwv6ld2r8yag3gmaz82sx05amf",
 							},
 						},
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(1_796_623),
 								XAddress:  "chains/ADA/addresses/addr_test1wr54sl5p9yuvaknwv8kjyg7k7n6h02rccyh7s7ntuqs49rsfy5283",
@@ -537,7 +539,7 @@ func TestFetchTxInfo(t *testing.T) {
 						nil,
 					),
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/ADA/assets/ADA",
 						Contract: "ADA",
@@ -596,11 +598,11 @@ func MustParseTime(s string) time.Time {
 func NewMovement(
 	chain string,
 	contract string,
-	from []*xclient.BalanceChange,
-	to []*xclient.BalanceChange,
-	event *xclient.Event,
-) *xclient.Movement {
-	movement := xclient.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
+	from []*txinfo.BalanceChange,
+	to []*txinfo.BalanceChange,
+	event *txinfo.Event,
+) *txinfo.Movement {
+	movement := txinfo.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
 	movement.From = from
 	movement.To = to
 	movement.Event = event

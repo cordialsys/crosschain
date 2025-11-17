@@ -19,7 +19,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/dusk/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -95,7 +96,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx verifies tx with `on/transactions/preverify` endpoint and then propagates it to the network
 // using `on/transactions/propagate` endpoint.
-func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	bytes, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)
@@ -140,16 +141,16 @@ func (client *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, fmt.Errorf("not implemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, fmt.Errorf("not implemented")
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	latestHeight, err := client.FetchLatestBlockHeight()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	params := types.GetTransactionParams{
@@ -159,36 +160,36 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 	var response types.GetTransactionResult
 	err = Request(client, request, &response)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	if response.SpentTransaction == nil {
-		return xclient.TxInfo{}, fmt.Errorf("transaction not found: %s", txHash)
+		return txinfo.TxInfo{}, fmt.Errorf("transaction not found: %s", txHash)
 	}
 
 	chain := client.Asset.GetChain().Chain
 	blockTime := time.Unix(response.SpentTransaction.BlockTimestamp, 0)
-	block := xclient.NewBlock(chain, response.SpentTransaction.BlockHeight, response.SpentTransaction.BlockHash, blockTime)
+	block := txinfo.NewBlock(chain, response.SpentTransaction.BlockHeight, response.SpentTransaction.BlockHash, blockTime)
 	confirmations := uint64(0)
 	// sometimes the latest height is 1 behind the tx height
 	if latestHeight > block.Height.Uint64() {
 		confirmations = latestHeight - block.Height.Uint64()
 	}
-	txInfo := xclient.NewTxInfo(block, client.Asset.GetChain(), response.SpentTransaction.ID, confirmations, &response.SpentTransaction.Err)
+	txInfo := txinfo.NewTxInfo(block, client.Asset.GetChain(), response.SpentTransaction.ID, confirmations, &response.SpentTransaction.Err)
 
 	transaction, err := response.SpentTransaction.Tx.GetTransaction()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get transaction: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get transaction: %w", err)
 	}
 	sourceAddress := xc.Address(transaction.Sender)
 	destinationAddress := xc.Address(transaction.Receiver)
 	amount := xc.NewAmountBlockchainFromUint64(transaction.Value)
-	movement := xclient.NewMovement(chain, "")
+	movement := txinfo.NewMovement(chain, "")
 	movement.AddSource(sourceAddress, amount, nil)
 	movement.AddDestination(destinationAddress, amount, nil)
 	if transaction.Memo != "" {
 		utf8Maybe, err := hex.DecodeString(strings.TrimPrefix(transaction.Memo, "0x"))
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to decode memo=%s: %w", transaction.Memo, err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to decode memo=%s: %w", transaction.Memo, err)
 		}
 		if utf8.Valid(utf8Maybe) {
 			movement.SetMemo(string(utf8Maybe))
@@ -262,7 +263,7 @@ func (client *Client) FetchLatestBlockHeight() (uint64, error) {
 	return uint64(fh), nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	// Fetch latest finalized block height if `height` arg was not specified
 	if !ok {
@@ -286,20 +287,20 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 	block := response.Block
 	blockTimestamp := time.Unix(block.Header.Timestamp, 0)
-	xBlock := xclient.NewBlock(client.Asset.GetChain().Chain, block.Header.Height, block.Header.Hash, blockTimestamp)
+	xBlock := txinfo.NewBlock(client.Asset.GetChain().Chain, block.Header.Height, block.Header.Hash, blockTimestamp)
 	transactions := make([]string, 0, len(block.Transactions))
 	for _, tx := range block.Transactions {
 		transactions = append(transactions, tx.Id)
 	}
 
-	return &xclient.BlockWithTransactions{
+	return &txinfo.BlockWithTransactions{
 		Block:          *xBlock,
 		TransactionIds: transactions,
 	}, nil
 }
 
 // Send Rues request to the Dusk network
-func Request(client *Client, rr types.RuesRequest, resp interface{}) error {
+func Request(client *Client, rr types.RuesRequest, resp any) error {
 	logger := log.WithFields(log.Fields{
 		"target": rr.Target,
 		"entity": rr.Entity,

@@ -17,7 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/cosmos/tx_input/gas"
 	localcodectypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/sirupsen/logrus"
 
 	banktypes "cosmossdk.io/x/bank/types"
@@ -31,6 +31,7 @@ import (
 	wasmtypes "github.com/cordialsys/crosschain/chain/cosmos/types/CosmWasm/wasmd/x/wasm/types"
 	injectiveexchangetypes "github.com/cordialsys/crosschain/chain/cosmos/types/InjectiveLabs/injective-core/injective-chain/modules/exchange/types"
 	xclient "github.com/cordialsys/crosschain/client"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/utils"
 	cosmostx "github.com/cosmos/cosmos-sdk/types/tx"
 
@@ -292,7 +293,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Cosmos tx
-func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, tx1 xctypes.SubmitTxReq) error {
 	txBytes, _ := tx1.Serialize()
 
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
@@ -314,8 +315,8 @@ func (client *Client) SubmitTx(ctx context.Context, tx1 xc.Tx) error {
 }
 
 // FetchLegacyTxInfo returns tx info for a Cosmos tx
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	result := xclient.LegacyTxInfo{
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	result := txinfo.LegacyTxInfo{
 		Fee:           xc.AmountBlockchain{},
 		BlockIndex:    0,
 		BlockTime:     0,
@@ -407,23 +408,23 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			altContractId = contract
 			contract = string(chainCfg.Chain)
 		}
-		result.Sources = append(result.Sources, &xclient.LegacyTxInfoEndpoint{
+		result.Sources = append(result.Sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Sender),
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
-			Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
+			Event:           txinfo.NewEventFromIndex(uint64(ev.Index), txinfo.MovementVariantNative),
 		})
-		result.Destinations = append(result.Destinations, &xclient.LegacyTxInfoEndpoint{
+		result.Destinations = append(result.Destinations, &txinfo.LegacyTxInfoEndpoint{
 			Address:         xc.Address(ev.Recipient),
 			ContractAddress: xc.ContractAddress(contract),
 			ContractId:      xc.ContractAddress(altContractId),
 			Amount:          ev.Amount,
-			Event:           xclient.NewEventFromIndex(uint64(ev.Index), xclient.MovementVariantNative),
+			Event:           txinfo.NewEventFromIndex(uint64(ev.Index), txinfo.MovementVariantNative),
 		})
 	}
 	for _, ev := range events.Delegates {
-		result.AddStakeEvent(&xclient.Stake{
+		result.AddStakeEvent(&txinfo.Stake{
 			Balance:   ev.Amount,
 			Validator: ev.Validator,
 			Account:   "",
@@ -431,7 +432,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		})
 	}
 	for _, ev := range events.Unbonds {
-		result.AddStakeEvent(&xclient.Unstake{
+		result.AddStakeEvent(&txinfo.Unstake{
 			Balance:   ev.Amount,
 			Validator: ev.Validator,
 			Account:   "",
@@ -469,16 +470,16 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return result, nil
 }
 
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHashStr := args.TxHash()
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, txHashStr)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain()
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Account), nil
+	return txinfo.TxInfoFromLegacy(chain, legacyTx, txinfo.Account), nil
 }
 
 // GetAccount returns a Cosmos account
@@ -700,7 +701,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return maxDecimal, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)
 	var cometBlock *comettypes.ResultBlock
 	var err error
@@ -715,8 +716,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, err
 	}
 
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			uint64(cometBlock.Block.Height),
 			cometBlock.BlockID.Hash.String(),

@@ -20,8 +20,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
-	xctypes "github.com/cordialsys/crosschain/chain/crosschain/types"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/gagliardetto/solana-go"
@@ -167,7 +167,12 @@ func CmdStake() *cobra.Command {
 			}
 			fmt.Println("submitting hash ", solana.Signature(sig1.Signature).String(), "...")
 
-			err = client.SubmitTx(context.Background(), xctypes.NewBinaryTx(tzBz, nil))
+			binTx := xctypes.NewBinaryTx(tzBz, nil)
+			req, err := xctypes.SubmitTxReqFromTx(binTx)
+			if err != nil {
+				return err
+			}
+			err = client.SubmitTx(context.Background(), req)
 			if err != nil {
 				return err
 			}

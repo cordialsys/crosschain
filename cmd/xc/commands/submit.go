@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	xcdrivertypes "github.com/cordialsys/crosschain/chain/crosschain/types"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
 )
@@ -26,14 +26,18 @@ func CmdRpcSubmit() *cobra.Command {
 				return fmt.Errorf("could not decode payload: %v", err)
 			}
 
-			binaryTx := xcdrivertypes.NewBinaryTx(payload, nil)
+			binaryTx := xctypes.NewBinaryTx(payload, nil)
+			req, err := xctypes.SubmitTxReqFromTx(binaryTx)
+			if err != nil {
+				return fmt.Errorf("failed to convert to SubmitTxReq: %w", err)
+			}
 
 			rpcClient, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return err
 			}
 
-			err = rpcClient.SubmitTx(context.Background(), binaryTx)
+			err = rpcClient.SubmitTx(context.Background(), req)
 			if err != nil {
 				return fmt.Errorf("could not submit tx: %v", err)
 			}

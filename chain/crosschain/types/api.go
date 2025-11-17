@@ -6,7 +6,8 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
-	xclient "github.com/cordialsys/crosschain/client"
+	xclient "github.com/cordialsys/crosschain/client/tx_info"
+	xclient_types "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/pkg/hex"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
@@ -186,54 +187,8 @@ type TransactionInfoRes struct {
 	xclient.TxInfo
 }
 
-type SubmitTxReq struct {
-	Chain  xc.NativeAsset `json:"chain"`
-	TxData []byte         `json:"tx_data"`
-	// Left to support older clients still using
-	LegacyTxSignatures [][]byte `json:"tx_signatures"`
-	// Mapping for Tx "metadata" embedded JSON
-	BroadcastInput string `json:"input,omitempty"`
-}
-
 type SubmitTxRes struct {
-	*SubmitTxReq
-}
-
-var _ xc.Tx = &SubmitTxReq{}
-var _ xc.TxWithMetadata = &SubmitTxReq{}
-var _ xc.TxLegacyGetSignatures = &SubmitTxReq{}
-
-func NewBinaryTx(serializedSignedTx []byte, broadcastInput []byte) xc.Tx {
-	return &SubmitTxReq{
-		TxData:         serializedSignedTx,
-		BroadcastInput: string(broadcastInput),
-	}
-}
-
-func (tx *SubmitTxReq) Hash() xc.TxHash {
-	panic("not implemented")
-}
-func (tx *SubmitTxReq) Sighashes() ([]*xc.SignatureRequest, error) {
-	panic("not implemented")
-}
-func (tx *SubmitTxReq) SetSignatures(sigs ...*xc.SignatureResponse) error {
-	for _, sig := range sigs {
-		tx.LegacyTxSignatures = append(tx.LegacyTxSignatures, sig.Signature)
-	}
-	return nil
-}
-func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
-	sigs := []xc.TxSignature{}
-	for _, sig := range tx.LegacyTxSignatures {
-		sigs = append(sigs, sig)
-	}
-	return sigs
-}
-func (tx *SubmitTxReq) Serialize() ([]byte, error) {
-	return tx.TxData, nil
-}
-func (tx *SubmitTxReq) GetMetadata() ([]byte, error) {
-	return []byte(tx.BroadcastInput), nil
+	*xclient_types.SubmitTxReq
 }
 
 type BlockResponse struct {

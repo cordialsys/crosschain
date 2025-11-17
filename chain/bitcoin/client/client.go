@@ -21,10 +21,11 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
 	// "github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	xclient "github.com/cordialsys/crosschain/client"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
@@ -90,7 +91,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	}, nil
 }
 
-func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	serial, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("bad tx: %v", err)
@@ -185,8 +186,8 @@ func (client *BlockbookClient) EstimateSatsPerByteFee(ctx context.Context) (xc.A
 	return xc.NewAmountHumanReadableFromFloat(satsPerByte), nil
 }
 
-func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	txWithInfo := &xclient.LegacyTxInfo{
+func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	txWithInfo := &txinfo.LegacyTxInfo{
 		Amount: xc.NewAmountBlockchainFromUint64(0),
 	}
 
@@ -228,8 +229,8 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	}
 	txWithInfo.TxID = string(txHash)
 
-	sources := []*xclient.LegacyTxInfoEndpoint{}
-	destinations := []*xclient.LegacyTxInfoEndpoint{}
+	sources := []*txinfo.LegacyTxInfoEndpoint{}
+	destinations := []*txinfo.LegacyTxInfoEndpoint{}
 
 	// build Tx
 	txObject := &tx.Tx{
@@ -265,13 +266,13 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		txObject.UnspentOutputs = append(txObject.UnspentOutputs, input.Output)
 		inputs = append(inputs, input)
 		utxoId := NewUtxoId(xc.TxHash(in.TxID), in.Vout)
-		sources = append(sources, &xclient.LegacyTxInfoEndpoint{
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
 			Address:         input.Address,
 			Amount:          input.Value,
 			ContractAddress: "",
 			NativeAsset:     xc.NativeAsset(asset),
 			Asset:           string(asset),
-			Event:           xclient.NewEvent(utxoId, xclient.MovementVariantNative),
+			Event:           txinfo.NewEvent(utxoId, txinfo.MovementVariantNative),
 		})
 	}
 
@@ -293,12 +294,12 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		utxoId := NewUtxoId(txHash, out.N)
 		if len(out.Addresses) > 0 {
 			addr := out.Addresses[0]
-			endpoint := &xclient.LegacyTxInfoEndpoint{
+			endpoint := &txinfo.LegacyTxInfoEndpoint{
 				Address:     xc.Address(addr),
 				Amount:      out.Value,
 				NativeAsset: xc.NativeAsset(asset),
 				Asset:       string(asset),
-				Event:       xclient.NewEvent(utxoId, xclient.MovementVariantNative),
+				Event:       txinfo.NewEvent(utxoId, txinfo.MovementVariantNative),
 			}
 
 			if addr != from {
@@ -322,10 +323,10 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 	return *txWithInfo, nil
 }
 
-func (client *BlockbookClient) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *BlockbookClient) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	legacyTx, err := client.FetchLegacyTxInfo(ctx, args.TxHash())
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chain := client.Asset.GetChain()
 
@@ -337,7 +338,7 @@ func (client *BlockbookClient) FetchTxInfo(ctx context.Context, args *txinfo.Arg
 	legacyTx.Destinations = legacyTx.GetDroppedBtcDestinations()
 
 	// remap to new tx
-	return xclient.TxInfoFromLegacy(chain, legacyTx, xclient.Utxo), nil
+	return txinfo.TxInfoFromLegacy(chain, legacyTx, txinfo.Utxo), nil
 }
 
 func (client *BlockbookClient) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -532,7 +533,7 @@ func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) 
 	return uint64(header.Height), nil
 }
 
-func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
 		lastestHeight, err := client.LatestBlock(ctx)
@@ -552,8 +553,8 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 		return nil, err
 	}
 
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			uint64(blockResponse.Height),
 			blockResponse.Hash,

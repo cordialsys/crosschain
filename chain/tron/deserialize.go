@@ -10,7 +10,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/tx_info"
 	"github.com/ethereum/go-ethereum/common"
 	evmtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -26,13 +26,13 @@ func compareTopics(topics1 []httpclient.Bytes, topics2 []common.Hash) bool {
 	return equal
 }
 
-func deserialiseTransactionEvents(log []*httpclient.Log, evmTx *evmtypes.Receipt) ([]*xclient.LegacyTxInfoEndpoint, []*xclient.LegacyTxInfoEndpoint) {
-	sources := make([]*xclient.LegacyTxInfoEndpoint, 0)
-	destinations := make([]*xclient.LegacyTxInfoEndpoint, 0)
+func deserialiseTransactionEvents(log []*httpclient.Log, evmTx *evmtypes.Receipt) ([]*txinfo.LegacyTxInfoEndpoint, []*txinfo.LegacyTxInfoEndpoint) {
+	sources := make([]*txinfo.LegacyTxInfoEndpoint, 0)
+	destinations := make([]*txinfo.LegacyTxInfoEndpoint, 0)
 
 	for _, event := range log {
-		source := new(xclient.LegacyTxInfoEndpoint)
-		destination := new(xclient.LegacyTxInfoEndpoint)
+		source := new(txinfo.LegacyTxInfoEndpoint)
+		destination := new(txinfo.LegacyTxInfoEndpoint)
 		source.NativeAsset = xc.TRX
 		destination.NativeAsset = xc.TRX
 		if len(event.Topics) < 3 {
@@ -66,8 +66,8 @@ func deserialiseTransactionEvents(log []*httpclient.Log, evmTx *evmtypes.Receipt
 				// then using a transaction index.  This is because tron transactions always have a single log,
 				// meaning the index would always be 0.
 				index := log.Index
-				source.Event = xclient.NewEventFromIndex(uint64(index), xclient.MovementVariantToken)
-				destination.Event = xclient.NewEventFromIndex(uint64(index), xclient.MovementVariantToken)
+				source.Event = txinfo.NewEventFromIndex(uint64(index), txinfo.MovementVariantToken)
+				destination.Event = txinfo.NewEventFromIndex(uint64(index), txinfo.MovementVariantToken)
 				break
 			}
 		}

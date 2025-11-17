@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/client/services/kiln"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/pelletier/go-toml/v2"
@@ -167,7 +168,11 @@ func CmdStake() *cobra.Command {
 				return nil
 			}
 
-			err = rpcCli.SubmitTx(context.Background(), tx)
+			req, err := xctypes.SubmitTxReqFromTx(tx)
+			if err != nil {
+				return fmt.Errorf("failed to convert tx to req: %w", err)
+			}
+			err = rpcCli.SubmitTx(context.Background(), req)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
@@ -304,7 +309,11 @@ func CmdUnstake() *cobra.Command {
 				return nil
 			}
 
-			err = rpcCli.SubmitTx(context.Background(), tx)
+			req, err := xctypes.SubmitTxReqFromTx(tx)
+			if err != nil {
+				return fmt.Errorf("failed to convert tx to req: %w", err)
+			}
+			err = rpcCli.SubmitTx(context.Background(), req)
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}

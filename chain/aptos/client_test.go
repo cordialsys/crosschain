@@ -10,7 +10,8 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/cordialsys/crosschain/client"
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -177,11 +178,14 @@ func (s *AptosTestSuite) TestSubmitTx() {
 
 	client, err := NewClient(asset)
 	require.NoError(err)
-	err = client.SubmitTx(s.Ctx, tf)
+
+	submitReq, err := xctypes.SubmitTxReqFromTx(tf)
+	require.NoError(err)
+	err = client.SubmitTx(s.Ctx, submitReq)
 	require.NoError(err)
 
 	// second submit is error
-	err = client.SubmitTx(s.Ctx, tf)
+	err = client.SubmitTx(s.Ctx, submitReq)
 	require.Error(err)
 
 }
@@ -192,7 +196,7 @@ func TestFetchTxInfo(t *testing.T) {
 	vectors := []struct {
 		tx              string
 		resp            interface{}
-		val             xclient.LegacyTxInfo
+		val             txinfo.LegacyTxInfo
 		err             string
 		httpStatusCodes []int
 	}{
@@ -205,7 +209,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
@@ -217,21 +221,21 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      1309838,
 				BlockTime:       1683055759,
 				Confirmations:   7334,
-				Sources: []*xclient.LegacyTxInfoEndpoint{{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 					Amount:          xc.NewAmountBlockchainFromUint64(123400000),
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
 					NativeAsset:     "APTOS",
-					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 				}},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 					Amount:          xc.NewAmountBlockchainFromUint64(123400000),
 					ContractAddress: "APTOS",
 					NativeAsset:     "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
-					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(1, txinfo.MovementVariantNative),
 				}},
 			},
 		},
@@ -244,7 +248,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				TxID:            "0x17df567aa2daf8c146a0e9b827415402722b4f3b8178025ea703d9b03dc33f29",
 				BlockHash:       "6717630095",
 				From:            "0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d",
@@ -256,19 +260,19 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      1309838,
 				BlockTime:       1746985555,
 				Confirmations:   7334,
-				Sources: []*xclient.LegacyTxInfoEndpoint{{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d",
 					Amount:          xc.NewAmountBlockchainFromUint64(10000),
 					ContractAddress: "0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20",
 					NativeAsset:     "APTOS",
-					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 				}},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be",
 					Amount:          xc.NewAmountBlockchainFromUint64(10000),
 					ContractAddress: "0x971225a0feba8d24b7658bc2e2e3155ccdb17eff3e2ef320d1428879f10ebf20",
 					NativeAsset:     "APTOS",
-					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(1, txinfo.MovementVariantNative),
 				}},
 			},
 		},
@@ -279,7 +283,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"chain_id":58,"epoch":"61","ledger_version":"3532090","oldest_ledger_version":"0","ledger_timestamp":"1683058921700697","node_role":"full_node","oldest_block_height":"0","block_height":"1320608","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 				`{"message":"Transaction not found by Transaction hash(0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3221)","error_code":"transaction_not_found","vm_error_code":null}`,
 			},
-			val:             xclient.LegacyTxInfo{},
+			val:             txinfo.LegacyTxInfo{},
 			err:             "TransactionNotFound: Transaction not found by Transaction",
 			httpStatusCodes: []int{404, 404, 404, 404, 404},
 		},
@@ -292,7 +296,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"67467400","block_hash":"0x65a99fc435368aef999ebd6ce962347ae15adb659de5a5e4f4fd3e5736eead70","block_timestamp":"1688879042654550","first_version":"176278669","last_version":"176278675","transactions":null}`,
 				`{"chain_id":1,"epoch":"3257","ledger_version":"177862741","oldest_ledger_version":"0","ledger_timestamp":"1689016648102542","node_role":"full_node","oldest_block_height":"0","block_height":"68013901","git_hash":"f43ce082abbdaa3a8b38ac07d928feed4248eb73"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				TxID:            "0x06a6c25f3601895a3d3330f6ba4696fb8e677973aa56aa7b0ea362915bcff39c",
 				BlockHash:       "176278674",
 				From:            "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
@@ -304,21 +308,21 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockIndex:      67467400,
 				BlockTime:       1688879042,
 				Confirmations:   546501,
-				Sources: []*xclient.LegacyTxInfoEndpoint{{
+				Sources: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
 					Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
 					NativeAsset:     "APTOS",
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
-					Event:           xclient.NewEventFromIndex(0, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(0, txinfo.MovementVariantNative),
 				}},
-				Destinations: []*xclient.LegacyTxInfoEndpoint{{
+				Destinations: []*txinfo.LegacyTxInfoEndpoint{{
 					Address:         "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
 					Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
 					NativeAsset:     "APTOS",
 					ContractAddress: "APTOS",
 					ContractId:      "0x1::aptos_coin::AptosCoin",
-					Event:           xclient.NewEventFromIndex(1, xclient.MovementVariantNative),
+					Event:           txinfo.NewEventFromIndex(1, txinfo.MovementVariantNative),
 				}},
 			},
 			err: "",
@@ -332,7 +336,7 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"block_height":"1309838","block_hash":"0x77eb1ba86353da0133d76892773ecbf18db68555ada5ab358d451ad23653cc31","block_timestamp":"1683055759739669","first_version":"3509308","last_version":"3509310","transactions":null}`,
 				`{"chain_id":58,"epoch":"61","ledger_version":"3524912","oldest_ledger_version":"0","ledger_timestamp":"1683057861003497","node_role":"full_node","oldest_block_height":"0","block_height":"1317172","git_hash":"57f8b499aead5adf38276acb585cd2c0de398568"}`,
 			},
-			val: xclient.LegacyTxInfo{
+			val: txinfo.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
@@ -371,7 +375,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchLegacyTxInfo(context.Background(), xc.TxHash(v.tx))
 
 			if v.err != "" {
-				require.Equal(xclient.LegacyTxInfo{}, txInfo)
+				require.Equal(txinfo.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(err, v.err)
 			} else {
 				require.Nil(err)

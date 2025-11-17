@@ -11,6 +11,8 @@ import (
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc/codes"
@@ -92,7 +94,7 @@ func (s *CrosschainTestSuite) TestFetchTxInputError() {
 func (s *CrosschainTestSuite) TestFetchTxInfo() {
 	require := s.Require()
 
-	txInfo := xclient.LegacyTxInfo{
+	txInfo := txinfo.LegacyTxInfo{
 		BlockHash:     "block-hash",
 		BlockIndex:    2,
 		TxID:          "tx-hash",
@@ -135,7 +137,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	require := s.Require()
 
 	resObj := types.SubmitTxRes{
-		SubmitTxReq: &types.SubmitTxReq{},
+		SubmitTxReq: &xctypes.SubmitTxReq{},
 	}
 	res, _ := json.Marshal(resObj)
 
@@ -146,7 +148,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 	client.URL = server.URL
 
 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
-	txData := &types.SubmitTxReq{
+	txData := xctypes.SubmitTxReq{
 		TxData:             []byte("data"),
 		LegacyTxSignatures: [][]byte{{1, 2, 3, 4}},
 		BroadcastInput:     `{"x":"y"}`,
@@ -165,7 +167,7 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 	client.URL = server.URL
 
 	// types.SubmitTxReq implements xc.Tx so it's easy to use here
-	txData := &types.SubmitTxReq{
+	txData := xctypes.SubmitTxReq{
 		TxData: []byte("data"),
 	}
 	err := client.SubmitTx(s.Ctx, txData)

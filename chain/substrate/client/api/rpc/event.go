@@ -12,7 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/sirupsen/logrus"
 
-	xcclient "github.com/cordialsys/crosschain/client"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 )
 
 type Event struct {
@@ -47,9 +47,9 @@ func (ev *Event) GetId() string {
 	return ev.Id
 }
 
-func (ev *Event) GetEventDescriptor() (*xcclient.Event, bool) {
+func (ev *Event) GetEventDescriptor() (*txinfo.Event, bool) {
 	// This is the native way to identify events
-	return xcclient.NewEvent(fmt.Sprintf("%d-%d", ev.Block, ev.EventIdx), xcclient.MovementVariantNative), true
+	return txinfo.NewEvent(fmt.Sprintf("%d-%d", ev.Block, ev.EventIdx), txinfo.MovementVariantNative), true
 }
 
 func unwrap(value *registry.DecodedField) (decoded interface{}) {

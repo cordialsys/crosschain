@@ -24,7 +24,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/internet_computer/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	xcerrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -94,7 +95,7 @@ func (client *Client) fetchFee(ctx context.Context, contract xc.ContractAddress)
 
 	var fee idl.Nat
 	err := client.Agent.Query(
-		canister, icrc.MethodFee, []any{}, []any{&fee},
+		ctx, canister, icrc.MethodFee, []any{}, []any{&fee},
 	)
 	if err != nil {
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to query icrc fee: %w", err)
@@ -152,16 +153,12 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a InternetComputerProtocol tx
-func (client *Client) SubmitTx(ctx context.Context, txI xc.Tx) error {
-	withMetadata, ok := txI.(xc.TxWithMetadata)
-	if !ok {
-		return fmt.Errorf("ICP transactions must implement TxWithMetadata")
-	}
+func (client *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) error {
 	serializedSignedTx, err := txI.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)
 	}
-	metadataBz, err := withMetadata.GetMetadata()
+	metadataBz, err := txI.GetMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to get metadata: %w", err)
 	}
@@ -225,13 +222,14 @@ func (client *Client) CallIcrcTransaction(a *agent.Agent, id types.RequestID, ca
 }
 
 // Returns transaction info - legacy/old endpoint
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, fmt.Errorf("deprecated")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, fmt.Errorf("deprecated")
 }
 
 func (client *Client) fetchIndexPrincipal(ctx context.Context, canister icpaddress.Principal) (icpaddress.Principal, error) {
 	var response icrc.GetIndexPrincipalResponse
 	err := client.Agent.Query(
+		ctx,
 		canister,
 		icrc.MethodGetIndexPrincipal,
 		[]any{},
@@ -257,6 +255,7 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 		}
 		var response icrc.GetAccountTransactionsResponse
 		err := client.Agent.Query(
+			ctx,
 			canister,
 			icrc.MethodGetAccountTransactions,
 			[]any{args},
@@ -290,6 +289,7 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 	}
 	var response icp.GetAccountIdentifierTransactionsResult
 	err = client.Agent.Query(
+		ctx,
 		canister,
 		icp.MethodGetAccountIdentifierTransactions,
 		[]any{args},
@@ -315,42 +315,42 @@ func (client *Client) fetchAccountTransactions(ctx context.Context, sender xc.Ad
 	return transactions, err
 }
 
-func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (xclient.TxInfo, error) {
+func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (txinfo.TxInfo, error) {
 	block, err := client.fetchRawBlock(ctx, canister, blockIndex)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch block: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch block: %w", err)
 	}
 
 	blockHash, err := block.Hash()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	height, err := client.fetchHeight(ctx, canister)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	ts, err := block.Timestamp()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	blockTimestamp := time.Unix(0, int64(ts)).UTC()
-	xBlock := xclient.NewBlock(xc.ICP, blockIndex, blockHash, blockTimestamp)
+	xBlock := txinfo.NewBlock(xc.ICP, blockIndex, blockHash, blockTimestamp)
 
 	transactionHash := types.GetTransacionHash(blockIndex, canister)
-	txInfo := xclient.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
+	txInfo := txinfo.NewTxInfo(xBlock, client.Asset.GetChain(), transactionHash, height-blockIndex, nil)
 
 	transaction, err := block.Transaction()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	sourceAddress := xc.Address(transaction.SourceAddress())
 	destinationAddress := xc.Address(transaction.DestinationAddress())
 	amount, err := transaction.Amount()
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	xcAmount := xc.NewAmountBlockchainFromUint64(amount)
 
@@ -358,7 +358,7 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 	if canister.Encode() != icp.LedgerPrincipal.Encode() {
 		contract = xc.ContractAddress(canister.Encode())
 	}
-	movement := xclient.NewMovement(client.Asset.GetChain().Chain, contract)
+	movement := txinfo.NewMovement(client.Asset.GetChain().Chain, contract)
 	movement.AddSource(sourceAddress, xcAmount, nil)
 	movement.AddDestination(destinationAddress, xcAmount, nil)
 	movement.SetMemo(transaction.Memo())
@@ -383,12 +383,12 @@ func (client *Client) fetchTxInfoByBlockIndex(ctx context.Context, canister icpa
 // - fetch last N account transactions
 // - check if there is a transaction with hash == requested hash
 // - proceed with 'client.fetchTxInfoByBlockIndex' if matching transaction hash was found
-func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister icpaddress.Principal, txHash xc.TxHash, sender xc.Address) (xclient.TxInfo, error) {
+func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister icpaddress.Principal, txHash xc.TxHash, sender xc.Address) (txinfo.TxInfo, error) {
 	indexCanister, ok := indexCanisters[ledgerCanister.String()]
 	if !ok {
 		indexer, err := client.fetchIndexPrincipal(ctx, ledgerCanister)
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to fetch index principal: %w", err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to fetch index principal: %w", err)
 		}
 
 		indexCanister = indexer
@@ -396,13 +396,13 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 
 	transactions, err := client.fetchAccountTransactions(ctx, sender, indexCanister)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch account transactions: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch account transactions: %w", err)
 	}
 
 	for _, tx := range transactions {
 		th, err := tx.Transaction.Hash()
 		if err != nil {
-			return xclient.TxInfo{}, fmt.Errorf("failed to compute tx hash: %w", err)
+			return txinfo.TxInfo{}, fmt.Errorf("failed to compute tx hash: %w", err)
 		}
 
 		if th == string(txHash) {
@@ -410,7 +410,7 @@ func (client *Client) tryFetchTxInfoByHash(ctx context.Context, ledgerCanister i
 			return client.fetchTxInfoByBlockIndex(ctx, ledgerCanister, blockHeight)
 		}
 	}
-	return xclient.TxInfo{}, xcerrors.TransactionNotFoundf("no matching transaction found in recent account history")
+	return txinfo.TxInfo{}, xcerrors.TransactionNotFoundf("no matching transaction found in recent account history")
 }
 
 func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, bool, error) {
@@ -447,13 +447,13 @@ func getBlockAndContractIndex(args *txinfo.Args) (uint64, icpaddress.Principal, 
 }
 
 // Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 
 	// We can fetch the transaction direclty if we receive a block index
 	// Fallback to account history lookup otherwise
 	block, ledgerCanister, ok, err := getBlockAndContractIndex(args)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	if ok {
@@ -462,7 +462,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 		// fallback to account history lookup
 		senderAddress, ok := args.Sender()
 		if !ok {
-			return xclient.TxInfo{}, fmt.Errorf("must use block-height to lookup or specify sender address")
+			return txinfo.TxInfo{}, fmt.Errorf("must use block-height to lookup or specify sender address")
 		}
 		hash := args.TxHash()
 		return client.tryFetchTxInfoByHash(ctx, ledgerCanister, hash, senderAddress)
@@ -488,7 +488,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 		var balance idl.Nat
 
-		err = client.Agent.Query(icrcCanister, icrc.MethodBalanceOf, []any{account}, []any{&balance})
+		err = client.Agent.Query(ctx, icrcCanister, icrc.MethodBalanceOf, []any{account}, []any{&balance})
 		if err != nil {
 			return xc.AmountBlockchain{}, fmt.Errorf("failed to query balance: %w", err)
 		}
@@ -501,7 +501,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 		}
 
 		var icpBalance icp.Balance
-		err = client.Agent.Query(icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
+		err = client.Agent.Query(ctx, icp.LedgerPrincipal, icp.MethodAccountBalance, []any{
 			icp.GetBalanceArgs{Account: accountID},
 		}, []any{&icpBalance})
 
@@ -520,7 +520,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 
 	var metadata icrc.MapWrapper
-	err = client.Agent.Query(canister, icrc.MethodMetadata, []any{}, []any{&metadata})
+	err = client.Agent.Query(ctx, canister, icrc.MethodMetadata, []any{}, []any{&metadata})
 	if err != nil {
 		return 0, fmt.Errorf("failed to fetch metadata: %w", err)
 	}
@@ -547,7 +547,10 @@ func (client *Client) fetchHeight(ctx context.Context, canister icpaddress.Princ
 
 func (client *Client) fetchIcpHeight(ctx context.Context) (uint64, error) {
 	var response icp.QueryBlocksResponse
-	err := client.Agent.Query(icp.LedgerPrincipal, icp.MethodQueryBlocks,
+	err := client.Agent.Query(
+		ctx,
+		icp.LedgerPrincipal,
+		icp.MethodQueryBlocks,
 		// Start and Lenght 0 to query block height
 		[]any{icp.QueryBlocksArgs{
 			Start:  0,
@@ -565,7 +568,10 @@ func (client *Client) fetchIcpHeight(ctx context.Context) (uint64, error) {
 
 func (client *Client) fetchRawIcpBlock(ctx context.Context, blockIndex uint64) (icp.Block, error) {
 	var response icp.QueryBlocksResponse
-	err := client.Agent.Query(icp.LedgerPrincipal, icp.MethodQueryBlocks,
+	err := client.Agent.Query(
+		ctx,
+		icp.LedgerPrincipal,
+		icp.MethodQueryBlocks,
 		[]any{icp.QueryBlocksArgs{
 			Start:  blockIndex,
 			Length: 1,
@@ -585,6 +591,7 @@ func (client *Client) fetchRawIcpBlock(ctx context.Context, blockIndex uint64) (
 		targetArchive := response.ArchivedBlocks[0]
 		var archiveResponse icp.GetBlocksResult
 		err = client.Agent.Query(
+			ctx,
 			targetArchive.Callback.Method.Principal,
 			targetArchive.Callback.Method.Method,
 			[]any{
@@ -611,6 +618,7 @@ func (client *Client) fetchRawIcpBlock(ctx context.Context, blockIndex uint64) (
 func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress.Principal, blockIndex uint64) (icrc.Block, error) {
 	var response icrc.GetBlocksResponse
 	err := client.Agent.Query(
+		ctx,
 		canister,
 		icrc.MethodGetBlocks,
 		[]any{[]icrc.GetBlocksRequest{
@@ -638,6 +646,7 @@ func (client *Client) fetchRawIcrcBlock(ctx context.Context, canister icpaddress
 		archive := response.ArchivedBlocks[0]
 		var archiveResponse icrc.GetBlocksResponse
 		err = client.Agent.Query(
+			ctx,
 			archive.Callback.Method.Principal,
 			archive.Callback.Method.Method,
 			[]any{archive.Args},
@@ -666,6 +675,7 @@ func (client *Client) fetchRawBlock(ctx context.Context, canister icpaddress.Pri
 func (client *Client) fetchIcrcHeight(ctx context.Context, canister icpaddress.Principal) (uint64, error) {
 	var response icrc.GetBlocksResponse
 	err := client.Agent.Query(
+		ctx,
 		canister,
 		icrc.MethodGetBlocks,
 		[]any{[]icrc.GetBlocksRequest{{
@@ -682,7 +692,7 @@ func (client *Client) fetchIcrcHeight(ctx context.Context, canister icpaddress.P
 	return response.GetHeight() - 1, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	contract, ok := args.Contract()
 	canister := icp.LedgerPrincipal
 	if ok {
@@ -719,15 +729,15 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		return nil, fmt.Errorf("failed to get block timestamp: %w", err)
 	}
 	timestamp := time.Unix(0, int64(ts)).UTC()
-	xcBlock := xclient.NewBlock(xc.ICP, height, hash, timestamp)
+	xcBlock := txinfo.NewBlock(xc.ICP, height, hash, timestamp)
 
 	transactions := make([]string, 0, 1)
 	txHash := types.GetTransacionHash(height, canister)
 
 	transactions = append(transactions, txHash)
-	return &xclient.BlockWithTransactions{
+	return &txinfo.BlockWithTransactions{
 		Block:          *xcBlock,
 		TransactionIds: transactions,
-		SubBlocks:      []*xclient.SubBlockWithTransactions{},
+		SubBlocks:      []*txinfo.SubBlockWithTransactions{},
 	}, nil
 }

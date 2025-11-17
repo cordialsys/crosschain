@@ -17,7 +17,8 @@ import (
 	xrptx "github.com/cordialsys/crosschain/chain/xrp/tx"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -319,7 +320,9 @@ func TestSubmitTx(t *testing.T) {
 
 		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
-		err := client.SubmitTx(context.Background(), vector.txInput)
+		req, err := xctypes.SubmitTxReqFromTx(vector.txInput)
+		require.NoError(t, err)
+		err = client.SubmitTx(context.Background(), req)
 		require.NoError(t, err)
 	}
 }
@@ -331,7 +334,7 @@ func TestFetchTxInfo(t *testing.T) {
 		txHash         string
 		txResp         string
 		ledgerResp     types.LedgerResponse
-		expectedTxInfo xclient.TxInfo
+		expectedTxInfo txinfo.TxInfo
 		err            string
 	}{
 		{
@@ -416,22 +419,22 @@ func TestFetchTxInfo(t *testing.T) {
 					Status:             "success",
 				},
 			},
-			expectedTxInfo: xclient.TxInfo{
+			expectedTxInfo: txinfo.TxInfo{
 				Name:   "chains/XRP/transactions/3f27c0af1993af63e3438ba903b981aa095b6c81ab23976a9729b44ab39719ba",
 				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 				XChain: "XRP",
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "XRP",
 					Height: xc.NewAmountBlockchainFromUint64(94494),
 					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/XRP/assets/XRP",
 						XContract: "XRP",
 						AssetId:   "XRP",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("10000012"),
 								Amount:    nil,
@@ -439,7 +442,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "rHzsdt8NDw1R4YTDHvJgW8zt15AEKSgf1S",
 							},
 						},
-						To: []*xclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromStr("10000000"),
@@ -451,7 +454,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Memo: "",
 					},
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/XRP/assets/XRP",
 						Contract: "XRP",
@@ -461,7 +464,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Confirmations: 91095577,
 				Final:         true,
-				State:         xclient.Succeeded,
+				State:         txinfo.Succeeded,
 			},
 			err: "",
 		},
@@ -672,22 +675,22 @@ func TestFetchTxInfo(t *testing.T) {
 					Status:             "success",
 				},
 			},
-			expectedTxInfo: xclient.TxInfo{
+			expectedTxInfo: txinfo.TxInfo{
 				Name:   "chains/XRP/transactions/9d4d9cb01f4ffb12ca6262966311936b182e325a80461645e78ef54c11d2751b",
 				Hash:   "9D4D9CB01F4FFB12CA6262966311936B182E325A80461645E78EF54C11D2751B",
 				XChain: "XRP",
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "XRP",
 					Height: xc.NewAmountBlockchainFromUint64(90659219),
 					Hash:   "",
 					Time:   time.Unix(1725988340, 0),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					{
 						XAsset:    "chains/XRP/assets/USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 						XContract: "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
 						AssetId:   "USD-rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 
 								Balance:   xc.NewAmountBlockchainFromStr("2624741712800000"),
@@ -696,7 +699,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "rs9ineLqrCzeAGS1bxsrW8x2n3bRJYAh3Q",
 							},
 						},
-						To: []*xclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("2624741712800000"),
 								Amount:    nil,
@@ -709,7 +712,7 @@ func TestFetchTxInfo(t *testing.T) {
 						XAsset:    "chains/XRP/assets/XRP",
 						XContract: "XRP",
 						AssetId:   "XRP",
-						From: []*xclient.BalanceChange{
+						From: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("4862478"),
 								Amount:    nil,
@@ -717,7 +720,7 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "rzvAXDKJnPi8m25HjXYiXAjJnzc7LGTfw",
 							},
 						},
-						To: []*xclient.BalanceChange{
+						To: []*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromStr("4862466"),
 								Amount:    nil,
@@ -727,7 +730,7 @@ func TestFetchTxInfo(t *testing.T) {
 						},
 					},
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/XRP/assets/XRP",
 						Contract: "XRP",
@@ -736,7 +739,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Confirmations: 565969,
 				Final:         true,
-				State:         xclient.Succeeded,
+				State:         txinfo.Succeeded,
 			},
 			err: "",
 		},
@@ -786,22 +789,22 @@ func TestFetchTxInfo(t *testing.T) {
 					Status:             "success",
 				},
 			},
-			expectedTxInfo: xclient.TxInfo{
+			expectedTxInfo: txinfo.TxInfo{
 				Name:   "chains/XRP/transactions/3f27c0af1993af63e3438ba903b981aa095b6c81ab23976a9729b44ab39719ba",
 				Hash:   "3F27C0AF1993AF63E3438BA903B981AA095B6C81AB23976A9729B44AB39719BA",
 				XChain: "XRP",
 				Error:  testtypes.Ref("transaction failed: tecPATH_PARTIAL"),
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  "XRP",
 					Height: xc.NewAmountBlockchainFromUint64(94494),
 					Hash:   "",
 					Time:   time.Unix(1724341792, 0),
 				},
 				Movements:     nil,
-				Fees:          []*xclient.Balance{},
+				Fees:          []*txinfo.Balance{},
 				Confirmations: 91095577,
 				Final:         true,
-				State:         xclient.Failed,
+				State:         txinfo.Failed,
 			},
 			err: "",
 		},
@@ -837,7 +840,7 @@ func TestFetchTxInfo(t *testing.T) {
 			txInfo, err := client.FetchTxInfo(context.Background(), args)
 
 			if vector.err != "" {
-				require.Equal(t, xclient.LegacyTxInfo{}, txInfo)
+				require.Equal(t, txinfo.LegacyTxInfo{}, txInfo)
 				require.ErrorContains(t, err, vector.err)
 			} else {
 				require.NoError(t, err)

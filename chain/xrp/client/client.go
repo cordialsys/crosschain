@@ -15,7 +15,8 @@ import (
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -126,7 +127,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Template tx
-func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
 	serializedTxInputBytes, err := txInput.Serialize()
 	if err != nil {
 		return err
@@ -152,21 +153,21 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xc.Tx) error {
 }
 
 // FetchTxInfo Returns transaction info - new endpoint
-func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	txInfo, err := client.GetTxInfo(ctx, txHash)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 
 	return txInfo, nil
 }
 
-func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, fmt.Errorf("unimplemented")
+func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, fmt.Errorf("unimplemented")
 }
 
-func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.TxInfo, error) {
+func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.TxInfo, error) {
 	txRequest := &types.TransactionRequest{
 		Method: "tx",
 		Params: []types.TransactionParamEntry{
@@ -180,22 +181,22 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 	var txResponse types.TransactionResponse
 	err := client.Send(MethodPost, txRequest, &txResponse)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	if txResponse.Result.Hash == "" {
-		return xclient.TxInfo{}, errors.TransactionNotFoundf("no transaction by hash '%s'", txHash)
+		return txinfo.TxInfo{}, errors.TransactionNotFoundf("no transaction by hash '%s'", txHash)
 	}
 
 	ledger, err := client.getLatestLedger(false)
 	if err != nil {
-		return xclient.TxInfo{}, err
+		return txinfo.TxInfo{}, err
 	}
 	chainCfg := client.Asset.GetChain()
 	chain := chainCfg.Chain
 
 	blockTime := time.Unix(types.XRP_EPOCH+txResponse.Result.Date, 0)
 
-	block := xclient.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), "", blockTime)
+	block := txinfo.NewBlock(chain, uint64(txResponse.Result.LedgerIndex), "", blockTime)
 
 	confirmations := ledger.Result.LedgerCurrentIndex - txResponse.Result.LedgerIndex
 
@@ -205,7 +206,7 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 		errMsg = &msg
 	}
 
-	txInfo := xclient.NewTxInfo(block, chainCfg, txResponse.Result.Hash, uint64(confirmations), errMsg)
+	txInfo := txinfo.NewTxInfo(block, chainCfg, txResponse.Result.Hash, uint64(confirmations), errMsg)
 
 	affectedNodes := txResponse.Result.Meta.AffectedNodes
 
@@ -216,31 +217,31 @@ func (client *Client) GetTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.
 			continue
 		}
 		if err != nil {
-			return xclient.TxInfo{}, err
+			return txinfo.TxInfo{}, err
 		}
 
 		// Fetch address, contract and amount
 		address, err := xrpNode.GetAddress(&txResponse)
 		if err != nil {
-			return xclient.TxInfo{}, err
+			return txinfo.TxInfo{}, err
 		}
 
 		contract, err := xrpNode.GetContract()
 		if err != nil {
-			return xclient.TxInfo{}, err
+			return txinfo.TxInfo{}, err
 		}
 
 		amount, err := xrpNode.GetAmount()
 		if err != nil {
-			return xclient.TxInfo{}, err
+			return txinfo.TxInfo{}, err
 		}
 		// XRP sometimes reports balances as negative
 		amount = amount.Abs()
 
-		movement := xclient.NewMovement(chainCfg.Chain, contract)
+		movement := txinfo.NewMovement(chainCfg.Chain, contract)
 		isSource, err := xrpNode.IsSource(&txResponse)
 		if err != nil {
-			return xclient.TxInfo{}, err
+			return txinfo.TxInfo{}, err
 		}
 		if txResponse.Result.DestinationTag != 0 {
 			movement.Memo = fmt.Sprintf("%d", txResponse.Result.DestinationTag)
@@ -337,7 +338,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	return types.TRUSTLINE_DECIMALS, nil
 }
 
-func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	var ledger *types.LedgerResponse
 	var err error
 	var ledgerHash string
@@ -361,8 +362,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 		ledgerHash = data.Result.LedgerHash
 	}
 
-	block := &xclient.BlockWithTransactions{
-		Block: *xclient.NewBlock(
+	block := &txinfo.BlockWithTransactions{
+		Block: *txinfo.NewBlock(
 			client.Asset.GetChain().Chain,
 			xc.NewAmountBlockchainFromStr(ledger.Result.Ledger.LedgerIndex).Uint64(),
 			ledgerHash,

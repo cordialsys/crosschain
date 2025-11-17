@@ -18,7 +18,8 @@ import (
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	txinput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory/defaults/chains"
 	"github.com/stellar/go/xdr"
 	"github.com/stretchr/testify/require"
@@ -687,13 +688,14 @@ func TestSubmitTx(t *testing.T) {
 				WithChainID("Test SDF Network ; September 2015"),
 			)
 
-			err = client.SubmitTx(context.Background(), vector.txInput)
+			req, err := xctypes.SubmitTxReqFromTx(vector.txInput)
 			if err != nil {
 				require.NotEqual(t, err, "")
 				require.ErrorContains(t, err, vector.error)
 			} else {
 				require.NoError(t, err)
 			}
+			_ = client.SubmitTx(context.Background(), req)
 		})
 	}
 }
@@ -709,11 +711,11 @@ func MustParseTime(s string) time.Time {
 func NewMovement(
 	chain string,
 	contract string,
-	from []*xclient.BalanceChange,
-	to []*xclient.BalanceChange,
-	event *xclient.Event,
-) *xclient.Movement {
-	movement := xclient.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
+	from []*txinfo.BalanceChange,
+	to []*txinfo.BalanceChange,
+	event *txinfo.Event,
+) *txinfo.Movement {
+	movement := txinfo.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
 	movement.From = from
 	movement.To = to
 	movement.Event = event
@@ -726,7 +728,7 @@ func TestFetchTxInfo(t *testing.T) {
 		getTxResult           string
 		getLedgerResult       string
 		getLatestLedgerResult string
-		expected              xclient.TxInfo
+		expected              txinfo.TxInfo
 		err                   string
 	}{
 		{
@@ -798,28 +800,28 @@ func TestFetchTxInfo(t *testing.T) {
 					]
 				}
 			}`,
-			expected: xclient.TxInfo{
+			expected: txinfo.TxInfo{
 				Name:   "chains/XLM/transactions/1ea250b425a38ed08bab46a141b467e19a2789548c36abc0f4ae3e363fd8a1f3",
 				Hash:   "1ea250b425a38ed08bab46a141b467e19a2789548c36abc0f4ae3e363fd8a1f3",
 				XChain: xc.NativeAsset("XLM"),
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.NativeAsset("XLM"),
 					Height: xc.NewAmountBlockchainFromUint64(514624),
 					Hash:   "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
 					Time:   MustParseTime("2025-01-09T12:46:09Z"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					NewMovement(
 						"XLM",
 						"XLM",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(10000000),
 								XAddress:  "chains/XLM/addresses/GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
 								AddressId: "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
 							},
 						},
-						[]*xclient.BalanceChange{{
+						[]*txinfo.BalanceChange{{
 							Balance:   xc.NewAmountBlockchainFromUint64(10000000),
 							XAddress:  "chains/XLM/addresses/GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI",
 							AddressId: "GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI",
@@ -829,18 +831,18 @@ func TestFetchTxInfo(t *testing.T) {
 					NewMovement(
 						"XLM",
 						"XLM",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(100),
 								XAddress:  "chains/XLM/addresses/GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
 								AddressId: "GDLO3EPTGZIC75YG3F3STV5LKUQ6EMGDSNJ4U6JXFUVR7QRZ5KTSYRJF",
 							},
 						},
-						[]*xclient.BalanceChange{},
-						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						[]*txinfo.BalanceChange{},
+						txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					),
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/XLM/assets/XLM",
 						Contract: "XLM",
@@ -849,7 +851,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Confirmations: 5711,
 				Final:         true,
-				State:         xclient.Succeeded,
+				State:         txinfo.Succeeded,
 			},
 		},
 
@@ -924,28 +926,28 @@ func TestFetchTxInfo(t *testing.T) {
 					]
 				}
 			}`,
-			expected: xclient.TxInfo{
+			expected: txinfo.TxInfo{
 				Name:   "chains/XLM/transactions/bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
 				Hash:   "bc44695505b047f7dc4a35a99573202220f6c14493eb40ded6b6b3aca0ac65dd",
 				XChain: xc.NativeAsset("XLM"),
-				Block: &xclient.Block{
+				Block: &txinfo.Block{
 					Chain:  xc.NativeAsset("XLM"),
 					Height: xc.NewAmountBlockchainFromUint64(1342625),
 					Hash:   "e7c43d43c778e6e4d3503c59f8226a4f0af36a1ea89b7643c1a77c4296e02d0f",
 					Time:   MustParseTime("2025-01-09T12:46:09Z"),
 				},
-				Movements: []*xclient.Movement{
+				Movements: []*txinfo.Movement{
 					NewMovement(
 						"XLM",
 						"XLM",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(120000000),
 								XAddress:  "chains/XLM/addresses/GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
 								AddressId: "GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
 							},
 						},
-						[]*xclient.BalanceChange{{
+						[]*txinfo.BalanceChange{{
 							Balance:   xc.NewAmountBlockchainFromUint64(120000000),
 							XAddress:  "chains/XLM/addresses/GB53K4UH7ODJ6QMCIVZKMPZ3BTVOWFOU4CBPJZQ2JRD3R3WTVFLZJ7Q3",
 							AddressId: "GB53K4UH7ODJ6QMCIVZKMPZ3BTVOWFOU4CBPJZQ2JRD3R3WTVFLZJ7Q3",
@@ -955,18 +957,18 @@ func TestFetchTxInfo(t *testing.T) {
 					NewMovement(
 						"XLM",
 						"XLM",
-						[]*xclient.BalanceChange{
+						[]*txinfo.BalanceChange{
 							{
 								Balance:   xc.NewAmountBlockchainFromUint64(100),
 								XAddress:  "chains/XLM/addresses/GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
 								AddressId: "GC5HMPRX6MAQI2YOPLLIXV6E6WCZCSC2WKJ6F34PYA6AZLAQVPN36BG4",
 							},
 						},
-						[]*xclient.BalanceChange{},
-						xclient.NewEventFromIndex(0, xclient.MovementVariantFee),
+						[]*txinfo.BalanceChange{},
+						txinfo.NewEventFromIndex(0, txinfo.MovementVariantFee),
 					),
 				},
-				Fees: []*xclient.Balance{
+				Fees: []*txinfo.Balance{
 					{
 						Asset:    "chains/XLM/assets/XLM",
 						Contract: "XLM",
@@ -975,7 +977,7 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Confirmations: 1,
 				Final:         true,
-				State:         xclient.Succeeded,
+				State:         txinfo.Succeeded,
 			},
 		},
 		{
@@ -1024,7 +1026,7 @@ func TestFetchTxInfo(t *testing.T) {
 		args := txinfo.NewArgs(xc.TxHash(vector.hash))
 		txInfo, err := client.FetchTxInfo(context.Background(), args)
 		if vector.err != "" {
-			require.Equal(t, xclient.TxInfo{}, txInfo)
+			require.Equal(t, txinfo.TxInfo{}, txInfo)
 			require.ErrorContains(t, err, vector.err)
 		} else {
 			require.NoError(t, err)
