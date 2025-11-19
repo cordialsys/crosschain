@@ -13,6 +13,7 @@ import (
 	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
 	evmtxinput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	substratetxinput "github.com/cordialsys/crosschain/chain/substrate/tx_input"
+	"github.com/cordialsys/crosschain/factory"
 
 	"github.com/cordialsys/crosschain/chain/evm_legacy"
 	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
@@ -23,6 +24,7 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/cordialsys/crosschain/factory/signer"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -243,15 +245,30 @@ func (s *CrosschainTestSuite) TestAllNewTxBuilder() {
 func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 	require := s.Require()
 
-	for _, driver := range xc.SupportedDrivers {
-		res, err := drivers.NewAddressBuilder(createChainFor(driver).Base())
+	factory := factory.NewDefaultFactory()
+
+	for _, chainCfg := range factory.GetAllChains() {
+		driver := chainCfg.Driver
+		addressBuilder, err := drivers.NewAddressBuilder(chainCfg.Base())
 		require.NoError(err, "Missing driver for NewAddressBuilder: "+driver)
-		require.NotNil(res)
+		require.NotNil(addressBuilder)
 
 		// verify address validation is defined and connected
 		err = drivers.ValidateAddress(createChainFor(driver).Base(), "not a valid address")
 		require.Error(err)
 		require.False(stderrors.Is(err, drivers.ErrNoAddressValidation), "missing address validation for: "+driver)
+
+		// verify valid address is accepted
+		testSecret := "cbfffd116c66668df349e724719a160fdb30808157c0242ba0f21d2222c284a9"
+		signer, err := signer.New(driver, testSecret, chainCfg.Base())
+		require.NoError(err)
+		publicKey, err := signer.PublicKey()
+		require.NoError(err)
+		address, err := addressBuilder.GetAddressFromPublicKey(publicKey)
+		require.NoError(err)
+		// validate the derived address
+		err = drivers.ValidateAddress(chainCfg.Base(), address)
+		require.NoError(err, "failed to validate derived address '%s' for: %s", driver, address)
 	}
 
 	err := drivers.ValidateAddress(createChainFor("not-a-valid-driver").Base(), "not a valid address")

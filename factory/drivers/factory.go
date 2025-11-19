@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cordialsys/crosschain/chain/eos"
+	"github.com/cordialsys/crosschain/chain/hyperliquid"
 	"github.com/cordialsys/crosschain/chain/kaspa"
 	kaspaaddress "github.com/cordialsys/crosschain/chain/kaspa/address"
 	kaspabuilder "github.com/cordialsys/crosschain/chain/kaspa/builder"
@@ -292,7 +293,11 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return solana.CheckError(err)
 	case xc.DriverAptos:
 		return aptos.CheckError(err)
-	case xc.DriverBitcoin, xc.DriverBitcoinLegacy, xc.DriverZcash:
+	case xc.DriverBitcoin:
+		return bitcoin.CheckError(err)
+	case xc.DriverBitcoinLegacy:
+		return bitcoin_cash.CheckError(err)
+	case xc.DriverZcash:
 		return bitcoin.CheckError(err)
 	case xc.DriverBitcoinCash:
 		return bitcoin_cash.CheckError(err)
@@ -333,6 +338,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return evm.ValidateAddress(cfg, addr)
 	case xc.DriverEVMLegacy:
 		return evm.ValidateAddress(cfg, addr)
+	case xc.DriverHyperliquid:
+		return hyperliquid.ValidateAddress(cfg, addr)
 	case xc.DriverFilecoin:
 		return fil.ValidateAddress(cfg, addr)
 	case xc.DriverCosmos, xc.DriverCosmosEvmos:
@@ -341,8 +348,12 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return solana.ValidateAddress(cfg, addr)
 	case xc.DriverAptos:
 		return aptos.ValidateAddress(cfg, addr)
-	case xc.DriverBitcoin, xc.DriverBitcoinLegacy, xc.DriverZcash:
+	case xc.DriverBitcoin:
 		return bitcoin.ValidateAddress(cfg, addr)
+	case xc.DriverBitcoinLegacy:
+		return bitcoin_cash.ValidateAddress(cfg, addr)
+	case xc.DriverZcash:
+		return zcash.ValidateAddress(cfg, addr)
 	case xc.DriverBitcoinCash:
 		return bitcoin_cash.ValidateAddress(cfg, addr)
 	case xc.DriverSui:
