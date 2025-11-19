@@ -31,11 +31,24 @@ func TestTxInputConflicts(t *testing.T) {
 				ValidTime:           int64(baseExpiration.Seconds()),
 			},
 			newInput: &TxInput{
-				ValidStartTimestamp: baseTs + baseExpiration.Nanoseconds() + 1, // over expiration date
+				ValidStartTimestamp: baseTs + baseExpiration.Nanoseconds()*tx_input.TIME_MARGIN_MULTIPLIER + 1, // over expiration date
 				ValidTime:           int64(baseExpiration.Seconds()),
 			},
 			independent:     true,
 			doubleSpendSafe: true,
+		},
+		{
+			name: "ValidButNoMargin",
+			oldInput: &TxInput{
+				ValidStartTimestamp: baseTs,
+				ValidTime:           int64(baseExpiration.Seconds()),
+			},
+			newInput: &TxInput{
+				ValidStartTimestamp: baseTs + baseExpiration.Nanoseconds() + 1, // over expiration date, but within margin
+				ValidTime:           int64(baseExpiration.Seconds()),
+			},
+			independent:     true,
+			doubleSpendSafe: false,
 		},
 		{
 			name: "UnsafeInputs",
@@ -75,4 +88,56 @@ func TestTxInputConflicts(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestSetGasFeePriority(t *testing.T) {
+	v := []struct {
+		name        string
+		baseFee     uint64
+		multiplier  xc.GasFeePriority
+		expectedFee uint64
+	}{
+		{
+			name:        "Low",
+			baseFee:     100_000,
+			multiplier:  MustNewPriority("0.7"),
+			expectedFee: 70_000,
+		},
+		{
+			name:        "Market",
+			baseFee:     100_000,
+			multiplier:  MustNewPriority("1.0"),
+			expectedFee: 100_000,
+		},
+		{
+			name:        "Aggressive",
+			baseFee:     100_000,
+			multiplier:  MustNewPriority("1.5"),
+			expectedFee: 150_000,
+		},
+		{
+			name:        "VeryAggressive",
+			baseFee:     100_000,
+			multiplier:  MustNewPriority("2.0"),
+			expectedFee: 200_000,
+		},
+	}
+	for _, v := range v {
+		t.Run(v.name, func(t *testing.T) {
+			input := &TxInput{
+				MaxTransactionFee: v.baseFee,
+			}
+			err := input.SetGasFeePriority(v.multiplier)
+			require.NoError(t, err)
+			require.Equal(t, v.expectedFee, input.MaxTransactionFee)
+		})
+	}
+}
+
+func MustNewPriority(p string) xc.GasFeePriority {
+	feePriority, err := xc.NewPriority(p)
+	if err != nil {
+		panic(err)
+	}
+	return feePriority
 }

@@ -314,6 +314,12 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "0.0.111",
 			out:   "0.0.111",
 		},
+		{
+			// leave normalized intact
+			chain: xc.HBAR,
+			inp:   "0-0-111",
+			out:   "0-0-111",
+		},
 	}
 
 	// test that we have a test vector for each chain

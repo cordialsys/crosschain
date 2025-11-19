@@ -48,11 +48,6 @@ const (
 // Use mirror `api/v1/network/exchangerate` to convert to HBAR
 var CRYPTO_TRANSFER_FEE = xc.MustNewAmountHumanReadableFromStr("0.0001")
 
-// Raw transfer fee doesn't account for EVM addressing, or memos.
-// Multiply the estimation to cover the cost
-// For example, token transfers with max len memo (100 chars) are 10x more expensive
-var FEE_MARGIN = xc.MustNewAmountHumanReadableFromStr("12.0")
-
 // Fees go to fee accounts + node operator
 // Fee accounts are the same for testnet and mainnet
 var FeeAccounts = []string{
@@ -106,7 +101,6 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 func (c *Client) FetchAccountInfo(ctx context.Context, address xc.Address) (*resttypes.AccountInfo, error) {
 	url := c.IndexerUrl.JoinPath(ENDPOINT_ACCOUNTS + "/" + string(address))
-	fmt.Printf("url: %s\n", url)
 	accountInfo, err := Get[resttypes.AccountInfo](ctx, c, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get: %w", err)
@@ -159,7 +153,9 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	}
 
 	fee := rate.GetMaxEquivalent(CRYPTO_TRANSFER_FEE)
-	fee = fee.Mul(FEE_MARGIN)
+	feeMultiplier := c.Asset.ChainGasMultiplier
+	hrFeeMultiplier := xc.NewAmountHumanReadableFromFloat(feeMultiplier)
+	fee = fee.Mul(hrFeeMultiplier)
 	input := &tx_input.TxInput{
 		TxInputEnvelope:     xc.TxInputEnvelope{},
 		NodeAccountID:       c.NodeId,
@@ -201,7 +197,11 @@ func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 	// there is also `ResponseCodeEnum_Success` but it's not used
 	if r.NodeTransactionPrecheckCode != services.ResponseCodeEnum_OK {
 		grpcError := commontypes.GrpcError(r.NodeTransactionPrecheckCode)
-		return fmt.Errorf("node precheck failure: %w", grpcError)
+		if r.NodeTransactionPrecheckCode == services.ResponseCodeEnum_DUPLICATE_TRANSACTION {
+			return clienterrors.TransactionExistsf("node precheck failure: %s", grpcError)
+		} else {
+			return fmt.Errorf("node precheck failure: %w", grpcError)
+		}
 	}
 	return nil
 }

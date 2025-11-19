@@ -5,7 +5,10 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/shopspring/decimal"
 )
+
+const TIME_MARGIN_MULTIPLIER = int64(2)
 
 // TxInput for Hedera
 type TxInput struct {
@@ -50,13 +53,14 @@ func (input *TxInput) GetDriver() xc.Driver {
 	return xc.DriverHedera
 }
 
-func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
-	multiplier, err := other.GetDefault()
+func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
+	multiplier, err := priority.GetDefault()
 	if err != nil {
 		return err
 	}
-	// multiply the gas price using the default, or apply a strategy according to the enum
-	_ = multiplier
+	xcFee := xc.NewAmountBlockchainFromUint64(input.MaxTransactionFee)
+	multipliedMaxFee := multiplier.Mul(decimal.Decimal(xcFee.ToHuman(0)))
+	input.MaxTransactionFee = multipliedMaxFee.BigInt().Uint64()
 	return nil
 }
 
@@ -78,14 +82,10 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	}
 	o, ok := other.(ValidStartGetter)
 	if ok {
-		if input.GetTimestampNano() <= o.GetExpiration() {
-			return false
-		}
+		return input.GetTimestampNano() > o.GetExpiration()
 	} else {
-		// shouldn't happen, can't tell
 		return false
 	}
-	return true
 }
 
 func (input *TxInput) GetTimestampNano() int64 {
@@ -94,7 +94,7 @@ func (input *TxInput) GetTimestampNano() int64 {
 
 func (input *TxInput) GetExpiration() int64 {
 	ux := time.Unix(0, input.ValidStartTimestamp)
-	expirationPeriod := time.Second * time.Duration(input.ValidTime)
+	expirationPeriod := time.Second * time.Duration(input.ValidTime*TIME_MARGIN_MULTIPLIER)
 	expiration := ux.Add(expirationPeriod)
 	return expiration.UnixNano()
 }
