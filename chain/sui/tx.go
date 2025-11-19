@@ -77,15 +77,15 @@ type BroadcastMetadata struct {
 	Signatures [][]byte `json:"signatures"`
 }
 
-func (tx Tx) GetMetadata() ([]byte, error) {
+func (tx Tx) GetMetadata() ([]byte, bool, error) {
 	metadata := BroadcastMetadata{
 		Signatures: tx.signatures,
 	}
 	metadataBz, err := json.Marshal(metadata)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return metadataBz, nil
+	return metadataBz, len(metadataBz) > 0, nil
 }
 
 type StakingInput struct {

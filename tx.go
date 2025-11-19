@@ -165,7 +165,7 @@ type Tx interface {
 
 type TxWithMetadata interface {
 	// If the client SubmitTx needs additional metadata, this can be used to define it.
-	GetMetadata() ([]byte, error)
+	GetMetadata() ([]byte, bool, error)
 }
 
 type TxLegacyGetSignatures interface {

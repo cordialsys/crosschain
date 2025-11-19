@@ -274,7 +274,7 @@ type BroadcastMetadata struct {
 	IsIcrcTx        bool   `json:"is_icrc_tx"`
 }
 
-func (tx Tx) GetMetadata() ([]byte, error) {
+func (tx Tx) GetMetadata() ([]byte, bool, error) {
 	requestID := tx.Request.RequestID()
 	metadata := BroadcastMetadata{
 		CanisterID:      tx.Request.CanisterID.String(),
@@ -284,7 +284,7 @@ func (tx Tx) GetMetadata() ([]byte, error) {
 	}
 	metadataBz, err := json.Marshal(metadata)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return metadataBz, nil
+	return metadataBz, len(metadataBz) > 0, nil
 }
