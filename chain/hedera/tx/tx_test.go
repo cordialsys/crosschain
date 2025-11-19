@@ -121,9 +121,12 @@ func TestTxAddSignature(t *testing.T) {
 	tx.SignedTx.SigMap = nil
 	signature, err := hex.DecodeString("2b52a0e733db28b68aa3aca59abb888d9ca3cd558e2548683f0151391385e55a3b7b9fe6f137fbb512998156994c6b5c402eabc41e9dd1f5adc3c79db20796a401")
 	require.NoError(t, err)
+	pk, err := hex.DecodeString("04a1d9f1096dc56d52520ad3eee17d675ffbed1eec0222b7ff5c1db2e3edbe1e178186cc5da5c438aec0be028fc8d4284c687903dbe440cbb947882f6d9c661444")
+	require.NoError(t, err)
 	err = tx.SetSignatures([]*xc.SignatureResponse{
 		{
 			Signature: xc.TxSignature(signature),
+			PublicKey: pk,
 		},
 	}...)
 	require.NoError(t, err)
