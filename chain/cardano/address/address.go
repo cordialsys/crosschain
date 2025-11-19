@@ -22,6 +22,18 @@ const (
 	NetworkTagMainnet    = 0b0000_0001
 )
 
+var ValidMainnetHRPs = []string{
+	"addr",
+	"stake",
+	"pool",
+}
+
+var ValidTestnetHRPs = []string{
+	"addr_test",
+	"stake_test",
+	"pool",
+}
+
 // AddressBuilder for Template
 type AddressBuilder struct {
 	IsMainnet bool

@@ -84,6 +84,11 @@ func TestValidateAddress(t *testing.T) {
 			wantError: true,
 			errorMsg:  "invalid base58check encoding",
 		},
+		{
+			name:      "TRON - address with space in middle",
+			address:   "TDpBe64DqirkKWj6H uR1pWgmnhw2wDacE",
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {

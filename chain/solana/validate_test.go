@@ -43,6 +43,11 @@ func TestValidateAddress(t *testing.T) {
 		},
 		// Invalid addresses
 		{
+			name:      "Solana - address with space in middle",
+			address:   "Hzn3n914JaSpnxo5mBbmuC mGL6mxWN9Ac2HzEXFSGtb",
+			wantError: true,
+		},
+		{
 			name:      "Solana - invalid base58 (contains 0)",
 			address:   "0000000000000000000000000000000000000000000",
 			wantError: true,

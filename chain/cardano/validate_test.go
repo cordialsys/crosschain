@@ -24,6 +24,12 @@ func TestValidateAddress(t *testing.T) {
 			wantError: false,
 		},
 		{
+			name:      "ADA mainnet - payment address normal",
+			network:   "mainnet",
+			address:   "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k",
+			wantError: false,
+		},
+		{
 			name:      "ADA mainnet - payment address with stake key",
 			network:   "mainnet",
 			address:   "addr1q9y8tu07chm4g5djr33tye2ckvdnl2cm7s6u7p5mqjs8wfalpcf5mc8ncefe92rj4gz6kwlzxrj54wy25c7c44vvdl9qeyswq3",
@@ -37,6 +43,12 @@ func TestValidateAddress(t *testing.T) {
 			wantError: false,
 		},
 		// Invalid addresses
+		{
+			name:      "ADA mainnet - address with space in middle",
+			network:   "mainnet",
+			address:   "addr1wy42rt3rdptdaa2lwlntkx4 ksuqrmqqjlu7pf5l5f8upmgj3gq2m",
+			wantError: true,
+		},
 		{
 			name:      "ADA mainnet - bitcoin address",
 			network:   "mainnet",

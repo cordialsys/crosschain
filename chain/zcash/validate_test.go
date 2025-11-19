@@ -56,6 +56,12 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "checksum",
 		},
 		{
+			name:      "Zcash - address with space in middle",
+			address:   "t1UYsZVJkLPeMjxEt CvSxfWuNmddpWfxzs",
+			network:   "mainnet",
+			wantError: true,
+		},
+		{
 			name:      "Zcash - bitcoin address",
 			address:   "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
 			network:   "mainnet",

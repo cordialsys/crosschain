@@ -80,6 +80,12 @@ func TestValidateAddress(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name:      "TON - address with space in middle",
+			address:   "EQAjflEZ_6KgKMxPlcnKN1ZoUvH TT6hVwTW95EGVQfeSha2",
+			network:   "mainnet",
+			wantError: true,
+		},
+		{
 			name:      "TON - invalid raw format (missing colon)",
 			address:   "0237E5119FFA2A028CC4F95C9CA37566852F1DD4D3EA15704D6F791065507DE4A",
 			network:   "mainnet",

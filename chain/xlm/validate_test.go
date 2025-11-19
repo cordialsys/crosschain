@@ -74,6 +74,11 @@ func TestValidateAddress(t *testing.T) {
 			wantError: true,
 			errorMsg:  "checksum mismatch",
 		},
+		{
+			name:      "XLM - address with space in middle",
+			address:   "GCTUKHQ7655O6ZT3OQ3QTDTQSD6K JCTHTN2YYTHNG5WWXWGW7MUYJZ4",
+			wantError: true,
+		},
 	}
 
 	for _, tt := range tests {

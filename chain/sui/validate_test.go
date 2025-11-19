@@ -73,6 +73,11 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "invalid hex encoding",
 		},
 		{
+			name:      "Sui - address with space in middle",
+			address:   "0x086d8e59c3ef72ccc8cbf74c55e7f611b0 e9eba788c7153924c4e4a32449a8e",
+			wantError: true,
+		},
+		{
 			name:      "Sui - bitcoin address",
 			address:   "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
 			wantError: true,

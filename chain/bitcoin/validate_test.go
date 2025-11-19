@@ -117,6 +117,13 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "invalid bitcoin address",
 		},
 		{
+			name:      "BTC mainnet - address with space in middle",
+			chain:     string(xc.BTC),
+			network:   "mainnet",
+			address:   "1A1zP1eP5QGefi2DM TfTL5SLmv7DivfNa",
+			wantError: true,
+		},
+		{
 			name:      "BTC mainnet - testnet address",
 			chain:     string(xc.BTC),
 			network:   "mainnet",
