@@ -28,6 +28,12 @@ chains:
         decimals: 4
         fee_limit: "100.0"
         aliases: ["core.vaulta"]
+    external:
+      coin_market_cap:
+        asset_id: "1765"
+      coin_gecko:
+        asset_id: "eos"
+
   ACA:
     chain: ACA
     driver: substrate
@@ -59,6 +65,13 @@ chains:
     fee_limit: "30.0"
     transaction_active_time: "2h"
     auth: "env:CARDANO_PROJECT_ID"
+    external:
+      coin_gecko:
+        asset_id: "cardano"
+      coin_market_cap:
+        asset_id: "2010"
+      indexing_co:
+        chain_id: "cardano"
   AKT:
     chain: AKT
     driver: cosmos
@@ -580,6 +593,11 @@ chains:
     chain_gas_multiplier: 12.0
     confirmations_final: 3
     indexer_url: "https://mainnet-public.mirrornode.hedera.com"
+    external:
+      coin_market_cap:
+        asset_id: "4642"
+      coin_gecko:
+        asset_id: "hedera-hashgraph"
   HyperEVM:
     chain: HyperEVM
     driver: evm
@@ -887,6 +905,11 @@ chains:
     fee_limit: "250.0"
     chain_max_gas_price: 120
     confirmations_final: 250
+    external:
+      coin_market_cap:
+        asset_id: "30495"
+      coin_gecko:
+        asset_id: "monad"
   NIL:
     chain: NIL
     driver: cosmos
@@ -944,6 +967,11 @@ chains:
         decimals: 6
         fee_limit: "20.0"
         aliases: ["USDN"]
+    external:
+      coin_market_cap:
+        asset_id: "36538" # this is Noble Dollar
+      coin_gecko:
+        asset_id: "ibc-bridged-usdc"
 
   OAS:
     chain: OAS
@@ -1267,6 +1295,11 @@ chains:
     gas_budget_default: "0.1"
     decimals: 18
     fee_limit: "100.0"
+    external:
+      coin_market_cap:
+        asset_id: "36645"
+      coin_gecko:
+        asset_id: "plasma"
   0G:
     chain: 0G
     driver: evm
