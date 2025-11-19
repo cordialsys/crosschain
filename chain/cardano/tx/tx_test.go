@@ -163,7 +163,7 @@ func TestStakingSighashes(t *testing.T) {
 	require.NoError(t, err)
 
 	// Double signature is reqauired for stakes
-	expectedPayload, _ := hex.DecodeString("68f25aefa3534fa86f064882bd34a39710913285ed359c7ac715c430926b2a2f")
+	expectedPayload, _ := hex.DecodeString("69a46c76de189a45193341f71b54702b4199ccd497ec570fa76f3736c366e8dc")
 	require.Equal(t, []*xc.SignatureRequest{
 		{
 			Payload: expectedPayload,
