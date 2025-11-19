@@ -14,6 +14,9 @@ type AddressBuilder struct {
 
 // NewAddressBuilder creates a new Cosmos AddressBuilder
 func NewAddressBuilder(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
+	if asset.ChainPrefix == "" {
+		return nil, fmt.Errorf("chain prefix not configured for %s", asset.Chain)
+	}
 	return AddressBuilder{
 		Asset: asset,
 	}, nil
