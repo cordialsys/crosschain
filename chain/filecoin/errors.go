@@ -1,4 +1,4 @@
-package newchain
+package filecoin
 
 import "github.com/cordialsys/crosschain/client/errors"
 

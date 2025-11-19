@@ -2,6 +2,7 @@ package drivers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/kaspa"
@@ -315,4 +316,53 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return icp.CheckError(err)
 	}
 	return errors.UnknownError
+}
+
+var ErrNoAddressValidation = fmt.Errorf("no address validation defined for")
+
+func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
+	if strings.TrimSpace(string(addr)) == "" {
+		return fmt.Errorf("empty address")
+	}
+	switch cfg.Driver {
+	case xc.DriverCardano:
+		return cardano.ValidateAddress(cfg, addr)
+	case xc.DriverDusk:
+		return dusk.ValidateAddress(cfg, addr)
+	case xc.DriverEVM:
+		return evm.ValidateAddress(cfg, addr)
+	case xc.DriverEVMLegacy:
+		return evm.ValidateAddress(cfg, addr)
+	case xc.DriverFilecoin:
+		return fil.ValidateAddress(cfg, addr)
+	case xc.DriverCosmos, xc.DriverCosmosEvmos:
+		return cosmos.ValidateAddress(cfg, addr)
+	case xc.DriverSolana:
+		return solana.ValidateAddress(cfg, addr)
+	case xc.DriverAptos:
+		return aptos.ValidateAddress(cfg, addr)
+	case xc.DriverBitcoin, xc.DriverBitcoinLegacy, xc.DriverZcash:
+		return bitcoin.ValidateAddress(cfg, addr)
+	case xc.DriverBitcoinCash:
+		return bitcoin_cash.ValidateAddress(cfg, addr)
+	case xc.DriverSui:
+		return sui.ValidateAddress(cfg, addr)
+	case xc.DriverSubstrate:
+		return substrate.ValidateAddress(cfg, addr)
+	case xc.DriverTron:
+		return tron.ValidateAddress(cfg, addr)
+	case xc.DriverTon:
+		return ton.ValidateAddress(cfg, addr)
+	case xc.DriverXrp:
+		return xrp.ValidateAddress(cfg, addr)
+	case xc.DriverXlm:
+		return xlm.ValidateAddress(cfg, addr)
+	case xc.DriverKaspa:
+		return kaspa.ValidateAddress(cfg, addr)
+	case xc.DriverEOS:
+		return eos.ValidateAddress(cfg, addr)
+	case xc.DriverInternetComputerProtocol:
+		return icp.ValidateAddress(cfg, addr)
+	}
+	return fmt.Errorf("%w: %s", ErrNoAddressValidation, string(cfg.Chain))
 }

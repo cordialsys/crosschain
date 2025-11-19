@@ -73,7 +73,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	}
 	return AddressBuilder{
 		asset:  asset,
-		params: params,
+		params: &params,
 	}, nil
 }
 

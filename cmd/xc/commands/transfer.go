@@ -192,6 +192,12 @@ func CmdTxTransfer() *cobra.Command {
 				tfOptions = append(tfOptions, builder.OptionPriority(priority))
 			}
 
+			// validate to address
+			err = drivers.ValidateAddress(chainConfig.Base(), xc.Address(toWalletAddress))
+			if err != nil {
+				return fmt.Errorf("invalid to address: %v", err)
+			}
+
 			tfArgs, err := builder.NewTransferArgs(chainConfig.Base(), from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)

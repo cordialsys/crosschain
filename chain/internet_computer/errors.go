@@ -1,4 +1,4 @@
-package newchain
+package internet_computer
 
 import (
 	"strings"

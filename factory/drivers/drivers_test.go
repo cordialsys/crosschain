@@ -1,6 +1,7 @@
 package drivers_test
 
 import (
+	stderrors "errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -246,7 +247,15 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 		res, err := drivers.NewAddressBuilder(createChainFor(driver).Base())
 		require.NoError(err, "Missing driver for NewAddressBuilder: "+driver)
 		require.NotNil(res)
+
+		// verify address validation is defined and connected
+		err = drivers.ValidateAddress(createChainFor(driver).Base(), "not a valid address")
+		require.Error(err)
+		require.False(stderrors.Is(err, drivers.ErrNoAddressValidation), "missing address validation for: "+driver)
 	}
+
+	err := drivers.ValidateAddress(createChainFor("not-a-valid-driver").Base(), "not a valid address")
+	require.True(stderrors.Is(err, drivers.ErrNoAddressValidation), "did not return expected error for invalid chain")
 }
 
 func (s *CrosschainTestSuite) TestAllCheckError() {

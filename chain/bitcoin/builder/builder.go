@@ -38,7 +38,7 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	}
 	return TxBuilder{
 		Asset:          cfgI,
-		Params:         params,
+		Params:         &params,
 		AddressDecoder: &address.BtcAddressDecoder{},
 	}, nil
 }

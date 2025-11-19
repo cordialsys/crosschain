@@ -18,7 +18,7 @@ func testbitcoin(addressRaw string) error {
 	}
 	addr, err := btcutil.DecodeAddress(
 		addressRaw,
-		params,
+		&params,
 	)
 	if err != nil {
 		return err

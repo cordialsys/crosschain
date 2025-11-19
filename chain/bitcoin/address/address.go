@@ -92,7 +92,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 	log.Debugf("New bitcoin address builder with algorithm: %s", algorithm)
 	builder := AddressBuilder{
 		asset:     asset,
-		params:    params,
+		params:    &params,
 		algorithm: algorithm,
 		format:    format,
 	}

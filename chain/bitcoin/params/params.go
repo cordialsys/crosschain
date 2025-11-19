@@ -7,7 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-func GetParams(cfg *xc.ChainBaseConfig) (*chaincfg.Params, error) {
+func GetParams(cfg *xc.ChainBaseConfig) (chaincfg.Params, error) {
 	switch xc.NativeAsset(cfg.Chain) {
 	case xc.BTC, xc.BCH:
 		return BtcNetworks.GetParams(cfg.Network), nil
@@ -18,7 +18,7 @@ func GetParams(cfg *xc.ChainBaseConfig) (*chaincfg.Params, error) {
 	case xc.ZEC:
 		return ZecNetworks.GetParams(cfg.Network), nil
 	}
-	return &chaincfg.Params{}, errors.New("unsupported bitcoin chain: " + string(cfg.Chain))
+	return chaincfg.Params{}, errors.New("unsupported bitcoin chain: " + string(cfg.Chain))
 }
 
 // UTXO chains have mainnet, testnet, and regtest/devnet network types built in.
@@ -29,29 +29,29 @@ const Testnet Network = "testnet"
 const Regtest Network = "regtest"
 
 type NetworkTriple struct {
-	Mainnet *chaincfg.Params
-	Testnet *chaincfg.Params
-	Regtest *chaincfg.Params
+	Mainnet chaincfg.Params
+	Testnet chaincfg.Params
+	Regtest chaincfg.Params
 }
 
 func init() {
-	_ = chaincfg.Register(BtcNetworks.Mainnet)
-	_ = chaincfg.Register(BtcNetworks.Testnet)
-	_ = chaincfg.Register(BtcNetworks.Regtest)
+	_ = chaincfg.Register(&BtcNetworks.Mainnet)
+	_ = chaincfg.Register(&BtcNetworks.Testnet)
+	_ = chaincfg.Register(&BtcNetworks.Regtest)
 
-	_ = chaincfg.Register(DogeNetworks.Mainnet)
-	_ = chaincfg.Register(DogeNetworks.Testnet)
-	_ = chaincfg.Register(DogeNetworks.Regtest)
+	_ = chaincfg.Register(&DogeNetworks.Mainnet)
+	_ = chaincfg.Register(&DogeNetworks.Testnet)
+	_ = chaincfg.Register(&DogeNetworks.Regtest)
 
-	_ = chaincfg.Register(LtcNetworks.Mainnet)
-	_ = chaincfg.Register(LtcNetworks.Testnet)
-	_ = chaincfg.Register(LtcNetworks.Regtest)
+	_ = chaincfg.Register(&LtcNetworks.Mainnet)
+	_ = chaincfg.Register(&LtcNetworks.Testnet)
+	_ = chaincfg.Register(&LtcNetworks.Regtest)
 
-	_ = chaincfg.Register(ZecNetworks.Mainnet)
-	_ = chaincfg.Register(ZecNetworks.Testnet)
+	_ = chaincfg.Register(&ZecNetworks.Mainnet)
+	_ = chaincfg.Register(&ZecNetworks.Testnet)
 }
 
-func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
+func (n *NetworkTriple) GetParams(network string) chaincfg.Params {
 	switch Network(network) {
 	case Mainnet:
 		return n.Mainnet
@@ -65,10 +65,10 @@ func (n *NetworkTriple) GetParams(network string) *chaincfg.Params {
 }
 
 var BtcNetworks *NetworkTriple = &NetworkTriple{
-	Mainnet: &chaincfg.MainNetParams,
+	Mainnet: chaincfg.MainNetParams,
 	// testnet4 is the upgrade to testnet3
 	// https://github.com/bitcoin/bitcoin/blob/45719390a1434ad7377a5ed05dcd73028130cf2d/src/kernel/chainparams.cpp
-	Testnet: &chaincfg.Params{
+	Testnet: chaincfg.Params{
 		Name: "testnet",
 		Net:  0x283f161c,
 
@@ -79,11 +79,11 @@ var BtcNetworks *NetworkTriple = &NetworkTriple{
 		HDPrivateKeyID:   [4]byte{0x04, 0x35, 0x83, 0x94},
 		Bech32HRPSegwit:  "tb",
 	},
-	Regtest: &chaincfg.RegressionNetParams,
+	Regtest: chaincfg.RegressionNetParams,
 }
 
 var DogeNetworks *NetworkTriple = &NetworkTriple{
-	Mainnet: &chaincfg.Params{
+	Mainnet: chaincfg.Params{
 		Name: "mainnet",
 		Net:  0xc0c0c0c0,
 
@@ -101,7 +101,7 @@ var DogeNetworks *NetworkTriple = &NetworkTriple{
 		// collide with real addresses, so we specify it.
 		Bech32HRPSegwit: "doge",
 	},
-	Testnet: &chaincfg.Params{
+	Testnet: chaincfg.Params{
 		Name: "testnet",
 		Net:  0xfcc1b7dc,
 
@@ -119,7 +119,7 @@ var DogeNetworks *NetworkTriple = &NetworkTriple{
 		// collide with real addresses, so we specify it.
 		Bech32HRPSegwit: "doget",
 	},
-	Regtest: &chaincfg.Params{
+	Regtest: chaincfg.Params{
 		Name: "regtest",
 
 		// Dogecoin has 0xdab5bffa as RegTest (same as Bitcoin's RegTest).
@@ -144,7 +144,7 @@ var DogeNetworks *NetworkTriple = &NetworkTriple{
 }
 
 var LtcNetworks *NetworkTriple = &NetworkTriple{
-	Mainnet: &chaincfg.Params{
+	Mainnet: chaincfg.Params{
 		Name: "mainnet",
 		Net:  0xfbc0b6db,
 
@@ -162,7 +162,7 @@ var LtcNetworks *NetworkTriple = &NetworkTriple{
 		// collide with real addresses, so we specify it.
 		Bech32HRPSegwit: "ltc",
 	},
-	Testnet: &chaincfg.Params{
+	Testnet: chaincfg.Params{
 		Name: "testnet",
 		Net:  0xfdd2c8f1,
 
@@ -180,7 +180,7 @@ var LtcNetworks *NetworkTriple = &NetworkTriple{
 		// collide with real addresses, so we specify it.
 		Bech32HRPSegwit: "tltc",
 	},
-	Regtest: &chaincfg.Params{
+	Regtest: chaincfg.Params{
 		Name: "regtest",
 
 		// Dogecoin has 0xdab5bffa as RegTest (same as Bitcoin's RegTest).
@@ -205,7 +205,7 @@ var LtcNetworks *NetworkTriple = &NetworkTriple{
 }
 
 var ZecNetworks *NetworkTriple = &NetworkTriple{
-	Mainnet: &chaincfg.Params{
+	Mainnet: chaincfg.Params{
 		Name: "mainnet",
 		// Net:  0x6427E924,
 		Net: 0xd9b4bef9,
@@ -219,7 +219,7 @@ var ZecNetworks *NetworkTriple = &NetworkTriple{
 		// not used for zcash
 		Bech32HRPSegwit: "",
 	},
-	Testnet: &chaincfg.Params{
+	Testnet: chaincfg.Params{
 		Name: "testnet",
 		Net:  0x0709110B,
 		// https://zips.z.cash/protocol/protocol.pdf
