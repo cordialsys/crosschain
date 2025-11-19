@@ -23,7 +23,7 @@ func NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOp
 	}
 
 	builder := AddressBuilder{
-		params,
+		&params,
 		asset,
 	}
 

@@ -15,6 +15,7 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx-info"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -176,6 +177,12 @@ func CmdTxMultiTransfer() *cobra.Command {
 					return fmt.Errorf("could not create receiver for to-address '%s' at position %d: %v", toAddresses[i], i, err)
 				}
 				logrus.WithField("address", toAddress).WithField("amount", amount).Info("sending to")
+
+				// validate to address
+				err = drivers.ValidateAddress(chainConfig.Base(), toAddress)
+				if err != nil {
+					return fmt.Errorf("invalid to address: %v", err)
+				}
 			}
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {

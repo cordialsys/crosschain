@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/stretchr/testify/require"
+	"github.com/vedhavyas/go-subkey/v2"
 )
 
 func Validate(t *testing.T, chainCfg *xc.ChainConfig) {
@@ -26,4 +28,20 @@ func Validate(t *testing.T, chainCfg *xc.ChainConfig) {
 		)
 		require.NotEmpty(chainCfg.IndexerUrl, help)
 	}
+}
+
+func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
+	addrStr := string(addr)
+
+	_, _, err := subkey.SS58Decode(addrStr)
+	if err != nil {
+		return fmt.Errorf("invalid substrate address %s: %w", addr, err)
+	}
+
+	_, err = address.Decode(addr)
+	if err != nil {
+		return fmt.Errorf("invalid substrate address %s: %w", addr, err)
+	}
+
+	return nil
 }

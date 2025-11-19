@@ -3,6 +3,7 @@ package hex
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -56,4 +57,12 @@ func (h *Hex) UnmarshalText(data []byte) error {
 
 func (h Hex) MarshalText() ([]byte, error) {
 	return []byte(h.String()), nil
+}
+
+func Validate(s string) ([]byte, error) {
+	bz, err := hex.DecodeString(strings.TrimPrefix(s, "0x"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid hex: %w", err)
+	}
+	return bz, nil
 }

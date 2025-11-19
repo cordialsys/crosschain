@@ -94,6 +94,12 @@ func TestTransfer(t *testing.T) {
 	toAddress := deriveAddress(t, xcFactory, chainConfig, toPrivateKey)
 	fmt.Println("sending from ", from, " to ", toAddress)
 
+	// validate to address
+	err = drivers.ValidateAddress(chainConfig.Base(), toAddress)
+	if err != nil {
+		t.Fatalf("invalid to address: %v", err)
+	}
+
 	txBuilder, err := xcFactory.NewTxBuilder(chainConfig.Base())
 	require.NoError(t, err)
 

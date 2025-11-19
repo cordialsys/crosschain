@@ -62,7 +62,7 @@ func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
 	return &BlockchairClient{
 		ApiKey:           apiKey,
 		Url:              cfg.URL,
-		Chaincfg:         params,
+		Chaincfg:         &params,
 		httpClient:       *httpClient,
 		Asset:            asset,
 		addressDecoder:   &address.BtcAddressDecoder{},

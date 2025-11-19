@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/big"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"golang.org/x/crypto/ripemd160"
@@ -51,6 +52,33 @@ func EncodeBase58(input []byte) string {
 	}
 
 	return string(result)
+}
+
+func DecodeBase58(input string) ([]byte, error) {
+	result := big.NewInt(0)
+	base := big.NewInt(int64(len(xrpBase58Alphabet)))
+
+	for _, c := range input {
+		charIndex := strings.IndexRune(xrpBase58Alphabet, c)
+		if charIndex == -1 {
+			return nil, fmt.Errorf("invalid character '%c' in base58 string", c)
+		}
+		result.Mul(result, base)
+		result.Add(result, big.NewInt(int64(charIndex)))
+	}
+
+	decoded := result.Bytes()
+
+	// Add leading zero bytes
+	for _, c := range input {
+		if c == rune(xrpBase58Alphabet[0]) {
+			decoded = append([]byte{0x00}, decoded...)
+		} else {
+			break
+		}
+	}
+
+	return decoded, nil
 }
 
 // GetAddressFromPublicKey returns an Address given a public key

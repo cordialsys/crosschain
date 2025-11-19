@@ -68,6 +68,11 @@ func TestMultiTransfer(t *testing.T) {
 	toAddresses := make([]xc.Address, len(toPrivateKeys))
 	for i, pk := range toPrivateKeys {
 		toAddresses[i] = deriveAddress(t, xcFactory, chainConfig, pk)
+		// validate to address
+		err = drivers.ValidateAddress(chainConfig.Base(), toAddresses[i])
+		if err != nil {
+			t.Fatalf("invalid to address: %v", err)
+		}
 	}
 
 	feePayerWalletAddress := deriveAddress(t, xcFactory, chainConfig, feePayerPrivateKey)

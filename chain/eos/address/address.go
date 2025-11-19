@@ -33,7 +33,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", err
 	}
 
-	hash := ripemd160checksum(pubkey.SerializeCompressed(), ecc.CurveK1)
+	hash := Ripemd160Checksum(pubkey.SerializeCompressed(), ecc.CurveK1)
 
 	pubkeyAndChecksum := make([]byte, len(publicKeyBytes)+4)
 	copy(pubkeyAndChecksum, publicKeyBytes)
@@ -45,7 +45,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(prefixed), nil
 }
 
-func ripemd160checksum(in []byte, curve ecc.CurveID) []byte {
+func Ripemd160Checksum(in []byte, curve ecc.CurveID) []byte {
 	h := ripemd160.New()
 	_, _ = h.Write(in) // this implementation has no error path
 

@@ -82,7 +82,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 
 	return &BlockbookClient{
 		asset,
-		chaincfg,
+		&chaincfg,
 		decoder,
 		false,
 		bbClient,

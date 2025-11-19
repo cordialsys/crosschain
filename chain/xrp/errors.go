@@ -1,4 +1,4 @@
-package newchain
+package xrp
 
 import (
 	"strings"
