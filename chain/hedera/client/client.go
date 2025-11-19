@@ -211,12 +211,14 @@ func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclie
 	return xclient.LegacyTxInfo{}, errors.New("not implemented")
 }
 
-func isFeeAccount(account string, node string, sourceAccount string) bool {
-	if slices.Contains(FeeAccounts, account) {
-		return true
+func determineEventType(transfer resttypes.Transfer, node string) xclient.MovementVariant {
+	if slices.Contains(FeeAccounts, transfer.Account) || transfer.Account == node {
+		return xclient.MovementVariantFee
+	} else if transfer.TokenId == "" {
+		return xclient.MovementVariantNative
+	} else {
+		return xclient.MovementVariantToken
 	}
-
-	return account == node || account == sourceAccount
 }
 
 // Returns transaction info - new endpoint
@@ -284,41 +286,40 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		return xclient.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
 	}
 
-	type transferAndEvent struct {
-		transfer resttypes.Transfer
-		event    *xclient.Event
-	}
-	var allTransfers []transferAndEvent
+	var allTransfers []resttypes.Transfer
+	allTransfers = append(allTransfers, tx.Transfers...)
+	allTransfers = append(allTransfers, tx.TokenTransfers...)
 
-	for i, transfer := range tx.Transfers {
-		allTransfers = append(allTransfers, transferAndEvent{transfer: transfer, event: xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative)})
-	}
-	for i, transfer := range tx.TokenTransfers {
-		allTransfers = append(allTransfers, transferAndEvent{transfer: transfer, event: xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantToken)})
-	}
-
-	for _, transferAndEvent := range allTransfers {
-		transfer := transferAndEvent.transfer
-		if isFeeAccount(transfer.Account, tx.Node, sourceAddress) {
+	contractToMovement := make(map[string]*xclient.Movement, 0)
+	for i, transfer := range allTransfers {
+		eventVariant := determineEventType(transfer, tx.Node)
+		eventId := fmt.Sprintf("%d", i)
+		if eventVariant == xclient.MovementVariantFee {
 			continue
 		}
-		movement := xclient.NewMovement(c.Asset.Chain, xc.ContractAddress(transfer.TokenId))
-		absAmount := uint64(0)
-		if transfer.Amount < 0 {
-			absAmount = uint64(transfer.Amount * -1)
-		} else {
-			absAmount = uint64(transfer.Amount)
+
+		movement, ok := contractToMovement[transfer.TokenId]
+		if !ok {
+			newMovement := xclient.NewMovement(c.Asset.Chain, xc.ContractAddress(transfer.TokenId))
+			contractToMovement[transfer.TokenId] = newMovement
+			movement = newMovement
+			txInfo.AddMovement(movement)
 		}
-		amount := xc.NewAmountBlockchainFromUint64(absAmount)
-		movement.AddSource(xc.Address(sourceAddress), amount, nil)
-		movement.AddDestination(xc.Address(transfer.Account), amount, nil)
+
+		// determine direction
+		if transfer.Amount < 0 {
+			absAmount := uint64(transfer.Amount * -1)
+			balanceChange := movement.AddSource(xc.Address(sourceAddress), xc.NewAmountBlockchainFromUint64(absAmount), nil)
+			balanceChange.Event = xclient.NewEvent(eventId, eventVariant)
+		} else {
+			absAmount := uint64(transfer.Amount)
+			balanceChange := movement.AddDestination(xc.Address(transfer.Account), xc.NewAmountBlockchainFromUint64(absAmount), nil)
+			balanceChange.Event = xclient.NewEvent(eventId, eventVariant)
+		}
+
 		movement.Memo = tx.GetMemo()
-		movement.AddEventMeta(transferAndEvent.event)
-		txInfo.AddMovement(movement)
 	}
 
-	fee := xc.NewAmountBlockchainFromUint64(tx.ChargedTxFee)
-	txInfo.AddFee(xc.Address(sourceAddress), xc.ContractAddress(xc.HBAR), fee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	return *txInfo, nil
 }

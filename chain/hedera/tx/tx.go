@@ -104,12 +104,19 @@ func NewTransfer(args builder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert contract to token id: %w", err)
 		}
+
+		decimals, ok := args.GetDecimals()
+		if !ok {
+			return nil, errors.New("decimals are required for token transfers")
+		}
 		tokenTransfers = []*common.TokenTransferList{
 			{
-				Token:            tokenId,
-				Transfers:        accountAmounts,
-				NftTransfers:     []*common.NftTransfer{},
-				ExpectedDecimals: &wrapperspb.UInt32Value{},
+				Token:        tokenId,
+				Transfers:    accountAmounts,
+				NftTransfers: []*common.NftTransfer{},
+				ExpectedDecimals: &wrapperspb.UInt32Value{
+					Value: uint32(decimals),
+				},
 			},
 		}
 		accountAmounts = nil

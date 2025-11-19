@@ -148,9 +148,13 @@ func TestFetchTxInfo(t *testing.T) {
 						"HBAR",
 						[]*xclient.BalanceChange{
 							{
-								Balance:   xc.NewAmountBlockchainFromUint64(300),
+								Balance:   xc.NewAmountBlockchainFromUint64(585704),
 								XAddress:  "chains/HBAR/addresses/0.0.7182039",
 								AddressId: "0.0.7182039",
+								Event: &xclient.Event{
+									Id:      "4",
+									Variant: xclient.MovementVariantNative,
+								},
 							},
 						},
 						[]*xclient.BalanceChange{
@@ -158,11 +162,11 @@ func TestFetchTxInfo(t *testing.T) {
 								Balance:   xc.NewAmountBlockchainFromUint64(300),
 								XAddress:  "chains/HBAR/addresses/0.0.7182040",
 								AddressId: "0.0.7182040",
+								Event: &xclient.Event{
+									Id:      "5",
+									Variant: xclient.MovementVariantNative,
+								},
 							},
-						},
-						&xclient.Event{
-							Id:      "5",
-							Variant: "native",
 						},
 					),
 					NewMovement(
@@ -173,6 +177,10 @@ func TestFetchTxInfo(t *testing.T) {
 								Balance:   xc.NewAmountBlockchainFromUint64(100),
 								XAddress:  "chains/HBAR/addresses/0.0.7182039",
 								AddressId: "0.0.7182039",
+								Event: &xclient.Event{
+									Id:      "6",
+									Variant: xclient.MovementVariantToken,
+								},
 							},
 						},
 						[]*xclient.BalanceChange{
@@ -180,33 +188,17 @@ func TestFetchTxInfo(t *testing.T) {
 								Balance:   xc.NewAmountBlockchainFromUint64(100),
 								XAddress:  "chains/HBAR/addresses/0.0.7182146",
 								AddressId: "0.0.7182146",
+								Event: &xclient.Event{
+									Id:      "7",
+									Variant: xclient.MovementVariantToken,
+								},
 							},
-						},
-						&xclient.Event{
-							Id:      "1",
-							Variant: "token",
-						},
-					),
-					NewMovement(
-						"HBAR",
-						"HBAR",
-						[]*xclient.BalanceChange{
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(585704),
-								XAddress:  "chains/HBAR/addresses/0.0.7182039",
-								AddressId: "0.0.7182039",
-							},
-						},
-						[]*xclient.BalanceChange{},
-						&xclient.Event{
-							Id:      "0",
-							Variant: "fee",
 						},
 					),
 				},
 				Fees: []*xclient.Balance{
 					{
-						Balance:  xc.NewAmountBlockchainFromUint64(585704),
+						Balance:  xc.NewAmountBlockchainFromUint64(585404),
 						Contract: "HBAR",
 						Asset:    "chains/HBAR/assets/HBAR",
 					},
@@ -261,11 +253,9 @@ func NewMovement(
 	contract string,
 	from []*xclient.BalanceChange,
 	to []*xclient.BalanceChange,
-	event *xclient.Event,
 ) *xclient.Movement {
 	movement := xclient.NewMovement(xc.NativeAsset(chain), xc.ContractAddress(contract))
 	movement.From = from
 	movement.To = to
-	movement.Event = event
 	return movement
 }
