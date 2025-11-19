@@ -295,3 +295,30 @@ func TestSupportedAddressFormats(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalIdsAreSet(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	for _, xcf := range []*factory.Factory{xcf1} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				validExternalConfig := false
+				if chain.External.CoinGecko.AssetId != "" {
+					validExternalConfig = true
+				}
+				if chain.External.CoinGecko.ChainId != "" {
+					validExternalConfig = true
+				}
+				if chain.External.CoinMarketCap.AssetId != "" {
+					validExternalConfig = true
+				}
+				if chain.External.CoinMarketCap.ChainId != "" {
+					validExternalConfig = true
+				}
+				if chain.External.IndexingCo.ChainId != "" {
+					validExternalConfig = true
+				}
+				require.True(t, validExternalConfig, "Please provive external ids")
+			})
+		}
+	}
+}
