@@ -26,9 +26,11 @@ import (
 )
 
 const (
-	TokenDecimals  = 0
-	NativeDecimals = 6
-	ApiVersion     = "/api/v0"
+	TokenDecimals     = 0
+	NativeDecimals    = 6
+	ApiVersion        = "/api/v0"
+	EndpointAddresses = "addresses"
+	EndpointAccounts  = "accounts"
 )
 
 // Client for Template
@@ -87,7 +89,7 @@ func (client *Client) FetchProtocolParameters(ctx context.Context) (types.Protoc
 }
 
 func (client *Client) FetchUtxos(ctx context.Context, address xc.Address, contract xc.ContractAddress) ([]types.Utxo, error) {
-	path := fmt.Sprintf("/addresses/%s/utxos/?order=desc", string(address))
+	path := fmt.Sprintf("/%s/%s/utxos/?order=desc", EndpointAddresses, string(address))
 	var response []types.Utxo
 	err := client.Get(ctx, path, &response)
 	return response, err
@@ -314,7 +316,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclie
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
-	path := fmt.Sprintf("/addresses/%s", string(args.Address()))
+	path := fmt.Sprintf("/%s/%s", EndpointAddresses, string(args.Address()))
 	var getAddressInfoResponse types.GetAddressInfoResponse
 	err := client.Get(ctx, path, &getAddressInfoResponse)
 	if err != nil {

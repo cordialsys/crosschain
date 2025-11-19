@@ -19,7 +19,7 @@ import (
 var _ xclient.StakingClient = &Client{}
 
 func (c *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalanceArgs) ([]*xclient.StakedBalance, error) {
-	path := fmt.Sprintf("/addresses/%s", string(args.GetFrom()))
+	path := fmt.Sprintf("/%s/%s", EndpointAddresses, string(args.GetFrom()))
 	var getAddressInfoResponse types.GetAddressInfoResponse
 	err := c.Get(ctx, path, &getAddressInfoResponse)
 	if err != nil {
@@ -33,7 +33,7 @@ func (c *Client) FetchStakeBalance(ctx context.Context, args xclient.StakedBalan
 		}
 	}
 
-	rewardsPath := fmt.Sprintf("/accounts/%s", getAddressInfoResponse.StakeAddress)
+	rewardsPath := fmt.Sprintf("/%s/%s", EndpointAccounts, getAddressInfoResponse.StakeAddress)
 	var getAccountInfoResponse types.GetAccountInfoResponse
 	err = c.Get(ctx, rewardsPath, &getAccountInfoResponse)
 	if err != nil {
@@ -119,6 +119,35 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 	if ok {
 		return nil, buildererrors.ErrStakingAmountNotUsed
 	}
+
+	pubkey, ok := args.GetPublicKey()
+	if !ok {
+		return nil, fmt.Errorf("cardano unstaking require a valid pubkey")
+	}
+
+	validator, ok := args.GetValidator()
+	if !ok {
+		return nil, buildererrors.ErrValidatorRequired
+	}
+
+	stakeAddress, err := address.GetStakeAddress(pubkey, c.IsMainnet())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rewards address: %w", err)
+	}
+
+	accountsPath := fmt.Sprintf("/%s/%s", EndpointAccounts, stakeAddress)
+	var getAccountInfoResponse types.GetAccountInfoResponse
+	err = c.Get(ctx, accountsPath, &getAccountInfoResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch account info: %w", err)
+	}
+	if getAccountInfoResponse.PoolId == "" {
+		return nil, fmt.Errorf("cannot unstake: pool id is already empty")
+	}
+	if getAccountInfoResponse.PoolId != validator {
+		return nil, fmt.Errorf("cannot unstake: specified validator differs from active pool")
+	}
+
 	protocolParams, err := c.FetchProtocolParameters(ctx)
 	if err != nil {
 		return nil, clienterrors.ProtocolParamsf(err)

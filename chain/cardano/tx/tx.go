@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	builder "github.com/cordialsys/crosschain/builder"
@@ -40,6 +41,8 @@ const (
 	PolicyIdSize = 28
 	// Size of the UTXO entry without any coin values
 	UtxoEntrySizeWithoutVal = 27
+
+	PoolHrm = "pool"
 )
 
 type CertificateCredential struct {
@@ -61,7 +64,6 @@ func NewKeyCredential(pubkey []byte) (CertificateCredential, error) {
 }
 
 type DelegVote struct {
-	_        struct{} `cbor:",toarray"`
 	VoteType uint64
 }
 
@@ -79,18 +81,14 @@ type Certificate struct {
 }
 
 func (c *Certificate) MarshalCBOR() ([]byte, error) {
-	arr := make([]interface{}, 0)
+	arr := make([]any, 0)
 	arr = append(arr, c.CertificationType)
 	arr = append(arr, c.Credential)
-	if c.PoolId != nil && len(c.PoolId) != 0 {
+	if len(c.PoolId) != 0 {
 		arr = append(arr, c.PoolId)
 	}
 	if c.Vote.VoteType != 0 {
-		vb, err := cbor.Marshal(c.Vote)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal delegation vote: %w", err)
-		}
-		arr = append(arr, vb)
+		arr = append(arr, []uint64{c.Vote.VoteType})
 	}
 	arr = append(arr, c.DepositAmount)
 	return cbor.Marshal(arr)
@@ -893,7 +891,13 @@ func NewStake(args builder.StakeArgs, input xc.StakeTxInput) (xc.Tx, error) {
 	if !ok {
 		return nil, fmt.Errorf("pool id is required for cardano staking, use '--validator'")
 	}
-	poolBytes, err := hex.DecodeString(poolId)
+
+	var poolBytes []byte
+	if strings.HasPrefix(poolId, PoolHrm) {
+		_, poolBytes, err = bech32.DecodeToBase256(poolId)
+	} else {
+		poolBytes, err = hex.DecodeString(poolId)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode pool id: %w", err)
 	}
