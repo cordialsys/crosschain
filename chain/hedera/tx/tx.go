@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec/v2"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
 	commontypes "github.com/cordialsys/crosschain/chain/hedera/common_types"
@@ -181,15 +182,17 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	}
 
 	signature := signatures[0]
+	pk, err := btcec.ParsePubKey(signature.PublicKey)
+	if err != nil {
+		return fmt.Errorf("failed to parse public key: %w", err)
+	}
 	tx.SignedTx.SigMap = &common.SignatureMap{
 		SigPair: []*common.SignaturePair{
 			{
 				Signature: &common.SignaturePair_ECDSASecp256K1{
 					ECDSASecp256K1: signature.Signature[0:64],
 				},
-				// We can skip public key prefix because we are probiding only one signature
-				// NOTE: ECDSA pubkey is required in compressed format
-				// PubKeyPrefix: signature.PublicKey,
+				PubKeyPrefix: pk.SerializeCompressed(),
 			},
 		},
 	}
