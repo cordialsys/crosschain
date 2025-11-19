@@ -590,7 +590,7 @@ chains:
     chain_name: Hedera
     decimals: 8
     fee_limit: "200.0"
-    chain_gas_multiplier: 12.0
+    chain_gas_multiplier: 20.0
     confirmations_final: 3
     indexer_url: "https://mainnet-public.mirrornode.hedera.com"
     external:
