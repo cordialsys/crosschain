@@ -62,6 +62,11 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "checksum mismatch",
 		},
 		{
+			name:      "XRP - address with space in middle",
+			address:   "rLETt614usCXtkc8Y Qmrzachr CaDjACjP",
+			wantError: true,
+		},
+		{
 			name:      "XRP - bitcoin address",
 			address:   "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
 			wantError: true,

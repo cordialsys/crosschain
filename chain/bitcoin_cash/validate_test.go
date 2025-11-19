@@ -79,6 +79,13 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "invalid bitcoin cash address",
 		},
 		{
+			name:      "BCH mainnet - address with space in middle",
+			chain:     string(xc.BCH),
+			network:   "mainnet",
+			address:   "bitcoincash:qpm2qsznhks23z7 29mms6s4cwef74vcwvy22gdx6a",
+			wantError: true,
+		},
+		{
 			name:      "BCH mainnet - malformed address",
 			chain:     string(xc.BCH),
 			network:   "mainnet",

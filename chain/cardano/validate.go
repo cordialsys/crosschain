@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/cardano/address"
 	"github.com/cosmos/btcutil/bech32"
 )
 
@@ -22,13 +23,13 @@ func DecodeToBase256(bech string) (string, []byte, error) {
 	return hrp, converted, nil
 }
 
-func ValidateAddress(cfg *xc.ChainBaseConfig, address xc.Address) error {
-	addrStr := string(address)
+func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
+	addrStr := string(addr)
 
 	// Decode bech32 address using btcd's bech32 library which supports longer addresses
 	hrp, decoded, err := DecodeToBase256(addrStr)
 	if err != nil {
-		return fmt.Errorf("invalid cardano address %s: %w", address, err)
+		return fmt.Errorf("invalid cardano address %s: %w", addr, err)
 	}
 
 	// Check network and address type
@@ -37,24 +38,18 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, address xc.Address) error {
 	// Validate HRP (Human Readable Part) based on network
 	var validHRPs []string
 	if isMainnet {
-		validHRPs = []string{"addr", "stake"}
+		validHRPs = address.ValidMainnetHRPs
 	} else {
-		validHRPs = []string{"addr_test", "stake_test"}
+		validHRPs = address.ValidTestnetHRPs
 	}
 
 	isValidHRP := slices.Contains(validHRPs, hrp)
 	if !isValidHRP {
-		return fmt.Errorf("invalid cardano address %s: wrong network prefix, expected one of %v, got %s", address, validHRPs, hrp)
+		return fmt.Errorf("invalid cardano address %s: wrong network prefix, expected one of %v, got %s", addr, validHRPs, hrp)
 	}
 
-	// Validate address length
-	// Payment addresses (with stake key): 57 bytes (1 header + 28 payment hash + 28 stake hash)
-	// Payment addresses (without stake key): 29 bytes (1 header + 28 payment hash)
-	// Stake addresses: 29 bytes (1 header + 28 stake hash)
-	validLengths := []int{29, 57}
-	isValidLength := slices.Contains(validLengths, len(decoded))
-	if !isValidLength {
-		return fmt.Errorf("invalid cardano address %s: invalid length %d, expected one of %v", address, len(decoded), validLengths)
+	if len(decoded) < 20 || len(decoded) > 72 {
+		return fmt.Errorf("cardano address has invalid length %d", len(decoded))
 	}
 
 	return nil

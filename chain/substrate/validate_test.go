@@ -56,6 +56,11 @@ func TestValidateAddress(t *testing.T) {
 			errorMsg:  "invalid substrate address",
 		},
 		{
+			name:      "Substrate - address with space in middle",
+			address:   "1a1LcBX6hGPKg5aQ6DXZpAHCCzWjckh a4sz3P1PvL3oc4F",
+			wantError: true,
+		},
+		{
 			name:      "Substrate - bitcoin address",
 			address:   "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
 			wantError: true,
