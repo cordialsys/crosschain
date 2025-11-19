@@ -284,8 +284,21 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		return xclient.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
 	}
 
-	allTransfers := append(tx.Transfers, tx.TokenTransfers...)
-	for _, transfer := range allTransfers {
+	type transferAndEvent struct {
+		transfer resttypes.Transfer
+		event    *xclient.Event
+	}
+	var allTransfers []transferAndEvent
+
+	for i, transfer := range tx.Transfers {
+		allTransfers = append(allTransfers, transferAndEvent{transfer: transfer, event: xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantNative)})
+	}
+	for i, transfer := range tx.TokenTransfers {
+		allTransfers = append(allTransfers, transferAndEvent{transfer: transfer, event: xclient.NewEventFromIndex(uint64(i), xclient.MovementVariantToken)})
+	}
+
+	for _, transferAndEvent := range allTransfers {
+		transfer := transferAndEvent.transfer
 		if isFeeAccount(transfer.Account, tx.Node, sourceAddress) {
 			continue
 		}
@@ -300,11 +313,12 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		movement.AddSource(xc.Address(sourceAddress), amount, nil)
 		movement.AddDestination(xc.Address(transfer.Account), amount, nil)
 		movement.Memo = tx.GetMemo()
+		movement.AddEventMeta(transferAndEvent.event)
 		txInfo.AddMovement(movement)
 	}
 
 	fee := xc.NewAmountBlockchainFromUint64(tx.ChargedTxFee)
-	txInfo.AddFee(xc.Address(sourceAddress), "HBAR", fee, nil)
+	txInfo.AddFee(xc.Address(sourceAddress), xc.ContractAddress(xc.HBAR), fee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
 	return *txInfo, nil
 }

@@ -160,7 +160,10 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "0.0.7182040",
 							},
 						},
-						nil,
+						&xclient.Event{
+							Id:      "5",
+							Variant: "native",
+						},
 					),
 					NewMovement(
 						"HBAR",
@@ -179,7 +182,10 @@ func TestFetchTxInfo(t *testing.T) {
 								AddressId: "0.0.7182146",
 							},
 						},
-						nil,
+						&xclient.Event{
+							Id:      "1",
+							Variant: "token",
+						},
 					),
 					NewMovement(
 						"HBAR",
