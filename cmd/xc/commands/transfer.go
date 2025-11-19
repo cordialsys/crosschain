@@ -467,7 +467,7 @@ func SubmitTransaction(chain xc.NativeAsset, client xclient.Client, tx xc.Tx, ti
 		}
 		var metadataBz []byte
 		if txMeta, ok := tx.(xc.TxWithMetadata); ok {
-			bz, err := txMeta.GetMetadata()
+			bz, _, err := txMeta.GetMetadata()
 			if err != nil {
 				return fmt.Errorf("failed to get tx metadata: %w", err)
 			}

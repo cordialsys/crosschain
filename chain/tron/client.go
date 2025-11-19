@@ -104,13 +104,13 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
 	// TODO: Refactor SubmitTx interface to accept SubmitTxReq instead of tx
 	// This check will always return 'ok == true' at the moment
-	metaBz, err := tx.GetMetadata()
+	metaBz, ok, err := tx.GetMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to get tx metadata: %w", err)
 	}
 
 	// no metadata provided, submit standard tx
-	if len(metaBz) == 0 {
+	if !ok {
 		bz, err := tx.Serialize()
 		if err != nil {
 			return err

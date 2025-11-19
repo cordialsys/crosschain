@@ -535,15 +535,13 @@ func (c *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) error {
 	}
 
 	var sigs [][]byte
-	metadataBz, err := txI.GetMetadata()
+	metadataBz, ok, err := txI.GetMetadata()
 	if err != nil {
 		return err
 	}
-	if len(metadataBz) > 0 {
+	if ok {
 		var metadata BroadcastMetadata
 		err = json.Unmarshal(metadataBz, &metadata)
-		fmt.Printf("metbz: %v\n", string(metadataBz))
-		fmt.Printf("met: %v\n", metadata)
 		if err != nil {
 			logrus.WithError(err).Warn("could not unmarshal broadcast input")
 		} else {

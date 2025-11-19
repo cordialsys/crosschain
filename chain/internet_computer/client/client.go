@@ -158,7 +158,7 @@ func (client *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) err
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)
 	}
-	metadataBz, err := txI.GetMetadata()
+	metadataBz, _, err := txI.GetMetadata()
 	if err != nil {
 		return fmt.Errorf("failed to get metadata: %w", err)
 	}

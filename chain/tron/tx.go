@@ -135,14 +135,14 @@ type BroadcastMetadata struct {
 	TransactionsData []*TxMetadata `json:"transactions_data"`
 }
 
-func (tx *Tx) GetMetadata() ([]byte, error) {
+func (tx *Tx) GetMetadata() ([]byte, bool, error) {
 	mtdata := BroadcastMetadata{
 		TransactionsData: tx.metadata,
 	}
 
 	mtbytes, err := json.Marshal(mtdata)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode metadata: %w", err)
+		return nil, false, fmt.Errorf("failed to encode metadata: %w", err)
 	}
-	return mtbytes, nil
+	return mtbytes, len(mtbytes) > 0, nil
 }

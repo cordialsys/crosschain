@@ -41,14 +41,14 @@ func (tx *SubmitTxReq) GetSignatures() []xc.TxSignature {
 func (tx *SubmitTxReq) Serialize() ([]byte, error) {
 	return tx.TxData, nil
 }
-func (tx *SubmitTxReq) GetMetadata() ([]byte, error) {
-	return []byte(tx.BroadcastInput), nil
+func (tx *SubmitTxReq) GetMetadata() ([]byte, bool, error) {
+	return []byte(tx.BroadcastInput), tx.BroadcastInput != "", nil
 }
 
 func SubmitTxReqFromTx(tx xc.Tx) (SubmitTxReq, error) {
 	metadata := ""
 	if mtx, ok := tx.(xc.TxWithMetadata); ok {
-		md, err := mtx.GetMetadata()
+		md, _, err := mtx.GetMetadata()
 		if err != nil {
 			return SubmitTxReq{}, fmt.Errorf("failed to get tx metadata: %w", err)
 		}
