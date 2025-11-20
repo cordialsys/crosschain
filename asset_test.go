@@ -7,6 +7,7 @@ import (
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
+	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/kaspa"
@@ -46,7 +47,7 @@ func TestChains(t *testing.T) {
 				case DriverSolana:
 					// pass
 				case DriverCosmos, DriverCosmosEvmos:
-					// pass
+					cosmos.Validate(t, chain)
 				case DriverCardano, DriverFilecoin, DriverXlm, DriverXrp:
 					// pass
 				case DriverBitcoin, DriverBitcoinCash, DriverBitcoinLegacy, DriverZcash:

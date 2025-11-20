@@ -3,10 +3,17 @@ package cosmos
 import (
 	"fmt"
 	"slices"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 )
+
+func Validate(t *testing.T, chainCfg *xc.ChainConfig) {
+	require := require.New(t)
+	require.NotEmpty(chainCfg.ChainPrefix, "chain_prefix is required")
+}
 
 func ValidateAddress(cfg *xc.ChainBaseConfig, address xc.Address) error {
 	addrStr := string(address)
