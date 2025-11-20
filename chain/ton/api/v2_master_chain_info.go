@@ -42,6 +42,13 @@ type ExtraString string
 func (extra ExtraString) Timestamp() (float64, error) {
 	extraParts := strings.Split(string(extra), ":")
 	blockTimeString := extraParts[0]
+
+	// sometimes the timestamp is returned with missing decimal part
+	// example: 54186321 seqno
+	if !strings.Contains(blockTimeString, ".") {
+		blockTimeString += ".0"
+	}
+
 	blockTimeFloat, err := strconv.ParseFloat(blockTimeString, 64)
 	if err != nil {
 		return blockTimeFloat, fmt.Errorf("invalid 'extra' field on block: %s: %v", extra, err)
