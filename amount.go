@@ -174,14 +174,6 @@ func NewAmountHumanReadableFromStr(str string) (AmountHumanReadable, error) {
 	return AmountHumanReadable(decimal), err
 }
 
-func MustNewAmountHumanReadableFromStr(str string) AmountHumanReadable {
-	decimal, err := decimal.NewFromString(str)
-	if err != nil {
-		panic(err)
-	}
-	return AmountHumanReadable(decimal)
-}
-
 // NewAmountHumanReadableFromFloat creates a new AmountHumanReadable from a float
 func NewAmountHumanReadableFromFloat(float float64) AmountHumanReadable {
 	return AmountHumanReadable(decimal.NewFromFloat(float))

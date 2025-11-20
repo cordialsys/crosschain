@@ -6,14 +6,14 @@ import (
 	"github.com/cordialsys/crosschain/chain/hedera/tx"
 )
 
-// TxBuilder for Template
+// TxBuilder for Hedera
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
 }
 
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
 
-// NewTxBuilder creates a new Template TxBuilder
+// NewTxBuilder creates a new Hedera TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 	return TxBuilder{
 		Asset: cfgI,
