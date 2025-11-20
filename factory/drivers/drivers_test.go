@@ -8,6 +8,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcaddress "github.com/cordialsys/crosschain/address"
 	aptostxinput "github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	bitcointxinput "github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	cosmostxinput "github.com/cordialsys/crosschain/chain/cosmos/tx_input"
@@ -258,17 +259,28 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 		require.Error(err)
 		require.False(stderrors.Is(err, drivers.ErrNoAddressValidation), "missing address validation for: "+driver)
 
-		// verify valid address is accepted
+		// verify valid address is accepted for all known formats
 		testSecret := "cbfffd116c66668df349e724719a160fdb30808157c0242ba0f21d2222c284a9"
 		signer, err := signer.New(driver, testSecret, chainCfg.Base())
 		require.NoError(err)
 		publicKey, err := signer.PublicKey()
 		require.NoError(err)
-		address, err := addressBuilder.GetAddressFromPublicKey(publicKey)
-		require.NoError(err)
-		// validate the derived address
-		err = drivers.ValidateAddress(chainCfg.Base(), address)
-		require.NoError(err, "failed to validate derived address '%s' for: %s", driver, address)
+
+		addressBuilders := []xc.AddressBuilder{
+			addressBuilder,
+		}
+		for _, format := range chainCfg.Address.Formats {
+			builder, err := drivers.NewAddressBuilder(chainCfg.Base(), xcaddress.OptionFormat(xc.AddressFormat(format)))
+			require.NoError(err)
+			addressBuilders = append(addressBuilders, builder)
+		}
+		for _, builder := range addressBuilders {
+			address, err := builder.GetAddressFromPublicKey(publicKey)
+			require.NoError(err)
+			// validate the derived address
+			err = drivers.ValidateAddress(chainCfg.Base(), address)
+			require.NoError(err, "failed to validate derived address '%s' for: %s", driver, address)
+		}
 	}
 
 	err := drivers.ValidateAddress(createChainFor("not-a-valid-driver").Base(), "not a valid address")

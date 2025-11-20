@@ -14,7 +14,7 @@ import (
 )
 
 func TestNewAddressBuilder(t *testing.T) {
-	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").Base())
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").WithChainPrefix("x").Base())
 	require.NoError(t, err)
 	require.NotNil(t, builder)
 }
@@ -38,7 +38,9 @@ func TestGetAddressFromPublicKeyEvmos(t *testing.T) {
 }
 
 func TestGetAddressFromPublicKeyErr(t *testing.T) {
-	builder, _ := address.NewAddressBuilder(xc.NewChainConfig("").Base())
+	builder, err := address.NewAddressBuilder(xc.NewChainConfig("").Base())
+	// no prefix set
+	require.Error(t, err)
 
 	require.Panics(t, func() {
 		// cosmos-sdk panics with "length of pubkey is incorrect"
@@ -50,17 +52,12 @@ func TestGetAddressFromPublicKeyErr(t *testing.T) {
 		_, _ = builder.GetAddressFromPublicKey([]byte{1, 2, 3})
 	})
 
-	// AssetConfig.ChainPrefix is needed to bech32ify
-	pubKeyBytes, _ := hex.DecodeString("02E8445082A72F29B75CA48748A914DF60622A609CACFCE8ED0E35804560741D29")
-	derivedAddress, err := builder.GetAddressFromPublicKey(pubKeyBytes)
-	require.Equal(t, xc.Address(""), derivedAddress)
-	require.EqualError(t, err, "prefix cannot be empty")
-
 	// cosmos-sdk doesn't check if pubkey is on the curve
 	chain := xc.NewChainConfig(xc.LUNA).WithChainPrefix("terra")
-	builder, _ = address.NewAddressBuilder(chain.Base())
+	builder, err = address.NewAddressBuilder(chain.Base())
+	require.NoError(t, err)
 	bytes, _ := hex.DecodeString("001122334455667788990011223344556677889900112233445566778899001122")
-	derivedAddress, err = builder.GetAddressFromPublicKey(bytes)
+	derivedAddress, err := builder.GetAddressFromPublicKey(bytes)
 	require.NoError(t, err)
 	require.Equal(t, xc.Address("terra1hw58t56mzszlnnkjak83ul8ff437ylrz57xj4v"), derivedAddress)
 
