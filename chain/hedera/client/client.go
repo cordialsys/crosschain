@@ -19,7 +19,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/hedera/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	clienterrors "github.com/cordialsys/crosschain/client/errors"
-	txinfo "github.com/cordialsys/crosschain/client/tx-info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xclienttypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/hedera-protobufs-go/services"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -46,7 +47,7 @@ const (
 // Cost of CRYPTO_TRANSFER operation in USD's
 // https://docs.hedera.com/hedera/networks/mainnet/fees
 // Use mirror `api/v1/network/exchangerate` to convert to HBAR
-var CRYPTO_TRANSFER_FEE = xc.MustNewAmountHumanReadableFromStr("0.0001")
+var CRYPTO_TRANSFER_FEE = xc.NewAmountHumanReadableFromFloat(0.0001)
 
 // Fees go to fee accounts + node operator
 // Fee accounts are the same for testnet and mainnet
@@ -177,7 +178,7 @@ func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.
 }
 
 // SubmitTx submits a Hedera tx
-func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
+func (c *Client) SubmitTx(ctx context.Context, tx xclienttypes.SubmitTxReq) error {
 	logger := c.GrpcLogger(ctx)
 	txBytes, err := tx.Serialize()
 	if err != nil {
@@ -207,44 +208,40 @@ func (c *Client) SubmitTx(ctx context.Context, tx xc.Tx) error {
 }
 
 // Returns transaction info - legacy/old endpoint
-func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (xclient.LegacyTxInfo, error) {
-	return xclient.LegacyTxInfo{}, errors.New("not implemented")
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	return txinfo.LegacyTxInfo{}, errors.New("not implemented")
 }
 
-func determineEventType(transfer resttypes.Transfer, node string) xclient.MovementVariant {
+func determineEventType(transfer resttypes.Transfer, node string) txinfo.MovementVariant {
 	if slices.Contains(FeeAccounts, transfer.Account) || transfer.Account == node {
-		return xclient.MovementVariantFee
+		return txinfo.MovementVariantFee
 	} else if transfer.TokenId == "" {
-		return xclient.MovementVariantNative
+		return txinfo.MovementVariantNative
 	} else {
-		return xclient.MovementVariantToken
+		return txinfo.MovementVariantToken
 	}
 }
 
 // Returns transaction info - new endpoint
-func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.TxInfo, error) {
+func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	u := c.IndexerUrl.JoinPath(ENDPOINT_TRANSACTIONS + "/" + string(args.TxHash()))
 	transactions, err := Get[resttypes.TransactionsInfo](ctx, c, u)
 	if err != nil && strings.Contains(err.Error(), "Not Found") {
-		return xclient.TxInfo{}, clienterrors.TransactionNotFoundf("%s", err.Error())
+		return txinfo.TxInfo{}, clienterrors.TransactionNotFoundf("%s", err.Error())
 	} else if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction: %w", err)
+	}
+	if len(transactions.Transactions) == 0 {
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction: %s", args.TxHash())
 	}
 
-	if len(transactions.Transactions) == 0 {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch transaction: %s", args.TxHash())
-	}
 	// select parent transaction
-	var tx *resttypes.Transaction
+	tx := &transactions.Transactions[0]
 	for _, t := range transactions.Transactions {
 		if t.Nonce == 0 {
 			tx = &t
 			break
 		}
-	}
-
-	if tx == nil {
-		return xclient.TxInfo{}, errors.New("failed to find transaction with nonce 0")
 	}
 
 	pKey, pValue := tx.BlockTimeParam()
@@ -254,20 +251,20 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 	params.Add(KEY_ORDER, ORDER_ASC)
 	blocks, err := c.FetchRawBlocks(ctx, params)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch blocks: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch blocks: %w", err)
 	}
 	if len(blocks.Blocks) != 1 {
-		return xclient.TxInfo{}, fmt.Errorf("cannot find block with consensus_timestamp: %s", tx.ConsensusTimestamp)
+		return txinfo.TxInfo{}, fmt.Errorf("cannot find block with consensus_timestamp: %s", tx.ConsensusTimestamp)
 	}
 	b := blocks.Blocks[0]
 	bTimestamp, err := b.GetBlockTime()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("invalid block time: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("invalid block time: %w", err)
 	}
 
 	currentBlock, err := c.FetchRawBlock(ctx, 0)
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to fetch currect block: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch currect block: %w", err)
 	}
 	confirmations := uint64(0)
 	if currentBlock.Number > b.Number {
@@ -278,46 +275,45 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (xclient.Tx
 		txErr = &tx.Result
 	}
 
-	block := xclient.NewBlock(c.Asset.Chain, b.Number, b.Hash, bTimestamp)
-	txInfo := xclient.NewTxInfo(block, c.Asset.GetChain(), tx.GetHash(), confirmations, txErr)
+	block := txinfo.NewBlock(c.Asset.Chain, b.Number, b.Hash, bTimestamp)
+	txInfo := txinfo.NewTxInfo(block, c.Asset.GetChain(), tx.GetHash(), confirmations, txErr)
 	txInfo.LookupId = string(tx.TransactionId)
 	sourceAddress, err := tx.GetSourceAddress()
 	if err != nil {
-		return xclient.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
 	}
 
 	var allTransfers []resttypes.Transfer
 	allTransfers = append(allTransfers, tx.Transfers...)
 	allTransfers = append(allTransfers, tx.TokenTransfers...)
 
-	contractToMovement := make(map[string]*xclient.Movement, 0)
+	contractToMovement := make(map[string]*txinfo.Movement, 0)
 	for i, transfer := range allTransfers {
 		eventVariant := determineEventType(transfer, tx.Node)
-		eventId := fmt.Sprintf("%d", i)
-		if eventVariant == xclient.MovementVariantFee {
+		if eventVariant == txinfo.MovementVariantFee {
 			continue
 		}
+		eventId := fmt.Sprintf("%d", i)
 
 		movement, ok := contractToMovement[transfer.TokenId]
 		if !ok {
-			newMovement := xclient.NewMovement(c.Asset.Chain, xc.ContractAddress(transfer.TokenId))
+			newMovement := txinfo.NewMovement(c.Asset.Chain, xc.ContractAddress(transfer.TokenId))
 			contractToMovement[transfer.TokenId] = newMovement
 			movement = newMovement
 			txInfo.AddMovement(movement)
+			movement.Memo = tx.GetMemo()
 		}
 
 		// determine direction
 		if transfer.Amount < 0 {
 			absAmount := uint64(transfer.Amount * -1)
 			balanceChange := movement.AddSource(xc.Address(sourceAddress), xc.NewAmountBlockchainFromUint64(absAmount), nil)
-			balanceChange.Event = xclient.NewEvent(eventId, eventVariant)
+			balanceChange.Event = txinfo.NewEvent(eventId, eventVariant)
 		} else {
 			absAmount := uint64(transfer.Amount)
 			balanceChange := movement.AddDestination(xc.Address(transfer.Account), xc.NewAmountBlockchainFromUint64(absAmount), nil)
-			balanceChange.Event = xclient.NewEvent(eventId, eventVariant)
+			balanceChange.Event = txinfo.NewEvent(eventId, eventVariant)
 		}
-
-		movement.Memo = tx.GetMemo()
 	}
 
 	txInfo.Fees = txInfo.CalculateFees()
@@ -424,7 +420,7 @@ func (c *Client) FetchBlockTransactions(ctx context.Context, block resttypes.Blo
 	return hashes, nil
 }
 
-func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xclient.BlockWithTransactions, error) {
+func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, _ := args.Height()
 	rawBlock, err := c.FetchRawBlock(ctx, height)
 	if err != nil {
@@ -439,8 +435,8 @@ func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*xcli
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block time: %w", err)
 	}
-	block := xclient.NewBlock(c.Asset.GetChain().Chain, rawBlock.Number, rawBlock.Hash, blockTime)
-	return &xclient.BlockWithTransactions{
+	block := txinfo.NewBlock(c.Asset.GetChain().Chain, rawBlock.Number, rawBlock.Hash, blockTime)
+	return &txinfo.BlockWithTransactions{
 		Block:          *block,
 		TransactionIds: transactions,
 	}, nil

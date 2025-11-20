@@ -176,7 +176,6 @@ func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 			Payload: h,
 		},
 	}, nil
-
 }
 
 // SetSignatures adds a signature to Tx

@@ -375,6 +375,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return eos.ValidateAddress(cfg, addr)
 	case xc.DriverInternetComputerProtocol:
 		return icp.ValidateAddress(cfg, addr)
+	case xc.DriverHedera:
+		return hedera.ValidateAddress(cfg, addr)
 	}
 	return fmt.Errorf("%w: %s", ErrNoAddressValidation, string(cfg.Chain))
 }

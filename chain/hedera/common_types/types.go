@@ -32,15 +32,15 @@ func HederaIdToParts(s string) ([3]int64, error) {
 }
 
 func NewAccountId(acc string) (*common.AccountID, error) {
-	// evm accoun id
+	// evm account id
 	if strings.HasPrefix(acc, "0x") {
-		h, err := hex.FromString(acc)
-		if err != nil {
+		var hex hex.Hex
+		if err := hex.UnmarshalText([]byte(acc)); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal hex: %w", err)
 		}
 		return &common.AccountID{
 			Account: &common.AccountID_Alias{
-				Alias: h.Bytes(),
+				Alias: hex.Bytes(),
 			},
 		}, nil
 	} else {
