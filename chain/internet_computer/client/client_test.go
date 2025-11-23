@@ -31,7 +31,7 @@ func TestFetchTxInput(t *testing.T) {
 func TestSubmitTx(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
-	tx, err := xctypes.SubmitTxReqFromTx(&tx.Tx{})
+	tx, err := xctypes.SubmitTxReqFromTx(xc.ICP, &tx.Tx{})
 	require.EqualError(t, err, "failed to serialize tx: not implemented")
 	err = client.SubmitTx(context.Background(), tx)
 	require.EqualError(t, err, "not implemented")

@@ -168,7 +168,7 @@ func CmdStake() *cobra.Command {
 				return nil
 			}
 
-			req, err := xctypes.SubmitTxReqFromTx(tx)
+			req, err := xctypes.SubmitTxReqFromTx(chain.Chain, tx)
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to req: %w", err)
 			}
@@ -309,7 +309,7 @@ func CmdUnstake() *cobra.Command {
 				return nil
 			}
 
-			req, err := xctypes.SubmitTxReqFromTx(tx)
+			req, err := xctypes.SubmitTxReqFromTx(chain.Chain, tx)
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to req: %w", err)
 			}

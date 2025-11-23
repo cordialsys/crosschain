@@ -891,7 +891,7 @@ func TestTransfers(t *testing.T) {
 			})
 			require.NoError(err)
 
-			req, err := xctypes.SubmitTxReqFromTx(tx)
+			req, err := xctypes.SubmitTxReqFromTx(xc.SUI, tx)
 			require.NoError(err)
 			err = client.SubmitTx(context.Background(), req)
 			require.NoError(err)

@@ -247,7 +247,7 @@ func TestMultiTransfer(t *testing.T) {
 	}
 
 	// Submit transaction
-	req, err := xctypes.SubmitTxReqFromTx(tx)
+	req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, tx)
 	require.NoError(t, err)
 	err = client.SubmitTx(context.Background(), req)
 	require.NoError(t, err)

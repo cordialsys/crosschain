@@ -189,7 +189,7 @@ func TestSubmitTx(t *testing.T) {
 			client, err := client.NewClient(config)
 			require.NoError(t, err)
 
-			tx, err := xctypes.SubmitTxReqFromTx(vector.tx)
+			tx, err := xctypes.SubmitTxReqFromTx(xc.DUSK, vector.tx)
 			require.NoError(t, err)
 			err = client.SubmitTx(context.Background(), tx)
 			if vector.err != "" {

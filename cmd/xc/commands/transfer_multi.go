@@ -348,7 +348,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			}
 
 			// submit the tx, wait a bit, fetch the tx info (network needed)
-			req, err := xctypes.SubmitTxReqFromTx(tx)
+			req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, tx)
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
 			}
