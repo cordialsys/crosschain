@@ -168,7 +168,7 @@ func CmdStake() *cobra.Command {
 			fmt.Println("submitting hash ", solana.Signature(sig1.Signature).String(), "...")
 
 			binTx := xctypes.NewBinaryTx(tzBz, nil)
-			req, err := xctypes.SubmitTxReqFromTx(binTx)
+			req, err := xctypes.SubmitTxReqFromTx(chain.Chain, binTx)
 			if err != nil {
 				return err
 			}

@@ -15,7 +15,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/cordialsys/crosschain/client/tx_info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	bin "github.com/gagliardetto/binary"
@@ -370,7 +370,7 @@ func TestSubmitTxSuccess(t *testing.T) {
 	server, close := testtypes.MockJSONRPC(t, fmt.Sprintf("\"%s\"", tx.Hash()))
 	defer close()
 	client, _ := client.NewClient(xc.NewChainConfig(xc.SOL).WithUrl(server.URL))
-	req, err := xctypes.SubmitTxReqFromTx(&testtypes.MockXcTx{
+	req, err := xctypes.SubmitTxReqFromTx(xc.SOL, &testtypes.MockXcTx{
 		SerializedSignedTx: serialized_tx,
 		Signatures:         []xc.TxSignature{{1, 2, 3, 4}},
 	})
@@ -381,7 +381,7 @@ func TestSubmitTxSuccess(t *testing.T) {
 func TestSubmitTxErr(t *testing.T) {
 
 	client, _ := client.NewClient(xc.NewChainConfig(""))
-	tx, err := xctypes.SubmitTxReqFromTx(&tx.Tx{
+	tx, err := xctypes.SubmitTxReqFromTx(xc.SOL, &tx.Tx{
 		SolTx: &solana.Transaction{},
 	})
 	require.NoError(t, err)

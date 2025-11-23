@@ -10,7 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/tx_info"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/require"
@@ -179,7 +179,7 @@ func (s *AptosTestSuite) TestSubmitTx() {
 	client, err := NewClient(asset)
 	require.NoError(err)
 
-	submitReq, err := xctypes.SubmitTxReqFromTx(tf)
+	submitReq, err := xctypes.SubmitTxReqFromTx(xc.APTOS, tf)
 	require.NoError(err)
 	err = client.SubmitTx(s.Ctx, submitReq)
 	require.NoError(err)

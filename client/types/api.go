@@ -45,7 +45,7 @@ func (tx *SubmitTxReq) GetMetadata() ([]byte, bool, error) {
 	return []byte(tx.BroadcastInput), tx.BroadcastInput != "", nil
 }
 
-func SubmitTxReqFromTx(tx xc.Tx) (SubmitTxReq, error) {
+func SubmitTxReqFromTx(chain xc.NativeAsset, tx xc.Tx) (SubmitTxReq, error) {
 	metadata := ""
 	if mtx, ok := tx.(xc.TxWithMetadata); ok {
 		md, _, err := mtx.GetMetadata()
@@ -55,14 +55,23 @@ func SubmitTxReqFromTx(tx xc.Tx) (SubmitTxReq, error) {
 		metadata = string(md)
 	}
 
+	legacySigs := [][]byte{}
+	if mtx, ok := tx.(xc.TxLegacyGetSignatures); ok {
+		for _, sig := range mtx.GetSignatures() {
+			legacySigs = append(legacySigs, sig)
+		}
+	}
+
 	txData, err := tx.Serialize()
 	if err != nil {
 		return SubmitTxReq{}, fmt.Errorf("failed to serialize tx: %w", err)
 	}
 
 	return SubmitTxReq{
-		TxData:         txData,
-		BroadcastInput: metadata,
+		Chain:              chain,
+		TxData:             txData,
+		LegacyTxSignatures: legacySigs,
+		BroadcastInput:     metadata,
 	}, nil
 }
 

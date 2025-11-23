@@ -290,7 +290,7 @@ func TestSubmitTx(t *testing.T) {
 			defer server.Close()
 
 			client, _ := client.NewClient(xc.NewChainConfig(xc.FIL, xc.DriverFilecoin).WithUrl(server.URL).WithNet("mainnet"))
-			tx, err := xctypes.SubmitTxReqFromTx(v.tx)
+			tx, err := xctypes.SubmitTxReqFromTx(xc.FIL, v.tx)
 			require.NoError(t, err)
 			err = client.SubmitTx(context.Background(), tx)
 			if err != nil {
