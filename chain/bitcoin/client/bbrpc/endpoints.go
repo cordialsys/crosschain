@@ -118,6 +118,11 @@ func (client *Client) GetTx(ctx context.Context, txHash string) (types.Transacti
 
 // GetBlock returns block information
 func (client *Client) GetBlock(ctx context.Context, block uint64) (types.Block, error) {
+	return client.GetBlockWithOptions(ctx, block, map[string]interface{}{"page": 1})
+}
+
+// GetBlockWithOptions returns block information with additional option specifications
+func (client *Client) GetBlockWithOptions(ctx context.Context, block uint64, options map[string]interface{}) (types.Block, error) {
 	var blockData types.Block
 
 	// First get the block hash
@@ -129,7 +134,7 @@ func (client *Client) GetBlock(ctx context.Context, block uint64) (types.Block, 
 	}
 
 	// Then get the block data
-	blockParams := []interface{}{blockHash.BlockHash, map[string]interface{}{"page": 1}}
+	blockParams := []interface{}{blockHash.BlockHash, options}
 	err = client.call(ctx, "bb_getBlock", blockParams, &blockData)
 	if err != nil {
 		return types.Block{}, err
