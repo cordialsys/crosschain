@@ -30,11 +30,19 @@ const (
 
 func (client *Client) eip7702GasLimit(destinationCount int) uint64 {
 	native := client.Asset.GetChain()
-	gasLimit := uint64(500_000) + 100_000*uint64(destinationCount)
+	gasLimitDefault := uint64(500_000)
 	if native.Chain == xc.ArbETH {
-		// arbeth specifically has different gas limit scale
-		gasLimit = 4_000_000 + 250_000*uint64(destinationCount)
+		gasLimitDefault = 4_000_000
 	}
+	if client.Asset.GetChain().GasLimitDefault > 0 {
+		gasLimitDefault = uint64(client.Asset.GetChain().GasLimitDefault)
+	}
+	gasLimit := gasLimitDefault + 100_000*uint64(destinationCount)
+	if native.Chain == xc.ArbETH || native.Chain == xc.MON {
+		// arbeth specifically has different gas limit scale
+		gasLimit = gasLimitDefault + 250_000*uint64(destinationCount)
+	}
+
 	return gasLimit
 }
 
