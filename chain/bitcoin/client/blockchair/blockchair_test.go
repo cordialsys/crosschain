@@ -191,7 +191,7 @@ func TestSubmitTx(t *testing.T) {
 	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithAuth("env:_BLOCK_CHAIR_KEY").WithProvider(string(bitcoin.Blockchair))
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
-	tx, err := xctypes.SubmitTxReqFromTx(&tx.Tx{
+	tx, err := xctypes.SubmitTxReqFromTx(xc.BTC, &tx.Tx{
 		MsgTx: wire.NewMsgTx(2),
 	})
 	require.NoError(err)

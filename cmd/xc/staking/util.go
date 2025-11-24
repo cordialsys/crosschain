@@ -92,7 +92,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 			return "", fmt.Errorf("failed transaction resubmission")
 		}
 
-		req, err := xctypes.SubmitTxReqFromTx(tx)
+		req, err := xctypes.SubmitTxReqFromTx(chain.Chain, tx)
 		if err != nil {
 			return "", fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
 		}

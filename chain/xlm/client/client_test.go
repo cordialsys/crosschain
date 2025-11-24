@@ -688,7 +688,7 @@ func TestSubmitTx(t *testing.T) {
 				WithChainID("Test SDF Network ; September 2015"),
 			)
 
-			req, err := xctypes.SubmitTxReqFromTx(vector.txInput)
+			req, err := xctypes.SubmitTxReqFromTx(xc.XLM, vector.txInput)
 			if err != nil {
 				require.NotEqual(t, err, "")
 				require.ErrorContains(t, err, vector.error)

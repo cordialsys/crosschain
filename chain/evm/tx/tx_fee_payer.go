@@ -34,6 +34,7 @@ var _ evmTx = &SingleTx{}
 const basicSmartAccountAddressRaw = "0x7785a22Facd31dB653bA4928f1D5B81D093f0b2f"
 
 var basicSmartAccountAddress = common.HexToAddress(basicSmartAccountAddressRaw)
+var noSmartAccountAddress = common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 // keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
 var _DOMAIN_TYPEHASH = common.HexToHash("47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218")

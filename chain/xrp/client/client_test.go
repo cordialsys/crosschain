@@ -320,7 +320,7 @@ func TestSubmitTx(t *testing.T) {
 
 		client, _ := xrpClient.NewClient(xc.NewChainConfig(xc.XRP).WithUrl(server.URL))
 
-		req, err := xctypes.SubmitTxReqFromTx(vector.txInput)
+		req, err := xctypes.SubmitTxReqFromTx(xc.XRP, vector.txInput)
 		require.NoError(t, err)
 		err = client.SubmitTx(context.Background(), req)
 		require.NoError(t, err)

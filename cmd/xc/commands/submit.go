@@ -27,7 +27,7 @@ func CmdRpcSubmit() *cobra.Command {
 			}
 
 			binaryTx := xctypes.NewBinaryTx(payload, nil)
-			req, err := xctypes.SubmitTxReqFromTx(binaryTx)
+			req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, binaryTx)
 			if err != nil {
 				return fmt.Errorf("failed to convert to SubmitTxReq: %w", err)
 			}
