@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -44,6 +45,12 @@ func CmdTxInput() *cobra.Command {
 			}
 			if contract != "" && decimals == -1 {
 				return fmt.Errorf("must set --decimals if using --contract")
+			}
+
+			// validate from address
+			err = drivers.ValidateAddress(chainConfig.Base(), fromAddress)
+			if err != nil {
+				return fmt.Errorf("invalid from address: %v", err)
 			}
 
 			client, err := xcFactory.NewClient(chainConfig)

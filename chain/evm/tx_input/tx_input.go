@@ -11,7 +11,7 @@ import (
 // TxInput for EVM
 type TxInput struct {
 	xc.TxInputEnvelope
-	Nonce       uint64     `json:"nonce,omitempty"`
+	Nonce       uint64     `json:"nonce"`
 	FromAddress xc.Address `json:"from_address,omitempty"`
 	GasLimit    uint64     `json:"gas_limit,omitempty"`
 	// DynamicFeeTx
@@ -28,7 +28,7 @@ type TxInput struct {
 	ChainId xc.AmountBlockchain `json:"chain_id,omitempty"`
 
 	// For eip7702 transactions
-	BasicSmartAccountNonce uint64     `json:"basic_smart_account_nonce,omitempty"`
+	BasicSmartAccountNonce uint64     `json:"basic_smart_account_nonce"`
 	FeePayerAddress        xc.Address `json:"fee_payer_address,omitempty"`
 	FeePayerNonce          uint64     `json:"fee_payer_nonce,omitempty"`
 

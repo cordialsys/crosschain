@@ -44,6 +44,7 @@ func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_inp
 			txInner = NewFeePayerTx(*multiArgs, input, chain)
 		} else {
 			txInner = NewSingleTx(args, input, chain)
+			// txInner = NewSingleTxNoDelegation(args, input, chain)
 		}
 	}
 	return &Tx{
