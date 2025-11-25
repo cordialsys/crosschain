@@ -83,7 +83,6 @@ func newTx() *tx.Tx {
 		panic(err)
 	}
 	return &tx.Tx{
-		TxBody: body,
 		SignedTx: &services.SignedTransaction{
 			BodyBytes: bodyBytes,
 			SigMap: &common.SignatureMap{
