@@ -181,3 +181,15 @@ func UnmarshalWithdrawingInput(data []byte) (xc.WithdrawTxInput, error) {
 	}
 	return staking, nil
 }
+
+func UnmarshalCallInput(data []byte) (xc.CallTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	call, ok := inp.(xc.CallTxInput)
+	if !ok {
+		return call, fmt.Errorf("not a call input: %T", inp)
+	}
+	return call, nil
+}

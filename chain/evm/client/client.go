@@ -60,6 +60,7 @@ var _ xclient.MultiTransferClient = &Client{}
 // Ethereum does not support full delegated staking, so we can only report balance information.
 // A 3rd party 'staking provider' is required to do the rest.
 var _ xclient.StakingClient = &Client{}
+var _ xclient.CallClient = &Client{}
 
 func ReplaceIncompatiableEvmResponses(body []byte) []byte {
 	bodyStr := string(body)
