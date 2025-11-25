@@ -78,6 +78,10 @@ func (client *Client) TraceEthMovements(ctx context.Context, txHash common.Hash)
 	zero := big.NewInt(0)
 	native := client.Asset.GetChain().Chain
 
+	if len(traces) == 0 {
+		logrus.Debug("no traces found for tx")
+	}
+
 	for _, trace := range traces {
 		amount := trace.Action.Value.ToInt()
 		logrus.WithFields(logrus.Fields{

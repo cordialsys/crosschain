@@ -241,7 +241,10 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 	}
 
-	if err != nil {
+	// as a sanity check, in as there are some cases where the trace_ rpc calls somehow miss this.
+	traceResultEmpty := len(ethMovements.Sources) == 0 && len(ethMovements.Destinations) == 0
+
+	if err != nil || (traceResultEmpty) {
 		// Not all RPC nodes support this trace call, so we'll just drop reporting
 		// internal eth movements if there's an issue.
 		logrus.WithFields(logrus.Fields{

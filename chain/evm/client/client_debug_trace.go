@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -72,6 +73,14 @@ func (client *Client) DebugTraceTransaction(ctx context.Context, txHash common.H
 	return &result, err
 }
 
+func printJson(v interface{}) {
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(b))
+}
+
 func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.Hash) (tx.SourcesAndDests, error) {
 	result, err := client.DebugTraceTransaction(ctx, txHash)
 	if err != nil {
@@ -81,6 +90,11 @@ func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.
 	sourcesAndDests := tx.SourcesAndDests{}
 	zero := big.NewInt(0)
 	native := client.Asset.GetChain().Chain
+
+	if len(traces) == 0 {
+		logrus.Debug("no debug traces found for tx")
+	}
+	printJson(result)
 
 	for _, trace := range traces {
 		amount := trace.Value.ToInt()
