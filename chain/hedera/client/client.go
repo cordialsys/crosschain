@@ -101,7 +101,10 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 }
 
 func (c *Client) FetchAccountInfo(ctx context.Context, address xc.Address) (*resttypes.AccountInfo, error) {
+	params := url.Values{}
+	params.Add(KEY_LIMIT, "1")
 	url := c.IndexerUrl.JoinPath(ENDPOINT_ACCOUNTS + "/" + string(address))
+	url.RawQuery = params.Encode()
 	accountInfo, err := Get[resttypes.AccountInfo](ctx, c, url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get: %w", err)
@@ -278,15 +281,12 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 	block := txinfo.NewBlock(c.Asset.Chain, b.Number, b.Hash, bTimestamp)
 	txInfo := txinfo.NewTxInfo(block, c.Asset.GetChain(), tx.GetHash(), confirmations, txErr)
 	txInfo.LookupId = string(tx.TransactionId)
-	sourceAddress, err := tx.GetSourceAddress()
-	if err != nil {
-		return txinfo.TxInfo{}, fmt.Errorf("failed to get payment account: %w", err)
-	}
 
 	var allTransfers []resttypes.Transfer
 	allTransfers = append(allTransfers, tx.Transfers...)
 	allTransfers = append(allTransfers, tx.TokenTransfers...)
 
+	accountInfos := make(map[string]*resttypes.AccountInfo)
 	contractToMovement := make(map[string]*txinfo.Movement, 0)
 	for i, transfer := range allTransfers {
 		eventVariant := determineEventType(transfer, tx.Node)
@@ -304,14 +304,25 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 			movement.Memo = tx.GetMemo()
 		}
 
+		accInfo, ok := accountInfos[transfer.Account]
+		if !ok {
+			info, err := c.FetchAccountInfo(ctx, xc.Address(transfer.Account))
+			if err != nil {
+				return txinfo.TxInfo{}, fmt.Errorf("failed to fetch account info: %w", err)
+			}
+			accountInfos[transfer.Account] = info
+			accInfo = info
+		}
+		address := xc.Address(accInfo.EvmAddress)
+
 		// determine direction
 		if transfer.Amount < 0 {
 			absAmount := uint64(transfer.Amount * -1)
-			balanceChange := movement.AddSource(xc.Address(sourceAddress), xc.NewAmountBlockchainFromUint64(absAmount), nil)
+			balanceChange := movement.AddSource(address, xc.NewAmountBlockchainFromUint64(absAmount), nil)
 			balanceChange.Event = txinfo.NewEvent(eventId, eventVariant)
 		} else {
 			absAmount := uint64(transfer.Amount)
-			balanceChange := movement.AddDestination(xc.Address(transfer.Account), xc.NewAmountBlockchainFromUint64(absAmount), nil)
+			balanceChange := movement.AddDestination(address, xc.NewAmountBlockchainFromUint64(absAmount), nil)
 			balanceChange.Event = txinfo.NewEvent(eventId, eventVariant)
 		}
 	}

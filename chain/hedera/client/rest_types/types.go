@@ -25,6 +25,7 @@ type Balance struct {
 
 type AccountInfo struct {
 	Account            string    `json:"account"`
+	EvmAddress         string    `json:"evm_address"`
 	Balance            Balance   `json:"balance"`
 	ConsensusTimestamp Timestamp `json:"consensus_timestamp"`
 }
