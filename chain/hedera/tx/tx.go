@@ -21,7 +21,6 @@ import (
 
 // Tx for Hedera
 type Tx struct {
-	TxBody   *services.TransactionBody
 	SignedTx *services.SignedTransaction
 }
 
@@ -142,9 +141,15 @@ func NewTransfer(args builder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 		Data: cryptoTransferBody,
 	}
 
+	bodyBytes, err := proto.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize tx body: %w", err)
+	}
+
 	return &Tx{
-		TxBody:   body,
-		SignedTx: &services.SignedTransaction{},
+		SignedTx: &services.SignedTransaction{
+			BodyBytes: bodyBytes,
+		},
 	}, nil
 }
 
@@ -161,14 +166,9 @@ func (tx Tx) Hash() xc.TxHash {
 }
 
 // Sighashes returns the tx payload to sign, aka sighash
-func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	txBody, err := proto.Marshal(tx.TxBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tx body: %w", err)
-	}
-	tx.SignedTx.BodyBytes = txBody
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 	hash := sha3.NewLegacyKeccak256()
-	hash.Write(txBody)
+	hash.Write(tx.SignedTx.BodyBytes)
 	h := hash.Sum(nil)
 
 	return []*xc.SignatureRequest{
