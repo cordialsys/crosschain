@@ -169,6 +169,10 @@ func TestTransfer(t *testing.T) {
 		signatures = append(signatures, signature)
 	}
 
+	// Recreate a new tx for serialization to reflect Treasury.
+	tx, err = txBuilder.Transfer(tfArgs, input)
+	require.NoError(t, err)
+
 	err = tx.SetSignatures(signatures...)
 	require.NoError(t, err, "could not add signatures")
 

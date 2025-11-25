@@ -219,6 +219,10 @@ func TestMultiTransfer(t *testing.T) {
 		signatures = append(signatures, signature)
 	}
 
+	// Recreate a new tx for serialization to reflect Treasury.
+	tx, err = multiTxBuilder.MultiTransfer(*tfArgs, input)
+	require.NoError(t, err)
+
 	// Add signatures to transaction
 	err = tx.SetSignatures(signatures...)
 	require.NoError(t, err)
