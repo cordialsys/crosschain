@@ -27,12 +27,13 @@ func RegisterTxVariantInput(variant xc.TxVariantInput) {
 			panic(fmt.Sprintf("staking input %T driver %s duplicates %T", variant, variant.GetVariant(), existing))
 		}
 	}
-	i1, ok1 := variant.(xc.StakeTxInput)
-	i2, ok2 := variant.(xc.UnstakeTxInput)
-	i3, ok3 := variant.(xc.WithdrawTxInput)
-	i4, ok4 := variant.(xc.MultiTransferInput)
-	if !ok1 && !ok2 && !ok3 && !ok4 {
-		panic(fmt.Sprintf("staking input %T must implement one of %T, %T, %T, %T", variant, i1, i2, i3, i4))
+	_, ok1 := variant.(xc.StakeTxInput)
+	_, ok2 := variant.(xc.UnstakeTxInput)
+	_, ok3 := variant.(xc.WithdrawTxInput)
+	_, ok4 := variant.(xc.MultiTransferInput)
+	_, ok5 := variant.(xc.CallTxInput)
+	if !ok1 && !ok2 && !ok3 && !ok4 && !ok5 {
+		panic(fmt.Sprintf("staking input %T must implement one of known variants", variant))
 	}
 
 	supportedVariantTx = append(supportedVariantTx, variant)
