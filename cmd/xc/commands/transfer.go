@@ -426,6 +426,13 @@ func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.Transf
 			WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding signature")
 	}
 
+	// We reconstruct the tx redundantly here to reflect Treasury.
+	// This drops any mutations from tx.SetSignatures() below & tests repeatability.
+	tx, err = b.Transfer(args, input)
+	if err != nil {
+		return nil, fmt.Errorf("could not build transfer for serialization: %v", err)
+	}
+
 	// complete the tx by adding its signature
 	// (no network, no private key needed)
 	err = tx.SetSignatures(signatures...)
