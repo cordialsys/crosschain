@@ -334,3 +334,20 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 
 	return result, nil
 }
+
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
+	// feePayer, _ := args.GetFeePayer()
+	// no fee-payer for calls currently.
+	feePayer := xc.Address("")
+	// no multiple transaction attempts for calls currently.
+	previousAttempts := []string{}
+	// take first from address from the call
+	from := call.SigningAddresses()[0]
+
+	txInput, err := client.FetchUnsimulatedInput(ctx, from, feePayer, previousAttempts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tx_input.CallInput{TxInput: *txInput}, nil
+}

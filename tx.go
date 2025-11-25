@@ -1,7 +1,7 @@
 package crosschain
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"reflect"
 )
 
@@ -97,6 +97,10 @@ type WithdrawTxInput interface {
 	TxVariantInput
 	Withdrawing()
 }
+type CallTxInput interface {
+	TxVariantInput
+	Calling()
+}
 
 // TxStatus is the status of a tx on chain, currently success or failure.
 type TxStatus uint8
@@ -109,13 +113,6 @@ const (
 
 // TxHash is a tx hash or id
 type TxHash string
-
-// TxDataToSign is the payload that Signer needs to sign, when "signing a tx". It's sometimes called a sighash.
-type TxDataToSign []byte
-
-func (data TxDataToSign) String() string {
-	return base64.RawURLEncoding.EncodeToString(data)
-}
 
 // TxSignature is a tx signature
 type TxSignature []byte
@@ -178,4 +175,22 @@ type TxAdditionalSighashes interface {
 	// This should return any _remaining_ signatures requests left to fill.
 	// The caller will always call .SetSignatures() after this with all of the signature made so far.
 	AdditionalSighashes() ([]*SignatureRequest, error)
+}
+
+type TxCall interface {
+	Tx
+	// Set transaction input.  This may not be needed, but could be used to adjust:
+	// * fees
+	// * other dynamic chain information not included in the origin Call message
+	SetInput(input CallTxInput) error
+
+	// List of addresses that may be needed to sign
+	SigningAddresses() []Address
+
+	// List of 3rd party contract addresses that this Call resource interacts with
+	// (omit native system contracts)
+	ContractAddresses() []ContractAddress
+
+	// Get original serialized message that Call was constructed with
+	GetMsg() json.RawMessage
 }

@@ -268,6 +268,10 @@ func NewWithdrawingInputType(driver Driver, variant string) TxVariantInputType {
 	return TxVariantInputType(fmt.Sprintf("drivers/%s/withdrawing/%s", driver, variant))
 }
 
+func NewCallingInputType(driver Driver) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/calling/%s", driver, driver))
+}
+
 func (variant TxVariantInputType) Driver() Driver {
 	return Driver(strings.Split(string(variant), "/")[1])
 }
