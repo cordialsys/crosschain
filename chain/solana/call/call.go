@@ -121,35 +121,55 @@ func (c *TxCall) SetInput(input xc.CallTxInput) error {
 	return nil
 }
 
-func (tx *TxCall) Hash() xc.TxHash {
-	if len(tx.solTx.Signatures) == 0 {
+func (c *TxCall) Hash() xc.TxHash {
+	if len(c.solTx.Signatures) == 0 {
 		return ""
 	}
-	return xc.TxHash(tx.solTx.Signatures[0].String())
+	return xc.TxHash(c.solTx.Signatures[0].String())
 }
 
-func (tx *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
-	solanaTx := *tx.solTx
+func (c *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
+	solanaTx := *c.solTx
 	txMessagePayload, err := solanaTx.Message.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
 	return []*xc.SignatureRequest{
 		{
-			Signer:  tx.signingAddress,
+			Signer:  c.signingAddress,
 			Payload: txMessagePayload,
 		},
 	}, nil
 }
 
-func (tx *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
-	tx.solTx.Signatures = make([]solana.Signature, len(signatures))
-	for i, signature := range signatures {
-		tx.solTx.Signatures[i] = solana.Signature(signature.Signature)
+func (c *TxCall) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
+	return []*xc.SignatureRequest{}, nil
+}
+
+// SetSignatures adds signatures to the transaction
+func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
+	signerKeys := c.solTx.Message.Signers().ToPointers()
+	if len(c.solTx.Signatures) != len(signerKeys) {
+		c.solTx.Signatures = make([]solana.Signature, len(signerKeys))
+	}
+	// Map public keys -> signatures
+	sigMap := map[string]*xc.SignatureResponse{}
+	for _, sig := range signatures {
+		sigMap[string(sig.PublicKey)] = sig
+	}
+
+	// Assign
+	for i, signer := range signerKeys {
+		resp, ok := sigMap[string(signer.Bytes())]
+		if !ok {
+			c.solTx.Signatures[i] = solana.Signature{}
+			continue
+		}
+		c.solTx.Signatures[i] = solana.Signature(resp.Signature)
 	}
 	return nil
 }
 
-func (tx *TxCall) Serialize() ([]byte, error) {
-	return tx.solTx.MarshalBinary()
+func (c *TxCall) Serialize() ([]byte, error) {
+	return c.solTx.MarshalBinary()
 }
