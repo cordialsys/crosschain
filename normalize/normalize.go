@@ -223,12 +223,11 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 		hash = strings.TrimPrefix(hash, "0x")
 		hash = strings.ToLower(hash)
 
-	case xc.DriverAptos, xc.DriverSui:
-		if driver == xc.DriverSui {
-			// Sui transaction hashes are not hex
-			return hash
+	case xc.DriverAptos:
+		// normalize if using hex format (ignore if using version number)
+		if strings.HasPrefix(hash, "0x") {
+			hash = NormalizeMoveAddress(hash)
 		}
-		hash = NormalizeMoveAddress(hash)
 
 	case xc.DriverCosmos:
 		// cosmos hash tx do not prefix 0x, so we always remove.
