@@ -267,7 +267,15 @@ func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) erro
 
 // FetchLegacyTxInfo returns tx info for a Aptos tx
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
-	tx, err := client.AptosClient.GetTransactionByHash(string(txHash))
+	_, versionErr := strconv.ParseUint(string(txHash), 10, 64)
+	var tx *aptostypes.Transaction
+	var err error
+	// support looking up by hash or version
+	if versionErr != nil {
+		tx, err = client.AptosClient.GetTransactionByHash(string(txHash))
+	} else {
+		tx, err = client.AptosClient.GetTransactionByVersion(string(txHash))
+	}
 	if err != nil {
 		if aptosErr, ok := err.(*aptostypes.RestError); ok {
 			if aptosErr.Code == http.StatusNotFound {
