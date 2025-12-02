@@ -336,13 +336,21 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 }
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
-	// feePayer, _ := args.GetFeePayer()
 	// no fee-payer for calls currently.
+	// feePayer, _ := args.GetFeePayer()
 	feePayer := xc.Address("")
+	if feePayer != "" {
+		// Warn if caller attempts to set a fee payer; not supported for calls.
+		logrus.WithField("feePayer", feePayer).Warn("fee payer provided for call is not supported and will be ignored")
+	}
 	// no multiple transaction attempts for calls currently.
 	previousAttempts := []string{}
 	// take first from address from the call
-	from := call.SigningAddresses()[0]
+	froms := call.SigningAddresses()
+	if len(froms) == 0 {
+		return nil, fmt.Errorf("no signing addresses provided for call")
+	}
+	from := froms[0]
 
 	txInput, err := client.FetchUnsimulatedInput(ctx, from, feePayer, previousAttempts)
 	if err != nil {
