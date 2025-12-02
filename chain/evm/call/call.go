@@ -22,8 +22,8 @@ type TxCall struct {
 	amount          xc.AmountBlockchain
 	data            []byte
 
-	inputMaybe *tx_input.CallInput
-	signature  xc.TxSignature
+	input     *tx_input.CallInput
+	signature xc.TxSignature
 }
 
 type Params struct {
@@ -47,7 +47,10 @@ func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage) (*TxCall, error) {
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
 	}
-	// take the first param obj?
+	// TODO: take the first param obj?
+	if len(call.Params) != 1 {
+		return nil, fmt.Errorf("only params with a signle element supported for now, got %d", len(call.Params))
+	}
 	params := call.Params[0]
 
 	signingAddress := xc.Address(params.From)
@@ -76,35 +79,37 @@ func (c *TxCall) GetMsg() json.RawMessage {
 }
 
 func (c *TxCall) SetInput(input xc.CallTxInput) error {
-	var ok bool
-	c.inputMaybe, ok = input.(*tx_input.CallInput)
-	if !ok {
-		return fmt.Errorf("expected input type %s, got %s", input.GetVariant(), input.GetVariant())
+	if input == nil {
+		return fmt.Errorf("input not set")
 	}
+	ci, ok := input.(*tx_input.CallInput)
+	if !ok {
+		return fmt.Errorf("expected input type *tx_input.CallInput, got %T", input)
+	}
+	c.input = ci
 	return nil
 }
 
 func (tx *TxCall) BuildEthTx() (*gethtypes.Transaction, error) {
-	if tx.inputMaybe == nil {
+	if tx.input == nil {
 		return nil, fmt.Errorf("input not set")
 	}
-	input := tx.inputMaybe
 	toAddress, err := evmaddress.FromHex(xc.Address(tx.contractAddress))
 	if err != nil {
 		return nil, fmt.Errorf("invalid contract address: %w", err)
 	}
 	ethTx := gethtypes.NewTx(&gethtypes.DynamicFeeTx{
-		ChainID:   input.ChainId.Int(),
-		Nonce:     input.Nonce,
-		GasTipCap: input.GasTipCap.Int(),
-		GasFeeCap: input.GasFeeCap.Int(),
-		Gas:       input.GasLimit,
+		ChainID:   tx.input.ChainId.Int(),
+		Nonce:     tx.input.Nonce,
+		GasTipCap: tx.input.GasTipCap.Int(),
+		GasFeeCap: tx.input.GasFeeCap.Int(),
+		Gas:       tx.input.GasLimit,
 		To:        &toAddress,
 		Value:     tx.amount.Int(),
 		Data:      tx.data,
 	})
 	if len(tx.signature) > 0 {
-		ethTx, err = ethTx.WithSignature(evmtx.GetEthSigner(tx.cfg, &input.TxInput), tx.signature)
+		ethTx, err = ethTx.WithSignature(evmtx.GetEthSigner(tx.cfg, &tx.input.TxInput), tx.signature)
 		if err != nil {
 			return nil, err
 		}
@@ -121,14 +126,11 @@ func (tx *TxCall) Hash() xc.TxHash {
 }
 
 func (tx *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
-	if tx.inputMaybe == nil {
-		return nil, fmt.Errorf("input not set")
-	}
 	ethTx, err := tx.BuildEthTx()
 	if err != nil {
 		return nil, err
 	}
-	sighash := evmtx.GetEthSigner(tx.cfg, &tx.inputMaybe.TxInput).Hash(ethTx).Bytes()
+	sighash := evmtx.GetEthSigner(tx.cfg, &tx.input.TxInput).Hash(ethTx).Bytes()
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(sighash)}, nil
 }
 

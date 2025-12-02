@@ -24,6 +24,21 @@ func newTwoSignerTx(t *testing.T, k1 solana.PublicKey, k2 solana.PublicKey) *sol
 	return tx
 }
 
+// newCustomProgramTx builds a single-instruction tx that references a non-native program ID.
+// Include payer as a signer account to satisfy signer requirement.
+func newCustomProgramTx(t *testing.T, payer solana.PublicKey, programID solana.PublicKey) *solana.Transaction {
+	accs := []*solana.AccountMeta{
+		{PublicKey: payer, IsSigner: true, IsWritable: true},
+	}
+	ins := solana.NewInstruction(programID, accs, []byte{0x01, 0x02})
+	recent := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
+	tx, err := solana.NewTransaction([]solana.Instruction{ins}, recent, solana.TransactionPayer(payer))
+	if err != nil {
+		t.Fatalf("failed to build tx: %v", err)
+	}
+	return tx
+}
+
 func mustMarshalCall(t *testing.T, call Call) json.RawMessage {
 	b, err := json.Marshal(call)
 	if err != nil {
@@ -180,5 +195,46 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 	_, err = NewCall(&xc.ChainBaseConfig{}, raw)
 	if err == nil {
 		t.Fatalf("expected NewCall to error when Account is not among message signers")
+	}
+}
+
+func TestSolanaSetInput_NilAccepted(t *testing.T) {
+	payer := solana.NewWallet().PublicKey()
+	// use memo instructions as in existing tests
+	k2 := solana.NewWallet().PublicKey()
+	tx := newTwoSignerTx(t, payer, k2)
+	msgBytes, err := tx.MarshalBinary()
+	if err != nil {
+		t.Fatalf("failed to marshal tx: %v", err)
+	}
+	raw := mustMarshalCall(t, Call{Transaction: msgBytes, Account: payer})
+	c, err := NewCall(&xc.ChainBaseConfig{}, raw)
+	if err != nil {
+		t.Fatalf("NewCall failed: %v", err)
+	}
+	if err := c.SetInput(nil); err != nil {
+		t.Fatalf("SetInput(nil) should not error, got: %v", err)
+	}
+}
+
+func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
+	payer := solana.NewWallet().PublicKey()
+	customProgram := solana.NewWallet().PublicKey() // unlikely to be a native program id
+	tx := newCustomProgramTx(t, payer, customProgram)
+	msgBytes, err := tx.MarshalBinary()
+	if err != nil {
+		t.Fatalf("failed to marshal tx: %v", err)
+	}
+	raw := mustMarshalCall(t, Call{Transaction: msgBytes, Account: payer})
+	c, err := NewCall(&xc.ChainBaseConfig{}, raw)
+	if err != nil {
+		t.Fatalf("NewCall failed: %v", err)
+	}
+	addrs := c.ContractAddresses()
+	if len(addrs) != 1 {
+		t.Fatalf("expected exactly 1 contract address, got %d: %v", len(addrs), addrs)
+	}
+	if string(addrs[0]) != customProgram.String() {
+		t.Fatalf("unexpected contract address: want %s got %s", customProgram.String(), addrs[0])
 	}
 }
