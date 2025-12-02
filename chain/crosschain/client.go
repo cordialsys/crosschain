@@ -378,7 +378,12 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 // FetchBalance fetches token balance from a Crosschain endpoint
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/assets/%s/decimals", client.URL, client.Asset.GetChain().Chain, contract)
+
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/assets/%s/decimals",
+		client.URL,
+		client.Asset.GetChain().Chain,
+		url.PathEscape(string(contract)),
+	)
 	res, err := client.ApiCallWithUrl(ctx, "GET", apiURL, nil)
 	if err != nil {
 		return 0, err
