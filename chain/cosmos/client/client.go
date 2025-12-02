@@ -684,6 +684,12 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 			}
 		}
 
+		if strings.HasPrefix(string(contract), "ibc/") {
+			// Sometimes IBC assets don't have any registered metadata.
+			// Default to 6.
+			return 6, nil
+		}
+
 		// return original bank error
 		return 0, bankErr
 	}
