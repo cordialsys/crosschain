@@ -29,11 +29,13 @@ type Transaction struct {
 	Value            xc.AmountBlockchain `json:"value"`
 	Type             xc.AmountBlockchain `json:"type"`
 	AccessList       types.AccessList    `json:"accessList"`
-	ChainID          xc.AmountBlockchain `json:"chainId"`
-	V                xc.AmountBlockchain `json:"v"`
-	YParity          xc.AmountBlockchain `json:"yParity"`
-	R                xc.AmountBlockchain `json:"r"`
-	S                xc.AmountBlockchain `json:"s"`
+	// ChainID is left as a string because on some really old transactions, it's "" empty string,
+	// which is an invalid AmountBlockchain.
+	ChainID string              `json:"chainId"`
+	V       xc.AmountBlockchain `json:"v"`
+	YParity xc.AmountBlockchain `json:"yParity"`
+	R       xc.AmountBlockchain `json:"r"`
+	S       xc.AmountBlockchain `json:"s"`
 }
 
 // type TransactionWrapper struct {
