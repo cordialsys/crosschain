@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/cordialsys/crosschain/pkg/hex"
 	"github.com/gagliardetto/solana-go"
 )
@@ -19,7 +18,6 @@ type TxCall struct {
 	solTx             *solana.Transaction
 	signingAddress    xc.Address
 	contractAddresses []xc.ContractAddress
-	inputMaybe        *tx_input.CallInput
 }
 
 type Params struct {
@@ -92,13 +90,9 @@ func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage) (*TxCall, error) {
 		default:
 			contractAddresses = append(contractAddresses, xc.ContractAddress(programID.String()))
 		}
-
-		contractAddresses = append(contractAddresses, xc.ContractAddress(programID.String()))
 	}
 
-	var input *tx_input.CallInput = nil
-
-	return &TxCall{cfg, msg, call, solanaTx, signingAddress, contractAddresses, input}, nil
+	return &TxCall{cfg, msg, call, solanaTx, signingAddress, contractAddresses}, nil
 }
 
 func (c *TxCall) SigningAddresses() []xc.Address {
@@ -113,12 +107,8 @@ func (c *TxCall) GetMsg() json.RawMessage {
 	return c.msg
 }
 
-func (c *TxCall) SetInput(input xc.CallTxInput) error {
-	var ok bool
-	c.inputMaybe, ok = input.(*tx_input.CallInput)
-	if !ok {
-		return fmt.Errorf("expected input type %s, got %s", input.GetVariant(), input.GetVariant())
-	}
+func (c *TxCall) SetInput(_ xc.CallTxInput) error {
+	// noop
 	return nil
 }
 
