@@ -1,6 +1,7 @@
 package call
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -149,23 +150,33 @@ func (c *TxCall) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 // SetSignatures adds signatures to the transaction
 func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
 	signerKeys := c.solTx.Message.Signers().ToPointers()
-	if len(c.solTx.Signatures) != len(signerKeys) {
+
+	// Ensure the signatures slice is sized to the number of required signers,
+	// but preserve any existing signatures already present.
+	if len(c.solTx.Signatures) < len(signerKeys) {
+		old := c.solTx.Signatures
 		c.solTx.Signatures = make([]solana.Signature, len(signerKeys))
-	}
-	// Map public keys -> signatures
-	sigMap := map[string]*xc.SignatureResponse{}
-	for _, sig := range signatures {
-		sigMap[string(sig.PublicKey)] = sig
+		// copy over existing signatures by index
+		copy(c.solTx.Signatures, old)
+	} else if len(c.solTx.Signatures) > len(signerKeys) {
+		// Trim any extra signatures if present to make the accounts list and signers list match
+		c.solTx.Signatures = c.solTx.Signatures[:len(signerKeys)]
 	}
 
-	// Assign
+	// Assign only provided signatures; do not clear existing ones
 	for i, signer := range signerKeys {
-		resp, ok := sigMap[string(signer.Bytes())]
-		if !ok {
-			c.solTx.Signatures[i] = solana.Signature{}
+		if signer == nil {
 			continue
 		}
-		c.solTx.Signatures[i] = solana.Signature(resp.Signature)
+		for _, signature := range signatures {
+			if signature == nil {
+				continue
+			}
+			if bytes.Equal(signature.PublicKey, signer.Bytes()) {
+				c.solTx.Signatures[i] = solana.Signature(signature.Signature)
+				break
+			}
+		}
 	}
 	return nil
 }
