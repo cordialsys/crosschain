@@ -752,6 +752,9 @@ type ChainClientConfig struct {
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
 	// default no limit
 	burst := chain.Burst
+	if burst <= 0 {
+		burst = 1
+	}
 	var limiter = rate.NewLimiter(rate.Inf, burst)
 	if chain.PeriodLimit != 0 {
 		limiter = rate.NewLimiter(rate.Every(chain.PeriodLimit), burst)
