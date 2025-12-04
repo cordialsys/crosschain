@@ -558,6 +558,17 @@ chains:
         asset_id: "3513"
       coin_gecko:
         asset_id: fantom
+  ## TODO: Update on mainnet launch
+  GUSDT:
+    chain: GUSDT
+    driver: evm
+    chain_name: Stable
+    decimals: 18
+    confirmations_final: 15
+    fee_limit: "200.0"
+    external:
+      coin_market_cap:
+        asset_id: "38892"
   HASH:
     chain: HASH
     driver: cosmos
@@ -693,7 +704,6 @@ chains:
         asset_id: "8916"
       coin_gecko:
         asset_id: "internet-computer"
-
   INJ:
     chain: INJ
     driver: evmos

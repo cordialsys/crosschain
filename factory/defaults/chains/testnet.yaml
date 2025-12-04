@@ -234,6 +234,17 @@ chains:
     chain_id: 4002
     chain_name: Fantom (Testnet)
     decimals: 18
+  GUSDT:
+    chain: GUSDT
+    driver: evm
+    chain_id: 2201
+    chain_name: Stable Testnet
+    decimals: 18
+    confirmations_final: 15
+    fee_limit: "200.0"
+    external:
+      coin_market_cap:
+        asset_id: "38892"
   HBAR:
     chain: HBAR
     chain_id: "0.0.3"
