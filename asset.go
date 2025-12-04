@@ -59,6 +59,7 @@ const (
 	FIL      = NativeAsset("FIL")      // Filecoin
 	FOGO     = NativeAsset("FOGO")     // Fogo
 	FTM      = NativeAsset("FTM")      // Fantom
+	GUSDT    = NativeAsset("GUSDT")    // Stable
 	HASH     = NativeAsset("HASH")     // Provenance
 	HBAR     = NativeAsset("HBAR")     // Hedera
 	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
@@ -131,6 +132,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	FIL,
 	FOGO,
 	FTM,
+	GUSDT,
 	HBAR,
 	HyperEVM,
 	INJ,
@@ -292,7 +294,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
+	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
