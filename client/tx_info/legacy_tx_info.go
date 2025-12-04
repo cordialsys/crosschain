@@ -43,6 +43,7 @@ type LegacyTxInfo struct {
 	// to support new TxInfo model, we can't drop "change" btc movements
 	droppedBtcDestinations []*LegacyTxInfoEndpoint
 	stakeEvents            []StakeEvent
+	LookupId               string `json:"lookup_id,omitempty"`
 }
 
 // type StakeEvent interface {
