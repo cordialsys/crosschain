@@ -212,6 +212,7 @@ func TestFetchTxInfo(t *testing.T) {
 			val: txinfo.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
+				LookupId:        "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 				To:              "0x2a5ddd8e5ac5e30f61e42e4dc54a2d6a904412810767fa2e1674b08ca3b04365",
 				ToAlt:           "",
@@ -251,6 +252,7 @@ func TestFetchTxInfo(t *testing.T) {
 			val: txinfo.LegacyTxInfo{
 				TxID:            "0x17df567aa2daf8c146a0e9b827415402722b4f3b8178025ea703d9b03dc33f29",
 				BlockHash:       "6717630095",
+				LookupId:        "6717630095",
 				From:            "0x5249a0f1ccb427e6595343ef001ec18765fd325beb70fbea0a9c25807167e60d",
 				To:              "0xb7c348a3253a8102e354b21972319600f0933dd454db12d3e2fc81623ffa49be",
 				ToAlt:           "",
@@ -301,6 +303,7 @@ func TestFetchTxInfo(t *testing.T) {
 				BlockHash:       "176278674",
 				From:            "0x80174e0fe8cb2d32b038c6c888dd95c3e1560736f0d4a6e8bed6ae43b5c91f6f",
 				To:              "0xcdaa56944a811c22398165b6c885b8aaad39fe7b91b008bb6334d639cbaec8f7",
+				LookupId:        "176278674",
 				ToAlt:           "",
 				ContractAddress: "",
 				Amount:          xc.NewAmountBlockchainFromUint64(140099000000),
@@ -339,6 +342,7 @@ func TestFetchTxInfo(t *testing.T) {
 			val: txinfo.LegacyTxInfo{
 				TxID:            "0x15940935f6317d7a42085855aa8167106aff03aeff5528bed51da015940d3222",
 				BlockHash:       "3509309",
+				LookupId:        "3509309",
 				From:            "0xf08819a2ca002c1da8c6242040607617093f519eb2525201efaba47b0841f682",
 				To:              "",
 				ToAlt:           "",
