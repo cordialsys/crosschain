@@ -199,6 +199,9 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 			case "multi-transfer":
 				_, err := drivers.UnmarshalMultiTransferInput(bz)
 				require.NoError(err)
+			case "calling":
+				_, err := drivers.UnmarshalCallInput(bz)
+				require.NoError(err)
 			default:
 				require.Fail("unexpected txType ", inputType)
 			}
@@ -212,7 +215,7 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 	for _, variant := range registry.GetSupportedTxVariants() {
 		variantType := variant.GetVariant()
 		parts := strings.Split(string(variantType), "/")
-		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer"}
+		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer", "calling"}
 		require.Len(parts, 4, "variant must be in format drivers/:driver/[ "+strings.Join(inputColumns, "|")+" ]/:id")
 		require.Equal("drivers", parts[0])
 		require.Contains(inputColumns, parts[2], "input type column must be one of: "+strings.Join(inputColumns, ", "))

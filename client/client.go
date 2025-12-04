@@ -51,6 +51,11 @@ type StakingClient interface {
 	FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) (xc.WithdrawTxInput, error)
 }
 
+type CallClient interface {
+	// Fetch inputs required for a call transaction
+	FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error)
+}
+
 // Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
 type ManualUnstakingClient interface {
 	CompleteManualUnstaking(ctx context.Context, unstake *txinfo.Unstake) error
