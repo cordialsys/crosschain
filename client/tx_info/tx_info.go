@@ -457,6 +457,7 @@ func TxInfoFromLegacy(chainCfg *xc.ChainConfig, legacyTx LegacyTxInfo, mappingTy
 		uint64(legacyTx.Confirmations),
 		errMsg,
 	)
+	txInfo.LookupId = legacyTx.LookupId
 
 	if mappingType == Utxo {
 		tfs := []*Movement{}
