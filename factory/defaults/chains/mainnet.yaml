@@ -382,6 +382,24 @@ chains:
         asset_id: "4066"
       coin_gecko:
         asset_id: chiliz
+  DASH:
+    chain: DASH
+    driver: bitcoin-legacy
+    provider: blockbook
+    chain_name: Dash
+    decimals: 8
+    fee_limit: "1000"
+    confirmations_final: 15
+    confirmed_utxo: true
+    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
+    chain_max_gas_price: 50000000
+    external:
+      coin_market_cap:
+        asset_id: "131"
+      coin_gecko:
+        asset_id: "dash"
+      indexing_co:
+        chain_id: dogecoin
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy

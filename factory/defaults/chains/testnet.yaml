@@ -166,6 +166,16 @@ chains:
     chain_id: 88882
     chain_name: Chiliz 2.0 (testnet)
     decimals: 18
+  DASH:
+    chain: DASH
+    driver: bitcoin-legacy
+    provider: blockbook
+    chain_name: Dash
+    decimals: 8
+    fee_limit: "1000"
+    confirmations_final: 15
+    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
+    chain_max_gas_price: 50000000
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
