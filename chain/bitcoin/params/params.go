@@ -17,6 +17,8 @@ func GetParams(cfg *xc.ChainBaseConfig) (chaincfg.Params, error) {
 		return LtcNetworks.GetParams(cfg.Network), nil
 	case xc.ZEC:
 		return ZecNetworks.GetParams(cfg.Network), nil
+	case xc.DASH:
+		return DashNetworks.GetParams(cfg.Network), nil
 	}
 	return chaincfg.Params{}, errors.New("unsupported bitcoin chain: " + string(cfg.Chain))
 }
@@ -231,5 +233,44 @@ var ZecNetworks *NetworkTriple = &NetworkTriple{
 
 		// not used for zcash
 		Bech32HRPSegwit: "",
+	},
+}
+
+var DashNetworks *NetworkTriple = &NetworkTriple{
+	Mainnet: chaincfg.Params{
+		Name: "mainnet",
+		Net:  0xbf0c6bbd,
+
+		// Address encoding magics
+		PubKeyHashAddrID:        0x4c, // 76 - starts with X
+		ScriptHashAddrID:        0x10, // 16 - starts with 7
+		PrivateKeyID:            0xcc, // 204 - WIF starts with X
+		WitnessPubKeyHashAddrID: 0x00, // Not used
+		WitnessScriptHashAddrID: 0x00, // Not used
+
+		// BIP32 hierarchical deterministic extended key magics
+		HDPrivateKeyID: [4]byte{0x04, 0x88, 0xad, 0xe4}, // xprv
+		HDPublicKeyID:  [4]byte{0x04, 0x88, 0xb2, 0x1e}, // xpub
+
+		// BIP44 coin type
+		HDCoinType: 5,
+	},
+	Testnet: chaincfg.Params{
+		Name: "testnet3",
+		Net:  0xffcae2ce,
+
+		// Address encoding magics
+		PubKeyHashAddrID:        0x8c, // 140 - starts with y
+		ScriptHashAddrID:        0x13, // 19 - starts with 8 or 9
+		PrivateKeyID:            0xef, // 239 - WIF starts with c
+		WitnessPubKeyHashAddrID: 0x00, // Not used
+		WitnessScriptHashAddrID: 0x00, // Not used
+
+		// BIP32 hierarchical deterministic extended key magics
+		HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // tprv
+		HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // tpub
+
+		// BIP44 coin type (testnet uses coin type 1)
+		HDCoinType: 1,
 	},
 }

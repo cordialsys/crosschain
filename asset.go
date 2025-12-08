@@ -47,6 +47,7 @@ const (
 	CELO     = NativeAsset("CELO")     // Celo
 	CHZ      = NativeAsset("CHZ")      // Chiliz
 	CHZ2     = NativeAsset("CHZ2")     // Chiliz 2.0
+	DASH     = NativeAsset("DASH")     // Dash
 	DOGE     = NativeAsset("DOGE")     // Dogecoin
 	DOT      = NativeAsset("DOT")      // Polkadot
 	DUSK     = NativeAsset("DUSK")     // Dusk
@@ -107,6 +108,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	BABY,
 	BCH,
 	BTC,
+	DASH,
 	DOGE,
 	LTC,
 	ACA,
@@ -290,7 +292,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoin
 	case BCH:
 		return DriverBitcoinCash
-	case DOGE, LTC:
+	case DOGE, LTC, DASH:
 		return DriverBitcoinLegacy
 	case ZEC:
 		return DriverZcash
