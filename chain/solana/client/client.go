@@ -317,7 +317,7 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	// Complicated txs may contain only pointers to address, forcing us to resolve the accounts/addresses stored on-chain.
 	err = processTransactionWithAddressLookups(ctx, solTx, client.SolClient)
 	if err != nil {
-		return result, fmt.Errorf("error processing resolveing address-lookups: %w", err)
+		return result, errors.TransactionNotFoundf("error resolving address-lookups: %v", err)
 	}
 
 	tx := tx.NewDecoderFromNativeTx(solTx, res.Meta)
