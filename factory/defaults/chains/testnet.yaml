@@ -174,8 +174,6 @@ chains:
     decimals: 8
     fee_limit: "1000"
     confirmations_final: 15
-    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
-    chain_max_gas_price: 50000000
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
