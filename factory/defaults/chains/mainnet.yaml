@@ -391,8 +391,6 @@ chains:
     fee_limit: "1000"
     confirmations_final: 15
     confirmed_utxo: true
-    # DOGE is much cheaper so we set the gas price (sats/byte) to be much higher
-    chain_max_gas_price: 50000000
     external:
       coin_market_cap:
         asset_id: "131"
