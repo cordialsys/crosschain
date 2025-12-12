@@ -1,4 +1,4 @@
-package call
+package call_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/evm/call"
 )
 
 type wrongCallInput struct{}
@@ -27,7 +28,7 @@ func (wrongCallInput) Calling() {}
 
 func TestNewCall(t *testing.T) {
 	vectors := []struct {
-		params []Params
+		params []call.Params
 		result error
 	}{
 		{
@@ -35,11 +36,11 @@ func TestNewCall(t *testing.T) {
 			result: fmt.Errorf("only params with a signle element supported for now, got 0"),
 		},
 		{
-			params: []Params{},
+			params: []call.Params{},
 			result: fmt.Errorf("only params with a signle element supported for now, got 0"),
 		},
 		{
-			params: []Params{
+			params: []call.Params{
 				{
 					From: "0x1234",
 					To:   "0x5678",
@@ -52,7 +53,7 @@ func TestNewCall(t *testing.T) {
 			result: fmt.Errorf("only params with a signle element supported for now, got 2"),
 		},
 		{
-			params: []Params{
+			params: []call.Params{
 				{
 					From: "0x1234",
 					To:   "0x5678",
@@ -63,8 +64,8 @@ func TestNewCall(t *testing.T) {
 	}
 
 	for i, v := range vectors {
-		msgBytes, _ := json.Marshal(Call{Method: "eth_call", Params: v.params})
-		_, err := NewCall(&xc.ChainBaseConfig{}, msgBytes)
+		msgBytes, _ := json.Marshal(call.Call{Method: "eth_call", Params: v.params})
+		_, err := call.NewCall(&xc.ChainBaseConfig{}, msgBytes)
 
 		switch {
 		case err == nil && v.result != nil:
@@ -92,13 +93,13 @@ func TestSetInput(t *testing.T) {
 		},
 	}
 	for i, v := range vectors {
-		msgBytes, _ := json.Marshal(Call{Method: "eth_call", Params: []Params{
+		msgBytes, _ := json.Marshal(call.Call{Method: "eth_call", Params: []call.Params{
 			{
 				From: "0x1234",
 				To:   "0x5678",
 			},
 		}})
-		c, err := NewCall(&xc.ChainBaseConfig{}, msgBytes)
+		c, err := call.NewCall(&xc.ChainBaseConfig{}, msgBytes)
 		if err != nil {
 			t.Fatalf("NewCall failed: %v", err)
 		}

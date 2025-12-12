@@ -15,7 +15,7 @@ type TxCall struct {
 	cfg               *xc.ChainBaseConfig
 	msg               json.RawMessage
 	call              Call
-	solTx             *solana.Transaction
+	SolTx             *solana.Transaction
 	signingAddress    xc.Address
 	contractAddresses []xc.ContractAddress
 }
@@ -113,14 +113,14 @@ func (c *TxCall) SetInput(_ xc.CallTxInput) error {
 }
 
 func (c *TxCall) Hash() xc.TxHash {
-	if len(c.solTx.Signatures) == 0 {
+	if len(c.SolTx.Signatures) == 0 {
 		return ""
 	}
-	return xc.TxHash(c.solTx.Signatures[0].String())
+	return xc.TxHash(c.SolTx.Signatures[0].String())
 }
 
 func (c *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
-	solanaTx := *c.solTx
+	solanaTx := *c.SolTx
 	txMessagePayload, err := solanaTx.Message.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -139,18 +139,18 @@ func (c *TxCall) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 
 // SetSignatures adds signatures to the transaction
 func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
-	signerKeys := c.solTx.Message.Signers().ToPointers()
+	signerKeys := c.SolTx.Message.Signers().ToPointers()
 
 	// Ensure the signatures slice is sized to the number of required signers,
 	// but preserve any existing signatures already present.
-	if len(c.solTx.Signatures) < len(signerKeys) {
-		old := c.solTx.Signatures
-		c.solTx.Signatures = make([]solana.Signature, len(signerKeys))
+	if len(c.SolTx.Signatures) < len(signerKeys) {
+		old := c.SolTx.Signatures
+		c.SolTx.Signatures = make([]solana.Signature, len(signerKeys))
 		// copy over existing signatures by index
-		copy(c.solTx.Signatures, old)
-	} else if len(c.solTx.Signatures) > len(signerKeys) {
+		copy(c.SolTx.Signatures, old)
+	} else if len(c.SolTx.Signatures) > len(signerKeys) {
 		// Trim any extra signatures if present to make the accounts list and signers list match
-		c.solTx.Signatures = c.solTx.Signatures[:len(signerKeys)]
+		c.SolTx.Signatures = c.SolTx.Signatures[:len(signerKeys)]
 	}
 
 	// Assign only provided signatures; do not clear existing ones
@@ -163,7 +163,7 @@ func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
 				continue
 			}
 			if bytes.Equal(signature.PublicKey, signer.Bytes()) {
-				c.solTx.Signatures[i] = solana.Signature(signature.Signature)
+				c.SolTx.Signatures[i] = solana.Signature(signature.Signature)
 				break
 			}
 		}
@@ -172,5 +172,5 @@ func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
 }
 
 func (c *TxCall) Serialize() ([]byte, error) {
-	return c.solTx.MarshalBinary()
+	return c.SolTx.MarshalBinary()
 }
