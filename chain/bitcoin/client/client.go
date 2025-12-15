@@ -78,7 +78,7 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		bbClient = bbRest
 	}
 
-	rpcClient := rpc.NewClient(rpcUrl, cfg.Base())
+	rpcClient := rpc.NewClient(rpcUrl, cfg)
 	rpcClient.SetHttpClient(httpClient)
 
 	return &BlockbookClient{

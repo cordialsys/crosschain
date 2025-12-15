@@ -177,6 +177,9 @@ func (client *Client) getRawTransactionOutput(ctx context.Context, txid string, 
 	if cachedTx, exists := cache[txid]; exists {
 		rawTx = cachedTx
 	} else {
+		if err := client.chain.Limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("rate limit wait failed on getting raw transaction %s: %w", txid, err)
+		}
 		rawTx, err = client.GetRawTransaction(ctx, txid)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get raw transaction %s: %w", txid, err)

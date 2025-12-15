@@ -16,10 +16,10 @@ import (
 type Client struct {
 	httpClient *http.Client
 	Url        string
-	chain      *xc.ChainBaseConfig
+	chain      *xc.ChainConfig
 }
 
-func NewClient(url string, chain *xc.ChainBaseConfig) *Client {
+func NewClient(url string, chain *xc.ChainConfig) *Client {
 	return &Client{
 		httpClient: http.DefaultClient,
 		Url:        url,
