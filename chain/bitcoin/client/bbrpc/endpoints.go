@@ -45,6 +45,15 @@ func (client *Client) LatestStats(ctx context.Context) (types.StatsResponse, err
 	return stats, nil
 }
 
+func (client *Client) LatestBlock(ctx context.Context) (uint64, error) {
+	stats, err := client.LatestStats(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(stats.Backend.Blocks), nil
+}
+
 // SubmitTx submits a transaction to the network using the native sendrawtransaction RPC method
 func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, error) {
 	params := []interface{}{
@@ -79,7 +88,7 @@ func (client *Client) ListUtxo(ctx context.Context, addr string, confirmed bool)
 	return utxos, nil
 }
 
-func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.EstimateFeeResponse, error) {
+func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.FeeEstimationResult, error) {
 	// Call the native estimatesmartfee RPC method
 	params := []interface{}{blocks, "ECONOMICAL"}
 	var result struct {
@@ -90,16 +99,17 @@ func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.Estima
 
 	err := client.call(ctx, "estimatesmartfee", params, &result)
 	if err != nil {
-		return types.EstimateFeeResponse{}, err
+		return types.FeeEstimationResult{}, err
 	}
 
 	// Check if there were any errors in the estimation
 	if len(result.Errors) > 0 {
-		return types.EstimateFeeResponse{}, fmt.Errorf("fee estimation errors: %v", result.Errors)
+		return types.FeeEstimationResult{}, fmt.Errorf("fee estimation errors: %v", result.Errors)
 	}
 
-	return types.EstimateFeeResponse{
-		Result: result.Feerate.String(),
+	return types.FeeEstimationResult{
+		Type: types.FeeEstimationPerKb,
+		Fee:  result.Feerate,
 	}, nil
 }
 

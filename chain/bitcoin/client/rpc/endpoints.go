@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/sirupsen/logrus"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
@@ -87,14 +87,42 @@ func (client *Client) GetBlockStats(ctx context.Context) (GetBlockStatsResponse,
 	return stats, nil
 }
 
-func (client *Client) EstimateSmartFee(ctx context.Context, blocks int) (EstimateSmartFeeResponse, error) {
+func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.FeeEstimationResult, error) {
+	chain := client.chain.GetChain()
 	var result EstimateSmartFeeResponse
 	params := []interface{}{blocks}
 	err := client.call(ctx, "estimatesmartfee", params, &result)
 	if err != nil {
-		return result, fmt.Errorf("failed to estimate smart fee for %d blocks: %w", blocks, err)
+		// Some backends do not support fee estimation
+		logrus.WithError(err).Info("estimatesmartfee is not supported, trying to use native blockstats endpoint")
+		// try using the native blockstats endpoint to use the avg fee rate
+		stats, err := client.GetBlockStats(ctx)
+		if err != nil {
+			// use the configured default price, if it's set.
+			defaultPrice := client.chain.GetChain().ChainGasPriceDefault
+			logrus.WithField("chain", chain.Chain).
+				WithField("defaultPrice", defaultPrice).
+				WithField("error", err).
+				Warn("using default fee price since estimate-fee is not supported")
+			if client.chain.GetChain().ChainGasPriceDefault >= 1 {
+				return types.FeeEstimationResult{}, nil
+			}
+			return types.FeeEstimationResult{}, fmt.Errorf("could not estimate fee: %v", err)
+		}
+		avg := stats.AvgFeeRate
+		if avg.IsZero() {
+			avg = xc.NewAmountHumanReadableFromFloat(1)
+		}
+		return types.FeeEstimationResult{
+			Type: types.FeeEstimationAverage,
+			Fee:  avg,
+		}, nil
 	}
-	return result, nil
+
+	return types.FeeEstimationResult{
+		Type: types.FeeEstimationPerKb,
+		Fee:  result.Feerate,
+	}, nil
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, error) {
@@ -111,10 +139,29 @@ func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, err
 	return result, nil
 }
 
-func (client *Client) GetBlock(ctx context.Context, blockHash string) (types.Block, error) {
+func (client *Client) LatestBlock(ctx context.Context) (uint64, error) {
+	bestBlockHash, err := client.GetBestBlockHash(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get best block hash: %w", err)
+	}
+
+	header, err := client.GetBlockHeader(ctx, bestBlockHash)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get block header: %w", err)
+	}
+
+	return uint64(header.Height), nil
+}
+
+func (client *Client) GetBlock(ctx context.Context, height uint64) (types.Block, error) {
+	blockHash, err := client.GetBlockHash(ctx, int(height))
+	if err != nil {
+		return types.Block{}, err
+	}
+
 	var result types.Block
 	params := []interface{}{blockHash, 1} // verbosity = 1 for JSON object
-	err := client.call(ctx, "getblock", params, &result)
+	err = client.call(ctx, "getblock", params, &result)
 	if err != nil {
 		return result, err
 	}
@@ -153,14 +200,9 @@ func (client *Client) GetBlockHeader(ctx context.Context, blockHash string) (typ
 	return result, nil
 }
 
-func (client *Client) GetRawTransaction(ctx context.Context, txid string, blockHash ...string) (GetRawTransactionResponse, error) {
+func (client *Client) GetRawTransaction(ctx context.Context, txid string) (GetRawTransactionResponse, error) {
 	// Always use verbose = 1 for JSON object response
 	params := []interface{}{txid, 1}
-
-	// Add block hash if provided
-	if len(blockHash) > 0 && blockHash[0] != "" {
-		params = append(params, blockHash[0])
-	}
 
 	var result GetRawTransactionResponse
 	err := client.call(ctx, "getrawtransaction", params, &result)
@@ -198,10 +240,10 @@ func (client *Client) getRawTransactionOutput(ctx context.Context, txid string, 
 	// return scriptPubKey, nil
 }
 
-func (client *Client) GetTx(ctx context.Context, txid string, chaincfg *chaincfg.Params, blockHash ...string) (types.TransactionResponse, error) {
+func (client *Client) GetTx(ctx context.Context, txid string) (types.TransactionResponse, error) {
 	decimals := client.chain.Decimals
 	// Get raw transaction data
-	rawTx, err := client.GetRawTransaction(ctx, txid, blockHash...)
+	rawTx, err := client.GetRawTransaction(ctx, txid)
 	if err != nil {
 		return types.TransactionResponse{}, err
 	}
@@ -229,7 +271,7 @@ func (client *Client) GetTx(ctx context.Context, txid string, chaincfg *chaincfg
 		}
 
 		// Extract addresses from the scriptPubKey
-		_, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, chaincfg)
+		_, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, client.chaincfg)
 		if err != nil {
 			return types.TransactionResponse{}, fmt.Errorf("failed to extract addresses from scriptPubKey: %w", err)
 		}
@@ -297,4 +339,8 @@ func (client *Client) GetTx(ctx context.Context, txid string, chaincfg *chaincfg
 	}
 
 	return response, nil
+}
+
+func (client *Client) ListUtxo(ctx context.Context, addr string, confirmed bool) (types.UtxoResponse, error) {
+	return client.bbClient.ListUtxo(ctx, addr, confirmed)
 }

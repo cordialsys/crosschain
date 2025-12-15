@@ -58,6 +58,7 @@ const (
 	ETH      = NativeAsset("ETH")      // Ethereum
 	ETHW     = NativeAsset("ETHW")     // Ethereum PoW
 	FIL      = NativeAsset("FIL")      // Filecoin
+	FLUX     = NativeAsset("FLUX")     // Flux
 	FOGO     = NativeAsset("FOGO")     // Fogo
 	FTM      = NativeAsset("FTM")      // Fantom
 	GUSDT    = NativeAsset("GUSDT")    // Stable
@@ -132,6 +133,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ETH,
 	ETHW,
 	FIL,
+	FLUX,
 	FOGO,
 	FTM,
 	GUSDT,
@@ -298,7 +300,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinCash
 	case DOGE, LTC, DASH:
 		return DriverBitcoinLegacy
-	case ZEC:
+	case ZEC, FLUX:
 		return DriverZcash
 	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
 		return DriverEVM

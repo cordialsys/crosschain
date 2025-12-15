@@ -8,16 +8,27 @@ import (
 
 const BitcoinCashPrefix = "bitcoincash:"
 
-type BlockBookClient interface {
+type FeeEstimationType string
+
+const (
+	FeeEstimationPerKb   = FeeEstimationType("perkb")
+	FeeEstimationAverage = FeeEstimationType("avg")
+)
+
+type FeeEstimationResult struct {
+	Type FeeEstimationType
+	Fee  xc.AmountHumanReadable
+}
+
+type BitcoinClientDriver interface {
 	// Currently the only method we _need_ is ListUtxo
 	ListUtxo(ctx context.Context, addr string, confirmed bool) (UtxoResponse, error)
 
-	// Previously used:
-	// EstimateFee(ctx context.Context, blocks int) (EstimateFeeResponse, error)
-	// LatestStats(ctx context.Context) (StatsResponse, error)
-	// SubmitTx(ctx context.Context, txBytes []byte) (string, error)
-	// GetTx(ctx context.Context, txHash string) (TransactionResponse, error)
-	// GetBlock(ctx context.Context, block uint64) (Block, error)
+	EstimateFee(ctx context.Context, blocks int) (FeeEstimationResult, error)
+	LatestBlock(ctx context.Context) (uint64, error)
+	SubmitTx(ctx context.Context, txBytes []byte) (string, error)
+	GetTx(ctx context.Context, txHash string) (TransactionResponse, error)
+	GetBlock(ctx context.Context, block uint64) (Block, error)
 }
 
 type ErrorResponse struct {

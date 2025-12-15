@@ -559,6 +559,19 @@ chains:
         asset_id: filecoin
       indexing_co:
         chain_id: filecoin
+  FLUX:
+    chain: FLUX
+    chain_id: 0x76B809BB
+    confirmations_final: 6
+    driver: zcash
+    decimals: 8
+    fee_limit: "1.0"
+    provider: "full-blockbook"
+    external:
+      coin_gecko:
+        asset_id: "zelcash"
+      coin_market_cap:
+        asset_id: "3029"
   FTM:
     chain: FTM
     driver: evm-legacy

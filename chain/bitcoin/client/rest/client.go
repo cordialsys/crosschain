@@ -18,7 +18,7 @@ type Client struct {
 	Url        string
 }
 
-var _ types.BlockBookClient = &Client{}
+var _ types.BitcoinClientDriver = &Client{}
 
 func NewClient(url string) *Client {
 	return &Client{

@@ -236,6 +236,14 @@ chains:
     chain_name: Filecoin
     decimals: 18
     confirmations_final: 1
+  FLUX:
+    chain: FLUX
+    driver: zcash
+    decimals: 8
+    fee_limit: "1.0"
+    confirmations_final: 6
+    url: https://api.runonflux.io/
+    indexer_url: https://blockbook.runonflux.io/
   FTM:
     chain: FTM
     driver: evm-legacy
