@@ -11,7 +11,6 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/bbrpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/rest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/sirupsen/logrus"
@@ -37,16 +36,11 @@ func NewClient(cfg *xc.ChainConfig, chaincfg *chaincfg.Params) *Client {
 
 	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
 	var bbClient types.BitcoinClientDriver
-	if cfg.GetChain().IndexerType == "bbrpc" {
-		bbRpc := bbrpc.NewClient(indexerUrl)
-		bbRpc.SetHttpClient(http.DefaultClient)
-		bbClient = bbRpc
-	} else {
-		// Default to the o.g. rest client
-		bbRest := rest.NewClient(indexerUrl)
-		bbRest.SetHttpClient(cfg.DefaultHttpClient())
-		bbClient = bbRest
-	}
+
+	// Use REST bb client for ListUtxo call
+	bbRest := rest.NewClient(indexerUrl)
+	bbRest.SetHttpClient(cfg.DefaultHttpClient())
+	bbClient = bbRest
 
 	return &Client{
 		httpClient: http.DefaultClient,

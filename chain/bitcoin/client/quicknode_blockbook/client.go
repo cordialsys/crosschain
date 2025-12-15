@@ -1,4 +1,4 @@
-package rpc
+package quicknode_blockbook
 
 import (
 	"bytes"
@@ -7,12 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
-	"github.com/btcsuite/btcd/chaincfg"
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/bbrpc"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/rest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	"github.com/sirupsen/logrus"
 )
@@ -20,40 +16,14 @@ import (
 type Client struct {
 	httpClient *http.Client
 	Url        string
-	bbClient   types.BitcoinClientDriver
-	chain      *xc.ChainConfig
-	chaincfg   *chaincfg.Params
 }
 
 var _ types.BitcoinClientDriver = &Client{}
 
-func NewClient(cfg *xc.ChainConfig, chaincfg *chaincfg.Params) *Client {
-	rpcUrl := cfg.URL
-	indexerUrl := cfg.IndexerUrl
-	if indexerUrl == "" {
-		// default to combined endpoint
-		indexerUrl = rpcUrl
-	}
-
-	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
-	var bbClient types.BitcoinClientDriver
-	if cfg.GetChain().IndexerType == "bbrpc" {
-		bbRpc := bbrpc.NewClient(indexerUrl)
-		bbRpc.SetHttpClient(http.DefaultClient)
-		bbClient = bbRpc
-	} else {
-		// Default to the o.g. rest client
-		bbRest := rest.NewClient(indexerUrl)
-		bbRest.SetHttpClient(cfg.DefaultHttpClient())
-		bbClient = bbRest
-	}
-
+func NewClient(url string) *Client {
 	return &Client{
 		httpClient: http.DefaultClient,
-		Url:        cfg.URL,
-		chain:      cfg,
-		bbClient:   bbClient,
-		chaincfg:   chaincfg,
+		Url:        url,
 	}
 }
 
@@ -75,7 +45,17 @@ type JSONRPCResponse struct {
 	// decode ID as string or int
 	ID     xc.AmountBlockchain `json:"id"`
 	Result json.RawMessage     `json:"result,omitempty"`
-	Error  *types.JsonRPCError `json:"error,omitempty"`
+	Error  *JSONRPCError       `json:"error,omitempty"`
+}
+
+// JSON RPC error structure
+type JSONRPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (err *JSONRPCError) Error() string {
+	return fmt.Sprintf("JSON RPC error %d: %s", err.Code, err.Message)
 }
 
 // call makes a JSON RPC call to the QuickNode endpoint
@@ -97,7 +77,7 @@ func (client *Client) call(ctx context.Context, method string, params []interfac
 		"method": method,
 		"params": params,
 	})
-	log.Trace("call json-rpc")
+	log.Trace("call blockbook json-rpc")
 
 	req, err := http.NewRequestWithContext(ctx, "POST", client.Url, bytes.NewReader(requestBody))
 	if err != nil {
@@ -117,19 +97,19 @@ func (client *Client) call(ctx context.Context, method string, params []interfac
 		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Trace("json-rpc response")
-	var jsonResp JSONRPCResponse
-	if err := json.Unmarshal(body, &jsonResp); err != nil {
-		return fmt.Errorf("failed to unmarshal JSON RPC response (http status=%d): %w", resp.StatusCode, err)
-	}
-
-	if jsonResp.Error != nil {
-		jsonResp.Error.HttpStatus = resp.StatusCode
-		return jsonResp.Error
-	}
+	log.WithField("body", string(body)).WithField("status", resp.StatusCode).Trace("blockbook json-rpc response")
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("HTTP error %d: %s", resp.StatusCode, string(body))
+	}
+
+	var jsonResp JSONRPCResponse
+	if err := json.Unmarshal(body, &jsonResp); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON RPC response: %w", err)
+	}
+
+	if jsonResp.Error != nil {
+		return jsonResp.Error
 	}
 
 	if result != nil {

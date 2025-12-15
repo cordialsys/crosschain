@@ -140,9 +140,9 @@ chains:
   BTC:
     chain: BTC
     driver: bitcoin
-    provider: blockbook
     chain_name: Bitcoin (Testnet)
     decimals: 8
+    indexer_url: https://go.getblock.io/be34efa093754d998dfe3ff85c31424a
     address:
       formats: ["segwit", "taproot", "legacy"]
   CELO:
@@ -169,7 +169,6 @@ chains:
   DASH:
     chain: DASH
     driver: bitcoin-legacy
-    provider: blockbook
     chain_name: Dash
     decimals: 8
     fee_limit: "1000"
@@ -242,7 +241,7 @@ chains:
     decimals: 8
     fee_limit: "1.0"
     confirmations_final: 6
-    url: https://api.runonflux.io/
+    provider: "blockbook"
     indexer_url: https://blockbook.runonflux.io/
   FTM:
     chain: FTM
