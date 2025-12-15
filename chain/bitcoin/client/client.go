@@ -13,7 +13,6 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/builder"
-	"github.com/cordialsys/crosschain/chain/bitcoin/client/bbrpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/rest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/rpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
@@ -23,12 +22,13 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
-	// "github.com/cordialsys/crosschain/chain/bitcoin_cash"
 	xclient "github.com/cordialsys/crosschain/client"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 )
+
+const BlockbookFull string = "full-blockbook"
 
 type BlockbookClient struct {
 	Asset    xc.ITask
@@ -37,8 +37,7 @@ type BlockbookClient struct {
 
 	skipAmountFilter bool
 
-	bbClient  types.BlockBookClient
-	rpcClient *rpc.Client
+	bbClient types.BitcoinClientDriver
 }
 
 var _ xclient.Client = &BlockbookClient{}
@@ -53,29 +52,19 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	if err != nil {
 		return &BlockbookClient{}, err
 	}
-	rpcUrl := cfg.URL
-	rpcUrl = strings.TrimSuffix(rpcUrl, "/")
-
-	indexerUrl := cfg.IndexerUrl
-	if indexerUrl == "" {
-		// default to combined endpoint
-		indexerUrl = rpcUrl
-	}
-	indexerUrl = strings.TrimSuffix(indexerUrl, "/")
 
 	decoder := address.NewAddressDecoder()
 
-	var bbClient types.BlockBookClient
-
-	if cfgI.GetChain().IndexerType == "bbrpc" {
-		bbRpc := bbrpc.NewClient(indexerUrl)
-		bbRpc.SetHttpClient(httpClient)
-		bbClient = bbRpc
-	} else {
+	var bbClient types.BitcoinClientDriver
+	if cfgI.GetChain().Provider == BlockbookFull {
 		// Default to the o.g. rest client
-		bbRest := rest.NewClient(indexerUrl)
+		bbRest := rest.NewClient(cfg.URL)
 		bbRest.SetHttpClient(httpClient)
 		bbClient = bbRest
+	} else {
+		rpcClient := rpc.NewClient(cfg, &chaincfg)
+		rpcClient.SetHttpClient(httpClient)
+		bbClient = rpcClient
 	}
 
 	rpcClient := rpc.NewClient(rpcUrl, cfg)
@@ -87,7 +76,6 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 		decoder,
 		false,
 		bbClient,
-		rpcClient,
 	}, nil
 }
 
@@ -96,8 +84,7 @@ func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTx
 	if err != nil {
 		return fmt.Errorf("bad tx: %v", err)
 	}
-
-	_, err = client.rpcClient.SubmitTx(ctx, serial)
+	_, err = client.bbClient.SubmitTx(ctx, serial)
 	return err
 }
 
@@ -148,42 +135,28 @@ func (client *BlockbookClient) EstimateTotalFeeZcash(ctx context.Context, numAct
 func (client *BlockbookClient) EstimateSatsPerByteFee(ctx context.Context) (xc.AmountHumanReadable, error) {
 	// Used by estimatefee RPC (number of future blocks to try to get mined within).  Smaller is more aggressive.
 	numBlocksToGetMined := 2
-
-	data, err := client.rpcClient.EstimateSmartFee(ctx, numBlocksToGetMined)
+	feeRate, err := client.bbClient.EstimateFee(ctx, numBlocksToGetMined)
 	if err != nil {
-		// Some backends do not support fee estimation
-		logrus.WithError(err).Info("estimatesmartfee is not supported, trying to use native blockstats endpoint")
-		// try using the native blockstats endpoint to use the avg fee rate
-		stats, err := client.rpcClient.GetBlockStats(ctx)
-		if err != nil {
-			// use the configured default price, if it's set.
-			defaultPrice := client.Asset.GetChain().ChainGasPriceDefault
-			logrus.WithField("chain", client.Asset.GetChain().Chain).
-				WithField("defaultPrice", defaultPrice).
-				WithField("error", err).
-				Warn("using default fee price since estimate-fee is not supported")
-			if client.Asset.GetChain().ChainGasPriceDefault >= 1 {
-				return xc.NewAmountHumanReadableFromFloat(defaultPrice), nil
-			}
-			return xc.AmountHumanReadable{}, fmt.Errorf("could not estimate fee: %v", err)
-		}
-		avg := stats.AvgFeeRate
-		if avg.IsZero() {
-			avg = xc.NewAmountHumanReadableFromFloat(1)
-		}
-		return avg, nil
+		return xc.AmountHumanReadable{}, fmt.Errorf("failed to estimate fee: %w", err)
 	}
 
-	btcPerKb := data.Feerate.Decimal()
-	// convert to BTC/byte
-	BtcPerB := btcPerKb.Div(decimal.NewFromInt(1000))
-	// convert to sats/byte
-	decimalFactor := decimal.NewFromInt32(10).Pow(decimal.NewFromInt32(client.Asset.GetChain().Decimals))
-	satsPerB := xc.AmountHumanReadable(BtcPerB).Decimal().Mul(decimalFactor)
+	switch feeRate.Type {
+	case types.FeeEstimationPerKb:
+		btcPerKb := feeRate.Fee.Decimal()
+		// convert to BTC/byte
+		BtcPerB := btcPerKb.Div(decimal.NewFromInt(1000))
+		// convert to sats/byte
+		decimalFactor := decimal.NewFromInt32(10).Pow(decimal.NewFromInt32(client.Asset.GetChain().Decimals))
+		satsPerB := xc.AmountHumanReadable(BtcPerB).Decimal().Mul(decimalFactor)
 
-	satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerB.InexactFloat64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
+		satsPerByte := tx_input.LegacyFeeFilter(client.Asset.GetChain(), satsPerB.InexactFloat64(), client.Asset.GetChain().ChainGasMultiplier, client.Asset.GetChain().ChainMaxGasPrice)
 
-	return xc.NewAmountHumanReadableFromFloat(satsPerByte), nil
+		return xc.NewAmountHumanReadableFromFloat(satsPerByte), nil
+	case types.FeeEstimationAverage:
+		return feeRate.Fee, nil
+	default:
+		return xc.AmountHumanReadable{}, fmt.Errorf("unsupported FeeEstimation type: %s", feeRate.Type)
+	}
 }
 
 func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
@@ -193,8 +166,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 
 	expectedTo := ""
 
-	data, err := client.rpcClient.GetTx(ctx, string(txHash), client.Chaincfg)
-
+	data, err := client.bbClient.GetTx(ctx, string(txHash))
 	if err != nil {
 		if apiErr, ok := err.(*types.ErrorResponse); ok {
 			// they don't use 404 code :/
@@ -211,7 +183,7 @@ func (client *BlockbookClient) FetchLegacyTxInfo(ctx context.Context, txHash xc.
 		return *txWithInfo, err
 	}
 
-	latestBlock, err := client.LatestBlock(ctx)
+	latestBlock, err := client.bbClient.LatestBlock(ctx)
 	if err != nil {
 		return *txWithInfo, err
 	}
@@ -361,7 +333,7 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	}
 	input.Address = args.GetFrom()
 	input.UnspentOutputs = allUnspentOutputs
-	if client.Asset.GetChain().Chain == xc.ZEC {
+	if client.IsZCashDerived() {
 		totalFee, err := client.EstimateTotalFeeZcash(ctx, 2)
 		if err != nil {
 			return input, err
@@ -441,7 +413,7 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 	}
 
 	// Estimate fees
-	if client.Asset.GetChain().Chain == xc.ZEC {
+	if client.IsZCashDerived() {
 		totalFee, err := client.EstimateTotalFeeZcash(ctx, len(args.Receivers())*2)
 		if err != nil {
 			return multiInput, err
@@ -521,34 +493,17 @@ func (client *BlockbookClient) FetchDecimals(ctx context.Context, contract xc.Co
 	return 0, fmt.Errorf("unsupported")
 }
 
-func (client *BlockbookClient) LatestBlock(ctx context.Context) (uint64, error) {
-	bestBlockHash, err := client.rpcClient.GetBestBlockHash(ctx)
-	if err != nil {
-		return 0, err
-	}
-	header, err := client.rpcClient.GetBlockHeader(ctx, bestBlockHash)
-	if err != nil {
-		return 0, err
-	}
-	return uint64(header.Height), nil
-}
-
 func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	height, ok := args.Height()
 	if !ok {
-		lastestHeight, err := client.LatestBlock(ctx)
+		lastestHeight, err := client.bbClient.LatestBlock(ctx)
 		if err != nil {
 			return nil, err
 		}
 		height = lastestHeight
 	}
 
-	blockHash, err := client.rpcClient.GetBlockHash(ctx, int(height))
-	if err != nil {
-		return nil, err
-	}
-
-	blockResponse, err := client.rpcClient.GetBlock(ctx, blockHash)
+	blockResponse, err := client.bbClient.GetBlock(ctx, height)
 	if err != nil {
 		return nil, err
 	}
@@ -563,4 +518,9 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 	}
 	block.TransactionIds = append(block.TransactionIds, blockResponse.GetTxIds()...)
 	return block, nil
+}
+
+func (client *BlockbookClient) IsZCashDerived() bool {
+	chain := client.Asset.GetChain().Chain
+	return chain == xc.ZEC || chain == xc.FLUX
 }

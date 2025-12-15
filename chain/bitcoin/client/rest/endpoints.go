@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 )
 
@@ -17,6 +18,14 @@ func (client *Client) LatestStats(ctx context.Context) (types.StatsResponse, err
 	}
 
 	return stats, nil
+}
+
+func (client *Client) LatestBlock(ctx context.Context) (uint64, error) {
+	stats, err := client.LatestStats(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return uint64(stats.Backend.Blocks), nil
 }
 
 func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, error) {
@@ -45,15 +54,23 @@ func (client *Client) ListUtxo(ctx context.Context, addr string, confirmed bool)
 	return data, nil
 }
 
-func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.EstimateFeeResponse, error) {
+func (client *Client) EstimateFee(ctx context.Context, blocks int) (types.FeeEstimationResult, error) {
 	var data types.EstimateFeeResponse
 	// fee estimate for last N blocks
 	err := client.get(ctx, fmt.Sprintf("/api/v2/estimatefee/%d", blocks), &data)
 	if err != nil {
-		return types.EstimateFeeResponse{}, err
+		return types.FeeEstimationResult{}, err
 	}
 
-	return data, nil
+	feerate, err := xc.NewAmountHumanReadableFromStr(data.Result)
+	if err != nil {
+		return types.FeeEstimationResult{}, err
+	}
+
+	return types.FeeEstimationResult{
+		Type: types.FeeEstimationPerKb,
+		Fee:  feerate,
+	}, nil
 }
 
 func (client *Client) GetTx(ctx context.Context, txHash string) (types.TransactionResponse, error) {

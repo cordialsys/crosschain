@@ -17,6 +17,7 @@ type BitcoinClient string
 var Native BitcoinClient = "native"
 var Blockchair BitcoinClient = "blockchair"
 var Blockbook BitcoinClient = "blockbook"
+var FullBlockbook BitcoinClient = "full-blockbook"
 
 type BtcClient interface {
 	client.Client
