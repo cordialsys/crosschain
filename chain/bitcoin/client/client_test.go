@@ -87,7 +87,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			`{"jsonrpc":"2.0","result":{"feerate":0.00004965,"blocks":4},"id":1}`,
 		}, 200)
 		defer close()
-		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
+		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.JsonRpc))
 		client, _ := bitcoin.NewClient(asset)
 
 		from := xc.Address("mpjwFvP88ZwAt3wEHY6irKkGhxcsv22BP6")
@@ -140,7 +140,7 @@ func (s *ClientTestSuite) TestFetchTxInfo() {
 		`{"jsonrpc":"2.0","result":{"hash":"000000000000000000011734882627e0149787de4d66a864254a3d63529586ee","confirmations":1,"height":916481,"version":537337856,"versionHex":"20072000","merkleroot":"0d321497ceb7eb229a1e37fd1280908dc4ed0dec07693561b80e5bcd36397e2f","time":1758900536,"mediantime":1758897247,"nonce":2935948034,"bits":"1701fa38","target":"00000000000000000001fa380000000000000000000000000000000000000000","difficulty":142342602928674.9,"chainwork":"0000000000000000000000000000000000000000e6231883838e80965d49ccf0","nTx":3511,"previousblockhash":"000000000000000000003de597b30b9216bc3b605ec29752bca909ab214b6303"},"id":1}`,
 	}, 200)
 	defer close()
-	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("mainnet").WithProvider(string(bitcoin.Blockbook)).WithDecimals(8)
+	asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("mainnet").WithProvider(string(bitcoin.JsonRpc)).WithDecimals(8)
 	client, err := bitcoin.NewClient(asset)
 	require.NoError(err)
 	info, err := client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("d802946fc7180d899e3006fd9b6991b0f42e2f4af9aec697ce811da068105d2e"))
@@ -178,7 +178,7 @@ func (s *ClientTestSuite) TestNotFoundFetchTxInfo() {
 	for _, v := range testcases {
 		server, close := testtypes.MockHTTP(s.T(), v.resp, 400)
 		defer close()
-		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.Blockbook))
+		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.JsonRpc))
 		client, err := bitcoin.NewClient(asset)
 		require.NoError(err)
 		_, err = client.FetchLegacyTxInfo(s.Ctx, xc.TxHash("227178d784150211e8ea5a586ee75bc97655e61f02bc8c07557e475cfecea3cd"))

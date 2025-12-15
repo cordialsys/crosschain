@@ -1,4 +1,4 @@
-package bbrpc
+package quicknode_blockbook
 
 import (
 	"context"

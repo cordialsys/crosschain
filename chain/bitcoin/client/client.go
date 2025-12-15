@@ -13,6 +13,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin/address"
 	"github.com/cordialsys/crosschain/chain/bitcoin/builder"
+	"github.com/cordialsys/crosschain/chain/bitcoin/client/quicknode_blockbook"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/rest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/rpc"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
@@ -44,7 +45,7 @@ var _ xclient.Client = &BlockbookClient{}
 var _ xclient.MultiTransferClient = &BlockbookClient{}
 var _ address.WithAddressDecoder = &BlockbookClient{}
 
-func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
+func NewJsonRpcClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := cfg.DefaultHttpClient()
@@ -55,27 +56,63 @@ func NewClient(cfgI xc.ITask) (*BlockbookClient, error) {
 
 	decoder := address.NewAddressDecoder()
 
-	var bbClient types.BitcoinClientDriver
-	if cfgI.GetChain().Provider == BlockbookFull {
-		// Default to the o.g. rest client
-		bbRest := rest.NewClient(cfg.URL)
-		bbRest.SetHttpClient(httpClient)
-		bbClient = bbRest
-	} else {
-		rpcClient := rpc.NewClient(cfg, &chaincfg)
-		rpcClient.SetHttpClient(httpClient)
-		bbClient = rpcClient
-	}
-
-	rpcClient := rpc.NewClient(rpcUrl, cfg)
+	rpcClient := rpc.NewClient(cfg, &chaincfg)
 	rpcClient.SetHttpClient(httpClient)
 
 	return &BlockbookClient{
-		asset,
-		&chaincfg,
-		decoder,
-		false,
-		bbClient,
+		Asset:            asset,
+		Chaincfg:         &chaincfg,
+		decoder:          decoder,
+		skipAmountFilter: false,
+		bbClient:         rpcClient,
+	}, nil
+}
+
+func NewBlockbookClient(cfgI xc.ITask) (*BlockbookClient, error) {
+	asset := cfgI
+	cfg := cfgI.GetChain()
+	httpClient := cfg.DefaultHttpClient()
+	chaincfg, err := params.GetParams(cfg.Base())
+	if err != nil {
+		return &BlockbookClient{}, err
+	}
+
+	decoder := address.NewAddressDecoder()
+
+	// Use REST blockboook client
+	bbRest := rest.NewClient(cfg.URL)
+	bbRest.SetHttpClient(httpClient)
+
+	return &BlockbookClient{
+		Asset:            asset,
+		Chaincfg:         &chaincfg,
+		decoder:          decoder,
+		skipAmountFilter: false,
+		bbClient:         bbRest,
+	}, nil
+}
+
+func NewQuicknodeBlockbookClient(cfgI xc.ITask) (*BlockbookClient, error) {
+	asset := cfgI
+	cfg := cfgI.GetChain()
+	httpClient := cfg.DefaultHttpClient()
+	chaincfg, err := params.GetParams(cfg.Base())
+	if err != nil {
+		return &BlockbookClient{}, err
+	}
+
+	decoder := address.NewAddressDecoder()
+
+	// Use REST blockboook client
+	quicknodeBb := quicknode_blockbook.NewClient(cfg.URL)
+	quicknodeBb.SetHttpClient(httpClient)
+
+	return &BlockbookClient{
+		Asset:            asset,
+		Chaincfg:         &chaincfg,
+		decoder:          decoder,
+		skipAmountFilter: false,
+		bbClient:         quicknodeBb,
 	}, nil
 }
 
@@ -333,7 +370,7 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 	}
 	input.Address = args.GetFrom()
 	input.UnspentOutputs = allUnspentOutputs
-	if client.IsZCashDerived() {
+	if client.Asset.GetChain().Chain == xc.ZEC {
 		totalFee, err := client.EstimateTotalFeeZcash(ctx, 2)
 		if err != nil {
 			return input, err
@@ -413,7 +450,7 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 	}
 
 	// Estimate fees
-	if client.IsZCashDerived() {
+	if client.Asset.GetChain().Chain == xc.ZEC {
 		totalFee, err := client.EstimateTotalFeeZcash(ctx, len(args.Receivers())*2)
 		if err != nil {
 			return multiInput, err
@@ -518,9 +555,4 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 	}
 	block.TransactionIds = append(block.TransactionIds, blockResponse.GetTxIds()...)
 	return block, nil
-}
-
-func (client *BlockbookClient) IsZCashDerived() bool {
-	chain := client.Asset.GetChain().Chain
-	return chain == xc.ZEC || chain == xc.FLUX
 }

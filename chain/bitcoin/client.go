@@ -18,6 +18,8 @@ var Native BitcoinClient = "native"
 var Blockchair BitcoinClient = "blockchair"
 var Blockbook BitcoinClient = "blockbook"
 var FullBlockbook BitcoinClient = "full-blockbook"
+var JsonRpc BitcoinClient = "json-rpc"
+var QuicknodeBlockbook BitcoinClient = "quicknode-blockbook"
 
 type BtcClient interface {
 	client.Client
@@ -43,10 +45,16 @@ func NewBitcoinClient(cfgI xc.ITask) (BtcClient, error) {
 		log.Debug("using blockchair client")
 		return blockchair.NewBlockchairClient(cfgI)
 	case Blockbook:
-		log.Debug("using blockbook client")
-		return bitcoinclient.NewClient(cfgI)
+		log.Debug("using blockbook rest client")
+		return bitcoinclient.NewBlockbookClient(cfgI)
+	case QuicknodeBlockbook:
+		log.Debug("using quicknode blockbook rpc client")
+		return bitcoinclient.NewQuicknodeBlockbookClient(cfgI)
+	case JsonRpc:
+		log.Debug("using json-rpc client")
+		return bitcoinclient.NewJsonRpcClient(cfgI)
 	default:
-		log.Debug("using default (blockbook) client")
-		return bitcoinclient.NewClient(cfgI)
+		log.Debug("using default (json-rpc) client")
+		return bitcoinclient.NewJsonRpcClient(cfgI)
 	}
 }

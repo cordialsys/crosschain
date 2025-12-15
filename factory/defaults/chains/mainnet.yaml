@@ -280,7 +280,6 @@ chains:
   BCH:
     chain: BCH
     driver: bitcoin-cash
-    provider: blockbook
     chain_name: Bitcoin Cash
     fee_limit: "1.0"
     decimals: 8
@@ -325,7 +324,6 @@ chains:
   BTC:
     chain: BTC
     driver: bitcoin
-    provider: blockbook
     chain_name: Bitcoin
     decimals: 8
     fee_limit: "0.005"
@@ -385,7 +383,6 @@ chains:
   DASH:
     chain: DASH
     driver: bitcoin-legacy
-    provider: blockbook
     chain_name: Dash
     decimals: 8
     fee_limit: "1000"
@@ -401,7 +398,6 @@ chains:
   DOGE:
     chain: DOGE
     driver: bitcoin-legacy
-    provider: blockbook
     chain_name: Dogecoin
     decimals: 8
     fee_limit: "1000"
@@ -566,7 +562,7 @@ chains:
     driver: zcash
     decimals: 8
     fee_limit: "1.0"
-    provider: "full-blockbook"
+    provider: "blockbook"
     external:
       coin_gecko:
         asset_id: "zelcash"
@@ -844,7 +840,6 @@ chains:
   LTC:
     chain: LTC
     driver: bitcoin-legacy
-    provider: blockbook
     chain_name: Litecoin
     decimals: 8
     fee_limit: "5.0"
