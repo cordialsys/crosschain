@@ -30,6 +30,7 @@ const (
 	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 	CREATE_TRANSACTION         = "createtransaction"
 	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
+	KEY_FEE_PER_BANDWIDTH      = "getTransactionFee"
 )
 
 // Client for Template
@@ -81,13 +82,64 @@ func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.Crea
 	return input, nil
 }
 
+func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc.Tx, sender xc.Address) (uint64, error) {
+	bz, err := transaction.Serialize()
+	if err != nil {
+		return 0, fmt.Errorf("failed to serialize transfer for fee estimation: %w", err)
+	}
+	txSize := len(bz)
+	accountResources, err := client.client.GetAccountResources(string(sender))
+	if err != nil {
+		return 0, fmt.Errorf("failed to get account resources: %w", err)
+	}
+	chainParameters, err := client.client.GetChainParameters()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get chain parameters: %w", err)
+	}
+
+	availableBandwidth := accountResources.GetAvailableBandwith()
+	bandwidthRequired := txSize - int(availableBandwidth)
+	// free transfer
+	if bandwidthRequired <= 0 {
+		return 0, nil
+	}
+
+	feePerBandwidth, ok := chainParameters.GetParam(KEY_FEE_PER_BANDWIDTH)
+	if !ok {
+		return 0, errors.New("failed to get bandwidth price")
+	}
+
+	return uint64(bandwidthRequired * feePerBandwidth), nil
+}
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	params := httpclient.CreateTransactionParams{
 		From:   args.GetFrom(),
 		To:     args.GetTo(),
 		Amount: args.GetAmount(),
 	}
-	return client.FetchBaseInput(ctx, params)
+
+	baseInput, err := client.FetchBaseInput(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	builder, err := NewTxBuilder(client.chain.Base())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create a new tx builder: %w", err)
+	}
+	dummyTx, err := builder.Transfer(args, baseInput)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dummy transfer tx for fee estimation: %w", err)
+	}
+
+	fee, err := client.EstimateTransactionFee(ctx, dummyTx, args.GetFrom())
+	if err != nil {
+		return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
+	}
+	baseInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
+
+	return baseInput, nil
 }
 
 func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
