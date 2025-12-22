@@ -10,6 +10,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
+	zecaddress "github.com/cordialsys/crosschain/chain/zcash/address"
 	"github.com/shopspring/decimal"
 )
 
@@ -277,6 +278,16 @@ func (client *Client) GetTx(ctx context.Context, txid string) (types.Transaction
 		}
 		// Convert addresses to strings
 		for _, addr := range extracted {
+			if client.chain.Chain == xc.ZEC {
+				tadr := zecaddress.TransparentAddress{
+					Hash:         [20]byte(addr.ScriptAddress()),
+					NetID:        client.chaincfg.PubKeyHashAddrID,
+					ScriptHashId: client.chaincfg.ScriptHashAddrID,
+				}
+				addresses = append(addresses, tadr.EncodeAddress())
+			} else {
+				addresses = append(addresses, addr.String())
+			}
 			addresses = append(addresses, addr.String())
 		}
 		amount := vout.Value.ToBlockchain(decimals)
