@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -40,7 +39,10 @@ type DebugTraceTransactionArgs struct {
 }
 
 // Recurse through all of the traces and provide them as a linear set of traces.
-func FlattenTraceResult(result *DebugTraceTransactionResult, traces []*DebugTraceTransactionResult, id string) []*DebugTraceTransactionResult {
+func FlattenTraceResult(result *DebugTraceTransactionResult, traces []*DebugTraceTransactionResult, id string, includeReverted bool) []*DebugTraceTransactionResult {
+	if result.RevertReason != "" || result.Error != "" {
+		return traces
+	}
 	traces = append(traces, result)
 	result.traceId = strings.TrimPrefix(id, "_")
 	index := 0
@@ -55,7 +57,8 @@ func FlattenTraceResult(result *DebugTraceTransactionResult, traces []*DebugTrac
 				continue
 			}
 		}
-		traces = FlattenTraceResult(innerResult, traces, fmt.Sprintf("%s_%d", id, index))
+
+		traces = FlattenTraceResult(innerResult, traces, fmt.Sprintf("%s_%d", id, index), includeReverted)
 		index++
 	}
 	return traces
@@ -73,20 +76,12 @@ func (client *Client) DebugTraceTransaction(ctx context.Context, txHash common.H
 	return &result, err
 }
 
-func printJson(v interface{}) {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(b))
-}
-
 func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.Hash) (tx.SourcesAndDests, error) {
 	result, err := client.DebugTraceTransaction(ctx, txHash)
 	if err != nil {
 		return tx.SourcesAndDests{}, err
 	}
-	traces := FlattenTraceResult(result, []*DebugTraceTransactionResult{}, "")
+	traces := FlattenTraceResult(result, []*DebugTraceTransactionResult{}, "", false)
 	sourcesAndDests := tx.SourcesAndDests{}
 	zero := big.NewInt(0)
 	native := client.Asset.GetChain().Chain
@@ -94,7 +89,6 @@ func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.
 	if len(traces) == 0 {
 		logrus.Debug("no debug traces found for tx")
 	}
-	printJson(result)
 
 	for _, trace := range traces {
 		amount := trace.Value.ToInt()
@@ -105,7 +99,12 @@ func (client *Client) DebugTraceEthMovements(ctx context.Context, txHash common.
 			"error":  trace.Error,
 		}).Debug("trace")
 		if trace.Error != "" || trace.RevertReason != "" {
-			// stop tracing if we hit a reverted instruction, so we remain on the side of caution.
+			// We should have omitted any reverted traces by this point.
+			// stop early to be safe.
+			logrus.WithFields(logrus.Fields{
+				"trace":       trace,
+				"transaction": txHash.String(),
+			}).Warn("reverted trace not skipped")
 			break
 		}
 		if amount.Cmp(zero) <= 0 {
