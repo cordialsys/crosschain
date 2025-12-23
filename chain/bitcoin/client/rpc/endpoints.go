@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
 	zecaddress "github.com/cordialsys/crosschain/chain/zcash/address"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -133,6 +135,9 @@ func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, err
 	}
 	var result string
 	err := client.call(ctx, "sendrawtransaction", params, &result)
+	if err != nil && strings.Contains(err.Error(), "transaction already exists in mempool") {
+		return "", errors.TransactionExistsf("%v", err)
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to submit transaction: %w", err)
 	}

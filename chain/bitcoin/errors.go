@@ -19,8 +19,10 @@ func CheckError(err error) errors.Status {
 		return errors.NetworkError
 	}
 	if strings.Contains(msg, "transaction already in block chain") ||
-		strings.Contains(msg, "already known") {
+		strings.Contains(msg, "already known") ||
+		strings.Contains(msg, "transaction already exists in mempool") {
 		return errors.TransactionExists
 	}
+
 	return errors.UnknownError
 }
