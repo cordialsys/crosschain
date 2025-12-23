@@ -63,6 +63,7 @@ func GetAddressHash(address string) ([]byte, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+
 	if contract, ok := args.GetContract(); ok {
 		return txBuilder.NewTokenTransfer(args.GetFrom(), args.GetTo(), args.GetAmount(), contract, input)
 	} else {

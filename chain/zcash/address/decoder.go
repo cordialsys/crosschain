@@ -22,24 +22,24 @@ var _ bitcoinaddress.AddressDecoder = &ZcashAddressDecoder{}
 
 // "t" Address
 type TransparentAddress struct {
-	hash         [ripemd160.Size]byte
-	netID        byte
-	scriptHashId byte
+	Hash         [ripemd160.Size]byte
+	NetID        byte
+	ScriptHashId byte
 }
 
 var _ btcutil.Address = &TransparentAddress{}
 
 func (t *TransparentAddress) EncodeAddress() string {
-	contents := append([]byte{t.scriptHashId}, t.hash[:]...)
-	return base58.CheckEncode(contents, t.netID)
+	contents := append([]byte{t.ScriptHashId}, t.Hash[:]...)
+	return base58.CheckEncode(contents, t.NetID)
 }
 
 func (t *TransparentAddress) ScriptAddress() []byte {
-	return t.hash[:]
+	return t.Hash[:]
 }
 
 func (t *TransparentAddress) IsForNet(net *chaincfg.Params) bool {
-	return t.netID == net.PubKeyHashAddrID
+	return t.NetID == net.PubKeyHashAddrID
 }
 
 func (t *TransparentAddress) String() string {
@@ -73,9 +73,9 @@ func (*ZcashAddressDecoder) Decode(inputAddr xc.Address, params *chaincfg.Params
 		hash := [ripemd160.Size]byte{}
 		copy(hash[:], decoded)
 		return &TransparentAddress{
-			hash:         hash,
-			netID:        netID,
-			scriptHashId: scriptHashId,
+			Hash:         hash,
+			NetID:        netID,
+			ScriptHashId: scriptHashId,
 		}, nil
 	default:
 		return nil, errors.New("decoded zcash address is of unknown size")
