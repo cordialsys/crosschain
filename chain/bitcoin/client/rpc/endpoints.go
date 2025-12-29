@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/sirupsen/logrus"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/bitcoin/client/types"
+	zecaddress "github.com/cordialsys/crosschain/chain/zcash/address"
+	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/shopspring/decimal"
 )
 
@@ -132,6 +135,9 @@ func (client *Client) SubmitTx(ctx context.Context, txBytes []byte) (string, err
 	}
 	var result string
 	err := client.call(ctx, "sendrawtransaction", params, &result)
+	if err != nil && strings.Contains(err.Error(), "transaction already exists in mempool") {
+		return "", errors.TransactionExistsf("%v", err)
+	}
 	if err != nil {
 		return "", fmt.Errorf("failed to submit transaction: %w", err)
 	}
@@ -277,6 +283,16 @@ func (client *Client) GetTx(ctx context.Context, txid string) (types.Transaction
 		}
 		// Convert addresses to strings
 		for _, addr := range extracted {
+			if client.chain.Chain == xc.ZEC {
+				tadr := zecaddress.TransparentAddress{
+					Hash:         [20]byte(addr.ScriptAddress()),
+					NetID:        client.chaincfg.PubKeyHashAddrID,
+					ScriptHashId: client.chaincfg.ScriptHashAddrID,
+				}
+				addresses = append(addresses, tadr.EncodeAddress())
+			} else {
+				addresses = append(addresses, addr.String())
+			}
 			addresses = append(addresses, addr.String())
 		}
 		amount := vout.Value.ToBlockchain(decimals)

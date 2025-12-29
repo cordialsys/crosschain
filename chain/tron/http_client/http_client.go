@@ -329,6 +329,9 @@ func (c *Client) BroadcastHex(txHex string) (*CreateTransactionResponse, error) 
 		return nil, err
 	}
 	err = checkError(parsed.Error)
+	if err != nil && strings.Contains(err.Error(), "DUP_TRANSACTION_ERROR") {
+		return nil, errors.TransactionExistsf("%v", err)
+	}
 	if err != nil {
 		return parsed, err
 	}
@@ -565,84 +568,6 @@ func (c *Client) GetAccount(address string) (*GetAccountResponse, error) {
 	}
 	if len(parsed.Address) == 0 {
 		return parsed, fmt.Errorf("could not find account: %s", address)
-	}
-
-	return parsed, nil
-}
-
-type ChainParameter struct {
-	Key   string `json:"key"`
-	Value int    `json:"value"`
-}
-
-type ChainParameters struct {
-	Error
-	Inner []ChainParameter `json:"chainParameter"`
-}
-
-func (params *ChainParameters) GetParam(key string) (int, bool) {
-	for _, p := range params.Inner {
-		if p.Key == key {
-			return p.Value, true
-		}
-	}
-
-	return 0, false
-}
-
-func (c *Client) GetChainParameters() (*ChainParameters, error) {
-	resp, err := c.client.Get(c.Url("wallet/getchainparameters"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chain params: %w", err)
-	}
-
-	parsed, err := parseResponse(resp, &ChainParameters{})
-	if err != nil {
-		return nil, err
-	}
-
-	err = checkError(parsed.Error)
-	if err != nil {
-		return parsed, err
-	}
-
-	return parsed, nil
-}
-
-type GetAccountResourcesResponse struct {
-	Error
-	FreeNetLimit int `json:"freeNetLimit"`
-	FreeNetUsed  int `json:"freeNetUsed"`
-	NetLimit     int `json:"NetLimit"`
-	NetUsed      int `json:"NetUsed"`
-}
-
-func (a GetAccountResourcesResponse) GetAvailableBandwith() int {
-	return (a.FreeNetLimit - a.FreeNetUsed) +
-		(a.NetLimit - a.NetUsed)
-}
-
-func (c *Client) GetAccountResources(address string) (*GetAccountResourcesResponse, error) {
-	req, err := postRequest(c.Url("wallet/getaccountresource"), map[string]interface{}{
-		"address": address,
-		"visible": true,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	parsed, err := parseResponse(resp, &GetAccountResourcesResponse{})
-	if err != nil {
-		return nil, err
-	}
-
-	err = checkError(parsed.Error)
-	if err != nil {
-		return parsed, err
 	}
 
 	return parsed, nil
