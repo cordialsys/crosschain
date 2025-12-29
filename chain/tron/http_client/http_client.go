@@ -329,6 +329,9 @@ func (c *Client) BroadcastHex(txHex string) (*CreateTransactionResponse, error) 
 		return nil, err
 	}
 	err = checkError(parsed.Error)
+	if err != nil && strings.Contains(err.Error(), "DUP_TRANSACTION_ERROR") {
+		return nil, errors.TransactionExistsf("%v", err)
+	}
 	if err != nil {
 		return parsed, err
 	}
