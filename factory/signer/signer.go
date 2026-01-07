@@ -178,8 +178,13 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 		var privKey bls.PrivateKey[bls.G2]
 		err := privKey.UnmarshalBinary(secretBz)
 		if err != nil && strings.Contains(err.Error(), "value out of range") {
-			logrus.Warn("scalar is not on bls12-381 curve, truncating first byte")
-			secretBz[0] = 0
+			logrus.Warn("scalar is not on bls12-381 curve, truncating first 2 bits")
+			secretBz[0] = secretBz[0] & 0x3f
+			privKey = bls.PrivateKey[bls.G2]{}
+			err = privKey.UnmarshalBinary(secretBz)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return &Signer{driver, secretBz, alg}, nil
 	default:
