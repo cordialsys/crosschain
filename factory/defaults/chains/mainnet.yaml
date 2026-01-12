@@ -617,8 +617,6 @@ chains:
     external:
       coin_market_cap:
         asset_id: "19960"
-      indexing_co:
-        chain_id: provenance
   HBAR:
     chain: HBAR
     chain_id: "0.0.3"
@@ -1065,8 +1063,6 @@ chains:
         asset_id: "23149"
       coin_gecko:
         asset_id: sei-network
-      indexing_co:
-        chain_id: sei
   SeiEVM:
     chain: SeiEVM
     driver: evm
