@@ -320,6 +320,24 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "0-0-111",
 			out:   "0-0-111",
 		},
+		{
+			// normalize implicit addresses
+			chain: xc.NEAR,
+			inp:   "0ECE",
+			out:   "0ece",
+		},
+		{
+			// leave near addresses intact
+			chain: xc.NEAR,
+			inp:   "crosschain.near",
+			out:   "crosschain.near",
+		},
+		{
+			// leave normalized intact
+			chain: xc.NEAR,
+			inp:   "crosschain-near",
+			out:   "crosschain-near",
+		},
 	}
 
 	// test that we have a test vector for each chain

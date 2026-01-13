@@ -190,6 +190,11 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 			address = prefix + address
 			address = strings.ToLower(address)
 		}
+	case xc.DriverNear:
+		// normalize implicit addresses
+		if !(strings.Contains(address, ".") || strings.Contains(address, "-")) {
+			address = strings.ToLower(address)
+		}
 
 	default:
 	}

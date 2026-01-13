@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/hedera"
 	"github.com/cordialsys/crosschain/chain/kaspa"
+	"github.com/cordialsys/crosschain/chain/near"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/normalize"
@@ -59,6 +60,8 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverHedera:
 					hedera.Validate(t, chain)
+				case DriverNear:
+					near.Validate(t, chain)
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)
 				default:

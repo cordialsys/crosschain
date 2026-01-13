@@ -964,6 +964,17 @@ chains:
         asset_id: nillion
       coin_market_cap:
         asset_id: "35702"
+  NEAR:
+    chain: NEAR
+    driver: near
+    decimals: 24
+    fee_limit: "200.0"
+    chain_gas_multiplier: 20.0
+    external:
+      coin_gecko:
+        asset_id: near
+      coin_market_cap:
+        asset_id: "6535"
   NOBLE:
     chain: NOBLE
     driver: cosmos
