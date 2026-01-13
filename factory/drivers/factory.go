@@ -10,6 +10,7 @@ import (
 	kaspaaddress "github.com/cordialsys/crosschain/chain/kaspa/address"
 	kaspabuilder "github.com/cordialsys/crosschain/chain/kaspa/builder"
 	kaspaclient "github.com/cordialsys/crosschain/chain/kaspa/client"
+	"github.com/cordialsys/crosschain/chain/near"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
 	"github.com/cordialsys/crosschain/chain/zcash"
@@ -60,6 +61,9 @@ import (
 	icpaddress "github.com/cordialsys/crosschain/chain/internet_computer/address"
 	icpbuilder "github.com/cordialsys/crosschain/chain/internet_computer/builder"
 	icpclient "github.com/cordialsys/crosschain/chain/internet_computer/client"
+	nearaddress "github.com/cordialsys/crosschain/chain/near/address"
+	nearbuilder "github.com/cordialsys/crosschain/chain/near/builder"
+	nearclient "github.com/cordialsys/crosschain/chain/near/client"
 	"github.com/cordialsys/crosschain/chain/solana"
 	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
 	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
@@ -108,6 +112,8 @@ func NewClient(cfg xc.ITask, driver xc.Driver) (xclient.Client, error) {
 		return bitcoin_cash.NewClient(cfg)
 	case xc.DriverSubstrate:
 		return substrateclient.NewClient(cfg)
+	case xc.DriverNear:
+		return nearclient.NewClient(cfg)
 	case xc.DriverTron:
 		return tron.NewClient(cfg)
 	case xc.DriverTon:
@@ -200,6 +206,8 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return bitcoin_cash.NewTxBuilder(cfg)
 	case xc.DriverSubstrate:
 		return substratebuilder.NewTxBuilder(cfg)
+	case xc.DriverNear:
+		return nearbuilder.NewTxBuilder(cfg)
 	case xc.DriverTron:
 		return tron.NewTxBuilder(cfg)
 	case xc.DriverTon:
@@ -256,6 +264,8 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 		return sui.NewAddressBuilder(cfg)
 	case xc.DriverSubstrate:
 		return substrateaddress.NewAddressBuilder(cfg)
+	case xc.DriverNear:
+		return nearaddress.NewAddressBuilder(cfg)
 	case xc.DriverTron:
 		return tron.NewAddressBuilder(cfg)
 	case xc.DriverTon:
@@ -331,6 +341,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return icp.CheckError(err)
 	case xc.DriverHedera:
 		return hedera.CheckError(err)
+	case xc.DriverNear:
+		return near.CheckError(err)
 	}
 	return errors.UnknownError
 }
@@ -388,6 +400,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return icp.ValidateAddress(cfg, addr)
 	case xc.DriverHedera:
 		return hedera.ValidateAddress(cfg, addr)
+	case xc.DriverNear:
+		return near.ValidateAddress(cfg, addr)
 	}
 	return fmt.Errorf("%w: %s", ErrNoAddressValidation, string(cfg.Chain))
 }

@@ -76,9 +76,9 @@ const (
 	KAVA     = NativeAsset("KAVA")     // Kava
 	KLAY     = NativeAsset("KLAY")     // Klaytn
 	KSM      = NativeAsset("KSM")      // Kusama
-	XDC      = NativeAsset("XDC")      // XinFin
 	MATIC    = NativeAsset("MATIC")    // Polygon
 	MON      = NativeAsset("MON")      // MONAD
+	NEAR     = NativeAsset("NEAR")     // Near
 	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
 	OAS      = NativeAsset("OAS")      // Oasys (not Oasis!)
 	OptETH   = NativeAsset("OptETH")   // Optimism
@@ -92,6 +92,7 @@ const (
 	TRX      = NativeAsset("TRX")      // TRON
 	SEI      = NativeAsset("SEI")      // Sei
 	SeiEVM   = NativeAsset("SeiEVM")   // SeiEVM
+	XDC      = NativeAsset("XDC")      // XinFin
 	XPL      = NativeAsset("XPL")      // Plasma
 	XRP      = NativeAsset("XRP")      // XRP
 	XLM      = NativeAsset("XLM")      // XLM
@@ -153,6 +154,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	XDC,
 	MATIC,
 	MON,
+	NEAR,
 	OAS,
 	OptETH,
 	EmROSE,
@@ -198,6 +200,7 @@ const (
 	DriverHyperliquid              = Driver("hyperliquid")
 	DriverInternetComputerProtocol = Driver("icp")
 	DriverKaspa                    = Driver("kaspa")
+	DriverNear                     = Driver("near")
 	DriverSubstrate                = Driver("substrate")
 	DriverSolana                   = Driver("solana")
 	DriverSui                      = Driver("sui")
@@ -224,6 +227,7 @@ var SupportedDrivers = []Driver{
 	DriverHedera,
 	DriverInternetComputerProtocol,
 	DriverKaspa,
+	DriverNear,
 	DriverSubstrate,
 	DriverSolana,
 	DriverSui,
@@ -322,6 +326,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSolana
 	case DOT, TAO, KSM, ENJ, KAR, ASTR:
 		return DriverSubstrate
+	case NEAR:
+		return DriverNear
 	case TRX:
 		return DriverTron
 	case TON:
@@ -356,7 +362,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -380,7 +386,8 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera:
 		return Uncompressed
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk, DriverKaspa, DriverInternetComputerProtocol:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear:
 		return Raw
 	}
 	return ""
