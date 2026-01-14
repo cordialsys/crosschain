@@ -969,7 +969,7 @@ chains:
     driver: near
     decimals: 24
     fee_limit: "200.0"
-    chain_gas_multiplier: 20.0
+    chain_gas_multiplier: 2.0
     external:
       coin_gecko:
         asset_id: near

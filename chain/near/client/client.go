@@ -25,7 +25,7 @@ import (
 
 const (
 	EventIdReceiptAction = "receipt"
-	DefaultGasMultiplier = float64(20.0)
+	DefaultGasMultiplier = float64(2.0)
 	DefaultRequestId     = "1"
 	JsonRpcVersion       = "2.0"
 	KeyId                = "id"
@@ -44,13 +44,6 @@ const (
 	Near                 = "NEAR"
 	SystemAccountId      = "system"
 )
-
-// Tx cost table: https://docs.near.org/protocol/gas#cost-for-common-actions
-// 0.000045 NEAR
-var FeeCostActionTransfer = xc.NewAmountBlockchainFromStr("45000000000000000000")
-
-// 0.03 NEAR
-var FeeCostActionFunctionCall = xc.NewAmountBlockchainFromStr("30000000000000000000000")
 
 // Client for Template
 type Client struct {
