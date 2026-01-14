@@ -51,12 +51,57 @@ func buildNativeTransaction() tx.Tx[tx.TransferAction] {
 	}
 }
 
-func TestTxSighashes(t *testing.T) {
+// Build your transaction
+func buildTokenTransaction(t *testing.T) tx.Tx[tx.FunctionCallAction] {
+	// PublicKey
+	pubKey := tx.PublicKey{
+		KeyType: 0,
+		Data: [32]byte{
+			242, 31, 43, 12, 14, 227, 230, 61, 65, 10, 176, 49, 129, 185, 181, 215,
+			154, 232, 219, 195, 85, 228, 110, 54, 119, 130, 185, 31, 12, 89, 12, 13,
+		},
+	}
 
+	// BlockHash
+	blockHash := [32]byte{
+		41, 91, 198, 122, 73, 58, 81, 66, 48, 45, 229, 36, 209, 13, 239, 197,
+		20, 41, 201, 128, 171, 215, 243, 224, 121, 34, 255, 111, 67, 69, 121, 178,
+	}
+
+	tokenTransfer, err := tx.NewFunctionCallAction("usdt.token", "receiver.testnet", xc.NewAmountBlockchainFromUint64(1000000), xc.NewAmountBlockchainFromUint64(1))
+	require.NoError(t, err)
+	require.NotNil(t, tokenTransfer)
+	// Build transaction
+	transaction := tx.Transaction[tx.FunctionCallAction]{
+		SignerID:   "f21f2b0c0ee3e63d410ab03181b9b5d79ae8dbc355e46e367782b91f0c590c0d",
+		PublicKey:  pubKey,
+		Nonce:      231253846000017,
+		ReceiverID: "crosschainxc.testnet",
+		BlockHash:  blockHash,
+		Actions: []tx.FunctionCallAction{
+			tokenTransfer,
+		},
+	}
+
+	return tx.Tx[tx.FunctionCallAction]{
+		Transaction: transaction,
+		Signature:   tx.Signature{},
+	}
+}
+
+func TestTxSighashes(t *testing.T) {
 	nativeTx := buildNativeTransaction()
 	expectedSighash := "9fabe1d1adb2e1d4326ca5c353d99afc45ebd1cc8e7e3f6a84717ddeecdd2e51"
 
 	sighashes, err := nativeTx.Sighashes()
+	require.NoError(t, err)
+	require.NotNil(t, sighashes)
+	require.Equal(t, expectedSighash, hex.EncodeToString(sighashes[0].Payload))
+
+	tokenTx := buildTokenTransaction(t)
+	expectedSighash = "441900dd7ea33bd355c373ce8ea2caadcf577dda47d732af11ef83164f8136c5"
+
+	sighashes, err = tokenTx.Sighashes()
 	require.NoError(t, err)
 	require.NotNil(t, sighashes)
 	require.Equal(t, expectedSighash, hex.EncodeToString(sighashes[0].Payload))
@@ -68,6 +113,10 @@ func TestTxHash(t *testing.T) {
 	hash := nativeTx.Hash()
 	require.Equal(t, expectedHash, hash)
 
+	tokenTx := buildTokenTransaction(t)
+	expectedHash = xc.TxHash("5apqXCbArtDvJcPEJ1vEVbt8xXpWsg2k6fpwHojAQwB2")
+	hash = tokenTx.Hash()
+	require.Equal(t, expectedHash, hash)
 }
 
 func TestUint128FromAmountBlockchain(t *testing.T) {

@@ -6,22 +6,13 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
+	"github.com/cordialsys/crosschain/chain/near/tx_input"
 	"github.com/stretchr/testify/require"
 )
 
 type TxInput = tx_input.TxInput
 
-func TestSafeFromDoubleSpend(t *testing.T) {
-
-	newInput := &TxInput{}
-	oldInput1 := &TxInput{}
-	// Defaults are false but each chain has conditions
-	require.False(t, newInput.SafeFromDoubleSend(oldInput1))
-	require.False(t, newInput.IndependentOf(oldInput1))
-}
-
-func TestTxInputConflicts(t *testing.T) {
+func TestTxInput(t *testing.T) {
 
 	type testcase struct {
 		oldInput xc.TxInput
@@ -32,16 +23,24 @@ func TestTxInputConflicts(t *testing.T) {
 	}
 	vectors := []testcase{
 		{
-			oldInput:        &TxInput{},
-			newInput:        &TxInput{},
+			oldInput: &TxInput{
+				Nonce: 0,
+			},
+			newInput: &TxInput{
+				Nonce: 0,
+			},
 			independent:     false,
-			doubleSpendSafe: false,
+			doubleSpendSafe: true,
 		},
 		{
-			newInput: &TxInput{},
+			newInput: &TxInput{
+				Nonce: 1,
+			},
 			// check no old input
-			oldInput:        nil,
-			independent:     false,
+			oldInput: &TxInput{
+				Nonce: 2,
+			},
+			independent:     true,
 			doubleSpendSafe: false,
 		},
 	}
