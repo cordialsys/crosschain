@@ -87,6 +87,7 @@ const (
 	SUI      = NativeAsset("SUI")      // SUI
 	XPLA     = NativeAsset("XPLA")     // XPLA
 	TAO      = NativeAsset("TAO")      // Bittensor
+	TEMPO    = NativeAsset("TEMPO")    // Tempo
 	TIA      = NativeAsset("TIA")      // celestia
 	TON      = NativeAsset("TON")      // TON
 	TRX      = NativeAsset("TRX")      // TRON
@@ -162,6 +163,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SUI,
 	XPLA,
 	TAO,
+	TEMPO,
 	TIA,
 	TON,
 	TRX,
@@ -306,7 +308,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG:
+	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

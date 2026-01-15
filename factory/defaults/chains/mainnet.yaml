@@ -1141,7 +1141,13 @@ chains:
         asset_id: "22974"
       coin_gecko:
         asset_id: bittensor
-
+  TEMPO:
+    chain: TEMPO
+    driver: evm
+    chain_id: 42431
+    chain_name: Tempo Testnet (Moderato)
+    decimals: 6
+    confirmations_final: 5
   TIA:
     chain: TIA
     driver: cosmos
