@@ -15,7 +15,7 @@ install:
 
 # you may need to create a builder in docker to enable multi-platform builds
 setup-builder:
-	docker buildx create --name multi-arch --platform linux/amd64,linux/arm64 --use
+	docker buildx create --platform linux/amd64,linux/arm64 --use
 
 build-push-images:
 	docker buildx bake --push
