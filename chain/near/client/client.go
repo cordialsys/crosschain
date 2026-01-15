@@ -10,12 +10,14 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	types "github.com/cordialsys/crosschain/chain/near/client/types"
+	nearerrors "github.com/cordialsys/crosschain/chain/near/errors"
 	"github.com/cordialsys/crosschain/chain/near/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
@@ -284,14 +286,26 @@ func (client *Client) processTransferAction(transfer types.TransferAction, from 
 
 // Returns transaction info - new endpoint
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
-	senderId, ok := args.Sender()
-	if !ok {
-		return txinfo.TxInfo{}, errors.New("sender id is required for NEAR TxInfo")
+	senderId := ""
+	hash := string(args.TxHash())
+	parts := strings.Split(hash, "-")
+	switch len(parts) {
+	case 2:
+		senderId = parts[0]
+		hash = parts[1]
+	case 1:
+		sender, ok := args.Sender()
+		if !ok {
+			return txinfo.TxInfo{}, nearerrors.ErrMissingSenderId
+		}
+		senderId = string(sender)
+	default:
+		return txinfo.TxInfo{}, nearerrors.ErrMissingSenderId
 	}
 
 	txStatusParams := types.TxStatusParams{
-		TxHash:          string(args.TxHash()),
-		SenderAccountId: string(senderId),
+		TxHash:          hash,
+		SenderAccountId: senderId,
 	}
 
 	txStatus, err := GetIndexer[types.TxStatus](ctx, client, MethodTxStatus, txStatusParams)
@@ -376,6 +390,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	fee = fee.Add(&transactionTokensBurnt)
 	txInfo.AddFee(xc.Address(txStatus.Transaction.SignerID), "", fee, nil)
 	txInfo.Fees = txInfo.CalculateFees()
+	txInfo.LookupId = fmt.Sprintf("%s-%s", txStatus.Transaction.SignerID, txInfo.Hash)
 	return *txInfo, nil
 }
 
