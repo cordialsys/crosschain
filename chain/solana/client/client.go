@@ -626,6 +626,54 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 	}
 
+	// As a last resort, try inferring SOL transfers from the balance changes. We should be careful not to double-report any of these movements.
+	accounts := tx.GetAccountKeys()
+	if len(meta.PreBalances) == len(meta.PostBalances) && len(meta.PreBalances) == len(accounts) {
+	NextBalanceChange:
+		for i := range accounts {
+			if meta.PreBalances[i] != meta.PostBalances[i] {
+				if meta.PostBalances[i] > meta.PreBalances[i] {
+					// this is a deposit from somewhere
+					amount := xc.NewAmountBlockchainFromUint64(meta.PostBalances[i] - meta.PreBalances[i])
+					sender := solana.SystemProgramID
+					recipient := xc.Address(accounts[i].String())
+					// take a guess of where it came from.
+					for j := range accounts {
+						if meta.PostBalances[j] < meta.PreBalances[j] {
+							sender = accounts[j]
+							break
+						}
+					}
+					// add it only if there's not existing deposit to this address
+					for _, dep := range dests {
+						if dep.Address == recipient {
+							break NextBalanceChange
+						}
+					}
+
+					// add balance change SOL movement
+					event := txinfo.NewEventFromIndex(uint64(i), txinfo.MovementBalanceChangeVariant)
+					sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
+						Address: xc.Address(sender.String()),
+						Amount:  amount,
+						Event:   event,
+					})
+					dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
+						Address: recipient,
+						Amount:  amount,
+						Event:   event,
+					})
+				}
+			}
+		}
+	} else {
+		logrus.WithFields(logrus.Fields{
+			"pre_balances":  meta.PreBalances,
+			"post_balances": meta.PostBalances,
+			"accounts":      accounts,
+		}).Warn("balance changes do not match account keys, skipping SOL transfer inference")
+	}
+
 	if len(sources) > 0 {
 		result.From = sources[0].Address
 	}

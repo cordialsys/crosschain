@@ -27,6 +27,8 @@ const (
 	// For transferring native asset internally in a smart contract, in a way that
 	// is different from tokens.
 	MovementVariantInternal MovementVariant = "internal"
+	// When the movement is detected from balance changes report rather than parsing directly.
+	MovementBalanceChangeVariant MovementVariant = "balance"
 	// For separate fee payment
 	MovementVariantFee MovementVariant = "fee"
 )
