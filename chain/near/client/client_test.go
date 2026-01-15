@@ -9,8 +9,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-
-	client, err := client.NewClient(xc.NewChainConfig(xc.NEAR))
-	require.NotNil(t, client)
+	c, err := client.NewClient(xc.NewChainConfig(xc.NEAR))
+	require.NotNil(t, c)
 	require.NoError(t, err)
 }

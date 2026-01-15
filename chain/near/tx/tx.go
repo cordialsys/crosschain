@@ -10,6 +10,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	nearerrors "github.com/cordialsys/crosschain/chain/near/errors"
 	"github.com/cordialsys/crosschain/chain/near/tx_input"
 	bin "github.com/gagliardetto/binary"
 )
@@ -140,10 +141,10 @@ func NewNativeTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[Tran
 
 	publicKey, ok := args.GetPublicKey()
 	if !ok {
-		return nil, errors.New("public key is required for NEAR transactions")
+		return nil, nearerrors.ErrMissingPublicKey
 	}
 	if len(publicKey) != PublicKeyLen {
-		return nil, fmt.Errorf("public key len should be exactly %d, got %d", PublicKeyLen, len(publicKey))
+		return nil, nearerrors.ErrInvalidPublicKeyLengthf(PublicKeyLen, len(publicKey))
 	}
 	var pkbz [PublicKeyLen]byte
 	copy(pkbz[:], publicKey)
@@ -174,7 +175,7 @@ func NewTokenTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[Funct
 	amount := args.GetAmount()
 	contract, ok := args.GetContract()
 	if !ok {
-		return nil, fmt.Errorf("contract is reqauired for token transfers")
+		return nil, fmt.Errorf("contract is required for token transfers")
 	}
 	tokenTransfer, err := NewFunctionCallAction(string(contract), string(to), amount, input.RequiredDepopsit)
 	if err != nil {
@@ -184,10 +185,10 @@ func NewTokenTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[Funct
 
 	publicKey, ok := args.GetPublicKey()
 	if !ok {
-		return nil, errors.New("public key is required for NEAR transactions")
+		return nil, nearerrors.ErrMissingPublicKey
 	}
 	if len(publicKey) != PublicKeyLen {
-		return nil, fmt.Errorf("public key len should be exactly %d, got %d", PublicKeyLen, len(publicKey))
+		return nil, nearerrors.ErrInvalidPublicKeyLengthf(PublicKeyLen, len(publicKey))
 	}
 	var pkbz [PublicKeyLen]byte
 	copy(pkbz[:], publicKey)

@@ -64,6 +64,7 @@ import (
 	nearaddress "github.com/cordialsys/crosschain/chain/near/address"
 	nearbuilder "github.com/cordialsys/crosschain/chain/near/builder"
 	nearclient "github.com/cordialsys/crosschain/chain/near/client"
+	nearerrors "github.com/cordialsys/crosschain/chain/near/errors"
 	"github.com/cordialsys/crosschain/chain/solana"
 	solanaaddress "github.com/cordialsys/crosschain/chain/solana/address"
 	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
@@ -342,7 +343,7 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 	case xc.DriverHedera:
 		return hedera.CheckError(err)
 	case xc.DriverNear:
-		return near.CheckError(err)
+		return nearerrors.CheckError(err)
 	}
 	return errors.UnknownError
 }
