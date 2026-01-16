@@ -25,3 +25,19 @@ func (input *MultiTransferInput) GetVariant() xc.TxVariantInputType {
 }
 
 func (input *MultiTransferInput) MultiTransfer() {}
+
+func (input *MultiTransferInput) GetNonce() uint64 {
+	return input.Nonce
+}
+
+func (input *MultiTransferInput) GetFromAddress() string {
+	return string(input.FromAddress)
+}
+
+func (input *MultiTransferInput) GetFeePayerNonce() uint64 {
+	return input.FeePayerNonce
+}
+
+func (input *MultiTransferInput) GetFeePayerAddress() string {
+	return string(input.FeePayerAddress)
+}

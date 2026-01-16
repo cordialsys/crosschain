@@ -16,7 +16,7 @@ import (
 type TxCall struct {
 	cfg             *xc.ChainBaseConfig
 	msg             json.RawMessage
-	call            Call
+	Call            Call
 	signingAddress  xc.Address
 	contractAddress xc.ContractAddress
 	amount          xc.AmountBlockchain

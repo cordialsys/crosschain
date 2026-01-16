@@ -36,6 +36,22 @@ type TxInput struct {
 	Prices []*Price `json:"prices,omitempty"`
 }
 
+func (input *TxInput) GetNonce() uint64 {
+	return input.Nonce
+}
+
+func (input *TxInput) GetFromAddress() string {
+	return string(input.FromAddress)
+}
+
+func (input *TxInput) GetFeePayerNonce() uint64 {
+	return input.FeePayerNonce
+}
+
+func (input *TxInput) GetFeePayerAddress() string {
+	return string(input.FeePayerAddress)
+}
+
 type ToTxInput interface {
 	// For ensuring compatibility with chains upgraded from evm-legacy driver
 	ToTxInput() *TxInput
@@ -97,41 +113,35 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return maxFeeSpend, ""
 }
 
+type GetAccountInfo interface {
+	GetNonce() uint64
+	GetFromAddress() string
+
+	GetFeePayerNonce() uint64
+	GetFeePayerAddress() string
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if toTxInput, ok := other.(ToTxInput); ok {
-		other = toTxInput.ToTxInput()
-	}
-	// different sequence means independence
-	var otherInput *TxInput
-	switch other := other.(type) {
-	case *TxInput:
-		otherInput = other
-	case *MultiTransferInput:
-		otherInput = &other.TxInput
-	case *BatchDepositInput:
-		otherInput = &other.TxInput
-	case *ExitRequestInput:
-		otherInput = &other.TxInput
-	default:
+	evmOther, ok := other.(GetAccountInfo)
+	if !ok {
 		return false
 	}
 
-	independent = true
-	if input.FeePayerAddress != "" || input.FeePayerNonce != 0 {
-		if otherInput.Nonce == input.Nonce && strings.EqualFold(string(otherInput.FromAddress), string(input.FromAddress)) {
-			independent = false
+	if input.GetFeePayerAddress() != "" || input.GetFeePayerNonce() != 0 {
+		if evmOther.GetNonce() == input.Nonce && strings.EqualFold(evmOther.GetFromAddress(), input.GetFromAddress()) {
+			return false
 		}
 		// Should not sign multiple tx for the same fee-payer nonce.
-		if strings.EqualFold(string(otherInput.FeePayerAddress), string(input.FeePayerAddress)) &&
-			otherInput.FeePayerNonce == input.FeePayerNonce {
-			independent = false
+		if strings.EqualFold(evmOther.GetFeePayerAddress(), input.GetFeePayerAddress()) &&
+			evmOther.GetFeePayerNonce() == input.GetFeePayerNonce() {
+			return false
 		}
 	} else {
-		if otherInput.Nonce == input.Nonce {
-			independent = false
+		if evmOther.GetNonce() == input.Nonce {
+			return false
 		}
 	}
-	return
+	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	if toTxInput, ok := other.(ToTxInput); ok {
