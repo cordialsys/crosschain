@@ -28,3 +28,19 @@ func (*CallInput) GetVariant() xc.TxVariantInputType {
 
 // Mark as valid for calling transactions
 func (*CallInput) Calling() {}
+
+func (input *CallInput) GetNonce() uint64 {
+	return input.Nonce
+}
+
+func (input *CallInput) GetFromAddress() string {
+	return string(input.FromAddress)
+}
+
+func (input *CallInput) GetFeePayerNonce() uint64 {
+	return input.FeePayerNonce
+}
+
+func (input *CallInput) GetFeePayerAddress() string {
+	return string(input.FeePayerAddress)
+}
