@@ -229,6 +229,12 @@ chains:
     external:
       indexing_co:
         chain_id: eth_holesky
+  FRAX:
+    chain: FRAX
+    driver: evm
+    chain_id: 2522
+    chain_name: Fraxtal Testnet L2
+    decimals: 18
   FIL:
     chain: FIL
     driver: filecoin

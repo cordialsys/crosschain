@@ -538,6 +538,19 @@ chains:
         chain_id: "94"
       coin_gecko:
         asset_id: oasis
+  FRAX:
+    chain: FRAX
+    driver: evm
+    chain_id: 252
+    chain_name: Fraxtal Mainnet L2
+    decimals: 18
+    fee_limit: "100.0"
+    confirmations_final: 10
+    external:
+      coin_market_cap:
+        chain_id: "6953"
+      coin_gecko:
+        asset_id: frax-share
   FIL:
     chain: FIL
     driver: filecoin
