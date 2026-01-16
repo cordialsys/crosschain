@@ -165,7 +165,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SUI,
 	XPLA,
 	TAO,
-	TEMPO,
+	// TEMPO,
 	TIA,
 	TON,
 	TRX,
