@@ -79,8 +79,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - name: install dagger
-        run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.14.0 BIN_DIR=/usr/bin sudo -E sh
+        run: curl -fsSL https://dl.dagger.io/dagger/install.sh | DAGGER_VERSION=0.19.1 BIN_DIR=/usr/bin sudo -E sh
       - name: test-param
         run: echo "tests; ${{join(matrix.chain.tests, ',')}}"
       - name: chain
