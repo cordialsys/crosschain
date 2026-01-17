@@ -14,6 +14,8 @@ import (
 	"github.com/gagliardetto/solana-go/programs/vote"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/sirupsen/logrus"
+
+	systemext "github.com/cordialsys/crosschain/chain/solana/tx/instructions/system"
 )
 
 type ResolvedInstruction struct {
@@ -277,4 +279,8 @@ func (tx Decoder) GetMemos() []instructionAtIndex[*memo.Create] {
 
 func (tx Decoder) GetAccountKeys() []solana.PublicKey {
 	return tx.txData.GetAccountKeys()
+}
+
+func (tx Decoder) GetCustomSystemIntentTransfers() []instructionAtIndex[*systemext.IntentTransfer] {
+	return getall[*systemext.IntentTransfer](&tx, systemext.DecodeInstruction, solana.SystemProgramID, tx.txData)
 }
