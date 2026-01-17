@@ -617,6 +617,25 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 		}
 		result.AddStakeEvent(xcStake)
 	}
+
+	for _, instr := range tx.GetCustomSystemIntentTransfers() {
+		from := instr.Instruction.GetFromAccount().PublicKey.String()
+		to := instr.Instruction.GetToAccount().PublicKey.String()
+		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
+		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
+
+		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
+			Address: xc.Address(from),
+			Amount:  amount,
+			Event:   event,
+		})
+		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
+			Address: xc.Address(to),
+			Amount:  amount,
+			Event:   event,
+		})
+	}
+
 	for i, instr := range tx.GetMemos() {
 		message := instr.Instruction.Message
 		if i < len(dests) {
@@ -624,54 +643,6 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 			// Shouldn't matter if we assign to dest or source here, as they are the same movement.
 			dests[i].Memo = string(message)
 		}
-	}
-
-	// As a last resort, try inferring SOL transfers from the balance changes. We should be careful not to double-report any of these movements.
-	accounts := tx.GetAccountKeys()
-	if len(meta.PreBalances) == len(meta.PostBalances) && len(meta.PreBalances) == len(accounts) {
-	NextBalanceChange:
-		for i := range accounts {
-			if meta.PreBalances[i] != meta.PostBalances[i] {
-				if meta.PostBalances[i] > meta.PreBalances[i] {
-					// this is a deposit from somewhere
-					amount := xc.NewAmountBlockchainFromUint64(meta.PostBalances[i] - meta.PreBalances[i])
-					sender := solana.SystemProgramID
-					recipient := xc.Address(accounts[i].String())
-					// take a guess of where it came from.
-					for j := range accounts {
-						if meta.PostBalances[j] < meta.PreBalances[j] {
-							sender = accounts[j]
-							break
-						}
-					}
-					// add it only if there's not existing deposit to this address
-					for _, dep := range dests {
-						if dep.Address == recipient {
-							break NextBalanceChange
-						}
-					}
-
-					// add balance change SOL movement
-					event := txinfo.NewEventFromIndex(uint64(i), txinfo.MovementBalanceChangeVariant)
-					sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-						Address: xc.Address(sender.String()),
-						Amount:  amount,
-						Event:   event,
-					})
-					dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-						Address: recipient,
-						Amount:  amount,
-						Event:   event,
-					})
-				}
-			}
-		}
-	} else {
-		logrus.WithFields(logrus.Fields{
-			"pre_balances":  meta.PreBalances,
-			"post_balances": meta.PostBalances,
-			"accounts":      accounts,
-		}).Warn("balance changes do not match account keys, skipping SOL transfer inference")
 	}
 
 	if len(sources) > 0 {
