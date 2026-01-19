@@ -30,13 +30,11 @@ type Params struct {
 type Call struct {
 	// The binary Solana transaction to sign
 	Transaction []byte `json:"transaction"`
-	// The account/address to sign the transaction with
-	Account solana.PublicKey `json:"account"`
 }
 
 var _ xc.TxCall = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage, address xc.Address) (*TxCall, error) {
 	var call Call
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
@@ -49,13 +47,13 @@ func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage) (*TxCall, error) {
 
 	var signingAddress xc.Address = ""
 	for _, signer := range solanaTx.Message.Signers() {
-		if signer.String() == call.Account.String() {
+		if signer.String() == string(address) {
 			signingAddress = xc.Address(signer.String())
 			break
 		}
 	}
 	if signingAddress == "" {
-		return nil, fmt.Errorf("requested address %s is not referenced in transaction", call.Account.String())
+		return nil, fmt.Errorf("requested address %s is not referenced in transaction", address)
 	}
 
 	programIDs, err := solanaTx.GetProgramIDs()
