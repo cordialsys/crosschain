@@ -12,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/evm/abi/gas_price_oracle"
 	"github.com/cordialsys/crosschain/chain/evm/address"
 	"github.com/cordialsys/crosschain/chain/evm/builder"
+	evmcall "github.com/cordialsys/crosschain/chain/evm/call"
 	"github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum"
@@ -356,6 +357,34 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.Ca
 	if err != nil {
 		return nil, err
 	}
+
+	evmCall := call.(*evmcall.TxCall)
+	fromAddr, _ := address.FromHex(from)
+	toAddr, _ := address.FromHex(xc.Address(evmCall.Call.To))
+	data := evmCall.Call.Data
+	value := evmCall.Call.Amount
+	msg := ethereum.CallMsg{
+		From: fromAddr,
+		To:   &toAddr,
+		// use a high limit just for the estimation
+		Gas:        8_000_000,
+		Value:      value.Int(),
+		Data:       data,
+		AccessList: types.AccessList{},
+	}
+	zero := big.NewInt(0)
+	// we should not include both gas pricing, need to pick one.
+	if client.Asset.GetChain().Driver == xc.DriverEVMLegacy {
+		msg.GasPrice = zero
+	} else {
+		msg.GasFeeCap = zero
+		msg.GasTipCap = zero
+	}
+	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
+	if err != nil {
+		return nil, err
+	}
+	txInput.GasLimit = gasLimit
 
 	return &tx_input.CallInput{TxInput: *txInput}, nil
 }
