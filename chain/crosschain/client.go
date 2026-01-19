@@ -380,9 +380,10 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/call-input",
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/addresses/%s/call-input",
 		client.URL,
 		chain,
+		call.SigningAddresses()[0],
 	)
 	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, call.GetMsg())
 	if err != nil {

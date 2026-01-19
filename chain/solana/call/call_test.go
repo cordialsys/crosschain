@@ -67,9 +67,9 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	}
 
 	// Build Call JSON targeting k1 as the requested account
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes, Account: k1})
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	cfg := &xc.ChainBaseConfig{}
-	c, err := call.NewCall(cfg, raw)
+	c, err := call.NewCall(cfg, raw, xc.Address(k1.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -136,8 +136,8 @@ func TestSighashesAndHashBehavior(t *testing.T) {
 		t.Fatalf("failed to marshal tx: %v", err)
 	}
 
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes, Account: k1})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw)
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(k1.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -192,8 +192,8 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 
 	// pick an unrelated account as the requested Account
 	bad := solana.NewWallet().PublicKey()
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes, Account: bad})
-	_, err = call.NewCall(&xc.ChainBaseConfig{}, raw)
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+	_, err = call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(bad.String()))
 	if err == nil {
 		t.Fatalf("expected NewCall to error when Account is not among message signers")
 	}
@@ -208,8 +208,8 @@ func TestSolanaSetInput_NilAccepted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal tx: %v", err)
 	}
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes, Account: payer})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw)
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(payer.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -226,8 +226,8 @@ func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal tx: %v", err)
 	}
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes, Account: payer})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw)
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(payer.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}

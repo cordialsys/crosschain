@@ -26,39 +26,26 @@ type TxCall struct {
 	signature xc.TxSignature
 }
 
-type Params struct {
-	From  string              `json:"from"`
-	To    string              `json:"to"`
-	Value xc.AmountBlockchain `json:"value"`
-	Data  hex.Hex             `json:"data"`
-}
-
 // Must match API type
 type Call struct {
-	Method string `json:"method"`
-	// Params safe_map.Map `json:"params"`
-	Params []Params `json:"params"`
+	Method string              `json:"method"`
+	To     string              `json:"to"`
+	Amount xc.AmountBlockchain `json:"amount"`
+	Data   hex.Hex             `json:"data"`
 }
 
 var _ xc.TxCall = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage, signingAddress xc.Address) (*TxCall, error) {
 	var call Call
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
 	}
-	// TODO: take the first param obj?
-	if len(call.Params) != 1 {
-		return nil, fmt.Errorf("only params with a signle element supported for now, got %d", len(call.Params))
-	}
-	params := call.Params[0]
 
-	signingAddress := xc.Address(params.From)
+	contractAddress := xc.ContractAddress(call.To)
 
-	contractAddress := xc.ContractAddress(params.To)
-
-	amount := params.Value
-	data := []byte(params.Data)
+	amount := call.Amount
+	data := []byte(call.Data)
 
 	var input *tx_input.CallInput = nil
 	var signature xc.TxSignature = nil

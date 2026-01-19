@@ -360,10 +360,9 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.Ca
 
 	evmCall := call.(*evmcall.TxCall)
 	fromAddr, _ := address.FromHex(from)
-	params := evmCall.Call.Params[0]
-	toAddr, _ := address.FromHex(xc.Address(params.To))
-	data := params.Data
-	value := params.Value
+	toAddr, _ := address.FromHex(xc.Address(evmCall.Call.To))
+	data := evmCall.Call.Data
+	value := evmCall.Call.Amount
 	msg := ethereum.CallMsg{
 		From: fromAddr,
 		To:   &toAddr,
