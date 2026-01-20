@@ -52,11 +52,6 @@ func (input *TxInput) GetFeePayerAddress() string {
 	return string(input.FeePayerAddress)
 }
 
-type ToTxInput interface {
-	// For ensuring compatibility with chains upgraded from evm-legacy driver
-	ToTxInput() *TxInput
-}
-
 var _ xc.TxInput = &TxInput{}
 
 func init() {
@@ -122,8 +117,8 @@ type GetAccountInfo interface {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if toTxInput, ok := other.(ToTxInput); ok {
-		other = toTxInput.ToTxInput()
+	if other == nil {
+		return false
 	}
 	evmOther, ok := other.(GetAccountInfo)
 	if !ok {
@@ -147,10 +142,7 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if toTxInput, ok := other.(ToTxInput); ok {
-		other = toTxInput.ToTxInput()
-	}
-	if !xc.IsTypeOf(other, input, MultiTransferInput{}, BatchDepositInput{}, ExitRequestInput{}) {
+	if other == nil {
 		return false
 	}
 	// all same sequence means no double send
