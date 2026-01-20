@@ -14,13 +14,13 @@ import (
 
 // Client for Template
 type Client struct {
-	Asset xc.ITask
+	Asset *xc.ChainConfig
 }
 
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	return &Client{cfgI}, errors.New("not implemented")
 }
 

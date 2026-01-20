@@ -30,7 +30,7 @@ import (
 // Client for Solana
 type Client struct {
 	SolClient *rpc.Client
-	Asset     xc.ITask
+	Asset     *xc.ChainConfig
 }
 
 var _ xclient.Client = &Client{}
@@ -38,7 +38,7 @@ var _ xclient.StakingClient = &Client{}
 var _ xclient.CallClient = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the Solana node
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	solClient := rpc.New(cfg.URL)
 	return &Client{

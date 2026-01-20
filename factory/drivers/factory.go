@@ -89,7 +89,7 @@ import (
 	"github.com/cordialsys/crosschain/factory/signer"
 )
 
-func NewClient(cfg xc.ITask, driver xc.Driver) (xclient.Client, error) {
+func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 	switch driver {
 	case xc.DriverCardano:
 		return cardanoclient.NewClient(cfg)
@@ -141,7 +141,7 @@ func NewClient(cfg xc.ITask, driver xc.Driver) (xclient.Client, error) {
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
 
-func NewStakingClient(servicesConfig *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error) {
+func NewStakingClient(servicesConfig *services.ServicesConfig, cfg *xc.ChainConfig, provider xc.StakingProvider) (xclient.StakingClient, error) {
 	driver := cfg.GetChain().Driver
 	switch driver {
 	case xc.DriverEVM:

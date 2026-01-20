@@ -3,6 +3,8 @@ package crosschain
 import (
 	"encoding/json"
 	"reflect"
+
+	"github.com/cordialsys/crosschain/call"
 )
 
 // TxInput is input data to a tx. Depending on the blockchain it can include nonce, recent block hash, account id, ...
@@ -193,4 +195,7 @@ type TxCall interface {
 
 	// Get original serialized message that Call was constructed with
 	GetMsg() json.RawMessage
+
+	// Get the method of the call
+	GetMethod() call.Method
 }

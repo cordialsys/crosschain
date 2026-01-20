@@ -21,7 +21,7 @@ import (
 type CrosschainTestSuite struct {
 	suite.Suite
 	Ctx   context.Context
-	Asset xc.ITask
+	Asset *xc.ChainConfig
 }
 
 func (s *CrosschainTestSuite) SetupTest() {

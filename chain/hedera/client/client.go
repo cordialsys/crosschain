@@ -70,7 +70,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Hedera Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	url, err := url.Parse(cfg.IndexerUrl)
 	if err != nil {

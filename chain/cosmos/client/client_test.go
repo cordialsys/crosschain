@@ -342,7 +342,7 @@ func TestSubmitTxErr(t *testing.T) {
 func TestFetchTxInfo(t *testing.T) {
 
 	vectors := []struct {
-		asset xc.ITask
+		asset *xc.ChainConfig
 		tx    string
 		resp  interface{}
 		val   txinfo.LegacyTxInfo
@@ -639,7 +639,7 @@ func TestFetchTxInfo(t *testing.T) {
 func TestFetchBalance(t *testing.T) {
 
 	vectors := []struct {
-		asset    xc.ITask
+		asset    *xc.ChainConfig
 		contract xc.ContractAddress
 		address  string
 		resp     interface{}

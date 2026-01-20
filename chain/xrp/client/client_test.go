@@ -272,7 +272,7 @@ func TestSubmitTx(t *testing.T) {
 	vectors := []struct {
 		txInput    xc.Tx
 		submitResp types.SubmitResponse
-		asset      xc.ITask
+		asset      *xc.ChainConfig
 	}{
 		{
 			txInput: &xrptx.Tx{

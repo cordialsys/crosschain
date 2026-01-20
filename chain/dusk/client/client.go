@@ -26,7 +26,7 @@ import (
 
 // Client for Dusk
 type Client struct {
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 	Url        string
 	RuesUrl    string
 	HttpClient *http.Client
@@ -36,7 +36,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Dusk Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	logger := log.WithFields(log.Fields{
 		"chain":   cfg.Chain,

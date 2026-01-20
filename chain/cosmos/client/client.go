@@ -40,7 +40,7 @@ import (
 
 // Client for Cosmos
 type Client struct {
-	Asset     xc.ITask
+	Asset     *xc.ChainConfig
 	Ctx       client.Context
 	rpcClient *jsonrpcclient.Client
 	Prefix    string
@@ -74,7 +74,7 @@ func NewClientFrom(chain xc.NativeAsset, chainId string, chainPrefix string, rpc
 }
 
 // NewClient returns a new Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	host := cfg.URL
@@ -247,13 +247,11 @@ func (client *Client) FetchBaseTxInput(ctx context.Context, from xc.Address, con
 		txInput.FeePayerAccountNumber = feePayerAccount.GetAccountNumber()
 	}
 
-	switch client.Asset.(type) {
-	case *xc.ChainConfig:
-		txInput.GasLimit = gas.NativeTransferGasLimit
-		if client.Asset.GetChain().Chain == xc.HASH {
-			txInput.GasLimit = 200_000
-		}
-	default:
+	txInput.GasLimit = gas.NativeTransferGasLimit
+	if client.Asset.GetChain().Chain == xc.HASH {
+		txInput.GasLimit = 200_000
+	}
+	if contractMaybe != "" {
 		txInput.GasLimit = gas.TokenTransferGasLimit
 	}
 

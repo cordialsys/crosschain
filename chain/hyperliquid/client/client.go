@@ -50,7 +50,7 @@ const (
 // - "info" api is main hyperliquid api
 // - "explorer" api is available only via RPC, it provides transaction/user/block details
 type Client struct {
-	Asset xc.ITask
+	Asset *xc.ChainConfig
 	// Node url
 	Url *url.URL
 	// Explorer/Indexer url
@@ -63,7 +63,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new hyperliquid Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 
 	if cfg.IndexerUrl == "" {

@@ -28,13 +28,13 @@ import (
 type Client struct {
 	Url        string
 	HttpClient *http.Client
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 	Passphrase string
 }
 
 var _ xclient.Client = &Client{}
 
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	networkPassphrase := cfg.ChainID.AsString()
 	if networkPassphrase == "" {

@@ -26,14 +26,14 @@ type BtcClient interface {
 	address.WithAddressDecoder
 }
 
-func NewClient(cfgI xc.ITask) (BtcClient, error) {
+func NewClient(cfgI *xc.ChainConfig) (BtcClient, error) {
 	cli, err := NewBitcoinClient(cfgI)
 	if err != nil {
 		return cli, err
 	}
 	return cli.WithAddressDecoder(&address.BtcAddressDecoder{}).(BtcClient), nil
 }
-func NewBitcoinClient(cfgI xc.ITask) (BtcClient, error) {
+func NewBitcoinClient(cfgI *xc.ChainConfig) (BtcClient, error) {
 	log := log.WithField("chain", cfgI.GetChain().Chain)
 	if strings.Contains(cfgI.GetChain().URL, "api.blockchair.com") {
 		log.Debug("using blockchair client")

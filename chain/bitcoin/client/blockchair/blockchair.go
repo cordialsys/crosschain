@@ -31,7 +31,7 @@ import (
 type BlockchairClient struct {
 	// opts            ClientOptions
 	httpClient       http.Client
-	Asset            xc.ITask
+	Asset            *xc.ChainConfig
 	Chaincfg         *chaincfg.Params
 	Url              string
 	ApiKey           string
@@ -43,7 +43,7 @@ var _ xclient.Client = &BlockchairClient{}
 var _ address.WithAddressDecoder = &BlockchairClient{}
 
 // NewClient returns a new Bitcoin Client
-func NewBlockchairClient(cfgI xc.ITask) (*BlockchairClient, error) {
+func NewBlockchairClient(cfgI *xc.ChainConfig) (*BlockchairClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := cfg.DefaultHttpClient()

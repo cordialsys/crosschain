@@ -24,13 +24,13 @@ import (
 type Client struct {
 	Url        string
 	HttpClient *http.Client
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 }
 
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new JSON-RPC Client to the XRP node
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 
 	return &Client{

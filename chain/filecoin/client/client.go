@@ -25,7 +25,7 @@ import (
 type Client struct {
 	Url        string
 	HttpClient *http.Client
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 	Logger     *log.Entry
 }
 
@@ -35,7 +35,7 @@ var _ xclient.Client = &Client{}
 var DefaultMaxGasPrice = xc.NewAmountBlockchainFromUint64(10_000_000)
 
 // NewClient returns a new Filecoin Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	logger := log.WithFields(log.Fields{
 		"chain":   cfg.Chain,

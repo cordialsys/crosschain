@@ -6,6 +6,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/call"
 	xclient "github.com/cordialsys/crosschain/client/tx_info"
 	xclient_types "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/pkg/hex"
@@ -277,4 +278,10 @@ func UnpackSubBlocks(apiBlocks []*BlockResponse) ([]*xclient.SubBlockWithTransac
 	}
 
 	return blocks, nil
+}
+
+type CallInputReq struct {
+	Method    call.Method     `json:"method"`
+	Request   json.RawMessage `json:"request"`
+	Addresses []xc.Address    `json:"addresses"`
 }

@@ -30,7 +30,7 @@ import (
 // Client for Substrate
 type Client struct {
 	DotClient  *gsrpc.SubstrateAPI
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 	indexerUrl string
 	apiKey     string
 }
@@ -46,7 +46,7 @@ var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 
 // NewClient returns a new Substrate Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	chain := cfgI.GetChain()
 	rpcurl := chain.URL
 

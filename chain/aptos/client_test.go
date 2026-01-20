@@ -56,7 +56,7 @@ func TestFetchTxInput(t *testing.T) {
 	require := require.New(t)
 
 	vectors := []struct {
-		asset xc.ITask
+		asset *xc.ChainConfig
 		resp  []string
 		from  string
 		input *tx_input.TxInput
@@ -394,7 +394,7 @@ func TestFetchTxInfo(t *testing.T) {
 func TestFetchBalance(t *testing.T) {
 	require := require.New(t)
 	vectors := []struct {
-		asset    xc.ITask
+		asset    *xc.ChainConfig
 		contract xc.ContractAddress
 		resp     interface{}
 		val      string

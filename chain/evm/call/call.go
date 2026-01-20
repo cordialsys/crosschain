@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/call"
 	evmaddress "github.com/cordialsys/crosschain/chain/evm/address"
 	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/cordialsys/crosschain/chain/evm/tx_input"
@@ -15,6 +16,7 @@ import (
 // Internal type
 type TxCall struct {
 	cfg             *xc.ChainBaseConfig
+	method          call.Method
 	msg             json.RawMessage
 	Call            Call
 	signingAddress  xc.Address
@@ -36,7 +38,7 @@ type Call struct {
 
 var _ xc.TxCall = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage, signingAddress xc.Address) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddress xc.Address) (*TxCall, error) {
 	var call Call
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
@@ -50,7 +52,7 @@ func NewCall(cfg *xc.ChainBaseConfig, msg json.RawMessage, signingAddress xc.Add
 	var input *tx_input.CallInput = nil
 	var signature xc.TxSignature = nil
 
-	return &TxCall{cfg, msg, call, signingAddress, contractAddress, amount, data, input, signature}, nil
+	return &TxCall{cfg, method, msg, call, signingAddress, contractAddress, amount, data, input, signature}, nil
 }
 
 func (c *TxCall) SigningAddresses() []xc.Address {
@@ -63,6 +65,9 @@ func (c *TxCall) ContractAddresses() []xc.ContractAddress {
 
 func (c *TxCall) GetMsg() json.RawMessage {
 	return c.msg
+}
+func (c *TxCall) GetMethod() call.Method {
+	return c.method
 }
 
 func (c *TxCall) SetInput(input xc.CallTxInput) error {

@@ -32,14 +32,14 @@ import (
 // Client for Template
 type Client struct {
 	Url    string
-	Asset  xc.ITask
+	Asset  *xc.ChainConfig
 	ApiKey string
 }
 
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	chain := cfgI.GetChain()
 	url := chain.URL
 	url = strings.TrimSuffix(url, "/")

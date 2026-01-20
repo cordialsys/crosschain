@@ -29,7 +29,7 @@ import (
 
 // Client for Template
 type Client struct {
-	Asset           xc.ITask
+	Asset           *xc.ChainConfig
 	URL             string
 	Http            *http.Client
 	Network         xc.NetworkSelector
@@ -45,7 +45,7 @@ var _ xclient.MultiTransferClient = &Client{}
 const ServiceApiKeyHeader = "x-service-api-key"
 
 // NewClient returns a new Crosschain Client
-func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig, url string, apiKeyRef config.Secret, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
 	url = strings.TrimSuffix(url, "/")
 	var apiKey string
 	var err error
@@ -72,7 +72,7 @@ func NewClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, network xc.Ne
 	}, nil
 }
 
-func NewStakingClient(cfgI xc.ITask, url string, apiKeyRef config.Secret, serviceApiKey config.Secret, provider xc.StakingProvider, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
+func NewStakingClient(cfgI *xc.ChainConfig, url string, apiKeyRef config.Secret, serviceApiKey config.Secret, provider xc.StakingProvider, network xc.NetworkSelector, httpTimeout time.Duration) (*Client, error) {
 	client, err := NewClient(cfgI, url, apiKeyRef, network, httpTimeout)
 	if err != nil {
 		return nil, err
@@ -378,14 +378,12 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/call-input",
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/call",
 		client.URL,
 		chain,
 	)
-	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, struct {
-		Request   json.RawMessage `json:"request"`
-		Addresses []xc.Address    `json:"addresses"`
-	}{
+	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, &types.CallInputReq{
+		Method:    call.GetMethod(),
 		Request:   call.GetMsg(),
 		Addresses: call.SigningAddresses(),
 	})

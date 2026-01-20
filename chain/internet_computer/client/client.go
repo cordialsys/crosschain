@@ -34,7 +34,7 @@ const NumberOfTransactionsForTxInfo = uint64(100)
 // Client for InternetComputerProtocol
 type Client struct {
 	Agent  *agent.Agent
-	Asset  xc.ITask
+	Asset  *xc.ChainConfig
 	Logger *log.Entry
 	Url    *url.URL
 }
@@ -58,7 +58,7 @@ func newAgentConfig(identity icpaddress.Ed25519Identity, remote *url.URL, logger
 }
 
 // NewClient returns a new InternetComputerProtocol Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	url, err := url.Parse(cfg.URL)
 	if err != nil {
