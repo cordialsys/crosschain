@@ -122,6 +122,9 @@ type GetAccountInfo interface {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if toTxInput, ok := other.(ToTxInput); ok {
+		other = toTxInput.ToTxInput()
+	}
 	evmOther, ok := other.(GetAccountInfo)
 	if !ok {
 		return false

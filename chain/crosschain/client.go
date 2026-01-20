@@ -17,8 +17,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
-	evmtxinput "github.com/cordialsys/crosschain/chain/evm/tx_input"
-	solanatxinput "github.com/cordialsys/crosschain/chain/solana/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
@@ -380,28 +378,21 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/addresses/%s/call-input",
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/call-input",
 		client.URL,
 		chain,
-		call.SigningAddresses()[0],
 	)
-	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, call.GetMsg())
+	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, struct {
+		Request   json.RawMessage `json:"request"`
+		Addresses []xc.Address    `json:"addresses"`
+	}{
+		Request:   call.GetMsg(),
+		Addresses: call.SigningAddresses(),
+	})
 	if err != nil {
 		return nil, err
 	}
-	var resp xc.CallTxInput
-	switch chain {
-	case xc.SOL:
-		resp = &solanatxinput.CallInput{}
-	case xc.ETH:
-		resp = &evmtxinput.CallInput{}
-	default:
-		return nil, fmt.Errorf("unsupported chain: %s", chain)
-	}
-	if err = json.Unmarshal(responseBody, &resp); err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return drivers.UnmarshalCallInput(responseBody)
 }
 
 // FetchBalance fetches token balance from a Crosschain endpoint
