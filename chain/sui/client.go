@@ -29,7 +29,7 @@ const NativeCoin = "0x2::sui::SUI"
 
 // Client for Sui
 type Client struct {
-	Asset     xc.ITask
+	Asset     *xc.ChainConfig
 	SuiClient *client.Client
 	// for testing
 	LastSignatureCount int
@@ -68,7 +68,7 @@ func (i *HttpLogger) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // NewClient returns a new Sui Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	httpClient := &http.Client{
 		Timeout: cfg.DefaultHttpClient().Timeout,

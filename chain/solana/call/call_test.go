@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xccall "github.com/cordialsys/crosschain/call"
 	"github.com/cordialsys/crosschain/chain/solana/call"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/memo"
@@ -69,7 +70,7 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	// Build Call JSON targeting k1 as the requested account
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	cfg := &xc.ChainBaseConfig{}
-	c, err := call.NewCall(cfg, raw, xc.Address(k1.String()))
+	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -137,7 +138,7 @@ func TestSighashesAndHashBehavior(t *testing.T) {
 	}
 
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(k1.String()))
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -193,7 +194,7 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 	// pick an unrelated account as the requested Account
 	bad := solana.NewWallet().PublicKey()
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	_, err = call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(bad.String()))
+	_, err = call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(bad.String()))
 	if err == nil {
 		t.Fatalf("expected NewCall to error when Account is not among message signers")
 	}
@@ -209,7 +210,7 @@ func TestSolanaSetInput_NilAccepted(t *testing.T) {
 		t.Fatalf("failed to marshal tx: %v", err)
 	}
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(payer.String()))
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}
@@ -227,7 +228,7 @@ func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
 		t.Fatalf("failed to marshal tx: %v", err)
 	}
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, raw, xc.Address(payer.String()))
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
 	if err != nil {
 		t.Fatalf("NewCall failed: %v", err)
 	}

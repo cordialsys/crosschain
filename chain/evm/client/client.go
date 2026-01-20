@@ -48,7 +48,7 @@ func init() {
 
 // Client for EVM
 type Client struct {
-	Asset       xc.ITask
+	Asset       *xc.ChainConfig
 	EthClient   *ethclient.Client
 	ChainId     *big.Int
 	Interceptor *utils.HttpInterceptor
@@ -95,7 +95,7 @@ func ReplaceIncompatiableEvmResponses(body []byte) []byte {
 }
 
 // NewClient returns a new EVM Client
-func NewClient(asset xc.ITask) (*Client, error) {
+func NewClient(asset *xc.ChainConfig) (*Client, error) {
 	nativeAsset := asset.GetChain()
 	url := asset.GetChain().URL
 

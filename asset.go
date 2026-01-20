@@ -793,8 +793,6 @@ func (chain *ChainClientConfig) Configure() {
 	}
 }
 
-var _ ITask = &ChainConfig{}
-
 func (c ChainConfig) String() string {
 	secretRef := string(c.Auth2)
 	if !config.HasTypePrefix(secretRef) || strings.HasPrefix(secretRef, string(config.Raw)) {

@@ -26,7 +26,7 @@ import (
 
 // Client for Aptos
 type Client struct {
-	Asset       xc.ITask
+	Asset       *xc.ChainConfig
 	AptosClient *aptosclient.RestClient
 }
 
@@ -35,7 +35,7 @@ var _ xclient.Client = &Client{}
 const DefaultGasLimit = 10000
 
 // NewClient returns a new Aptos Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
@@ -49,7 +49,7 @@ func NewClient(cfgI xc.ITask) (*Client, error) {
 
 // Enable constructing multiple clients without dialing aptos endpoint
 // multiple times
-func NewClientFrom(asset xc.ITask, client *aptosclient.RestClient) *Client {
+func NewClientFrom(asset *xc.ChainConfig, client *aptosclient.RestClient) *Client {
 	return &Client{
 		Asset:       asset,
 		AptosClient: client,

@@ -68,7 +68,7 @@ func (input *TxInput) GetNonce() uint64 {
 	return (*evminput.TxInput)(input).GetNonce()
 }
 
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	evmClient, err := evmclient.NewClient(cfgI)
 	if err != nil {
 		return nil, err

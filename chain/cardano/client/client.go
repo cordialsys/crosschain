@@ -48,7 +48,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	chainConfig := cfgI.GetChain()
 	url := chainConfig.GetChain().URL
 	if url == "" {

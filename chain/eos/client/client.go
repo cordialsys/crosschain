@@ -28,7 +28,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	url := cfgI.GetChain().URL
 	auth := cfgI.GetChain().Auth2
 	apiKey := ""

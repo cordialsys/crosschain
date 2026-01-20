@@ -17,7 +17,7 @@ import (
 
 // FactoryContext is the main Factory interface
 type FactoryContext interface {
-	NewClient(asset xc.ITask) (xclient.Client, error)
+	NewClient(asset *xc.ChainConfig) (xclient.Client, error)
 	NewTxBuilder(asset *xc.ChainBaseConfig) (builder.FullTransferBuilder, error)
 	NewSigner(asset *xc.ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error)
 	NewAddressBuilder(asset *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error)
@@ -27,12 +27,12 @@ type FactoryContext interface {
 
 	GetAddressFromPublicKey(asset *xc.ChainBaseConfig, publicKey []byte, options ...xcaddress.AddressOption) (xc.Address, error)
 
-	MustAmountBlockchain(asset xc.ITask, humanAmountStr string) xc.AmountBlockchain
-	MustAddress(asset xc.ITask, addressStr string) xc.Address
+	MustAmountBlockchain(asset *xc.ChainConfig, humanAmountStr string) xc.AmountBlockchain
+	MustAddress(asset *xc.ChainConfig, addressStr string) xc.Address
 
-	ConvertAmountToHuman(asset xc.ITask, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error)
-	ConvertAmountToBlockchain(asset xc.ITask, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error)
-	ConvertAmountStrToBlockchain(asset xc.ITask, humanAmountStr string) (xc.AmountBlockchain, error)
+	ConvertAmountToHuman(asset *xc.ChainConfig, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error)
+	ConvertAmountToBlockchain(asset *xc.ChainConfig, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error)
+	ConvertAmountStrToBlockchain(asset *xc.ChainConfig, humanAmountStr string) (xc.AmountBlockchain, error)
 
 	GetChain(nativeAsset xc.NativeAsset) (*xc.ChainConfig, bool)
 	GetConfig() config.Config
@@ -40,7 +40,7 @@ type FactoryContext interface {
 	GetAllChains() []*xc.ChainConfig
 
 	GetNetworkSelector() xc.NetworkSelector
-	NewStakingClient(stakingCfg *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error)
+	NewStakingClient(stakingCfg *services.ServicesConfig, cfg *xc.ChainConfig, provider xc.StakingProvider) (xclient.StakingClient, error)
 }
 
 // Factory is the main Factory implementation, holding the config
@@ -72,7 +72,7 @@ func (f *Factory) GetConfig() config.Config {
 }
 
 // NewClient creates a new Client
-func (f *Factory) NewClient(cfg xc.ITask) (xclient.Client, error) {
+func (f *Factory) NewClient(cfg *xc.ChainConfig) (xclient.Client, error) {
 	chainConfig := cfg.GetChain()
 	if f.NoXcClients {
 		if chainConfig.URL == "" {
@@ -93,7 +93,7 @@ func (f *Factory) NewClient(cfg xc.ITask) (xclient.Client, error) {
 	}
 }
 
-func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error) {
+func (f *Factory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg *xc.ChainConfig, provider xc.StakingProvider) (xclient.StakingClient, error) {
 	chainConfig := cfg.GetChain()
 	if !f.NoXcClients {
 		url, driver := chainConfig.ClientURL()
@@ -163,21 +163,21 @@ func (f *Factory) GetAddressFromPublicKey(cfg *xc.ChainBaseConfig, publicKey []b
 }
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
-func (f *Factory) ConvertAmountToHuman(cfg xc.ITask, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error) {
+func (f *Factory) ConvertAmountToHuman(cfg *xc.ChainConfig, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error) {
 	dec := cfg.GetDecimals()
 	amount := blockchainAmount.ToHuman(dec)
 	return amount, nil
 }
 
 // ConvertAmountToBlockchain converts an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
-func (f *Factory) ConvertAmountToBlockchain(cfg xc.ITask, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error) {
+func (f *Factory) ConvertAmountToBlockchain(cfg *xc.ChainConfig, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error) {
 	dec := cfg.GetDecimals()
 	amount := humanAmount.ToBlockchain(dec)
 	return amount, nil
 }
 
 // ConvertAmountStrToBlockchain converts a string representing an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
-func (f *Factory) ConvertAmountStrToBlockchain(cfg xc.ITask, humanAmountStr string) (xc.AmountBlockchain, error) {
+func (f *Factory) ConvertAmountStrToBlockchain(cfg *xc.ChainConfig, humanAmountStr string) (xc.AmountBlockchain, error) {
 	human, err := xc.NewAmountHumanReadableFromStr(humanAmountStr)
 	if err != nil {
 		return xc.AmountBlockchain{}, err
@@ -219,12 +219,12 @@ func (f *Factory) ConvertAmountStrToBlockchain(cfg xc.ITask, humanAmountStr stri
 // }
 
 // MustAddress coverts a string to Address, panic if error
-func (f *Factory) MustAddress(cfg xc.ITask, addressStr string) xc.Address {
+func (f *Factory) MustAddress(cfg *xc.ChainConfig, addressStr string) xc.Address {
 	return xc.Address(addressStr)
 }
 
 // MustAmountBlockchain coverts a string into AmountBlockchain, panic if error
-func (f *Factory) MustAmountBlockchain(cfg xc.ITask, humanAmountStr string) xc.AmountBlockchain {
+func (f *Factory) MustAmountBlockchain(cfg *xc.ChainConfig, humanAmountStr string) xc.AmountBlockchain {
 	res, err := f.ConvertAmountStrToBlockchain(cfg, humanAmountStr)
 	if err != nil {
 		panic(err)

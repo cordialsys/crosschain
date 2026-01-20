@@ -15,7 +15,7 @@ import (
 type TestFactory struct {
 	DefaultFactory factory.FactoryContext
 
-	NewClientFunc               func(asset xc.ITask) (xclient.Client, error)
+	NewClientFunc               func(asset *xc.ChainConfig) (xclient.Client, error)
 	NewTxBuilderFunc            func(asset *xc.ChainBaseConfig) (builder.FullTransferBuilder, error)
 	NewSignerFunc               func(asset *xc.ChainBaseConfig) (*signer.Signer, error)
 	NewAddressBuilderFunc       func(asset *xc.ChainBaseConfig) (xc.AddressBuilder, error)
@@ -25,7 +25,7 @@ type TestFactory struct {
 var _ factory.FactoryContext = &TestFactory{}
 
 // NewClient creates a new Client
-func (f *TestFactory) NewClient(asset xc.ITask) (xclient.Client, error) {
+func (f *TestFactory) NewClient(asset *xc.ChainConfig) (xclient.Client, error) {
 	if f.NewClientFunc != nil {
 		return f.NewClientFunc(asset)
 	}
@@ -76,17 +76,17 @@ func (f *TestFactory) GetAddressFromPublicKey(asset *xc.ChainBaseConfig, publicK
 }
 
 // ConvertAmountToHuman converts an AmountBlockchain into AmountHumanReadable, dividing by the appropriate number of decimals
-func (f *TestFactory) ConvertAmountToHuman(asset xc.ITask, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error) {
+func (f *TestFactory) ConvertAmountToHuman(asset *xc.ChainConfig, blockchainAmount xc.AmountBlockchain) (xc.AmountHumanReadable, error) {
 	return f.DefaultFactory.ConvertAmountToHuman(asset, blockchainAmount)
 }
 
 // ConvertAmountToBlockchain converts an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
-func (f *TestFactory) ConvertAmountToBlockchain(asset xc.ITask, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error) {
+func (f *TestFactory) ConvertAmountToBlockchain(asset *xc.ChainConfig, humanAmount xc.AmountHumanReadable) (xc.AmountBlockchain, error) {
 	return f.DefaultFactory.ConvertAmountToBlockchain(asset, humanAmount)
 }
 
 // ConvertAmountStrToBlockchain converts a string representing an AmountHumanReadable into AmountBlockchain, multiplying by the appropriate number of decimals
-func (f *TestFactory) ConvertAmountStrToBlockchain(asset xc.ITask, humanAmountStr string) (xc.AmountBlockchain, error) {
+func (f *TestFactory) ConvertAmountStrToBlockchain(asset *xc.ChainConfig, humanAmountStr string) (xc.AmountBlockchain, error) {
 	return f.DefaultFactory.ConvertAmountStrToBlockchain(asset, humanAmountStr)
 }
 
@@ -101,12 +101,12 @@ func (f *TestFactory) GetConfig() factoryconfig.Config {
 }
 
 // MustAddress coverts a string to Address, panic if error
-func (f *TestFactory) MustAddress(asset xc.ITask, addressStr string) xc.Address {
+func (f *TestFactory) MustAddress(asset *xc.ChainConfig, addressStr string) xc.Address {
 	return f.DefaultFactory.MustAddress(asset, addressStr)
 }
 
 // MustAmountBlockchain coverts a string into AmountBlockchain, panic if error
-func (f *TestFactory) MustAmountBlockchain(asset xc.ITask, humanAmountStr string) xc.AmountBlockchain {
+func (f *TestFactory) MustAmountBlockchain(asset *xc.ChainConfig, humanAmountStr string) xc.AmountBlockchain {
 	return f.DefaultFactory.MustAmountBlockchain(asset, humanAmountStr)
 
 }
@@ -118,7 +118,7 @@ func (f *TestFactory) GetAllChains() []*xc.ChainConfig {
 func (f *TestFactory) GetNetworkSelector() xc.NetworkSelector {
 	return f.DefaultFactory.GetNetworkSelector()
 }
-func (f *TestFactory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg xc.ITask, provider xc.StakingProvider) (xclient.StakingClient, error) {
+func (f *TestFactory) NewStakingClient(stakingCfg *services.ServicesConfig, cfg *xc.ChainConfig, provider xc.StakingProvider) (xclient.StakingClient, error) {
 	return f.DefaultFactory.NewStakingClient(stakingCfg, cfg, provider)
 }
 

@@ -32,7 +32,7 @@ import (
 const BlockbookFull string = "full-blockbook"
 
 type BlockbookClient struct {
-	Asset    xc.ITask
+	Asset    *xc.ChainConfig
 	Chaincfg *chaincfg.Params
 	decoder  address.AddressDecoder
 
@@ -45,7 +45,7 @@ var _ xclient.Client = &BlockbookClient{}
 var _ xclient.MultiTransferClient = &BlockbookClient{}
 var _ address.WithAddressDecoder = &BlockbookClient{}
 
-func NewJsonRpcClient(cfgI xc.ITask) (*BlockbookClient, error) {
+func NewJsonRpcClient(cfgI *xc.ChainConfig) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := cfg.DefaultHttpClient()
@@ -68,7 +68,7 @@ func NewJsonRpcClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	}, nil
 }
 
-func NewBlockbookClient(cfgI xc.ITask) (*BlockbookClient, error) {
+func NewBlockbookClient(cfgI *xc.ChainConfig) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := cfg.DefaultHttpClient()
@@ -92,7 +92,7 @@ func NewBlockbookClient(cfgI xc.ITask) (*BlockbookClient, error) {
 	}, nil
 }
 
-func NewQuicknodeBlockbookClient(cfgI xc.ITask) (*BlockbookClient, error) {
+func NewQuicknodeBlockbookClient(cfgI *xc.ChainConfig) (*BlockbookClient, error) {
 	asset := cfgI
 	cfg := cfgI.GetChain()
 	httpClient := cfg.DefaultHttpClient()

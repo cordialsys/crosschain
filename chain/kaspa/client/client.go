@@ -46,7 +46,7 @@ func derefOrZero[T any](v *T) T {
 }
 
 // TODO https://github.com/kaspanet/rusty-kaspa/blob/master/rpc/core/src/api/rpc.rs
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	chain := cfgI.GetChain()
 	clientConfig := chain.ChainClientConfig
 	client := rest.NewClient(clientConfig.URL, chain.Chain, chain.DefaultHttpClient())

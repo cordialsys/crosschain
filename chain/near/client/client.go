@@ -49,7 +49,7 @@ const (
 
 // Client for Template
 type Client struct {
-	Asset      xc.ITask
+	Asset      *xc.ChainConfig
 	Url        *url.URL
 	IndexerUrl *url.URL
 }
@@ -57,7 +57,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 
 // NewClient returns a new Template Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	chain := cfgI.GetChain()
 	u, err := url.Parse(chain.URL)
 	if err != nil {

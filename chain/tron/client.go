@@ -41,7 +41,7 @@ type Client struct {
 }
 
 // NewClient returns a new Template Client
-func NewClient(cfgI xc.ITask) (*Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
 
 	if cfg.GasBudgetDefault.Decimal().InexactFloat64() <= 0 {

@@ -20,7 +20,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 var _ xclient.MultiTransferClient = &Client{}
 
-func NewClient(cfgI xc.ITask) (xclient.Client, error) {
+func NewClient(cfgI *xc.ChainConfig) (xclient.Client, error) {
 	cli, err := bitcoin.NewBitcoinClient(cfgI)
 	if err != nil {
 		return cli, err
