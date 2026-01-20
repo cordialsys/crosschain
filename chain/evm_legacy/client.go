@@ -24,7 +24,7 @@ var _ xclient.Client = &Client{}
 type TxInput evminput.TxInput
 
 var _ xc.TxInput = &TxInput{}
-var _ evminput.ToTxInput = &TxInput{}
+var _ evminput.GetAccountInfo = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -36,10 +36,6 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverEVMLegacy,
 		},
 	}
-}
-
-func (input *TxInput) ToTxInput() *evminput.TxInput {
-	return (*evminput.TxInput)(input)
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -57,6 +53,19 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (independent bool) {
 }
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return ((*evminput.TxInput)(input)).GetFeeLimit()
+}
+
+func (input *TxInput) GetFeePayerAddress() string {
+	return (*evminput.TxInput)(input).GetFeePayerAddress()
+}
+func (input *TxInput) GetFeePayerNonce() uint64 {
+	return (*evminput.TxInput)(input).GetFeePayerNonce()
+}
+func (input *TxInput) GetFromAddress() string {
+	return (*evminput.TxInput)(input).GetFromAddress()
+}
+func (input *TxInput) GetNonce() uint64 {
+	return (*evminput.TxInput)(input).GetNonce()
 }
 
 func NewClient(cfgI xc.ITask) (*Client, error) {
