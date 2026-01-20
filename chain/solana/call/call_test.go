@@ -9,6 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/call"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/memo"
+	"github.com/stretchr/testify/require"
 )
 
 // helper to create a simple tx with two signers: payer (k1) and an extra signer (k2) via memo instruction
@@ -20,9 +21,7 @@ func newTwoSignerTx(t *testing.T, k1 solana.PublicKey, k2 solana.PublicKey) *sol
 	}
 	recent := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
 	tx, err := solana.NewTransaction(instrs, recent, solana.TransactionPayer(k1))
-	if err != nil {
-		t.Fatalf("failed to build tx: %v", err)
-	}
+	require.NoError(t, err)
 	return tx
 }
 
@@ -35,17 +34,13 @@ func newCustomProgramTx(t *testing.T, payer solana.PublicKey, programID solana.P
 	ins := solana.NewInstruction(programID, accs, []byte{0x01, 0x02})
 	recent := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
 	tx, err := solana.NewTransaction([]solana.Instruction{ins}, recent, solana.TransactionPayer(payer))
-	if err != nil {
-		t.Fatalf("failed to build tx: %v", err)
-	}
+	require.NoError(t, err)
 	return tx
 }
 
 func mustMarshalCall(t *testing.T, call call.Call) json.RawMessage {
 	b, err := json.Marshal(call)
-	if err != nil {
-		t.Fatalf("failed to marshal call: %v", err)
-	}
+	require.NoError(t, err)
 	return b
 }
 
@@ -63,25 +58,20 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	k2 := solana.NewWallet().PublicKey()
 	tx := newTwoSignerTx(t, k1, k2)
 	msgBytes, err := tx.MarshalBinary()
-	if err != nil {
-		t.Fatalf("failed to marshal tx: %v", err)
-	}
+	require.NoError(t, err, "failed to marshal tx")
 
 	// Build Call JSON targeting k1 as the requested account
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	cfg := &xc.ChainBaseConfig{}
 	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
-	if err != nil {
-		t.Fatalf("NewCall failed: %v", err)
-	}
+	require.NoError(t, err, "NewCall failed")
 
 	// Map indices for k1 and k2
 	signers := c.SolTx.Message.Signers()
 	i1 := findSignerIndex(signers, k1)
 	i2 := findSignerIndex(signers, k2)
-	if i1 < 0 || i2 < 0 {
-		t.Fatalf("expected both k1 and k2 to be signers, got: %v", signers)
-	}
+	require.GreaterOrEqual(t, i1, 0, "expected k1 to be a signer, got: %v", signers)
+	require.GreaterOrEqual(t, i2, 0, "expected k2 to be a signer, got: %v", signers)
 
 	// First, set signature for k1 only
 	sig1 := make([]byte, 64)
@@ -89,18 +79,10 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 		sig1[i] = 0x11
 	}
 	err = c.SetSignatures(&xc.SignatureResponse{Signature: sig1, PublicKey: k1.Bytes()})
-	if err != nil {
-		t.Fatalf("SetSignatures failed: %v", err)
-	}
-	if len(c.SolTx.Signatures) != len(signers) {
-		t.Fatalf("expected %d signatures, got %d", len(signers), len(c.SolTx.Signatures))
-	}
-	if c.SolTx.Signatures[i1].String() == (solana.Signature{}).String() {
-		t.Fatalf("expected signature for k1 to be set")
-	}
-	if c.SolTx.Signatures[i2].String() != (solana.Signature{}).String() {
-		t.Fatalf("expected signature for k2 to be empty initially")
-	}
+	require.NoError(t, err, "SetSignatures failed")
+	require.Len(t, c.SolTx.Signatures, len(signers), "unexpected signatures length")
+	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i1].String(), "expected signature for k1 to be set")
+	require.Equal(t, (solana.Signature{}).String(), c.SolTx.Signatures[i2].String(), "expected signature for k2 to be empty initially")
 
 	// Now, set signature for k2 only; k1 should be preserved
 	sig2 := make([]byte, 64)
@@ -108,24 +90,15 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 		sig2[i] = 0x22
 	}
 	err = c.SetSignatures(&xc.SignatureResponse{Signature: sig2, PublicKey: k2.Bytes()})
-	if err != nil {
-		t.Fatalf("SetSignatures failed: %v", err)
-	}
-	if c.SolTx.Signatures[i1].String() == (solana.Signature{}).String() {
-		t.Fatalf("expected signature for k1 to be preserved, but it was cleared")
-	}
-	if c.SolTx.Signatures[i2].String() == (solana.Signature{}).String() {
-		t.Fatalf("expected signature for k2 to be set, but it is empty")
-	}
+	require.NoError(t, err, "SetSignatures failed")
+	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i1].String(), "expected signature for k1 to be preserved, but it was cleared")
+	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i2].String(), "expected signature for k2 to be set, but it is empty")
 
 	// Calling with empty slice should not wipe existing signatures
 	err = c.SetSignatures()
-	if err != nil {
-		t.Fatalf("SetSignatures(empty) failed: %v", err)
-	}
-	if c.SolTx.Signatures[i1].String() == (solana.Signature{}).String() || c.SolTx.Signatures[i2].String() == (solana.Signature{}).String() {
-		t.Fatalf("expected existing signatures to be preserved when passing no signatures")
-	}
+	require.NoError(t, err, "SetSignatures(empty) failed")
+	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i1].String(), "expected existing signatures to be preserved when passing no signatures")
+	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i2].String(), "expected existing signatures to be preserved when passing no signatures")
 }
 
 func TestSighashesAndHashBehavior(t *testing.T) {
@@ -133,36 +106,23 @@ func TestSighashesAndHashBehavior(t *testing.T) {
 	k2 := solana.NewWallet().PublicKey()
 	tx := newTwoSignerTx(t, k1, k2)
 	msgBytes, err := tx.MarshalBinary()
-	if err != nil {
-		t.Fatalf("failed to marshal tx: %v", err)
-	}
+	require.NoError(t, err)
 
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
-	if err != nil {
-		t.Fatalf("NewCall failed: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Hash should be empty initially
-	if got := c.Hash(); got != "" {
-		t.Fatalf("expected empty hash, got %q", got)
-	}
+	require.Empty(t, c.Hash())
 
 	// Sighashes should target k1 and payload equals message bytes
 	reqs, err := c.Sighashes()
-	if err != nil {
-		t.Fatalf("Sighashes failed: %v", err)
-	}
-	if len(reqs) != 1 {
-		t.Fatalf("expected 1 signature request, got %d", len(reqs))
-	}
-	if reqs[0].Signer != xc.Address(k1.String()) {
-		t.Fatalf("expected signer %s, got %s", k1.String(), reqs[0].Signer)
-	}
+	require.NoError(t, err)
+
+	require.Len(t, reqs, 1, "expected 1 signature request")
+	require.Equal(t, xc.Address(k1.String()), reqs[0].Signer, "unexpected signer")
 	payload, _ := c.SolTx.Message.MarshalBinary()
-	if string(reqs[0].Payload) != string(payload) {
-		t.Fatalf("payload mismatch")
-	}
+	require.Equal(t, payload, reqs[0].Payload, "payload mismatch")
 
 	// Set signature for the first signer index and validate Hash
 	signers := c.SolTx.Message.Signers()
@@ -173,13 +133,9 @@ func TestSighashesAndHashBehavior(t *testing.T) {
 	for i := range sig {
 		sig[i] = 0xAB
 	}
-	if err := c.SetSignatures(&xc.SignatureResponse{Signature: sig, PublicKey: pk0.Bytes()}); err != nil {
-		t.Fatalf("SetSignatures failed: %v", err)
-	}
+	require.NoError(t, c.SetSignatures(&xc.SignatureResponse{Signature: sig, PublicKey: pk0.Bytes()}), "SetSignatures failed")
 	expectedHash := solana.Signature(sig).String()
-	if got := c.Hash(); string(got) != expectedHash {
-		t.Fatalf("expected hash %s, got %s", expectedHash, got)
-	}
+	require.Equal(t, expectedHash, string(c.Hash()))
 }
 
 func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
@@ -187,17 +143,14 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 	k2 := solana.NewWallet().PublicKey()
 	tx := newTwoSignerTx(t, k1, k2)
 	msgBytes, err := tx.MarshalBinary()
-	if err != nil {
-		t.Fatalf("failed to marshal tx: %v", err)
-	}
+	require.NoError(t, err)
 
 	// pick an unrelated account as the requested Account
 	bad := solana.NewWallet().PublicKey()
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+
 	_, err = call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(bad.String()))
-	if err == nil {
-		t.Fatalf("expected NewCall to error when Account is not among message signers")
-	}
+	require.Error(t, err)
 }
 
 func TestSolanaSetInput_NilAccepted(t *testing.T) {
@@ -206,17 +159,11 @@ func TestSolanaSetInput_NilAccepted(t *testing.T) {
 	k2 := solana.NewWallet().PublicKey()
 	tx := newTwoSignerTx(t, payer, k2)
 	msgBytes, err := tx.MarshalBinary()
-	if err != nil {
-		t.Fatalf("failed to marshal tx: %v", err)
-	}
+	require.NoError(t, err)
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
-	if err != nil {
-		t.Fatalf("NewCall failed: %v", err)
-	}
-	if err := c.SetInput(nil); err != nil {
-		t.Fatalf("SetInput(nil) should not error, got: %v", err)
-	}
+	require.NoError(t, err)
+	require.NoError(t, c.SetInput(nil), "SetInput(nil) should not error")
 }
 
 func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
@@ -224,19 +171,13 @@ func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
 	customProgram := solana.NewWallet().PublicKey() // unlikely to be a native program id
 	tx := newCustomProgramTx(t, payer, customProgram)
 	msgBytes, err := tx.MarshalBinary()
-	if err != nil {
-		t.Fatalf("failed to marshal tx: %v", err)
-	}
+	require.NoError(t, err)
+
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
-	if err != nil {
-		t.Fatalf("NewCall failed: %v", err)
-	}
+	require.NoError(t, err)
+
 	addrs := c.ContractAddresses()
-	if len(addrs) != 1 {
-		t.Fatalf("expected exactly 1 contract address, got %d: %v", len(addrs), addrs)
-	}
-	if string(addrs[0]) != customProgram.String() {
-		t.Fatalf("unexpected contract address: want %s got %s", customProgram.String(), addrs[0])
-	}
+	require.Len(t, addrs, 1, "expected exactly 1 contract address")
+	require.Equal(t, customProgram.String(), string(addrs[0]), "unexpected contract address")
 }
