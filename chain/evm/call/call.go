@@ -26,7 +26,7 @@ type TxCall struct {
 	signature xc.TxSignature
 }
 
-// Must match API type
+// Call is Method + https://docs.cordialapis.com/docs/treasury/jwufy9q517jj3-unsigned-evm-transaction flattened
 type Call struct {
 	Method string              `json:"method"`
 	To     string              `json:"to"`
