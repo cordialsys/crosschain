@@ -363,12 +363,13 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.Ca
 	toAddr, _ := address.FromHex(xc.Address(evmCall.Call.To))
 	data := evmCall.Call.Data
 	value := evmCall.Call.Amount
+	wei := value.ToBlockchain(client.Asset.Decimals).Int()
 	msg := ethereum.CallMsg{
 		From: fromAddr,
 		To:   &toAddr,
 		// use a high limit just for the estimation
 		Gas:        8_000_000,
-		Value:      value.Int(),
+		Value:      wei,
 		Data:       data,
 		AccessList: types.AccessList{},
 	}

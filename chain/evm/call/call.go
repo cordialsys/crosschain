@@ -21,7 +21,7 @@ type TxCall struct {
 	Call            Call
 	signingAddress  xc.Address
 	contractAddress xc.ContractAddress
-	amount          xc.AmountBlockchain
+	amount          xc.AmountHumanReadable
 	data            []byte
 
 	input     *tx_input.CallInput
@@ -30,10 +30,10 @@ type TxCall struct {
 
 // Call is Method + https://docs.cordialapis.com/docs/treasury/jwufy9q517jj3-unsigned-evm-transaction flattened
 type Call struct {
-	Method string              `json:"method"`
-	To     string              `json:"to"`
-	Amount xc.AmountBlockchain `json:"amount"`
-	Data   hex.Hex             `json:"data"`
+	Method string                 `json:"method"`
+	To     string                 `json:"to"`
+	Amount xc.AmountHumanReadable `json:"amount"`
+	Data   hex.Hex                `json:"data"`
 }
 
 var _ xc.TxCall = &TxCall{}
@@ -90,6 +90,7 @@ func (tx *TxCall) BuildEthTx() (*gethtypes.Transaction, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid contract address: %w", err)
 	}
+	wei := tx.amount.ToBlockchain(tx.cfg.Decimals).Int()
 	ethTx := gethtypes.NewTx(&gethtypes.DynamicFeeTx{
 		ChainID:   tx.input.ChainId.Int(),
 		Nonce:     tx.input.Nonce,
@@ -97,7 +98,7 @@ func (tx *TxCall) BuildEthTx() (*gethtypes.Transaction, error) {
 		GasFeeCap: tx.input.GasFeeCap.Int(),
 		Gas:       tx.input.GasLimit,
 		To:        &toAddress,
-		Value:     tx.amount.Int(),
+		Value:     wei,
 		Data:      tx.data,
 	})
 	if len(tx.signature) > 0 {
