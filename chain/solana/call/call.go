@@ -31,7 +31,7 @@ type Params struct {
 
 type Call struct {
 	// The binary Solana transaction to sign
-	Transaction []byte `json:"transaction"`
+	Transaction hex.Hex `json:"transaction"`
 }
 
 var _ xc.TxCall = &TxCall{}
