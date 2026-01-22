@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/evm"
+	"github.com/cordialsys/crosschain/chain/tempo"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/stretchr/testify/require"
 )
@@ -19,6 +20,9 @@ func TestDefaultChainConfigurationDriver(t *testing.T) {
 			switch chain.Driver {
 			case xc.DriverEVM:
 				err := evm.ValidateConfig(chain)
+				require.NoError(t, err)
+			case xc.DriverTempo:
+				err := tempo.ValidateConfig(chain)
 				require.NoError(t, err)
 			default:
 				// TODO provide config validation for all chains
