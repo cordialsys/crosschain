@@ -57,6 +57,10 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 			if txInput.GetDriver() == xc.DriverCosmos {
 				return makeCopy(txInput), nil
 			}
+		case xc.DriverTempo:
+			if txInput.GetDriver() == xc.DriverEVM {
+				return makeCopy(txInput), nil
+			}
 		}
 	}
 

@@ -534,13 +534,14 @@ chains:
     chain_prefix: "42"
     indexer_type: rpc
     rate_limit: 0.5
-  # TEMPO:
-  #   chain: TEMPO
-  #   driver: evm
-  #   chain_id: 42431
-  #   chain_name: Tempo Testnet (Moderato)
-  #   decimals: 6
-  #   confirmations_final: 5
+  TEMPO:
+    chain: TEMPO
+    driver: tempo
+    chain_id: 42431
+    chain_name: Tempo Testnet (Moderato)
+    decimals: 6
+    fee_limit: "10000000000000.0"
+    confirmations_final: 5
   TRX:
     chain: TRX
     driver: tron

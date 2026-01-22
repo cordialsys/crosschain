@@ -28,7 +28,7 @@ func TestChains(t *testing.T) {
 		for _, chain := range xcf.GetAllChains() {
 			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
 				switch chain.Driver {
-				case DriverEVM, DriverEVMLegacy:
+				case DriverEVM, DriverEVMLegacy, DriverTempo:
 					evm.Validate(t, chain)
 				case DriverSubstrate:
 					substrate.Validate(t, chain)

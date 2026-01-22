@@ -73,6 +73,7 @@ import (
 	substratebuilder "github.com/cordialsys/crosschain/chain/substrate/builder"
 	substrateclient "github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/sui"
+	"github.com/cordialsys/crosschain/chain/tempo"
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
@@ -107,6 +108,8 @@ func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 		return aptos.NewClient(cfg)
 	case xc.DriverSui:
 		return sui.NewClient(cfg)
+	case xc.DriverTempo:
+		return tempo.NewClient(cfg)
 	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
 		return bitcoin.NewClient(cfg)
 	case xc.DriverBitcoinCash:
@@ -201,6 +204,8 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return aptos.NewTxBuilder(cfg)
 	case xc.DriverSui:
 		return sui.NewTxBuilder(cfg)
+	case xc.DriverTempo:
+		return tempo.NewTxBuilder(cfg)
 	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
 		return bitcoinbuilder.NewTxBuilder(cfg)
 	case xc.DriverBitcoinCash:
@@ -263,6 +268,8 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 		return bitcoin_cash.NewAddressBuilder(cfg)
 	case xc.DriverSui:
 		return sui.NewAddressBuilder(cfg)
+	case xc.DriverTempo:
+		return tempo.NewAddressBuilder(cfg)
 	case xc.DriverSubstrate:
 		return substrateaddress.NewAddressBuilder(cfg)
 	case xc.DriverNear:
@@ -324,6 +331,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return bitcoin_cash.CheckError(err)
 	case xc.DriverSui:
 		return sui.CheckError(err)
+	case xc.DriverTempo:
+		return tempo.CheckError(err)
 	case xc.DriverSubstrate:
 		return substrate.CheckError(err)
 	case xc.DriverTron:
@@ -383,6 +392,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return bitcoin_cash.ValidateAddress(cfg, addr)
 	case xc.DriverSui:
 		return sui.ValidateAddress(cfg, addr)
+	case xc.DriverTempo:
+		return tempo.ValidateAddress(cfg, addr)
 	case xc.DriverSubstrate:
 		return substrate.ValidateAddress(cfg, addr)
 	case xc.DriverTron:
