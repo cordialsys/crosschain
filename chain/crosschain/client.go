@@ -378,7 +378,7 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
 	chain := client.Asset.GetChain().Chain
-	apiURL := fmt.Sprintf("%s/v1/chains/%s/call",
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/calls",
 		client.URL,
 		chain,
 	)
@@ -390,7 +390,12 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.Ca
 	if err != nil {
 		return nil, err
 	}
-	return drivers.UnmarshalCallInput(responseBody)
+	var r types.TransferInputRes
+	err = json.Unmarshal(responseBody, &r)
+	if err != nil {
+		return nil, err
+	}
+	return drivers.UnmarshalCallInput([]byte(r.Input))
 }
 
 // FetchBalance fetches token balance from a Crosschain endpoint
