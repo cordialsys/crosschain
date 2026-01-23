@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/sirupsen/logrus"
 )
 
@@ -334,6 +336,19 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 	}
 
 	return result, nil
+}
+
+// EthHashTypedData computes EIP-712 digest
+func (client *Client) EthHashTypedData(callRequest json.RawMessage) ([]byte, error) {
+	var typedData apitypes.TypedData
+	if err := json.Unmarshal(callRequest, &typedData); err != nil {
+		return nil, err
+	}
+	digest, _, err := apitypes.TypedDataAndHash(typedData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash typed data: %w", err)
+	}
+	return digest, nil
 }
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
