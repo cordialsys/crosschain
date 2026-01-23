@@ -27,10 +27,13 @@ import (
 var _ xclient.Client = &Client{}
 
 const (
-	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 	CREATE_TRANSACTION         = "createtransaction"
-	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
 	KEY_FEE_PER_BANDWIDTH      = "getTransactionFee"
+	KEY_CREATE_ACCOUNT_FEE     = "getCreateNewAccountFeeInSystemContract"
+	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
+	// Transaction on chain includes transaction result, which increases tx size
+	TRANSACTION_RESULT_OVERHEAD = 64
 )
 
 // Client for Template
@@ -82,12 +85,12 @@ func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.Crea
 	return input, nil
 }
 
-func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc.Tx, sender xc.Address) (uint64, error) {
+func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc.Tx, sender xc.Address, receiver xc.Address) (uint64, error) {
 	bz, err := transaction.Serialize()
 	if err != nil {
 		return 0, fmt.Errorf("failed to serialize transfer for fee estimation: %w", err)
 	}
-	txSize := len(bz)
+	txSize := len(bz) + TRANSACTION_RESULT_OVERHEAD
 	accountResources, err := client.client.GetAccountResources(string(sender))
 	if err != nil {
 		return 0, fmt.Errorf("failed to get account resources: %w", err)
@@ -98,9 +101,10 @@ func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc
 	}
 
 	availableBandwidth := accountResources.GetAvailableBandwith()
-	bandwidthRequired := txSize - int(availableBandwidth)
+	bandwidthRequired := txSize
+
 	// free transfer
-	if bandwidthRequired <= 0 {
+	if bandwidthRequired <= availableBandwidth {
 		return 0, nil
 	}
 
@@ -108,8 +112,21 @@ func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc
 	if !ok {
 		return 0, errors.New("failed to get bandwidth price")
 	}
+	fee := uint64(bandwidthRequired * feePerBandwidth)
 
-	return uint64(bandwidthRequired * feePerBandwidth), nil
+	// Include AccountActivation fee if neccessary
+	_, err = client.client.GetAccount(string(receiver))
+	if err != nil && strings.Contains(err.Error(), "could not find account") {
+		accountCreationFee, ok := chainParameters.GetParam(KEY_CREATE_ACCOUNT_FEE)
+		if !ok {
+			return 0, errors.New("failed to get account creation fee")
+		}
+		fee = uint64(accountCreationFee) + fee
+	} else if err != nil {
+		return 0, fmt.Errorf("failed to get recipient account: %w", err)
+	}
+
+	return fee, nil
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
@@ -132,13 +149,27 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dummy transfer tx for fee estimation: %w", err)
 	}
-
-	fee, err := client.EstimateTransactionFee(ctx, dummyTx, args.GetFrom())
+	err = dummyTx.SetSignatures(&xc.SignatureResponse{
+		Signature: make([]byte, 65),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
+		panic(err)
 	}
-	baseInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
 
+	// Call EstimateTransactionFee for native transfers
+	_, ok := args.GetContract()
+	if !ok {
+		fee, err := client.EstimateTransactionFee(ctx, dummyTx, args.GetFrom(), args.GetTo())
+		if err != nil {
+			return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
+		}
+		baseInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
+	}
+
+	multiplier := client.chain.ChainGasMultiplier
+	if multiplier > 0.01 {
+		baseInput.MaxFee = xc.MultiplyByFloat(baseInput.MaxFee, multiplier)
+	}
 	return baseInput, nil
 }
 

@@ -123,21 +123,6 @@ func (c Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) (
 		Decimals:       int(c.chain.Decimals),
 	}
 
-	builder, err := NewTxBuilder(c.chain.Base())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new tx builder: %w", err)
-	}
-	dummyTx, err := builder.Stake(args, &stakeInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dummy stake tx for fee estimation: %w", err)
-	}
-
-	fee, err := c.EstimateTransactionFee(ctx, dummyTx, args.GetFrom())
-	if err != nil {
-		return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
-	}
-	stakeInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
-
 	return &stakeInput, nil
 }
 
@@ -171,29 +156,13 @@ func (c Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs)
 		return nil, fmt.Errorf("%w: %w", ErrFailedToFetchBaseInput, err)
 	}
 
-	unstakeInput := &txinput.UnstakeInput{
+	return &txinput.UnstakeInput{
 		TxInput:        *unfreezeInput,
 		VoteInput:      voteInput,
 		FreezedBalance: account.GetFrozenBalance(),
 		Votes:          account.Votes,
 		Decimals:       int(c.chain.Decimals),
-	}
-	builder, err := NewTxBuilder(c.chain.Base())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new tx builder: %w", err)
-	}
-	dummyTx, err := builder.Unstake(args, unstakeInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dummy unstake tx for fee estimation: %w", err)
-	}
-
-	fee, err := c.EstimateTransactionFee(ctx, dummyTx, args.GetFrom())
-	if err != nil {
-		return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
-	}
-	unstakeInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
-
-	return unstakeInput, nil
+	}, nil
 }
 
 func (c Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) (xc.WithdrawTxInput, error) {
@@ -235,26 +204,10 @@ func (c Client) FetchWithdrawInput(ctx context.Context, args builder.StakeArgs) 
 		getRewardInput = input
 	}
 
-	withdrawInput := &txinput.WithdrawInput{
+	return &txinput.WithdrawInput{
 		TxInput:              unfrozeBalanceInput,
 		WithdrawRewardsInput: getRewardInput,
-	}
-	builder, err := NewTxBuilder(c.chain.Base())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new tx builder: %w", err)
-	}
-	dummyTx, err := builder.Withdraw(args, withdrawInput)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dummy withdraw tc for fee estimation: %w", err)
-	}
-
-	fee, err := c.EstimateTransactionFee(ctx, dummyTx, args.GetFrom())
-	if err != nil {
-		return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)
-	}
-	withdrawInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
-
-	return withdrawInput, nil
+	}, nil
 }
 
 // AllowContractValidateError allows the "ContractValidateException" - this means that the operation

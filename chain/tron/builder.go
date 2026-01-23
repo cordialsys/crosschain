@@ -386,7 +386,7 @@ func ReduceTotalVoteCount(votes []*httpclient.Vote, reduceCount uint64) error {
 
 type UnstakeVoteDecision struct {
 	Action         UnstakeVoteAction
-	ValidatorVotes *httpclient.Vote
+	ValidatorVotes httpclient.Vote
 }
 
 // we have to create a new vote tx in two cases:
@@ -399,9 +399,9 @@ func DetermineUnstakeVoteAction(input *txinput.UnstakeInput, validator string, v
 		usedVotes += v.VoteCount
 		if validator != "" && validator == v.VoteAddress {
 			validatorVotes = v
+			break
 		}
 	}
-
 	if validator != "" && validatorVotes == nil {
 		return UnstakeVoteDecision{}, errors.New("cannot unstake from validator %s: no active votes for this validator")
 	}
@@ -413,7 +413,7 @@ func DetermineUnstakeVoteAction(input *txinput.UnstakeInput, validator string, v
 
 		if validatorVotes.VoteCount < votesToUnstake {
 			return UnstakeVoteDecision{}, fmt.Errorf(
-				"not enought votes on validator: %s, required: %d, got: %d",
+				"not enough votes on validator: %s, required: %d, got: %d",
 				validator,
 				votesToUnstake,
 				validatorVotes.VoteCount,
@@ -422,7 +422,7 @@ func DetermineUnstakeVoteAction(input *txinput.UnstakeInput, validator string, v
 
 		return UnstakeVoteDecision{
 			Action:         VoteForSpecificValidator,
-			ValidatorVotes: validatorVotes,
+			ValidatorVotes: *validatorVotes,
 		}, nil
 	}
 
@@ -477,9 +477,6 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 	transactions := make([]*core.Transaction, 0)
 	switch voteDecision.Action {
 	case VoteForSpecificValidator:
-		if voteDecision.ValidatorVotes == nil {
-			return nil, errors.New("expected to unstake from validator, but votes were not provided")
-		}
 		voteDecision.ValidatorVotes.VoteCount -= stakeVotes
 		votes, ok, err := txBuilder.NewVotes(from, stakingInput.Votes, stakingInput.VoteInput)
 		if err != nil {
