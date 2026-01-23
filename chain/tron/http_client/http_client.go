@@ -621,8 +621,17 @@ type GetAccountResourcesResponse struct {
 }
 
 func (a GetAccountResourcesResponse) GetAvailableBandwith() int {
-	return (a.FreeNetLimit - a.FreeNetUsed) +
-		(a.NetLimit - a.NetUsed)
+	freeBandwidth := 0
+	if a.FreeNetLimit > a.FreeNetUsed {
+		freeBandwidth = a.FreeNetLimit - a.FreeNetUsed
+	}
+
+	allocatedBandwidth := 0
+	if a.NetLimit > a.NetUsed {
+		allocatedBandwidth = a.NetLimit - a.NetUsed
+	}
+
+	return freeBandwidth + allocatedBandwidth
 }
 
 func (c *Client) GetAccountResources(address string) (*GetAccountResourcesResponse, error) {

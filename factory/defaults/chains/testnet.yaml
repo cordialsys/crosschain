@@ -549,6 +549,7 @@ chains:
     decimals: 6
     # 200 tron fee limit
     gas_budget_default: "200.0"
+    chain_gas_multiplier: 1.1
   TON:
     chain: TON
     driver: ton

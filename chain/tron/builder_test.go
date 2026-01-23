@@ -216,7 +216,7 @@ func TestNewTxBuilder(t *testing.T) {
 				builder.OptionValidator("TJmka325yjJKeFpQDwKSQAoNwEyNGhsaEV"),
 			),
 			expectedSigHex: []string{
-				"80d10df71def72d98fac86aed88880741aecd282dd48efb0d275e3faf3857908",
+				"e7058780953a68d73308b609bde6dd661cb06367e75a07f836c6524ed019d130",
 				"3b382c12231fcd509583eff02be2ca6c5843ea4f06eaad74452a5e4737eaea26",
 			},
 			expectedTransactions: []core.Transaction_Contract_ContractType{
@@ -349,7 +349,7 @@ func TestNewTxBuilder(t *testing.T) {
 				// no validator
 			),
 			expectedSigHex: []string{
-				"80d10df71def72d98fac86aed88880741aecd282dd48efb0d275e3faf3857908",
+				"e7058780953a68d73308b609bde6dd661cb06367e75a07f836c6524ed019d130",
 				"3b382c12231fcd509583eff02be2ca6c5843ea4f06eaad74452a5e4737eaea26",
 			},
 			expectedTransactions: []core.Transaction_Contract_ContractType{
@@ -395,7 +395,7 @@ func TestNewTxBuilder(t *testing.T) {
 				// no validator
 			),
 			expectedSigHex: []string{
-				"80d10df71def72d98fac86aed88880741aecd282dd48efb0d275e3faf3857908",
+				"e7058780953a68d73308b609bde6dd661cb06367e75a07f836c6524ed019d130",
 				"3b382c12231fcd509583eff02be2ca6c5843ea4f06eaad74452a5e4737eaea26",
 			},
 			expectedTransactions: []core.Transaction_Contract_ContractType{
