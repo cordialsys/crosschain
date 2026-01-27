@@ -129,6 +129,22 @@ func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc
 	return fee, nil
 }
 
+func setDummySignatures(tx xc.Tx) error {
+	sighashes, err := tx.Sighashes()
+	if err != nil {
+		return fmt.Errorf("failed to get dummy transfer tx sighashes: %w", err)
+	}
+	signatureCount := len(sighashes)
+	signatures := make([]*xc.SignatureResponse, signatureCount)
+	for i := range signatureCount {
+		signatures[i] = &xc.SignatureResponse{
+			Signature: make([]byte, 65),
+		}
+	}
+	err = tx.SetSignatures(signatures...)
+	return err
+}
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	params := httpclient.CreateTransactionParams{
 		From:   args.GetFrom(),
@@ -149,11 +165,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dummy transfer tx for fee estimation: %w", err)
 	}
-	err = dummyTx.SetSignatures(&xc.SignatureResponse{
-		Signature: make([]byte, 65),
-	})
+	err = setDummySignatures(dummyTx)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to set dummy signatures for fee estimation: %w", err)
 	}
 
 	// Call EstimateTransactionFee for native transfers
