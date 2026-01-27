@@ -6,9 +6,9 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xclient "github.com/cordialsys/crosschain/client"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
+	xclient "github.com/cordialsys/crosschain/client"
 )
 
 // Client wraps the EVM client and enforces contract requirements for all operations.
@@ -31,7 +31,7 @@ func NewClient(cfg *xc.ChainConfig) (*Client, error) {
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, hasContract := args.GetContract()
 	if !hasContract || contract == "" {
-		return nil, fmt.Errorf("TEMPO requires --contract to be set")
+		return nil, fmt.Errorf("Tempo only supports token transfers (missing contract sending from %s)", args.GetFrom())
 	}
 
 	input, err := client.Client.FetchTransferInput(ctx, args)
