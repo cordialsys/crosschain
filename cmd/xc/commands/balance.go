@@ -45,12 +45,12 @@ func CmdRpcBalance() *cobra.Command {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
 			}
 			if decimal {
-				if contract == "" {
-					contract = string(chainConfig.Chain)
-				}
-				decimals, err := rpcClient.FetchDecimals(context.Background(), xc.ContractAddress(contract))
+				// For native assets, pass empty string to FetchDecimals
+				// For tokens, pass the contract address
+				contractForDecimals := xc.ContractAddress(contract)
+				decimals, err := rpcClient.FetchDecimals(context.Background(), contractForDecimals)
 				if err != nil {
-					return fmt.Errorf("could not fetch decimals for contract %s: %v", contract, err)
+					return fmt.Errorf("could not fetch decimals: %v", err)
 				}
 				amount := balance.ToHuman(int32(decimals))
 				fmt.Println(amount.String())
