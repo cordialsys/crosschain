@@ -61,6 +61,10 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 			if txInput.GetDriver() == xc.DriverEVM {
 				return makeCopy(txInput), nil
 			}
+		case xc.DriverEGLD:
+			if txInput.GetDriver() == xc.DriverElrond {
+				return makeCopy(txInput), nil
+			}
 		}
 	}
 

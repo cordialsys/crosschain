@@ -194,6 +194,12 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "EOS6FiFh5HgMKCQoU6NggepL7Xxd3JXUNPNvsLte6SdB8ss2h3Hfq",
 		},
 		{
+			// Bech32, should be no variation
+			chain: xc.EGLD,
+			inp:   "erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th",
+			out:   "erd1qyu5wthldzr8wx5c9ucg8kjagg0jfs53s8nr3zpz3hypefsdd8ssycr6th",
+		},
+		{
 			chain: xc.ETH,
 			inp:   "0x0ECE",
 			out:   "0x0ece",
