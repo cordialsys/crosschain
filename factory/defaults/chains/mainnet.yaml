@@ -455,6 +455,18 @@ chains:
         asset_id: "4092"
       coin_gecko:
         asset_id: dusk-network
+  EGLD:
+    chain: EGLD
+    driver: egld
+    decimals: 18
+    fee_limit: "50.0"
+    indexer_url: "https://api.multiversx.com"
+    confirmations_final: 2
+    external:
+      coin_market_cap:
+        asset_id: "6892"
+      coin_gecko:
+        asset_id: elrond-erd-2
   ES:
     chain: ES
     driver: solana

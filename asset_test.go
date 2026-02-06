@@ -8,6 +8,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/chain/cosmos"
+	"github.com/cordialsys/crosschain/chain/egld"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
 	"github.com/cordialsys/crosschain/chain/hedera"
@@ -36,6 +37,8 @@ func TestChains(t *testing.T) {
 					kaspa.Validate(t, chain)
 				case DriverEOS:
 					eos.Validate(t, chain)
+				case DriverEGLD, DriverElrond:
+					egld.Validate(t, chain)
 				case DriverTron:
 					// pass
 				case DriverTon:

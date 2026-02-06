@@ -51,6 +51,7 @@ const (
 	DOGE     = NativeAsset("DOGE")     // Dogecoin
 	DOT      = NativeAsset("DOT")      // Polkadot
 	DUSK     = NativeAsset("DUSK")     // Dusk
+	EGLD     = NativeAsset("EGLD")     // MultiversX (Elrond)
 	ENJ      = NativeAsset("ENJ")      // Enjin
 	EOS      = NativeAsset("EOS")      // EOS
 	ES       = NativeAsset("ES")       // Eclipse
@@ -129,6 +130,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	CHZ2,
 	DOT,
 	DUSK,
+	EGLD,
 	ENJ,
 	EOS,
 	ES,
@@ -196,6 +198,8 @@ const (
 	DriverCosmos                   = Driver("cosmos")
 	DriverCosmosEvmos              = Driver("evmos")
 	DriverDusk                     = Driver("dusk")
+	DriverEGLD                     = Driver("egld")
+	DriverElrond                   = Driver("elrond")
 	DriverEOS                      = Driver("eos")
 	DriverEVM                      = Driver("evm")
 	DriverEVMLegacy                = Driver("evm-legacy")
@@ -225,6 +229,8 @@ var SupportedDrivers = []Driver{
 	DriverBitcoinLegacy,
 	DriverCosmos,
 	DriverCosmosEvmos,
+	DriverEGLD,
+	DriverElrond,
 	DriverEOS,
 	DriverEVM,
 	DriverEVMLegacy,
@@ -348,6 +354,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSolana
 	case DUSK:
 		return DriverDusk
+	case EGLD:
+		return DriverElrond
 	case ADA:
 		return DriverCardano
 	case HYPE:
@@ -368,7 +376,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverElrond:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -393,7 +401,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
-		DriverKaspa, DriverInternetComputerProtocol, DriverNear:
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverElrond:
 		return Raw
 	}
 	return ""

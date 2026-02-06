@@ -195,6 +195,14 @@ chains:
     decimals: 9
     chain_name: Dusk
     confirmations_final: 1
+  EGLD:
+    chain: EGLD
+    driver: elrond
+    decimals: 18
+    chain_name: MultiversX (Devnet)
+    network: devnet
+    indexer_url: "https://devnet-api.multiversx.com"
+    confirmations_final: 2
   LTC:
     chain: LTC
     driver: bitcoin-legacy
