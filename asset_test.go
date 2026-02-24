@@ -1,6 +1,8 @@
 package crosschain_test
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"testing"
@@ -8,6 +10,7 @@ import (
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/call"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
@@ -394,6 +397,17 @@ func TestChainSupportAnnotations(t *testing.T) {
 					derefOrZero(chain.Support.Fee.Payer),
 					fmt.Sprintf("chain.support.fee.payer should be set to %t, or the chain input %T implementation is wrong", supportsFeePayer, input),
 				)
+
+				_, err = drivers.NewCall(chain.ChainBaseConfig, call.Method(""), json.RawMessage("{}"), "")
+				// hacky way to determine chain's call support...
+				callSupported := !errors.Is(err, drivers.ErrCallNotSupported)
+
+				require.Equal(
+					callSupported,
+					derefOrZero(chain.Support.Call),
+					fmt.Sprintf("chain.support.call should be set to %t, or the drivers.NewCall implementation is wrong", callSupported),
+				)
+
 			})
 		}
 	}

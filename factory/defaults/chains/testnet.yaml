@@ -152,6 +152,7 @@ chains:
   AVAX:
     chain: AVAX
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -162,6 +163,7 @@ chains:
   BERA:
     chain: BERA
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -182,6 +184,7 @@ chains:
   BNB:
     chain: BNB
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -203,6 +206,7 @@ chains:
   CELO:
     chain: CELO
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -305,6 +309,7 @@ chains:
     chain: ETH
     support:
       staking: [stake, unstake]
+      call: true
       fee:
         accurate: true
         payer: true
@@ -323,6 +328,7 @@ chains:
   FRAX:
     chain: FRAX
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -362,6 +368,7 @@ chains:
   GUSDT:
     chain: GUSDT
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -391,6 +398,7 @@ chains:
   HyperEVM:
     chain: HyperEVM
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -553,6 +561,7 @@ chains:
   MATIC:
     chain: MATIC
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -563,6 +572,7 @@ chains:
   MON:
     chain: MON
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -658,6 +668,7 @@ chains:
     support:
       memo: string
       staking: [stake, unstake, withdraw]
+      call: true
       fee:
         accurate: true
         payer: true
@@ -671,6 +682,7 @@ chains:
     support:
       memo: string
       staking: [stake, unstake, withdraw]
+      call: true
       fee:
         accurate: true
         payer: true
@@ -795,6 +807,7 @@ chains:
   BASE:
     chain: BASE
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -846,6 +859,7 @@ chains:
   SeiEVM:
     chain: SeiEVM
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -882,6 +896,7 @@ chains:
     support:
       memo: string
       staking: [stake, unstake, withdraw]
+      call: true
       fee:
         accurate: true
         payer: true
@@ -894,6 +909,7 @@ chains:
   LinETH:
     chain: LinETH
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -906,6 +922,7 @@ chains:
   XPL:
     chain: XPL
     support:
+      call: true
       fee:
         accurate: true
         payer: true
@@ -919,6 +936,7 @@ chains:
   0G:
     chain: 0G
     support:
+      call: true
       fee:
         accurate: true
         payer: true
