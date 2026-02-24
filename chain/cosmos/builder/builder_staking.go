@@ -98,3 +98,11 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 
 	return txBuilder.createTxWithMsg(&withdrawInput.TxInput, msg, tx.NewTxArgsFromStakingArgs(args, &withdrawInput.TxInput), fees)
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+		xc.StakingMethodWithdraw,
+	}
+}

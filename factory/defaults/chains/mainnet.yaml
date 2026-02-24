@@ -14,6 +14,12 @@ http_timeout: 120s
 chains:
   EOS:
     chain: EOS
+    support:
+      memo: string
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: eos
     chain_coin: eosio.token/EOS
     decimals: 4
@@ -36,6 +42,10 @@ chains:
 
   ACA:
     chain: ACA
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     chain_id: 787
     chain_name: Acala
@@ -53,6 +63,11 @@ chains:
         asset_id: "6756"
   ADA:
     chain: ADA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: cardano
     chain_id: cardano
     network: mainnet
@@ -74,6 +89,12 @@ chains:
         chain_id: "cardano"
   AKT:
     chain: AKT
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: akashnet-2
     chain_name: Akash
@@ -98,6 +119,12 @@ chains:
         asset_id: "7431"
   BABY:
     chain: BABY
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: bbn-1
     chain_name: Babylon
@@ -122,6 +149,12 @@ chains:
         asset_id: "32198"
   BAND:
     chain: BAND
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: laozi-mainnet
     chain_name: Band
@@ -145,6 +178,10 @@ chains:
         asset_id: "4679"
   APTOS:
     chain: APTOS
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: aptos
     chain_id: 1
     confirmations_final: 1
@@ -169,6 +206,12 @@ chains:
         chain_id: aptos
   ATOM:
     chain: ATOM
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: cosmoshub-4
     chain_name: Cosmos
@@ -195,6 +238,10 @@ chains:
         chain_id: cosmos
   ASTR:
     chain: ASTR
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     indexer_url: "https://astar.api.subscan.io"
     indexer_type: subscan
@@ -211,6 +258,10 @@ chains:
         asset_id: astar
   AVAX:
     chain: AVAX
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 43114
     chain_name: Avalanche C-Chain
@@ -228,6 +279,10 @@ chains:
         chain_id: avalanche
   ArbETH:
     chain: ArbETH
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 42161
     chain_name: Arbitrum
@@ -249,6 +304,9 @@ chains:
         bridged_asset: "chains/ETH/assets/ETH" # ArbETH is settled in ETH
   AurETH:
     chain: AurETH
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 1313161554
     chain_name: Aurora
@@ -264,6 +322,10 @@ chains:
         asset_id: aurora
   BASE:
     chain: BASE
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
     secondary_chain_gas_multiplier: 1.0
@@ -279,6 +341,9 @@ chains:
 
   BCH:
     chain: BCH
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-cash
     chain_name: Bitcoin Cash
     fee_limit: "1.0"
@@ -293,6 +358,10 @@ chains:
         asset_id: bitcoin-cash
   BERA:
     chain: BERA
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Berachain
     decimals: 18
@@ -304,6 +373,10 @@ chains:
         asset_id: berachain-bera
   BNB:
     chain: BNB
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     # including legacy information because we recently switched from evm-legacy to evm driver
     include_legacy_information: true
@@ -323,6 +396,9 @@ chains:
         chain_id: bsc
   BTC:
     chain: BTC
+    support:
+      fee:
+        accurate: true
     driver: bitcoin
     chain_name: Bitcoin
     decimals: 8
@@ -340,6 +416,10 @@ chains:
         chain_id: bitcoin
   CELO:
     chain: CELO
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 42220
     chain_name: Celo
@@ -368,6 +448,9 @@ chains:
     dti: 7PDZ5890K
   CHZ2:
     chain: CHZ2
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 88888
     chain_name: Chiliz 2.0
@@ -382,6 +465,9 @@ chains:
         asset_id: chiliz
   DASH:
     chain: DASH
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Dash
     decimals: 8
@@ -395,6 +481,9 @@ chains:
         asset_id: "dash"
   DOGE:
     chain: DOGE
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Dogecoin
     decimals: 8
@@ -413,6 +502,10 @@ chains:
         chain_id: dogecoin
   DOT:
     chain: DOT
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     indexer_url: "https://polkadot.api.subscan.io"
     indexer_type: subscan
@@ -430,6 +523,10 @@ chains:
         asset_id: polkadot
   ENJ:
     chain: ENJ
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     indexer_url: "https://enjin.api.subscan.io"
     indexer_type: subscan
@@ -445,6 +542,10 @@ chains:
         asset_id: enjincoin
   DUSK:
     chain: DUSK
+    support:
+      memo: string
+      fee:
+        accurate: true
     driver: dusk
     decimals: 9
     fee_limit: "1.0"
@@ -457,6 +558,12 @@ chains:
         asset_id: dusk-network
   ES:
     chain: ES
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     chain_name: Eclipse
     decimals: 9
@@ -471,6 +578,9 @@ chains:
         bridged_asset: "chains/ETH/assets/ETH" # ES is settled in ETH
   ETC:
     chain: ETC
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 61
     chain_name: Ethereum Classic
@@ -487,6 +597,11 @@ chains:
         chain_id: ethereum_classic
   ETH:
     chain: ETH
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 1
     chain_name: Ethereum
@@ -510,6 +625,10 @@ chains:
         chain_id: ethereum
   ETHW:
     chain: ETHW
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 10001
     chain_name: EthereumPOW
@@ -526,6 +645,9 @@ chains:
         chain_id: ethereum_pow
   EmROSE:
     chain: EmROSE
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 42262
     chain_name: Oasis
@@ -540,6 +662,10 @@ chains:
         asset_id: oasis
   FRAX:
     chain: FRAX
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 252
     chain_name: Fraxtal Mainnet L2
@@ -553,6 +679,9 @@ chains:
         asset_id: frax-share
   FIL:
     chain: FIL
+    support:
+      fee:
+        accurate: true
     driver: filecoin
     chain_name: Filecoin
     decimals: 18
@@ -568,6 +697,9 @@ chains:
         chain_id: filecoin
   FLUX:
     chain: FLUX
+    support:
+      fee:
+        accurate: true
     chain_id: 0x76B809BB
     confirmations_final: 6
     driver: zcash
@@ -581,6 +713,9 @@ chains:
         asset_id: "3029"
   FTM:
     chain: FTM
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 250
     chain_name: Fantom
@@ -597,6 +732,10 @@ chains:
   ## TODO: Update on mainnet launch
   GUSDT:
     chain: GUSDT
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Stable
     decimals: 18
@@ -607,6 +746,12 @@ chains:
         asset_id: "38892"
   HASH:
     chain: HASH
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: pio-mainnet-1
     chain_name: Provenance
@@ -630,6 +775,10 @@ chains:
         asset_id: "19960"
   HBAR:
     chain: HBAR
+    support:
+      memo: string
+      fee:
+        accurate: true
     chain_id: "0.0.3"
     driver: hedera
     chain_name: Hedera
@@ -645,6 +794,10 @@ chains:
         asset_id: "hedera-hashgraph"
   HyperEVM:
     chain: HyperEVM
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 999
     chain_name: HyperEVM
@@ -660,6 +813,9 @@ chains:
         chain_id: hyper_evm
   HYPE:
     chain: HYPE
+    support:
+      fee:
+        accurate: true
     driver: hyperliquid
     chain_name: Hyperliquid
     decimals: 8
@@ -690,6 +846,9 @@ chains:
         bridged_asset: "chains/HYPE/assets/USDC:0x6d1e7cde53ba9467b783cb7c530ce054"
   ICP:
     chain: ICP
+    support:
+      fee:
+        accurate: true
     driver: icp
     chain_name: Internet Computer Protocol
     confirmations_final: 1
@@ -740,6 +899,12 @@ chains:
         asset_id: "internet-computer"
   INJ:
     chain: INJ
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: evmos
     chain_id: injective-1
     chain_name: Injective
@@ -765,6 +930,10 @@ chains:
         asset_id: injective
   KAR:
     chain: KAR
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     chain_prefix: "8"
     chain_name: Karura
@@ -778,6 +947,9 @@ chains:
         asset_id: karura
   KAS:
     chain: KAS
+    support:
+      fee:
+        accurate: true
     driver: kaspa
     chain_prefix: "kaspa"
     chain_name: Kaspa
@@ -792,6 +964,12 @@ chains:
         asset_id: kaspa
   KAVA:
     chain: KAVA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: kava_2222-10
     chain_name: Kava
@@ -815,6 +993,9 @@ chains:
         asset_id: kava
   KLAY:
     chain: KLAY
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 8217
     chain_name: Klaytn
@@ -832,6 +1013,10 @@ chains:
         asset_id: klay-token
   KSM:
     chain: KSM
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     decimals: 12
     fee_limit: "25.0"
@@ -848,6 +1033,9 @@ chains:
         asset_id: kusama
   LTC:
     chain: LTC
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Litecoin
     decimals: 8
@@ -861,6 +1049,12 @@ chains:
         asset_id: litecoin
   LUNA:
     chain: LUNA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: phoenix-1
     chain_name: Terra
@@ -886,6 +1080,12 @@ chains:
           chain_id: terra
   LUNC:
     chain: LUNC
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: columbus-5
     chain_name: Terra Classic
@@ -920,6 +1120,10 @@ chains:
         chain_id: terra_classic
   MATIC:
     chain: MATIC
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 137
     chain_name: Polygon
@@ -940,6 +1144,10 @@ chains:
         chain_id: polygon
   MON:
     chain: MON
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Monad
     chain_gas_multiplier: 4
@@ -955,6 +1163,12 @@ chains:
         asset_id: "monad"
   NIL:
     chain: NIL
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: nillion-1
     chain_name: Nillion
@@ -975,6 +1189,9 @@ chains:
         asset_id: "35702"
   NEAR:
     chain: NEAR
+    support:
+      fee:
+        accurate: true
     driver: near
     decimals: 24
     fee_limit: "200.0"
@@ -986,6 +1203,12 @@ chains:
         asset_id: "6535"
   NOBLE:
     chain: NOBLE
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_name: Noble
     chain_prefix: noble
@@ -1029,6 +1252,9 @@ chains:
 
   OAS:
     chain: OAS
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 248
     chain_name: Oasys
@@ -1042,6 +1268,10 @@ chains:
         asset_id: oasys
   OptETH:
     chain: OptETH
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
     secondary_chain_gas_multiplier: 1.0
@@ -1062,6 +1292,12 @@ chains:
         bridged_asset: "chains/ETH/assets/ETH" # OptETH is settled in ETH
   SEI:
     chain: SEI
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: pacific-1
     chain_name: Sei
@@ -1087,6 +1323,10 @@ chains:
         asset_id: sei-network
   SeiEVM:
     chain: SeiEVM
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 1329
     chain_name: Sei
@@ -1104,6 +1344,12 @@ chains:
         asset_id: sei-network
   SOL:
     chain: SOL
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     chain_name: Solana
     decimals: 9
@@ -1120,6 +1366,11 @@ chains:
         chain_id: solana
   SUI:
     chain: SUI
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: sui
     chain_name: Sui
     chain_coin: "0x2::sui::SUI"
@@ -1140,6 +1391,10 @@ chains:
         asset_id: sui
   TAO:
     chain: TAO
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
     driver: substrate
     decimals: 9
     fee_limit: "1.0"
@@ -1163,6 +1418,12 @@ chains:
   #   confirmations_final: 5
   TIA:
     chain: TIA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_name: Celestia
     chain_prefix: celestia
@@ -1188,6 +1449,9 @@ chains:
         chain_id: terra_classic
   TON:
     chain: TON
+    support:
+      memo: string
+      fee:
     driver: ton
     decimals: 9
     fee_limit: "250.0"
@@ -1204,6 +1468,10 @@ chains:
         chain_id: ton
   TRX:
     chain: TRX
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: tron
     net: mainnet
     chain_name: Tron
@@ -1222,6 +1490,9 @@ chains:
         chain_id: tron
   XDC:
     chain: XDC
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 50
     chain_name: XinFin
@@ -1237,6 +1508,12 @@ chains:
         asset_id: xdc-network
   XPLA:
     chain: XPLA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: dimension_37-1
     chain_name: XPLA Chain
@@ -1261,6 +1538,10 @@ chains:
         chain_id: xpla
   XRP:
     chain: XRP
+    support:
+      memo: numeric
+      fee:
+        accurate: true
     driver: xrp
     chain_name: xrp
     decimals: 6
@@ -1276,6 +1557,9 @@ chains:
         chain_id: ripple
   XLM:
     chain: XLM
+    support:
+      memo: string
+      fee:
     driver: xlm
     chain_name: xlm
     decimals: 7
@@ -1295,6 +1579,12 @@ chains:
         chain_id: stellar
   ZETA:
     chain: ZETA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: evmos
     chain_id: zetachain_7000-1
     chain_name: ZetaChain
@@ -1318,6 +1608,12 @@ chains:
         asset_id: "21259"
   FOGO:
     chain: FOGO
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     chain_name: Fogo
     decimals: 9
@@ -1328,6 +1624,10 @@ chains:
         asset_id: fogo
   LinETH:
     chain: LinETH
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 59144
     chain_name: Linea
@@ -1348,6 +1648,10 @@ chains:
   XPL:
     # TODO: Update chain_id after mainnet is released
     chain: XPL
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Plasma
     gas_budget_default: "0.1"
@@ -1360,6 +1664,10 @@ chains:
         asset_id: "plasma"
   0G:
     chain: 0G
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 1
     chain_name: 0g
@@ -1374,6 +1682,9 @@ chains:
         asset_id: zero-gravity
   ZEC:
     chain: ZEC
+    support:
+      fee:
+        accurate: true
     driver: zcash
     chain_name: Zcash
     decimals: 8

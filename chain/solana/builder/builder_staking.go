@@ -248,3 +248,11 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 	}
 	return tx, nil
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+		xc.StakingMethodWithdraw,
+	}
+}

@@ -147,3 +147,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, assetId
 		SignPubKey: pubKey,
 	}, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// XRP supports memo
+	return xc.MemoSupportNumeric
+}

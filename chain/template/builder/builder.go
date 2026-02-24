@@ -40,3 +40,9 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input 
 func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
 	return nil, fmt.Errorf("token transfers are not supported for %s", txBuilder.Asset.Chain)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// indicate if we use args.GetMemo() to include a memo on the transaction
+	// false if memo is not used/supported.
+	return xc.MemoSupportNone
+}

@@ -36,3 +36,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		Message: tx.NewMessage(args, *txInput),
 	}, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Filecoin does not support memo
+	return xc.MemoSupportNone
+}

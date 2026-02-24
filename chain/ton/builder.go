@@ -218,3 +218,8 @@ func ParseComment(body *cell.Cell) (string, bool) {
 	}
 	return "", false
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// TON does support memo
+	return xc.MemoSupportString
+}

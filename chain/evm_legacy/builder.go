@@ -46,3 +46,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	}
 	return NewTx(txBuilder.Asset, args, casted, true)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// EVM does not support memo
+	return xc.MemoSupportNone
+}

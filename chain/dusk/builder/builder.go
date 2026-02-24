@@ -35,3 +35,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	tx, err := tx.NewTx(args, *txInput)
 	return &tx, err
 }
+
+func (_ TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Dusk supports memo
+	return xc.MemoSupportString
+}

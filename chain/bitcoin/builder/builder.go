@@ -226,3 +226,7 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 	}
 	return &tx, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	return xc.MemoSupportNone
+}

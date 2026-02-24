@@ -34,3 +34,17 @@ func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawT
 	// For generic substrate chains using nomination pools
 	return NewNominationPoolsStakingBuilder(&txBuilder).Withdraw(args, input)
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	if txBuilder.Asset.Chain == xc.TAO {
+		return []xc.StakingMethod{
+			xc.StakingMethodStake,
+			xc.StakingMethodUnstake,
+		}
+	}
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+		xc.StakingMethodWithdraw,
+	}
+}

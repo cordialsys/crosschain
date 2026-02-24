@@ -25,3 +25,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	tx := tx.NewTx(args, txInput, prefixInt)
 	return tx, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Kaspa does not support memo
+	return xc.MemoSupportNone
+}

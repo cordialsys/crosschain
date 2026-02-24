@@ -120,3 +120,8 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 		NetworkPassphrase: txInput.Passphrase,
 	}, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// XLM supports memo
+	return xc.MemoSupportString
+}

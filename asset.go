@@ -610,6 +610,52 @@ type ChainConfig struct {
 	*ChainClientConfig `yaml:",inline"`
 }
 
+type MemoSupport string
+
+const (
+	MemoSupportString  = MemoSupport("string")
+	MemoSupportNumeric = MemoSupport("numeric")
+	MemoSupportNone    = MemoSupport("none")
+)
+
+func (m MemoSupport) Valid() bool {
+	if m == "" {
+		// consider to be none
+		return true
+	}
+	return m == MemoSupportString || m == MemoSupportNumeric || m == MemoSupportNone
+}
+
+type StakingMethod string
+
+const (
+	StakingMethodStake    = StakingMethod("stake")
+	StakingMethodUnstake  = StakingMethod("unstake")
+	StakingMethodWithdraw = StakingMethod("withdraw")
+)
+
+func (m StakingMethod) Valid() bool {
+	return m == StakingMethodStake || m == StakingMethodUnstake || m == StakingMethodWithdraw
+}
+
+type FeeSupport struct {
+	// Is the fee-limit accurate?
+	Accurate *bool `yaml:"accurate,omitempty"`
+	// Is fee payer supported?
+	Payer *bool `yaml:"payer,omitempty"`
+}
+
+type ChainSupport struct {
+	// Is memo supported? What type?
+	Memo *MemoSupport `yaml:"memo,omitempty"`
+	// Is staking supported?  What methods?
+	Staking []StakingMethod `yaml:"staking,omitempty"`
+	// Are calls supported?
+	Call *bool `yaml:"call,omitempty"`
+
+	Fee FeeSupport `yaml:"fee,omitempty"`
+}
+
 type ChainBaseConfig struct {
 	// The crosschain symbol of the chain
 	Chain NativeAsset `yaml:"chain,omitempty"`
@@ -666,6 +712,10 @@ type ChainBaseConfig struct {
 
 	// Optional address configuration
 	Address AddressConfig `yaml:"address,omitempty"`
+
+	// Annotations for what the chain currently supports.
+	// This must accurately reflect the implementation and is unit-tested.
+	Support ChainSupport `yaml:"support"`
 }
 
 func (chain *ChainConfig) Configure(httpTimeout time.Duration) {

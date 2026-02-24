@@ -5,6 +5,12 @@ http_timeout: 60s
 chains:
   EOS:
     chain: EOS
+    support:
+      memo: string
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: eos
     chain_coin: eosio.token/EOS
     decimals: 4
@@ -21,6 +27,11 @@ chains:
         aliases: ["core.vaulta"]
   ADA:
     chain: ADA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: cardano
     network: preprod
     chain_id: cardano
@@ -32,6 +43,10 @@ chains:
     auth: "env:CARDANO_PROJECT_ID"
   APTOS:
     chain: APTOS
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: aptos
     chain_coin: "0x1::aptos_coin::AptosCoin"
     net: devnet
@@ -58,6 +73,12 @@ chains:
         decimals: 6
   BABY:
     chain: BABY
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: bbn-test-5
     chain_name: Babylon
@@ -75,6 +96,12 @@ chains:
         fee_limit: "200.0"
   BAND:
     chain: BAND
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: laozi-testnet
     chain_name: Band
@@ -92,6 +119,12 @@ chains:
         fee_limit: "200.0"
   ATOM:
     chain: ATOM
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: theta-testnet-001
     chain_name: Cosmos (Theta Testnet)
@@ -105,6 +138,10 @@ chains:
         decimals: 6
   ASTR:
     chain: ASTR
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     indexer_url: "https://shibuya.api.subscan.io"
     indexer_type: subscan
@@ -114,12 +151,20 @@ chains:
     confirmations_final: 3
   AVAX:
     chain: AVAX
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 43113
     chain_name: Avalanche (Fuji Testnet)
     decimals: 18
   BERA:
     chain: BERA
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Berachain
     decimals: 18
@@ -128,17 +173,27 @@ chains:
         chain_id: berachain_bartio
   BCH:
     chain: BCH
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-cash
     chain_name: Bitcoin Cash (Testnet)
     decimals: 8
   BNB:
     chain: BNB
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 97
     chain_name: Binance Smart Chain (Testnet)
     decimals: 18
   BTC:
     chain: BTC
+    support:
+      fee:
+        accurate: true
     driver: bitcoin
     chain_name: Bitcoin (Testnet)
     decimals: 8
@@ -147,6 +202,10 @@ chains:
       formats: ["segwit", "taproot", "legacy"]
   CELO:
     chain: CELO
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 44787
     chain_name: Celo (Testnet)
@@ -162,12 +221,18 @@ chains:
     decimals: 18
   CHZ2:
     chain: CHZ2
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 88882
     chain_name: Chiliz 2.0 (testnet)
     decimals: 18
   DASH:
     chain: DASH
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Dash
     decimals: 8
@@ -175,6 +240,9 @@ chains:
     confirmations_final: 15
   DOGE:
     chain: DOGE
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Dogecoin (Testnet)
     decimals: 8
@@ -182,6 +250,10 @@ chains:
     chain_max_gas_price: 50000000
   DOT:
     chain: DOT
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     decimals: 12 # different decimals from mainnet
     chain_id: 1001
@@ -191,23 +263,37 @@ chains:
     indexer_type: subscan
   DUSK:
     chain: DUSK
+    support:
+      memo: string
+      fee:
+        accurate: true
     driver: dusk
     decimals: 9
     chain_name: Dusk
     confirmations_final: 1
   LTC:
     chain: LTC
+    support:
+      fee:
+        accurate: true
     driver: bitcoin-legacy
     chain_name: Litecoin (Testnet)
     decimals: 8
   ETC:
     chain: ETC
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 63
     chain_name: Ethereum Classic (Mordor)
     decimals: 18
   ENJ:
     chain: ENJ
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: substrate
     indexer_url: "https://canary.api.subscan.io"
     indexer_type: subscan
@@ -217,6 +303,11 @@ chains:
 
   ETH:
     chain: ETH
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Ethereum (Holesky)
     decimals: 18
@@ -231,18 +322,28 @@ chains:
         chain_id: eth_holesky
   FRAX:
     chain: FRAX
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 2522
     chain_name: Fraxtal Testnet L2
     decimals: 18
   FIL:
     chain: FIL
+    support:
+      fee:
+        accurate: true
     driver: filecoin
     chain_name: Filecoin
     decimals: 18
     confirmations_final: 1
   FLUX:
     chain: FLUX
+    support:
+      fee:
+        accurate: true
     driver: zcash
     decimals: 8
     fee_limit: "1.0"
@@ -251,12 +352,19 @@ chains:
     indexer_url: https://blockbook.runonflux.io/
   FTM:
     chain: FTM
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 4002
     chain_name: Fantom (Testnet)
     decimals: 18
   GUSDT:
     chain: GUSDT
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 2201
     chain_name: Stable Testnet
@@ -268,6 +376,10 @@ chains:
         asset_id: "38892"
   HBAR:
     chain: HBAR
+    support:
+      memo: string
+      fee:
+        accurate: true
     chain_id: "0.0.3"
     driver: hedera
     chain_name: Hedera
@@ -278,6 +390,10 @@ chains:
     indexer_url: "https://testnet.mirrornode.hedera.com"
   HyperEVM:
     chain: HyperEVM
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 998
     chain_name: HyperEVM Testnet
@@ -285,6 +401,9 @@ chains:
     confirmations_final: 30
   HYPE:
     chain: HYPE
+    support:
+      fee:
+        accurate: true
     driver: hyperliquid
     chain_name: Hyperliquid (Testnet)
     decimals: 8
@@ -310,6 +429,9 @@ chains:
         bridged_asset: "chains/HYPE/assets/USDC:0xeb62eee3685fc4c43992febcd9e75443"
   KAS:
     chain: KAS
+    support:
+      fee:
+        accurate: true
     driver: kaspa
     # prefix for kaspa testnet
     chain_prefix: "kaspatest"
@@ -326,6 +448,12 @@ chains:
     decimals: 12
   KAVA:
     chain: KAVA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: kava_2221-16000
     chain_name: Kava
@@ -343,6 +471,9 @@ chains:
         fee_limit: "100.0"
   KLAY:
     chain: KLAY
+    support:
+      fee:
+        accurate: true
     driver: "evm-legacy"
     net: testnet
     chain_id: 1001
@@ -359,6 +490,12 @@ chains:
     disabled: true
   INJ:
     chain: INJ
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: evmos
     chain_id: injective-888
     chain_name: Injective (Testnet)
@@ -374,6 +511,12 @@ chains:
         decimals: 18
   LUNA:
     chain: LUNA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: pisco-1
     chain_name: Terra (Testnet)
@@ -387,6 +530,12 @@ chains:
         decimals: 6
   LUNC:
     chain: LUNC
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: bombay-12
     chain_name: Terra Classic (Testnet)
@@ -403,18 +552,32 @@ chains:
         decimals: 6
   MATIC:
     chain: MATIC
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 80001
     chain_name: Polygon (Mumbai)
     decimals: 18
   MON:
     chain: MON
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 10143
     chain_name: Monad
     decimals: 18
   NIL:
     chain: NIL
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: nillion-chain-testnet-1
     chain_name: Nillion
@@ -429,6 +592,9 @@ chains:
         fee_limit: "100.0"
   NEAR:
     chain: NEAR
+    support:
+      fee:
+        accurate: true
     driver: near
     decimals: 24
     fee_limit: "200.0"
@@ -440,12 +606,21 @@ chains:
         asset_id: "6535"
   EmROSE:
     chain: EmROSE
+    support:
+      fee:
+        accurate: true
     driver: evm-legacy
     chain_id: 42261
     chain_name: Oasis Emerald (Testnet)
     decimals: 18
   SEI:
     chain: SEI
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: atlantic-2
     chain_name: Sei
@@ -460,6 +635,12 @@ chains:
         decimals: 6
   TIA:
     chain: TIA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_name: Celestia
     chain_prefix: celestia
@@ -474,6 +655,12 @@ chains:
         decimals: 6
   SOL:
     chain: SOL
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     net: devnet
     chain_name: Solana (Devnet)
@@ -481,12 +668,23 @@ chains:
     chain_gas_multiplier: 1.5
   ES:
     chain: ES
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     chain_name: Eclipse
     decimals: 9
     chain_gas_multiplier: 1.5
   SUI:
     chain: SUI
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
+        payer: true
     driver: sui
     net: devnet
     chain_coin: "0x2::sui::SUI"
@@ -498,6 +696,12 @@ chains:
         decimals: 9
   XPLA:
     chain: XPLA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: cube_47-5
     chain_name: XPLA (Testnet)
@@ -512,6 +716,12 @@ chains:
         decimals: 18
   HASH:
     chain: HASH
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: cosmos
     chain_id: pio-testnet-1
     chain_name: Provenance (Testnet)
@@ -528,6 +738,10 @@ chains:
         decimals: 9
   TAO:
     chain: TAO
+    support:
+      staking: [stake, unstake]
+      fee:
+        accurate: true
     driver: substrate
     decimals: 9
     chain_name: Bittensor
@@ -536,6 +750,10 @@ chains:
     rate_limit: 0.5
   TEMPO:
     chain: TEMPO
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: tempo
     chain_id: 42431
     chain_name: Tempo Testnet (Moderato)
@@ -544,6 +762,10 @@ chains:
     confirmations_final: 5
   TRX:
     chain: TRX
+    support:
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
     driver: tron
     net: testnet
     chain_name: Nile
@@ -553,18 +775,29 @@ chains:
     chain_gas_multiplier: 1.1
   TON:
     chain: TON
+    support:
+      memo: string
+      fee:
     driver: ton
     decimals: 9
     net: testnet
     rate_limit: 0.5
   XRP:
     chain: XRP
+    support:
+      memo: numeric
+      fee:
+        accurate: true
     driver: xrp
     net: devnet
     chain_name: xrp (Devnet)
     decimals: 6
   BASE:
     chain: BASE
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_name: Base Protocol
     decimals: 18
@@ -599,6 +832,9 @@ chains:
         max_fee: "20.0"
   XLM:
     chain: XLM
+    support:
+      memo: string
+      fee:
     driver: xlm
     chain_name: xlm
     decimals: 7
@@ -609,6 +845,10 @@ chains:
     chain_id: "Test SDF Network ; September 2015"
   SeiEVM:
     chain: SeiEVM
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 1328
     chain_name: Sei
@@ -617,6 +857,12 @@ chains:
     decimals: 18
   ZETA:
     chain: ZETA
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: evmos
     chain_id: athens_7001-1
     chain_name: ZetaChain
@@ -633,6 +879,12 @@ chains:
         fee_limit: "200.0"
   FOGO:
     chain: FOGO
+    support:
+      memo: string
+      staking: [stake, unstake, withdraw]
+      fee:
+        accurate: true
+        payer: true
     driver: solana
     chain_name: Fogo (testnet)
     net: testnet
@@ -641,6 +893,10 @@ chains:
     fee_limit: "100"
   LinETH:
     chain: LinETH
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 59141
     chain_name: Linea Sepolia
@@ -649,6 +905,10 @@ chains:
     fee_limit: "100.0"
   XPL:
     chain: XPL
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 9746
     chain_name: Plasma
@@ -658,6 +918,10 @@ chains:
     fee_limit: "100.0"
   0G:
     chain: 0G
+    support:
+      fee:
+        accurate: true
+        payer: true
     driver: evm
     chain_id: 1
     chain_name: 0g

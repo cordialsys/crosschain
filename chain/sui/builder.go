@@ -300,3 +300,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, fromPubKey []by
 	// The token is already in the coins in the tx_input so txbuilding is the exact same.
 	return txBuilder.NewTransfer(feePayer, fromPubKey, from, to, amount, input)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// SUI does not support memo
+	return xc.MemoSupportNone
+}
