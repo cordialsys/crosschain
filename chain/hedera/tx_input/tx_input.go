@@ -65,7 +65,13 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 }
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	return xc.NewAmountBlockchainFromUint64(0), ""
+	return xc.NewAmountBlockchainFromUint64(input.MaxTransactionFee), ""
+}
+
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// HBAR uses a max fee, but it's typically very small and computed dynamically,
+	// so i'd say it's accurate.
+	return true
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {

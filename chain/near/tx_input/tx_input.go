@@ -49,6 +49,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return input.FeeEstimation, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) bool {
 	old, ok := other.(NonceGetter)
 	if ok {

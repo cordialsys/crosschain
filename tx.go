@@ -32,6 +32,19 @@ type TxInputGetMaxPossibleFee interface {
 	// Note: The caller/user should check this after TxInput has been populated with all other fields, as they can influence
 	// what the ultimate max fee is.
 	GetFeeLimit() (AmountBlockchain, ContractAddress)
+
+	// Marker to indicate that the gas estimation included in a TxInput
+	// is accurate to what will actually be paid.
+	//
+	// For instance, if the chain is blindly setting a high gas price "limit", and in
+	// reality the user will only pay a fraction of that, then this should return false.
+	//
+	// If the fee is actually accurate, then we can rely on it for inclusive fee spending behavior.
+	// The user can opt to "send max balance" and we'll deduct the fee estimation from the current balance
+	// for the transaction amount.  We want to know if this is accurate or we can avoid:
+	// - Leaving a high leftover balance
+	// - Transaction reverting due to fee-estimate being too low
+	IsFeeLimitAccurate() bool
 }
 
 // This interface determines whether if different tx inputs conflict with one another.

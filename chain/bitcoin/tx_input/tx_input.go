@@ -149,6 +149,10 @@ func (txInput *TxInput) SetAmount(amount xc.AmountBlockchain) {
 	txInput.UnspentOutputs = FilterForMinUtxoSet(txInput.UnspentOutputs, amount, 10)
 }
 
+func (txInput *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 // Indicate if another txInput has a same UTXO and returns the first one.
 func (txInput *TxInput) HasSameUtxoAs(other *TxInput) (*Outpoint, bool) {
 	for _, x := range txInput.UnspentOutputs {

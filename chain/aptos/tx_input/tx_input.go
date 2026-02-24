@@ -66,3 +66,7 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// sequence all same - we're safe
 	return true
 }
+
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}

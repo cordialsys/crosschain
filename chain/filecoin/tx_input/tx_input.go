@@ -61,6 +61,12 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return maxFeeSpend, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// gas limit is estimated, and fees are generally very low on FIL
+	// it's accurate
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if emvOther, ok := other.(*TxInput); ok {
 		return emvOther.Nonce != input.Nonce

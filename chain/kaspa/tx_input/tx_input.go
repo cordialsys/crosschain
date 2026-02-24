@@ -69,6 +69,12 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return feeEstimate, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// This may be flaky, Kaspa seems to have arbitrary minimum balance constraints
+	// Often I've seen kaspa complain if <5 KAS is left in the address
+	return true
+}
+
 func (input *TxInput) IndependentOf(otherI xc.TxInput) (independent bool) {
 	other, ok := otherI.(*TxInput)
 	if ok {

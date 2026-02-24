@@ -68,6 +68,10 @@ func (input *TxInput) GetNonce() uint64 {
 	return (*evminput.TxInput)(input).GetNonce()
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return ((*evminput.TxInput)(input)).IsFeeLimitAccurate()
+}
+
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	evmClient, err := evmclient.NewClient(cfgI)
 	if err != nil {

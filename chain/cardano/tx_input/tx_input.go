@@ -59,6 +59,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(input.Fee), ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 // check if any utxo is spent twice
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	cardanoOther, ok := other.(UtxoGetter)

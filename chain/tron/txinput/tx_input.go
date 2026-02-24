@@ -5,7 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/tron/core"
-	"github.com/cordialsys/crosschain/chain/tron/http_client"
+	httpclient "github.com/cordialsys/crosschain/chain/tron/http_client"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 )
 
@@ -75,7 +75,12 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 }
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	// The client should be setting this maximum based on simulation, so it's accurate.
 	return input.MaxFee, ""
+}
+
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
 }
 
 func (input *TxInput) SetUnix(unix int64) {

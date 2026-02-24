@@ -57,6 +57,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(input.Fee), input.Canister
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if icpOther, ok := other.(*TxInput); ok {
 		return input.CreateTime != icpOther.CreateTime
