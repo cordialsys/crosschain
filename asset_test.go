@@ -7,6 +7,7 @@ import (
 
 	. "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/address"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/eos"
 	"github.com/cordialsys/crosschain/chain/evm"
@@ -15,6 +16,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/near"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/factory"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/normalize"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
@@ -322,6 +324,76 @@ func TestExternalIdsAreSet(t *testing.T) {
 					validExternalConfig = true
 				}
 				require.True(t, validExternalConfig, "Please provive external ids")
+			})
+		}
+	}
+}
+
+func derefOrZero[T any](ptr *T) T {
+	if ptr == nil {
+		var zero T
+		return zero
+	}
+	return *ptr
+}
+
+func TestChainSupportAnnotations(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				require := require.New(t)
+				xcf := factory.NewDefaultFactory()
+				builder, err := xcf.NewTxBuilder(chain.ChainBaseConfig)
+				require.NoError(err)
+
+				for _, stakingMethod := range chain.Support.Staking {
+					require.True(stakingMethod.Valid(), fmt.Sprintf("chain.support.staking method %s is not valid", stakingMethod))
+				}
+
+				if !derefOrZero(chain.Support.Memo).Valid() {
+					require.Fail(fmt.Sprintf("chain.support.memo be set to %s, %s, or %s", MemoSupportString, MemoSupportNumeric, MemoSupportNone))
+				}
+
+				memoSupport := builder.SupportsMemo()
+				if derefOrZero(chain.Support.Memo) != memoSupport {
+					if (derefOrZero(chain.Support.Memo) == "" && memoSupport == MemoSupportNone) ||
+						(derefOrZero(chain.Support.Memo) == MemoSupportNone && memoSupport == "") {
+						// ok
+					} else {
+						require.Fail(fmt.Sprintf("chain.support.memo should be set to %s, or the value returned by the %T builder is wrong", memoSupport, builder))
+					}
+				}
+
+				staker, ok := builder.(xcbuilder.Staking)
+				if ok {
+					methods := staker.MethodsUsed()
+					if len(methods) > 0 {
+						if len(chain.Support.Staking) == 0 {
+							require.Fail(fmt.Sprintf("chain.support.staking be set to an array containing a subset of %s, %s, %s to match the current builder's methods %v", StakingMethodStake, StakingMethodUnstake, StakingMethodWithdraw, methods))
+						}
+					}
+				} else {
+					if len(chain.Support.Staking) > 0 {
+						require.Fail(fmt.Sprintf("chain.support.staking be set to an empty array since it's not supported on the %T builder", builder))
+					}
+				}
+
+				input, err := drivers.NewTxInput(chain.Driver)
+				require.NoError(err)
+				require.Equal(
+					input.IsFeeLimitAccurate(),
+					derefOrZero(chain.Support.Fee.Accurate),
+					fmt.Sprintf("chain.support.fee.accurate should be set to %t, or the chain input %T implementation is wrong", input.IsFeeLimitAccurate(), input),
+				)
+
+				_, supportsFeePayer := builder.(xcbuilder.BuilderSupportsFeePayer)
+				require.Equal(
+					supportsFeePayer,
+					derefOrZero(chain.Support.Fee.Payer),
+					fmt.Sprintf("chain.support.fee.payer should be set to %t, or the chain input %T implementation is wrong", supportsFeePayer, input),
+				)
 			})
 		}
 	}

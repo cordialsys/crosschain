@@ -287,3 +287,8 @@ func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Addres
 
 	return txBuilder.buildSolanaTx(from, from, instructions, txInput, "")
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Solana supports memo
+	return xc.MemoSupportString
+}

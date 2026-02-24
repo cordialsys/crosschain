@@ -24,3 +24,8 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
 	return tx.NewTransfer(args, input)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Hedera supports memo
+	return xc.MemoSupportString
+}

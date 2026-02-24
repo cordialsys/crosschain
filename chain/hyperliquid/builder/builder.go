@@ -33,3 +33,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	transaction := tx.NewTx(args, *txInput)
 	return &transaction, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Hyperliquid does not support memo
+	return xc.MemoSupportNone
+}

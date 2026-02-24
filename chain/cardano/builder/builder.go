@@ -36,3 +36,16 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	return tx.NewWithdraw(args, input)
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+		xc.StakingMethodWithdraw,
+	}
+}
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Cardano does support memo
+	return xc.MemoSupportString
+}

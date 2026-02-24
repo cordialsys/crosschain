@@ -256,3 +256,15 @@ func (txBuilder TxBuilder) Unstake(stakingArgs xcbuilder.StakeArgs, input xc.Uns
 func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	return nil, fmt.Errorf("withdraw not supported; EOS will be automatically withdrawn after ~3days of unstaking")
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+	}
+}
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// EOS supports memo
+	return xc.MemoSupportString
+}

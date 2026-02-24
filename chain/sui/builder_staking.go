@@ -290,3 +290,10 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 func (txBuilder TxBuilder) Withdraw(args xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	return nil, errors.New("sui doesn't require a separate withdraw call")
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+	}
+}

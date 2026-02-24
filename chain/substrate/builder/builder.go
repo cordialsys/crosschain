@@ -51,3 +51,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 
 	return tx.NewTx(extrinsic.NewDynamicExtrinsic(&call), sender, txInput.Tip, txInput)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Substrate does not support memo
+	return xc.MemoSupportNone
+}

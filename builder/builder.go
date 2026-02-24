@@ -33,6 +33,8 @@ type BuilderRequiresIdentity interface {
 
 type Transfer interface {
 	Transfer(args TransferArgs, input xc.TxInput) (xc.Tx, error)
+	// Marker to indicate if including a memo on the transaction is supported (via args.GetMemo())
+	SupportsMemo() xc.MemoSupport
 }
 
 type MultiTransfer interface {
@@ -43,4 +45,7 @@ type Staking interface {
 	Stake(stakingArgs StakeArgs, input xc.StakeTxInput) (xc.Tx, error)
 	Unstake(stakingArgs StakeArgs, input xc.UnstakeTxInput) (xc.Tx, error)
 	Withdraw(stakingArgs StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error)
+
+	// Informational only
+	MethodsUsed() []xc.StakingMethod
 }

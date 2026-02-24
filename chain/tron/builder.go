@@ -570,6 +570,14 @@ func (txBuilder TxBuilder) Withdraw(stakingArgs xcbuilder.StakeArgs, input xc.Wi
 	return NewTx(transactions)
 }
 
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	return []xc.StakingMethod{
+		xc.StakingMethodStake,
+		xc.StakingMethodUnstake,
+		xc.StakingMethodWithdraw,
+	}
+}
+
 // check that input is following 1 vote == 1 trx logic
 // 1. make sure that stake amount is >= to vote amount
 // 2. make sure that stakeAmount - voteTrxAmount is no greater than 1 TRX
@@ -590,4 +598,9 @@ func validateStakeAmount(argsAmount xc.AmountBlockchain, votes uint64, decimals 
 	}
 
 	return nil
+}
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Tron does not support memo
+	return xc.MemoSupportNone
 }

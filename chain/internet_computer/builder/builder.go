@@ -33,3 +33,8 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	transaction, err := tx.NewTx(args, *txInput)
 	return &transaction, err
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// InternetComputerProtocol does not support memo
+	return xc.MemoSupportNone
+}

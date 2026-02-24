@@ -51,3 +51,8 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contrac
 
 	return tx.NewTokenTx(nearInput, args)
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Near does not support memo
+	return xc.MemoSupportNone
+}

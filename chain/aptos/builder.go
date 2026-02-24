@@ -182,3 +182,7 @@ func (txb *TxBuilder) NewTokenTransfer(feePayer xc.Address, from xc.Address, to 
 	}
 	return tx, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	return xc.MemoSupportNone
+}

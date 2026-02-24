@@ -171,3 +171,21 @@ func (txBuilder TxBuilder) Unstake(stakeArgs xcbuilder.StakeArgs, input xc.Unsta
 func (txBuilder TxBuilder) Withdraw(stakeArgs xcbuilder.StakeArgs, input xc.WithdrawTxInput) (xc.Tx, error) {
 	return nil, fmt.Errorf("ethereum stakes are claimed automatically")
 }
+
+func (txBuilder TxBuilder) MethodsUsed() []xc.StakingMethod {
+	if txBuilder.Asset.Chain == xc.ETH {
+		return []xc.StakingMethod{
+			xc.StakingMethodStake,
+			xc.StakingMethodUnstake,
+		}
+	} else {
+		// Currently unknown for other EVM chains
+		return []xc.StakingMethod{}
+	}
+
+}
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// EVM does not support memo
+	return xc.MemoSupportNone
+}

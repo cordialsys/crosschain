@@ -190,3 +190,8 @@ func (txBuilder TxBuilder) createTxWithMsg(input *tx_input.TxInput, msg types.Ms
 		fees,
 	), nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	// Cosmos supports memo
+	return xc.MemoSupportString
+}
