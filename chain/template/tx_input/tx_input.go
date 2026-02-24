@@ -43,6 +43,11 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(0), ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// Default false unless we know the fee estimation is accurate (not a max limit)
+	return false
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// are these two transactions independent (e.g. different sequences & utxos & expirations?)
 	// default false

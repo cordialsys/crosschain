@@ -91,6 +91,9 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	// sequence all same - we're safe
 	return true
 }
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
 
 func EstimateFeeLimit(feeLimit xc.AmountBlockchain, gasPrice xc.AmountBlockchain) xc.AmountBlockchain {
 	gasLimit := feeLimit.Div(&gasPrice)

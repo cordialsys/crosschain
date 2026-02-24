@@ -92,6 +92,10 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	return true
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) GetVariant() xc.TxVariantInputType {
 	return xc.NewStakingInputType(xc.DriverSubstrate, string(xc.Native))
 }

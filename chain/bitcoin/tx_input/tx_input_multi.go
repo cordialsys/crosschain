@@ -67,6 +67,10 @@ func (txInput *MultiTransferInput) GetFeeLimit() (xc.AmountBlockchain, xc.Contra
 	return xc.AmountBlockchain(*fee.BigInt()), ""
 }
 
+func (input *MultiTransferInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *MultiTransferInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if btcOther, ok := other.(UtxoGetter); ok {
 		// check if any utxo are spent twice

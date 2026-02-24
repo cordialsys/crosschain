@@ -83,6 +83,9 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	}
 	return
 }
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
 func CoinEqual(coin1 *types.Coin, coin2 *types.Coin) bool {
 	return bytes.Equal(coin1.CoinObjectId.Data(), (coin2.CoinObjectId.Data())) &&
 		bytes.Equal(coin1.Digest.Data(), coin2.Digest.Data())

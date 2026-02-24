@@ -106,6 +106,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return maxSpend, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// no conflicts on solana as txs are easily parallelizeable through
 	// the recent-block-hash mechanism.

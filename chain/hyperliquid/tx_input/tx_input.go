@@ -51,6 +51,11 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(100_000_000), UsdcTokenId
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// fixed fees currently, so always inclusive
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if hypeOther, ok := other.(*TxInput); ok {
 		return input.TransactionTime != hypeOther.TransactionTime

@@ -86,3 +86,8 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(uint64(input.MaxFee)), ""
 }
+
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// currently getting a ~2 XLM fixed fee, not really accurate
+	return false
+}

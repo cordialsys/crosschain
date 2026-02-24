@@ -108,6 +108,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return maxFeeSpend, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 type GetAccountInfo interface {
 	GetNonce() uint64
 	GetFromAddress() string

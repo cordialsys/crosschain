@@ -82,6 +82,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return totalSpendInt, ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// different sequence means independence
 	if cosmosOther, ok := other.(GetAccountInfo); ok {

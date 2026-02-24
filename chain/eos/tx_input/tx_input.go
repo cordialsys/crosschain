@@ -92,6 +92,11 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(0), ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	// EOS isn't spend on fee, it uses the staking resources, so it's always inclusive...
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// EOS doesn't use nonces, all are independent.
 	return true
