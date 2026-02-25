@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/cordialsys/crosschain/client/errors"
@@ -18,6 +19,7 @@ import (
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/solana/builder"
+	"github.com/cordialsys/crosschain/chain/solana/client/solscan"
 	"github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
@@ -281,7 +283,45 @@ func processTransactionWithAddressLookups(ctx context.Context, txx *solana.Trans
 }
 
 // FetchLegacyTxInfo returns tx info for a Solana tx
+// RPC is always attempted first, then indexer fallback if configured.
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	// Keep input validation behavior the same regardless of data source.
+	if _, err := solana.SignatureFromBase58(string(txHash)); err != nil {
+		return txinfo.LegacyTxInfo{}, err
+	}
+
+	rpcInfo, rpcErr := client.fetchLegacyTxInfoFromRPC(ctx, txHash)
+	if rpcErr == nil {
+		return rpcInfo, nil
+	}
+
+	indexerURL := strings.TrimSpace(client.Asset.GetChain().IndexerUrl)
+	if indexerURL == "" {
+		return txinfo.LegacyTxInfo{}, rpcErr
+	}
+
+	solscanClient, err := solscan.NewClient(indexerURL)
+	if err != nil {
+		return txinfo.LegacyTxInfo{}, err
+	}
+
+	indexerInfo, indexerErr := solscanClient.GetLegacyTxInfo(ctx, string(txHash))
+	if indexerErr == nil {
+		return indexerInfo, indexerErr
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"tx_hash":       txHash,
+		"rpc_error":     rpcErr.Error(),
+		"indexer_url":   indexerURL,
+		"indexer_error": indexerErr.Error(),
+	}).Warn("solana tx-info lookup failed on rpc and indexer fallback")
+
+	// Preserve RPC behavior when both fail by returning the RPC error.
+	return txinfo.LegacyTxInfo{}, rpcErr
+}
+
+func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {
 	result := txinfo.LegacyTxInfo{}
 
 	txSig, err := solana.SignatureFromBase58(string(txHash))
