@@ -31,13 +31,10 @@ func NewClient(rawURL string) (*Client, error) {
 }
 
 func (c *Client) DoGet(ctx context.Context, u *url.URL, output any) (int, error) {
-	// u := c.baseURL.JoinPath("v1/transaction/detail")
-	// q := u.Query()
-	// q.Set("tx", txHash)
-	// u.RawQuery = q.Encode()
-	logrus.WithFields(logrus.Fields{
+	log := logrus.WithFields(logrus.Fields{
 		"url": u.String(),
-	}).Debug("get solscan")
+	})
+	log.Debug("get solscan")
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
@@ -54,14 +51,12 @@ func (c *Client) DoGet(ctx context.Context, u *url.URL, output any) (int, error)
 		return resp.StatusCode, fmt.Errorf("failed to read indexer response body: %w", err)
 	}
 
-	logrus.WithFields(logrus.Fields{
-		"url":  u.String(),
+	log = log.WithFields(logrus.Fields{
 		"data": string(body),
-	}).Debug("get solscan response")
+	})
 
-	// if resp.StatusCode == http.StatusNotFound {
-	// 	return resp.StatusCode, errors.TransactionNotFoundf("not found")
-	// }
+	log.Debug("get solscan response")
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return resp.StatusCode, fmt.Errorf("indexer status %d", resp.StatusCode)
 	}
@@ -172,7 +167,8 @@ func (c *Client) GetLegacyTxInfo(ctx context.Context, txHash string) (txinfo.Leg
 	result.Confirmations = 0
 	// Not ideal, but approximate and fine for a fallback method.
 	if parsed.Data.TxStatus == "finalized" {
-		result.Confirmations = 150
+		// currently the final confirmations for solana is 150, so we should guess over that.
+		result.Confirmations = 500
 	}
 
 	chainInfo, err := c.GetChainInfo(ctx)
