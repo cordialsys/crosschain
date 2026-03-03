@@ -57,6 +57,7 @@ const (
 	ETC      = NativeAsset("ETC")      // Ethereum Classic
 	ETH      = NativeAsset("ETH")      // Ethereum
 	ETHW     = NativeAsset("ETHW")     // Ethereum PoW
+	FET      = NativeAsset("FET")      // Fetch.ai
 	FIL      = NativeAsset("FIL")      // Filecoin
 	FLUX     = NativeAsset("FLUX")     // Flux
 	FOGO     = NativeAsset("FOGO")     // Fogo
@@ -135,6 +136,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	ETC,
 	ETH,
 	ETHW,
+	FET,
 	FIL,
 	FLUX,
 	FOGO,
