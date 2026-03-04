@@ -320,7 +320,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverEVMLegacy
 	case APTOS:
 		return DriverAptos
-	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY, KAVA:
+	case ATOM, XPLA, INJ, HASH, LUNC, LUNA, SEI, TIA, NOBLE, AKT, BAND, ZETA, NIL, BABY, KAVA, FET:
 		return DriverCosmos
 	case ICP:
 		return DriverInternetComputerProtocol
