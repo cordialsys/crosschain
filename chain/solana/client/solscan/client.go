@@ -161,6 +161,26 @@ func (c *Client) GetLegacyTxInfo(ctx context.Context, txHash string) (txinfo.Leg
 		result.ContractAddress = result.Destinations[0].ContractAddress
 	}
 
+	// For some reason solscan reports SOL as `So11111111111111111111111111111111111111111`,
+	// So we need to swap it out.
+	const solscanSolID = "So11111111111111111111111111111111111111111"
+	for _, src := range result.Sources {
+		if src.ContractAddress == xc.ContractAddress(solscanSolID) {
+			src.ContractAddress = ""
+		}
+		if src.Asset == solscanSolID {
+			src.Asset = ""
+		}
+	}
+	for _, dest := range result.Destinations {
+		if dest.ContractAddress == xc.ContractAddress(solscanSolID) {
+			dest.ContractAddress = ""
+		}
+		if dest.Asset == solscanSolID {
+			dest.Asset = ""
+		}
+	}
+
 	if data.Status != 1 {
 		result.Error = "transaction failed"
 	}
