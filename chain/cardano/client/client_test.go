@@ -585,6 +585,91 @@ func TestFetchTxInfo(t *testing.T) {
 
 }
 
+func TestFetchDecimals(t *testing.T) {
+	vectors := []struct {
+		name             string
+		contract         xc.ContractAddress
+		assetResponse    string
+		expectedDecimals int
+		err              bool
+		expectNoRequest  bool
+	}{
+		{
+			name:             "NativeADA",
+			contract:         "ADA",
+			expectedDecimals: 6,
+			expectNoRequest:  true,
+		},
+		{
+			name:             "Lovelace",
+			contract:         "lovelace",
+			expectedDecimals: 6,
+			expectNoRequest:  true,
+		},
+		{
+			name:             "EmptyContract",
+			contract:         "",
+			expectedDecimals: 6,
+			expectNoRequest:  true,
+		},
+		{
+			name:             "TokenWithDecimals",
+			contract:         "0691b2fecca1ac4f53cb6dfb00b7013e561d1f34403b957cbb5af1fa4e49474854",
+			assetResponse:    `{"asset":"0691b2fecca1ac4f53cb6dfb00b7013e561d1f34403b957cbb5af1fa4e49474854","policy_id":"0691b2fecca1ac4f53cb6dfb00b7013e561d1f34403b957cbb5af1fa","metadata":{"name":"NIGHT","decimals":6}}`,
+			expectedDecimals: 6,
+		},
+		{
+			name:             "TokenWithNoMetadata",
+			contract:         "abc123",
+			assetResponse:    `{"asset":"abc123","policy_id":"abc123","metadata":null}`,
+			expectedDecimals: 0,
+		},
+		{
+			name:             "TokenWithZeroDecimals",
+			contract:         "abc123",
+			assetResponse:    `{"asset":"abc123","policy_id":"abc123","metadata":{"name":"TestToken","decimals":0}}`,
+			expectedDecimals: 0,
+		},
+		{
+			name:     "APIError",
+			contract: "invalid_asset",
+			err:      true,
+		},
+	}
+
+	cfg := NewTestConfig()
+	for _, vector := range vectors {
+		t.Run(vector.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if vector.expectNoRequest {
+					t.Fatal("unexpected HTTP request for native asset")
+				}
+				if vector.err {
+					w.WriteHeader(http.StatusBadRequest)
+					_, err := w.Write([]byte(`{"status_code":400,"error":"Bad Request","message":"Invalid asset"}`))
+					require.NoError(t, err)
+					return
+				}
+				require.Contains(t, r.URL.Path, "/assets/")
+				_, err := w.Write([]byte(vector.assetResponse))
+				require.NoError(t, err)
+			}))
+			defer server.Close()
+
+			client, _ := client.NewClient(cfg)
+			client.Url = server.URL
+
+			decimals, err := client.FetchDecimals(context.Background(), vector.contract)
+			if vector.err {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, vector.expectedDecimals, decimals)
+		})
+	}
+}
+
 func MustParseTime(s string) time.Time {
 	t, err := time.Parse(time.RFC3339, s)
 	if err != nil {
