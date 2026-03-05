@@ -37,7 +37,7 @@ func TestChains(t *testing.T) {
 					kaspa.Validate(t, chain)
 				case DriverEOS:
 					eos.Validate(t, chain)
-				case DriverEGLD, DriverElrond:
+				case DriverEGLD:
 					egld.Validate(t, chain)
 				case DriverTron:
 					// pass

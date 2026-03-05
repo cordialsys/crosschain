@@ -1,3 +1,4 @@
+// Generate with: make build-egld-proto
 syntax = "proto3";
 
 package egld_transaction;

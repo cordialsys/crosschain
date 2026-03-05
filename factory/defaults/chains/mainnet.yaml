@@ -461,7 +461,7 @@ chains:
     decimals: 18
     fee_limit: "50.0"
     indexer_url: "https://api.multiversx.com"
-    confirmations_final: 2
+    confirmations_final: 6
     external:
       coin_market_cap:
         asset_id: "6892"

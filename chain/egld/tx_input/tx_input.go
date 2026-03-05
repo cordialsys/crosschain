@@ -46,13 +46,13 @@ func (input *TxInput) GetNonce() uint64 {
 
 func NewTxInput() *TxInput {
 	return &TxInput{
-		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverElrond),
+		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverEGLD),
 		Version:         1, // Default transaction version
 	}
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
-	return xc.DriverElrond
+	return xc.DriverEGLD
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
