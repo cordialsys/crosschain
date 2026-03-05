@@ -283,6 +283,9 @@ chains:
     network: devnet
     indexer_url: "https://devnet-api.multiversx.com"
     confirmations_final: 6
+    support:
+      fee:
+        accurate: true
   LTC:
     chain: LTC
     support:
