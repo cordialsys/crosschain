@@ -42,3 +42,6 @@ build-push-bitcoin:
 
 build-tron-proto:
 	./chain/tron/core/generate_proto.sh # generate tron protobufs
+
+build-egld-proto:
+	cd chain/egld/tx && protoc --go_out=. --go_opt=paths=source_relative egld_transaction.proto

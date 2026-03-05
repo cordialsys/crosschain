@@ -277,12 +277,12 @@ chains:
     confirmations_final: 1
   EGLD:
     chain: EGLD
-    driver: elrond
+    driver: egld
     decimals: 18
     chain_name: MultiversX (Devnet)
     network: devnet
     indexer_url: "https://devnet-api.multiversx.com"
-    confirmations_final: 2
+    confirmations_final: 6
   LTC:
     chain: LTC
     support:

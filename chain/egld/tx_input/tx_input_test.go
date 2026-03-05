@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/cordialsys/crosschain/chain/template/tx_input"
+	"github.com/cordialsys/crosschain/chain/egld/tx_input"
 	"github.com/stretchr/testify/require"
 )
 

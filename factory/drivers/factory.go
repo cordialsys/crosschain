@@ -132,7 +132,7 @@ func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 		return xlmclient.NewClient(cfg)
 	case xc.DriverDusk:
 		return duskclient.NewClient(cfg)
-	case xc.DriverEGLD, xc.DriverElrond:
+	case xc.DriverEGLD:
 		return egldclient.NewClient(cfg)
 	case xc.DriverKaspa:
 		return kaspaclient.NewClient(cfg)
@@ -232,7 +232,7 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return filbuilder.NewTxBuilder(cfg)
 	case xc.DriverDusk:
 		return duskbuilder.NewTxBuilder(cfg)
-	case xc.DriverEGLD, xc.DriverElrond:
+	case xc.DriverEGLD:
 		return egldbuilder.NewTxBuilder(cfg)
 	case xc.DriverKaspa:
 		return kaspabuilder.NewTxBuilder(cfg)
@@ -258,7 +258,7 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 	switch xc.Driver(cfg.Driver) {
 	case xc.DriverDusk:
 		return duskaddress.NewAddressBuilder(cfg)
-	case xc.DriverEGLD, xc.DriverElrond:
+	case xc.DriverEGLD:
 		return egldaddress.NewAddressBuilder(cfg)
 	case xc.DriverEVM:
 		return evmaddress.NewAddressBuilder(cfg)
@@ -363,7 +363,7 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return hedera.CheckError(err)
 	case xc.DriverNear:
 		return nearerrors.CheckError(err)
-	case xc.DriverEGLD, xc.DriverElrond:
+	case xc.DriverEGLD:
 		return egld.CheckError(err)
 	}
 	return errors.UnknownError
@@ -426,7 +426,7 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return hedera.ValidateAddress(cfg, addr)
 	case xc.DriverNear:
 		return near.ValidateAddress(cfg, addr)
-	case xc.DriverEGLD, xc.DriverElrond:
+	case xc.DriverEGLD:
 		return egld.ValidateAddress(cfg, addr)
 	}
 	return fmt.Errorf("%w: %s", ErrNoAddressValidation, string(cfg.Chain))

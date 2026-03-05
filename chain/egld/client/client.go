@@ -114,14 +114,13 @@ func (client *Client) Post(ctx context.Context, url string, payload any, respons
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(responseBody))
-	}
-
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(responseBody))
 	}
 
 	if err := json.Unmarshal(responseBody, response); err != nil {
