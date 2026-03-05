@@ -79,6 +79,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.AmountBlockchain(*maxFee), ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// Transactions are independent if they have different nonces
 	if egldOther, ok := other.(GetAccountInfo); ok {

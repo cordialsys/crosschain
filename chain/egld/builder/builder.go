@@ -86,3 +86,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contrac
 
 	return txObj, nil
 }
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	return xc.MemoSupportNone
+}

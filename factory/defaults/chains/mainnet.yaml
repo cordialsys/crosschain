@@ -569,6 +569,9 @@ chains:
     fee_limit: "50.0"
     indexer_url: "https://api.multiversx.com"
     confirmations_final: 6
+    support:
+      fee:
+        accurate: true
     external:
       coin_market_cap:
         asset_id: "6892"
