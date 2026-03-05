@@ -338,12 +338,22 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	return xc.NewAmountBlockchainFromUint64(0), nil
 }
 
-// types.Ada uses 6 decimals, and tokens use 0 decimals.
-// Token decimals are tricky at the moment, so we return 0 for now.
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	if contract == types.Lovelace || contract == "" || contract == types.Ada {
 		return NativeDecimals, nil
 	}
+
+	path := fmt.Sprintf("/assets/%s", string(contract))
+	var assetInfo types.AssetInfo
+	err := client.Get(ctx, path, &assetInfo)
+	if err != nil {
+		return 0, fmt.Errorf("failed to fetch asset info for %s: %w", contract, err)
+	}
+
+	if assetInfo.Metadata != nil {
+		return assetInfo.Metadata.Decimals, nil
+	}
+
 	return TokenDecimals, nil
 }
 

@@ -90,6 +90,21 @@ type TransactionUtxos struct {
 	Outputs []Utxo `json:"outputs"`
 }
 
+type AssetMetadata struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Ticker      string `json:"ticker"`
+	URL         string `json:"url"`
+	Logo        string `json:"logo"`
+	Decimals    int    `json:"decimals"`
+}
+
+type AssetInfo struct {
+	Asset    string         `json:"asset"`
+	PolicyId string         `json:"policy_id"`
+	Metadata *AssetMetadata `json:"metadata"`
+}
+
 type GetAccountInfoResponse struct {
 	WithdrawableAmount string `json:"withdrawable_amount"`
 	PoolId             string `json:"pool_id"`
