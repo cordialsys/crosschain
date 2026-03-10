@@ -329,6 +329,9 @@ func TestExternalIdsAreSet(t *testing.T) {
 				if chain.External.IndexingCo.ChainId != "" {
 					validExternalConfig = true
 				}
+				if chain.External.StakingRewards.ChainId != "" {
+					validExternalConfig = true
+				}
 				require.True(t, validExternalConfig, "Please provive external ids")
 			})
 		}
