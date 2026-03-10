@@ -448,6 +448,9 @@ type External struct {
 		ChainId  string `yaml:"chain_id,omitempty"`
 		Disabled bool   `yaml:"disabled,omitempty"`
 	} `yaml:"indexing_co,omitempty"`
+	StakingRewards struct {
+		ChainId string `yaml:"chain_id,omitempty"`
+	} `yaml:"staking_rewards,omitempty"`
 }
 
 type StakingConfig struct {
