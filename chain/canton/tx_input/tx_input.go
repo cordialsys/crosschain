@@ -1,0 +1,65 @@
+package tx_input
+
+import (
+	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
+)
+
+// TxInput for Canton holds the result of the prepare step in the
+// interactive-submission (external-party signing) flow.
+type TxInput struct {
+	xc.TxInputEnvelope
+	IsExternalTransfer   bool `json:"is_external_transfer"`
+	PreparedTransaction  interactive.PreparedTransaction
+	Sighash              []byte `json:"sighash"`
+	HashingSchemeVersion interactive.HashingSchemeVersion
+	// SubmissionId for deduplication (UUID)
+	SubmissionId string `json:"submission_id"`
+}
+
+var _ xc.TxInput = &TxInput{}
+
+func init() {
+	registry.RegisterTxBaseInput(&TxInput{})
+}
+
+func NewTxInput() *TxInput {
+	return &TxInput{
+		TxInputEnvelope: xc.TxInputEnvelope{
+			Type: xc.DriverCanton,
+		},
+	}
+}
+
+func (input *TxInput) GetDriver() xc.Driver {
+	return xc.DriverCanton
+}
+
+func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
+	// Canton does not use gas fees in the traditional sense
+	return nil
+}
+
+func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	return xc.NewAmountBlockchainFromUint64(0), ""
+}
+
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	// Each Canton submission has a unique SubmissionId / command ID
+	if cantonOther, ok := other.(*TxInput); ok {
+		return cantonOther.SubmissionId != input.SubmissionId
+	}
+	return true
+}
+
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if !xc.IsTypeOf(other, input) {
+		return false
+	}
+	if input.IndependentOf(other) {
+		return false
+	}
+	// Same submission ID means deduplication will protect us
+	return true
+}

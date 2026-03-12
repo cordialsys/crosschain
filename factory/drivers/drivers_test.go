@@ -91,6 +91,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	if driver == xc.DriverHedera {
 		fakeAsset.ChainID = "0.0.3"
 	}
+	if driver == xc.DriverCanton {
+		fakeAsset.URL = "https://canton.example.com"
+	}
 	return fakeAsset
 }
 
