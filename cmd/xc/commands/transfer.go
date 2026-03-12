@@ -222,10 +222,10 @@ func CmdTxTransfer() *cobra.Command {
 				}
 			}
 
-			input, err = xcFactory.TxInputRoundtrip(input)
-			if err != nil {
-				return fmt.Errorf("failed tx input roundtrip: %w", err)
-			}
+			// input, err = xcFactory.TxInputRoundtrip(input)
+			// if err != nil {
+			// 	return fmt.Errorf("failed tx input roundtrip: %w", err)
+			// }
 
 			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
 			timeStamp, _ := tfArgs.GetTimestamp()
