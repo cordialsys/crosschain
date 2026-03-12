@@ -44,6 +44,7 @@ const (
 	BCH      = NativeAsset("BCH")      // Bitcoin Cash
 	BNB      = NativeAsset("BNB")      // Binance Coin
 	BTC      = NativeAsset("BTC")      // Bitcoin
+	CANTON   = NativeAsset("CANTON")   // Canton
 	CELO     = NativeAsset("CELO")     // Celo
 	CHZ      = NativeAsset("CHZ")      // Chiliz
 	CHZ2     = NativeAsset("CHZ2")     // Chiliz 2.0
@@ -114,6 +115,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	BABY,
 	BCH,
 	BTC,
+	CANTON,
 	DASH,
 	DOGE,
 	LTC,
@@ -196,6 +198,7 @@ const (
 	DriverBitcoin                  = Driver("bitcoin")
 	DriverBitcoinCash              = Driver("bitcoin-cash")
 	DriverBitcoinLegacy            = Driver("bitcoin-legacy")
+	DriverCanton                   = Driver("canton")
 	DriverCardano                  = Driver("cardano")
 	DriverCosmos                   = Driver("cosmos")
 	DriverCosmosEvmos              = Driver("evmos")
@@ -228,6 +231,7 @@ var SupportedDrivers = []Driver{
 	DriverBitcoin,
 	DriverBitcoinCash,
 	DriverBitcoinLegacy,
+	DriverCanton,
 	DriverCosmos,
 	DriverCosmosEvmos,
 	DriverEGLD,
@@ -314,6 +318,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoin
 	case BCH:
 		return DriverBitcoinCash
+	case CANTON:
+		return DriverCanton
 	case DOGE, LTC, DASH:
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
@@ -376,7 +382,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -401,7 +407,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
-		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD:
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
 		return Raw
 	}
 	return ""

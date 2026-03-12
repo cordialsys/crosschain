@@ -443,6 +443,13 @@ chains:
         asset_id: celo
       indexing_co:
         chain_id: celo
+  CANTON:
+    chain: CANTON
+    driver: canton
+    chain_name: Canton
+    decimals: 18
+    fee_limit: "100.0"
+    confirmations_final: 1
   CHZ:
     chain: CHZ
     driver: evm-legacy
