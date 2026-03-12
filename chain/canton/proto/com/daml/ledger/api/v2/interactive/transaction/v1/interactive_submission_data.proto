@@ -1,0 +1,116 @@
+// Copyright (c) 2026 Digital Asset (Switzerland) GmbH and/or its affiliates. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package com.daml.ledger.api.v2.interactive.transaction.v1;
+
+import "com/daml/ledger/api/v2/value.proto";
+
+option csharp_namespace = "Com.Daml.Ledger.Api.V2.Interactive.Transaction.V1";
+option java_outer_classname = "InteractiveSubmissionDataOuterClass";
+option java_package = "com.daml.ledger.api.v2.interactive.transaction.v1";
+
+/*
+ * Transaction Nodes
+ */
+
+// Fetch node
+message Fetch {
+  // Specific LF version of the node
+  //
+  // Required
+  string lf_version = 1;
+  // Required
+  string contract_id = 2;
+  // Required
+  string package_name = 3;
+  // The identifier uses the package-id reference format.
+  //
+  // Required
+  Identifier template_id = 4;
+  // Required: must be non-empty
+  repeated string signatories = 5;
+  // Required: must be non-empty
+  repeated string stakeholders = 6;
+  // Required: must be non-empty
+  repeated string acting_parties = 7;
+  // Optional
+  Identifier interface_id = 8;
+}
+
+// Exercise node
+message Exercise {
+  // Specific LF version of the node
+  //
+  // Required
+  string lf_version = 1;
+  // Required
+  string contract_id = 2;
+  // Required
+  string package_name = 3;
+  // The identifier uses the package-id reference format.
+  //
+  // Required
+  Identifier template_id = 4;
+  // Required: must be non-empty
+  repeated string signatories = 5;
+  // Required: must be non-empty
+  repeated string stakeholders = 6;
+  // Required: must be non-empty
+  repeated string acting_parties = 7;
+  // The identifier uses the package-id reference format.
+  //
+  // Optional
+  Identifier interface_id = 8;
+  // Required
+  string choice_id = 9;
+  // Required
+  Value chosen_value = 10;
+  // Required
+  bool consuming = 11;
+  // Optional: can be empty
+  repeated string children = 12;
+  // Optional
+  Value exercise_result = 13;
+  // Optional: can be empty
+  repeated string choice_observers = 14;
+}
+
+// Create Node
+message Create {
+  // Specific LF version of the node
+  //
+  // Required
+  string lf_version = 1;
+  // Required
+  string contract_id = 2;
+  // Required
+  string package_name = 3;
+  // The identifier uses the package-id reference format.
+  //
+  // Required
+  Identifier template_id = 4;
+  // Required
+  Value argument = 5;
+  // Required: must be non-empty
+  repeated string signatories = 6;
+  // Required: must be non-empty
+  repeated string stakeholders = 7;
+}
+
+// Rollback Node
+message Rollback {
+  // Required: must be non-empty
+  repeated string children = 1;
+}
+
+message Node {
+  // Required
+  oneof node_type {
+    Create create = 1;
+    Fetch fetch = 2;
+    Exercise exercise = 3;
+    Rollback rollback = 4;
+  }
+}

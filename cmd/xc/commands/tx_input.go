@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -148,6 +149,16 @@ func CmdTxInput() *cobra.Command {
 			}
 
 			fmt.Println(asJson(input))
+
+			// verify we can marshal/unmarshal the input
+			inputBz, err := drivers.MarshalTxInput(input)
+			if err != nil {
+				return fmt.Errorf("could not marshal transaction input: %v", err)
+			}
+			_, err = drivers.UnmarshalTxInput(inputBz)
+			if err != nil {
+				return fmt.Errorf("could not unmarshal transaction input: %v", err)
+			}
 
 			return nil
 		},

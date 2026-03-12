@@ -12,6 +12,8 @@ type CallMethodMeta struct {
 const EthSendTransaction Method = "eth_sendTransaction"
 const EthSignTransaction Method = "eth_signTransaction"
 const PersonalSign Method = "personal_sign"
+const OfferAccept Method = "offer_accept"
+const SettlementComplete Method = "settlement_complete"
 const SolanaSignIn Method = "solana:signIn"
 const SolanaSignMessage Method = "solana:signMessage"
 const SolanaSignTransaction Method = "solana:signTransaction"
@@ -22,36 +24,55 @@ var CallMethods = []CallMethodMeta{
 		Method:         EthSendTransaction,
 		IsTransaction:  true,
 		NeedsBroadcast: true,
+		Valid:          true,
 	},
 	{
 		Method:         EthSignTransaction,
 		IsTransaction:  true,
 		NeedsBroadcast: false,
+		Valid:          true,
 	},
 	{
 		Method:         PersonalSign,
 		IsTransaction:  false,
 		NeedsBroadcast: false,
+		Valid:          true,
+	},
+	{
+		Method:         OfferAccept,
+		IsTransaction:  true,
+		NeedsBroadcast: true,
+		Valid:          true,
+	},
+	{
+		Method:         SettlementComplete,
+		IsTransaction:  true,
+		NeedsBroadcast: true,
+		Valid:          true,
 	},
 	{
 		Method:         SolanaSignIn,
 		IsTransaction:  false,
 		NeedsBroadcast: false,
+		Valid:          true,
 	},
 	{
 		Method:         SolanaSignMessage,
 		IsTransaction:  false,
 		NeedsBroadcast: false,
+		Valid:          true,
 	},
 	{
 		Method:         SolanaSignTransaction,
 		IsTransaction:  true,
 		NeedsBroadcast: false,
+		Valid:          true,
 	},
 	{
 		Method:         SolanaSignAndSendTransaction,
 		IsTransaction:  true,
 		NeedsBroadcast: true,
+		Valid:          true,
 	},
 }
 

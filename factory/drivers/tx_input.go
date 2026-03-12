@@ -197,3 +197,15 @@ func UnmarshalCallInput(data []byte) (xc.CallTxInput, error) {
 	}
 	return call, nil
 }
+
+func UnmarshalCreateAccountInput(data []byte) (xc.CreateAccountTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	createAccount, ok := inp.(xc.CreateAccountTxInput)
+	if !ok {
+		return createAccount, fmt.Errorf("not a create-account input: %T", inp)
+	}
+	return createAccount, nil
+}
