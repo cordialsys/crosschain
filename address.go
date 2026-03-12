@@ -14,6 +14,10 @@ type AddressBuilder interface {
 	GetAddressFromPublicKey(publicKeyBytes []byte) (Address, error)
 }
 
+type AddressBuilderWithRegistration interface {
+	AddressRegistrationRequired(address Address) bool
+}
+
 type AddressBuilderWithFormats interface {
 	// Returns the signature algorithm to be used for a given address format
 	GetSignatureAlgorithm() SignatureType

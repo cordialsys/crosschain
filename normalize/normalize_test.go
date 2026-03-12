@@ -176,6 +176,12 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "15BgrFpAb7kSBYCcCqZPbLDgNrqygmGumT",
 		},
 		{
+			// Canton party IDs should be preserved as-is.
+			chain: xc.CANTON,
+			inp:   "d6ed91f336502ff706d97729d7ab5521e230c39353ca79372d2b1fc239eaa72c::12203a20475db3ac28b1e0591c90de7826a205cacd9c7b724a2e5822851f029ee2fc",
+			out:   "d6ed91f336502ff706d97729d7ab5521e230c39353ca79372d2b1fc239eaa72c::12203a20475db3ac28b1e0591c90de7826a205cacd9c7b724a2e5822851f029ee2fc",
+		},
+		{
 			// base58, no variation
 			chain: xc.DOT,
 			inp:   "15EVqvzZ93gqafPTp7x4tCdSSx22mMFw8ypJj61wXH8DBZ3b",

@@ -443,6 +443,28 @@ chains:
         asset_id: celo
       indexing_co:
         chain_id: celo
+  CANTON:
+    chain: CANTON
+    support:
+      call: true
+      fee:
+        accurate: true
+      memo: string
+    driver: canton
+    chain_name: Canton
+    decimals: 10
+    fee_limit: "100.0"
+    confirmations_final: 1
+    external:
+      coin_market_cap:
+        asset_id: "37263"
+      coin_gecko:
+        asset_id: "canton-network"
+    canton_config:
+      enable_transfer_offers: false
+      lighthouse_api_url: "https://lighthouse.cantonloop.com"
+      validator_client_secret: "env:CANTON_VALIDATOR_CLIENT_SECRET"
+      canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
   CHZ:
     chain: CHZ
     driver: evm-legacy

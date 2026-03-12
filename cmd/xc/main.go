@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cordialsys/crosschain/client/services"
+	"github.com/cordialsys/crosschain/cmd/xc/canton"
 	"github.com/cordialsys/crosschain/cmd/xc/commands"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/cmd/xc/staking"
@@ -84,6 +85,10 @@ func CmdXc() *cobra.Command {
 	setup.AddStakingArgs(cmd)
 
 	cmd.AddCommand(commands.CmdRpcBalance())
+	cmd.AddCommand(commands.CmdListOffers())
+	cmd.AddCommand(commands.CmdListSettlements())
+	cmd.AddCommand(commands.CmdOfferAccept())
+	cmd.AddCommand(commands.CmdSettlementComplete())
 	cmd.AddCommand(commands.CmdDecimals())
 	cmd.AddCommand(commands.CmdTxInput())
 	cmd.AddCommand(commands.CmdTxInfo())
@@ -95,6 +100,8 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(commands.CmdFund())
 	cmd.AddCommand(commands.CmdSign())
 	cmd.AddCommand(commands.CmdRpcSubmit())
+	cmd.AddCommand(commands.CmdCreateAccount())
+	cmd.AddCommand(canton.CmdCanton())
 	cmd.AddCommand(staking.CmdStaking())
 	cmd.AddCommand(commands.CmdTools())
 

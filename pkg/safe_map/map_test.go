@@ -8,7 +8,7 @@ import (
 	"github.com/cordialsys/crosschain/pkg/safe_map"
 )
 
-type Map = safe_map.Map
+type Map = safe_map.Map[any]
 
 func ToMap(m *Map) map[string]any {
 	result := make(map[string]any, m.Len())
@@ -20,7 +20,7 @@ func ToMap(m *Map) map[string]any {
 }
 
 func FromMap(data map[string]any) *Map {
-	m := safe_map.New()
+	m := safe_map.New[any]()
 	for key, value := range data {
 		m.Set(key, value)
 	}
@@ -89,7 +89,7 @@ func TestMap_SetAndGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := safe_map.New()
+			m := safe_map.New[any]()
 			m.Set(tt.key, tt.value)
 
 			got, ok := m.Get(tt.getKey)
@@ -453,7 +453,7 @@ func TestMap_UnmarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := safe_map.New()
+			m := safe_map.New[any]()
 			err := json.Unmarshal([]byte(tt.json), m)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UnmarshalJSON() error = %v, wantErr %v", err, tt.wantErr)
@@ -499,7 +499,7 @@ func TestMap_JSONRoundTrip(t *testing.T) {
 			}
 
 			// Unmarshal
-			decoded := safe_map.New()
+			decoded := safe_map.New[any]()
 			if err := json.Unmarshal(data, decoded); err != nil {
 				t.Fatalf("Unmarshal() error = %v", err)
 			}
@@ -521,7 +521,7 @@ func TestMap_DeterministicOrdering(t *testing.T) {
 	// Create multiple maps with same data in different insertion orders
 	data := map[string]any{"z": 26, "a": 1, "m": 13, "b": 2, "y": 25}
 
-	m1 := safe_map.New()
+	m1 := safe_map.New[any]()
 	for k, v := range data {
 		m1.Set(k, v)
 	}
