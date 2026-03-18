@@ -47,7 +47,6 @@ const (
 	LabelAmount        = "amount"
 	LabelInitialAmount = "initialAmount"
 	ModuleSpliceAmulet = "SpliceAmulet"
-
 )
 
 // cantonEnv reads a required Canton environment variable, returning an error if unset.
@@ -106,6 +105,9 @@ func NewGrpcLedgerClient(target string, authToken string) (*GrpcLedgerClient, er
 		creds = credentials.NewTLS(&tls.Config{})
 	}
 	target = strings.TrimRight(target, "/")
+	if !strings.HasPrefix(target, "dns:///") {
+		target = "dns:///" + target
+	}
 
 	conn, err := grpc.NewClient(target, grpc.WithTransportCredentials(creds))
 	if err != nil {
@@ -184,6 +186,28 @@ func (c *GrpcLedgerClient) GetSynchronizerId(ctx context.Context, party string) 
 	return syncs[0].GetSynchronizerId(), nil
 }
 
+func (c *GrpcLedgerClient) ExternalPartyExists(ctx context.Context, partyID string) (bool, error) {
+	if partyID == "" {
+		return false, errors.New("empty required argument: partyID")
+	}
+
+	_, err := c.GetSynchronizerId(ctx, partyID)
+	if err == nil {
+		return true, nil
+	}
+
+	msg := err.Error()
+	if strings.Contains(msg, "no connected synchronizers found") ||
+		strings.Contains(msg, "PARTY_NOT_KNOWN") ||
+		strings.Contains(msg, "party not known") ||
+		strings.Contains(msg, "unknown party") ||
+		strings.Contains(msg, "not found") {
+		return false, nil
+	}
+
+	return false, err
+}
+
 // Get active contracts for given party using StateServiceClient.GetActiveContracts
 func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID string, ledgerEnd int64, includeBlobs bool) ([]*v2.ActiveContract, error) {
 	if partyID == "" {
@@ -248,82 +272,6 @@ func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID strin
 	}
 
 	return activeContracts, nil
-}
-
-// Register external party on the ledger
-// 1. Generate external party topology for our public key
-// 2. Sign the topology response, to prove ownership of the key
-// 3. Allocate external party
-func (c *GrpcLedgerClient) RegisterExternalParty(ctx context.Context, publicKeyBytes []byte, privateKey ed25519.PrivateKey) error {
-	authCtx := c.authCtx(ctx)
-	partyHint := hex.EncodeToString(publicKeyBytes)
-	signingPubKey := &v2.SigningPublicKey{
-		Format:  v2.CryptoKeyFormat_CRYPTO_KEY_FORMAT_RAW,
-		KeyData: publicKeyBytes,
-		KeySpec: v2.SigningKeySpec_SIGNING_KEY_SPEC_EC_CURVE25519,
-	}
-	logger := c.logger.WithFields(logrus.Fields{
-		KeyMethod: "GenerateExternalPartyTopology",
-		KeyParty:  partyHint,
-	})
-	logger.Trace("request")
-
-	topologyResponse, err := c.adminClient.GenerateExternalPartyTopology(authCtx, &admin.GenerateExternalPartyTopologyRequest{
-		Synchronizer: TestnetSynchronizerID,
-		PartyHint:    partyHint,
-		PublicKey:    signingPubKey,
-	})
-	if err != nil {
-		return fmt.Errorf("GenerateExternalPartyTopology failed: %w", err)
-	}
-
-	// Continue the process and allocate the external party
-	fingerprint := topologyResponse.GetPublicKeyFingerprint()
-	signature := ed25519.Sign(privateKey, topologyResponse.GetMultiHash())
-	sig := &v2.Signature{
-		Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
-		Signature:            signature,
-		SignedBy:             fingerprint,
-		SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
-	}
-
-	// Topology transactions were signed by the participant internally — pass them back as-is.
-	txns := make([]*admin.AllocateExternalPartyRequest_SignedTransaction, 0, len(topologyResponse.GetTopologyTransactions()))
-	for _, txBytes := range topologyResponse.GetTopologyTransactions() {
-		txns = append(txns, &admin.AllocateExternalPartyRequest_SignedTransaction{
-			Transaction: txBytes,
-		})
-	}
-
-	logger = logrus.WithFields(logrus.Fields{
-		KeyMethod:         "AllocateExternalParty",
-		KeySynchronizerId: TestnetSynchronizerID,
-		KeyTxCount:        len(txns),
-	})
-	logger.Trace("request")
-
-	allocResp, err := c.adminClient.AllocateExternalParty(authCtx, &admin.AllocateExternalPartyRequest{
-		Synchronizer:           TestnetSynchronizerID,
-		OnboardingTransactions: txns,
-		MultiHashSignatures:    []*v2.Signature{sig},
-	})
-
-	if err != nil && !isAlreadyExists(err) {
-		return fmt.Errorf("GenerateExternalPartyTopology failed: %w", err)
-	}
-	if isAlreadyExists(err) {
-		logger.Trace("topology already generated")
-	} else {
-		registeredPartyId := allocResp.GetPartyId()
-		expectedPartyId, err := cantonaddress.GetAddressFromPublicKey(publicKeyBytes)
-		if err != nil {
-			c.logger.Warn("failed to get address from public key: %w", err)
-		}
-		if expectedPartyId != xc.Address(registeredPartyId) {
-			c.logger.Warn("registered party id differs from expected")
-		}
-	}
-	return nil
 }
 
 func (c *GrpcLedgerClient) CreateUser(ctx context.Context, partyId string) error {

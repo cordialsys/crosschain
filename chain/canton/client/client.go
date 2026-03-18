@@ -2,11 +2,9 @@ package client
 
 import (
 	"context"
-	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -20,12 +18,13 @@ import (
 	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
-	"github.com/cosmos/gogoproto/proto"
 	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
+	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/admin"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
-
 
 // Client for Canton using the gRPC Ledger API
 type Client struct {
@@ -522,11 +521,15 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-// SubmitTx unmarshals the serialized ExecuteSubmissionRequest proto and calls
-// InteractiveSubmissionService.ExecuteSubmissionAndWait
+// SubmitTx accepts either a serialized Canton transfer submission or a
+// serialized Canton create-account step and dispatches it accordingly.
 func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
 	if len(submitReq.TxData) == 0 {
 		return fmt.Errorf("empty transaction data")
+	}
+
+	if createAccountInput, err := tx_input.ParseCreateAccountInput(submitReq.TxData); err == nil {
+		return client.CreateAccount(ctx, createAccountInput)
 	}
 
 	var req interactive.ExecuteSubmissionRequest
@@ -690,94 +693,6 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 		return zero, fmt.Errorf("token balance queries not yet supported for Canton, contract: %s", contract)
 	}
 
-	// Check if we want to onboard the client
-	// Onboarding process:
-	// 1. CreateExternalParty:
-	//   - GenerateExternalPartyTopology
-	//   - AllocateExternalParty
-	// 2. Create keycloak user
-	// 3. Set keycloak user attributes: `canton_party_id` and `canton_participant_aud`
-	// 4. CRITICAL: Create ledger user, with userId equal to keycloak user id. This allows us to use
-	//   keycloak tokens for ledger interactions
-	// 5. CreateExternalPartySetupProposal allows external parties to receive funds. It's critical:
-	//   - ExternalParties cannot accept transfer offers because they have very limited validator visibility
-	//   - ExternalParties use TransferPreapproaval flow, which is different from vanilla offer/accept
-	// 6. Accept CreateExternalPartySetupProposal
-	//   - List user active contracts
-	//   - Create Approval for the contract
-	//   - Sign and submit
-	// TODO: Refactor
-	// All calls in this branch are properly recovering from "[User/Party/Contract]Exists" errors
-	// It's really important that onboarding is resilient
-	v := os.Getenv("CANTON_REGISTER_ON_BALANCE")
-	if v == "true" {
-		seed := os.Getenv("XC_PRIVATE_KEY")
-		if len(seed) == 0 {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("missing priv key for party registration")
-		}
-		seedBz, err := hex.DecodeString(seed)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), errors.New("failed to read private key")
-		}
-		privKey := ed25519.NewKeyFromSeed(seedBz)
-		publicKey := privKey.Public().(ed25519.PublicKey)
-		err = client.ledgerClient.RegisterExternalParty(ctx, publicKey, privKey)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to register external party: %w", err)
-		}
-
-		address, err := cantonaddress.GetAddressFromPublicKey(publicKey)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to get address: %w", err)
-		}
-
-		if err := client.ledgerClient.CreateUser(ctx, string(address)); err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to create ledger user: %w", err)
-		}
-
-		err = client.ledgerClient.CreateExternalPartySetupProposal(ctx, string(address))
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to create external party setup proposal: %w", err)
-		}
-
-		// ut, err := client.walletKC.AcquireUserToken(ctx, partyHint, userPassword)
-		// if err != nil {
-		// 	return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to fetch user token for user %s: %w", partyHint, err)
-		// }
-		// client.ledgerClient.SetToken(ut.AccessToken)
-
-		err = client.ledgerClient.AcceptExternalPartySetupProposal(ctx, string(address), privKey)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to accept external party setup proposal: %w", err)
-		}
-
-		uiToken, err := client.cantonUIToken(ctx)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), err
-		}
-		amuletRules, err := client.ledgerClient.GetAmuletRules(ctx, uiToken)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to fetch amulet rules: %w", err)
-		}
-		openMiningRound, issuingMiningRound, err := client.ledgerClient.GetOpenAndIssuingMiningRound(ctx, uiToken)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to fetch open mining round: %w", err)
-		}
-
-		ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to get ledger end: %w", err)
-		}
-		contracts, err := client.ledgerClient.GetActiveContracts(ctx, string(address), ledgerEnd, true)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to fetch active contracts: %w", err)
-		}
-		err = client.ledgerClient.CompleteAcceptedTransferOffer(ctx, string(address), amuletRules, openMiningRound, issuingMiningRound, privKey, contracts)
-		if err != nil {
-			return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to complete accepted transfer offer: %w", err)
-		}
-	}
-
 	return client.FetchNativeBalance(ctx, args.Address())
 }
 
@@ -860,18 +775,205 @@ func KeyFingerprintFromAddress(addr xc.Address) (string, error) {
 	return fingerprint, nil
 }
 
-// TxFromInput builds a Tx from a TxInput and the transfer args
-func TxFromInput(args xcbuilder.TransferArgs, input *tx_input.TxInput) (*cantontx.Tx, error) {
-	fingerprint, err := KeyFingerprintFromAddress(args.GetFrom())
+// TxFromInput builds a Tx from a TxInput and the transfer args, validating the hash and contents.
+func TxFromInput(args xcbuilder.TransferArgs, input *tx_input.TxInput, decimals int32) (*cantontx.Tx, error) {
+	return cantontx.NewTx(input, args, decimals)
+}
+
+var _ xclient.AccountClient = &Client{}
+
+// FetchCreateAccountInput fetches all on-chain data required to register a Canton external party
+// and advances all registration steps that do not require an explicit external
+// signature. If another signed step is needed, it returns the payload for that
+// step; otherwise it returns nil to signal that registration is complete.
+func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient.CreateAccountArgs) (xclient.CreateAccountInput, error) {
+	publicKeyBytes := args.GetPublicKey()
+	partyID := string(args.GetAddress())
+
+	exists, err := client.ledgerClient.ExternalPartyExists(ctx, partyID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse sender party ID: %w", err)
+		return nil, fmt.Errorf("failed to check external party registration: %w", err)
 	}
-	return &cantontx.Tx{
-		PreparedTransaction:     &input.PreparedTransaction,
-		PreparedTransactionHash: input.Sighash,
-		HashingSchemeVersion:    input.HashingSchemeVersion,
-		Party:                   string(args.GetFrom()),
-		KeyFingerprint:          fingerprint,
-		SubmissionId:            input.SubmissionId,
-	}, nil
+	if !exists {
+		authCtx := client.ledgerClient.authCtx(ctx)
+		partyHint := hex.EncodeToString(publicKeyBytes)
+		signingPubKey := &v2.SigningPublicKey{
+			Format:  v2.CryptoKeyFormat_CRYPTO_KEY_FORMAT_RAW,
+			KeyData: publicKeyBytes,
+			KeySpec: v2.SigningKeySpec_SIGNING_KEY_SPEC_EC_CURVE25519,
+		}
+
+		topologyResp, err := client.ledgerClient.adminClient.GenerateExternalPartyTopology(authCtx, &admin.GenerateExternalPartyTopologyRequest{
+			Synchronizer: TestnetSynchronizerID,
+			PartyHint:    partyHint,
+			PublicKey:    signingPubKey,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("GenerateExternalPartyTopology failed: %w", err)
+		}
+
+		txns := make([][]byte, 0, len(topologyResp.GetTopologyTransactions()))
+		for _, txBytes := range topologyResp.GetTopologyTransactions() {
+			txns = append(txns, txBytes)
+		}
+
+		input := &tx_input.CreateAccountInput{
+			Stage:                tx_input.CreateAccountStageAllocate,
+			Description:          "Sign signature_request.payload, append the raw signature hex to create_account_input, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
+			PartyID:              partyID,
+			PublicKeyFingerprint: topologyResp.GetPublicKeyFingerprint(),
+			TopologyMultiHash:    topologyResp.GetMultiHash(),
+			TopologyTransactions: txns,
+		}
+
+		if err := input.VerifySignaturePayloads(); err != nil {
+			return nil, fmt.Errorf("hash verification failed after fetch: %w", err)
+		}
+		return input, nil
+	}
+
+	if err := client.ledgerClient.CreateUser(ctx, partyID); err != nil {
+		return nil, fmt.Errorf("CreateUser failed: %w", err)
+	}
+	if err := client.ledgerClient.CreateExternalPartySetupProposal(ctx, partyID); err != nil {
+		return nil, fmt.Errorf("CreateExternalPartySetupProposal failed: %w", err)
+	}
+
+	ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ledger end: %w", err)
+	}
+	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch active contracts: %w", err)
+	}
+	if client.ledgerClient.HasTransferPreapprovalContract(ctx, contracts) {
+		return nil, nil
+	}
+
+	for _, contract := range contracts {
+		event := contract.GetCreatedEvent()
+		if event == nil {
+			continue
+		}
+		tid := event.GetTemplateId()
+		if tid == nil || tid.GetEntityName() != "ExternalPartySetupProposal" {
+			continue
+		}
+
+		cmd := &v2.Command{
+			Command: &v2.Command_Exercise{
+				Exercise: &v2.ExerciseCommand{
+					TemplateId:     tid,
+					ContractId:     event.GetContractId(),
+					Choice:         "ExternalPartySetupProposal_Accept",
+					ChoiceArgument: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{}}},
+				},
+			},
+		}
+		commandID := newRegisterCommandId()
+		prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, partyID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare ExternalPartySetupProposal_Accept: %w", err)
+		}
+		preparedTxBz, err := proto.Marshal(prepareResp.GetPreparedTransaction())
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal setup proposal prepared transaction: %w", err)
+		}
+
+		input := &tx_input.CreateAccountInput{
+			Stage:                            tx_input.CreateAccountStageAccept,
+			Description:                      "Sign signature_request.payload, append the raw signature hex to create_account_input, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
+			PartyID:                          partyID,
+			SetupProposalPreparedTransaction: preparedTxBz,
+			SetupProposalHash:                prepareResp.GetPreparedTransactionHash(),
+			SetupProposalHashing:             prepareResp.GetHashingSchemeVersion(),
+			SetupProposalSubmissionID:        newRegisterCommandId(),
+		}
+		if err := input.VerifySignaturePayloads(); err != nil {
+			return nil, fmt.Errorf("hash verification failed after fetch: %w", err)
+		}
+		return input, nil
+	}
+
+	return nil, nil
+}
+
+// CreateAccount submits the signed Canton account-registration step described by
+// the serialized CreateAccountInput.
+func (client *Client) CreateAccount(ctx context.Context, createInput xclient.CreateAccountInput) error {
+	cantonInput, ok := createInput.(*tx_input.CreateAccountInput)
+	if !ok {
+		return fmt.Errorf("invalid CreateAccountInput type for Canton")
+	}
+	if len(cantonInput.Signature) == 0 {
+		return fmt.Errorf("CreateAccountInput has not been signed; call SetSignatures first")
+	}
+	if err := cantonInput.VerifySignaturePayloads(); err != nil {
+		return fmt.Errorf("invalid CreateAccountInput: %w", err)
+	}
+
+	authCtx := client.ledgerClient.authCtx(ctx)
+
+	switch cantonInput.Stage {
+	case tx_input.CreateAccountStageAllocate:
+		txns := make([]*admin.AllocateExternalPartyRequest_SignedTransaction, 0, len(cantonInput.TopologyTransactions))
+		for _, txBytes := range cantonInput.TopologyTransactions {
+			txns = append(txns, &admin.AllocateExternalPartyRequest_SignedTransaction{Transaction: txBytes})
+		}
+		sig := &v2.Signature{
+			Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
+			Signature:            cantonInput.Signature,
+			SignedBy:             cantonInput.PublicKeyFingerprint,
+			SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
+		}
+		_, err := client.ledgerClient.adminClient.AllocateExternalParty(authCtx, &admin.AllocateExternalPartyRequest{
+			Synchronizer:           TestnetSynchronizerID,
+			OnboardingTransactions: txns,
+			MultiHashSignatures:    []*v2.Signature{sig},
+		})
+		if err != nil && !isAlreadyExists(err) {
+			return fmt.Errorf("AllocateExternalParty failed: %w", err)
+		}
+		return nil
+	case tx_input.CreateAccountStageAccept:
+		var preparedTx interactive.PreparedTransaction
+		if err := proto.Unmarshal(cantonInput.SetupProposalPreparedTransaction, &preparedTx); err != nil {
+			return fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+		}
+		_, keyFingerprint, err := cantonaddress.ParsePartyID(xc.Address(cantonInput.PartyID))
+		if err != nil {
+			return fmt.Errorf("failed to parse party ID for setup proposal accept: %w", err)
+		}
+		executeReq := &interactive.ExecuteSubmissionAndWaitRequest{
+			PreparedTransaction: &preparedTx,
+			PartySignatures: &interactive.PartySignatures{
+				Signatures: []*interactive.SinglePartySignatures{
+					{
+						Party: cantonInput.PartyID,
+						Signatures: []*v2.Signature{
+							{
+								Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
+								Signature:            cantonInput.Signature,
+								SignedBy:             keyFingerprint,
+								SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
+							},
+						},
+					},
+				},
+			},
+			DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
+				DeduplicationDuration: durationpb.New(300 * time.Second),
+			},
+			SubmissionId:         cantonInput.SetupProposalSubmissionID,
+			HashingSchemeVersion: cantonInput.SetupProposalHashing,
+		}
+		_, err = client.ledgerClient.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
+		if err != nil && !isAlreadyExists(err) {
+			return fmt.Errorf("ExternalPartySetupProposal_Accept failed: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported create-account stage %q", cantonInput.Stage)
+	}
 }
