@@ -16,6 +16,9 @@ type TxInput struct {
 	HashingSchemeVersion interactive.HashingSchemeVersion
 	// SubmissionId for deduplication (UUID)
 	SubmissionId string `json:"submission_id"`
+	// Decimals is the number of decimal places for the chain's native asset,
+	// used to convert human-readable amounts in the prepared transaction to blockchain units.
+	Decimals int32 `json:"decimals"`
 }
 
 var _ xc.TxInput = &TxInput{}

@@ -5,7 +5,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 )
@@ -40,23 +39,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input 
 		return nil, fmt.Errorf("invalid tx input type for Canton, expected *tx_input.TxInput")
 	}
 
-	// Extract the key fingerprint from the sender's party ID
-	// Party format: name::12<fingerprint>
-	_, fingerprint, err := cantonaddress.ParsePartyID(args.GetFrom())
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse sender party ID: %w", err)
-	}
-
-	tx := &cantontx.Tx{
-		PreparedTransaction:     &cantonInput.PreparedTransaction,
-		PreparedTransactionHash: cantonInput.Sighash,
-		HashingSchemeVersion:    cantonInput.HashingSchemeVersion,
-		Party:                   string(args.GetFrom()),
-		KeyFingerprint:          fingerprint,
-		SubmissionId:            cantonInput.SubmissionId,
-	}
-
-	return tx, nil
+	return cantontx.NewTx(cantonInput, args, txBuilder.Asset.Decimals)
 }
 
 // NewTokenTransfer is not supported for Canton
