@@ -95,6 +95,7 @@ func CmdXc() *cobra.Command {
 	cmd.AddCommand(commands.CmdFund())
 	cmd.AddCommand(commands.CmdSign())
 	cmd.AddCommand(commands.CmdRpcSubmit())
+	cmd.AddCommand(commands.CmdCreateAccount())
 	cmd.AddCommand(staking.CmdStaking())
 	cmd.AddCommand(commands.CmdTools())
 
