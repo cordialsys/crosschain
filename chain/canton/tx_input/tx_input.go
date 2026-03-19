@@ -48,6 +48,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return xc.NewAmountBlockchainFromUint64(0), ""
 }
 
+func (input *TxInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	// Each Canton submission has a unique SubmissionId / command ID
 	if cantonOther, ok := other.(*TxInput); ok {

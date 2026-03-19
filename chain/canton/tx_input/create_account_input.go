@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	"google.golang.org/protobuf/proto"
 )
@@ -41,7 +41,49 @@ type CreateAccountInput struct {
 	Signature []byte `json:"signature,omitempty"`
 }
 
-var _ xclient.CreateAccountInput = &CreateAccountInput{}
+var _ xc.TxVariantInput = &CreateAccountInput{}
+var _ xc.CreateAccountTxInput = &CreateAccountInput{}
+
+func init() {
+	registry.RegisterTxVariantInput(&CreateAccountInput{})
+}
+
+func (*CreateAccountInput) CreatingAccount() {}
+
+func (*CreateAccountInput) GetVariant() xc.TxVariantInputType {
+	return xc.NewCreateAccountInputType(xc.DriverCanton, string(xc.Native))
+}
+
+func (*CreateAccountInput) GetDriver() xc.Driver {
+	return xc.DriverCanton
+}
+
+func (*CreateAccountInput) SetGasFeePriority(_ xc.GasFeePriority) error {
+	return nil
+}
+
+func (*CreateAccountInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
+	return xc.NewAmountBlockchainFromUint64(0), ""
+}
+
+func (*CreateAccountInput) IsFeeLimitAccurate() bool {
+	return true
+}
+
+func (i *CreateAccountInput) IndependentOf(other xc.TxInput) bool {
+	otherInput, ok := other.(*CreateAccountInput)
+	if !ok {
+		return true
+	}
+	return i.PartyID != otherInput.PartyID || i.Stage != otherInput.Stage
+}
+
+func (i *CreateAccountInput) SafeFromDoubleSend(other xc.TxInput) bool {
+	if i.IndependentOf(other) {
+		return false
+	}
+	return true
+}
 
 func ParseCreateAccountInput(data []byte) (*CreateAccountInput, error) {
 	if len(data) < 8 {

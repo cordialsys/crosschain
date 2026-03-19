@@ -159,6 +159,11 @@ type StakingInputReq struct {
 	Memo          string               `json:"memo,omitempty"`
 }
 
+type CreateAccountInputReq struct {
+	Address   string  `json:"address"`
+	PublicKey hex.Hex `json:"public_key,omitempty"`
+}
+
 type LegacyTxInputRes struct {
 	*TransferInputReq
 	xc.TxInput `json:"raw_tx_input,omitempty"`

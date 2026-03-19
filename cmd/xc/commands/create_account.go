@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
@@ -56,9 +57,17 @@ func CmdCreateAccount() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
-			accountClient, ok := rpcClient.(xclient.AccountClient)
+			accountClient, ok := rpcClient.(xclient.CreateAccountInputClient)
 			if !ok {
 				return fmt.Errorf("chain %s does not support account creation", chainConfig.Chain)
+			}
+			txBuilder, err := xcFactory.NewTxBuilder(chainConfig.Base())
+			if err != nil {
+				return fmt.Errorf("could not create tx builder: %v", err)
+			}
+			accountBuilder, ok := txBuilder.(xcbuilder.AccountCreation)
+			if !ok {
+				return fmt.Errorf("chain %s does not support create-account transactions", chainConfig.Chain)
 			}
 
 			createArgs := xclient.NewCreateAccountArgs(address, publicKey)
@@ -75,11 +84,23 @@ func CmdCreateAccount() *cobra.Command {
 				return nil
 			}
 
-			if err := input.VerifySignaturePayloads(); err != nil {
+			cantonInput, ok := input.(*tx_input.CreateAccountInput)
+			if !ok {
+				return fmt.Errorf("invalid create-account input type: %T", input)
+			}
+			if err := cantonInput.VerifySignaturePayloads(); err != nil {
 				return fmt.Errorf("hash verification failed: %v", err)
 			}
+			builderArgs, err := xcbuilder.NewCreateAccountArgs(chainConfig.Chain, address, publicKey)
+			if err != nil {
+				return fmt.Errorf("could not build create-account args: %v", err)
+			}
+			tx, err := accountBuilder.CreateAccount(builderArgs, input)
+			if err != nil {
+				return fmt.Errorf("could not build create-account tx: %v", err)
+			}
 
-			sighashes, err := input.Sighashes()
+			sighashes, err := tx.Sighashes()
 			if err != nil {
 				return fmt.Errorf("could not get sighashes: %v", err)
 			}
@@ -92,27 +113,21 @@ func CmdCreateAccount() *cobra.Command {
 				logrus.WithField("index", i).WithField("payload", hex.EncodeToString(sh.Payload)).Debug("signature request")
 			}
 
-			serializedInput, err := input.Serialize()
+			serializedInput, err := tx.Serialize()
 			if err != nil {
-				return fmt.Errorf("could not serialize create-account input: %v", err)
-			}
-			stage := ""
-			description := ""
-			if cantonInput, ok := input.(*tx_input.CreateAccountInput); ok {
-				stage = cantonInput.Stage
-				description = cantonInput.Description
+				return fmt.Errorf("could not serialize create-account tx: %v", err)
 			}
 
 			fmt.Println(asJson(map[string]any{
 				"address":     string(address),
 				"chain":       string(chainConfig.Chain),
 				"status":      "signature_required",
-				"stage":       stage,
-				"description": description,
+				"stage":       cantonInput.Stage,
+				"description": cantonInput.Description,
 				"signature_request": map[string]any{
 					"payload": hex.EncodeToString(sighashes[0].Payload),
 				},
-				"create_account_input": hex.EncodeToString(serializedInput),
+				"tx": hex.EncodeToString(serializedInput),
 			}))
 			return nil
 		},

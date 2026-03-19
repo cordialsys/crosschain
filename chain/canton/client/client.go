@@ -522,14 +522,14 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx accepts either a serialized Canton transfer submission or a
-// serialized Canton create-account step and dispatches it accordingly.
+// serialized Canton create-account transaction and dispatches it accordingly.
 func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
 	if len(submitReq.TxData) == 0 {
 		return fmt.Errorf("empty transaction data")
 	}
 
-	if createAccountInput, err := tx_input.ParseCreateAccountInput(submitReq.TxData); err == nil {
-		return client.CreateAccount(ctx, createAccountInput)
+	if createAccountTx, err := cantontx.ParseCreateAccountTx(submitReq.TxData); err == nil {
+		return client.submitCreateAccountTx(ctx, createAccountTx)
 	}
 
 	var req interactive.ExecuteSubmissionRequest
@@ -780,13 +780,13 @@ func TxFromInput(args xcbuilder.TransferArgs, input *tx_input.TxInput, decimals 
 	return cantontx.NewTx(input, args, decimals)
 }
 
-var _ xclient.AccountClient = &Client{}
+var _ xclient.CreateAccountInputClient = &Client{}
 
 // FetchCreateAccountInput fetches all on-chain data required to register a Canton external party
 // and advances all registration steps that do not require an explicit external
 // signature. If another signed step is needed, it returns the payload for that
 // step; otherwise it returns nil to signal that registration is complete.
-func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient.CreateAccountArgs) (xclient.CreateAccountInput, error) {
+func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient.CreateAccountArgs) (xc.CreateAccountTxInput, error) {
 	publicKeyBytes := args.GetPublicKey()
 	partyID := string(args.GetAddress())
 
@@ -819,7 +819,7 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 
 		input := &tx_input.CreateAccountInput{
 			Stage:                tx_input.CreateAccountStageAllocate,
-			Description:          "Sign signature_request.payload, append the raw signature hex to create_account_input, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
+			Description:          "Sign signature_request.payload, append the raw signature hex to tx, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
 			PartyID:              partyID,
 			PublicKeyFingerprint: topologyResp.GetPublicKeyFingerprint(),
 			TopologyMultiHash:    topologyResp.GetMultiHash(),
@@ -883,7 +883,7 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 
 		input := &tx_input.CreateAccountInput{
 			Stage:                            tx_input.CreateAccountStageAccept,
-			Description:                      "Sign signature_request.payload, append the raw signature hex to create_account_input, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
+			Description:                      "Sign signature_request.payload, append the raw signature hex to tx, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
 			PartyID:                          partyID,
 			SetupProposalPreparedTransaction: preparedTxBz,
 			SetupProposalHash:                prepareResp.GetPreparedTransactionHash(),
@@ -899,20 +899,14 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 	return nil, nil
 }
 
-// CreateAccount submits the signed Canton account-registration step described by
-// the serialized CreateAccountInput.
-func (client *Client) CreateAccount(ctx context.Context, createInput xclient.CreateAccountInput) error {
-	cantonInput, ok := createInput.(*tx_input.CreateAccountInput)
-	if !ok {
-		return fmt.Errorf("invalid CreateAccountInput type for Canton")
+func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx *cantontx.CreateAccountTx) error {
+	if createAccountTx == nil || createAccountTx.Input == nil {
+		return fmt.Errorf("create-account tx is nil")
 	}
+	cantonInput := createAccountTx.Input
 	if len(cantonInput.Signature) == 0 {
-		return fmt.Errorf("CreateAccountInput has not been signed; call SetSignatures first")
+		return fmt.Errorf("create-account transaction is not signed")
 	}
-	if err := cantonInput.VerifySignaturePayloads(); err != nil {
-		return fmt.Errorf("invalid CreateAccountInput: %w", err)
-	}
-
 	authCtx := client.ledgerClient.authCtx(ctx)
 
 	switch cantonInput.Stage {
@@ -941,9 +935,9 @@ func (client *Client) CreateAccount(ctx context.Context, createInput xclient.Cre
 		if err := proto.Unmarshal(cantonInput.SetupProposalPreparedTransaction, &preparedTx); err != nil {
 			return fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
 		}
-		_, keyFingerprint, err := cantonaddress.ParsePartyID(xc.Address(cantonInput.PartyID))
+		keyFingerprint, err := createAccountTx.KeyFingerprint()
 		if err != nil {
-			return fmt.Errorf("failed to parse party ID for setup proposal accept: %w", err)
+			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}
 		executeReq := &interactive.ExecuteSubmissionAndWaitRequest{
 			PreparedTransaction: &preparedTx,
