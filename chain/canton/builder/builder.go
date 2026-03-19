@@ -15,6 +15,7 @@ type TxBuilder struct {
 }
 
 var _ xcbuilder.FullTransferBuilder = TxBuilder{}
+var _ xcbuilder.AccountCreation = TxBuilder{}
 
 // NewTxBuilder creates a new Canton TxBuilder
 func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
@@ -45,4 +46,12 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input 
 // NewTokenTransfer is not supported for Canton
 func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
 	return nil, fmt.Errorf("token transfers are not supported for %s", txBuilder.Asset.Chain)
+}
+
+func (txBuilder TxBuilder) CreateAccount(args xcbuilder.CreateAccountArgs, input xc.CreateAccountTxInput) (xc.Tx, error) {
+	return cantontx.NewCreateAccountTx(args, input)
+}
+
+func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
+	return xc.MemoSupportNone
 }
