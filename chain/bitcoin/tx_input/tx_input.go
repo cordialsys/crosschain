@@ -82,6 +82,12 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	if input.XGasPricePerByte.IsZero() {
 		input.XGasPricePerByte = xc.NewAmountBlockchainFromUint64(1)
 	}
+	// multiply zcash estimated total size by the multiplier
+	input.Zcash.EstimatedTotalSize = xc.AmountBlockchain(
+		*multiplier.Mul(
+			decimal.Decimal(input.Zcash.EstimatedTotalSize.ToHuman(0)),
+		).BigInt(),
+	)
 	return nil
 }
 func (input *TxInput) GetGasPricePerByte() xc.AmountHumanReadable {
