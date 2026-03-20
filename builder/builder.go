@@ -49,3 +49,7 @@ type Staking interface {
 	// Informational only
 	MethodsUsed() []xc.StakingMethod
 }
+
+type AccountCreation interface {
+	CreateAccount(createAccountArgs CreateAccountArgs, input xc.CreateAccountTxInput) (xc.Tx, error)
+}
