@@ -789,11 +789,19 @@ var _ xclient.CreateAccountInputClient = &Client{}
 func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient.CreateAccountArgs) (xc.CreateAccountTxInput, error) {
 	publicKeyBytes := args.GetPublicKey()
 	partyID := string(args.GetAddress())
+	logger := logrus.WithFields(logrus.Fields{
+		"chain":          client.Asset.GetChain().Chain,
+		"party_id":       partyID,
+		"public_key_len": len(publicKeyBytes),
+	})
 
+	logger.Info("create-account: checking external party registration")
 	exists, err := client.ledgerClient.ExternalPartyExists(ctx, partyID)
 	if err != nil {
+		logger.WithError(err).Error("create-account: external party registration check failed")
 		return nil, fmt.Errorf("failed to check external party registration: %w", err)
 	}
+	logger.WithField("exists", exists).Info("create-account: external party registration check completed")
 	if !exists {
 		authCtx := client.ledgerClient.authCtx(ctx)
 		partyHint := hex.EncodeToString(publicKeyBytes)
@@ -803,14 +811,20 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			KeySpec: v2.SigningKeySpec_SIGNING_KEY_SPEC_EC_CURVE25519,
 		}
 
+		logger.WithField("party_hint", partyHint).Info("create-account: generating external party topology")
 		topologyResp, err := client.ledgerClient.adminClient.GenerateExternalPartyTopology(authCtx, &admin.GenerateExternalPartyTopologyRequest{
 			Synchronizer: TestnetSynchronizerID,
 			PartyHint:    partyHint,
 			PublicKey:    signingPubKey,
 		})
 		if err != nil {
+			logger.WithError(err).Error("create-account: generate external party topology failed")
 			return nil, fmt.Errorf("GenerateExternalPartyTopology failed: %w", err)
 		}
+		logger.WithFields(logrus.Fields{
+			"topology_tx_count": len(topologyResp.GetTopologyTransactions()),
+			"multihash_len":     len(topologyResp.GetMultiHash()),
+		}).Info("create-account: generated external party topology")
 
 		txns := make([][]byte, 0, len(topologyResp.GetTopologyTransactions()))
 		for _, txBytes := range topologyResp.GetTopologyTransactions() {
@@ -827,27 +841,42 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 		}
 
 		if err := input.VerifySignaturePayloads(); err != nil {
+			logger.WithError(err).Error("create-account: allocate-stage input verification failed")
 			return nil, fmt.Errorf("hash verification failed after fetch: %w", err)
 		}
+		logger.Info("create-account: returning allocate-stage input")
 		return input, nil
 	}
 
+	logger.Info("create-account: granting validator service user rights")
 	if err := client.ledgerClient.CreateUser(ctx, partyID); err != nil {
+		logger.WithError(err).Error("create-account: grant user rights failed")
 		return nil, fmt.Errorf("CreateUser failed: %w", err)
 	}
+	logger.Info("create-account: granted validator service user rights")
+	logger.Info("create-account: creating external party setup proposal")
 	if err := client.ledgerClient.CreateExternalPartySetupProposal(ctx, partyID); err != nil {
+		logger.WithError(err).Error("create-account: create external party setup proposal failed")
 		return nil, fmt.Errorf("CreateExternalPartySetupProposal failed: %w", err)
 	}
+	logger.Info("create-account: created external party setup proposal")
 
+	logger.Info("create-account: fetching ledger end")
 	ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
 	if err != nil {
+		logger.WithError(err).Error("create-account: get ledger end failed")
 		return nil, fmt.Errorf("failed to get ledger end: %w", err)
 	}
+	logger.WithField("ledger_end", ledgerEnd).Info("create-account: fetched ledger end")
+	logger.Info("create-account: fetching active contracts")
 	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, true)
 	if err != nil {
+		logger.WithError(err).Error("create-account: get active contracts failed")
 		return nil, fmt.Errorf("failed to fetch active contracts: %w", err)
 	}
+	logger.WithField("contract_count", len(contracts)).Info("create-account: fetched active contracts")
 	if client.ledgerClient.HasTransferPreapprovalContract(ctx, contracts) {
+		logger.Info("create-account: transfer preapproval already exists")
 		return nil, nil
 	}
 
@@ -872,12 +901,19 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			},
 		}
 		commandID := newRegisterCommandId()
+		logger.WithFields(logrus.Fields{
+			"contract_id": event.GetContractId(),
+			"template_id": tid.String(),
+			"command_id":  commandID,
+		}).Info("create-account: preparing setup proposal accept submission")
 		prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, partyID)
 		if err != nil {
+			logger.WithError(err).Error("create-account: prepare setup proposal accept failed")
 			return nil, fmt.Errorf("failed to prepare ExternalPartySetupProposal_Accept: %w", err)
 		}
 		preparedTxBz, err := proto.Marshal(prepareResp.GetPreparedTransaction())
 		if err != nil {
+			logger.WithError(err).Error("create-account: marshal setup proposal prepared transaction failed")
 			return nil, fmt.Errorf("failed to marshal setup proposal prepared transaction: %w", err)
 		}
 
@@ -891,11 +927,17 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			SetupProposalSubmissionID:        newRegisterCommandId(),
 		}
 		if err := input.VerifySignaturePayloads(); err != nil {
+			logger.WithError(err).Error("create-account: accept-stage input verification failed")
 			return nil, fmt.Errorf("hash verification failed after fetch: %w", err)
 		}
+		logger.WithFields(logrus.Fields{
+			"stage":         input.Stage,
+			"submission_id": input.SetupProposalSubmissionID,
+		}).Info("create-account: returning accept-stage input")
 		return input, nil
 	}
 
+	logger.Info("create-account: no further action required")
 	return nil, nil
 }
 
