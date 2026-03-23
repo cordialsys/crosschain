@@ -65,6 +65,8 @@ func (args *TransferArgs) GetToIdentity() (string, bool) {
 	return args.options.GetToIdentity()
 }
 
+
+
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options

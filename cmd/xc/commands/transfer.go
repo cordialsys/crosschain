@@ -184,7 +184,6 @@ func CmdTxTransfer() *cobra.Command {
 			if decimalsStr != "" {
 				tfOptions = append(tfOptions, builder.OptionContractDecimals(int(decimals)))
 			}
-
 			if priorityStr != "" {
 				priority, err := xc.NewPriority(priorityStr)
 				if err != nil {

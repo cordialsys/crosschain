@@ -94,6 +94,59 @@ func TestTxInputConflicts(t *testing.T) {
 			independent:     true,
 			doubleSpendSafe: true,
 		},
+		{
+			// durable nonce: same nonce account, different nonce values = INDEPENDENT but NOT safe
+			// (they don't conflict with each other, but both could land = double send risk)
+			newInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{1}),
+				Timestamp:           startTime,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				DurableNonce:        solana.Hash([32]byte{10}),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{2}),
+				Timestamp:           startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				DurableNonce:        solana.Hash([32]byte{11}),
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			// durable nonce: same nonce account, SAME nonce value = NOT independent and SAFE
+			// (they compete for the same nonce, only one can land)
+			newInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{1}),
+				Timestamp:           startTime,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				DurableNonce:        solana.Hash([32]byte{10}),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{2}),
+				Timestamp:           startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				DurableNonce:        solana.Hash([32]byte{10}),
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			// durable nonce: different nonce accounts = independent
+			newInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{1}),
+				Timestamp:           startTime,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				DurableNonce:        solana.Hash([32]byte{10}),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:     solana.Hash([32]byte{2}),
+				Timestamp:           startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+				DurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111113"),
+				DurableNonce:        solana.Hash([32]byte{11}),
+			},
+			independent:     true,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
 		newBz, _ := json.Marshal(v.newInput)
