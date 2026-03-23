@@ -57,7 +57,7 @@ func CmdCreateAccount() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
 			}
-			accountClient, ok := rpcClient.(xclient.CreateAccountInputClient)
+			accountClient, ok := rpcClient.(xclient.CreateAccountClient)
 			if !ok {
 				return fmt.Errorf("chain %s does not support account creation", chainConfig.Chain)
 			}

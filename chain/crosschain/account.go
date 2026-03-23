@@ -33,3 +33,23 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 	}
 	return drivers.UnmarshalCreateAccountInput([]byte(r.TxInput))
 }
+
+func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateAccountArgs) (*xclient.AccountState, error) {
+	chain := client.Asset.GetChain().Chain
+	req := &types.CreateAccountInputReq{
+		Address:   string(args.GetAddress()),
+		PublicKey: args.GetPublicKey(),
+	}
+
+	apiURL := fmt.Sprintf("%s/v1/chains/%s/accounts/state", client.URL, chain)
+	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)
+	if err != nil {
+		return nil, err
+	}
+
+	r := types.AccountStateRes{}
+	if err := json.Unmarshal(res, &r); err != nil {
+		return nil, err
+	}
+	return r.AccountState, nil
+}
