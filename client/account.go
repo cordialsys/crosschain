@@ -6,15 +6,31 @@ import (
 	xc "github.com/cordialsys/crosschain"
 )
 
-// CreateAccountInputClient is an optional client interface for chains that require
+// CreateAccountClient is an optional client interface for chains that require
 // an explicit on-chain account creation or registration step before the account can
 // receive funds or submit transactions.
-type CreateAccountInputClient interface {
+type CreateAccountClient interface {
 	// FetchCreateAccountInput advances all account-creation steps that do not need
 	// an external signature. If a signature is needed for the next step, it returns
 	// the corresponding tx input; if registration is already complete, it
 	// returns nil.
 	FetchCreateAccountInput(ctx context.Context, args *CreateAccountArgs) (xc.CreateAccountTxInput, error)
+
+	// GetAccountState returns the current create-account state without mutating it.
+	GetAccountState(ctx context.Context, args *CreateAccountArgs) (*AccountState, error)
+}
+
+type AccountStateEnum string
+
+const (
+	CreateAccountCallRequired AccountStateEnum = "CreateAccountCallRequired"
+	Pending                   AccountStateEnum = "Pending"
+	Created                   AccountStateEnum = "Created"
+)
+
+type AccountState struct {
+	State       AccountStateEnum `json:"state"`
+	Description string           `json:"description"`
 }
 
 // CreateAccountArgs carries the parameters for an account creation request.

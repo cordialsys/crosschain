@@ -780,7 +780,63 @@ func TxFromInput(args xcbuilder.TransferArgs, input *tx_input.TxInput, decimals 
 	return cantontx.NewTx(input, args, decimals)
 }
 
-var _ xclient.CreateAccountInputClient = &Client{}
+var _ xclient.CreateAccountClient = &Client{}
+
+func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateAccountArgs) (*xclient.AccountState, error) {
+	partyID := string(args.GetAddress())
+	logger := logrus.WithFields(logrus.Fields{
+		"chain":    client.Asset.GetChain().Chain,
+		"party_id": partyID,
+	})
+
+	exists, err := client.ledgerClient.ExternalPartyExists(ctx, partyID)
+	if err != nil {
+		logger.WithError(err).Error("get-account-state: external party registration check failed")
+		return nil, fmt.Errorf("failed to check external party registration: %w", err)
+	}
+	if !exists {
+		return &xclient.AccountState{
+			State:       xclient.CreateAccountCallRequired,
+			Description: "Account is not registered yet. Call create-account to continue.",
+		}, nil
+	}
+
+	ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+	if err != nil {
+		logger.WithError(err).Error("get-account-state: get ledger end failed")
+		return nil, fmt.Errorf("failed to get ledger end: %w", err)
+	}
+	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, true)
+	if err != nil {
+		logger.WithError(err).Error("get-account-state: get active contracts failed")
+		return nil, fmt.Errorf("failed to fetch active contracts: %w", err)
+	}
+	if client.ledgerClient.HasTransferPreapprovalContract(ctx, contracts) {
+		return &xclient.AccountState{
+			State:       xclient.Created,
+			Description: "Account registration is complete.",
+		}, nil
+	}
+	for _, contract := range contracts {
+		event := contract.GetCreatedEvent()
+		if event == nil {
+			continue
+		}
+		tid := event.GetTemplateId()
+		if tid == nil || tid.GetEntityName() != "ExternalPartySetupProposal" {
+			continue
+		}
+		return &xclient.AccountState{
+			State:       xclient.CreateAccountCallRequired,
+			Description: "Account registration requires another create-account call to continue.",
+		}, nil
+	}
+
+	return &xclient.AccountState{
+		State:       xclient.Pending,
+		Description: "Account registration is in progress. Retry create-account shortly.",
+	}, nil
+}
 
 // FetchCreateAccountInput fetches all on-chain data required to register a Canton external party
 // and advances all registration steps that do not require an explicit external
