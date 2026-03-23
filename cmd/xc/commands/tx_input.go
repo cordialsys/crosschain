@@ -166,6 +166,5 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().StringVar(&feePayerSecretRef, "fee-payer-secret", "env:"+signer.EnvPrivateKeyFeePayer, "Secret reference for the fee-payer address private key")
 	cmd.Flags().StringVar(&feePayerAddress, "fee-payer-address", "", "Use address value as fee-payer")
 	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
-
 	return cmd
 }

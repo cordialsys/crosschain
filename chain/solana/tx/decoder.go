@@ -281,6 +281,10 @@ func (tx Decoder) GetAccountKeys() []solana.PublicKey {
 	return tx.txData.GetAccountKeys()
 }
 
+func (tx Decoder) GetInitializeNonceAccounts() []instructionAtIndex[*system.InitializeNonceAccount] {
+	return getall[*system.InitializeNonceAccount](&tx, system.DecodeInstruction, solana.SystemProgramID, tx.txData)
+}
+
 func (tx Decoder) GetCustomSystemIntentTransfers() []instructionAtIndex[*systemext.IntentTransfer] {
 	return getall[*systemext.IntentTransfer](&tx, systemext.DecodeInstruction, solana.SystemProgramID, tx.txData)
 }

@@ -49,10 +49,15 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	}, nil
 }
 
+// DeriveNonceAccount derives a deterministic nonce account address from a sender's public key.
+func DeriveNonceAccount(from solana.PublicKey) (solana.PublicKey, error) {
+	return solana.CreateWithSeed(from, builder.DurableNonceSeed, solana.SystemProgramID)
+}
+
 func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
-	// get recent block hash (i.e. nonce)
+	// get recent block hash (always needed as fallback and for nonce account creation)
 	recent, err := client.SolClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, fmt.Errorf("could not get latest blockhash: %v", err)
@@ -65,7 +70,93 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 	// https://solana.com/docs/core/fees#key-points
 	txInput.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
 
+	// Derive and check for a durable nonce account
+	fromPub, err := solana.PublicKeyFromBase58(string(fromAddr))
+	if err != nil {
+		return nil, fmt.Errorf("invalid from address: %v", err)
+	}
+	nonceAccountPub, err := DeriveNonceAccount(fromPub)
+	if err != nil {
+		return nil, fmt.Errorf("could not derive nonce account: %v", err)
+	}
+	err = client.FetchDurableNonceInput(ctx, txInput, nonceAccountPub)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch durable nonce: %v", err)
+	}
+
 	return txInput, nil
+}
+
+// NonceAccountState represents the on-chain state of a durable nonce account.
+type NonceAccountState struct {
+	AuthorizedPubkey solana.PublicKey
+	Nonce            solana.Hash
+	FeeCalculator    struct {
+		LamportsPerSignature uint64
+	}
+}
+
+// The nonce account data layout (after the 4-byte version/state prefix):
+// 4 bytes: version (0 for legacy, 1 for current)
+// 4 bytes: state (0 = uninitialized, 1 = initialized)
+// 32 bytes: authority pubkey
+// 32 bytes: nonce (blockhash)
+// 8 bytes: lamports per signature
+const nonceAccountDataSize = 80
+
+// FetchNonceAccount retrieves the current state of a durable nonce account.
+func (client *Client) FetchNonceAccount(ctx context.Context, nonceAccountAddr solana.PublicKey) (*NonceAccountState, error) {
+	info, err := client.SolClient.GetAccountInfo(ctx, nonceAccountAddr)
+	if err != nil {
+		return nil, fmt.Errorf("could not get nonce account info: %v", err)
+	}
+	if info == nil || info.Value == nil {
+		return nil, fmt.Errorf("nonce account not found: %s", nonceAccountAddr)
+	}
+
+	data := info.Value.Data.GetBinary()
+	if len(data) < nonceAccountDataSize {
+		return nil, fmt.Errorf("nonce account data too small: %d bytes", len(data))
+	}
+
+	// Parse nonce account data
+	// Bytes 0-3: version (uint32 LE)
+	// Bytes 4-7: state (uint32 LE) -- 1 = initialized
+	// Bytes 8-39: authority pubkey (32 bytes)
+	// Bytes 40-71: nonce/blockhash (32 bytes)
+	// Bytes 72-79: lamports per signature (uint64 LE)
+	state := &NonceAccountState{}
+
+	stateVal := uint32(data[4]) | uint32(data[5])<<8 | uint32(data[6])<<16 | uint32(data[7])<<24
+	if stateVal != 1 {
+		return nil, fmt.Errorf("nonce account is not initialized (state=%d)", stateVal)
+	}
+
+	copy(state.AuthorizedPubkey[:], data[8:40])
+	copy(state.Nonce[:], data[40:72])
+	state.FeeCalculator.LamportsPerSignature = uint64(data[72]) | uint64(data[73])<<8 |
+		uint64(data[74])<<16 | uint64(data[75])<<24 | uint64(data[76])<<32 |
+		uint64(data[77])<<40 | uint64(data[78])<<48 | uint64(data[79])<<56
+
+	return state, nil
+}
+
+// FetchDurableNonceInput populates the TxInput with durable nonce information.
+// If the nonce account exists and is initialized, it reads the current nonce value.
+// If the nonce account doesn't exist, it sets ShouldCreateDurableNonce=true.
+func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_input.TxInput, nonceAccount solana.PublicKey) error {
+	txInput.DurableNonceAccount = nonceAccount
+
+	nonceState, err := client.FetchNonceAccount(ctx, nonceAccount)
+	if err != nil {
+		// If account doesn't exist or is not initialized, mark it for creation
+		txInput.ShouldCreateDurableNonce = true
+		logrus.WithField("nonce_account", nonceAccount.String()).WithError(err).Info("nonce account not found or not initialized, will need setup")
+		return nil
+	}
+
+	txInput.DurableNonce = nonceState.Nonce
+	return nil
 }
 
 // FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
@@ -381,7 +472,19 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 			result.Confirmations = int64(recent.Context.Slot) - result.BlockIndex
 		}
 	}
-	result.Fee = xc.NewAmountBlockchainFromUint64(meta.Fee)
+	totalFee := meta.Fee
+	// Include nonce account creation rent as part of the fee.
+	// When a durable nonce account is created (InitializeNonceAccount), the rent-exempt
+	// lamports paid via CreateAccountWithSeed should be attributed as a fee.
+	for _, nonceInit := range tx.GetInitializeNonceAccounts() {
+		nonceAccountKey := nonceInit.Instruction.GetNonceAccount().PublicKey
+		for _, createAccount := range tx.GetCreateAccounts() {
+			if createAccount.Instruction.NewAccount.Equals(nonceAccountKey) {
+				totalFee += createAccount.Instruction.Lamports
+			}
+		}
+	}
+	result.Fee = xc.NewAmountBlockchainFromUint64(totalFee)
 	accountKeys := tx.GetAccountKeys()
 	if len(accountKeys) > 0 {
 		// The first account is the fee payer on solana
