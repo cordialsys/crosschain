@@ -131,6 +131,40 @@ func TestTxInputConflicts(t *testing.T) {
 			doubleSpendSafe: true,
 		},
 		{
+			// durable nonce setup: both creating the same nonce account = NOT independent
+			newInput: &TxInput{
+				RecentBlockHash:          solana.Hash([32]byte{1}),
+				Timestamp:                startTime,
+				DurableNonceAccount:      solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				ShouldCreateDurableNonce: true,
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:          solana.Hash([32]byte{2}),
+				Timestamp:                startTime,
+				DurableNonceAccount:      solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				ShouldCreateDurableNonce: true,
+			},
+			independent:     false,
+			doubleSpendSafe: false,
+		},
+		{
+			// durable nonce setup: creating different nonce accounts = independent
+			newInput: &TxInput{
+				RecentBlockHash:          solana.Hash([32]byte{1}),
+				Timestamp:                startTime,
+				DurableNonceAccount:      solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				ShouldCreateDurableNonce: true,
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:          solana.Hash([32]byte{2}),
+				Timestamp:                startTime,
+				DurableNonceAccount:      solana.MustPublicKeyFromBase58("11111111111111111111111111111113"),
+				ShouldCreateDurableNonce: true,
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
 			// durable nonce: different nonce accounts = independent
 			newInput: &TxInput{
 				RecentBlockHash:     solana.Hash([32]byte{1}),
