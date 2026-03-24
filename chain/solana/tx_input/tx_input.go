@@ -43,7 +43,8 @@ type GetTxInfo interface {
 type GetDurableNonceInfo interface {
 	GetDurableNonceAccount() solana.PublicKey
 	GetDurableNonceValue() solana.Hash
-	IsDurableNonceEnabled() bool
+	HasDurableNonce() bool
+	IsCreatingDurableNonceAccount() bool
 }
 
 type TokenAccount struct {
@@ -85,8 +86,8 @@ func (input *TxInput) GetDurableNonceValue() solana.Hash {
 	return input.DurableNonce
 }
 
-func (input *TxInput) IsDurableNonceEnabled() bool {
-	return input.HasDurableNonce()
+func (input *TxInput) IsCreatingDurableNonceAccount() bool {
+	return input.ShouldCreateDurableNonce && !input.DurableNonceAccount.IsZero()
 }
 
 // GetBlockhashForTx returns the blockhash to use for the transaction.
@@ -104,7 +105,7 @@ func (input *TxInput) GetDriver() xc.Driver {
 }
 
 // Solana recent-block-hash timeout margin
-const SafetyTimeoutMargin = (5 * time.Minute)
+const SafetyTimeoutMargin = (10 * time.Minute)
 
 // Returns the microlamports to set the compute budget unit price.
 // It will not go about the max price amount for safety concerns.
@@ -156,31 +157,35 @@ func (input *TxInput) IsFeeLimitAccurate() bool {
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 	if otherNonce, ok := other.(GetDurableNonceInfo); ok {
-		// With durable nonces, two transactions conflict only if they use the same nonce value.
-		// Same nonce account + same nonce value = NOT independent (only one can succeed).
-		// Same nonce account + different nonce value = independent (each uses its own nonce).
-		if input.HasDurableNonce() && otherNonce.IsDurableNonceEnabled() {
-			if input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount()) {
+		sameAccount := !input.DurableNonceAccount.IsZero() &&
+			input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
+		if sameAccount {
+			// Both creating the same nonce account = conflict
+			if input.IsCreatingDurableNonceAccount() && otherNonce.IsCreatingDurableNonceAccount() {
+				return false
+			}
+			// Both using the same nonce value = conflict (only one can succeed)
+			// Different nonce values = independent (each uses its own nonce)
+			if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
 				return !input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
 			}
 		}
 	}
-	// no conflicts on solana as txs are easily parallelizeable through
-	// the recent-block-hash mechanism.
 	return true
 }
 
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	// When using durable nonces: the nonce can only be consumed once.
-	// Same nonce value = SAFE (only one transaction can land, the runtime rejects duplicates).
-	// Different nonce values = NOT SAFE (both could land, causing a double-send).
 	if otherNonce, ok := other.(GetDurableNonceInfo); ok {
-		if input.HasDurableNonce() && otherNonce.IsDurableNonceEnabled() {
-			if input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount()) {
-				// Same nonce account + same nonce value = only one tx can succeed
+		sameAccount := !input.DurableNonceAccount.IsZero() &&
+			input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
+		if sameAccount {
+			// Safe only when both have actual nonce values and they match
+			// (the nonce can only be consumed once, so only one tx can land).
+			// If either is missing a nonce (e.g. setup phase), not safe.
+			if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
 				return input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
 			}
-			// Different nonce accounts: both could land, check normal timeout
+			return false
 		}
 	}
 
@@ -190,13 +195,9 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 		return false
 	}
 	diff := input.Timestamp - oldInput.GetTimestamp()
-	// solana blockhash lasts only ~1 minute -> we'll require a 5 min period
-	// and different hash to consider it safe from double-send.
 	if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.GetRecentBlockhash().Equals(input.GetRecentBlockhash()) {
-		// not yet safe
 		return false
 	}
-	// all timed out - we're safe
 	return true
 }
 
