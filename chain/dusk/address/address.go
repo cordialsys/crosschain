@@ -22,6 +22,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(base58.Encode(publicKeyBytes)), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func GetPublicKeyFromAddress(address xc.Address) (bls.PublicKey[bls.G2], error) {
 	bytes := base58.Decode(string(address))
 

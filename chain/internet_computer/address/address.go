@@ -95,6 +95,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	}
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func DerEncodePublicKey(publicKey []byte) ([]byte, error) {
 	return asn1.Marshal(publicKeyInfo{
 		Algorithm: pkix.AlgorithmIdentifier{

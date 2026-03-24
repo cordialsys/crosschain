@@ -21,3 +21,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	hexPk := hex.EncodeToString(publicKeyBytes)
 	return xc.Address(hexPk), nil
 }
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
