@@ -37,6 +37,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return GetAddressFromPublicKey(publicKeyBytes)
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return true
+}
+
 func GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	if len(publicKeyBytes) != 32 {
 		return "", fmt.Errorf("invalid ed25519 public key length: expected 32 bytes, got %d", len(publicKeyBytes))
