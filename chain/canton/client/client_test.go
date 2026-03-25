@@ -7,6 +7,8 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
@@ -56,17 +58,7 @@ func TestNewClient(t *testing.T) {
 	})
 }
 
-func TestSubmitTxRoutesCreateAccountPayloadToCreateAccountTxPath(t *testing.T) {
-	t.Parallel()
-
-	client := &Client{}
-	err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
-		TxData: mustSerializedCreateAccountInput(t),
-	})
-	require.ErrorContains(t, err, "create-account transaction is not signed")
-}
-
-func TestSubmitTxExecutesStandardCantonPayload(t *testing.T) {
+func TestSubmitTxRequiresMetadata(t *testing.T) {
 	t.Parallel()
 
 	stub := &interactiveSubmissionStub{}
@@ -84,10 +76,71 @@ func TestSubmitTxExecutesStandardCantonPayload(t *testing.T) {
 	payload, err := proto.Marshal(req)
 	require.NoError(t, err)
 
-	err = client.SubmitTx(context.Background(), xctypes.SubmitTxReq{TxData: payload})
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{
+			name:    "create-account payload",
+			payload: mustSerializedCreateAccountInput(t),
+		},
+		{
+			name:    "transfer payload",
+			payload: payload,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{TxData: tt.payload})
+			require.ErrorContains(t, err, "missing Canton tx metadata")
+			require.Nil(t, stub.lastReq)
+		})
+	}
+}
+
+func TestSubmitTxUsesMetadataToRouteTransferPayload(t *testing.T) {
+	t.Parallel()
+
+	stub := &interactiveSubmissionStub{}
+	client := &Client{
+		ledgerClient: &GrpcLedgerClient{
+			authToken:                   "token",
+			interactiveSubmissionClient: stub,
+			logger:                      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	req := &interactive.ExecuteSubmissionRequest{SubmissionId: "submission-id"}
+	payload, err := proto.Marshal(req)
+	require.NoError(t, err)
+
+	metadata, err := cantontx.NewTransferMetadata().Bytes()
+	require.NoError(t, err)
+
+	err = client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
+		TxData:         payload,
+		BroadcastInput: string(metadata),
+	})
 	require.NoError(t, err)
 	require.NotNil(t, stub.lastReq)
 	require.Equal(t, "submission-id", stub.lastReq.GetSubmissionId())
+}
+
+func TestSubmitTxUsesMetadataToRouteCreateAccountPayload(t *testing.T) {
+	t.Parallel()
+
+	client := &Client{}
+	payload, metadata := mustSerializedCreateAccountTx(t)
+
+	err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
+		TxData:         payload,
+		BroadcastInput: string(metadata),
+	})
+	require.ErrorContains(t, err, "create-account transaction is not signed")
 }
 
 func TestFetchTxInfoResolvesRecoveryLookupId(t *testing.T) {
@@ -361,6 +414,26 @@ func mustSerializedCreateAccountInput(t *testing.T) []byte {
 	return bz
 }
 
+func mustSerializedCreateAccountTx(t *testing.T) ([]byte, []byte) {
+	t.Helper()
+	input := &tx_input.CreateAccountInput{
+		Stage:                tx_input.CreateAccountStageAllocate,
+		PartyID:              "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		PublicKeyFingerprint: "1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		TopologyTransactions: [][]byte{{0x01}},
+	}
+	args, err := xcbuilder.NewCreateAccountArgs(xc.CANTON, xc.Address(input.PartyID), []byte{0x01, 0x02})
+	require.NoError(t, err)
+	tx, err := cantontx.NewCreateAccountTx(args, input)
+	require.NoError(t, err)
+	payload, err := tx.Serialize()
+	require.NoError(t, err)
+	metadata, ok, err := tx.GetMetadata()
+	require.NoError(t, err)
+	require.True(t, ok)
+	return payload, metadata
+}
+
 type interactiveSubmissionStub struct {
 	lastReq *interactive.ExecuteSubmissionAndWaitRequest
 }
@@ -386,9 +459,9 @@ func (s *interactiveSubmissionStub) GetPreferredPackages(context.Context, *inter
 }
 
 type completionServiceStub struct {
-	lastReq    *v2.CompletionStreamRequest
-	responses  []*v2.CompletionStreamResponse
-	streamErr  error
+	lastReq   *v2.CompletionStreamRequest
+	responses []*v2.CompletionStreamResponse
+	streamErr error
 }
 
 func (s *completionServiceStub) CompletionStream(_ context.Context, req *v2.CompletionStreamRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[v2.CompletionStreamResponse], error) {

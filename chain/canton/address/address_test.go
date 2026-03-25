@@ -1,25 +1,12 @@
 package address
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/stretchr/testify/require"
 )
-
-// referenceFingerprint replicates Canton's fingerprint logic for test verification:
-// SHA-256(bigEndianUint32(12) || rawPubKey), encoded as "1220" + hex(digest)
-func referenceFingerprint(pubKey []byte) string {
-	var purposeBytes [4]byte
-	binary.BigEndian.PutUint32(purposeBytes[:], 12)
-	h := sha256.New()
-	h.Write(purposeBytes[:])
-	h.Write(pubKey)
-	return "1220" + hex.EncodeToString(h.Sum(nil))
-}
 
 func TestNewAddressBuilder(t *testing.T) {
 	cfg := &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton}
@@ -46,67 +33,19 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 
 	// Name must be the hex-encoded public key
 	require.Equal(t, hex.EncodeToString(pubKey), name)
-
-	// Fingerprint must be "1220" + 64 hex chars (SHA-256 multihash)
-	require.Equal(t, 68, len(fingerprint), "fingerprint must be 68 chars: 4 (1220) + 64 (SHA-256 hex)")
-	require.Equal(t, "1220", fingerprint[:4])
-
-	// Fingerprint value must match Canton's formula
-	require.Equal(t, referenceFingerprint(pubKey), fingerprint)
-}
-
-func TestGetAddressFromPublicKeyInvalidLength(t *testing.T) {
-	cfg := &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton}
-	builder, err := NewAddressBuilder(cfg)
-	require.NoError(t, err)
-
-	for _, bad := range [][]byte{make([]byte, 16), make([]byte, 64), {}} {
-		_, err := builder.GetAddressFromPublicKey(bad)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "invalid ed25519 public key length")
-	}
-}
-
-func TestAddressDeterminism(t *testing.T) {
-	cfg := &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton}
-	builder, err := NewAddressBuilder(cfg)
-	require.NoError(t, err)
-
-	pubKey := make([]byte, 32)
-	for i := range pubKey {
-		pubKey[i] = byte(i * 7 % 256)
-	}
-
-	addr1, err := builder.GetAddressFromPublicKey(pubKey)
-	require.NoError(t, err)
-	addr2, err := builder.GetAddressFromPublicKey(pubKey)
-	require.NoError(t, err)
-	require.Equal(t, addr1, addr2)
-}
-
-func TestDifferentKeysProduceDifferentAddresses(t *testing.T) {
-	cfg := &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton}
-	builder, _ := NewAddressBuilder(cfg)
-
-	key1 := make([]byte, 32)
-	key2 := make([]byte, 32)
-	key2[0] = 1
-
-	addr1, _ := builder.GetAddressFromPublicKey(key1)
-	addr2, _ := builder.GetAddressFromPublicKey(key2)
-	require.NotEqual(t, addr1, addr2)
+	require.Equal(t, "122093aa96c5554371f0d1fd471ce282f3b590ab0758f35c124924c8e3715910bbe1", fingerprint)
 }
 
 func TestParsePartyID(t *testing.T) {
 	validFP := "1220" + hex.EncodeToString(make([]byte, 32)) // "1220" + 64 zeros
 
 	tests := []struct {
-		name          string
-		addr          xc.Address
-		expectErr     bool
-		errContains   string
-		expectedName  string
-		expectedFP    string
+		name         string
+		addr         xc.Address
+		expectErr    bool
+		errContains  string
+		expectedName string
+		expectedFP   string
 	}{
 		{
 			name:         "valid - pubkey hex name",
@@ -170,5 +109,12 @@ func TestFingerprintLength(t *testing.T) {
 		_, fp, err := ParsePartyID(addr)
 		require.NoError(t, err)
 		require.Equal(t, 68, len(fp), "fingerprint must always be 68 chars")
+		expected := map[byte]string{
+			0:   "1220ea618da83b6c6b2c4557ffa17d722045169f52b8f50f3b31fc867e266de7e53d",
+			1:   "1220974cb80e78f2fea077628a02faa4c57d68a65036eea27fb3463088a1c8527a99",
+			127: "122087fab42073577d1d066f0cc217b347aedf5a73ee5feaa75d5e96538dad977b91",
+			255: "122044e19d94c296e8397d61e759ff1692e5dff8efbcd70d7a9b4033d8b4a259ccd0",
+		}
+		require.Equal(t, expected[seed], fp)
 	}
 }

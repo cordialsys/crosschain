@@ -2,6 +2,7 @@ package tx
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -15,6 +16,9 @@ type CreateAccountTx struct {
 }
 
 var _ xc.Tx = &CreateAccountTx{}
+var _ xc.TxWithMetadata = &CreateAccountTx{}
+
+const createAccountPayloadPrefixLen = 8
 
 func NewCreateAccountTx(args xcbuilder.CreateAccountArgs, input xc.CreateAccountTxInput) (*CreateAccountTx, error) {
 	cantonInput, ok := input.(*tx_input.CreateAccountInput)
@@ -30,13 +34,14 @@ func NewCreateAccountTx(args xcbuilder.CreateAccountArgs, input xc.CreateAccount
 	return &CreateAccountTx{Input: cloneCreateAccountInput(cantonInput)}, nil
 }
 
-func ParseCreateAccountTx(data []byte) (*CreateAccountTx, error) {
-	input, err := tx_input.ParseCreateAccountInput(data)
+func ParseCreateAccountTxWithMetadata(data []byte, metadata *Metadata) (*CreateAccountTx, error) {
+	signature, err := parseCreateAccountSignaturePayload(data)
 	if err != nil {
 		return nil, err
 	}
-	if err := input.VerifySignaturePayloads(); err != nil {
-		return nil, fmt.Errorf("invalid create-account tx: %w", err)
+	input, err := metadata.CreateAccountInput(signature)
+	if err != nil {
+		return nil, err
 	}
 	return &CreateAccountTx{Input: input}, nil
 }
@@ -45,7 +50,7 @@ func (tx *CreateAccountTx) Hash() xc.TxHash {
 	if tx == nil || tx.Input == nil {
 		return ""
 	}
-	serialized, err := tx.Input.Serialize()
+	serialized, err := tx.Serialize()
 	if err != nil {
 		return ""
 	}
@@ -82,7 +87,21 @@ func (tx *CreateAccountTx) Serialize() ([]byte, error) {
 	if tx == nil || tx.Input == nil {
 		return nil, fmt.Errorf("create-account tx input is nil")
 	}
-	return tx.Input.Serialize()
+	payload := make([]byte, createAccountPayloadPrefixLen+len(tx.Input.Signature))
+	copy(payload[createAccountPayloadPrefixLen:], tx.Input.Signature)
+	return payload, nil
+}
+
+func (tx *CreateAccountTx) GetMetadata() ([]byte, bool, error) {
+	if tx == nil || tx.Input == nil {
+		return nil, false, fmt.Errorf("create-account tx input is nil")
+	}
+	metadata := NewCreateAccountMetadata(tx.Input)
+	bz, err := metadata.Bytes()
+	if err != nil {
+		return nil, false, err
+	}
+	return bz, true, nil
 }
 
 func (tx *CreateAccountTx) KeyFingerprint() (string, error) {
@@ -121,4 +140,14 @@ func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.Creat
 		}
 	}
 	return &cloned
+}
+
+func parseCreateAccountSignaturePayload(data []byte) ([]byte, error) {
+	if len(data) < createAccountPayloadPrefixLen {
+		return nil, fmt.Errorf("create-account tx payload is too short")
+	}
+	if binary.BigEndian.Uint64(data[:createAccountPayloadPrefixLen]) != 0 {
+		return nil, fmt.Errorf("unsupported create-account tx payload format")
+	}
+	return append([]byte(nil), data[createAccountPayloadPrefixLen:]...), nil
 }

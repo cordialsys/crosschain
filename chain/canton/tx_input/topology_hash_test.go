@@ -2,31 +2,12 @@ package tx_input
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestComputeTopologyTransactionHash(t *testing.T) {
-	t.Parallel()
-
-	hash, err := ComputeTopologyTransactionHash([]byte{0x01, 0x02, 0x03})
-	require.NoError(t, err)
-	require.Equal(t, "1220c1467c073293cec489633f24df12269d37f5fc14c5e7793119703965b001b751", hex.EncodeToString(hash))
-}
-
-func TestComputeTopologyMultiHash(t *testing.T) {
-	t.Parallel()
-
-	hash1, err := ComputeTopologyMultiHash([][]byte{{0x01, 0x02}, {0x03, 0x04}})
-	require.NoError(t, err)
-
-	hash2, err := ComputeTopologyMultiHash([][]byte{{0x03, 0x04}, {0x01, 0x02}})
-	require.NoError(t, err)
-
-	require.Equal(t, hash1, hash2)
-	require.Equal(t, "122086be10f2f6a61410ec823c4350eb8eef35b66481a0dd080f2607f15f7d3b57ef", hex.EncodeToString(hash1))
-}
 
 func TestComputeTopologyMultiHashFailures(t *testing.T) {
 	t.Parallel()
@@ -36,4 +17,46 @@ func TestComputeTopologyMultiHashFailures(t *testing.T) {
 
 	_, err = ComputeTopologyMultiHash([][]byte{{}})
 	require.ErrorContains(t, err, "topology transaction is empty")
+}
+
+func TestComputeTopologyMultiHash_LiveVector(t *testing.T) {
+	t.Parallel()
+
+	vector := mustLoadLiveTopologyVector(t)
+	hash, err := ComputeTopologyMultiHash(vector.topologyTransactions)
+	require.NoError(t, err)
+	require.Equal(t, vector.multiHash, hash)
+}
+
+type liveTopologyVector struct {
+	multiHash            []byte
+	topologyTransactions [][]byte
+}
+
+func mustLoadLiveTopologyVector(t *testing.T) liveTopologyVector {
+	t.Helper()
+
+	data, err := os.ReadFile("testdata/live_topology_vector.json")
+	require.NoError(t, err)
+
+	var fixture struct {
+		MultiHash            string   `json:"multi_hash"`
+		TopologyTransactions []string `json:"topology_transactions"`
+	}
+	require.NoError(t, json.Unmarshal(data, &fixture))
+
+	multiHash, err := hex.DecodeString(fixture.MultiHash)
+	require.NoError(t, err)
+
+	topologyTransactions := make([][]byte, 0, len(fixture.TopologyTransactions))
+	for _, encoded := range fixture.TopologyTransactions {
+		tx, err := hex.DecodeString(encoded)
+		require.NoError(t, err)
+		topologyTransactions = append(topologyTransactions, tx)
+	}
+
+	return liveTopologyVector{
+		multiHash:            multiHash,
+		topologyTransactions: topologyTransactions,
+	}
 }

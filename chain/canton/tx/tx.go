@@ -34,6 +34,7 @@ type Tx struct {
 }
 
 var _ xc.Tx = &Tx{}
+var _ xc.TxWithMetadata = &Tx{}
 
 // NewTx constructs a Tx from a TxInput and transfer args, validating that the
 // receiver and amount encoded in the prepared transaction match the transfer args.
@@ -264,4 +265,13 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal Canton execute request: %w", err)
 	}
 	return data, nil
+}
+
+func (tx Tx) GetMetadata() ([]byte, bool, error) {
+	metadata := NewTransferMetadata()
+	bz, err := metadata.Bytes()
+	if err != nil {
+		return nil, false, err
+	}
+	return bz, true, nil
 }

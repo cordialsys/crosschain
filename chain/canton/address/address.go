@@ -34,14 +34,6 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 //   - 0x12 = SHA-256 algorithm code (varint)
 //   - 0x20 = 32-byte digest length (varint)
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	return GetAddressFromPublicKey(publicKeyBytes)
-}
-
-func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
-	return true
-}
-
-func GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	if len(publicKeyBytes) != 32 {
 		return "", fmt.Errorf("invalid ed25519 public key length: expected 32 bytes, got %d", len(publicKeyBytes))
 	}
@@ -50,6 +42,10 @@ func GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	addr := xc.Address(name + "::" + fingerprint)
 
 	return addr, nil
+}
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return true
 }
 
 // computeFingerprint returns the Canton key fingerprint for a raw Ed25519 public key.

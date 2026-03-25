@@ -219,19 +219,36 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-// SubmitTx accepts either a serialized Canton transfer submission or a
-// serialized Canton create-account transaction and dispatches it accordingly.
+// SubmitTx accepts a serialized Canton transaction together with metadata that
+// identifies the Canton transaction type to submit.
 func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
 	if len(submitReq.TxData) == 0 {
 		return fmt.Errorf("empty transaction data")
 	}
-
-	if createAccountTx, err := cantontx.ParseCreateAccountTx(submitReq.TxData); err == nil {
-		return client.submitCreateAccountTx(ctx, createAccountTx)
+	if submitReq.BroadcastInput == "" {
+		return fmt.Errorf("missing Canton tx metadata")
 	}
+	metadata, err := cantontx.ParseMetadata([]byte(submitReq.BroadcastInput))
+	if err != nil {
+		return fmt.Errorf("failed to parse Canton tx metadata: %w", err)
+	}
+	switch metadata.TxType {
+	case cantontx.TxTypeCreateAccount:
+		createAccountTx, err := cantontx.ParseCreateAccountTxWithMetadata(submitReq.TxData, metadata)
+		if err != nil {
+			return fmt.Errorf("failed to parse Canton create-account tx: %w", err)
+		}
+		return client.submitCreateAccountTx(ctx, createAccountTx)
+	case cantontx.TxTypeTransfer:
+		return client.submitTransferTx(ctx, submitReq.TxData)
+	default:
+		return fmt.Errorf("unsupported Canton tx type %q", metadata.TxType)
+	}
+}
 
+func (client *Client) submitTransferTx(ctx context.Context, payload []byte) error {
 	var req interactive.ExecuteSubmissionRequest
-	if err := proto.Unmarshal(submitReq.TxData, &req); err != nil {
+	if err := proto.Unmarshal(payload, &req); err != nil {
 		return fmt.Errorf("failed to unmarshal Canton execute request: %w", err)
 	}
 
@@ -763,6 +780,13 @@ func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateA
 	}
 	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, true)
 	if err != nil {
+		if isPermissionDenied(err) {
+			logger.WithError(err).Info("get-account-state: party exists but contract visibility is not ready yet")
+			return &xclient.AccountState{
+				State:       xclient.CreateAccountCallRequired,
+				Description: "Account exists but registration is not complete yet. Call create-account again to continue.",
+			}, nil
+		}
 		logger.WithError(err).Error("get-account-state: get active contracts failed")
 		return nil, fmt.Errorf("failed to fetch active contracts: %w", err)
 	}
@@ -978,4 +1002,11 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 	default:
 		return fmt.Errorf("unsupported create-account stage %q", cantonInput.Stage)
 	}
+}
+
+func isPermissionDenied(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "code = PermissionDenied")
 }
