@@ -1,7 +1,7 @@
 package tx
 
 import (
-	"crypto/sha256"
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -11,10 +11,9 @@ import (
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	v1 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive/transaction/v1"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
-func TestNewTx_ValidatesPreparedTransactionHashForTransferFlows(t *testing.T) {
+func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 	t.Parallel()
 
 	from := xc.Address("sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
@@ -46,16 +45,20 @@ func TestNewTx_ValidatesPreparedTransactionHashForTransferFlows(t *testing.T) {
 
 			input := &tx_input.TxInput{
 				PreparedTransaction: *vector.preparedTx,
-				Sighash:             txPreparedTransactionHash(t, vector.preparedTx),
 				SubmissionId:        "submission-id",
 			}
 
-			_, err = NewTx(input, args, 1)
+			tx, err := NewTx(input, args, 1)
 			require.NoError(t, err)
 
-			input.Sighash[len(input.Sighash)-1] ^= 0xff
-			_, err = NewTx(input, args, 1)
-			require.ErrorContains(t, err, "prepared transaction hash mismatch")
+			hash, err := tx_input.ComputePreparedTransactionHash(vector.preparedTx)
+			require.NoError(t, err)
+
+			sighashes, err := tx.Sighashes()
+			require.NoError(t, err)
+			require.Len(t, sighashes, 1)
+			require.Equal(t, hash, sighashes[0].Payload)
+			require.Equal(t, xc.TxHash(fmt.Sprintf("%x", hash)), tx.Hash())
 		})
 	}
 }
@@ -75,21 +78,6 @@ func txPreparedTransaction(nodeID string, node *v1.Node) *interactive.PreparedTr
 			},
 		},
 	}
-}
-
-func txPreparedTransactionHash(t *testing.T, preparedTx *interactive.PreparedTransaction) []byte {
-	t.Helper()
-	hash := mustExpectedHash(t, preparedTx)
-	require.NoError(t, tx_input.ValidatePreparedTransactionHash(preparedTx, hash))
-	return hash
-}
-
-func mustExpectedHash(t *testing.T, preparedTx *interactive.PreparedTransaction) []byte {
-	t.Helper()
-	data, err := proto.MarshalOptions{Deterministic: true}.Marshal(preparedTx)
-	require.NoError(t, err)
-	sum := sha256.Sum256(data)
-	return sum[:]
 }
 
 func txCreateNode(entity string, argument *v2.Value) *v1.Node {

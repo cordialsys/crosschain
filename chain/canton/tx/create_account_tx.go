@@ -57,7 +57,18 @@ func (tx *CreateAccountTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	if tx == nil || tx.Input == nil {
 		return nil, fmt.Errorf("create-account tx input is nil")
 	}
-	return tx.Input.Sighashes()
+	switch tx.Input.Stage {
+	case tx_input.CreateAccountStageAllocate:
+		hash, err := tx_input.ComputeTopologyMultiHash(tx.Input.TopologyTransactions)
+		if err != nil {
+			return nil, err
+		}
+		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
+	case tx_input.CreateAccountStageAccept:
+		return tx.Input.Sighashes()
+	default:
+		return nil, fmt.Errorf("unsupported create-account stage %q", tx.Input.Stage)
+	}
 }
 
 func (tx *CreateAccountTx) SetSignatures(sigs ...*xc.SignatureResponse) error {
@@ -100,7 +111,6 @@ func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.Creat
 		return nil
 	}
 	cloned := *input
-	cloned.TopologyMultiHash = append([]byte(nil), input.TopologyMultiHash...)
 	cloned.Signature = append([]byte(nil), input.Signature...)
 	cloned.SetupProposalPreparedTransaction = append([]byte(nil), input.SetupProposalPreparedTransaction...)
 	cloned.SetupProposalHash = append([]byte(nil), input.SetupProposalHash...)

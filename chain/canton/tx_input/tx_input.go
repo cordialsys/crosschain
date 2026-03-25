@@ -12,7 +12,6 @@ type TxInput struct {
 	xc.TxInputEnvelope
 	IsExternalTransfer   bool `json:"is_external_transfer"`
 	PreparedTransaction  interactive.PreparedTransaction
-	Sighash              []byte `json:"sighash"`
 	HashingSchemeVersion interactive.HashingSchemeVersion
 	// SubmissionId for deduplication (UUID)
 	SubmissionId string `json:"submission_id"`

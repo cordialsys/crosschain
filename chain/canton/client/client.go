@@ -507,7 +507,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	input.PreparedTransaction = *resp.GetPreparedTransaction()
-	input.Sighash = resp.GetPreparedTransactionHash()
 	input.SubmissionId = NewCommandId()
 	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
 
@@ -892,7 +891,6 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			Description:          "Sign signature_request.payload, append the raw signature hex to tx, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
 			PartyID:              partyID,
 			PublicKeyFingerprint: topologyResp.GetPublicKeyFingerprint(),
-			TopologyMultiHash:    topologyResp.GetMultiHash(),
 			TopologyTransactions: txns,
 		}
 

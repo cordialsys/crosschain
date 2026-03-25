@@ -25,7 +25,6 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 				Stage:                tx_input.CreateAccountStageAllocate,
 				PartyID:              "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				PublicKeyFingerprint: "1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-				TopologyMultiHash:    []byte{0xaa, 0xbb},
 				TopologyTransactions: [][]byte{{0x01, 0x02}},
 			},
 		},
@@ -49,6 +48,13 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 			sighashes, err := tx.Sighashes()
 			require.NoError(t, err)
 			require.Len(t, sighashes, 1)
+			if tt.input.Stage == tx_input.CreateAccountStageAllocate {
+				expectedHash, err := tx_input.ComputeTopologyMultiHash(tt.input.TopologyTransactions)
+				require.NoError(t, err)
+				require.Equal(t, expectedHash, sighashes[0].Payload)
+			} else {
+				require.Equal(t, tt.input.SetupProposalHash, sighashes[0].Payload)
+			}
 
 			unsigned, err := tx.Serialize()
 			require.NoError(t, err)
