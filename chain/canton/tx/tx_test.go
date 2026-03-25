@@ -1,7 +1,8 @@
 package tx
 
 import (
-	"fmt"
+	"bytes"
+	"strconv"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -27,11 +28,11 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 	}{
 		{
 			name:       "transfer_offer",
-			preparedTx: txPreparedTransaction("node-1", txCreateNode("TransferOffer", txTransferOfferArgument(string(to), "10.0"))),
+			preparedTx: txPreparedTransaction("1", txCreateNode("TransferOffer", txTransferOfferArgument(string(to), "10.0"))),
 		},
 		{
 			name:       "transfer_preapproval_send",
-			preparedTx: txPreparedTransaction("node-1", txExerciseNode("TransferPreapproval_Send", txAmountRecord("10.0"))),
+			preparedTx: txPreparedTransaction("1", txExerciseNode("TransferPreapproval_Send", txAmountRecord("10.0"))),
 		},
 	}
 
@@ -45,6 +46,7 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 
 			input := &tx_input.TxInput{
 				PreparedTransaction: *vector.preparedTx,
+				LedgerEnd:           12345,
 				SubmissionId:        "submission-id",
 			}
 
@@ -58,13 +60,13 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, sighashes, 1)
 			require.Equal(t, hash, sighashes[0].Payload)
-			require.Equal(t, xc.TxHash(fmt.Sprintf("%x", hash)), tx.Hash())
+			require.Equal(t, xc.TxHash("12345-submission-id"), tx.Hash())
 		})
 	}
 }
 
 func txPreparedTransaction(nodeID string, node *v1.Node) *interactive.PreparedTransaction {
-	return &interactive.PreparedTransaction{
+	tx := &interactive.PreparedTransaction{
 		Transaction: &interactive.DamlTransaction{
 			Version: "2",
 			Roots:   []string{nodeID},
@@ -77,7 +79,27 @@ func txPreparedTransaction(nodeID string, node *v1.Node) *interactive.PreparedTr
 				},
 			},
 		},
+		Metadata: &interactive.Metadata{
+			SubmitterInfo: &interactive.Metadata_SubmitterInfo{
+				ActAs:     []string{"sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+				CommandId: "command-id",
+			},
+			SynchronizerId:  "sync-id",
+			TransactionUuid: "transaction-uuid",
+			PreparationTime: 1,
+			InputContracts:  []*interactive.Metadata_InputContract{},
+		},
 	}
+	if node.GetExercise() != nil {
+		seedID, err := strconv.Atoi(nodeID)
+		if err != nil {
+			panic(err)
+		}
+		tx.Transaction.NodeSeeds = []*interactive.DamlTransaction_NodeSeed{
+			{NodeId: int32(seedID), Seed: bytes.Repeat([]byte{0x11}, 32)},
+		}
+	}
+	return tx
 }
 
 func txCreateNode(entity string, argument *v2.Value) *v1.Node {
@@ -89,7 +111,9 @@ func txCreateNode(entity string, argument *v2.Value) *v1.Node {
 					ModuleName: "Splice.Wallet.TransferOffer",
 					EntityName: entity,
 				},
-				Argument: argument,
+				ContractId:  "001122",
+				PackageName: "splice-wallet",
+				Argument:    argument,
 			},
 		},
 	}
@@ -104,6 +128,8 @@ func txExerciseNode(choice string, chosenValue *v2.Value) *v1.Node {
 					ModuleName: "Splice.Wallet",
 					EntityName: "Any",
 				},
+				ContractId:  "001122",
+				PackageName: "splice-wallet",
 				ChoiceId:    choice,
 				ChosenValue: chosenValue,
 			},

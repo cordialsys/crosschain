@@ -13,6 +13,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
 	cantonkc "github.com/cordialsys/crosschain/chain/canton/keycloak"
+	cantonproto "github.com/cordialsys/crosschain/chain/canton/proto"
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -23,7 +24,6 @@ import (
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // Client for Canton using the gRPC Ledger API
@@ -111,74 +111,8 @@ func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
 }
 
 func (client *Client) PrepareTransferOfferCommand(ctx context.Context, args xcbuilder.TransferArgs, amuletRules AmuletRules) (*interactive.PrepareSubmissionResponse, error) {
-	// amount := args.GetAmount()
-	// amountStr := amount.ToHuman(10)
-	commandID := newRegisterCommandId()
-	cmd := &v2.Command{
-		Command: &v2.Command_Create{
-			Create: &v2.CreateCommand{
-				TemplateId: &v2.Identifier{
-					// TODO: Fetch via KnownPackages and match on splice-wallet version from amulet rules
-					PackageId:  "fd57252dda29e3ce90028114c91b521cb661df5a9d6e87c41a9e91518215fa5b",
-					ModuleName: "Splice.Wallet.TransferOffer",
-					EntityName: "TransferOffer",
-				},
-				CreateArguments: &v2.Record{
-					Fields: []*v2.RecordField{
-						{
-							Label: "sender",
-							Value: &v2.Value{Sum: &v2.Value_Party{Party: string(args.GetFrom())}},
-						},
-						{
-							Label: "receiver",
-							Value: &v2.Value{Sum: &v2.Value_Party{Party: string(args.GetTo())}},
-						},
-						{
-							Label: "dso",
-							Value: &v2.Value{Sum: &v2.Value_Party{Party: amuletRules.AmuletRulesUpdate.Contract.Payload.DSO}},
-						},
-						{
-							Label: "amount",
-							Value: &v2.Value{
-								Sum: &v2.Value_Record{
-									Record: &v2.Record{
-										Fields: []*v2.RecordField{
-											{
-												Label: "amount",
-												Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: "10.0"}}, // hardcode for now
-											},
-											{
-												Label: "unit",
-												Value: &v2.Value{
-													Sum: &v2.Value_Enum{
-														Enum: &v2.Enum{
-															Constructor: "AmuletUnit",
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-						{
-							Label: "description",
-							Value: &v2.Value{Sum: &v2.Value_Text{Text: ""}},
-						},
-						{
-							Label: "expiresAt",
-							Value: &v2.Value{Sum: &v2.Value_Timestamp{Timestamp: time.Now().UTC().Add(24 * time.Hour).UnixMicro()}},
-						},
-						{
-							Label: "trackingId",
-							Value: &v2.Value{Sum: &v2.Value_Text{Text: commandID}},
-						},
-					},
-				},
-			},
-		},
-	}
+	commandID := cantonproto.NewCommandID()
+	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID)
 
 	prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, string(args.GetFrom()))
 	if err != nil {
@@ -203,248 +137,12 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 	recipientContracts []*v2.ActiveContract,
 ) (*interactive.PrepareSubmissionResponse, error) {
 	senderPartyID := string(args.GetFrom())
-
-	// Find the recipient's TransferPreapproval contract.
-	var preapprovalContractID string
-	var preapprovalTemplateID *v2.Identifier
-	for _, c := range recipientContracts {
-		event := c.GetCreatedEvent()
-		if event == nil {
-			continue
-		}
-		tid := event.GetTemplateId()
-		if tid != nil && isPreapprovalTemplate(tid) {
-			preapprovalContractID = event.GetContractId()
-			preapprovalTemplateID = tid
-			break
-		}
-	}
-	if preapprovalContractID == "" {
-		return nil, fmt.Errorf("no TransferPreapproval contract found for recipient %s", args.GetTo())
-	}
-
-	// Build sender's amulet inputs.
-	transferInputs := make([]*v2.Value, 0)
-	for _, ac := range senderContracts {
-		event := ac.GetCreatedEvent()
-		if event == nil {
-			continue
-		}
-		if event.GetTemplateId().GetEntityName() != "Amulet" {
-			continue
-		}
-		transferInputs = append(transferInputs, &v2.Value{
-			Sum: &v2.Value_Variant{
-				Variant: &v2.Variant{
-					Constructor: "InputAmulet",
-					Value: &v2.Value{
-						Sum: &v2.Value_ContractId{
-							ContractId: event.GetContractId(),
-						},
-					},
-				},
-			},
-		})
-	}
-
-	amuletRulesID := amuletRules.AmuletRulesUpdate.Contract.ContractID
-	openMiningRoundID := openMiningRound.Contract.ContractID
-
-	rn, err := strconv.ParseInt(issuingMiningRound.Contract.Payload.Round.Number, 10, 64)
+	cmd, disclosedContracts, err := buildTransferPreapprovalExerciseCommand(args, amuletRules, openMiningRound, issuingMiningRound, senderContracts, recipientContracts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse issuing mining round number: %w", err)
+		return nil, err
 	}
-	issuingMiningRounds := &v2.Value{
-		Sum: &v2.Value_GenMap{
-			GenMap: &v2.GenMap{
-				Entries: []*v2.GenMap_Entry{
-					{
-						Key: &v2.Value{
-							Sum: &v2.Value_Record{
-								Record: &v2.Record{
-									Fields: []*v2.RecordField{
-										{
-											Label: "number",
-											Value: &v2.Value{Sum: &v2.Value_Int64{Int64: rn}},
-										},
-									},
-								},
-							},
-						},
-						Value: &v2.Value{
-							Sum: &v2.Value_ContractId{
-								ContractId: issuingMiningRound.Contract.ContractID,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Build disclosed contracts: TransferPreapproval + sender amulets + AmuletRules + OpenMiningRound + IssuingMiningRound.
-	disclosedContracts := make([]*v2.DisclosedContract, 0)
-
-	// Disclose the recipient's TransferPreapproval contract (the one being exercised).
-	for _, ac := range recipientContracts {
-		event := ac.GetCreatedEvent()
-		if event == nil {
-			continue
-		}
-		if tid := event.GetTemplateId(); tid != nil && isPreapprovalTemplate(tid) {
-			disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
-				TemplateId:       tid,
-				ContractId:       event.GetContractId(),
-				CreatedEventBlob: event.GetCreatedEventBlob(),
-			})
-			break
-		}
-	}
-
-	for _, ac := range senderContracts {
-		event := ac.GetCreatedEvent()
-		if event == nil || event.GetTemplateId().GetEntityName() != "Amulet" {
-			continue
-		}
-		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
-			TemplateId:       event.GetTemplateId(),
-			ContractId:       event.GetContractId(),
-			CreatedEventBlob: event.GetCreatedEventBlob(),
-		})
-	}
-
-	// Disclose AmuletRules.
-	amuletRulesTemplateParts := strings.SplitN(amuletRules.AmuletRulesUpdate.Contract.TemplateID, ":", 3)
-	if len(amuletRulesTemplateParts) == 3 {
-		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
-			TemplateId: &v2.Identifier{
-				PackageId:  amuletRulesTemplateParts[0],
-				ModuleName: amuletRulesTemplateParts[1],
-				EntityName: amuletRulesTemplateParts[2],
-			},
-			ContractId:       amuletRulesID,
-			CreatedEventBlob: amuletRules.AmuletRulesUpdate.Contract.CreatedEventBlob,
-		})
-	}
-
-	openParts := strings.Split(openMiningRound.Contract.TemplateID, ":")
-	if len(openParts) == 3 {
-		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
-			TemplateId: &v2.Identifier{
-				PackageId:  openParts[0],
-				ModuleName: openParts[1],
-				EntityName: openParts[2],
-			},
-			ContractId:       openMiningRoundID,
-			CreatedEventBlob: openMiningRound.Contract.CreatedEventBlob,
-		})
-	}
-
-	issuingParts := strings.Split(issuingMiningRound.Contract.TemplateID, ":")
-	if len(issuingParts) == 3 {
-		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
-			TemplateId: &v2.Identifier{
-				PackageId:  issuingParts[0],
-				ModuleName: issuingParts[1],
-				EntityName: issuingParts[2],
-			},
-			ContractId:       issuingMiningRound.Contract.ContractID,
-			CreatedEventBlob: issuingMiningRound.Contract.CreatedEventBlob,
-		})
-	}
-
-	cmd := &v2.Command{
-		Command: &v2.Command_Exercise{
-			Exercise: &v2.ExerciseCommand{
-				TemplateId: preapprovalTemplateID,
-				ContractId: preapprovalContractID,
-				Choice:     "TransferPreapproval_Send",
-				ChoiceArgument: &v2.Value{
-					Sum: &v2.Value_Record{
-						Record: &v2.Record{
-							Fields: []*v2.RecordField{
-								{
-									Label: "sender",
-									Value: &v2.Value{Sum: &v2.Value_Party{Party: senderPartyID}},
-								},
-								{
-									Label: "inputs",
-									Value: &v2.Value{
-										Sum: &v2.Value_List{
-											List: &v2.List{Elements: transferInputs},
-										},
-									},
-								},
-								{
-									Label: "amount",
-									Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: "10.0"}},
-								},
-								{
-									Label: "context",
-									Value: &v2.Value{
-										Sum: &v2.Value_Record{
-											Record: &v2.Record{
-												Fields: []*v2.RecordField{
-													{
-														Label: "amuletRules",
-														Value: &v2.Value{Sum: &v2.Value_ContractId{ContractId: amuletRulesID}},
-													},
-													{
-														Label: "context",
-														Value: &v2.Value{
-															Sum: &v2.Value_Record{
-																Record: &v2.Record{
-																	Fields: []*v2.RecordField{
-																		{
-																			Label: "openMiningRound",
-																			Value: &v2.Value{Sum: &v2.Value_ContractId{ContractId: openMiningRoundID}},
-																		},
-																		{
-																			Label: "issuingMiningRounds",
-																			Value: issuingMiningRounds,
-																		},
-																		{
-																			Label: "validatorRights",
-																			Value: &v2.Value{
-																				Sum: &v2.Value_GenMap{
-																					GenMap: &v2.GenMap{Entries: []*v2.GenMap_Entry{}},
-																				},
-																			},
-																		},
-																		{
-																			Label: "featuredAppRight",
-																			Value: &v2.Value{
-																				Sum: &v2.Value_Optional{Optional: &v2.Optional{}},
-																			},
-																		},
-																	},
-																},
-															},
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	commandID := newRegisterCommandId()
-	prepareReq := &interactive.PrepareSubmissionRequest{
-		CommandId:          commandID,
-		Commands:           []*v2.Command{cmd},
-		ActAs:              []string{senderPartyID},
-		ReadAs:             []string{senderPartyID, ValidatorPartyId},
-		SynchronizerId:     TestnetSynchronizerID,
-		DisclosedContracts: disclosedContracts,
-		VerboseHashing:     false,
-	}
+	commandID := cantonproto.NewCommandID()
+	prepareReq := cantonproto.NewPrepareRequest(commandID, TestnetSynchronizerID, []string{senderPartyID}, []string{senderPartyID, ValidatorPartyId}, []*v2.Command{cmd}, disclosedContracts)
 
 	authCtx := client.ledgerClient.authCtx(ctx)
 	prepareResp, err := client.ledgerClient.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
@@ -478,6 +176,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	isExternal := client.ledgerClient.HasTransferPreapprovalContract(ctx, recipientContracts)
 	input.IsExternalTransfer = isExternal
+	input.LedgerEnd = ledgerEnd
 
 	uiToken, err := client.cantonUIToken(ctx)
 	if err != nil {
@@ -581,15 +280,32 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (
 	return txinfo.LegacyTxInfo{}, errors.New("not implemented")
 }
 
+type amuletCreation struct {
+	owner  string
+	amount xc.AmountBlockchain
+}
+
 // FetchTxInfo fetches and normalizes transaction info for a Canton update by its updateId.
-// The txHash must be the Canton updateId returned after submission.
+// Recovery tokens in the form "<ledger_end>-<submission_id>" are resolved via the completion stream.
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
-	updateId := string(args.TxHash())
+	lookupId := string(args.TxHash())
+	sender, hasSender := args.Sender()
+	if !hasSender {
+		return txinfo.TxInfo{}, fmt.Errorf("canton tx-info lookup for %q requires sender address", lookupId)
+	}
+
+	updateId := lookupId
+	if beginExclusive, submissionId, ok := parseRecoveryLookupId(lookupId); ok {
+		resolvedUpdateId, err := client.ledgerClient.RecoverUpdateIdBySubmissionId(ctx, beginExclusive, string(sender), submissionId)
+		if err != nil {
+			return txinfo.TxInfo{}, fmt.Errorf("failed to resolve Canton recovery token %q: %w", lookupId, err)
+		}
+		updateId = resolvedUpdateId
+	}
 	chainCfg := client.Asset.GetChain()
 	decimals := chainCfg.Decimals
 
-	// Use admin token for lookup — the updateId is ledger-global
-	resp, err := client.ledgerClient.GetUpdateById(ctx, updateId)
+	resp, err := client.ledgerClient.GetUpdateById(ctx, string(sender), updateId)
 	if err != nil {
 		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch update: %w", err)
 	}
@@ -614,23 +330,30 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	if ts := tx.GetEffectiveAt(); ts != nil {
 		blockTime = ts.AsTime()
 	}
-	block := txinfo.NewBlock(chainCfg.Chain, uint64(txOffset), tx.GetSynchronizerId(), blockTime)
+	blockIdentifier := fmt.Sprintf("%s/%d", tx.GetSynchronizerId(), txOffset)
+	block := txinfo.NewBlock(chainCfg.Chain, uint64(txOffset), blockIdentifier, blockTime)
 	txInfo := txinfo.NewTxInfo(block, client.Asset, updateId, confirmations, nil)
-
-	// Scan events: find the acting party (sender) from exercised events and
-	// new Amulet owner (receiver) + amount from created Amulet events.
-	var senderParty string
-	type amuletCreation struct {
-		owner  string
-		amount xc.AmountBlockchain
+	if lookupId != updateId {
+		txInfo.LookupId = lookupId
 	}
+
+	// Use the caller-provided sender as the source of truth for Canton tx-info.
+	senderParty := string(sender)
+	zero := xc.NewAmountBlockchainFromUint64(0)
+	var transferOutputs []amuletCreation
+	totalFee := xc.NewAmountBlockchainFromUint64(0)
 	var amuletCreations []amuletCreation
 
 	for _, event := range tx.GetEvents() {
 		if ex := event.GetExercised(); ex != nil {
-			// The acting party on transfer-related choices is the sender
 			if len(ex.GetActingParties()) > 0 && senderParty == "" {
 				senderParty = ex.GetActingParties()[0]
+			}
+			if outputs, ok := extractTransferOutputs(ex, decimals); ok {
+				transferOutputs = append(transferOutputs, outputs...)
+			}
+			if fee, ok := extractTransferFee(ex, decimals); ok {
+				totalFee = totalFee.Add(&fee)
 			}
 		}
 		if cr := event.GetCreated(); cr != nil {
@@ -660,10 +383,21 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 		}
 	}
 
-	// Build movements: one per new Amulet contract created for a non-sender owner
+	if len(transferOutputs) > 0 {
+		for _, out := range transferOutputs {
+			txInfo.AddSimpleTransfer(xc.Address(senderParty), xc.Address(out.owner), "", out.amount, nil, "")
+		}
+		if totalFee.Cmp(&zero) > 0 {
+			txInfo.AddFee(xc.Address(senderParty), "", totalFee, nil)
+		}
+		txInfo.Fees = txInfo.CalculateFees()
+		txInfo.SyncDeprecatedFields()
+		return *txInfo, nil
+	}
+
+	// Fall back to created Amulets only when there is no explicit transfer exercise payload.
 	for _, ac := range amuletCreations {
 		if ac.owner == senderParty {
-			// This is change going back to the sender, not the primary transfer destination
 			continue
 		}
 		from := xc.Address(senderParty)
@@ -671,8 +405,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 		txInfo.AddSimpleTransfer(from, to, "", ac.amount, nil, "")
 	}
 
-	// If we couldn't distinguish sender from receiver (e.g. self-transfer or change only),
-	// fall back to reporting all creations
+	// If we couldn't distinguish sender from receiver (e.g. self-transfer), fall back to
+	// reporting all sender-visible created Amulets.
 	if len(txInfo.Movements) == 0 && len(amuletCreations) > 0 {
 		for _, ac := range amuletCreations {
 			from := xc.Address(senderParty)
@@ -680,10 +414,219 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 			txInfo.AddSimpleTransfer(from, to, "", ac.amount, nil, "")
 		}
 	}
+	if totalFee.Cmp(&zero) > 0 {
+		txInfo.AddFee(xc.Address(senderParty), "", totalFee, nil)
+	}
 
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.SyncDeprecatedFields()
 	return *txInfo, nil
+}
+
+func extractTransferOutputs(ex *v2.ExercisedEvent, decimals int32) ([]amuletCreation, bool) {
+	tid := ex.GetTemplateId()
+	if tid == nil || tid.GetModuleName() != "Splice.AmuletRules" || ex.GetChoice() != "AmuletRules_Transfer" {
+		return nil, false
+	}
+
+	arg := ex.GetChoiceArgument()
+	if arg == nil {
+		return nil, false
+	}
+	root := arg.GetRecord()
+	if root == nil {
+		return nil, false
+	}
+
+	var transferRecord *v2.Record
+	for _, field := range root.GetFields() {
+		if field.GetLabel() == "transfer" {
+			transferRecord = field.GetValue().GetRecord()
+			break
+		}
+	}
+	if transferRecord == nil {
+		return nil, false
+	}
+
+	var outputs []*v2.Value
+	for _, field := range transferRecord.GetFields() {
+		if field.GetLabel() == "outputs" {
+			if list := field.GetValue().GetList(); list != nil {
+				outputs = list.GetElements()
+			}
+			break
+		}
+	}
+	if len(outputs) == 0 {
+		return nil, false
+	}
+
+	parsed := make([]amuletCreation, 0, len(outputs))
+	for _, output := range outputs {
+		record := output.GetRecord()
+		if record == nil {
+			continue
+		}
+		var receiver string
+		var amount xc.AmountBlockchain
+		var ok bool
+		for _, field := range record.GetFields() {
+			switch field.GetLabel() {
+			case "receiver":
+				receiver = field.GetValue().GetParty()
+			case "amount":
+				amount, ok = extractNumericValue(field.GetValue(), decimals)
+			}
+		}
+		if receiver == "" || !ok {
+			continue
+		}
+		parsed = append(parsed, amuletCreation{owner: receiver, amount: amount})
+	}
+	if len(parsed) == 0 {
+		return nil, false
+	}
+	return parsed, true
+}
+
+func extractNumericValue(value *v2.Value, decimals int32) (xc.AmountBlockchain, bool) {
+	if value == nil {
+		return xc.AmountBlockchain{}, false
+	}
+	numeric := value.GetNumeric()
+	if numeric == "" {
+		return xc.AmountBlockchain{}, false
+	}
+	human, err := xc.NewAmountHumanReadableFromStr(numeric)
+	if err != nil {
+		return xc.AmountBlockchain{}, false
+	}
+	return human.ToBlockchain(decimals), true
+}
+
+func extractTransferFee(ex *v2.ExercisedEvent, decimals int32) (xc.AmountBlockchain, bool) {
+	tid := ex.GetTemplateId()
+	if tid == nil || tid.GetModuleName() != "Splice.AmuletRules" || ex.GetChoice() != "AmuletRules_Transfer" {
+		return xc.AmountBlockchain{}, false
+	}
+
+	result := ex.GetExerciseResult()
+	if result == nil {
+		return xc.AmountBlockchain{}, false
+	}
+	record := result.GetRecord()
+	if record == nil {
+		return xc.AmountBlockchain{}, false
+	}
+
+	if burned, ok := extractBurnedFee(record, decimals); ok {
+		return burned, true
+	}
+	if summaryFee, ok := extractSummaryFee(record, decimals); ok {
+		return summaryFee, true
+	}
+	return xc.AmountBlockchain{}, false
+}
+
+func extractBurnedFee(record *v2.Record, decimals int32) (xc.AmountBlockchain, bool) {
+	metaRecord := findRecordField(record, "meta")
+	if metaRecord == nil {
+		return xc.AmountBlockchain{}, false
+	}
+	valuesRecord := findRecordField(metaRecord, "values")
+	if valuesRecord == nil {
+		return xc.AmountBlockchain{}, false
+	}
+	burnedText, ok := extractTextMapValue(valuesRecord, "splice.lfdecentralizedtrust.org/burned")
+	if !ok || burnedText == "" {
+		return xc.AmountBlockchain{}, false
+	}
+	return parseHumanAmountToBlockchain(burnedText, decimals)
+}
+
+func extractSummaryFee(record *v2.Record, decimals int32) (xc.AmountBlockchain, bool) {
+	summaryRecord := findRecordField(record, "summary")
+	if summaryRecord == nil {
+		return xc.AmountBlockchain{}, false
+	}
+
+	total := xc.NewAmountBlockchainFromUint64(0)
+	found := false
+
+	if senderChangeFeeValue, ok := findValueField(summaryRecord, "senderChangeFee"); ok {
+		if fee, ok := extractNumericValue(senderChangeFeeValue, decimals); ok {
+			total = total.Add(&fee)
+			found = true
+		}
+	}
+	if outputFeesValue, ok := findValueField(summaryRecord, "outputFees"); ok {
+		if list := outputFeesValue.GetList(); list != nil {
+			for _, elem := range list.GetElements() {
+				fee, ok := extractNumericValue(elem, decimals)
+				if !ok {
+					continue
+				}
+				total = total.Add(&fee)
+				found = true
+			}
+		}
+	}
+
+	if !found {
+		return xc.AmountBlockchain{}, false
+	}
+	return total, true
+}
+
+func findRecordField(record *v2.Record, label string) *v2.Record {
+	value, ok := findValueField(record, label)
+	if !ok {
+		return nil
+	}
+	return value.GetRecord()
+}
+
+func findValueField(record *v2.Record, label string) (*v2.Value, bool) {
+	if record == nil {
+		return nil, false
+	}
+	for _, field := range record.GetFields() {
+		if field.GetLabel() == label {
+			return field.GetValue(), true
+		}
+	}
+	return nil, false
+}
+
+func extractTextMapValue(record *v2.Record, key string) (string, bool) {
+	for _, field := range record.GetFields() {
+		if field.GetLabel() != key {
+			continue
+		}
+		return field.GetValue().GetText(), true
+	}
+	return "", false
+}
+
+func parseHumanAmountToBlockchain(value string, decimals int32) (xc.AmountBlockchain, bool) {
+	human, err := xc.NewAmountHumanReadableFromStr(value)
+	if err != nil {
+		return xc.AmountBlockchain{}, false
+	}
+	return human.ToBlockchain(decimals), true
+}
+
+func parseRecoveryLookupId(value string) (int64, string, bool) {
+	idx := strings.Index(value, "-")
+	if idx <= 0 || idx == len(value)-1 {
+		return 0, "", false
+	}
+	beginExclusive, err := strconv.ParseInt(value[:idx], 10, 64)
+	if err != nil {
+		return 0, "", false
+	}
+	return beginExclusive, value[idx+1:], true
 }
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -944,17 +887,8 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			continue
 		}
 
-		cmd := &v2.Command{
-			Command: &v2.Command_Exercise{
-				Exercise: &v2.ExerciseCommand{
-					TemplateId:     tid,
-					ContractId:     event.GetContractId(),
-					Choice:         "ExternalPartySetupProposal_Accept",
-					ChoiceArgument: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{}}},
-				},
-			},
-		}
-		commandID := newRegisterCommandId()
+		cmd := buildExternalPartySetupProposalAcceptCommand(tid, event.GetContractId())
+		commandID := cantonproto.NewCommandID()
 		logger.WithFields(logrus.Fields{
 			"contract_id": event.GetContractId(),
 			"template_id": tid.String(),
@@ -1007,21 +941,8 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 
 	switch cantonInput.Stage {
 	case tx_input.CreateAccountStageAllocate:
-		txns := make([]*admin.AllocateExternalPartyRequest_SignedTransaction, 0, len(cantonInput.TopologyTransactions))
-		for _, txBytes := range cantonInput.TopologyTransactions {
-			txns = append(txns, &admin.AllocateExternalPartyRequest_SignedTransaction{Transaction: txBytes})
-		}
-		sig := &v2.Signature{
-			Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
-			Signature:            cantonInput.Signature,
-			SignedBy:             cantonInput.PublicKeyFingerprint,
-			SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
-		}
-		_, err := client.ledgerClient.adminClient.AllocateExternalParty(authCtx, &admin.AllocateExternalPartyRequest{
-			Synchronizer:           TestnetSynchronizerID,
-			OnboardingTransactions: txns,
-			MultiHashSignatures:    []*v2.Signature{sig},
-		})
+		req := cantonproto.NewAllocateExternalPartyRequest(TestnetSynchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, cantonInput.PublicKeyFingerprint)
+		_, err := client.ledgerClient.adminClient.AllocateExternalParty(authCtx, req)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("AllocateExternalParty failed: %w", err)
 		}
@@ -1035,29 +956,7 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 		if err != nil {
 			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}
-		executeReq := &interactive.ExecuteSubmissionAndWaitRequest{
-			PreparedTransaction: &preparedTx,
-			PartySignatures: &interactive.PartySignatures{
-				Signatures: []*interactive.SinglePartySignatures{
-					{
-						Party: cantonInput.PartyID,
-						Signatures: []*v2.Signature{
-							{
-								Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
-								Signature:            cantonInput.Signature,
-								SignedBy:             keyFingerprint,
-								SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
-							},
-						},
-					},
-				},
-			},
-			DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
-				DeduplicationDuration: durationpb.New(300 * time.Second),
-			},
-			SubmissionId:         cantonInput.SetupProposalSubmissionID,
-			HashingSchemeVersion: cantonInput.SetupProposalHashing,
-		}
+		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(&preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalSubmissionID, cantonInput.SetupProposalHashing)
 		_, err = client.ledgerClient.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("ExternalPartySetupProposal_Accept failed: %w", err)

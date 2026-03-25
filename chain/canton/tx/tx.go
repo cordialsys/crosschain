@@ -2,17 +2,16 @@ package tx
 
 import (
 	"fmt"
-	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
+	cantonproto "github.com/cordialsys/crosschain/chain/canton/proto"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	v1 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive/transaction/v1"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 // Tx for Canton holds the data needed for the external-party signing flow:
@@ -28,6 +27,8 @@ type Tx struct {
 	KeyFingerprint string
 	// SubmissionId for deduplication
 	SubmissionId string
+	// LedgerEnd captured before submission, used as the lower-bound recovery cursor.
+	LedgerEnd int64
 	// Populated after SetSignatures is called
 	signature []byte
 }
@@ -61,6 +62,7 @@ func NewTx(input *tx_input.TxInput, args xcbuilder.TransferArgs, decimals int32)
 		Party:                string(args.GetFrom()),
 		KeyFingerprint:       fingerprint,
 		SubmissionId:         input.SubmissionId,
+		LedgerEnd:            input.LedgerEnd,
 	}, nil
 }
 
@@ -220,13 +222,12 @@ func (tx Tx) computedSighash() ([]byte, error) {
 	return tx_input.ComputePreparedTransactionHash(tx.PreparedTransaction)
 }
 
-// Hash returns a hex string of the locally derived prepared transaction hash.
+// Hash returns a recovery token in the form "<ledger_end>-<submission_id>".
 func (tx Tx) Hash() xc.TxHash {
-	hash, err := tx.computedSighash()
-	if err != nil {
+	if tx.SubmissionId == "" {
 		return ""
 	}
-	return xc.TxHash(fmt.Sprintf("%x", hash))
+	return xc.TxHash(fmt.Sprintf("%d-%s", tx.LedgerEnd, tx.SubmissionId))
 }
 
 // Sighashes returns the locally derived prepared transaction hash bytes for the party to sign.
@@ -256,30 +257,7 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("prepared transaction is nil")
 	}
 
-	req := &interactive.ExecuteSubmissionRequest{
-		PreparedTransaction: tx.PreparedTransaction,
-		PartySignatures: &interactive.PartySignatures{
-			Signatures: []*interactive.SinglePartySignatures{
-				{
-					Party: tx.Party,
-					Signatures: []*v2.Signature{
-						{
-							Format:               v2.SignatureFormat_SIGNATURE_FORMAT_RAW,
-							Signature:            tx.signature,
-							SignedBy:             tx.KeyFingerprint,
-							SigningAlgorithmSpec: v2.SigningAlgorithmSpec_SIGNING_ALGORITHM_SPEC_ED25519,
-						},
-					},
-				},
-			},
-		},
-		DeduplicationPeriod: &interactive.ExecuteSubmissionRequest_DeduplicationDuration{
-			// TODO: Move to input
-			DeduplicationDuration: durationpb.New(300 * time.Second),
-		},
-		SubmissionId:         tx.SubmissionId,
-		HashingSchemeVersion: tx.HashingSchemeVersion,
-	}
+	req := cantonproto.NewExecuteSubmissionRequest(tx.PreparedTransaction, tx.Party, tx.signature, tx.KeyFingerprint, tx.SubmissionId, tx.HashingSchemeVersion)
 
 	data, err := proto.Marshal(req)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
-	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +18,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
+	cantonproto "github.com/cordialsys/crosschain/chain/canton/proto"
 	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/admin"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
@@ -79,6 +79,7 @@ type GrpcLedgerClient struct {
 	authToken                   string
 	adminClient                 admin.PartyManagementServiceClient
 	commandClient               v2.CommandServiceClient
+	completionClient            v2.CommandCompletionServiceClient
 	interactiveSubmissionClient interactive.InteractiveSubmissionServiceClient
 	stateClient                 v2.StateServiceClient
 	updateClient                v2.UpdateServiceClient
@@ -120,6 +121,7 @@ func NewGrpcLedgerClient(target string, authToken string) (*GrpcLedgerClient, er
 		adminClient:                 admin.NewPartyManagementServiceClient(conn),
 		stateClient:                 v2.NewStateServiceClient(conn),
 		updateClient:                v2.NewUpdateServiceClient(conn),
+		completionClient:            v2.NewCommandCompletionServiceClient(conn),
 		interactiveSubmissionClient: interactive.NewInteractiveSubmissionServiceClient(conn),
 		userManagementClient:        admin.NewUserManagementServiceClient(conn),
 		commandClient:               v2.NewCommandServiceClient(conn),
@@ -583,21 +585,11 @@ func (c *GrpcLedgerClient) HasTransferPreapprovalContract(ctx context.Context, c
 
 // newRegisterCommandId generates a UUID-style command ID for registration calls.
 func newRegisterCommandId() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	return cantonproto.NewCommandID()
 }
 
 func (c *GrpcLedgerClient) PrepareSubmissionRequest(ctx context.Context, command *v2.Command, commandID string, partyID string) (*interactive.PrepareSubmissionResponse, error) {
-	prepareReq := &interactive.PrepareSubmissionRequest{
-		CommandId:      commandID,
-		Commands:       []*v2.Command{command},
-		ActAs:          []string{partyID},
-		ReadAs:         []string{partyID},
-		SynchronizerId: TestnetSynchronizerID,
-		VerboseHashing: false,
-	}
+	prepareReq := cantonproto.NewPrepareRequest(commandID, TestnetSynchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{command}, nil)
 
 	authCtx := c.authCtx(ctx)
 	prepareResp, err := c.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
@@ -1029,21 +1021,27 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 	return nil
 }
 
-// GetUpdateById fetches a transaction (update) by its updateId from the Canton ledger.
-func (c *GrpcLedgerClient) GetUpdateById(ctx context.Context, updateId string) (*v2.GetUpdateResponse, error) {
+// GetUpdateById fetches a transaction (update) by its updateId from the Canton ledger,
+// scoped to a specific party to avoid requiring super-reader permissions.
+func (c *GrpcLedgerClient) GetUpdateById(ctx context.Context, partyID string, updateId string) (*v2.GetUpdateResponse, error) {
+	if partyID == "" {
+		return nil, errors.New("empty party id")
+	}
 	authCtx := c.authCtx(ctx)
 	req := &v2.GetUpdateByIdRequest{
 		UpdateId: updateId,
 		UpdateFormat: &v2.UpdateFormat{
 			IncludeTransactions: &v2.TransactionFormat{
-				TransactionShape: v2.TransactionShape_TRANSACTION_SHAPE_ACS_DELTA,
+				TransactionShape: v2.TransactionShape_TRANSACTION_SHAPE_LEDGER_EFFECTS,
 				EventFormat: &v2.EventFormat{
-					FiltersForAnyParty: &v2.Filters{
-						Cumulative: []*v2.CumulativeFilter{{
-							IdentifierFilter: &v2.CumulativeFilter_WildcardFilter{
-								WildcardFilter: &v2.WildcardFilter{},
-							},
-						}},
+					FiltersByParty: map[string]*v2.Filters{
+						partyID: {
+							Cumulative: []*v2.CumulativeFilter{{
+								IdentifierFilter: &v2.CumulativeFilter_WildcardFilter{
+									WildcardFilter: &v2.WildcardFilter{},
+								},
+							}},
+						},
 					},
 					Verbose: true,
 				},
@@ -1052,9 +1050,64 @@ func (c *GrpcLedgerClient) GetUpdateById(ctx context.Context, updateId string) (
 	}
 	resp, err := c.updateClient.GetUpdateById(authCtx, req)
 	if err != nil {
-		return nil, fmt.Errorf("GetUpdateById(%s): %w", updateId, err)
+		return nil, fmt.Errorf("GetUpdateById(%s, %s): %w", partyID, updateId, err)
 	}
 	return resp, nil
+}
+
+func (c *GrpcLedgerClient) RecoverUpdateIdBySubmissionId(ctx context.Context, beginExclusive int64, partyID string, submissionId string) (string, error) {
+	if partyID == "" {
+		return "", errors.New("empty party id")
+	}
+	if submissionId == "" {
+		return "", errors.New("empty submission id")
+	}
+
+	upperBound, err := c.GetLedgerEnd(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get ledger end for recovery: %w", err)
+	}
+	if upperBound <= beginExclusive {
+		return "", fmt.Errorf("no ledger updates after offset %d", beginExclusive)
+	}
+
+	streamCtx, cancel := context.WithTimeout(c.authCtx(ctx), 15*time.Second)
+	defer cancel()
+
+	stream, err := c.completionClient.CompletionStream(streamCtx, &v2.CompletionStreamRequest{
+		UserId:         ValidatorServiceUserId,
+		Parties:        []string{partyID},
+		BeginExclusive: beginExclusive,
+	})
+	if err != nil {
+		return "", fmt.Errorf("CompletionStream(%d): %w", beginExclusive, err)
+	}
+
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return "", fmt.Errorf("completion stream recv: %w", err)
+		}
+
+		if completion := resp.GetCompletion(); completion != nil {
+			if completion.GetSubmissionId() == submissionId && completion.GetUpdateId() != "" {
+				return completion.GetUpdateId(), nil
+			}
+			if completion.GetOffset() >= upperBound {
+				break
+			}
+			continue
+		}
+
+		if checkpoint := resp.GetOffsetCheckpoint(); checkpoint != nil && checkpoint.GetOffset() >= upperBound {
+			break
+		}
+	}
+
+	return "", fmt.Errorf("could not recover update id for submission %q in offsets (%d, %d]", submissionId, beginExclusive, upperBound)
 }
 
 func isAlreadyExists(err error) bool {
@@ -1201,8 +1254,5 @@ func ExtractAmuletBalance(record *v2.Record, decimals int32) (xc.AmountBlockchai
 
 // NewCommandId generates a UUID-style unique command ID
 func NewCommandId() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+	return cantonproto.NewCommandID()
 }

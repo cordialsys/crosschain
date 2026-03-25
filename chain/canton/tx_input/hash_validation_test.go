@@ -1,9 +1,11 @@
 package tx_input
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"strconv"
 	"testing"
 
 	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
@@ -16,7 +18,7 @@ import (
 func TestComputePreparedTransactionHash(t *testing.T) {
 	t.Parallel()
 
-	preparedTx := testPreparedTransaction("node-1", testExerciseNode("TransferPreapproval_Send", testAmountRecord("10.0")))
+	preparedTx := testPreparedTransaction("1", testExerciseNode("TransferPreapproval_Send", testAmountRecord("10.0")))
 
 	hash1, err := ComputePreparedTransactionHash(preparedTx)
 	require.NoError(t, err)
@@ -38,7 +40,7 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 	}{
 		{
 			name:       "transfer_preapproval_send",
-			preparedTx: testPreparedTransaction("node-1", testExerciseNode("TransferPreapproval_Send", testAmountRecord("10.0"))),
+			preparedTx: testPreparedTransaction("1", testExerciseNode("TransferPreapproval_Send", testAmountRecord("10.0"))),
 			verify: func(t *testing.T, preparedTx *interactive.PreparedTransaction, hash []byte) {
 				t.Helper()
 				require.NoError(t, ValidatePreparedTransactionHash(preparedTx, hash))
@@ -46,7 +48,7 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 		},
 		{
 			name:       "transfer_offer_send",
-			preparedTx: testPreparedTransaction("node-1", testCreateNode("TransferOffer", testTransferOfferArgument("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "10.0"))),
+			preparedTx: testPreparedTransaction("1", testCreateNode("TransferOffer", testTransferOfferArgument("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "10.0"))),
 			verify: func(t *testing.T, preparedTx *interactive.PreparedTransaction, hash []byte) {
 				t.Helper()
 				require.NoError(t, ValidatePreparedTransactionHash(preparedTx, hash))
@@ -54,7 +56,7 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 		},
 		{
 			name:       "create_account_accept",
-			preparedTx: testPreparedTransaction("node-1", testExerciseNode("ExternalPartySetupProposal_Accept", testEmptyRecord())),
+			preparedTx: testPreparedTransaction("1", testExerciseNode("ExternalPartySetupProposal_Accept", testEmptyRecord())),
 			verify: func(t *testing.T, preparedTx *interactive.PreparedTransaction, hash []byte) {
 				t.Helper()
 				preparedBz, err := proto.Marshal(preparedTx)
@@ -71,7 +73,7 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 		},
 		{
 			name:       "complete_transfer_offer",
-			preparedTx: testPreparedTransaction("node-1", testExerciseNode("AcceptedTransferOffer_Complete", testEmptyRecord())),
+			preparedTx: testPreparedTransaction("1", testExerciseNode("AcceptedTransferOffer_Complete", testEmptyRecord())),
 			verify: func(t *testing.T, preparedTx *interactive.PreparedTransaction, hash []byte) {
 				t.Helper()
 				require.NoError(t, ValidatePreparedTransactionHash(preparedTx, hash))
@@ -117,7 +119,7 @@ func TestValidatePreparedTransactionHash_LiveCreateAccountAcceptMismatch(t *test
 	require.NoError(t, proto.Unmarshal(input.SetupProposalPreparedTransaction, &preparedTx))
 
 	err := ValidatePreparedTransactionHash(&preparedTx, input.SetupProposalHash)
-	require.ErrorContains(t, err, "prepared transaction hash mismatch")
+	require.NoError(t, err)
 
 	require.NoError(t, input.VerifySignaturePayloads())
 }
@@ -142,7 +144,7 @@ func mustLoadLiveCreateAccountAcceptInput(t *testing.T) *CreateAccountInput {
 }
 
 func testPreparedTransaction(nodeID string, node *v1.Node) *interactive.PreparedTransaction {
-	return &interactive.PreparedTransaction{
+	tx := &interactive.PreparedTransaction{
 		Transaction: &interactive.DamlTransaction{
 			Version: "2",
 			Roots:   []string{nodeID},
@@ -155,7 +157,27 @@ func testPreparedTransaction(nodeID string, node *v1.Node) *interactive.Prepared
 				},
 			},
 		},
+		Metadata: &interactive.Metadata{
+			SubmitterInfo: &interactive.Metadata_SubmitterInfo{
+				ActAs:     []string{"sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+				CommandId: "command-id",
+			},
+			SynchronizerId:  "sync-id",
+			TransactionUuid: "transaction-uuid",
+			PreparationTime: 1,
+			InputContracts:  []*interactive.Metadata_InputContract{},
+		},
 	}
+	if node.GetExercise() != nil {
+		seedID, err := strconv.Atoi(nodeID)
+		if err != nil {
+			panic(err)
+		}
+		tx.Transaction.NodeSeeds = []*interactive.DamlTransaction_NodeSeed{
+			{NodeId: int32(seedID), Seed: bytes.Repeat([]byte{0x11}, 32)},
+		}
+	}
+	return tx
 }
 
 func testPreparedTransactionHash(t *testing.T, preparedTx *interactive.PreparedTransaction) []byte {
@@ -174,7 +196,9 @@ func testCreateNode(entity string, argument *v2.Value) *v1.Node {
 					ModuleName: "Splice.Wallet.TransferOffer",
 					EntityName: entity,
 				},
-				Argument: argument,
+				ContractId:  "001122",
+				PackageName: "splice-wallet",
+				Argument:    argument,
 			},
 		},
 	}
@@ -189,6 +213,8 @@ func testExerciseNode(choice string, chosenValue *v2.Value) *v1.Node {
 					ModuleName: "Splice.Wallet",
 					EntityName: "Any",
 				},
+				ContractId:  "001122",
+				PackageName: "splice-wallet",
 				ChoiceId:    choice,
 				ChosenValue: chosenValue,
 			},
