@@ -424,8 +424,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 }
 
 func extractTransferOutputs(ex *v2.ExercisedEvent, decimals int32) ([]amuletCreation, bool) {
-	tid := ex.GetTemplateId()
-	if tid == nil || tid.GetModuleName() != "Splice.AmuletRules" || ex.GetChoice() != "AmuletRules_Transfer" {
+	if !isTransferExercise(ex) {
 		return nil, false
 	}
 
@@ -438,13 +437,7 @@ func extractTransferOutputs(ex *v2.ExercisedEvent, decimals int32) ([]amuletCrea
 		return nil, false
 	}
 
-	var transferRecord *v2.Record
-	for _, field := range root.GetFields() {
-		if field.GetLabel() == "transfer" {
-			transferRecord = field.GetValue().GetRecord()
-			break
-		}
-	}
+	transferRecord := findRecordField(root, "transfer")
 	if transferRecord == nil {
 		return nil, false
 	}
@@ -506,8 +499,7 @@ func extractNumericValue(value *v2.Value, decimals int32) (xc.AmountBlockchain, 
 }
 
 func extractTransferFee(ex *v2.ExercisedEvent, decimals int32) (xc.AmountBlockchain, bool) {
-	tid := ex.GetTemplateId()
-	if tid == nil || tid.GetModuleName() != "Splice.AmuletRules" || ex.GetChoice() != "AmuletRules_Transfer" {
+	if !isTransferExercise(ex) {
 		return xc.AmountBlockchain{}, false
 	}
 
@@ -519,6 +511,7 @@ func extractTransferFee(ex *v2.ExercisedEvent, decimals int32) (xc.AmountBlockch
 	if record == nil {
 		return xc.AmountBlockchain{}, false
 	}
+	record = unwrapTransferResultRecord(record)
 
 	if burned, ok := extractBurnedFee(record, decimals); ok {
 		return burned, true
@@ -527,6 +520,26 @@ func extractTransferFee(ex *v2.ExercisedEvent, decimals int32) (xc.AmountBlockch
 		return summaryFee, true
 	}
 	return xc.AmountBlockchain{}, false
+}
+
+func isTransferExercise(ex *v2.ExercisedEvent) bool {
+	tid := ex.GetTemplateId()
+	if tid == nil || tid.GetModuleName() != "Splice.AmuletRules" {
+		return false
+	}
+	switch ex.GetChoice() {
+	case "AmuletRules_Transfer", "TransferPreapproval_Send":
+		return true
+	default:
+		return false
+	}
+}
+
+func unwrapTransferResultRecord(record *v2.Record) *v2.Record {
+	if nested := findRecordField(record, "result"); nested != nil {
+		return nested
+	}
+	return record
 }
 
 func extractBurnedFee(record *v2.Record, decimals int32) (xc.AmountBlockchain, bool) {
