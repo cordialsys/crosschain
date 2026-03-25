@@ -1,7 +1,6 @@
 package tx_input
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"os"
@@ -13,6 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestComputePreparedTransactionHash(t *testing.T) {
+	t.Parallel()
+
+	preparedTx := testPreparedTransaction("node-1", testExerciseNode("TransferPreapproval_Send", testAmountRecord("10.0")))
+
+	hash1, err := ComputePreparedTransactionHash(preparedTx)
+	require.NoError(t, err)
+
+	hash2, err := ComputePreparedTransactionHash(preparedTx)
+	require.NoError(t, err)
+
+	require.Equal(t, hash1, hash2)
+	require.NotEmpty(t, hash1)
+}
 
 func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 	t.Parallel()
@@ -146,11 +160,9 @@ func testPreparedTransaction(nodeID string, node *v1.Node) *interactive.Prepared
 
 func testPreparedTransactionHash(t *testing.T, preparedTx *interactive.PreparedTransaction) []byte {
 	t.Helper()
-	data, err := proto.MarshalOptions{Deterministic: true}.Marshal(preparedTx)
+	hash, err := ComputePreparedTransactionHash(preparedTx)
 	require.NoError(t, err)
-
-	sum := sha256.Sum256(data)
-	return sum[:]
+	return hash
 }
 
 func testCreateNode(entity string, argument *v2.Value) *v1.Node {

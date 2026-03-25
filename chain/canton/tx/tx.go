@@ -17,12 +17,9 @@ import (
 
 // Tx for Canton holds the data needed for the external-party signing flow:
 //  1. PreparedTransaction: the proto from InteractiveSubmissionService.PrepareSubmission
-//  2. PreparedTransactionHash: raw bytes to sign (Ed25519)
-//  3. After SetSignatures: Serialize() marshals the ExecuteSubmissionRequest proto
+//  2. After SetSignatures: Serialize() marshals the ExecuteSubmissionRequest proto
 type Tx struct {
 	PreparedTransaction *interactive.PreparedTransaction
-	// Raw hash bytes of the prepared transaction (what the party signs)
-	PreparedTransactionHash []byte
 	// Hashing scheme version returned by prepare endpoint
 	HashingSchemeVersion interactive.HashingSchemeVersion
 	// Party (Canton party ID / address) that is authorizing this transaction
@@ -37,9 +34,8 @@ type Tx struct {
 
 var _ xc.Tx = &Tx{}
 
-// NewTx constructs a Tx from a TxInput and transfer args, validating that:
-//  1. The PreparedTransactionHash matches SHA-256(proto.Marshal(PreparedTransaction))
-//  2. The receiver and amount encoded in the prepared transaction match the transfer args
+// NewTx constructs a Tx from a TxInput and transfer args, validating that the
+// receiver and amount encoded in the prepared transaction match the transfer args.
 //
 // decimals is the chain's native asset decimal places, used to compare blockchain amounts
 // against the human-readable amounts encoded in the prepared transaction.
@@ -50,19 +46,21 @@ func NewTx(input *tx_input.TxInput, args xcbuilder.TransferArgs, decimals int32)
 	}
 
 	preparedTx := &input.PreparedTransaction
-	if err := tx_input.ValidatePreparedTransactionHash(preparedTx, input.Sighash); err != nil {
+	if preparedTx == nil || preparedTx.GetTransaction() == nil {
+		return nil, fmt.Errorf("prepared transaction is nil")
+	}
+	if _, err := tx_input.ComputePreparedTransactionHash(preparedTx); err != nil {
 		return nil, err
 	}
 	if err := validateTransferArgs(preparedTx, args, decimals); err != nil {
 		return nil, err
 	}
 	return &Tx{
-		PreparedTransaction:     preparedTx,
-		PreparedTransactionHash: input.Sighash,
-		HashingSchemeVersion:    input.HashingSchemeVersion,
-		Party:                   string(args.GetFrom()),
-		KeyFingerprint:          fingerprint,
-		SubmissionId:            input.SubmissionId,
+		PreparedTransaction:  preparedTx,
+		HashingSchemeVersion: input.HashingSchemeVersion,
+		Party:                string(args.GetFrom()),
+		KeyFingerprint:       fingerprint,
+		SubmissionId:         input.SubmissionId,
 	}, nil
 }
 
@@ -215,17 +213,29 @@ func compareNumericToBlockchain(numeric string, wantAmount xc.AmountBlockchain, 
 	return nil
 }
 
-// Hash returns a hex string of the prepared transaction hash
-func (tx Tx) Hash() xc.TxHash {
-	return xc.TxHash(fmt.Sprintf("%x", tx.PreparedTransactionHash))
+func (tx Tx) computedSighash() ([]byte, error) {
+	if tx.PreparedTransaction == nil {
+		return nil, fmt.Errorf("prepared transaction is nil")
+	}
+	return tx_input.ComputePreparedTransactionHash(tx.PreparedTransaction)
 }
 
-// Sighashes returns the raw prepared transaction hash bytes for the party to sign
-func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	if len(tx.PreparedTransactionHash) == 0 {
-		return nil, fmt.Errorf("prepared transaction hash is empty")
+// Hash returns a hex string of the locally derived prepared transaction hash.
+func (tx Tx) Hash() xc.TxHash {
+	hash, err := tx.computedSighash()
+	if err != nil {
+		return ""
 	}
-	return []*xc.SignatureRequest{xc.NewSignatureRequest(tx.PreparedTransactionHash)}, nil
+	return xc.TxHash(fmt.Sprintf("%x", hash))
+}
+
+// Sighashes returns the locally derived prepared transaction hash bytes for the party to sign.
+func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
+	hash, err := tx.computedSighash()
+	if err != nil {
+		return nil, err
+	}
+	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 }
 
 // SetSignatures stores the Ed25519 signature from the external party

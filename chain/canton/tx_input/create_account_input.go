@@ -30,7 +30,6 @@ type CreateAccountInput struct {
 
 	PartyID              string   `json:"party_id"`
 	PublicKeyFingerprint string   `json:"public_key_fingerprint,omitempty"`
-	TopologyMultiHash    []byte   `json:"topology_multi_hash,omitempty"`
 	TopologyTransactions [][]byte `json:"topology_transactions,omitempty"`
 
 	SetupProposalPreparedTransaction []byte                           `json:"setup_proposal_prepared_transaction,omitempty"`
@@ -124,10 +123,7 @@ func (i *CreateAccountInput) Serialize() ([]byte, error) {
 func (i *CreateAccountInput) Sighashes() ([]*xc.SignatureRequest, error) {
 	switch i.Stage {
 	case CreateAccountStageAllocate:
-		if len(i.TopologyMultiHash) == 0 {
-			return nil, fmt.Errorf("topology multi-hash is empty")
-		}
-		return []*xc.SignatureRequest{xc.NewSignatureRequest(i.TopologyMultiHash)}, nil
+		return nil, fmt.Errorf("allocate-stage sighash is derived by the Canton create-account tx")
 	case CreateAccountStageAccept:
 		if len(i.SetupProposalHash) == 0 {
 			return nil, fmt.Errorf("setup proposal hash is empty")
@@ -152,8 +148,8 @@ func (i *CreateAccountInput) VerifySignaturePayloads() error {
 	}
 	switch i.Stage {
 	case CreateAccountStageAllocate:
-		if len(i.TopologyMultiHash) == 0 {
-			return fmt.Errorf("topology multi-hash is empty")
+		if i.PublicKeyFingerprint == "" {
+			return fmt.Errorf("public key fingerprint is empty")
 		}
 		if len(i.TopologyTransactions) == 0 {
 			return fmt.Errorf("topology transactions are empty")

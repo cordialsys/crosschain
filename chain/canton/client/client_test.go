@@ -90,7 +90,6 @@ func mustSerializedCreateAccountInput(t *testing.T) []byte {
 		Stage:                tx_input.CreateAccountStageAllocate,
 		PartyID:              "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		PublicKeyFingerprint: "1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		TopologyMultiHash:    []byte{0xaa, 0xbb},
 		TopologyTransactions: [][]byte{{0x01}},
 	}
 	bz, err := input.Serialize()
