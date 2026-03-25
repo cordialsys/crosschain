@@ -58,8 +58,15 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 
 			unsigned, err := tx.Serialize()
 			require.NoError(t, err)
+			require.Len(t, unsigned, 8)
 
-			parsedUnsigned, err := ParseCreateAccountTx(unsigned)
+			metadataBz, ok, err := tx.GetMetadata()
+			require.NoError(t, err)
+			require.True(t, ok)
+			metadata, err := ParseMetadata(metadataBz)
+			require.NoError(t, err)
+
+			parsedUnsigned, err := ParseCreateAccountTxWithMetadata(unsigned, metadata)
 			require.NoError(t, err)
 			require.Equal(t, tt.input.Stage, parsedUnsigned.Input.Stage)
 
@@ -69,7 +76,7 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 			signed, err := tx.Serialize()
 			require.NoError(t, err)
 
-			parsedSigned, err := ParseCreateAccountTx(signed)
+			parsedSigned, err := ParseCreateAccountTxWithMetadata(signed, metadata)
 			require.NoError(t, err)
 			require.Equal(t, "dead", hex.EncodeToString(parsedSigned.Input.Signature))
 			require.NotEmpty(t, tx.Hash())
