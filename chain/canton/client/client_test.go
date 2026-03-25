@@ -286,6 +286,68 @@ func TestFetchTxInfoUsesProvidedSenderWhenEventsDoNotExposeOne(t *testing.T) {
 	require.Equal(t, xc.Address(sender), info.Movements[0].To[0].AddressId)
 }
 
+func TestExtractTransferFeeSupportsTransferPreapprovalSendResult(t *testing.T) {
+	t.Parallel()
+
+	ex := &v2.ExercisedEvent{
+		TemplateId: &v2.Identifier{
+			ModuleName: "Splice.AmuletRules",
+			EntityName: "TransferPreapproval",
+		},
+		Choice: "TransferPreapproval_Send",
+		ExerciseResult: &v2.Value{
+			Sum: &v2.Value_Record{
+				Record: &v2.Record{
+					Fields: []*v2.RecordField{
+						{
+							Label: "result",
+							Value: &v2.Value{
+								Sum: &v2.Value_Record{
+									Record: &v2.Record{
+										Fields: []*v2.RecordField{
+											{
+												Label: "summary",
+												Value: &v2.Value{
+													Sum: &v2.Value_Record{
+														Record: &v2.Record{
+															Fields: []*v2.RecordField{
+																{
+																	Label: "senderChangeFee",
+																	Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: "1.5"}},
+																},
+																{
+																	Label: "outputFees",
+																	Value: &v2.Value{
+																		Sum: &v2.Value_List{
+																			List: &v2.List{
+																				Elements: []*v2.Value{
+																					{Sum: &v2.Value_Numeric{Numeric: "0.5"}},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fee, ok := extractTransferFee(ex, 18)
+	require.True(t, ok)
+	require.Equal(t, "2000000000000000000", fee.String())
+}
+
 func mustSerializedCreateAccountInput(t *testing.T) []byte {
 	t.Helper()
 	input := &tx_input.CreateAccountInput{
