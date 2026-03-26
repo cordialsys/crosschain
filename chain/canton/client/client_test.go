@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 	"testing"
 	"time"
@@ -50,6 +51,17 @@ func TestNewClient(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing canton custom config field")
 	})
+}
+
+func TestValidatorServiceUserIDFromToken(t *testing.T) {
+	t.Parallel()
+
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none"}`))
+	payload := base64.RawURLEncoding.EncodeToString([]byte(`{"preferred_username":"service-account-validator-id"}`))
+
+	userID, err := validatorServiceUserIDFromToken(header + "." + payload + ".sig")
+	require.NoError(t, err)
+	require.Equal(t, "service-account-validator-id", userID)
 }
 
 func TestSubmitTxRequiresMetadata(t *testing.T) {

@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -32,10 +34,10 @@ type Client struct {
 
 	ledgerClient *GrpcLedgerClient
 
-	// adminKC fetches operator-level tokens (client_credentials grant).
-	adminKC *cantonkc.Client
-	// walletKC acquires canton-ui tokens for scan proxy HTTP calls.
-	walletKC *cantonkc.Client
+	// validatorKC fetches validator-level tokens (client_credentials grant).
+	validatorKC *cantonkc.Client
+	// cantonUiKC acquires canton-ui tokens for scan proxy HTTP calls.
+	cantonUiKC *cantonkc.Client
 
 	cantonUiUsername string
 	cantonUiPassword string
@@ -49,6 +51,33 @@ func parseBasicAuthSecret(value string, field string) (string, string, error) {
 		return "", "", fmt.Errorf("%s must resolve to id:secret", field)
 	}
 	return parts[0], parts[1], nil
+}
+
+func validatorServiceUserIDFromToken(token string) (string, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return "", errors.New("invalid validator auth token")
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", fmt.Errorf("decode validator auth token payload: %w", err)
+	}
+
+	var claims struct {
+		PreferredUsername string `json:"preferred_username"`
+		Subject           string `json:"sub"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return "", fmt.Errorf("decode validator auth token claims: %w", err)
+	}
+	if claims.PreferredUsername == "" {
+		if claims.Subject == "" {
+			return "", errors.New("validator auth token missing preferred_username and sub")
+		}
+		return claims.Subject, nil
+	}
+	return claims.PreferredUsername, nil
 }
 
 // NewClient returns a new Canton gRPC Client
@@ -109,23 +138,28 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 	client := &Client{
 		Asset:            cfgI,
-		adminKC:          cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
-		walletKC:         cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
+		validatorKC:      cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
+		cantonUiKC:       cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
 		cantonUiUsername: cantonUiUsername,
 		cantonUiPassword: cantonUiPassword,
 	}
 
-	authToken, err := client.adminKC.AdminToken(context.Background())
+	authToken, err := client.validatorKC.AdminToken(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch auth token: %w", err)
 	}
 	if authToken == "" {
 		return nil, errors.New("invalid authToken")
 	}
+	validatorServiceUserID, err := validatorServiceUserIDFromToken(authToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive validator service user id from token: %w", err)
+	}
 
 	grpcClient, err := NewGrpcLedgerClient(cfg.URL, authToken, runtimeIdentityConfig{
 		validatorPartyID:       validatorPartyID,
-		validatorServiceUserID: "service-account-" + validatorAuthID,
+		validatorServiceUserID: validatorServiceUserID,
+		deduplicationWindow:    cfgI.TransactionActiveTime,
 		restAPIURL:             restAPIURL,
 		scanProxyURL:           scanProxyURL,
 		scanAPIURL:             scanAPIURL,
@@ -140,7 +174,7 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 // cantonUIToken acquires a canton-ui Keycloak token used for scan proxy HTTP calls.
 func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
-	resp, err := client.walletKC.AcquireCantonUiToken(ctx, client.cantonUiUsername, client.cantonUiPassword)
+	resp, err := client.cantonUiKC.AcquireCantonUiToken(ctx, client.cantonUiUsername, client.cantonUiPassword)
 	if err != nil {
 		return "", fmt.Errorf("failed to acquire canton-ui token: %w", err)
 	}
@@ -274,6 +308,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	input.PreparedTransaction = *resp.GetPreparedTransaction()
 	input.SubmissionId = NewCommandId()
 	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
+	input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(client.Asset.TransactionActiveTime)
 
 	return input, nil
 }
@@ -1073,7 +1108,7 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 		if err != nil {
 			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}
-		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(&preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalSubmissionID, cantonInput.SetupProposalHashing)
+		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(&preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalSubmissionID, cantonInput.SetupProposalHashing, client.ledgerClient.deduplicationWindow)
 		_, err = client.ledgerClient.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("ExternalPartySetupProposal_Accept failed: %w", err)

@@ -39,13 +39,13 @@ func TestNewExecuteRequests(t *testing.T) {
 	prepared := &interactive.PreparedTransaction{}
 	hashing := interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_UNSPECIFIED
 
-	req := NewExecuteSubmissionRequest(prepared, "party", []byte{0xaa}, "fingerprint", "sub-id", hashing)
+	req := NewExecuteSubmissionRequest(prepared, "party", []byte{0xaa}, "fingerprint", "sub-id", hashing, 0)
 	require.Equal(t, prepared, req.GetPreparedTransaction())
 	require.Equal(t, "sub-id", req.GetSubmissionId())
 	require.Equal(t, hashing, req.GetHashingSchemeVersion())
 	require.Equal(t, 300*time.Second, req.GetDeduplicationDuration().AsDuration())
 
-	waitReq := NewExecuteSubmissionAndWaitRequest(prepared, "party", []byte{0xbb}, "fingerprint", "sub-id-2", hashing)
+	waitReq := NewExecuteSubmissionAndWaitRequest(prepared, "party", []byte{0xbb}, "fingerprint", "sub-id-2", hashing, 0)
 	require.Equal(t, prepared, waitReq.GetPreparedTransaction())
 	require.Equal(t, "sub-id-2", waitReq.GetSubmissionId())
 	require.Equal(t, hashing, waitReq.GetHashingSchemeVersion())

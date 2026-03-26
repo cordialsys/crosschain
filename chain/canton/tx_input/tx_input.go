@@ -1,6 +1,8 @@
 package tx_input
 
 import (
+	"time"
+
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
 	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
@@ -16,6 +18,8 @@ type TxInput struct {
 	HashingSchemeVersion interactive.HashingSchemeVersion
 	// SubmissionId for deduplication (UUID)
 	SubmissionId string `json:"submission_id"`
+	// DeduplicationWindow controls how long Canton treats the submission ID as deduplicatable.
+	DeduplicationWindow time.Duration `json:"deduplication_window"`
 	// Decimals is the number of decimal places for the chain's native asset,
 	// used to convert human-readable amounts in the prepared transaction to blockchain units.
 	Decimals int32 `json:"decimals"`

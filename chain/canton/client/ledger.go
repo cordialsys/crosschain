@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -49,18 +48,10 @@ const (
 	ModuleSpliceAmulet = "SpliceAmulet"
 )
 
-// cantonEnv reads a required Canton environment variable, returning an error if unset.
-func cantonEnv(name string) (string, error) {
-	v := os.Getenv(name)
-	if v == "" {
-		return "", fmt.Errorf("required environment variable %s is not set", name)
-	}
-	return v, nil
-}
-
 type runtimeIdentityConfig struct {
 	validatorPartyID       string
 	validatorServiceUserID string
+	deduplicationWindow    time.Duration
 	restAPIURL             string
 	scanProxyURL           string
 	scanAPIURL             string
@@ -78,6 +69,7 @@ type GrpcLedgerClient struct {
 	userManagementClient        admin.UserManagementServiceClient
 	validatorPartyID            string
 	validatorServiceUserID      string
+	deduplicationWindow         time.Duration
 	restAPIURL                  string
 	scanProxyURL                string
 	scanAPIURL                  string
@@ -124,6 +116,7 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 		commandClient:               v2.NewCommandServiceClient(conn),
 		validatorPartyID:            cfg.validatorPartyID,
 		validatorServiceUserID:      cfg.validatorServiceUserID,
+		deduplicationWindow:         cantonproto.ResolveDeduplicationWindow(cfg.deduplicationWindow),
 		restAPIURL:                  cfg.restAPIURL,
 		scanProxyURL:                cfg.scanProxyURL,
 		scanAPIURL:                  cfg.scanAPIURL,
@@ -692,7 +685,7 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 			},
 		},
 		DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
-			DeduplicationDuration: durationpb.New(300 * time.Second),
+			DeduplicationDuration: durationpb.New(c.deduplicationWindow),
 		},
 		SubmissionId:         newRegisterCommandId(),
 		HashingSchemeVersion: prepareResp.GetHashingSchemeVersion(),
@@ -1032,7 +1025,7 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 			},
 		},
 		DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
-			DeduplicationDuration: durationpb.New(300 * time.Second),
+			DeduplicationDuration: durationpb.New(c.deduplicationWindow),
 		},
 		SubmissionId:         newRegisterCommandId(),
 		HashingSchemeVersion: prepareResp.GetHashingSchemeVersion(),
