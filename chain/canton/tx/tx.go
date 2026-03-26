@@ -2,6 +2,7 @@ package tx
 
 import (
 	"fmt"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -27,6 +28,8 @@ type Tx struct {
 	KeyFingerprint string
 	// SubmissionId for deduplication
 	SubmissionId string
+	// DeduplicationWindow controls how long Canton deduplicates this submission ID.
+	DeduplicationWindow time.Duration
 	// LedgerEnd captured before submission, used as the lower-bound recovery cursor.
 	LedgerEnd int64
 	// Populated after SetSignatures is called
@@ -63,6 +66,7 @@ func NewTx(input *tx_input.TxInput, args xcbuilder.TransferArgs, decimals int32)
 		Party:                string(args.GetFrom()),
 		KeyFingerprint:       fingerprint,
 		SubmissionId:         input.SubmissionId,
+		DeduplicationWindow:  input.DeduplicationWindow,
 		LedgerEnd:            input.LedgerEnd,
 	}, nil
 }
@@ -258,7 +262,7 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("prepared transaction is nil")
 	}
 
-	req := cantonproto.NewExecuteSubmissionRequest(tx.PreparedTransaction, tx.Party, tx.signature, tx.KeyFingerprint, tx.SubmissionId, tx.HashingSchemeVersion)
+	req := cantonproto.NewExecuteSubmissionRequest(tx.PreparedTransaction, tx.Party, tx.signature, tx.KeyFingerprint, tx.SubmissionId, tx.HashingSchemeVersion, tx.DeduplicationWindow)
 
 	data, err := proto.Marshal(req)
 	if err != nil {

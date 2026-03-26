@@ -13,6 +13,13 @@ import (
 
 const defaultDeduplicationWindow = 300 * time.Second
 
+func ResolveDeduplicationWindow(window time.Duration) time.Duration {
+	if window <= 0 {
+		return defaultDeduplicationWindow
+	}
+	return window
+}
+
 func NewCommandID() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
@@ -81,24 +88,24 @@ func NewPartySignatures(party string, sig *v2.Signature) *interactive.PartySigna
 	}
 }
 
-func NewExecuteSubmissionRequest(prepared *interactive.PreparedTransaction, party string, signature []byte, signedBy string, submissionID string, hashing interactive.HashingSchemeVersion) *interactive.ExecuteSubmissionRequest {
+func NewExecuteSubmissionRequest(prepared *interactive.PreparedTransaction, party string, signature []byte, signedBy string, submissionID string, hashing interactive.HashingSchemeVersion, deduplicationWindow time.Duration) *interactive.ExecuteSubmissionRequest {
 	return &interactive.ExecuteSubmissionRequest{
 		PreparedTransaction: prepared,
 		PartySignatures:     NewPartySignatures(party, NewRawSignature(signature, signedBy)),
 		DeduplicationPeriod: &interactive.ExecuteSubmissionRequest_DeduplicationDuration{
-			DeduplicationDuration: durationpb.New(defaultDeduplicationWindow),
+			DeduplicationDuration: durationpb.New(ResolveDeduplicationWindow(deduplicationWindow)),
 		},
 		SubmissionId:         submissionID,
 		HashingSchemeVersion: hashing,
 	}
 }
 
-func NewExecuteSubmissionAndWaitRequest(prepared *interactive.PreparedTransaction, party string, signature []byte, signedBy string, submissionID string, hashing interactive.HashingSchemeVersion) *interactive.ExecuteSubmissionAndWaitRequest {
+func NewExecuteSubmissionAndWaitRequest(prepared *interactive.PreparedTransaction, party string, signature []byte, signedBy string, submissionID string, hashing interactive.HashingSchemeVersion, deduplicationWindow time.Duration) *interactive.ExecuteSubmissionAndWaitRequest {
 	return &interactive.ExecuteSubmissionAndWaitRequest{
 		PreparedTransaction: prepared,
 		PartySignatures:     NewPartySignatures(party, NewRawSignature(signature, signedBy)),
 		DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
-			DeduplicationDuration: durationpb.New(defaultDeduplicationWindow),
+			DeduplicationDuration: durationpb.New(ResolveDeduplicationWindow(deduplicationWindow)),
 		},
 		SubmissionId:         submissionID,
 		HashingSchemeVersion: hashing,
