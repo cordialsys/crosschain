@@ -36,13 +36,7 @@ func TestNewClient(t *testing.T) {
 		require.Contains(t, err.Error(), "no URL configured")
 	})
 
-	t.Run("missing env var", func(t *testing.T) {
-		t.Setenv("CANTON_KEYCLOAK_URL", "")
-		t.Setenv("CANTON_KEYCLOAK_REALM", "")
-		t.Setenv("CANTON_VALIDATOR_ID", "")
-		t.Setenv("CANTON_VALIDATOR_SECRET", "")
-		t.Setenv("CANTON_UI_ID", "")
-		t.Setenv("CANTON_UI_PASSWORD", "")
+	t.Run("missing custom config", func(t *testing.T) {
 		cfg := &xc.ChainConfig{
 			ChainBaseConfig: &xc.ChainBaseConfig{
 				Chain:  xc.CANTON,
@@ -54,7 +48,7 @@ func TestNewClient(t *testing.T) {
 		}
 		_, err := NewClient(cfg)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "required environment variable")
+		require.Contains(t, err.Error(), "missing canton custom config field")
 	})
 }
 
@@ -402,6 +396,97 @@ func TestExtractTransferFeeSupportsTransferPreapprovalSendResult(t *testing.T) {
 	require.Equal(t, "2000000000000000000", fee.String())
 }
 
+func TestBuildTransferOfferCreateCommandUsesArgsAmount(t *testing.T) {
+	t.Parallel()
+
+	args, err := xcbuilder.NewTransferArgs(
+		&xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+		xc.Address("sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		xc.Address("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		xc.NewAmountBlockchainFromUint64(123),
+	)
+	require.NoError(t, err)
+
+	cmd := buildTransferOfferCreateCommand(args, AmuletRules{
+		AmuletRulesUpdate: struct {
+			Contract AmuletRulesContract `json:"contract"`
+			DomainID string              `json:"domain_id"`
+		}{
+			Contract: AmuletRulesContract{Payload: struct {
+				DSO string `json:"dso"`
+			}{DSO: "validator-party"}},
+		},
+	}, "command-id", 1)
+
+	create := cmd.GetCreate()
+	require.NotNil(t, create)
+	require.Equal(t, "12.3", extractCommandAmountNumeric(t, create.GetCreateArguments()))
+}
+
+func TestBuildTransferPreapprovalExerciseCommandUsesArgsAmount(t *testing.T) {
+	t.Parallel()
+
+	args, err := xcbuilder.NewTransferArgs(
+		&xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+		xc.Address("sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		xc.Address("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		xc.NewAmountBlockchainFromUint64(123),
+	)
+	require.NoError(t, err)
+
+	cmd, _, err := buildTransferPreapprovalExerciseCommand(
+		args,
+		AmuletRules{
+			AmuletRulesUpdate: struct {
+				Contract AmuletRulesContract `json:"contract"`
+				DomainID string              `json:"domain_id"`
+			}{
+				Contract: AmuletRulesContract{
+					ContractID: "amulet-rules-contract",
+					TemplateID: "pkg:Module:AmuletRules",
+					Payload: struct {
+						DSO string `json:"dso"`
+					}{DSO: "validator-party"},
+				},
+			},
+		},
+		&RoundEntry{Contract: RoundContract{ContractID: "open-round", TemplateID: "pkg:Module:OpenRound"}},
+		&RoundEntry{Contract: RoundContract{
+			ContractID: "issuing-round",
+			TemplateID: "pkg:Module:IssuingRound",
+			Payload: RoundPayload{Round: struct {
+				Number string `json:"number"`
+			}{Number: "1"}},
+		}},
+		[]*v2.ActiveContract{
+			{
+				CreatedEvent: &v2.CreatedEvent{
+					ContractId: "sender-amulet",
+					TemplateId: &v2.Identifier{EntityName: "Amulet"},
+				},
+			},
+		},
+		[]*v2.ActiveContract{
+			{
+				CreatedEvent: &v2.CreatedEvent{
+					ContractId:       "preapproval-contract",
+					CreatedEventBlob: []byte{0x01},
+					TemplateId: &v2.Identifier{
+						ModuleName: "Splice.AmuletRules",
+						EntityName: "TransferPreapproval",
+					},
+				},
+			},
+		},
+		1,
+	)
+	require.NoError(t, err)
+
+	exercise := cmd.GetExercise()
+	require.NotNil(t, exercise)
+	require.Equal(t, "12.3", extractCommandAmountNumeric(t, exercise.GetChoiceArgument().GetRecord()))
+}
+
 func mustSerializedCreateAccountInput(t *testing.T) []byte {
 	t.Helper()
 	input := &tx_input.CreateAccountInput{
@@ -571,6 +656,28 @@ func testAmuletCreatedEvent(owner string, initialAmount string) *v2.CreatedEvent
 			},
 		},
 	}
+}
+
+func extractCommandAmountNumeric(t *testing.T, record *v2.Record) string {
+	t.Helper()
+
+	for _, field := range record.GetFields() {
+		if field.GetLabel() != "amount" {
+			continue
+		}
+		if numeric := field.GetValue().GetNumeric(); numeric != "" {
+			return numeric
+		}
+		if amountRecord := field.GetValue().GetRecord(); amountRecord != nil {
+			for _, nested := range amountRecord.GetFields() {
+				if nested.GetLabel() == "amount" {
+					return nested.GetValue().GetNumeric()
+				}
+			}
+		}
+	}
+	t.Fatalf("amount field not found")
+	return ""
 }
 
 func testAmuletRulesTransferEvent(sender string, receiver string, amount string) *v2.ExercisedEvent {

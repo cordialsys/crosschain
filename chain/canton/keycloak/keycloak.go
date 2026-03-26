@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -30,6 +29,7 @@ type Client struct {
 	realm        string
 	clientID     string
 	clientSecret string
+	validatorPartyID string
 	httpClient   *http.Client
 
 	mu           sync.Mutex
@@ -37,12 +37,13 @@ type Client struct {
 	adminExpires time.Time
 }
 
-func NewClient(baseURL, realm, clientID, clientSecret string) *Client {
+func NewClient(baseURL, realm, clientID, clientSecret string, validatorPartyID string) *Client {
 	return &Client{
 		baseURL:      baseURL,
 		realm:        realm,
 		clientID:     clientID,
 		clientSecret: clientSecret,
+		validatorPartyID: validatorPartyID,
 		httpClient:   &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -174,11 +175,10 @@ func (k *Client) SetPartyAttribute(ctx context.Context, userID, partyID string) 
 		return fmt.Errorf("getting admin token: %w", err)
 	}
 
-	validatorPartyID := os.Getenv("CANTON_VALIDATOR_PARTY_ID")
-	if validatorPartyID == "" {
-		return fmt.Errorf("required environment variable CANTON_VALIDATOR_PARTY_ID is not set")
+	if k.validatorPartyID == "" {
+		return fmt.Errorf("validator party id is not configured")
 	}
-	participantAud := "https://daml.com/jwt/aud/participant/" + validatorPartyID
+	participantAud := "https://daml.com/jwt/aud/participant/" + k.validatorPartyID
 	payload, _ := json.Marshal(map[string]any{
 		"attributes": map[string][]string{
 			"canton_party_id":        {partyID},

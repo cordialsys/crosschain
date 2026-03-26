@@ -43,6 +43,14 @@ type Client struct {
 
 var _ xclient.Client = &Client{}
 
+func parseBasicAuthSecret(value string, field string) (string, string, error) {
+	parts := strings.SplitN(value, ":", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("%s must resolve to id:secret", field)
+	}
+	return parts[0], parts[1], nil
+}
+
 // NewClient returns a new Canton gRPC Client
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -51,51 +59,58 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 		return nil, fmt.Errorf("no URL configured for Canton client")
 	}
 
-	keycloakURL, err := cantonEnv("CANTON_KEYCLOAK_URL")
+	cantonCfg, err := LoadCantonConfig(cfgI)
 	if err != nil {
 		return nil, err
 	}
-	keycloakRealm, err := cantonEnv("CANTON_KEYCLOAK_REALM")
+	if err := cantonCfg.Validate(); err != nil {
+		return nil, err
+	}
+	keycloakURL, err := cantonCfg.KeycloakURL.LoadNonEmpty()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load canton keycloak url: %w", err)
+	}
+	keycloakRealm, err := cantonCfg.KeycloakRealm.LoadNonEmpty()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load canton keycloak realm: %w", err)
+	}
+	validatorAuthRaw, err := cantonCfg.ValidatorAuth.LoadNonEmpty()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load canton validator auth: %w", err)
+	}
+	validatorAuthID, validatorAuthSecret, err := parseBasicAuthSecret(validatorAuthRaw, "validator_auth")
 	if err != nil {
 		return nil, err
 	}
-	adminClientID, err := cantonEnv("CANTON_VALIDATOR_ID")
+	validatorPartyID, err := cantonCfg.ValidatorPartyID.LoadNonEmpty()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load canton validator party id: %w", err)
 	}
-	adminClientSecret, err := cantonEnv("CANTON_VALIDATOR_SECRET")
+	restAPIURL, err := cantonCfg.RestAPIURL.LoadNonEmpty()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load canton rest api url: %w", err)
 	}
-	validatorPartyID, err := cantonEnv("CANTON_VALIDATOR_PARTY_ID")
+	scanProxyURL, err := cantonCfg.ScanProxyURL.LoadNonEmpty()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load canton scan proxy url: %w", err)
 	}
-	restAPIURL, err := cantonEnv("CANTON_REST_API_URL")
+	scanAPIURL, err := cantonCfg.ScanAPIURL.LoadNonEmpty()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load canton scan api url: %w", err)
 	}
-	scanProxyURL, err := cantonEnv("CANTON_SCAN_API_URL")
+	cantonUIAuthRaw, err := cantonCfg.CantonUIAuth.LoadNonEmpty()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load canton ui auth: %w", err)
 	}
-	scanAPIURL, err := cantonEnv("CANTON_SCAN_NODE_URL")
-	if err != nil {
-		return nil, err
-	}
-	cantonUiUsername, err := cantonEnv("CANTON_UI_ID")
-	if err != nil {
-		return nil, err
-	}
-	cantonUiPassword, err := cantonEnv("CANTON_UI_PASSWORD")
+	cantonUiUsername, cantonUiPassword, err := parseBasicAuthSecret(cantonUIAuthRaw, "canton_ui_auth")
 	if err != nil {
 		return nil, err
 	}
 
 	client := &Client{
 		Asset:            cfgI,
-		adminKC:          cantonkc.NewClient(keycloakURL, keycloakRealm, adminClientID, adminClientSecret),
-		walletKC:         cantonkc.NewClient(keycloakURL, keycloakRealm, adminClientID, adminClientSecret),
+		adminKC:          cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
+		walletKC:         cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
 		cantonUiUsername: cantonUiUsername,
 		cantonUiPassword: cantonUiPassword,
 	}
@@ -110,7 +125,7 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 	grpcClient, err := NewGrpcLedgerClient(cfg.URL, authToken, runtimeIdentityConfig{
 		validatorPartyID:       validatorPartyID,
-		validatorServiceUserID: "service-account-" + adminClientID,
+		validatorServiceUserID: "service-account-" + validatorAuthID,
 		restAPIURL:             restAPIURL,
 		scanProxyURL:           scanProxyURL,
 		scanAPIURL:             scanAPIURL,
@@ -155,7 +170,7 @@ func (client *Client) resolveValidatorSynchronizerID(ctx context.Context) (strin
 
 func (client *Client) PrepareTransferOfferCommand(ctx context.Context, args xcbuilder.TransferArgs, amuletRules AmuletRules) (*interactive.PrepareSubmissionResponse, error) {
 	commandID := cantonproto.NewCommandID()
-	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID)
+	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID, client.Asset.GetChain().Decimals)
 	synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), amuletRules.AmuletRulesUpdate.DomainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve transfer synchronizer: %w", err)
@@ -184,7 +199,7 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 	recipientContracts []*v2.ActiveContract,
 ) (*interactive.PrepareSubmissionResponse, error) {
 	senderPartyID := string(args.GetFrom())
-	cmd, disclosedContracts, err := buildTransferPreapprovalExerciseCommand(args, amuletRules, openMiningRound, issuingMiningRound, senderContracts, recipientContracts)
+	cmd, disclosedContracts, err := buildTransferPreapprovalExerciseCommand(args, amuletRules, openMiningRound, issuingMiningRound, senderContracts, recipientContracts, client.Asset.GetChain().Decimals)
 	if err != nil {
 		return nil, err
 	}
