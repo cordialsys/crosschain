@@ -46,3 +46,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	address, err := GetAddressByPublicKey(hex.EncodeToString(publicKeyBytes))
 	return xc.Address(address), err
 }
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}

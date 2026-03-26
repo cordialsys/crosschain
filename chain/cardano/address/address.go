@@ -87,6 +87,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(""), InvalidAddressf(ab.Format)
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func GetPaymentAddress(publicKeyBytes []byte, withStakeKeyHash bool, isMainnet bool) (xc.Address, error) {
 	// Header consists of 2 parts:
 	// - [0..4] bits: Address type

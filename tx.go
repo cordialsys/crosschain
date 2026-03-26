@@ -112,6 +112,10 @@ type WithdrawTxInput interface {
 	TxVariantInput
 	Withdrawing()
 }
+type CreateAccountTxInput interface {
+	TxVariantInput
+	CreatingAccount()
+}
 type CallTxInput interface {
 	TxVariantInput
 	Calling()

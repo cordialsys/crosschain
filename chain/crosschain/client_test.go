@@ -219,3 +219,41 @@ func (s *CrosschainTestSuite) TestFetchBalanceError() {
 	_, err = client.FetchNativeBalance(s.Ctx, address)
 	require.EqualError(err, "InvalidArgument: api-error")
 }
+
+func (s *CrosschainTestSuite) TestGetAccountState() {
+	require := s.Require()
+
+	resObj := types.AccountStateRes{
+		CreateAccountInputReq: &types.CreateAccountInputReq{},
+		AccountState: &xclient.AccountState{
+			State:       xclient.CreateAccountCallRequired,
+		},
+	}
+	res, _ := json.Marshal(resObj)
+
+	server, close := testtypes.MockHTTP(s.T(), string(res), 200)
+	defer close()
+
+	client, _ := NewClient(s.Asset, "", "", "", 0)
+	client.URL = server.URL
+
+	args := xclient.NewCreateAccountArgs(xc.Address("address"), []byte{0x01, 0x02})
+	state, err := client.GetAccountState(s.Ctx, args)
+	require.NoError(err)
+	require.NotNil(state)
+	require.Equal(xclient.CreateAccountCallRequired, state.State)
+}
+
+func (s *CrosschainTestSuite) TestGetAccountStateError() {
+	require := s.Require()
+
+	server, close := testtypes.MockHTTP(s.T(), `{"code":3,"message":"api-error"}`, 400)
+	defer close()
+
+	client, _ := NewClient(s.Asset, "", "", "", 0)
+	client.URL = server.URL
+
+	args := xclient.NewCreateAccountArgs(xc.Address("address"), []byte{0x01, 0x02})
+	_, err := client.GetAccountState(s.Ctx, args)
+	require.EqualError(err, "InvalidArgument: api-error")
+}

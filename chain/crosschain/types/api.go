@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/call"
+	accountclient "github.com/cordialsys/crosschain/client"
 	xclient "github.com/cordialsys/crosschain/client/tx_info"
 	xclient_types "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/pkg/hex"
@@ -157,6 +158,16 @@ type StakingInputReq struct {
 	FeePayer      *FeePayerInfo        `json:"fee_payer,omitempty"`
 	Extra         StakingInputReqExtra `json:"extra,omitempty"`
 	Memo          string               `json:"memo,omitempty"`
+}
+
+type CreateAccountInputReq struct {
+	Address   string  `json:"address"`
+	PublicKey hex.Hex `json:"public_key,omitempty"`
+}
+
+type AccountStateRes struct {
+	*CreateAccountInputReq
+	AccountState *accountclient.AccountState `json:"account_state,omitempty"`
 }
 
 type LegacyTxInputRes struct {

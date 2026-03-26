@@ -39,6 +39,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(addr), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func DecodeMulti(addr xc.Address) (types.MultiAddress, error) {
 	decodedVal := base58.Decode(string(addr))
 	if len(decodedVal) < 34 {

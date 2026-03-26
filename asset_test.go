@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/address"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/call"
+	"github.com/cordialsys/crosschain/chain/canton"
 	"github.com/cordialsys/crosschain/chain/cosmos"
 	"github.com/cordialsys/crosschain/chain/egld"
 	"github.com/cordialsys/crosschain/chain/eos"
@@ -70,6 +71,8 @@ func TestChains(t *testing.T) {
 					hedera.Validate(t, chain)
 				case DriverNear:
 					near.Validate(t, chain)
+				case DriverCanton:
+					canton.Validate(t, chain)
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)
 				default:
@@ -302,6 +305,29 @@ func TestSupportedAddressFormats(t *testing.T) {
 						"invalid address formats configuration",
 						"%s, unnecessary base format", chain.Chain,
 					)
+				}
+			})
+		}
+	}
+}
+
+func TestCustomConfigValidation(t *testing.T) {
+	xcf1 := factory.NewDefaultFactory()
+	xcf2 := factory.NewNotMainnetsFactory(&factory.FactoryOptions{})
+	for _, xcf := range []*factory.Factory{xcf1, xcf2} {
+		for _, chain := range xcf.GetAllChains() {
+			t.Run(fmt.Sprintf("%s_%s", chain.Chain, xcf.Config.Network), func(t *testing.T) {
+				if len(chain.CustomConfig) == 0 {
+					return
+				}
+
+				switch chain.Driver {
+				case DriverCanton:
+					require.NoError(t, canton.ValidateCustomConfig(chain))
+				case "":
+					require.Fail(t, "unknown driver", chain.Driver)
+				default:
+					require.Fail(t, fmt.Sprintf("missing ValidateCustomConfig() for %s driver", chain.Driver))
 				}
 			})
 		}

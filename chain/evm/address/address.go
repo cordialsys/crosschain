@@ -41,6 +41,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(strings.ToLower(address)), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 // FromHex returns a go-ethereum Address decoded Crosschain address (hex string).
 func FromHex(address xc.Address) (common.Address, error) {
 	str := TrimPrefixes(string(address))

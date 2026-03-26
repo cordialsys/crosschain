@@ -40,6 +40,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(addr.String()), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func ParseAddress(addr xc.Address, net string) (*address.Address, error) {
 	addrS := string(addr)
 	if len(strings.Split(addrS, ":")) == 2 {
