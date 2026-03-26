@@ -81,7 +81,7 @@ type scanProxyRequest struct {
 	Method  string            `json:"method"`
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers,omitempty"`
-	Body    json.RawMessage   `json:"body"`
+	Body    string            `json:"body"`
 }
 
 func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityConfig) (*GrpcLedgerClient, error) {
@@ -415,7 +415,7 @@ func (c *GrpcLedgerClient) doScanProxyRequest(ctx context.Context, token string,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
-		Body: json.RawMessage(requestBody),
+		Body: string(requestBody),
 	}
 	payload, err := json.Marshal(envelope)
 	if err != nil {
