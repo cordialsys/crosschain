@@ -184,11 +184,12 @@ func TestFetchTxInfoResolvesRecoveryLookupId(t *testing.T) {
 			},
 		},
 		ledgerClient: &GrpcLedgerClient{
-			authToken:        "token",
-			stateClient:      &stateServiceStub{ledgerEnd: 110},
-			updateClient:     updateStub,
-			completionClient: completionStub,
-			logger:           logrus.NewEntry(logrus.New()),
+			authToken:              "token",
+			stateClient:            &stateServiceStub{ledgerEnd: 110},
+			updateClient:           updateStub,
+			completionClient:       completionStub,
+			validatorServiceUserID: "service-account-validator-id",
+			logger:                 logrus.NewEntry(logrus.New()),
 		},
 	}
 
@@ -202,7 +203,7 @@ func TestFetchTxInfoResolvesRecoveryLookupId(t *testing.T) {
 	require.Contains(t, updateStub.lastReq.GetUpdateFormat().GetIncludeTransactions().GetEventFormat().GetFiltersByParty(), sender)
 	require.NotNil(t, completionStub.lastReq)
 	require.Equal(t, int64(100), completionStub.lastReq.GetBeginExclusive())
-	require.Equal(t, ValidatorServiceUserId, completionStub.lastReq.GetUserId())
+	require.Equal(t, "service-account-validator-id", completionStub.lastReq.GetUserId())
 	require.Equal(t, []string{sender}, completionStub.lastReq.GetParties())
 }
 
@@ -438,7 +439,7 @@ type interactiveSubmissionStub struct {
 	lastReq *interactive.ExecuteSubmissionAndWaitRequest
 }
 
-func (s *interactiveSubmissionStub) PrepareSubmission(context.Context, *interactive.PrepareSubmissionRequest, ...grpc.CallOption) (*interactive.PrepareSubmissionResponse, error) {
+func (s *interactiveSubmissionStub) PrepareSubmission(_ context.Context, _ *interactive.PrepareSubmissionRequest, _ ...grpc.CallOption) (*interactive.PrepareSubmissionResponse, error) {
 	panic("unexpected call")
 }
 func (s *interactiveSubmissionStub) ExecuteSubmission(context.Context, *interactive.ExecuteSubmissionRequest, ...grpc.CallOption) (*interactive.ExecuteSubmissionResponse, error) {

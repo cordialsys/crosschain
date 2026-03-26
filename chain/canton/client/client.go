@@ -67,6 +67,22 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	validatorPartyID, err := cantonEnv("CANTON_VALIDATOR_PARTY_ID")
+	if err != nil {
+		return nil, err
+	}
+	restAPIURL, err := cantonEnv("CANTON_REST_API_URL")
+	if err != nil {
+		return nil, err
+	}
+	scanProxyURL, err := cantonEnv("CANTON_SCAN_API_URL")
+	if err != nil {
+		return nil, err
+	}
+	scanAPIURL, err := cantonEnv("CANTON_SCAN_NODE_URL")
+	if err != nil {
+		return nil, err
+	}
 	cantonUiUsername, err := cantonEnv("CANTON_UI_ID")
 	if err != nil {
 		return nil, err
@@ -92,7 +108,13 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 		return nil, errors.New("invalid authToken")
 	}
 
-	grpcClient, err := NewGrpcLedgerClient(cfg.URL, authToken)
+	grpcClient, err := NewGrpcLedgerClient(cfg.URL, authToken, runtimeIdentityConfig{
+		validatorPartyID:       validatorPartyID,
+		validatorServiceUserID: "service-account-" + adminClientID,
+		restAPIURL:             restAPIURL,
+		scanProxyURL:           scanProxyURL,
+		scanAPIURL:             scanAPIURL,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GrpcLedgerClient: %w", err)
 	}
@@ -110,11 +132,36 @@ func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
 	return resp.AccessToken, nil
 }
 
+func (client *Client) resolveSynchronizerID(ctx context.Context, partyID string, fallback string) (string, error) {
+	return client.ledgerClient.ResolveSynchronizerID(ctx, partyID, fallback)
+}
+
+func (client *Client) resolveValidatorSynchronizerID(ctx context.Context) (string, error) {
+	synchronizerID, err := client.resolveSynchronizerID(ctx, client.ledgerClient.validatorPartyID, "")
+	if err == nil {
+		return synchronizerID, nil
+	}
+
+	uiToken, tokenErr := client.cantonUIToken(ctx)
+	if tokenErr != nil {
+		return "", fmt.Errorf("failed to resolve validator synchronizer via validator party (%w) and could not fetch UI token for fallback (%v)", err, tokenErr)
+	}
+	amuletRules, rulesErr := client.ledgerClient.GetAmuletRules(ctx, uiToken)
+	if rulesErr != nil {
+		return "", fmt.Errorf("failed to resolve validator synchronizer via validator party (%w) and could not fetch amulet rules fallback (%v)", err, rulesErr)
+	}
+	return client.resolveSynchronizerID(ctx, "", amuletRules.AmuletRulesUpdate.DomainID)
+}
+
 func (client *Client) PrepareTransferOfferCommand(ctx context.Context, args xcbuilder.TransferArgs, amuletRules AmuletRules) (*interactive.PrepareSubmissionResponse, error) {
 	commandID := cantonproto.NewCommandID()
 	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID)
+	synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), amuletRules.AmuletRulesUpdate.DomainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve transfer synchronizer: %w", err)
+	}
 
-	prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, string(args.GetFrom()))
+	prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, string(args.GetFrom()), synchronizerID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare submission for party setup proposal accept: %w", err)
 	}
@@ -142,7 +189,11 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 		return nil, err
 	}
 	commandID := cantonproto.NewCommandID()
-	prepareReq := cantonproto.NewPrepareRequest(commandID, TestnetSynchronizerID, []string{senderPartyID}, []string{senderPartyID, ValidatorPartyId}, []*v2.Command{cmd}, disclosedContracts)
+	synchronizerID, err := client.resolveSynchronizerID(ctx, senderPartyID, amuletRules.AmuletRulesUpdate.DomainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve transfer synchronizer: %w", err)
+	}
+	prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{senderPartyID}, []string{senderPartyID, client.ledgerClient.validatorPartyID}, []*v2.Command{cmd}, disclosedContracts)
 
 	authCtx := client.ledgerClient.authCtx(ctx)
 	prepareResp, err := client.ledgerClient.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
@@ -847,8 +898,13 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 		}
 
 		logger.WithField("party_hint", partyHint).Info("create-account: generating external party topology")
+		synchronizerID, err := client.resolveValidatorSynchronizerID(ctx)
+		if err != nil {
+			logger.WithError(err).Error("create-account: resolve synchronizer failed")
+			return nil, fmt.Errorf("failed to resolve synchronizer for topology generation: %w", err)
+		}
 		topologyResp, err := client.ledgerClient.adminClient.GenerateExternalPartyTopology(authCtx, &admin.GenerateExternalPartyTopologyRequest{
-			Synchronizer: TestnetSynchronizerID,
+			Synchronizer: synchronizerID,
 			PartyHint:    partyHint,
 			PublicKey:    signingPubKey,
 		})
@@ -931,7 +987,12 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			"template_id": tid.String(),
 			"command_id":  commandID,
 		}).Info("create-account: preparing setup proposal accept submission")
-		prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, partyID)
+		synchronizerID, err := client.resolveSynchronizerID(ctx, partyID, "")
+		if err != nil {
+			logger.WithError(err).Error("create-account: resolve accept synchronizer failed")
+			return nil, fmt.Errorf("failed to resolve synchronizer for ExternalPartySetupProposal_Accept: %w", err)
+		}
+		prepareResp, err := client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, partyID, synchronizerID)
 		if err != nil {
 			logger.WithError(err).Error("create-account: prepare setup proposal accept failed")
 			return nil, fmt.Errorf("failed to prepare ExternalPartySetupProposal_Accept: %w", err)
@@ -978,8 +1039,12 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 
 	switch cantonInput.Stage {
 	case tx_input.CreateAccountStageAllocate:
-		req := cantonproto.NewAllocateExternalPartyRequest(TestnetSynchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, cantonInput.PublicKeyFingerprint)
-		_, err := client.ledgerClient.adminClient.AllocateExternalParty(authCtx, req)
+		synchronizerID, err := client.resolveValidatorSynchronizerID(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to resolve synchronizer for external party allocation: %w", err)
+		}
+		req := cantonproto.NewAllocateExternalPartyRequest(synchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, cantonInput.PublicKeyFingerprint)
+		_, err = client.ledgerClient.adminClient.AllocateExternalParty(authCtx, req)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("AllocateExternalParty failed: %w", err)
 		}
