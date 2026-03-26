@@ -11,7 +11,13 @@ import (
 	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
 )
 
-func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules AmuletRules, commandID string) *v2.Command {
+func transferAmountNumeric(args xcbuilder.TransferArgs, decimals int32) string {
+	amount := args.GetAmount()
+	return amount.ToHuman(decimals).String()
+}
+
+func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules AmuletRules, commandID string, decimals int32) *v2.Command {
+	amountNumeric := transferAmountNumeric(args, decimals)
 	return &v2.Command{
 		Command: &v2.Command_Create{
 			Create: &v2.CreateCommand{
@@ -26,7 +32,7 @@ func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules Am
 						cantonproto.Field("receiver", cantonproto.PartyValue(string(args.GetTo()))),
 						cantonproto.Field("dso", cantonproto.PartyValue(amuletRules.AmuletRulesUpdate.Contract.Payload.DSO)),
 						cantonproto.Field("amount", cantonproto.RecordValue(
-							cantonproto.Field("amount", cantonproto.NumericValue("10.0")),
+							cantonproto.Field("amount", cantonproto.NumericValue(amountNumeric)),
 							cantonproto.Field("unit", &v2.Value{
 								Sum: &v2.Value_Enum{Enum: &v2.Enum{Constructor: "AmuletUnit"}},
 							}),
@@ -61,6 +67,7 @@ func buildTransferPreapprovalExerciseCommand(
 	issuingMiningRound *RoundEntry,
 	senderContracts []*v2.ActiveContract,
 	recipientContracts []*v2.ActiveContract,
+	decimals int32,
 ) (*v2.Command, []*v2.DisclosedContract, error) {
 	var preapprovalContractID string
 	var preapprovalTemplateID *v2.Identifier
@@ -179,6 +186,7 @@ func buildTransferPreapprovalExerciseCommand(
 		})
 	}
 
+	amountNumeric := transferAmountNumeric(args, decimals)
 	cmd := &v2.Command{
 		Command: &v2.Command_Exercise{
 			Exercise: &v2.ExerciseCommand{
@@ -190,7 +198,7 @@ func buildTransferPreapprovalExerciseCommand(
 					cantonproto.Field("inputs", &v2.Value{
 						Sum: &v2.Value_List{List: &v2.List{Elements: transferInputs}},
 					}),
-					cantonproto.Field("amount", cantonproto.NumericValue("10.0")),
+					cantonproto.Field("amount", cantonproto.NumericValue(amountNumeric)),
 					cantonproto.Field("context", cantonproto.RecordValue(
 						cantonproto.Field("amuletRules", cantonproto.ContractIDValue(amuletRulesID)),
 						cantonproto.Field("context", cantonproto.RecordValue(

@@ -527,6 +527,7 @@ func NewChainConfig(nativeAsset NativeAsset, driverMaybe ...Driver) *ChainConfig
 			Driver: driver,
 		},
 		ChainClientConfig: &ChainClientConfig{},
+		CustomConfig:      map[string]any{},
 	}
 	cfg.Configure(0)
 	return cfg
@@ -629,6 +630,7 @@ func (chain *ChainConfig) DefaultHttpClient() *http.Client {
 type ChainConfig struct {
 	*ChainBaseConfig   `yaml:",inline"`
 	*ChainClientConfig `yaml:",inline"`
+	CustomConfig       map[string]any `yaml:"custom_config,omitempty"`
 }
 
 type MemoSupport string

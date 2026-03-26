@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
+	cantonclient "github.com/cordialsys/crosschain/chain/canton/client"
 )
 
 // ValidateAddress validates a Canton party ID address format.
@@ -40,6 +41,14 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 	}
 
 	return nil
+}
+
+func ValidateCustomConfig(chainCfg *xc.ChainConfig) error {
+	cfg, err := cantonclient.LoadCantonConfig(chainCfg)
+	if err != nil {
+		return err
+	}
+	return cfg.Validate()
 }
 
 // validatePartyName validates the party name component

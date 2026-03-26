@@ -131,7 +131,7 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 	}, nil
 }
 
-// authCtx injects the CANTON_AUTH bearer token into the gRPC context
+// authCtx injects the Canton validator bearer token into the gRPC context.
 func (c *GrpcLedgerClient) authCtx(ctx context.Context) context.Context {
 	if c.authToken == "" {
 		c.logger.Warn("empty authToken")
@@ -332,11 +332,8 @@ func (c *GrpcLedgerClient) CreateUser(ctx context.Context, partyId string) error
 	}
 }
 
-//	curl -v -X POST \
-//	  -H "Authorization: Bearer $ADMIN_TOKEN" \
-//	  -H "Content-Type: application/json" \
-//	  -d '{"user_party_id": "<party-id>"}' \
-//	  "$CANTON_REST_API_URL/api/validator/v0/admin/external-party/setup-proposal"
+// CreateExternalPartySetupProposal calls the configured validator REST API to create
+// an ExternalPartySetupProposal for the given party.
 func (c *GrpcLedgerClient) CreateExternalPartySetupProposal(ctx context.Context, partyID string) error {
 	body, err := json.Marshal(map[string]string{
 		"user_party_id": partyID,
@@ -410,7 +407,8 @@ func (a AmuletRules) GetSpliceId() string {
 
 // Make sure to auth with canton-ui token
 func (c *GrpcLedgerClient) GetAmuletRules(ctx context.Context, token string) (*AmuletRules, error) {
-	// We access the scan API through the http-proxy (CANTON_SCAN_API_URL) because direct access is not yet available.
+	// We access the configured scan API through the configured HTTP proxy because direct
+	// access to the scan node is not always available.
 	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/amulet-rules","headers":{"Content-Type":"application/json"},"body":"{}"}`, c.scanAPIURL)
 
 	req, err := http.NewRequestWithContext(

@@ -48,6 +48,9 @@ func (cfg *Config) MigrateFields() {
 		if chain.ChainClientConfig == nil {
 			chain.ChainClientConfig = &xc.ChainClientConfig{}
 		}
+		if chain.CustomConfig == nil {
+			chain.CustomConfig = map[string]any{}
+		}
 		chain.Configure(cfg.HttpTimeout)
 	}
 }
