@@ -96,11 +96,12 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 			validator,
 			account,
 		)
-		rentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
-		// The rent-exempt reserve is added to the inactive balance
-		stakedBalance.Balance.Inactive = stakedBalance.Balance.Inactive.Add(
-			&rentReserve,
-		)
+		if state == xclient.Inactive {
+			// Inactive balance we should directly use the .lamports on the account.
+			// This will include the rent reserve, and exclude any active stake.
+			// Whereas taking it from the stake info seems to often be stale.
+			stakedBalance.Balance.Inactive = xc.NewAmountBlockchainFromUint64(stake.Account.Account.Lamports)
+		}
 
 		stakedBalances = append(stakedBalances, stakedBalance)
 	}
@@ -228,8 +229,8 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		}
 	}
 	sort.Slice(matchingStakeAccounts, func(i, j int) bool {
-		// Sort in order by activation epoch, so that activated stakes are unstaked first
-		return matchingStakeAccounts[i].ActivationEpoch.Uint64() < matchingStakeAccounts[j].ActivationEpoch.Uint64()
+		// Sort in order by activation epoch, so that activating stakes are unstaked first
+		return matchingStakeAccounts[i].ActivationEpoch.Uint64() > matchingStakeAccounts[j].ActivationEpoch.Uint64()
 	})
 	if len(matchingStakeAccounts) == 0 {
 		return nil, fmt.Errorf("no activating or active stake accounts found for validator: %s", validator)
@@ -278,13 +279,14 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 			continue
 		}
 
-		amountStake := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.Stake)
-		amountRentReserve := xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Meta.RentExemptReserve)
+		// The reported .Lamport account on the stake account actually reflects
+		// the inactive amount + rent already.  It excludes any active stake.
+		withdrawableAmount := stake.Account.Account.Lamports
 		matchingStakeAccounts = append(matchingStakeAccounts, &tx_input.ExistingStake{
 			ActivationEpoch:   xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.ActivationEpoch),
 			DeactivationEpoch: xc.NewAmountBlockchainFromStr(stake.StakeAccount.Parsed.Info.Stake.Delegation.DeactivationEpoch),
 			AmountActive:      xc.NewAmountBlockchainFromUint64(0),
-			AmountInactive:    amountStake.Add(&amountRentReserve),
+			AmountInactive:    xc.NewAmountBlockchainFromUint64(withdrawableAmount),
 			StakeAccount:      stake.Account.Pubkey,
 		})
 	}
