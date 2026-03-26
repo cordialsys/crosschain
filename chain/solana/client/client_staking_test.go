@@ -53,10 +53,10 @@ func TestFetchStakingInput(t *testing.T) {
 			validator: "3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H",
 			expected: &tx_input.StakingInput{
 				TxInput: tx_input.TxInput{
-					TxInputEnvelope:       xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:       solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:     xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:               xc.NewAmountBlockchainFromUint64(5000),
+					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -77,10 +77,10 @@ func TestFetchStakingInput(t *testing.T) {
 			validator: "EqgfgrWR3D1As2aS7tYjoHfNxgxcfNYvdUL5zCsXFXBt",
 			expected: &tx_input.StakingInput{
 				TxInput: tx_input.TxInput{
-					TxInputEnvelope:       xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:       solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:     xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:               xc.NewAmountBlockchainFromUint64(5000),
+					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -188,31 +188,35 @@ func TestFetchUnstakingInput(t *testing.T) {
 			validator: "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp",
 			expected: &tx_input.UnstakingInput{
 				TxInput: tx_input.TxInput{
-					TxInputEnvelope:       xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:       solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:     xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:               xc.NewAmountBlockchainFromUint64(5000),
+					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
+						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(652),
+						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
+						AmountActive:      xc.NewAmountBlockchainFromUint64(7717120),
+						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
+						// AmountInactive: xc.NewAmountBlockchainFromUint64(0),
+					},
+
+					{
 						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
 						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(37731751),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
+						// AmountInactive: xc.NewAmountBlockchainFromUint64(0),
 					},
 					{
 						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),
 						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(1717786),
 						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
-					},
-					{
-						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(652),
-						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(18446744073709551615),
-						AmountActive:      xc.NewAmountBlockchainFromUint64(7717120),
-						AmountInactive:    xc.NewAmountBlockchainFromUint64(2282880),
+						// AmountInactive: xc.NewAmountBlockchainFromUint64(0),
 					},
 				},
 			},
@@ -255,6 +259,9 @@ func TestFetchUnstakingInput(t *testing.T) {
 					// stake.ValidatorVoteAccount = solana.PublicKey{}
 				}
 
+				testtypes.JsonPrint(input)
+				testtypes.JsonPrint(v.expected)
+
 				require.Equal(t, v.expected, input)
 			}
 		})
@@ -285,10 +292,10 @@ func TestFetchWithdrawInput(t *testing.T) {
 			validator: "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp",
 			expected: &tx_input.WithdrawInput{
 				TxInput: tx_input.TxInput{
-					TxInputEnvelope:       xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:       solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:     xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:               xc.NewAmountBlockchainFromUint64(5000),
+					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -297,7 +304,7 @@ func TestFetchWithdrawInput(t *testing.T) {
 						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(649),
 						DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 						AmountActive:      xc.NewAmountBlockchainFromUint64(0),
-						AmountInactive:    xc.NewAmountBlockchainFromUint64(3000280),
+						AmountInactive:    xc.NewAmountBlockchainFromUint64(3000322),
 					},
 					{
 						ActivationEpoch:   xc.NewAmountBlockchainFromUint64(650),

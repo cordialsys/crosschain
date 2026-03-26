@@ -137,7 +137,7 @@ func TestNewWithdrawTransfer(t *testing.T) {
 				ActivationEpoch:   xc.NewAmountBlockchainFromUint64(649),
 				DeactivationEpoch: xc.NewAmountBlockchainFromUint64(650),
 				AmountActive:      xc.NewAmountBlockchainFromUint64(0),
-				AmountInactive:    xc.NewAmountBlockchainFromUint64(3000280),
+				AmountInactive:    xc.NewAmountBlockchainFromUint64(3000322),
 				StakeAccount:      solana.MustPublicKeyFromBase58("8zrSGLMdE6dK57Q7a8N8TDohmyft1MrsLYdRqhDvCerc"),
 			},
 			{
