@@ -66,9 +66,12 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 					Stage:                            CreateAccountStageAccept,
 					PartyID:                          "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 					SetupProposalPreparedTransaction: preparedBz,
-					SetupProposalHash:                hash,
 				}
 				require.NoError(t, input.VerifySignaturePayloads())
+				sighashes, err := input.Sighashes()
+				require.NoError(t, err)
+				require.Len(t, sighashes, 1)
+				require.Equal(t, hash, sighashes[0].Payload)
 			},
 		},
 		{
@@ -100,9 +103,12 @@ func TestValidatePreparedTransactionHash_Flows(t *testing.T) {
 					Stage:                            CreateAccountStageAccept,
 					PartyID:                          "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 					SetupProposalPreparedTransaction: preparedBz,
-					SetupProposalHash:                wrongHash,
 				}
 				require.NoError(t, input.VerifySignaturePayloads())
+				sighashes, err := input.Sighashes()
+				require.NoError(t, err)
+				require.Len(t, sighashes, 1)
+				require.NotEqual(t, wrongHash, sighashes[0].Payload)
 			default:
 				require.ErrorContains(t, ValidatePreparedTransactionHash(vector.preparedTx, wrongHash), "prepared transaction hash mismatch")
 			}
@@ -118,7 +124,10 @@ func TestValidatePreparedTransactionHash_LiveCreateAccountAcceptMismatch(t *test
 	var preparedTx interactive.PreparedTransaction
 	require.NoError(t, proto.Unmarshal(input.SetupProposalPreparedTransaction, &preparedTx))
 
-	err := ValidatePreparedTransactionHash(&preparedTx, input.SetupProposalHash)
+	expectedHash, err := ComputePreparedTransactionHash(&preparedTx)
+	require.NoError(t, err)
+
+	err = ValidatePreparedTransactionHash(&preparedTx, expectedHash)
 	require.NoError(t, err)
 
 	require.NoError(t, input.VerifySignaturePayloads())

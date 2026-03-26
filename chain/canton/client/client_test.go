@@ -3,7 +3,10 @@ package client
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +54,31 @@ func TestNewClient(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing canton custom config field")
 	})
+}
+
+func TestFetchDecimals(t *testing.T) {
+	t.Parallel()
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 18,
+			},
+		},
+	}
+
+	decimals, err := client.FetchDecimals(context.Background(), "")
+	require.NoError(t, err)
+	require.Equal(t, 18, decimals)
+
+	decimals, err = client.FetchDecimals(context.Background(), xc.ContractAddress(xc.CANTON))
+	require.NoError(t, err)
+	require.Equal(t, 18, decimals)
+
+	_, err = client.FetchDecimals(context.Background(), xc.ContractAddress("SOME_TOKEN"))
+	require.ErrorContains(t, err, "token decimals are not supported for Canton")
 }
 
 func TestValidatorServiceUserIDFromToken(t *testing.T) {
@@ -295,7 +323,7 @@ func TestFetchTxInfoDirectUpdateLookupUsesSenderScopedRead(t *testing.T) {
 	require.Contains(t, updateStub.lastReq.GetUpdateFormat().GetIncludeTransactions().GetEventFormat().GetFiltersByParty(), sender)
 }
 
-func TestFetchTxInfoUsesProvidedSenderWhenEventsDoNotExposeOne(t *testing.T) {
+func TestFetchTxInfoLeavesMovementsEmptyWhenEventsDoNotExposeSender(t *testing.T) {
 	t.Parallel()
 
 	sender := "f0bb6fd00a035b6b6ec18bbb2739265b80f319c0634333fe678928f40750cade::1220769b6eab2a4cc2b324e0c407b27cc7589074052c946b01aab0b1ca9b806627c6"
@@ -339,11 +367,7 @@ func TestFetchTxInfoUsesProvidedSenderWhenEventsDoNotExposeOne(t *testing.T) {
 
 	info, err := client.FetchTxInfo(context.Background(), txinfo.NewArgs("update-self", txinfo.OptionSender(xc.Address(sender))))
 	require.NoError(t, err)
-	require.Len(t, info.Movements, 1)
-	require.Len(t, info.Movements[0].From, 1)
-	require.Len(t, info.Movements[0].To, 1)
-	require.Equal(t, xc.Address(sender), info.Movements[0].From[0].AddressId)
-	require.Equal(t, xc.Address(sender), info.Movements[0].To[0].AddressId)
+	require.Empty(t, info.Movements)
 }
 
 func TestExtractTransferFeeSupportsTransferPreapprovalSendResult(t *testing.T) {
@@ -406,6 +430,35 @@ func TestExtractTransferFeeSupportsTransferPreapprovalSendResult(t *testing.T) {
 	fee, ok := extractTransferFee(ex, 18)
 	require.True(t, ok)
 	require.Equal(t, "2000000000000000000", fee.String())
+}
+
+func TestExtractTransferSenderFallsBackToChoiceArgument(t *testing.T) {
+	t.Parallel()
+
+	sender := "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	ex := &v2.ExercisedEvent{
+		TemplateId: &v2.Identifier{
+			ModuleName: "Splice.AmuletRules",
+			EntityName: "TransferPreapproval",
+		},
+		Choice: "TransferPreapproval_Send",
+		ChoiceArgument: &v2.Value{
+			Sum: &v2.Value_Record{
+				Record: &v2.Record{
+					Fields: []*v2.RecordField{
+						{
+							Label: "sender",
+							Value: &v2.Value{Sum: &v2.Value_Party{Party: sender}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, ok := extractTransferSender(ex)
+	require.True(t, ok)
+	require.Equal(t, sender, got)
 }
 
 func TestBuildTransferOfferCreateCommandUsesArgsAmount(t *testing.T) {
@@ -497,6 +550,74 @@ func TestBuildTransferPreapprovalExerciseCommandUsesArgsAmount(t *testing.T) {
 	exercise := cmd.GetExercise()
 	require.NotNil(t, exercise)
 	require.Equal(t, "12.3", extractCommandAmountNumeric(t, exercise.GetChoiceArgument().GetRecord()))
+}
+
+func TestGetAmuletRulesUsesStructuredScanProxyRequest(t *testing.T) {
+	client := &GrpcLedgerClient{
+		scanProxyURL: "https://proxy.example",
+		scanAPIURL:   "https://scan.example",
+		httpClient:   &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		require.Equal(t, "https://proxy.example", req.URL.String())
+		require.Equal(t, "Bearer token", req.Header.Get("Authorization"))
+		require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+
+		var envelope scanProxyRequest
+		require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
+		require.Equal(t, "POST", envelope.Method)
+		require.Equal(t, "https://scan.example/api/scan/v0/amulet-rules", envelope.URL)
+		require.Equal(t, "application/json", envelope.Headers["Content-Type"])
+		require.JSONEq(t, `{}`, string(envelope.Body))
+
+		body := `{"amulet_rules_update":{"contract":{"template_id":"pkg:Mod:AmuletRules","contract_id":"cid","created_event_blob":"AQ==","payload":{"dso":"dso"}},"domain_id":"domain"}}`
+		return httpJSONResponse(http.StatusOK, body), nil
+	})},
+	}
+
+	result, err := client.GetAmuletRules(context.Background(), "token")
+	require.NoError(t, err)
+	require.Equal(t, "domain", result.AmuletRulesUpdate.DomainID)
+}
+
+func TestGetOpenAndIssuingMiningRoundUsesStructuredScanProxyRequest(t *testing.T) {
+	client := &GrpcLedgerClient{
+		scanProxyURL: "https://proxy.example",
+		scanAPIURL:   "https://scan.example/",
+		httpClient:   &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		var envelope scanProxyRequest
+		require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
+		require.Equal(t, "POST", envelope.Method)
+		require.Equal(t, "https://scan.example/api/scan/v0/open-and-issuing-mining-rounds", envelope.URL)
+		require.Equal(t, "application/json", envelope.Headers["Content-Type"])
+
+		var inner map[string][]string
+		require.NoError(t, json.Unmarshal(envelope.Body, &inner))
+		require.Contains(t, inner, "cached_open_mining_round_contract_ids")
+		require.Contains(t, inner, "cached_issuing_round_contract_ids")
+		require.Empty(t, inner["cached_open_mining_round_contract_ids"])
+		require.Empty(t, inner["cached_issuing_round_contract_ids"])
+
+		body := `{"open_mining_rounds":{"open":{"contract":{"contract_id":"open-cid","template_id":"pkg:Mod:Open","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="}, "domain_id":"domain"}},"issuing_mining_rounds":{"issuing":{"contract":{"contract_id":"issuing-cid","template_id":"pkg:Mod:Issuing","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="},"domain_id":"domain"}}}`
+		return httpJSONResponse(http.StatusOK, body), nil
+	})},
+	}
+
+	open, issuing, err := client.GetOpenAndIssuingMiningRound(context.Background(), "token")
+	require.NoError(t, err)
+	require.Equal(t, "open-cid", open.Contract.ContractID)
+	require.Equal(t, "issuing-cid", issuing.Contract.ContractID)
+}
+
+func TestGetAmuletRulesPreservesScanProxyHTTPError(t *testing.T) {
+	client := &GrpcLedgerClient{
+		scanProxyURL: "https://proxy.example",
+		scanAPIURL:   "https://scan.example",
+		httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			return httpJSONResponse(http.StatusBadGateway, `upstream failed`), nil
+		})},
+	}
+
+	_, err := client.GetAmuletRules(context.Background(), "token")
+	require.ErrorContains(t, err, "fetching amulet rules: status 502: upstream failed")
 }
 
 func mustSerializedCreateAccountInput(t *testing.T) []byte {
@@ -690,6 +811,20 @@ func extractCommandAmountNumeric(t *testing.T, record *v2.Record) string {
 	}
 	t.Fatalf("amount field not found")
 	return ""
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func httpJSONResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Header:     make(http.Header),
+	}
 }
 
 func testAmuletRulesTransferEvent(sender string, receiver string, amount string) *v2.ExercisedEvent {

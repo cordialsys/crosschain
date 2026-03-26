@@ -244,8 +244,7 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 	}
 	prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{senderPartyID}, []string{senderPartyID, client.ledgerClient.validatorPartyID}, []*v2.Command{cmd}, disclosedContracts)
 
-	authCtx := client.ledgerClient.authCtx(ctx)
-	prepareResp, err := client.ledgerClient.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
+	prepareResp, err := client.ledgerClient.PrepareSubmission(ctx, prepareReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare TransferPreapproval_Send: %w", err)
 	}
@@ -384,8 +383,7 @@ func (client *Client) submitTransferTx(ctx context.Context, payload []byte) erro
 		"parties":       parties,
 	}).Trace("canton request")
 
-	actx := client.ledgerClient.authCtx(ctx)
-	_, err := client.ledgerClient.interactiveSubmissionClient.ExecuteSubmissionAndWait(actx, andWaitReq)
+	_, err := client.ledgerClient.ExecuteSubmissionAndWait(ctx, andWaitReq)
 	if err != nil {
 		return fmt.Errorf("failed to submit Canton transaction: %w", err)
 	}
@@ -455,8 +453,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 		txInfo.LookupId = lookupId
 	}
 
-	// Use the caller-provided sender as the source of truth for Canton tx-info.
-	senderParty := string(sender)
+	// Use the ledger events as the source of truth for Canton tx-info movement reconstruction.
+	var senderParty string
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	var transferOutputs []amuletCreation
 	totalFee := xc.NewAmountBlockchainFromUint64(0)
@@ -464,8 +462,8 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 
 	for _, event := range tx.GetEvents() {
 		if ex := event.GetExercised(); ex != nil {
-			if len(ex.GetActingParties()) > 0 && senderParty == "" {
-				senderParty = ex.GetActingParties()[0]
+			if eventSender, ok := extractTransferSender(ex); ok && senderParty == "" {
+				senderParty = eventSender
 			}
 			if outputs, ok := extractTransferOutputs(ex, decimals); ok {
 				transferOutputs = append(transferOutputs, outputs...)
@@ -502,6 +500,9 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	}
 
 	if len(transferOutputs) > 0 {
+		if senderParty == "" {
+			return txinfo.TxInfo{}, fmt.Errorf("could not determine Canton transfer sender from events for update %s", updateId)
+		}
 		for _, out := range transferOutputs {
 			txInfo.AddSimpleTransfer(xc.Address(senderParty), xc.Address(out.owner), "", out.amount, nil, "")
 		}
@@ -514,6 +515,11 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	}
 
 	// Fall back to created Amulets only when there is no explicit transfer exercise payload.
+	if senderParty == "" {
+		txInfo.Fees = txInfo.CalculateFees()
+		txInfo.SyncDeprecatedFields()
+		return *txInfo, nil
+	}
 	for _, ac := range amuletCreations {
 		if ac.owner == senderParty {
 			continue
@@ -539,6 +545,30 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.SyncDeprecatedFields()
 	return *txInfo, nil
+}
+
+func extractTransferSender(ex *v2.ExercisedEvent) (string, bool) {
+	if !isTransferExercise(ex) {
+		return "", false
+	}
+	if len(ex.GetActingParties()) > 0 && ex.GetActingParties()[0] != "" {
+		return ex.GetActingParties()[0], true
+	}
+
+	arg := ex.GetChoiceArgument()
+	if arg == nil {
+		return "", false
+	}
+	record := arg.GetRecord()
+	if record == nil {
+		return "", false
+	}
+	if senderValue, ok := findValueField(record, "sender"); ok {
+		if sender := senderValue.GetParty(); sender != "" {
+			return sender, true
+		}
+	}
+	return "", false
 }
 
 func extractTransferOutputs(ex *v2.ExercisedEvent, decimals int32) ([]amuletCreation, bool) {
@@ -832,7 +862,10 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
-	return 0, errors.New("not implemented")
+	if client.Asset.GetChain().IsChain(contract) {
+		return int(client.Asset.GetChain().GetDecimals()), nil
+	}
+	return 0, fmt.Errorf("token decimals are not supported for Canton, contract: %s", contract)
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
@@ -846,11 +879,6 @@ func KeyFingerprintFromAddress(addr xc.Address) (string, error) {
 		return "", err
 	}
 	return fingerprint, nil
-}
-
-// TxFromInput builds a Tx from a TxInput and the transfer args, validating the hash and contents.
-func TxFromInput(args xcbuilder.TransferArgs, input *tx_input.TxInput, decimals int32) (*cantontx.Tx, error) {
-	return cantontx.NewTx(input, args, decimals)
 }
 
 var _ xclient.CreateAccountClient = &Client{}
@@ -869,8 +897,7 @@ func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateA
 	}
 	if !exists {
 		return &xclient.AccountState{
-			State:       xclient.CreateAccountCallRequired,
-			Description: "Account is not registered yet. Call create-account to continue.",
+			State: xclient.CreateAccountCallRequired,
 		}, nil
 	}
 
@@ -884,8 +911,7 @@ func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateA
 		if isPermissionDenied(err) {
 			logger.WithError(err).Info("get-account-state: party exists but contract visibility is not ready yet")
 			return &xclient.AccountState{
-				State:       xclient.CreateAccountCallRequired,
-				Description: "Account exists but registration is not complete yet. Call create-account again to continue.",
+				State: xclient.CreateAccountCallRequired,
 			}, nil
 		}
 		logger.WithError(err).Error("get-account-state: get active contracts failed")
@@ -893,8 +919,7 @@ func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateA
 	}
 	if client.ledgerClient.HasTransferPreapprovalContract(ctx, contracts) {
 		return &xclient.AccountState{
-			State:       xclient.Created,
-			Description: "Account registration is complete.",
+			State: xclient.Created,
 		}, nil
 	}
 	for _, contract := range contracts {
@@ -907,14 +932,12 @@ func (client *Client) GetAccountState(ctx context.Context, args *xclient.CreateA
 			continue
 		}
 		return &xclient.AccountState{
-			State:       xclient.CreateAccountCallRequired,
-			Description: "Account registration requires another create-account call to continue.",
+			State: xclient.CreateAccountCallRequired,
 		}, nil
 	}
 
 	return &xclient.AccountState{
-		State:       xclient.Pending,
-		Description: "Account registration is in progress. Retry create-account shortly.",
+		State: xclient.Pending,
 	}, nil
 }
 
@@ -939,7 +962,6 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 	}
 	logger.WithField("exists", exists).Info("create-account: external party registration check completed")
 	if !exists {
-		authCtx := client.ledgerClient.authCtx(ctx)
 		partyHint := hex.EncodeToString(publicKeyBytes)
 		signingPubKey := &v2.SigningPublicKey{
 			Format:  v2.CryptoKeyFormat_CRYPTO_KEY_FORMAT_RAW,
@@ -953,7 +975,7 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			logger.WithError(err).Error("create-account: resolve synchronizer failed")
 			return nil, fmt.Errorf("failed to resolve synchronizer for topology generation: %w", err)
 		}
-		topologyResp, err := client.ledgerClient.adminClient.GenerateExternalPartyTopology(authCtx, &admin.GenerateExternalPartyTopologyRequest{
+		topologyResp, err := client.ledgerClient.GenerateExternalPartyTopology(ctx, &admin.GenerateExternalPartyTopologyRequest{
 			Synchronizer: synchronizerID,
 			PartyHint:    partyHint,
 			PublicKey:    signingPubKey,
@@ -974,7 +996,6 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 
 		input := &tx_input.CreateAccountInput{
 			Stage:                tx_input.CreateAccountStageAllocate,
-			Description:          "Sign signature_request.payload, append the raw signature hex to tx, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
 			PartyID:              partyID,
 			PublicKeyFingerprint: topologyResp.GetPublicKeyFingerprint(),
 			TopologyTransactions: txns,
@@ -1055,10 +1076,8 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 
 		input := &tx_input.CreateAccountInput{
 			Stage:                            tx_input.CreateAccountStageAccept,
-			Description:                      "Sign signature_request.payload, append the raw signature hex to tx, then submit the combined hex with `xc submit --chain canton <combined_hex>`.",
 			PartyID:                          partyID,
 			SetupProposalPreparedTransaction: preparedTxBz,
-			SetupProposalHash:                prepareResp.GetPreparedTransactionHash(),
 			SetupProposalHashing:             prepareResp.GetHashingSchemeVersion(),
 			SetupProposalSubmissionID:        newRegisterCommandId(),
 		}
@@ -1085,8 +1104,6 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 	if len(cantonInput.Signature) == 0 {
 		return fmt.Errorf("create-account transaction is not signed")
 	}
-	authCtx := client.ledgerClient.authCtx(ctx)
-
 	switch cantonInput.Stage {
 	case tx_input.CreateAccountStageAllocate:
 		synchronizerID, err := client.resolveValidatorSynchronizerID(ctx)
@@ -1094,7 +1111,7 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 			return fmt.Errorf("failed to resolve synchronizer for external party allocation: %w", err)
 		}
 		req := cantonproto.NewAllocateExternalPartyRequest(synchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, cantonInput.PublicKeyFingerprint)
-		_, err = client.ledgerClient.adminClient.AllocateExternalParty(authCtx, req)
+		_, err = client.ledgerClient.AllocateExternalParty(ctx, req)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("AllocateExternalParty failed: %w", err)
 		}
@@ -1109,7 +1126,7 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}
 		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(&preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalSubmissionID, cantonInput.SetupProposalHashing, client.ledgerClient.deduplicationWindow)
-		_, err = client.ledgerClient.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
+		_, err = client.ledgerClient.ExecuteSubmissionAndWait(ctx, executeReq)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("ExternalPartySetupProposal_Accept failed: %w", err)
 		}

@@ -26,14 +26,11 @@ const (
 type CreateAccountInput struct {
 	Stage string `json:"stage"`
 
-	Description string `json:"description,omitempty"`
-
 	PartyID              string   `json:"party_id"`
 	PublicKeyFingerprint string   `json:"public_key_fingerprint,omitempty"`
 	TopologyTransactions [][]byte `json:"topology_transactions,omitempty"`
 
 	SetupProposalPreparedTransaction []byte                           `json:"setup_proposal_prepared_transaction,omitempty"`
-	SetupProposalHash                []byte                           `json:"setup_proposal_hash,omitempty"`
 	SetupProposalHashing             interactive.HashingSchemeVersion `json:"setup_proposal_hashing,omitempty"`
 	SetupProposalSubmissionID        string                           `json:"setup_proposal_submission_id,omitempty"`
 
@@ -125,10 +122,15 @@ func (i *CreateAccountInput) Sighashes() ([]*xc.SignatureRequest, error) {
 	case CreateAccountStageAllocate:
 		return nil, fmt.Errorf("allocate-stage sighash is derived by the Canton create-account tx")
 	case CreateAccountStageAccept:
-		if len(i.SetupProposalHash) == 0 {
-			return nil, fmt.Errorf("setup proposal hash is empty")
+		preparedTx, err := i.setupProposalPreparedTransaction()
+		if err != nil {
+			return nil, err
 		}
-		return []*xc.SignatureRequest{xc.NewSignatureRequest(i.SetupProposalHash)}, nil
+		hash, err := ComputePreparedTransactionHash(preparedTx)
+		if err != nil {
+			return nil, err
+		}
+		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 	default:
 		return nil, fmt.Errorf("unsupported create-account stage %q", i.Stage)
 	}
@@ -158,17 +160,24 @@ func (i *CreateAccountInput) VerifySignaturePayloads() error {
 		if len(i.SetupProposalPreparedTransaction) == 0 {
 			return fmt.Errorf("setup proposal prepared transaction is empty")
 		}
-		if len(i.SetupProposalHash) == 0 {
-			return fmt.Errorf("setup proposal hash is empty")
-		}
-		var prepared interactive.PreparedTransaction
-		if err := proto.Unmarshal(i.SetupProposalPreparedTransaction, &prepared); err != nil {
-			return fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+		if _, err := i.setupProposalPreparedTransaction(); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unsupported create-account stage %q", i.Stage)
 	}
 	return nil
+}
+
+func (i *CreateAccountInput) setupProposalPreparedTransaction() (*interactive.PreparedTransaction, error) {
+	if len(i.SetupProposalPreparedTransaction) == 0 {
+		return nil, fmt.Errorf("setup proposal prepared transaction is empty")
+	}
+	var prepared interactive.PreparedTransaction
+	if err := proto.Unmarshal(i.SetupProposalPreparedTransaction, &prepared); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+	}
+	return &prepared, nil
 }
 
 func (i *CreateAccountInput) metadataBytes() ([]byte, error) {

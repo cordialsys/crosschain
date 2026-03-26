@@ -91,19 +91,18 @@ func CmdCreateAccount() *cobra.Command {
 				switch state.State {
 				case xclient.Created:
 					fmt.Println(asJson(map[string]any{
-						"address":     string(address),
-						"chain":       string(chainConfig.Chain),
-						"status":      "registered",
-						"state":       state.State,
-						"description": state.Description,
+						"address": string(address),
+						"chain":   string(chainConfig.Chain),
+						"status":  "registered",
+						"state":   state.State,
 					}))
 					return nil
 				case xclient.Pending:
-					logrus.WithField("description", state.Description).Info("account creation is pending, waiting 10s")
+					logrus.Info("account creation is pending, waiting 10s")
 					time.Sleep(10 * time.Second)
 					continue
 				case xclient.CreateAccountCallRequired:
-					logrus.WithField("description", state.Description).Info("account creation step required")
+					logrus.Info("account creation step required")
 
 					input, err := accountClient.FetchCreateAccountInput(ctx, createArgs)
 					if err != nil {

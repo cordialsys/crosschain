@@ -27,7 +27,6 @@ type CreateAccountMetadata struct {
 	TopologyTransactions [][]byte `json:"topology_transactions,omitempty"`
 
 	SetupProposalPreparedTransaction []byte                           `json:"setup_proposal_prepared_transaction,omitempty"`
-	SetupProposalHash                []byte                           `json:"setup_proposal_hash,omitempty"`
 	SetupProposalHashing             interactive.HashingSchemeVersion `json:"setup_proposal_hashing,omitempty"`
 	SetupProposalSubmissionID        string                           `json:"setup_proposal_submission_id,omitempty"`
 }
@@ -62,7 +61,6 @@ func NewCreateAccountMetadata(input *tx_input.CreateAccountInput) *Metadata {
 			PublicKeyFingerprint:             input.PublicKeyFingerprint,
 			TopologyTransactions:             cloneMetadataBytes2D(input.TopologyTransactions),
 			SetupProposalPreparedTransaction: append([]byte(nil), input.SetupProposalPreparedTransaction...),
-			SetupProposalHash:                append([]byte(nil), input.SetupProposalHash...),
 			SetupProposalHashing:             input.SetupProposalHashing,
 			SetupProposalSubmissionID:        input.SetupProposalSubmissionID,
 		},
@@ -79,7 +77,6 @@ func (m *Metadata) CreateAccountInput(signature []byte) (*tx_input.CreateAccount
 		PublicKeyFingerprint:             m.CreateAccount.PublicKeyFingerprint,
 		TopologyTransactions:             cloneMetadataBytes2D(m.CreateAccount.TopologyTransactions),
 		SetupProposalPreparedTransaction: append([]byte(nil), m.CreateAccount.SetupProposalPreparedTransaction...),
-		SetupProposalHash:                append([]byte(nil), m.CreateAccount.SetupProposalHash...),
 		SetupProposalHashing:             m.CreateAccount.SetupProposalHashing,
 		SetupProposalSubmissionID:        m.CreateAccount.SetupProposalSubmissionID,
 		Signature:                        append([]byte(nil), signature...),
