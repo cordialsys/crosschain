@@ -71,6 +71,8 @@ func TestChains(t *testing.T) {
 					hedera.Validate(t, chain)
 				case DriverNear:
 					near.Validate(t, chain)
+				case DriverCanton:
+					canton.Validate(t, chain)
 				case "":
 					require.Fail(t, "unknown driver", chain.Driver)
 				default:

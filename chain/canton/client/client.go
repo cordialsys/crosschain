@@ -304,7 +304,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 	}
 
-	input.PreparedTransaction = *resp.GetPreparedTransaction()
+	input.PreparedTransaction = resp.GetPreparedTransaction()
 	input.SubmissionId = NewCommandId()
 	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
 	input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(client.Asset.TransactionActiveTime)

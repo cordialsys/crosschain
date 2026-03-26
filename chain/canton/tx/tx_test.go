@@ -45,7 +45,7 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 			require.NoError(t, err)
 
 			input := &tx_input.TxInput{
-				PreparedTransaction: *vector.preparedTx,
+				PreparedTransaction: vector.preparedTx,
 				LedgerEnd:           12345,
 				SubmissionId:        "submission-id",
 			}

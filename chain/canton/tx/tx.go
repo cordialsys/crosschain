@@ -50,7 +50,7 @@ func NewTx(input *tx_input.TxInput, args xcbuilder.TransferArgs, decimals int32)
 		return nil, fmt.Errorf("failed to parse sender party ID: %w", err)
 	}
 
-	preparedTx := &input.PreparedTransaction
+	preparedTx := input.PreparedTransaction
 	if preparedTx == nil || preparedTx.GetTransaction() == nil {
 		return nil, fmt.Errorf("prepared transaction is nil")
 	}

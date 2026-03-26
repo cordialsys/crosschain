@@ -18,11 +18,12 @@ func transferAmountNumeric(args xcbuilder.TransferArgs, decimals int32) string {
 
 func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules AmuletRules, commandID string, decimals int32) *v2.Command {
 	amountNumeric := transferAmountNumeric(args, decimals)
+	packageID := amuletRules.GetSpliceId()
 	return &v2.Command{
 		Command: &v2.Command_Create{
 			Create: &v2.CreateCommand{
 				TemplateId: &v2.Identifier{
-					PackageId:  "fd57252dda29e3ce90028114c91b521cb661df5a9d6e87c41a9e91518215fa5b",
+					PackageId:  packageID,
 					ModuleName: "Splice.Wallet.TransferOffer",
 					EntityName: "TransferOffer",
 				},
