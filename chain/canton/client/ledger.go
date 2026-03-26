@@ -58,21 +58,13 @@ func cantonEnv(name string) (string, error) {
 	return v, nil
 }
 
-// TODO: Fetch instead of hardcoding
-var (
-	TestnetSynchronizerID  = func() string { v, _ := cantonEnv("CANTON_TESTNET_SYNCHRONIZER_ID"); return v }()
-	ValidatorPartyId       = func() string { v, _ := cantonEnv("CANTON_VALIDATOR_PARTY_ID"); return v }()
-	RestApiUrl             = func() string { v, _ := cantonEnv("CANTON_REST_API_URL"); return v }()
-	ScanProxyUrl           = func() string { v, _ := cantonEnv("CANTON_SCAN_API_URL"); return v }()
-	ScanApiUrl             = func() string { v, _ := cantonEnv("CANTON_SCAN_NODE_URL"); return v }()
-	ValidatorServiceUserId = func() string {
-		v, _ := cantonEnv("CANTON_VALIDATOR_ID")
-		if v == "" {
-			return ""
-		}
-		return "service-account-" + v
-	}()
-)
+type runtimeIdentityConfig struct {
+	validatorPartyID       string
+	validatorServiceUserID string
+	restAPIURL             string
+	scanProxyURL           string
+	scanAPIURL             string
+}
 
 type GrpcLedgerClient struct {
 	// Bearer token injected into every gRPC call
@@ -84,10 +76,15 @@ type GrpcLedgerClient struct {
 	stateClient                 v2.StateServiceClient
 	updateClient                v2.UpdateServiceClient
 	userManagementClient        admin.UserManagementServiceClient
+	validatorPartyID            string
+	validatorServiceUserID      string
+	restAPIURL                  string
+	scanProxyURL                string
+	scanAPIURL                  string
 	logger                      *logrus.Entry
 }
 
-func NewGrpcLedgerClient(target string, authToken string) (*GrpcLedgerClient, error) {
+func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityConfig) (*GrpcLedgerClient, error) {
 	if authToken == "" {
 		return nil, errors.New("GrpcLedgerClient requires a valid authToken")
 	}
@@ -125,6 +122,11 @@ func NewGrpcLedgerClient(target string, authToken string) (*GrpcLedgerClient, er
 		interactiveSubmissionClient: interactive.NewInteractiveSubmissionServiceClient(conn),
 		userManagementClient:        admin.NewUserManagementServiceClient(conn),
 		commandClient:               v2.NewCommandServiceClient(conn),
+		validatorPartyID:            cfg.validatorPartyID,
+		validatorServiceUserID:      cfg.validatorServiceUserID,
+		restAPIURL:                  cfg.restAPIURL,
+		scanProxyURL:                cfg.scanProxyURL,
+		scanAPIURL:                  cfg.scanAPIURL,
 		logger:                      logger,
 	}, nil
 }
@@ -210,6 +212,27 @@ func (c *GrpcLedgerClient) ExternalPartyExists(ctx context.Context, partyID stri
 	return false, err
 }
 
+func (c *GrpcLedgerClient) ResolveSynchronizerID(ctx context.Context, partyID string, fallback string) (string, error) {
+	if partyID != "" {
+		synchronizerID, err := c.GetSynchronizerId(ctx, partyID)
+		if err == nil {
+			return synchronizerID, nil
+		}
+		if fallback == "" {
+			return "", err
+		}
+		c.logger.WithError(err).WithFields(logrus.Fields{
+			KeyParty:          partyID,
+			KeySynchronizerId: fallback,
+		}).Warn("failed to resolve party synchronizer, using fallback")
+		return fallback, nil
+	}
+	if fallback == "" {
+		return "", errors.New("no synchronizer resolution inputs")
+	}
+	return fallback, nil
+}
+
 // Get active contracts for given party using StateServiceClient.GetActiveContracts
 func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID string, ledgerEnd int64, includeBlobs bool) ([]*v2.ActiveContract, error) {
 	if partyID == "" {
@@ -279,7 +302,7 @@ func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID strin
 func (c *GrpcLedgerClient) CreateUser(ctx context.Context, partyId string) error {
 	authCtx := c.authCtx(ctx)
 	req := &admin.GrantUserRightsRequest{
-		UserId: ValidatorServiceUserId,
+		UserId: c.validatorServiceUserID,
 		Rights: []*admin.Right{
 			{
 				Kind: &admin.Right_CanReadAs_{
@@ -331,7 +354,7 @@ func (c *GrpcLedgerClient) CreateExternalPartySetupProposal(ctx context.Context,
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		RestApiUrl+endpoint,
+		c.restAPIURL+endpoint,
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -388,12 +411,12 @@ func (a AmuletRules) GetSpliceId() string {
 // Make sure to auth with canton-ui token
 func (c *GrpcLedgerClient) GetAmuletRules(ctx context.Context, token string) (*AmuletRules, error) {
 	// We access the scan API through the http-proxy (CANTON_SCAN_API_URL) because direct access is not yet available.
-	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/amulet-rules","headers":{"Content-Type":"application/json"},"body":"{}"}`, ScanApiUrl)
+	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/amulet-rules","headers":{"Content-Type":"application/json"},"body":"{}"}`, c.scanAPIURL)
 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		ScanProxyUrl,
+		c.scanProxyURL,
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -517,12 +540,12 @@ func (r *OpenAndIssuingMiningRounds) GetLatestIssuingMiningRound() (*RoundEntry,
 }
 
 func (c *GrpcLedgerClient) GetOpenAndIssuingMiningRound(ctx context.Context, token string) (*RoundEntry, *RoundEntry, error) {
-	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/open-and-issuing-mining-rounds","headers":{"Content-Type":"application/json"},"body":"{\"cached_open_mining_round_contract_ids\":[],\"cached_issuing_round_contract_ids\":[]}"}`, ScanApiUrl)
+	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/open-and-issuing-mining-rounds","headers":{"Content-Type":"application/json"},"body":"{\"cached_open_mining_round_contract_ids\":[],\"cached_issuing_round_contract_ids\":[]}"}`, c.scanAPIURL)
 
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		ScanProxyUrl,
+		c.scanProxyURL,
 		strings.NewReader(body),
 	)
 	if err != nil {
@@ -588,8 +611,8 @@ func newRegisterCommandId() string {
 	return cantonproto.NewCommandID()
 }
 
-func (c *GrpcLedgerClient) PrepareSubmissionRequest(ctx context.Context, command *v2.Command, commandID string, partyID string) (*interactive.PrepareSubmissionResponse, error) {
-	prepareReq := cantonproto.NewPrepareRequest(commandID, TestnetSynchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{command}, nil)
+func (c *GrpcLedgerClient) PrepareSubmissionRequest(ctx context.Context, command *v2.Command, commandID string, partyID string, synchronizerID string) (*interactive.PrepareSubmissionResponse, error) {
+	prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{command}, nil)
 
 	authCtx := c.authCtx(ctx)
 	prepareResp, err := c.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
@@ -641,7 +664,11 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 
 	authCtx := c.authCtx(ctx)
 	commandID := newRegisterCommandId()
-	prepareResp, err := c.PrepareSubmissionRequest(authCtx, cmd, commandID, partyId)
+	synchronizerID, err := c.ResolveSynchronizerID(ctx, partyId, "")
+	if err != nil {
+		return fmt.Errorf("failed to resolve synchronizer: %w", err)
+	}
+	prepareResp, err := c.PrepareSubmissionRequest(authCtx, cmd, commandID, partyId, synchronizerID)
 	if err != nil {
 		return fmt.Errorf("failed to prepare submission for party setup proposal accept: %w", err)
 	}
@@ -965,14 +992,14 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 	}
 
 	prepareReq := &interactive.PrepareSubmissionRequest{
-		UserId:    ValidatorServiceUserId,
+		UserId:    c.validatorServiceUserID,
 		CommandId: newRegisterCommandId(),
 		Commands:  []*v2.Command{cmd},
 		// ActAs:     []string{senderPartyID, ValidatorPartyId},
-		ReadAs: []string{senderPartyID, ValidatorPartyId},
+		ReadAs: []string{senderPartyID, c.validatorPartyID},
 		ActAs:  []string{senderPartyID},
 		// ReadAs:             []string{senderPartyID},
-		SynchronizerId:     TestnetSynchronizerID,
+		SynchronizerId:     amuletRules.AmuletRulesUpdate.DomainID,
 		DisclosedContracts: disclosedContracts,
 		VerboseHashing:     false,
 	}
@@ -1075,7 +1102,7 @@ func (c *GrpcLedgerClient) RecoverUpdateIdBySubmissionId(ctx context.Context, be
 	defer cancel()
 
 	stream, err := c.completionClient.CompletionStream(streamCtx, &v2.CompletionStreamRequest{
-		UserId:         ValidatorServiceUserId,
+		UserId:         c.validatorServiceUserID,
 		Parties:        []string{partyID},
 		BeginExclusive: beginExclusive,
 	})
