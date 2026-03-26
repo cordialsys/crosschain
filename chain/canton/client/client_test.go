@@ -560,21 +560,21 @@ func TestGetAmuletRulesUsesStructuredScanProxyRequest(t *testing.T) {
 	client := &GrpcLedgerClient{
 		scanProxyURL: "https://proxy.example",
 		scanAPIURL:   "https://scan.example",
-		httpClient:   &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		require.Equal(t, "https://proxy.example", req.URL.String())
-		require.Equal(t, "Bearer token", req.Header.Get("Authorization"))
-		require.Equal(t, "application/json", req.Header.Get("Content-Type"))
+		httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			require.Equal(t, "https://proxy.example", req.URL.String())
+			require.Equal(t, "Bearer token", req.Header.Get("Authorization"))
+			require.Equal(t, "application/json", req.Header.Get("Content-Type"))
 
-		var envelope scanProxyRequest
-		require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
-		require.Equal(t, "POST", envelope.Method)
-		require.Equal(t, "https://scan.example/api/scan/v0/amulet-rules", envelope.URL)
-		require.Equal(t, "application/json", envelope.Headers["Content-Type"])
-		require.JSONEq(t, `{}`, string(envelope.Body))
+			var envelope scanProxyRequest
+			require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
+			require.Equal(t, "POST", envelope.Method)
+			require.Equal(t, "https://scan.example/api/scan/v0/amulet-rules", envelope.URL)
+			require.Equal(t, "application/json", envelope.Headers["Content-Type"])
+			require.JSONEq(t, `{}`, envelope.Body)
 
-		body := `{"amulet_rules_update":{"contract":{"template_id":"pkg:Mod:AmuletRules","contract_id":"cid","created_event_blob":"AQ==","payload":{"dso":"dso"}},"domain_id":"domain"}}`
-		return httpJSONResponse(http.StatusOK, body), nil
-	})},
+			body := `{"amulet_rules_update":{"contract":{"template_id":"pkg:Mod:AmuletRules","contract_id":"cid","created_event_blob":"AQ==","payload":{"dso":"dso"}},"domain_id":"domain"}}`
+			return httpJSONResponse(http.StatusOK, body), nil
+		})},
 	}
 
 	result, err := client.GetAmuletRules(context.Background(), "token")
@@ -586,23 +586,23 @@ func TestGetOpenAndIssuingMiningRoundUsesStructuredScanProxyRequest(t *testing.T
 	client := &GrpcLedgerClient{
 		scanProxyURL: "https://proxy.example",
 		scanAPIURL:   "https://scan.example/",
-		httpClient:   &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-		var envelope scanProxyRequest
-		require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
-		require.Equal(t, "POST", envelope.Method)
-		require.Equal(t, "https://scan.example/api/scan/v0/open-and-issuing-mining-rounds", envelope.URL)
-		require.Equal(t, "application/json", envelope.Headers["Content-Type"])
+		httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			var envelope scanProxyRequest
+			require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
+			require.Equal(t, "POST", envelope.Method)
+			require.Equal(t, "https://scan.example/api/scan/v0/open-and-issuing-mining-rounds", envelope.URL)
+			require.Equal(t, "application/json", envelope.Headers["Content-Type"])
 
-		var inner map[string][]string
-		require.NoError(t, json.Unmarshal(envelope.Body, &inner))
-		require.Contains(t, inner, "cached_open_mining_round_contract_ids")
-		require.Contains(t, inner, "cached_issuing_round_contract_ids")
-		require.Empty(t, inner["cached_open_mining_round_contract_ids"])
-		require.Empty(t, inner["cached_issuing_round_contract_ids"])
+			var inner map[string][]string
+			require.NoError(t, json.Unmarshal([]byte(envelope.Body), &inner))
+			require.Contains(t, inner, "cached_open_mining_round_contract_ids")
+			require.Contains(t, inner, "cached_issuing_round_contract_ids")
+			require.Empty(t, inner["cached_open_mining_round_contract_ids"])
+			require.Empty(t, inner["cached_issuing_round_contract_ids"])
 
-		body := `{"open_mining_rounds":{"open":{"contract":{"contract_id":"open-cid","template_id":"pkg:Mod:Open","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="}, "domain_id":"domain"}},"issuing_mining_rounds":{"issuing":{"contract":{"contract_id":"issuing-cid","template_id":"pkg:Mod:Issuing","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="},"domain_id":"domain"}}}`
-		return httpJSONResponse(http.StatusOK, body), nil
-	})},
+			body := `{"open_mining_rounds":{"open":{"contract":{"contract_id":"open-cid","template_id":"pkg:Mod:Open","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="}, "domain_id":"domain"}},"issuing_mining_rounds":{"issuing":{"contract":{"contract_id":"issuing-cid","template_id":"pkg:Mod:Issuing","payload":{"round":{"number":"1"},"opensAt":"2000-01-01T00:00:00Z","targetClosesAt":"2999-01-01T00:00:00Z"},"created_event_blob":"AQ=="},"domain_id":"domain"}}}`
+			return httpJSONResponse(http.StatusOK, body), nil
+		})},
 	}
 
 	open, issuing, err := client.GetOpenAndIssuingMiningRound(context.Background(), "token")
