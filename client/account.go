@@ -29,8 +29,7 @@ const (
 )
 
 type AccountState struct {
-	State       AccountStateEnum `json:"state"`
-	Description string           `json:"description"`
+	State AccountStateEnum `json:"state"`
 }
 
 // CreateAccountArgs carries the parameters for an account creation request.

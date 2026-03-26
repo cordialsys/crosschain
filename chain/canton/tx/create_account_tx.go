@@ -132,7 +132,6 @@ func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.Creat
 	cloned := *input
 	cloned.Signature = append([]byte(nil), input.Signature...)
 	cloned.SetupProposalPreparedTransaction = append([]byte(nil), input.SetupProposalPreparedTransaction...)
-	cloned.SetupProposalHash = append([]byte(nil), input.SetupProposalHash...)
 	if len(input.TopologyTransactions) > 0 {
 		cloned.TopologyTransactions = make([][]byte, len(input.TopologyTransactions))
 		for i, txn := range input.TopologyTransactions {

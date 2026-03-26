@@ -73,7 +73,15 @@ type GrpcLedgerClient struct {
 	restAPIURL                  string
 	scanProxyURL                string
 	scanAPIURL                  string
+	httpClient                  *http.Client
 	logger                      *logrus.Entry
+}
+
+type scanProxyRequest struct {
+	Method  string            `json:"method"`
+	URL     string            `json:"url"`
+	Headers map[string]string `json:"headers,omitempty"`
+	Body    json.RawMessage   `json:"body"`
 }
 
 func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityConfig) (*GrpcLedgerClient, error) {
@@ -120,6 +128,7 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 		restAPIURL:                  cfg.restAPIURL,
 		scanProxyURL:                cfg.scanProxyURL,
 		scanAPIURL:                  cfg.scanAPIURL,
+		httpClient:                  http.DefaultClient,
 		logger:                      logger,
 	}, nil
 }
@@ -133,6 +142,22 @@ func (c *GrpcLedgerClient) authCtx(ctx context.Context) context.Context {
 
 	md := metadata.Pairs("authorization", "Bearer "+c.authToken)
 	return metadata.NewOutgoingContext(ctx, md)
+}
+
+func (c *GrpcLedgerClient) GenerateExternalPartyTopology(ctx context.Context, req *admin.GenerateExternalPartyTopologyRequest) (*admin.GenerateExternalPartyTopologyResponse, error) {
+	return c.adminClient.GenerateExternalPartyTopology(c.authCtx(ctx), req)
+}
+
+func (c *GrpcLedgerClient) AllocateExternalParty(ctx context.Context, req *admin.AllocateExternalPartyRequest) (*admin.AllocateExternalPartyResponse, error) {
+	return c.adminClient.AllocateExternalParty(c.authCtx(ctx), req)
+}
+
+func (c *GrpcLedgerClient) PrepareSubmission(ctx context.Context, req *interactive.PrepareSubmissionRequest) (*interactive.PrepareSubmissionResponse, error) {
+	return c.interactiveSubmissionClient.PrepareSubmission(c.authCtx(ctx), req)
+}
+
+func (c *GrpcLedgerClient) ExecuteSubmissionAndWait(ctx context.Context, req *interactive.ExecuteSubmissionAndWaitRequest) (*interactive.ExecuteSubmissionAndWaitResponse, error) {
+	return c.interactiveSubmissionClient.ExecuteSubmissionAndWait(c.authCtx(ctx), req)
 }
 
 // getLedgerEnd fetches the current ledger end offset via gRPC StateService
@@ -354,8 +379,7 @@ func (c *GrpcLedgerClient) CreateExternalPartySetupProposal(ctx context.Context,
 	req.Header.Set("Authorization", "Bearer "+c.authToken)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := http.DefaultClient
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("executing request: %w", err)
 	}
@@ -375,6 +399,61 @@ func (c *GrpcLedgerClient) CreateExternalPartySetupProposal(ctx context.Context,
 		}
 	}
 
+	return nil
+}
+
+func (c *GrpcLedgerClient) doScanProxyRequest(ctx context.Context, token string, path string, body any, out any) error {
+	requestBody, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal scan proxy inner body: %w", err)
+	}
+
+	targetURL := strings.TrimRight(c.scanAPIURL, "/") + path
+	envelope := scanProxyRequest{
+		Method: "POST",
+		URL:    targetURL,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
+		Body: json.RawMessage(requestBody),
+	}
+	payload, err := json.Marshal(envelope)
+	if err != nil {
+		return fmt.Errorf("marshal scan proxy request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.scanProxyURL,
+		bytes.NewReader(payload),
+	)
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("executing request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	if err := json.Unmarshal(respBody, out); err != nil {
+		return fmt.Errorf("unmarshal response: %w", err)
+	}
 	return nil
 }
 
@@ -400,44 +479,10 @@ func (a AmuletRules) GetSpliceId() string {
 
 // Make sure to auth with canton-ui token
 func (c *GrpcLedgerClient) GetAmuletRules(ctx context.Context, token string) (*AmuletRules, error) {
-	// We access the configured scan API through the configured HTTP proxy because direct
-	// access to the scan node is not always available.
-	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/amulet-rules","headers":{"Content-Type":"application/json"},"body":"{}"}`, c.scanAPIURL)
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		c.scanProxyURL,
-		strings.NewReader(body),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := http.DefaultClient
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fetching amulet rules: status %d: %s", resp.StatusCode, string(respBody))
-	}
-
 	var result AmuletRules
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("unmarshaling amulet rules: %w", err)
+	if err := c.doScanProxyRequest(ctx, token, "/api/scan/v0/amulet-rules", map[string]any{}, &result); err != nil {
+		return nil, fmt.Errorf("fetching amulet rules: %w", err)
 	}
-
 	return &result, nil
 }
 
@@ -531,40 +576,13 @@ func (r *OpenAndIssuingMiningRounds) GetLatestIssuingMiningRound() (*RoundEntry,
 }
 
 func (c *GrpcLedgerClient) GetOpenAndIssuingMiningRound(ctx context.Context, token string) (*RoundEntry, *RoundEntry, error) {
-	body := fmt.Sprintf(`{"method":"POST","url":"%s/api/scan/v0/open-and-issuing-mining-rounds","headers":{"Content-Type":"application/json"},"body":"{\"cached_open_mining_round_contract_ids\":[],\"cached_issuing_round_contract_ids\":[]}"}`, c.scanAPIURL)
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		c.scanProxyURL,
-		strings.NewReader(body),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("creating request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, nil, fmt.Errorf("executing request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading response body: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("fetching mining rounds: status %d: %s", resp.StatusCode, string(respBody))
-	}
-
 	var result OpenAndIssuingMiningRounds
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return nil, nil, fmt.Errorf("unmarshaling mining rounds: %w", err)
+	body := map[string]any{
+		"cached_open_mining_round_contract_ids":    []string{},
+		"cached_issuing_round_contract_ids": []string{},
+	}
+	if err := c.doScanProxyRequest(ctx, token, "/api/scan/v0/open-and-issuing-mining-rounds", body, &result); err != nil {
+		return nil, nil, fmt.Errorf("fetching mining rounds: %w", err)
 	}
 
 	latestOpenRound, err := result.GetLatestOpenMiningRound()
@@ -604,10 +622,7 @@ func newRegisterCommandId() string {
 
 func (c *GrpcLedgerClient) PrepareSubmissionRequest(ctx context.Context, command *v2.Command, commandID string, partyID string, synchronizerID string) (*interactive.PrepareSubmissionResponse, error) {
 	prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{command}, nil)
-
-	authCtx := c.authCtx(ctx)
-	prepareResp, err := c.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
-	return prepareResp, err
+	return c.PrepareSubmission(ctx, prepareReq)
 }
 
 func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context, partyId string, privateKey ed25519.PrivateKey) error {
@@ -653,13 +668,12 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 		},
 	}
 
-	authCtx := c.authCtx(ctx)
 	commandID := newRegisterCommandId()
 	synchronizerID, err := c.ResolveSynchronizerID(ctx, partyId, "")
 	if err != nil {
 		return fmt.Errorf("failed to resolve synchronizer: %w", err)
 	}
-	prepareResp, err := c.PrepareSubmissionRequest(authCtx, cmd, commandID, partyId, synchronizerID)
+	prepareResp, err := c.PrepareSubmissionRequest(ctx, cmd, commandID, partyId, synchronizerID)
 	if err != nil {
 		return fmt.Errorf("failed to prepare submission for party setup proposal accept: %w", err)
 	}
@@ -692,7 +706,7 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 	}
 
 	logrus.WithField("rpc", "ExecuteSubmissionAndWait").Trace("ExternalPartySetupProposal_Accept")
-	_, err = c.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
+	_, err = c.ExecuteSubmissionAndWait(ctx, executeReq)
 	if err != nil {
 		if isAlreadyExists(err) {
 			logrus.WithField("party_id", partyId).Debug("canton: setup proposal already accepted")
@@ -995,8 +1009,7 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 		VerboseHashing:     false,
 	}
 
-	authCtx := c.authCtx(ctx)
-	prepareResp, err := c.interactiveSubmissionClient.PrepareSubmission(authCtx, prepareReq)
+	prepareResp, err := c.PrepareSubmission(ctx, prepareReq)
 	if err != nil {
 		return fmt.Errorf("preparing AcceptedTransferOffer_Complete: %w", err)
 	}
@@ -1031,7 +1044,7 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 		HashingSchemeVersion: prepareResp.GetHashingSchemeVersion(),
 	}
 
-	_, err = c.interactiveSubmissionClient.ExecuteSubmissionAndWait(authCtx, executeReq)
+	_, err = c.ExecuteSubmissionAndWait(ctx, executeReq)
 	if err != nil {
 		return fmt.Errorf("executing AcceptedTransferOffer_Complete: %w", err)
 	}
@@ -1174,7 +1187,7 @@ func (c *GrpcLedgerClient) ExecuteTransferInstructionSend(
 		DisclosedContracts: []*v2.DisclosedContract{},
 	}
 
-	prepareResp, err := c.interactiveSubmissionClient.PrepareSubmission(ctx, prepareReq)
+	prepareResp, err := c.PrepareSubmission(ctx, prepareReq)
 	if err != nil {
 		return fmt.Errorf("prepare failed: %w", err)
 	}
@@ -1208,7 +1221,7 @@ func (c *GrpcLedgerClient) ExecuteTransferInstructionSend(
 		},
 	}
 
-	_, err = c.interactiveSubmissionClient.ExecuteSubmissionAndWait(ctx, submitReq)
+	_, err = c.ExecuteSubmissionAndWait(ctx, submitReq)
 	if err != nil {
 		return fmt.Errorf("submit failed: %w", err)
 	}

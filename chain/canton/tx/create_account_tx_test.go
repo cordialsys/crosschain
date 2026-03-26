@@ -9,7 +9,9 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
+	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestCreateAccountTxRoundTrip(t *testing.T) {
@@ -53,7 +55,12 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, expectedHash, sighashes[0].Payload)
 			} else {
-				require.Equal(t, tt.input.SetupProposalHash, sighashes[0].Payload)
+				var preparedTx interactive.PreparedTransaction
+				err := proto.Unmarshal(tt.input.SetupProposalPreparedTransaction, &preparedTx)
+				require.NoError(t, err)
+				expectedHash, err := tx_input.ComputePreparedTransactionHash(&preparedTx)
+				require.NoError(t, err)
+				require.Equal(t, expectedHash, sighashes[0].Payload)
 			}
 
 			unsigned, err := tx.Serialize()
