@@ -12,9 +12,9 @@ import (
 // interactive-submission (external-party signing) flow.
 type TxInput struct {
 	xc.TxInputEnvelope
-	IsExternalTransfer   bool `json:"is_external_transfer"`
+	IsExternalTransfer   bool  `json:"is_external_transfer"`
 	LedgerEnd            int64 `json:"ledger_end"`
-	PreparedTransaction  interactive.PreparedTransaction
+	PreparedTransaction  *interactive.PreparedTransaction
 	HashingSchemeVersion interactive.HashingSchemeVersion
 	// SubmissionId for deduplication (UUID)
 	SubmissionId string `json:"submission_id"`

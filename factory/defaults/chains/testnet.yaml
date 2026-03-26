@@ -216,6 +216,9 @@ chains:
     decimals: 18
   CANTON:
     chain: CANTON
+    support:
+      fee:
+        accurate: true
     driver: canton
     chain_name: Canton (Testnet)
     decimals: 18

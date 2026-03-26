@@ -445,11 +445,28 @@ chains:
         chain_id: celo
   CANTON:
     chain: CANTON
+    support:
+      fee:
+        accurate: true
     driver: canton
     chain_name: Canton
     decimals: 18
     fee_limit: "100.0"
     confirmations_final: 1
+    external:
+      coin_market_cap:
+        asset_id: "37263"
+      coin_gecko:
+        asset_id: "canton-network"
+    custom_config:
+      keycloak_url: "env:CANTON_KEYCLOAK_URL"
+      keycloak_realm: "env:CANTON_KEYCLOAK_REALM"
+      validator_auth: "env:CANTON_VALIDATOR_BASIC_AUTH"
+      validator_party_id: "env:CANTON_VALIDATOR_PARTY_ID"
+      rest_api_url: "env:CANTON_REST_API_URL"
+      scan_proxy_url: "env:CANTON_SCAN_API_URL"
+      scan_api_url: "env:CANTON_SCAN_NODE_URL"
+      canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
   CHZ:
     chain: CHZ
     driver: evm-legacy

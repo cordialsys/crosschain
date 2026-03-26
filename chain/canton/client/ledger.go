@@ -578,8 +578,8 @@ func (r *OpenAndIssuingMiningRounds) GetLatestIssuingMiningRound() (*RoundEntry,
 func (c *GrpcLedgerClient) GetOpenAndIssuingMiningRound(ctx context.Context, token string) (*RoundEntry, *RoundEntry, error) {
 	var result OpenAndIssuingMiningRounds
 	body := map[string]any{
-		"cached_open_mining_round_contract_ids":    []string{},
-		"cached_issuing_round_contract_ids": []string{},
+		"cached_open_mining_round_contract_ids": []string{},
+		"cached_issuing_round_contract_ids":     []string{},
 	}
 	if err := c.doScanProxyRequest(ctx, token, "/api/scan/v0/open-and-issuing-mining-rounds", body, &result); err != nil {
 		return nil, nil, fmt.Errorf("fetching mining rounds: %w", err)
@@ -681,6 +681,9 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 	// Sign the prepared transaction hash with the external party's private key.
 	txSig := ed25519.Sign(privateKey, prepareResp.GetPreparedTransactionHash())
 	_, keyFingerprint, err := cantonaddress.ParsePartyID(xc.Address(partyId))
+	if err != nil {
+		return fmt.Errorf("failed to parse PartyID: %w", err)
+	}
 	executeReq := &interactive.ExecuteSubmissionAndWaitRequest{
 		PreparedTransaction: prepareResp.GetPreparedTransaction(),
 		PartySignatures: &interactive.PartySignatures{

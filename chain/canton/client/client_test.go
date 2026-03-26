@@ -477,14 +477,18 @@ func TestBuildTransferOfferCreateCommandUsesArgsAmount(t *testing.T) {
 			Contract AmuletRulesContract `json:"contract"`
 			DomainID string              `json:"domain_id"`
 		}{
-			Contract: AmuletRulesContract{Payload: struct {
-				DSO string `json:"dso"`
-			}{DSO: "validator-party"}},
+			Contract: AmuletRulesContract{
+				TemplateID: "pkg-from-amulet-rules:Splice.AmuletRules:AmuletRules",
+				Payload: struct {
+					DSO string `json:"dso"`
+				}{DSO: "validator-party"},
+			},
 		},
 	}, "command-id", 1)
 
 	create := cmd.GetCreate()
 	require.NotNil(t, create)
+	require.Equal(t, "pkg-from-amulet-rules", create.GetTemplateId().GetPackageId())
 	require.Equal(t, "12.3", extractCommandAmountNumeric(t, create.GetCreateArguments()))
 }
 

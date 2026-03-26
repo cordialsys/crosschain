@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	cantonclient "github.com/cordialsys/crosschain/chain/canton/client"
+	"github.com/stretchr/testify/require"
 )
 
 // ValidateAddress validates a Canton party ID address format.
@@ -49,6 +51,11 @@ func ValidateCustomConfig(chainCfg *xc.ChainConfig) error {
 		return err
 	}
 	return cfg.Validate()
+}
+
+func Validate(t *testing.T, chainCfg *xc.ChainConfig) {
+	require := require.New(t)
+	require.NoError(ValidateCustomConfig(chainCfg))
 }
 
 // validatePartyName validates the party name component

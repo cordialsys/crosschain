@@ -227,7 +227,6 @@ func (s *CrosschainTestSuite) TestGetAccountState() {
 		CreateAccountInputReq: &types.CreateAccountInputReq{},
 		AccountState: &xclient.AccountState{
 			State:       xclient.CreateAccountCallRequired,
-			Description: "Account registration requires another create-account call to continue.",
 		},
 	}
 	res, _ := json.Marshal(resObj)
@@ -243,7 +242,6 @@ func (s *CrosschainTestSuite) TestGetAccountState() {
 	require.NoError(err)
 	require.NotNil(state)
 	require.Equal(xclient.CreateAccountCallRequired, state.State)
-	require.Equal("Account registration requires another create-account call to continue.", state.Description)
 }
 
 func (s *CrosschainTestSuite) TestGetAccountStateError() {

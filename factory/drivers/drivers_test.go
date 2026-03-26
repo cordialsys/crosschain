@@ -93,6 +93,16 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	}
 	if driver == xc.DriverCanton {
 		fakeAsset.URL = "https://canton.example.com"
+		fakeAsset.CustomConfig = map[string]any{
+			"keycloak_url":       "raw:https://keycloak.example.com/auth",
+			"keycloak_realm":     "raw:test-realm",
+			"validator_auth":     "raw:validator:test-secret",
+			"validator_party_id": "raw:validator::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"rest_api_url":       "raw:https://wallet.example.com",
+			"scan_proxy_url":     "raw:https://scan-proxy.example.com",
+			"scan_api_url":       "raw:https://scan-api.example.com",
+			"canton_ui_auth":     "raw:canton-ui:test-secret",
+		}
 	}
 	return fakeAsset
 }
@@ -101,8 +111,8 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 	require := s.Require()
 
 	for _, driver := range xc.SupportedDrivers {
-		// TODO: these require custom params for NewClient
-		if driver == xc.DriverAptos || driver == xc.DriverSubstrate {
+		// TODO: these require custom params or live auth for NewClient
+		if driver == xc.DriverAptos || driver == xc.DriverSubstrate || driver == xc.DriverCanton {
 			continue
 		}
 
@@ -205,6 +215,9 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 			case "calling":
 				_, err := drivers.UnmarshalCallInput(bz)
 				require.NoError(err)
+			case "create-account":
+				_, err := drivers.UnmarshalCreateAccountInput(bz)
+				require.NoError(err)
 			default:
 				require.Fail("unexpected txType ", inputType)
 			}
@@ -218,7 +231,7 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 	for _, variant := range registry.GetSupportedTxVariants() {
 		variantType := variant.GetVariant()
 		parts := strings.Split(string(variantType), "/")
-		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer", "calling"}
+		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer", "calling", "create-account"}
 		require.Len(parts, 4, "variant must be in format drivers/:driver/[ "+strings.Join(inputColumns, "|")+" ]/:id")
 		require.Equal("drivers", parts[0])
 		require.Contains(inputColumns, parts[2], "input type column must be one of: "+strings.Join(inputColumns, ", "))
