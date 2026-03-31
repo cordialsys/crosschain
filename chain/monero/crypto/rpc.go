@@ -76,6 +76,11 @@ func CheckTxOutputOwnership(
 	return expectedP.Equal(P) == 1, nil
 }
 
+// VarIntEncode encodes a uint64 as a Monero-style varint (exported)
+func VarIntEncode(val uint64) []byte {
+	return varintEncode(val)
+}
+
 // varintEncode encodes a uint64 as a Monero-style varint
 func varintEncode(val uint64) []byte {
 	var result []byte
