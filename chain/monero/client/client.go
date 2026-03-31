@@ -316,6 +316,12 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		}
 	}
 
+	// Scan for spendable outputs
+	from := args.GetFrom()
+	if err := c.PopulateTransferInput(ctx, input, from); err != nil {
+		return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
+	}
+
 	return input, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"io"
 
 	"filippo.io/edwards25519"
 )
@@ -28,7 +29,12 @@ type BulletproofPlus struct {
 // masks: the blinding factors used in the Pedersen commitments
 //
 // Returns the proof and the Pedersen commitments V[i] = amounts[i]*H + masks[i]*G
-func BulletproofPlusProve(amounts []uint64, masks [][]byte) (*BulletproofPlus, []*edwards25519.Point, error) {
+func BulletproofPlusProve(amounts []uint64, masks [][]byte, randReader ...io.Reader) (*BulletproofPlus, []*edwards25519.Point, error) {
+	// Use provided reader or default
+	var rng io.Reader
+	if len(randReader) > 0 && randReader[0] != nil {
+		rng = randReader[0]
+	}
 	m := len(amounts)
 	if m == 0 || m > maxM {
 		return nil, nil, fmt.Errorf("number of outputs must be 1..%d, got %d", maxM, m)
@@ -94,7 +100,7 @@ func BulletproofPlusProve(amounts []uint64, masks [][]byte) (*BulletproofPlus, [
 	}
 
 	// 3. Generate random blinding scalar alpha
-	alpha := randomScalar()
+	alpha := randomScalarFrom(rng)
 
 	// 4. Compute A = alpha*G + sum(aL[i]*Gi[i] + aR[i]*Hi[i])
 	A := edwards25519.NewGeneratorPoint().ScalarBaseMult(alpha)
@@ -181,8 +187,8 @@ func BulletproofPlusProve(amounts []uint64, masks [][]byte) (*BulletproofPlus, [
 		cR := innerProduct(aVec[n2:n], bVec[:n2])
 
 		// Random blinding for L, R
-		dL := randomScalar()
-		dR := randomScalar()
+		dL := randomScalarFrom(rng)
+		dR := randomScalarFrom(rng)
 
 		// L = cL*H + dL*G + sum(aVec[i]*gVec[n2+i] + bVec[n2+i]*hVec[i])
 		Lj := edwards25519.NewIdentityPoint().ScalarMult(cL, H)
@@ -269,9 +275,9 @@ func BulletproofPlusProve(amounts []uint64, masks [][]byte) (*BulletproofPlus, [
 	Bpoint := edwards25519.NewGeneratorPoint().ScalarBaseMult(d1)
 
 	// Final response scalars incorporating the challenge e
-	r1Final := scalarAdd(r1, scalarMul(e, randomScalar()))
-	s1Final := scalarAdd(s1, scalarMul(e, randomScalar()))
-	d1Final := scalarAdd(d1, scalarMul(e, randomScalar()))
+	r1Final := scalarAdd(r1, scalarMul(e, randomScalarFrom(rng)))
+	s1Final := scalarAdd(s1, scalarMul(e, randomScalarFrom(rng)))
+	d1Final := scalarAdd(d1, scalarMul(e, randomScalarFrom(rng)))
 
 	proof := &BulletproofPlus{
 		A:  A,
@@ -380,13 +386,23 @@ func pointCopy(p *edwards25519.Point) *edwards25519.Point {
 }
 
 func randomScalar() *edwards25519.Scalar {
+	return randomScalarFrom(nil)
+}
+
+func randomScalarFrom(rng io.Reader) *edwards25519.Scalar {
 	entropy := make([]byte, 64)
-	rand.Read(entropy)
+	if rng != nil {
+		rng.Read(entropy)
+	} else {
+		rand.Read(entropy)
+	}
 	wide := make([]byte, 64)
 	copy(wide, Keccak256(entropy))
 	s, _ := edwards25519.NewScalar().SetUniformBytes(wide)
 	return s
 }
+
+var _ = binary.LittleEndian // keep import
 
 func nextPow2(n int) int {
 	v := 1
