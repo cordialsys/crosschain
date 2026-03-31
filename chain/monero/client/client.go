@@ -383,44 +383,57 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 			continue
 		}
 
-		// Fetch transactions in this block
-		txParams := map[string]interface{}{
-			"txs_hashes":     block.TxHashes,
-			"decode_as_json": true,
-		}
-		txResult, err := c.httpRequest(ctx, "/get_transactions", txParams)
-		if err != nil {
-			logrus.WithError(err).WithField("height", height).Debug("failed to get transactions")
-			continue
-		}
-
-		var txResp struct {
-			Txs []struct {
-				AsJson string `json:"as_json"`
-				TxHash string `json:"tx_hash"`
-			} `json:"txs"`
-			Status string `json:"status"`
-		}
-		if err := json.Unmarshal(txResult, &txResp); err != nil {
-			continue
-		}
-
-		for _, tx := range txResp.Txs {
-			if tx.AsJson == "" {
-				continue
+		// Fetch transactions in batches (public nodes limit requests in restricted mode)
+		const batchSize = 25
+		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += batchSize {
+			batchEnd := batchStart + batchSize
+			if batchEnd > len(block.TxHashes) {
+				batchEnd = len(block.TxHashes)
 			}
-			amount, err := scanTransaction(tx.AsJson, privView, pubSpend, subKeys)
+			batch := block.TxHashes[batchStart:batchEnd]
+
+			txParams := map[string]interface{}{
+				"txs_hashes":     batch,
+				"decode_as_json": true,
+			}
+			txResult, err := c.httpRequest(ctx, "/get_transactions", txParams)
 			if err != nil {
-				logrus.WithError(err).WithField("tx_hash", tx.TxHash).Debug("error scanning transaction")
+				logrus.WithError(err).WithField("height", height).Debug("failed to get transactions")
 				continue
 			}
-			if amount > 0 {
-				logrus.WithFields(logrus.Fields{
-					"tx_hash": tx.TxHash,
-					"amount":  amount,
-					"height":  height,
-				}).Info("found incoming transfer")
-				totalBalance += amount
+
+			var txResp struct {
+				Txs []struct {
+					AsJson string `json:"as_json"`
+					TxHash string `json:"tx_hash"`
+				} `json:"txs"`
+				Status string `json:"status"`
+			}
+			if err := json.Unmarshal(txResult, &txResp); err != nil {
+				continue
+			}
+			if txResp.Status != "OK" {
+				logrus.WithField("status", txResp.Status).WithField("height", height).Debug("get_transactions returned non-OK status")
+				continue
+			}
+
+			for _, tx := range txResp.Txs {
+				if tx.AsJson == "" {
+					continue
+				}
+				amount, err := scanTransaction(tx.AsJson, privView, pubSpend, subKeys)
+				if err != nil {
+					logrus.WithError(err).WithField("tx_hash", tx.TxHash).Debug("error scanning transaction")
+					continue
+				}
+				if amount > 0 {
+					logrus.WithFields(logrus.Fields{
+						"tx_hash": tx.TxHash,
+						"amount":  amount,
+						"height":  height,
+					}).Info("found incoming transfer")
+					totalBalance += amount
+				}
 			}
 		}
 	}
