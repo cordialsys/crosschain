@@ -97,7 +97,6 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 			"keycloak_url":       "raw:https://keycloak.example.com/auth",
 			"keycloak_realm":     "raw:test-realm",
 			"validator_auth":     "raw:validator:test-secret",
-			"validator_party_id": "raw:validator::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			"rest_api_url":       "raw:https://wallet.example.com",
 			"scan_proxy_url":     "raw:https://scan-proxy.example.com",
 			"scan_api_url":       "raw:https://scan-api.example.com",

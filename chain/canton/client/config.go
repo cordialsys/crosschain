@@ -12,7 +12,6 @@ type CantonConfig struct {
 	KeycloakURL      config.Secret `yaml:"keycloak_url,omitempty"`
 	KeycloakRealm    config.Secret `yaml:"keycloak_realm,omitempty"`
 	ValidatorAuth    config.Secret `yaml:"validator_auth,omitempty"`
-	ValidatorPartyID config.Secret `yaml:"validator_party_id,omitempty"`
 	RestAPIURL       config.Secret `yaml:"rest_api_url,omitempty"`
 	ScanProxyURL     config.Secret `yaml:"scan_proxy_url,omitempty"`
 	ScanAPIURL       config.Secret `yaml:"scan_api_url,omitempty"`
@@ -43,9 +42,6 @@ func (cfg *CantonConfig) Validate() error {
 	}
 	if cfg.ValidatorAuth == "" {
 		return fmt.Errorf("missing canton custom config field validator_auth")
-	}
-	if cfg.ValidatorPartyID == "" {
-		return fmt.Errorf("missing canton custom config field validator_party_id")
 	}
 	if cfg.RestAPIURL == "" {
 		return fmt.Errorf("missing canton custom config field rest_api_url")

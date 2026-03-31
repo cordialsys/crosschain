@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -80,6 +82,37 @@ func validatorServiceUserIDFromToken(token string) (string, error) {
 	return claims.PreferredUsername, nil
 }
 
+func fetchValidatorPartyID(ctx context.Context, restAPIURL string) (string, error) {
+	endpoint := strings.TrimRight(restAPIURL, "/") + "/api/validator/v0/validator-user"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return "", fmt.Errorf("create validator user request: %w", err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch validator user: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("fetch validator user returned %d: %s", resp.StatusCode, body)
+	}
+
+	var payload struct {
+		PartyID string `json:"party_id"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return "", fmt.Errorf("decode validator user response: %w", err)
+	}
+	if payload.PartyID == "" {
+		return "", errors.New("validator user response missing party_id")
+	}
+
+	return payload.PartyID, nil
+}
+
 // NewClient returns a new Canton gRPC Client
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -111,13 +144,13 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	validatorPartyID, err := cantonCfg.ValidatorPartyID.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton validator party id: %w", err)
-	}
 	restAPIURL, err := cantonCfg.RestAPIURL.LoadNonEmpty()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load canton rest api url: %w", err)
+	}
+	validatorPartyID, err := fetchValidatorPartyID(context.Background(), restAPIURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch canton validator party id: %w", err)
 	}
 	scanProxyURL, err := cantonCfg.ScanProxyURL.LoadNonEmpty()
 	if err != nil {
