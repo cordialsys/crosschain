@@ -296,23 +296,26 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	}
 	input.BlockHeight = blockCount
 
-	// Get fee estimation
-	feeResult, err := c.httpRequest(ctx, "/get_fee_estimate", nil)
+	// Get fee estimation via JSON-RPC
+	feeResult, err := c.jsonRPCRequest(ctx, "get_fee_estimate", nil)
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get fee estimate, using default")
-		input.PerByteFee = 1000
+		input.PerByteFee = 20000
 	} else {
 		var feeEstimate struct {
 			Fee              uint64 `json:"fee"`
 			QuantizationMask uint64 `json:"quantization_mask"`
-			Status           string `json:"status"`
 		}
 		if err := json.Unmarshal(feeResult, &feeEstimate); err != nil {
 			logrus.WithError(err).Warn("failed to parse fee estimate")
-			input.PerByteFee = 1000
+			input.PerByteFee = 20000
 		} else {
 			input.PerByteFee = feeEstimate.Fee
 			input.QuantizationMask = feeEstimate.QuantizationMask
+			logrus.WithFields(logrus.Fields{
+				"fee_per_byte":      feeEstimate.Fee,
+				"quantization_mask": feeEstimate.QuantizationMask,
+			}).Info("fee estimate")
 		}
 	}
 
@@ -469,14 +472,36 @@ func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) er
 	}
 
 	var submitResult struct {
-		Status string `json:"status"`
-		Reason string `json:"reason"`
+		Status           string `json:"status"`
+		Reason           string `json:"reason"`
+		DoubleSpend      bool   `json:"double_spend"`
+		FeeTooLow        bool   `json:"fee_too_low"`
+		InvalidInput     bool   `json:"invalid_input"`
+		InvalidOutput    bool   `json:"invalid_output"`
+		LowMixin         bool   `json:"low_mixin"`
+		NotRelayed       bool   `json:"not_relayed"`
+		Overspend        bool   `json:"overspend"`
+		TooBig           bool   `json:"too_big"`
+		TooFewOutputs    bool   `json:"too_few_outputs"`
+		SanityCheckFailed bool  `json:"sanity_check_failed"`
 	}
 	if err := json.Unmarshal(result, &submitResult); err != nil {
-		return fmt.Errorf("failed to parse submit result: %w", err)
+		return fmt.Errorf("failed to parse submit result: %w (raw: %s)", err, string(result))
 	}
 	if submitResult.Status != "OK" {
-		return fmt.Errorf("transaction rejected: %s", submitResult.Reason)
+		logrus.WithFields(logrus.Fields{
+			"status":        submitResult.Status,
+			"reason":        submitResult.Reason,
+			"double_spend":  submitResult.DoubleSpend,
+			"fee_too_low":   submitResult.FeeTooLow,
+			"invalid_input": submitResult.InvalidInput,
+			"invalid_output":submitResult.InvalidOutput,
+			"low_mixin":     submitResult.LowMixin,
+			"overspend":     submitResult.Overspend,
+			"too_big":       submitResult.TooBig,
+			"sanity_failed": submitResult.SanityCheckFailed,
+		}).Error("transaction rejected by node")
+		return fmt.Errorf("transaction rejected: %s (status: %s)", submitResult.Reason, submitResult.Status)
 	}
 
 	return nil

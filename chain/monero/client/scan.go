@@ -22,6 +22,7 @@ type OwnedOutput struct {
 	GlobalIndex uint64 // populated later from get_outs
 	PublicKey   string // hex, the one-time output key
 	Commitment  string // hex, the Pedersen commitment
+	TxPubKey    string // hex, the transaction public key R (needed for spending)
 	// The derivation scalar needed to compute the one-time private key for spending
 	DerivationScalar []byte
 	// Which subaddress this output was sent to
@@ -175,6 +176,7 @@ func scanTransactionForOutputs(
 			OutputIndex:      uint64(outputIdx),
 			PublicKey:        outputKey,
 			Commitment:       commitment,
+			TxPubKey:         hex.EncodeToString(txPubKey),
 			DerivationScalar: scalar,
 			SubaddressIndex:  matchedIdx,
 		})
@@ -190,8 +192,8 @@ func scanTransactionForOutputs(
 	return owned, nil
 }
 
-// PopulateTransferInput scans for owned outputs and populates the TxInput
-// with spendable outputs and fetches decoys for ring construction.
+// PopulateTransferInput scans for owned outputs, fetches their global indices,
+// and populates decoy ring members for each output.
 func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
 	// Scan for our outputs
 	ownedOutputs, err := c.ScanBlocksForOwnedOutputs(ctx, 200)
@@ -211,16 +213,114 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 		input.ViewKeyHex = hex.EncodeToString(privView)
 	}
 
-	// Convert owned outputs to tx_input format
+	// For each owned output, we need to find its global index.
+	// We do this by fetching the transaction and looking up output indices.
+	for i, out := range ownedOutputs {
+		// Get global output indices for this transaction
+		globalIdx, commitment, err := c.getOutputGlobalIndex(ctx, out.TxHash, out.OutputIndex)
+		if err != nil {
+			logrus.WithError(err).WithField("tx_hash", out.TxHash).Warn("failed to get global index, skipping output")
+			continue
+		}
+		ownedOutputs[i].GlobalIndex = globalIdx
+		ownedOutputs[i].Commitment = commitment
+
+		logrus.WithFields(logrus.Fields{
+			"tx_hash":      out.TxHash,
+			"output_index": out.OutputIndex,
+			"global_index": globalIdx,
+		}).Debug("resolved global output index")
+	}
+
+	// Fetch decoys for each output
 	for _, out := range ownedOutputs {
+		if out.GlobalIndex == 0 {
+			continue
+		}
+
+		decoys, err := c.FetchDecoys(ctx, out.GlobalIndex, ringSize-1)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to fetch decoys")
+			continue
+		}
+
+		var ringMembers []tx_input.RingMember
+		for _, d := range decoys {
+			ringMembers = append(ringMembers, tx_input.RingMember{
+				GlobalIndex: d.GlobalIndex,
+				PublicKey:   d.PublicKey,
+				Commitment:  d.Commitment,
+			})
+		}
+
 		input.Outputs = append(input.Outputs, tx_input.Output{
 			Amount:      out.Amount,
 			Index:       out.OutputIndex,
 			TxHash:      out.TxHash,
 			GlobalIndex: out.GlobalIndex,
 			PublicKey:   out.PublicKey,
+			Commitment:  out.Commitment,
+			Mask:        out.TxPubKey, // Store tx pub key in Mask field for the builder
+			RingMembers: ringMembers,
 		})
 	}
 
+	if len(input.Outputs) == 0 {
+		return fmt.Errorf("no spendable outputs with decoys found")
+	}
+
 	return nil
+}
+
+// getOutputGlobalIndex fetches the global output index for a specific output in a transaction.
+func (c *Client) getOutputGlobalIndex(ctx context.Context, txHash string, outputIndex uint64) (uint64, string, error) {
+	result, err := c.httpRequest(ctx, "/get_transactions", map[string]interface{}{
+		"txs_hashes":     []string{txHash},
+		"decode_as_json": true,
+	})
+	if err != nil {
+		return 0, "", err
+	}
+
+	var txResp struct {
+		Txs []struct {
+			OutputIndices []uint64 `json:"output_indices"`
+			AsJson        string   `json:"as_json"`
+		} `json:"txs"`
+		Status string `json:"status"`
+	}
+	if err := json.Unmarshal(result, &txResp); err != nil {
+		return 0, "", err
+	}
+	if txResp.Status != "OK" || len(txResp.Txs) == 0 {
+		return 0, "", fmt.Errorf("failed to get tx %s", txHash)
+	}
+
+	tx := txResp.Txs[0]
+	if int(outputIndex) >= len(tx.OutputIndices) {
+		return 0, "", fmt.Errorf("output index %d out of range (tx has %d outputs)", outputIndex, len(tx.OutputIndices))
+	}
+
+	globalIdx := tx.OutputIndices[outputIndex]
+
+	// Also get the commitment from the rct outPk
+	commitment := ""
+	// Fetch commitment from get_outs
+	outsResult, err := c.httpRequest(ctx, "/get_outs", map[string]interface{}{
+		"outputs": []map[string]uint64{{"amount": 0, "index": globalIdx}},
+	})
+	if err == nil {
+		var outsResp struct {
+			Outs []struct {
+				Key  string `json:"key"`
+				Mask string `json:"mask"`
+			} `json:"outs"`
+			Status string `json:"status"`
+		}
+		if json.Unmarshal(outsResult, &outsResp) == nil && len(outsResp.Outs) > 0 {
+			commitment = outsResp.Outs[0].Mask
+		}
+	}
+
+	return globalIdx, commitment, nil
 }

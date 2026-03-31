@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"sort"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -158,43 +159,49 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	var clsags []*crypto.CLSAGSignature
 
 	for i, selOut := range selectedOutputs {
-		// Derive one-time private key for this output: x = H_s(viewKey_derivation || output_index) + spend_key
-		// First we need the tx public key from the original transaction that created this output
-		// For simplicity, we use the derivation scalar stored during scanning
+		// Derive one-time private key using the tx public key stored during scanning
 		oneTimePrivKey, err := deriveOneTimePrivKey(privSpend, privView, selOut, pubSpend)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive one-time private key for input %d: %w", i, err)
 		}
 
-		// Compute public key and key image
 		oneTimePubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(oneTimePrivKey)
 		keyImage := crypto.ComputeKeyImage(oneTimePrivKey, oneTimePubKey)
 
-		// For now, build a minimal ring with just the real output (no decoys).
-		// Full decoy selection requires the client, which isn't available in the builder.
-		// The ring will be populated with decoys when FetchTransferInput adds them.
-		ring := []*edwards25519.Point{oneTimePubKey}
+		// Build the ring: real output + decoys, sorted by global index
+		ring, ringCommitments, realPos, keyOffsets, err := buildRingFromMembers(
+			selOut.GlobalIndex, selOut.PublicKey, selOut.Commitment, selOut.RingMembers,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build ring for input %d: %w", i, err)
+		}
 
-		// Input commitment (the original output's commitment)
-		// For our owned outputs, C = amount*H + inputMask*G
-		// We need the input mask - it's derived from the view key
+		// Input commitment mask (derived from view key and tx pub key)
 		inputMask := deriveInputMask(privView, selOut)
+
+		// If we have a real commitment from the chain, use it.
+		// Otherwise compute: C = amount*H + inputMask*G
+		if realPos >= 0 && realPos < len(ringCommitments) {
+			// The commitment from the chain is the real one
+		}
 		inputCommitment, _ := crypto.PedersenCommit(selOut.Amount, inputMask.Bytes())
-		inputCommitments := []*edwards25519.Point{inputCommitment}
+		// Override the real position commitment with our computed one
+		if realPos >= 0 && realPos < len(ringCommitments) {
+			ringCommitments[realPos] = inputCommitment
+		}
 
 		// Commitment mask difference: z = input_mask - pseudo_mask
 		commitMaskDiff := edwards25519.NewScalar().Subtract(inputMask, pseudoMasks[i])
 
-		// Compute CLSAG signature
 		prefixHash := computeTempPrefixHash(outputs, extra, fee)
 
 		clsagCtx := &crypto.CLSAGContext{
 			Message:        prefixHash,
 			Ring:           ring,
-			Commitments:    inputCommitments,
+			Commitments:    ringCommitments,
 			PseudoOut:      pseudoOuts[i],
 			KeyImage:       keyImage,
-			SecretIndex:    0,
+			SecretIndex:    realPos,
 			SecretKey:      oneTimePrivKey,
 			CommitmentMask: commitMaskDiff,
 			Rand:           rng,
@@ -208,7 +215,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 		txInputs = append(txInputs, tx.TxInput{
 			Amount:     0,
-			KeyOffsets: []uint64{selOut.GlobalIndex},
+			KeyOffsets: keyOffsets,
 			KeyImage:   keyImage.Bytes(),
 		})
 	}
@@ -400,6 +407,76 @@ func generateMaskFrom(rng io.Reader) []byte {
 	entropy := make([]byte, 64)
 	rng.Read(entropy)
 	return crypto.RandomScalar(entropy)
+}
+
+// buildRingFromMembers constructs a sorted ring from the real output and its decoy members.
+// Returns (ring points, commitment points, real position, relative key offsets, error).
+func buildRingFromMembers(
+	realGlobalIndex uint64, realKey string, realCommitment string,
+	decoys []tx_input.RingMember,
+) ([]*edwards25519.Point, []*edwards25519.Point, int, []uint64, error) {
+	type ringEntry struct {
+		globalIndex uint64
+		key         string
+		commitment  string
+	}
+
+	entries := make([]ringEntry, 0, len(decoys)+1)
+	entries = append(entries, ringEntry{realGlobalIndex, realKey, realCommitment})
+	for _, d := range decoys {
+		entries = append(entries, ringEntry{d.GlobalIndex, d.PublicKey, d.Commitment})
+	}
+
+	// Sort by global index
+	sort.Slice(entries, func(i, j int) bool { return entries[i].globalIndex < entries[j].globalIndex })
+
+	// Find real position and compute relative offsets
+	realPos := -1
+	ring := make([]*edwards25519.Point, len(entries))
+	commitments := make([]*edwards25519.Point, len(entries))
+	keyOffsets := make([]uint64, len(entries))
+
+	var prevIdx uint64
+	for i, e := range entries {
+		if e.globalIndex == realGlobalIndex && e.key == realKey {
+			realPos = i
+		}
+
+		keyBytes, err := hex.DecodeString(e.key)
+		if err != nil || len(keyBytes) != 32 {
+			// Use identity as fallback
+			ring[i] = edwards25519.NewIdentityPoint()
+		} else {
+			p, err := edwards25519.NewIdentityPoint().SetBytes(keyBytes)
+			if err != nil {
+				ring[i] = edwards25519.NewIdentityPoint()
+			} else {
+				ring[i] = p
+			}
+		}
+
+		if e.commitment != "" {
+			cBytes, err := hex.DecodeString(e.commitment)
+			if err == nil && len(cBytes) == 32 {
+				p, err := edwards25519.NewIdentityPoint().SetBytes(cBytes)
+				if err == nil {
+					commitments[i] = p
+				}
+			}
+		}
+		if commitments[i] == nil {
+			commitments[i] = edwards25519.NewIdentityPoint()
+		}
+
+		keyOffsets[i] = e.globalIndex - prevIdx
+		prevIdx = e.globalIndex
+	}
+
+	if realPos < 0 {
+		return nil, nil, -1, nil, fmt.Errorf("real output not found in ring")
+	}
+
+	return ring, commitments, realPos, keyOffsets, nil
 }
 
 func computeTempPrefixHash(outputs []tx.TxOutput, extra []byte, fee uint64) []byte {
