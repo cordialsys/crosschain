@@ -41,8 +41,19 @@ type Output struct {
 	GlobalIndex uint64 `json:"global_index"`
 	// The one-time public key for this output
 	PublicKey string `json:"public_key"`
+	// RingCT commitment for this output
+	Commitment string `json:"commitment,omitempty"`
 	// RingCT mask (for RingCT outputs)
 	Mask string `json:"mask,omitempty"`
+	// Ring members (decoys) for this output, populated by FetchTransferInput
+	RingMembers []RingMember `json:"ring_members,omitempty"`
+}
+
+// RingMember represents a decoy output in the ring
+type RingMember struct {
+	GlobalIndex uint64 `json:"global_index"`
+	PublicKey   string `json:"public_key"`
+	Commitment  string `json:"commitment"`
 }
 
 func NewTxInput() *TxInput {
