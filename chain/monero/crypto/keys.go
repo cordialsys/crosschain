@@ -24,18 +24,9 @@ func Keccak256(data []byte) []byte {
 }
 
 // ScalarReduce reduces a 32-byte value modulo the ed25519 group order L.
-// This is used for Monero key derivation where the view key = H(spend_key) mod L.
+// Uses Monero's sc_reduce32 (32-byte input, not 64-byte).
 func ScalarReduce(input []byte) []byte {
-	// edwards25519 expects a 64-byte wide input for SetUniformBytes
-	// We pad our 32-byte hash to 64 bytes
-	wide := make([]byte, 64)
-	copy(wide, input)
-	sc, err := edwards25519.NewScalar().SetUniformBytes(wide)
-	if err != nil {
-		// This should never fail with valid 64-byte input
-		panic(fmt.Sprintf("ScalarReduce failed: %v", err))
-	}
-	return sc.Bytes()
+	return ScReduce32(input)
 }
 
 // DeriveViewKey derives the private view key from the private spend key.

@@ -6,44 +6,28 @@ import (
 	"fmt"
 
 	"filippo.io/edwards25519"
+	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 )
 
 // GenerateKeyDerivation computes D = 8 * viewKey * txPubKey
-// This is the ECDH shared secret with cofactor, used in Monero output scanning.
+// Uses Monero's exact C implementation for correctness.
 func GenerateKeyDerivation(txPubKey []byte, privateViewKey []byte) ([]byte, error) {
-	R, err := edwards25519.NewIdentityPoint().SetBytes(txPubKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid tx public key: %w", err)
+	if len(txPubKey) != 32 || len(privateViewKey) != 32 {
+		return nil, fmt.Errorf("invalid key lengths: pub=%d, sec=%d", len(txPubKey), len(privateViewKey))
 	}
-
-	a, err := edwards25519.NewScalar().SetCanonicalBytes(privateViewKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid view key: %w", err)
-	}
-
-	// D = a * R
-	D := edwards25519.NewIdentityPoint().ScalarMult(a, R)
-
-	// Multiply by cofactor 8: D = 8 * D
-	// Do 3 doublings: D -> 2D -> 4D -> 8D
-	// edwards25519 doesn't expose a direct double, so we use Add(D, D)
-	D2 := edwards25519.NewIdentityPoint().Add(D, D)
-	D4 := edwards25519.NewIdentityPoint().Add(D2, D2)
-	D8 := edwards25519.NewIdentityPoint().Add(D4, D4)
-
-	return D8.Bytes(), nil
+	result := cref.GenerateKeyDerivation(txPubKey, privateViewKey)
+	return result[:], nil
 }
 
 // DerivationToScalar computes s = H_s(derivation || varint(outputIndex))
-// where H_s is Keccak256 followed by scalar reduction mod L.
+// where H_s is Keccak256 followed by sc_reduce32.
 func DerivationToScalar(derivation []byte, outputIndex uint64) ([]byte, error) {
 	data := make([]byte, 0, 32+10)
 	data = append(data, derivation...)
 	data = append(data, varintEncode(outputIndex)...)
 
 	hash := Keccak256(data)
-	scalar := ScalarReduce(hash)
-	return scalar, nil
+	return ScReduce32(hash), nil
 }
 
 // DerivePublicKey computes P' = s*G + publicSpendKey

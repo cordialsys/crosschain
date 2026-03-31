@@ -43,9 +43,15 @@ type CLSAGContext struct {
 // ComputeKeyImage computes I = x * H_p(P) where:
 //   - x is the private spend key for this output
 //   - P is the one-time public key of the output
-//   - H_p is hash-to-point
+//   - H_p is hash_to_ec (Keccak -> Elligator map -> cofactor multiply)
 func ComputeKeyImage(privateKey *edwards25519.Scalar, publicKey *edwards25519.Point) *edwards25519.Point {
-	hp := hashToPoint(publicKey.Bytes())
+	// Use Monero's exact hash_to_ec via CGO
+	hpBytes := HashToEC(publicKey.Bytes())
+	hp, err := edwards25519.NewIdentityPoint().SetBytes(hpBytes)
+	if err != nil {
+		// Should not happen with valid hash_to_ec output
+		panic("ComputeKeyImage: invalid hash_to_ec output")
+	}
 	return edwards25519.NewIdentityPoint().ScalarMult(privateKey, hp)
 }
 
@@ -85,7 +91,8 @@ func CLSAGSign(ctx *CLSAGContext) (*CLSAGSignature, error) {
 	}
 
 	// Compute D = z * H_p(P[l])  (auxiliary key image for commitment)
-	hpPl := hashToPoint(P[l].Bytes())
+	hpPlBytes := HashToEC(P[l].Bytes())
+	hpPl, _ := edwards25519.NewIdentityPoint().SetBytes(hpPlBytes)
 	D := edwards25519.NewIdentityPoint().ScalarMult(z, hpPl)
 
 	// Compute aggregation coefficients mu_P and mu_C
@@ -141,7 +148,8 @@ func CLSAGSign(ctx *CLSAGContext) (*CLSAGSignature, error) {
 		W1 := edwards25519.NewIdentityPoint().Add(siG, ciCombined)
 
 		// W2 = s[i]*H_p(P[i]) + c[i] * (mu_P*I + mu_C*D)
-		hpPi := hashToPoint(P[i].Bytes())
+		hpPiBytes := HashToEC(P[i].Bytes())
+		hpPi, _ := edwards25519.NewIdentityPoint().SetBytes(hpPiBytes)
 		siHp := edwards25519.NewIdentityPoint().ScalarMult(s[i], hpPi)
 		muPI := edwards25519.NewIdentityPoint().ScalarMult(muP, I)
 		muCD := edwards25519.NewIdentityPoint().ScalarMult(muC, D)
