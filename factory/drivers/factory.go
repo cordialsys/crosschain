@@ -11,6 +11,10 @@ import (
 	kaspaaddress "github.com/cordialsys/crosschain/chain/kaspa/address"
 	kaspabuilder "github.com/cordialsys/crosschain/chain/kaspa/builder"
 	kaspaclient "github.com/cordialsys/crosschain/chain/kaspa/client"
+	monero "github.com/cordialsys/crosschain/chain/monero"
+	moneroaddress "github.com/cordialsys/crosschain/chain/monero/address"
+	monerobuilder "github.com/cordialsys/crosschain/chain/monero/builder"
+	moneroclient "github.com/cordialsys/crosschain/chain/monero/client"
 	"github.com/cordialsys/crosschain/chain/near"
 	"github.com/cordialsys/crosschain/chain/substrate"
 	xrpbuilder "github.com/cordialsys/crosschain/chain/xrp/builder"
@@ -146,6 +150,8 @@ func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 		return zcash.NewClient(cfg)
 	case xc.DriverHedera:
 		return hederaclient.NewClient(cfg)
+	case xc.DriverMonero:
+		return moneroclient.NewClient(cfg)
 	}
 	return nil, fmt.Errorf("no client defined for chain: %s", string(cfg.GetChain().Chain))
 }
@@ -246,6 +252,8 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return zcash.NewTxBuilder(cfg)
 	case xc.DriverHedera:
 		return hederabuilder.NewTxBuilder(cfg)
+	case xc.DriverMonero:
+		return monerobuilder.NewTxBuilder(cfg)
 	}
 	return nil, fmt.Errorf("no tx-builder defined for: %s", string(cfg.Chain))
 }
@@ -306,6 +314,8 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 		return zcashaddress.NewAddressBuilder(cfg)
 	case xc.DriverHedera:
 		return hederaaddress.NewAddressBuilder(cfg)
+	case xc.DriverMonero:
+		return moneroaddress.NewAddressBuilder(cfg, options...)
 	}
 	return nil, fmt.Errorf("no address builder defined for: %s", string(cfg.Chain))
 }
@@ -365,6 +375,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return nearerrors.CheckError(err)
 	case xc.DriverEGLD:
 		return egld.CheckError(err)
+	case xc.DriverMonero:
+		return monero.CheckError(err)
 	}
 	return errors.UnknownError
 }
@@ -428,6 +440,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return near.ValidateAddress(cfg, addr)
 	case xc.DriverEGLD:
 		return egld.ValidateAddress(cfg, addr)
+	case xc.DriverMonero:
+		return monero.ValidateAddress(cfg, addr)
 	}
 	return fmt.Errorf("%w: %s", ErrNoAddressValidation, string(cfg.Chain))
 }

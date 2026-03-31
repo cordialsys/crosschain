@@ -1638,6 +1638,25 @@ chains:
         asset_id: stellar
       indexing_co:
         chain_id: stellar
+  XMR:
+    chain: XMR
+    support:
+      fee:
+        accurate: false
+    driver: monero
+    chain_name: Monero
+    decimals: 12
+    fee_limit: "0.0001"
+    confirmations_final: 10
+    native_assets:
+      - asset_id: "XMR"
+        decimals: 12
+        fee_limit: "0.0001"
+    external:
+      coin_gecko:
+        asset_id: monero
+      coin_market_cap:
+        asset_id: "328"
   ZETA:
     chain: ZETA
     support:

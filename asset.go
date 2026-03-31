@@ -82,6 +82,7 @@ const (
 	MATIC    = NativeAsset("MATIC")    // Polygon
 	MON      = NativeAsset("MON")      // MONAD
 	NEAR     = NativeAsset("NEAR")     // Near
+	XMR      = NativeAsset("XMR")      // Monero
 	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
 	OAS      = NativeAsset("OAS")      // Oasys (not Oasis!)
 	OptETH   = NativeAsset("OptETH")   // Optimism
@@ -162,6 +163,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	MATIC,
 	MON,
 	NEAR,
+	XMR,
 	OAS,
 	OptETH,
 	EmROSE,
@@ -218,6 +220,7 @@ const (
 	DriverTon                      = Driver("ton")
 	DriverXrp                      = Driver("xrp")
 	DriverXlm                      = Driver("xlm")
+	DriverMonero                   = Driver("monero")
 	DriverZcash                    = Driver("zcash")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
@@ -247,6 +250,7 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 	DriverXrp,
 	DriverXlm,
+	DriverMonero,
 	DriverZcash,
 }
 
@@ -340,6 +344,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSubstrate
 	case NEAR:
 		return DriverNear
+	case XMR:
+		return DriverMonero
 	case TRX:
 		return DriverTron
 	case TON:
@@ -376,7 +382,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverMonero:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -401,7 +407,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
-		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD:
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverMonero:
 		return Raw
 	}
 	return ""
