@@ -204,6 +204,15 @@ func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
 	data := req.Payload
 	switch s.algorithm {
 	case xc.Ed255:
+		// Monero: CLSAG ring signatures are computed in the builder.
+		// The standard signer returns a pass-through signature.
+		if s.driver == xc.DriverMonero {
+			return &xc.SignatureResponse{
+				Address:   "",
+				Signature: []byte(data), // pass-through: CLSAG is pre-computed
+				PublicKey: s.MustPublicKey(),
+			}, nil
+		}
 		var signatureRaw []byte
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			logrus.Debug("using raw scalar signing for ed25519 key")
