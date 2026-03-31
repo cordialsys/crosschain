@@ -277,51 +277,81 @@ func loadKeys() (privSpend, privView, pubSpend, pubView *edwards25519.Scalar, er
 
 // deriveOneTimePrivKey derives the one-time private key for spending a specific output.
 // x = H_s(8 * viewKey * R || output_index) + spendKey
+// where R is the tx public key from the transaction that created this output.
+// The tx pub key R is stored in out.Mask during scanning.
 func deriveOneTimePrivKey(privSpend, privView *edwards25519.Scalar, out tx_input.Output, pubSpend *edwards25519.Scalar) (*edwards25519.Scalar, error) {
-	// We need the tx public key R from the transaction that created this output.
-	// This requires fetching the original transaction - for now, we derive from
-	// the output's public key and our keys.
-	// In a full implementation, the tx public key would be stored during scanning.
+	// Get the tx public key R (stored in the Mask field during scanning)
+	txPubKeyHex := out.Mask
+	if txPubKeyHex == "" {
+		return nil, fmt.Errorf("tx public key not available for output %s:%d", out.TxHash, out.Index)
+	}
+	txPubKeyBytes, err := hex.DecodeString(txPubKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("invalid tx pub key hex: %w", err)
+	}
 
-	// The one-time private key is: x = H_s(derivation || output_index) + a
-	// where a is the private spend key and derivation = 8 * b * R
+	// Compute derivation: D = 8 * viewKey * R (using Monero's exact C implementation)
+	derivation, err := crypto.GenerateKeyDerivation(txPubKeyBytes, privView.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("key derivation failed: %w", err)
+	}
 
-	// Since we don't have R stored, we need a different approach.
-	// For outputs we received, we stored the derivation scalar during scanning.
-	// Let's compute it from the output public key directly.
+	// Compute scalar: s = H_s(D || varint(output_index))
+	scalar, err := crypto.DerivationToScalar(derivation, out.Index)
+	if err != nil {
+		return nil, fmt.Errorf("derivation to scalar failed: %w", err)
+	}
+	hsScalar, err := edwards25519.NewScalar().SetCanonicalBytes(scalar)
+	if err != nil {
+		return nil, fmt.Errorf("invalid scalar: %w", err)
+	}
 
-	// Simplified: for the local signer, compute x = H_s(b * P || index) + a
-	// where P is the output's one-time public key (this isn't exactly right but
-	// demonstrates the flow; the real implementation needs the tx pub key R)
+	// x = s + a (one-time private key = derivation scalar + private spend key)
+	x := edwards25519.NewScalar().Add(hsScalar, privSpend)
+
+	// Verify: x*G should equal the output's public key
+	xG := edwards25519.NewGeneratorPoint().ScalarBaseMult(x)
 	outKeyBytes, err := hex.DecodeString(out.PublicKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid output public key: %w", err)
 	}
 	outPoint, err := edwards25519.NewIdentityPoint().SetBytes(outKeyBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid output point: %w", err)
+	}
+	if xG.Equal(outPoint) != 1 {
+		return nil, fmt.Errorf("derived one-time key does not match output public key (key derivation mismatch)")
 	}
 
-	// D = b * P (simplified derivation)
-	D := edwards25519.NewIdentityPoint().ScalarMult(privView, outPoint)
-
-	scalarData := append(D.Bytes(), crypto.VarIntEncode(out.Index)...)
-	scalarHash := crypto.Keccak256(scalarData)
-	hs := crypto.ScalarReduce(scalarHash)
-	hsScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(hs)
-
-	// x = hs + a
-	x := edwards25519.NewScalar().Add(hsScalar, privSpend)
 	return x, nil
 }
 
 // deriveInputMask derives the commitment mask for an input we own.
-// mask = H_s("commitment_mask" || derivation || output_index)
+// In Monero v2: mask = H_s("commitment_mask" || shared_scalar)
+// where shared_scalar = H_s(8 * viewKey * R || varint(output_index))
 func deriveInputMask(privView *edwards25519.Scalar, out tx_input.Output) *edwards25519.Scalar {
-	data := append([]byte("commitment_mask"), privView.Bytes()...)
-	data = append(data, crypto.VarIntEncode(out.Index)...)
+	// Get tx public key R (stored in Mask field during scanning)
+	txPubKeyHex := out.Mask
+	if txPubKeyHex == "" {
+		// Fallback - shouldn't happen
+		s, _ := edwards25519.NewScalar().SetCanonicalBytes(make([]byte, 32))
+		return s
+	}
+	txPubKeyBytes, _ := hex.DecodeString(txPubKeyHex)
+
+	// Compute derivation: D = 8 * viewKey * R
+	derivation, _ := crypto.GenerateKeyDerivation(txPubKeyBytes, privView.Bytes())
+
+	// Compute shared scalar: s = H_s(D || varint(output_index))
+	sharedScalar, _ := crypto.DerivationToScalar(derivation, out.Index)
+
+	// Compute commitment mask: mask = H_s("commitment_mask" || sharedScalar)
+	// "commitment_mask" is 15 bytes (no null terminator)
+	data := make([]byte, 0, 15+32)
+	data = append(data, []byte("commitment_mask")...)
+	data = append(data, sharedScalar...)
 	hash := crypto.Keccak256(data)
-	reduced := crypto.ScalarReduce(hash)
+	reduced := crypto.ScReduce32(hash)
 	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
 	return s
 }
