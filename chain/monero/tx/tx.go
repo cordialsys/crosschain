@@ -45,11 +45,17 @@ type Tx struct {
 }
 
 func (tx *Tx) Hash() xc.TxHash {
-	data, err := tx.Serialize()
-	if err != nil {
-		return ""
-	}
-	hash := crypto.Keccak256(data)
+	// Monero v2 tx hash = Keccak256(prefix_hash || rct_base_hash || rct_prunable_hash)
+	prefixHash := tx.PrefixHash()
+	rctBaseHash := crypto.Keccak256(tx.serializeRctBase())
+	rctPrunableHash := crypto.Keccak256(tx.serializeRctPrunable())
+
+	combined := make([]byte, 0, 96)
+	combined = append(combined, prefixHash...)
+	combined = append(combined, rctBaseHash...)
+	combined = append(combined, rctPrunableHash...)
+
+	hash := crypto.Keccak256(combined)
 	return xc.TxHash(hex.EncodeToString(hash))
 }
 
@@ -67,17 +73,24 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 }
 
 // CLSAGMessage computes the three-hash message that CLSAG signs:
-// H(prefix_hash || H(rct_sig_base) || H(bp_prunable))
+// H(prefix_hash || H(rct_sig_base) || H(bp_prunable_kv))
+//
+// The rct_base hash must match what would be parsed from the serialized blob.
+// The bp_prunable hash uses only the BP+ key fields (not CLSAG or pseudoOuts).
 func (tx *Tx) CLSAGMessage() []byte {
-	prefixHash := tx.PrefixHash()
-	rctBaseHash := crypto.Keccak256(tx.serializeRctBase())
-	bpPrunableHash := crypto.Keccak256(tx.serializeBpPrunable())
+	// Serialize the full tx to get exact byte boundaries
+	prefix := tx.serializePrefix()
+	rctBase := tx.serializeRctBase()
+	bpKv := tx.serializeBpPrunable() // BP+ key fields only
 
-	// Concatenate as 3 x 32-byte keys, then hash
+	prefixHash := crypto.Keccak256(prefix)
+	rctBaseHash := crypto.Keccak256(rctBase)
+	bpKvHash := crypto.Keccak256(bpKv)
+
 	combined := make([]byte, 0, 96)
 	combined = append(combined, prefixHash...)
 	combined = append(combined, rctBaseHash...)
-	combined = append(combined, bpPrunableHash...)
+	combined = append(combined, bpKvHash...)
 	return crypto.Keccak256(combined)
 }
 
