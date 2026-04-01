@@ -1,7 +1,9 @@
 package cref
 
 // #cgo CFLAGS: -DNDEBUG
+// #cgo LDFLAGS: -L${SRCDIR} -lbpplus -lstdc++ -lsodium
 // #include "crypto-ops.h"
+// #include "bp_plus_wrapper.h"
 // #include <string.h>
 //
 // // get_H: return the precomputed H generator point
@@ -123,7 +125,10 @@ package cref
 //   ge_tobytes(image, &result);
 // }
 import "C"
-import "unsafe"
+import (
+	"fmt"
+	"unsafe"
+)
 
 // GetH returns the precomputed H generator point used for Pedersen commitments.
 func GetH() [32]byte {
@@ -183,4 +188,115 @@ func GenerateKeyImage(keccakPub, sec []byte) [32]byte {
 		(*C.uchar)(unsafe.Pointer(&result[0])),
 	)
 	return result
+}
+
+// BPPlusProve generates a Bulletproofs+ range proof using Monero's exact C++ implementation.
+// amounts: slice of uint64 values to prove range for
+// masks: slice of 32-byte blinding factors (one per amount)
+// Returns the serialized proof bytes.
+func BPPlusProve(amounts []uint64, masks [][]byte) ([]byte, error) {
+	if len(amounts) == 0 || len(amounts) != len(masks) {
+		return nil, fmt.Errorf("invalid BP+ input: %d amounts, %d masks", len(amounts), len(masks))
+	}
+	count := len(amounts)
+
+	// Flatten masks into contiguous byte array
+	flatMasks := make([]byte, count*32)
+	for i, m := range masks {
+		if len(m) != 32 {
+			return nil, fmt.Errorf("mask %d is %d bytes, expected 32", i, len(m))
+		}
+		copy(flatMasks[i*32:], m)
+	}
+
+	// Output buffer
+	proofBuf := make([]byte, 8192)
+	proofLen := C.int(len(proofBuf))
+
+	ret := C.monero_bp_plus_prove(
+		(*C.uint64_t)(unsafe.Pointer(&amounts[0])),
+		(*C.uchar)(unsafe.Pointer(&flatMasks[0])),
+		C.int(count),
+		(*C.uchar)(unsafe.Pointer(&proofBuf[0])),
+		&proofLen,
+	)
+	if ret != 0 {
+		return nil, fmt.Errorf("BP+ prove failed with code %d", ret)
+	}
+
+	return proofBuf[:proofLen], nil
+}
+
+// BPPlusProveRaw is a lower-level version that returns the raw proof and the V commitments separately.
+// Returns (V commitments as [][]byte, proof fields as raw bytes, error)
+func BPPlusProveRaw(amounts []uint64, masks [][]byte) ([][]byte, BPPlusFields, error) {
+	raw, err := BPPlusProve(amounts, masks)
+	if err != nil {
+		return nil, BPPlusFields{}, err
+	}
+	return ParseBPPlusProof(raw)
+}
+
+// BPPlusFields contains the parsed fields of a BP+ proof.
+type BPPlusFields struct {
+	A, A1, B     [32]byte
+	R1, S1, D1   [32]byte
+	L            [][32]byte
+	R            [][32]byte
+}
+
+// ParseBPPlusProof parses the serialized proof from the C wrapper.
+// Returns (V commitments, proof fields, error).
+func ParseBPPlusProof(raw []byte) ([][]byte, BPPlusFields, error) {
+	var fields BPPlusFields
+	pos := 0
+
+	readU32 := func() uint32 {
+		v := uint32(raw[pos]) | uint32(raw[pos+1])<<8 | uint32(raw[pos+2])<<16 | uint32(raw[pos+3])<<24
+		pos += 4
+		return v
+	}
+	readKey := func() [32]byte {
+		var k [32]byte
+		copy(k[:], raw[pos:pos+32])
+		pos += 32
+		return k
+	}
+
+	nV := int(readU32())
+	V := make([][]byte, nV)
+	for i := 0; i < nV; i++ {
+		k := readKey()
+		V[i] = k[:]
+	}
+
+	fields.A = readKey()
+	fields.A1 = readKey()
+	fields.B = readKey()
+	fields.R1 = readKey()
+	fields.S1 = readKey()
+	fields.D1 = readKey()
+
+	nL := int(readU32())
+	fields.L = make([][32]byte, nL)
+	for i := 0; i < nL; i++ {
+		fields.L[i] = readKey()
+	}
+
+	nR := int(readU32())
+	fields.R = make([][32]byte, nR)
+	for i := 0; i < nR; i++ {
+		fields.R[i] = readKey()
+	}
+
+	return V, fields, nil
+}
+
+// BPPlusVerify verifies a Bulletproofs+ range proof using Monero's exact C++ implementation.
+func BPPlusVerify(proof []byte) bool {
+	ret := C.monero_bp_plus_verify(
+		(*C.uchar)(unsafe.Pointer(&proof[0])),
+		C.int(len(proof)),
+	)
+	return ret == 1
 }

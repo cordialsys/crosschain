@@ -27,6 +27,9 @@ type TxInput struct {
 
 	// The private view key (hex) needed for output scanning and tx construction
 	ViewKeyHex string `json:"view_key_hex"`
+
+	// Cached BP+ proof bytes (from first Transfer() call, reused for determinism)
+	CachedBpProof []byte `json:"cached_bp_proof,omitempty"`
 }
 
 // Output represents a spendable output in the Monero UTXO model
