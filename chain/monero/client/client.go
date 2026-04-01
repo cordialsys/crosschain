@@ -352,7 +352,7 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 	// Scan the last 200 blocks for outputs belonging to us.
 	// This is a practical limit for detecting recent deposits.
 	// A full wallet scan would require scanning from genesis.
-	scanDepth := uint64(200)
+	scanDepth := uint64(1000)
 	startHeight := blockCount - scanDepth
 	if startHeight > blockCount { // underflow check
 		startHeight = 0

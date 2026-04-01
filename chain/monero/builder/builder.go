@@ -179,32 +179,26 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		// Input commitment mask (derived from view key and tx pub key)
 		inputMask := deriveInputMask(privView, selOut)
 
-		// If we have a real commitment from the chain, use it.
-		// Otherwise compute: C = amount*H + inputMask*G
-		if realPos >= 0 && realPos < len(ringCommitments) {
-			// The commitment from the chain is the real one
-		}
+		// Set the real output's commitment to our computed value
 		inputCommitment, _ := crypto.PedersenCommit(selOut.Amount, inputMask.Bytes())
-		// Override the real position commitment with our computed one
 		if realPos >= 0 && realPos < len(ringCommitments) {
 			ringCommitments[realPos] = inputCommitment
 		}
 
-		// Commitment mask difference: z = input_mask - pseudo_mask
-		commitMaskDiff := edwards25519.NewScalar().Subtract(inputMask, pseudoMasks[i])
+		// z = input_mask - pseudo_out_mask (commitment offset secret)
+		zKey := edwards25519.NewScalar().Subtract(inputMask, pseudoMasks[i])
 
 		prefixHash := computeTempPrefixHash(outputs, extra, fee)
 
 		clsagCtx := &crypto.CLSAGContext{
-			Message:        prefixHash,
-			Ring:           ring,
-			Commitments:    ringCommitments,
-			PseudoOut:      pseudoOuts[i],
-			KeyImage:       keyImage,
-			SecretIndex:    realPos,
-			SecretKey:      oneTimePrivKey,
-			CommitmentMask: commitMaskDiff,
-			Rand:           rng,
+			Message:     prefixHash,
+			Ring:        ring,
+			CNonzero:    ringCommitments, // Original commitments (C_nonzero)
+			COffset:     pseudoOuts[i],   // Pseudo-output commitment (C_offset)
+			SecretIndex: realPos,
+			SecretKey:   oneTimePrivKey,
+			ZKey:        zKey,
+			Rand:        rng,
 		}
 
 		clsag, err := crypto.CLSAGSign(clsagCtx)
