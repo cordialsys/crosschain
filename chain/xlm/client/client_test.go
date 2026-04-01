@@ -13,6 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/xlm"
 	client "github.com/cordialsys/crosschain/chain/xlm/client"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
@@ -138,12 +139,14 @@ func TestFetchTxInput(t *testing.T) {
 			err: "",
 			expectedTxInput: txinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
-				Sequence:        1213,
+				SequenceOld:     1213,
+				Sequence:        integer.Int64(1213),
 				MaxFee:          100,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
 				Passphrase:            "Test SDF Network ; September 2015",
+				DestinationFunded:     true,
 			},
 		},
 		{
@@ -176,13 +179,15 @@ func TestFetchTxInput(t *testing.T) {
 			err: "",
 			expectedTxInput: txinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
-				Sequence:        1213,
+				SequenceOld:     1213,
+				Sequence:        integer.Int64(1213),
 				// Balance*10^7 - Amount
 				MaxFee: 20000000 - 100,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
 				Passphrase:            "Test SDF Network ; September 2015",
+				DestinationFunded:     true,
 			},
 		},
 		{
@@ -240,13 +245,16 @@ func TestFetchTxInput(t *testing.T) {
 			err: "",
 			expectedTxInput: txinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
-				Sequence:        1213,
+				SequenceOld:     1213,
+				Sequence:        integer.Int64(1213),
 				// Balance*10^7
 				MaxFee: 20000000,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
 				Passphrase:            "Test SDF Network ; September 2015",
+				DestinationFunded:     true,
+				NeedsCreateTrustline: true,
 			},
 		},
 	}

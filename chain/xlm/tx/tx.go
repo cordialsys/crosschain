@@ -20,6 +20,10 @@ type Tx struct {
 	// For more information, see the Stellar documentation:
 	// https://developers.stellar.org/docs/learn/encyclopedia/network-configuration/network-passphrases
 	NetworkPassphrase string
+	// FeePayer is set when a separate account pays the transaction fee.
+	// When set, the transaction source account is the fee payer, and the
+	// operation source account is the actual sender.
+	FeePayer xc.Address
 }
 
 var _ xc.Tx = &Tx{}
@@ -90,6 +94,14 @@ func (tx Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		return nil, fmt.Errorf("failed to hash envelope: %w", err)
 	}
 
+	if tx.FeePayer != "" {
+		// Both the sender and fee payer sign the same transaction hash.
+		return []*xc.SignatureRequest{
+			xc.NewSignatureRequest(hash),           // sender (main signer)
+			xc.NewSignatureRequest(hash, tx.FeePayer), // fee payer
+		}, nil
+	}
+
 	return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, err
 }
 
@@ -120,14 +132,19 @@ func (tx *Tx) SetSignatures(signatures ...*xc.SignatureResponse) error {
 		return fmt.Errorf("transaction already signed")
 	}
 
-	pubKey, ok := tx.TxEnvelope.SourceAccount().GetEd25519()
-	if !ok {
-		return errors.New("failed to retrieve public key from source account")
-	}
-
 	xlmSignatures := make([]xdr.DecoratedSignature, len(signatures))
 	for i, signature := range signatures {
-		decoratedSig, err := NewDecoratedSignature(signature.Signature, pubKey[:])
+		pubKeyBytes := signature.PublicKey
+		if len(pubKeyBytes) != 32 {
+			// Fallback to source account public key for backward compatibility
+			pubKey, ok := tx.TxEnvelope.SourceAccount().GetEd25519()
+			if !ok {
+				return errors.New("failed to retrieve public key from source account")
+			}
+			pubKeyBytes = pubKey[:]
+		}
+
+		decoratedSig, err := NewDecoratedSignature(signature.Signature, pubKeyBytes)
 		if err != nil {
 			return fmt.Errorf("failed to create decorated signature: %w", err)
 		}

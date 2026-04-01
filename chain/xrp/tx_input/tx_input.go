@@ -18,6 +18,9 @@ type TxInput struct {
 	XrpBalance           xc.AmountBlockchain `json:"xrp_balance,omitempty"`
 	// Indicate if account-delete is needed to send the full amount requested
 	AccountDelete bool `json:"account_delete,omitempty"`
+	// NeedsCreateTrustline indicates that the sender needs a trustline for the token asset.
+	// When true, a TrustSet transaction is built instead of Payment.
+	NeedsCreateTrustline bool `json:"should_create_trustline,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
