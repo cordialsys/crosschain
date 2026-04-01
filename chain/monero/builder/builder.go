@@ -154,12 +154,20 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		pseudoOuts[lastIdx], _ = crypto.PedersenCommit(selectedOutputs[lastIdx].Amount, lastMask.Bytes())
 	}
 
-	// Build inputs and compute CLSAG signatures
+	// Phase 1: Build inputs (key images, rings, key offsets) WITHOUT CLSAG sigs
+	type inputContext struct {
+		ring        []*edwards25519.Point
+		commitments []*edwards25519.Point
+		realPos     int
+		privKey     *edwards25519.Scalar
+		zKey        *edwards25519.Scalar
+	}
+
 	var txInputs []tx.TxInput
-	var clsags []*crypto.CLSAGSignature
+	var inputCtxs []inputContext
+	ringSize := 0
 
 	for i, selOut := range selectedOutputs {
-		// Derive one-time private key using the tx public key stored during scanning
 		oneTimePrivKey, err := deriveOneTimePrivKey(privSpend, privView, selOut, pubSpend)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive one-time private key for input %d: %w", i, err)
@@ -168,7 +176,6 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		oneTimePubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(oneTimePrivKey)
 		keyImage := crypto.ComputeKeyImage(oneTimePrivKey, oneTimePubKey)
 
-		// Build the ring: real output + decoys, sorted by global index
 		ring, ringCommitments, realPos, keyOffsets, err := buildRingFromMembers(
 			selOut.GlobalIndex, selOut.PublicKey, selOut.Commitment, selOut.RingMembers,
 		)
@@ -176,44 +183,27 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 			return nil, fmt.Errorf("failed to build ring for input %d: %w", i, err)
 		}
 
-		// Input commitment mask (derived from view key and tx pub key)
 		inputMask := deriveInputMask(privView, selOut)
-
-		// Set the real output's commitment to our computed value
 		inputCommitment, _ := crypto.PedersenCommit(selOut.Amount, inputMask.Bytes())
 		if realPos >= 0 && realPos < len(ringCommitments) {
 			ringCommitments[realPos] = inputCommitment
 		}
 
-		// z = input_mask - pseudo_out_mask (commitment offset secret)
 		zKey := edwards25519.NewScalar().Subtract(inputMask, pseudoMasks[i])
-
-		prefixHash := computeTempPrefixHash(outputs, extra, fee)
-
-		clsagCtx := &crypto.CLSAGContext{
-			Message:     prefixHash,
-			Ring:        ring,
-			CNonzero:    ringCommitments, // Original commitments (C_nonzero)
-			COffset:     pseudoOuts[i],   // Pseudo-output commitment (C_offset)
-			SecretIndex: realPos,
-			SecretKey:   oneTimePrivKey,
-			ZKey:        zKey,
-			Rand:        rng,
-		}
-
-		clsag, err := crypto.CLSAGSign(clsagCtx)
-		if err != nil {
-			return nil, fmt.Errorf("CLSAG signing failed for input %d: %w", i, err)
-		}
-		clsags = append(clsags, clsag)
 
 		txInputs = append(txInputs, tx.TxInput{
 			Amount:     0,
 			KeyOffsets: keyOffsets,
 			KeyImage:   keyImage.Bytes(),
 		})
+		inputCtxs = append(inputCtxs, inputContext{
+			ring: ring, commitments: ringCommitments,
+			realPos: realPos, privKey: oneTimePrivKey, zKey: zKey,
+		})
+		ringSize = len(ring)
 	}
 
+	// Phase 2: Build the Tx object (without CLSAGs) to compute CLSAGMessage
 	moneroTx := &tx.Tx{
 		Version:        2,
 		UnlockTime:     0,
@@ -226,8 +216,38 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		PseudoOuts:     pseudoOuts,
 		EcdhInfo:       ecdhInfo,
 		BpPlus:         bpProof,
-		CLSAGs:         clsags,
+		RingSize:       ringSize,
 	}
+
+	// Phase 3: Compute the three-hash CLSAG message
+	clsagMessage := moneroTx.CLSAGMessage()
+
+	// Phase 4: Sign each input with CLSAG using the correct message
+	// Reset the deterministic RNG so this is repeatable
+	rng = newDeterministicRNG(append(rngSeed, []byte("clsag")...))
+
+	var clsags []*crypto.CLSAGSignature
+	for i := range inputCtxs {
+		ctx := inputCtxs[i]
+		clsagCtx := &crypto.CLSAGContext{
+			Message:     clsagMessage,
+			Ring:        ctx.ring,
+			CNonzero:    ctx.commitments,
+			COffset:     pseudoOuts[i],
+			SecretIndex: ctx.realPos,
+			SecretKey:   ctx.privKey,
+			ZKey:        ctx.zKey,
+			Rand:        rng,
+		}
+
+		clsag, err := crypto.CLSAGSign(clsagCtx)
+		if err != nil {
+			return nil, fmt.Errorf("CLSAG signing failed for input %d: %w", i, err)
+		}
+		clsags = append(clsags, clsag)
+	}
+
+	moneroTx.CLSAGs = clsags
 
 	return moneroTx, nil
 }
