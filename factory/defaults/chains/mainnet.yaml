@@ -330,6 +330,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 8453
     gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
     secondary_chain_gas_multiplier: 1.0
     confirmations_final: 64
@@ -367,6 +368,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 80094
     chain_name: Berachain
     decimals: 18
     fee_limit: "10.0"
@@ -1207,6 +1209,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 143
     chain_name: Monad
     chain_gas_multiplier: 4
     chain_gas_tip: 20
@@ -1717,6 +1720,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 9745
     chain_name: Plasma
     gas_budget_default: "0.1"
     decimals: 18
@@ -1734,7 +1738,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
-    chain_id: 1
+    chain_id: 16661
     chain_name: 0g
     decimals: 18
     fee_limit: "300.0"
