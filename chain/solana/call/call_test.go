@@ -7,6 +7,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xccall "github.com/cordialsys/crosschain/call"
 	"github.com/cordialsys/crosschain/chain/solana/call"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/gagliardetto/solana-go"
 	"github.com/gagliardetto/solana-go/programs/memo"
 	"github.com/stretchr/testify/require"
@@ -18,6 +19,18 @@ func newTwoSignerTx(t *testing.T, k1 solana.PublicKey, k2 solana.PublicKey) *sol
 	instrs := []solana.Instruction{
 		memo.NewMemoInstruction([]byte("m1"), k1).Build(),
 		memo.NewMemoInstruction([]byte("m2"), k2).Build(),
+	}
+	recent := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
+	tx, err := solana.NewTransaction(instrs, recent, solana.TransactionPayer(k1))
+	require.NoError(t, err)
+	return tx
+}
+
+func newOneSignerTx(t *testing.T, k1 solana.PublicKey) *solana.Transaction {
+	t.Helper()
+	instrs := []solana.Instruction{
+		memo.NewMemoInstruction([]byte("m1"), k1).Build(),
+		memo.NewMemoInstruction([]byte("m2"), k1).Build(),
 	}
 	recent := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
 	tx, err := solana.NewTransaction(instrs, recent, solana.TransactionPayer(k1))
@@ -66,6 +79,20 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
 	require.NoError(t, err, "NewCall failed")
 
+	txInput := &tx_input.CallInput{
+		TxInput: tx_input.TxInput{
+			RecentBlockHash: solana.MustHashFromBase58("kGTDMh5QsU1EaV8DTXvwGgw3Ku2jNBR1oWxLYKLBdFx"),
+		},
+	}
+	err = c.SetInput(txInput)
+	require.NoError(t, err, "SetInput failed")
+
+	require.NotEqual(t,
+		"kGTDMh5QsU1EaV8DTXvwGgw3Ku2jNBR1oWxLYKLBdFx",
+		c.SolTx.Message.RecentBlockhash.String(),
+		"Does not update recent block hash since there are multiple signers",
+	)
+
 	// Map indices for k1 and k2
 	signers := c.SolTx.Message.Signers()
 	i1 := findSignerIndex(signers, k1)
@@ -99,6 +126,33 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	require.NoError(t, err, "SetSignatures(empty) failed")
 	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i1].String(), "expected existing signatures to be preserved when passing no signatures")
 	require.NotEqual(t, (solana.Signature{}).String(), c.SolTx.Signatures[i2].String(), "expected existing signatures to be preserved when passing no signatures")
+}
+
+func TestSetInput_OneSigner(t *testing.T) {
+	k1 := solana.NewWallet().PublicKey()
+	tx := newOneSignerTx(t, k1)
+	msgBytes, err := tx.MarshalBinary()
+	require.NoError(t, err, "failed to marshal tx")
+
+	// Build Call JSON targeting k1 as the requested account
+	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
+	cfg := &xc.ChainBaseConfig{}
+	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
+	require.NoError(t, err, "NewCall failed")
+
+	txInput := &tx_input.CallInput{
+		TxInput: tx_input.TxInput{
+			RecentBlockHash: solana.MustHashFromBase58("kGTDMh5QsU1EaV8DTXvwGgw3Ku2jNBR1oWxLYKLBdFx"),
+		},
+	}
+	err = c.SetInput(txInput)
+	require.NoError(t, err, "SetInput failed")
+
+	require.Equal(t,
+		"kGTDMh5QsU1EaV8DTXvwGgw3Ku2jNBR1oWxLYKLBdFx",
+		c.SolTx.Message.RecentBlockhash.String(),
+		"Did not recent block hash since there is a single signers",
+	)
 }
 
 func TestSighashesAndHashBehavior(t *testing.T) {
@@ -151,19 +205,6 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 
 	_, err = call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(bad.String()))
 	require.Error(t, err)
-}
-
-func TestSolanaSetInput_NilAccepted(t *testing.T) {
-	payer := solana.NewWallet().PublicKey()
-	// use memo instructions as in existing tests
-	k2 := solana.NewWallet().PublicKey()
-	tx := newTwoSignerTx(t, payer, k2)
-	msgBytes, err := tx.MarshalBinary()
-	require.NoError(t, err)
-	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
-	require.NoError(t, err)
-	require.NoError(t, c.SetInput(nil), "SetInput(nil) should not error")
 }
 
 func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
