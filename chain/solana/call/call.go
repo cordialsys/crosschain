@@ -112,22 +112,29 @@ func (c *TxCall) GetMethod() call.Method {
 	return c.Method
 }
 
-func (c *TxCall) SetInput(input xc.CallTxInput) error {
-	txInput := input.(*tx_input.CallInput)
-
+func (c *TxCall) IsRetryable() (bool, string) {
 	signers := 0
 
 	accountMetaList, err := c.SolTx.AccountMetaList()
 	if err != nil {
-		return fmt.Errorf("solana transaction has invalid accounts: %w", err)
+		// invalid transaction, default false
+		return false, fmt.Sprintf("invalid transaction: %v", err)
 	}
 	for _, accountMeta := range accountMetaList {
 		if accountMeta.IsSigner {
 			signers++
 		}
 	}
+	if signers <= 1 {
+		return true, ""
+	}
+	return false, "transaction has external signers"
+}
 
-	if signers > 1 {
+func (c *TxCall) SetInput(input xc.CallTxInput) error {
+	txInput := input.(*tx_input.CallInput)
+
+	if ok, _ := c.IsRetryable(); !ok {
 		// we cannot modify the transaction in any way as it has an external signer.
 		return nil
 	}
