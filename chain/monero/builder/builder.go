@@ -241,8 +241,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		RingSize:       ringSize,
 	}
 
-	// Phase 3: Compute the three-hash CLSAG message
-	clsagMessage := moneroTx.CLSAGMessage()
+	// Phase 3: Compute the three-hash CLSAG message from the serialized blob
+	// This ensures the message matches what the verifier computes.
+	serializedForMsg, _ := moneroTx.Serialize()
+	clsagMessage := computeCLSAGMessageFromBlob(serializedForMsg, len(moneroTx.Inputs), len(moneroTx.Outputs))
 
 	// Phase 4: Sign each input with CLSAG using the correct message
 	// Reset the deterministic RNG so this is repeatable
@@ -543,6 +545,81 @@ func buildRingFromMembers(
 	}
 
 	return ring, commitments, realPos, keyOffsets, nil
+}
+
+// computeCLSAGMessageFromBlob parses the serialized transaction blob and computes
+// the three-hash CLSAG message exactly as the Monero verifier would.
+func computeCLSAGMessageFromBlob(blob []byte, numInputs, numOutputs int) []byte {
+	pos := 0
+	readVarint := func() uint64 {
+		v := uint64(0); s := uint(0)
+		for blob[pos] & 0x80 != 0 { v |= uint64(blob[pos]&0x7f) << s; s += 7; pos++ }
+		v |= uint64(blob[pos]) << s; pos++
+		return v
+	}
+
+	// Parse prefix
+	readVarint() // version
+	readVarint() // unlock_time
+	numIn := readVarint()
+	for i := uint64(0); i < numIn; i++ {
+		pos++ // tag
+		readVarint() // amount
+		count := readVarint()
+		for j := uint64(0); j < count; j++ { readVarint() }
+		pos += 32 // key image
+	}
+	numOut := readVarint()
+	for i := uint64(0); i < numOut; i++ {
+		readVarint() // amount
+		tag := blob[pos]; pos++
+		pos += 32 // key
+		if tag == 0x03 { pos++ }
+	}
+	extraLen := readVarint()
+	pos += int(extraLen)
+	prefixEnd := pos
+
+	// RCT base
+	pos++ // type byte
+	readVarint() // fee
+	pos += int(numOut) * 8  // ecdhInfo
+	pos += int(numOut) * 32 // outPk
+	unprunableEnd := pos
+
+	// Parse prunable to extract BP+ kv fields (without CLSAG and pseudoOuts)
+	prunableStart := unprunableEnd
+	ppos := prunableStart
+	readVarintAt := func() uint64 {
+		v := uint64(0); s := uint(0)
+		for blob[ppos] & 0x80 != 0 { v |= uint64(blob[ppos]&0x7f) << s; s += 7; ppos++ }
+		v |= uint64(blob[ppos]) << s; ppos++
+		return v
+	}
+	readVarintAt() // nbp count
+
+	// Extract BP+ key fields (A, A1, B, r1, s1, d1, then L[], R[])
+	var bpKv []byte
+	bpKv = append(bpKv, blob[ppos:ppos+6*32]...) // A, A1, B, r1, s1, d1
+	ppos += 6 * 32
+
+	nL := readVarintAt() // L length
+	bpKv = append(bpKv, blob[ppos:ppos+int(nL)*32]...)
+	ppos += int(nL) * 32
+
+	nR := readVarintAt() // R length
+	bpKv = append(bpKv, blob[ppos:ppos+int(nR)*32]...)
+
+	// Compute hashes
+	prefixHash := crypto.Keccak256(blob[:prefixEnd])
+	rctBaseHash := crypto.Keccak256(blob[prefixEnd:unprunableEnd])
+	bpKvHash := crypto.Keccak256(bpKv)
+
+	combined := make([]byte, 0, 96)
+	combined = append(combined, prefixHash...)
+	combined = append(combined, rctBaseHash...)
+	combined = append(combined, bpKvHash...)
+	return crypto.Keccak256(combined)
 }
 
 func computeTempPrefixHash(outputs []tx.TxOutput, extra []byte, fee uint64) []byte {
