@@ -211,4 +211,8 @@ type TxCall interface {
 
 	// Get the method of the call
 	GetMethod() call.Method
+
+	// Indicate if it's possible & safe to retry the call transaction.
+	// Meaning, can we re-sign the transaction with the a new input?
+	IsRetryable() (ok bool, reason string)
 }
