@@ -794,6 +794,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 988
     chain_name: Stable
     decimals: 18
     confirmations_final: 15
