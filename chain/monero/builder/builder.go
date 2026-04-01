@@ -138,7 +138,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 	if len(selectedOutputs) == 1 {
 		pseudoMasks[0], _ = edwards25519.NewScalar().SetCanonicalBytes(totalOutMask.Bytes())
-		pseudoOuts[0], _ = crypto.PedersenCommit(totalInput-fee, totalOutMask.Bytes())
+		pseudoOuts[0], _ = crypto.PedersenCommit(totalInput, totalOutMask.Bytes())
 	} else {
 		runningMask := edwards25519.NewScalar()
 		for i := 0; i < len(selectedOutputs)-1; i++ {
