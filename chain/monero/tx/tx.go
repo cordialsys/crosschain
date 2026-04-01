@@ -5,6 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
+	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 	"filippo.io/edwards25519"
 )
 
@@ -33,7 +34,8 @@ type Tx struct {
 	OutCommitments []*edwards25519.Point // outPk masks
 	PseudoOuts     []*edwards25519.Point
 	EcdhInfo       [][]byte // 8 bytes each
-	BpPlus         *crypto.BulletproofPlus
+	BpPlus         *crypto.BulletproofPlus  // Go BP+ (deprecated, kept for compatibility)
+	BpPlusNative   *cref.BPPlusFields       // C++ BP+ proof fields
 
 	// CLSAG signatures (pre-computed)
 	CLSAGs []*crypto.CLSAGSignature
@@ -162,6 +164,23 @@ func (tx *Tx) serializeRctBase() []byte {
 // serializeBpPrunable: the BP+ proof fields as raw keys for hashing.
 // This matches get_pre_mlsag_hash's kv construction for RCTTypeBulletproofPlus.
 func (tx *Tx) serializeBpPrunable() []byte {
+	if tx.BpPlusNative != nil {
+		var kv []byte
+		bp := tx.BpPlusNative
+		kv = append(kv, bp.A[:]...)
+		kv = append(kv, bp.A1[:]...)
+		kv = append(kv, bp.B[:]...)
+		kv = append(kv, bp.R1[:]...)
+		kv = append(kv, bp.S1[:]...)
+		kv = append(kv, bp.D1[:]...)
+		for _, l := range bp.L {
+			kv = append(kv, l[:]...)
+		}
+		for _, r := range bp.R {
+			kv = append(kv, r[:]...)
+		}
+		return kv
+	}
 	if tx.BpPlus == nil {
 		return nil
 	}
@@ -186,9 +205,26 @@ func (tx *Tx) serializeBpPrunable() []byte {
 func (tx *Tx) serializeRctPrunable() []byte {
 	var buf []byte
 
-	// BP+ proof count
-	if tx.BpPlus != nil {
+	// BP+ proof
+	if tx.BpPlusNative != nil {
 		buf = append(buf, crypto.VarIntEncode(1)...) // 1 proof
+		bp := tx.BpPlusNative
+		buf = append(buf, bp.A[:]...)
+		buf = append(buf, bp.A1[:]...)
+		buf = append(buf, bp.B[:]...)
+		buf = append(buf, bp.R1[:]...)
+		buf = append(buf, bp.S1[:]...)
+		buf = append(buf, bp.D1[:]...)
+		buf = append(buf, crypto.VarIntEncode(uint64(len(bp.L)))...)
+		for _, l := range bp.L {
+			buf = append(buf, l[:]...)
+		}
+		buf = append(buf, crypto.VarIntEncode(uint64(len(bp.R)))...)
+		for _, r := range bp.R {
+			buf = append(buf, r[:]...)
+		}
+	} else if tx.BpPlus != nil {
+		buf = append(buf, crypto.VarIntEncode(1)...)
 		bp := tx.BpPlus
 		buf = append(buf, bp.A.Bytes()...)
 		buf = append(buf, bp.A1.Bytes()...)
@@ -196,12 +232,10 @@ func (tx *Tx) serializeRctPrunable() []byte {
 		buf = append(buf, bp.R1.Bytes()...)
 		buf = append(buf, bp.S1.Bytes()...)
 		buf = append(buf, bp.D1.Bytes()...)
-		// L with length prefix
 		buf = append(buf, crypto.VarIntEncode(uint64(len(bp.L)))...)
 		for _, l := range bp.L {
 			buf = append(buf, l.Bytes()...)
 		}
-		// R with length prefix
 		buf = append(buf, crypto.VarIntEncode(uint64(len(bp.R)))...)
 		for _, r := range bp.R {
 			buf = append(buf, r.Bytes()...)

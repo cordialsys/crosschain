@@ -98,3 +98,9 @@ func RandomScalar(entropy []byte) []byte {
 	hash := Keccak256(entropy)
 	return ScReduce32(hash)
 }
+
+// BPPlusProveNative generates a BP+ proof using Monero's exact C++ implementation.
+// Returns (V commitments, serialized proof fields for tx, prunable hash data, error).
+func BPPlusProveNative(amounts []uint64, masks [][]byte) (commitments [][]byte, proofFields cref.BPPlusFields, err error) {
+	return cref.BPPlusProveRaw(amounts, masks)
+}
