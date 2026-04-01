@@ -7,170 +7,205 @@ import (
 	"filippo.io/edwards25519"
 )
 
-// CLSAGSignature represents a CLSAG (Concise Linkable Spontaneous Anonymous Group) ring signature.
+// CLSAGSignature represents a CLSAG ring signature.
 type CLSAGSignature struct {
-	// S are the response scalars (one per ring member)
-	S []*edwards25519.Scalar
-	// C1 is the initial challenge scalar
-	C1 *edwards25519.Scalar
-	// D is the auxiliary key image component (for commitment signing)
-	D *edwards25519.Point
+	S  []*edwards25519.Scalar // response scalars (one per ring member)
+	C1 *edwards25519.Scalar   // initial challenge
+	I  *edwards25519.Point    // key image: p * H_p(P[l])
+	D  *edwards25519.Point    // commitment key image: (1/8) * z * H_p(P[l])
 }
 
-// CLSAGContext holds the parameters needed for CLSAG signing.
+// CLSAGContext holds parameters for CLSAG signing.
 type CLSAGContext struct {
-	// Message is the data being signed (tx prefix hash)
-	Message []byte
-	// Ring is the set of public keys (one-time output keys) in the ring
-	Ring []*edwards25519.Point
-	// Commitments are the Pedersen commitments for each ring member
-	Commitments []*edwards25519.Point
-	// PseudoOut is the pseudo-output commitment for this input
-	PseudoOut *edwards25519.Point
-	// KeyImage is I = x * H_p(P) where x is the private key and P is the real output key
-	KeyImage *edwards25519.Point
-	// SecretIndex is the position of the real output in the ring
-	SecretIndex int
-	// SecretKey is the one-time private key for the real output
-	SecretKey *edwards25519.Scalar
-	// CommitmentMask is the difference between real commitment mask and pseudo-out mask
-	// z = input_mask - pseudo_out_mask
-	CommitmentMask *edwards25519.Scalar
-	// Rand is an optional deterministic random reader
-	Rand io.Reader
+	Message     []byte                // tx prefix hash (32 bytes)
+	Ring        []*edwards25519.Point // P[0..n-1]: one-time public keys in the ring
+	CNonzero    []*edwards25519.Point // C_nonzero[0..n-1]: original commitments from chain
+	COffset     *edwards25519.Point   // pseudo-output commitment for this input
+	SecretIndex int                   // position of real output in ring
+	SecretKey   *edwards25519.Scalar  // p: one-time private key
+	ZKey        *edwards25519.Scalar  // z = input_mask - pseudo_out_mask
+	Rand        io.Reader             // optional deterministic RNG
 }
 
-// ComputeKeyImage computes I = x * H_p(P) where:
-//   - x is the private spend key for this output
-//   - P is the one-time public key of the output
-//   - H_p is hash_to_ec (Keccak -> Elligator map -> cofactor multiply)
+// invEight is the scalar 1/8 mod L, used for scaling the commitment image D.
+var invEight *edwards25519.Scalar
+
+func init() {
+	eight := make([]byte, 32)
+	eight[0] = 8
+	eightScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(eight)
+	invEight = edwards25519.NewScalar().Invert(eightScalar)
+}
+
+// ComputeKeyImage computes I = x * H_p(P) for a given private key and public key.
 func ComputeKeyImage(privateKey *edwards25519.Scalar, publicKey *edwards25519.Point) *edwards25519.Point {
-	// Use Monero's exact hash_to_ec via CGO
 	hpBytes := HashToEC(publicKey.Bytes())
-	hp, err := edwards25519.NewIdentityPoint().SetBytes(hpBytes)
-	if err != nil {
-		// Should not happen with valid hash_to_ec output
-		panic("ComputeKeyImage: invalid hash_to_ec output")
-	}
+	hp, _ := edwards25519.NewIdentityPoint().SetBytes(hpBytes)
 	return edwards25519.NewIdentityPoint().ScalarMult(privateKey, hp)
 }
 
-// CLSAGSign produces a CLSAG ring signature.
-//
-// The algorithm:
-//  1. Compute auxiliary values: mu_P = H("CLSAG_agg_0" || ring || I || ...), mu_C = H("CLSAG_agg_1" || ...)
-//  2. Generate random nonce alpha
-//  3. Compute initial commitments: alpha*G and alpha*H_p(P[l])
-//  4. Walk the ring computing challenges: c[i+1] = H(msg || ... || s[i]*G + c[i]*mu_P*P[i] || ...)
-//  5. Close the ring: s[l] = alpha - c[l] * (mu_P*x + mu_C*z)
+// CLSAGSign produces a CLSAG ring signature following Monero's exact algorithm.
+// Reference: monero/src/ringct/rctSigs.cpp CLSAG_Gen
 func CLSAGSign(ctx *CLSAGContext) (*CLSAGSignature, error) {
-	ringSize := len(ctx.Ring)
-	if ringSize == 0 {
+	n := len(ctx.Ring)
+	if n == 0 {
 		return nil, fmt.Errorf("empty ring")
 	}
-	if ctx.SecretIndex < 0 || ctx.SecretIndex >= ringSize {
-		return nil, fmt.Errorf("secret index %d out of range [0, %d)", ctx.SecretIndex, ringSize)
-	}
-	if len(ctx.Commitments) != ringSize {
-		return nil, fmt.Errorf("commitments count %d != ring size %d", len(ctx.Commitments), ringSize)
-	}
-
 	l := ctx.SecretIndex
-	x := ctx.SecretKey
-	z := ctx.CommitmentMask
-	P := ctx.Ring
-	C := ctx.Commitments
-	I := ctx.KeyImage
-	Cout := ctx.PseudoOut
+	p := ctx.SecretKey
+	z := ctx.ZKey
 
-	// Compute commitment differences: C[i] - Cout
-	Cdiff := make([]*edwards25519.Point, ringSize)
-	for i := 0; i < ringSize; i++ {
-		negCout := edwards25519.NewIdentityPoint().Negate(Cout)
-		Cdiff[i] = edwards25519.NewIdentityPoint().Add(C[i], negCout)
+	// Compute adjusted commitments: C[i] = C_nonzero[i] - C_offset
+	C := make([]*edwards25519.Point, n)
+	negCOffset := edwards25519.NewIdentityPoint().Negate(ctx.COffset)
+	for i := 0; i < n; i++ {
+		C[i] = edwards25519.NewIdentityPoint().Add(ctx.CNonzero[i], negCOffset)
 	}
 
-	// Compute D = z * H_p(P[l])  (auxiliary key image for commitment)
-	hpPlBytes := HashToEC(P[l].Bytes())
-	hpPl, _ := edwards25519.NewIdentityPoint().SetBytes(hpPlBytes)
-	D := edwards25519.NewIdentityPoint().ScalarMult(z, hpPl)
+	// Compute H_p(P[l]) - hash to point of signer's public key
+	hpBytes := HashToEC(ctx.Ring[l].Bytes())
+	Hp, _ := edwards25519.NewIdentityPoint().SetBytes(hpBytes)
 
-	// Compute aggregation coefficients mu_P and mu_C
-	// mu_P = H_s("CLSAG_agg_0" || ring_data || I || D || Cout)
-	// mu_C = H_s("CLSAG_agg_1" || ring_data || I || D || Cout)
-	aggData0 := []byte("CLSAG_agg_0")
-	aggData1 := []byte("CLSAG_agg_1")
-	ringData := buildRingData(P, C)
-	aggData0 = append(aggData0, ringData...)
-	aggData0 = append(aggData0, I.Bytes()...)
-	aggData0 = append(aggData0, D.Bytes()...)
-	aggData0 = append(aggData0, Cout.Bytes()...)
-	aggData1 = append(aggData1, ringData...)
-	aggData1 = append(aggData1, I.Bytes()...)
-	aggData1 = append(aggData1, D.Bytes()...)
-	aggData1 = append(aggData1, Cout.Bytes()...)
+	// Key image: I = p * H_p(P[l])
+	I := edwards25519.NewIdentityPoint().ScalarMult(p, Hp)
 
-	muP := hashToScalar(aggData0)
-	muC := hashToScalar(aggData1)
+	// Commitment image: D_full = z * H_p(P[l]), then D = (1/8) * D_full
+	Dfull := edwards25519.NewIdentityPoint().ScalarMult(z, Hp)
+	D := edwards25519.NewIdentityPoint().ScalarMult(invEight, Dfull)
 
-	// Generate random nonce
-	alpha := randomScalarFrom(ctx.Rand)
+	// Random nonce
+	a := randomScalarFrom(ctx.Rand)
 
-	// Compute initial round values at position l:
-	// aG  = alpha * G
-	// aHp = alpha * H_p(P[l])
-	aG := edwards25519.NewGeneratorPoint().ScalarBaseMult(alpha)
-	aHp := edwards25519.NewIdentityPoint().ScalarMult(alpha, hpPl)
+	// aG = a * G
+	aG := edwards25519.NewGeneratorPoint().ScalarBaseMult(a)
+	// aH = a * H_p(P[l])
+	aH := edwards25519.NewIdentityPoint().ScalarMult(a, Hp)
 
-	// Initialize response scalars with random values for all positions except l
-	s := make([]*edwards25519.Scalar, ringSize)
-	for i := 0; i < ringSize; i++ {
-		if i != l {
-			s[i] = randomScalarFrom(ctx.Rand)
+	// --- Compute aggregation coefficients mu_P, mu_C ---
+	// Uses sig.D (= D/8) in the hash, matching both prove and verify code.
+	muPData := make([]byte, 0, 32*(2*n+4))
+	muCData := make([]byte, 0, 32*(2*n+4))
+
+	tag0 := make([]byte, 32)
+	copy(tag0, "CLSAG_agg_0")
+	tag1 := make([]byte, 32)
+	copy(tag1, "CLSAG_agg_1")
+
+	muPData = append(muPData, tag0...)
+	muCData = append(muCData, tag1...)
+
+	for i := 0; i < n; i++ {
+		muPData = append(muPData, ctx.Ring[i].Bytes()...)
+		muCData = append(muCData, ctx.Ring[i].Bytes()...)
+	}
+	for i := 0; i < n; i++ {
+		muPData = append(muPData, ctx.CNonzero[i].Bytes()...)
+		muCData = append(muCData, ctx.CNonzero[i].Bytes()...)
+	}
+	// I, sig.D (= D/8), C_offset
+	muPData = append(muPData, I.Bytes()...)
+	muPData = append(muPData, D.Bytes()...) // D here is already D/8 (sig.D)
+	muPData = append(muPData, ctx.COffset.Bytes()...)
+	muCData = append(muCData, I.Bytes()...)
+	muCData = append(muCData, D.Bytes()...) // D here is already D/8 (sig.D)
+	muCData = append(muCData, ctx.COffset.Bytes()...)
+
+	muP := hashToScalar(muPData)
+	muC := hashToScalar(muCData)
+
+	// --- Build round hash template ---
+	// "CLSAG_round" || P[0..n-1] || C_nonzero[0..n-1] || C_offset || message || L || R
+	roundPrefix := make([]byte, 0, 32*(2*n+3))
+	roundTag := make([]byte, 32)
+	copy(roundTag, "CLSAG_round")
+	roundPrefix = append(roundPrefix, roundTag...)
+	for i := 0; i < n; i++ {
+		roundPrefix = append(roundPrefix, ctx.Ring[i].Bytes()...)
+	}
+	for i := 0; i < n; i++ {
+		roundPrefix = append(roundPrefix, ctx.CNonzero[i].Bytes()...)
+	}
+	roundPrefix = append(roundPrefix, ctx.COffset.Bytes()...)
+	roundPrefix = append(roundPrefix, ctx.Message...)
+
+	// Initial challenge: hash with aG and aH
+	c0Data := make([]byte, 0, len(roundPrefix)+64)
+	c0Data = append(c0Data, roundPrefix...)
+	c0Data = append(c0Data, aG.Bytes()...)
+	c0Data = append(c0Data, aH.Bytes()...)
+	c := hashToScalar(c0Data)
+
+	// Initialize s values
+	s := make([]*edwards25519.Scalar, n)
+
+	// Store c1 when we wrap around to index 0
+	var c1 *edwards25519.Scalar
+
+	i := (l + 1) % n
+	if i == 0 {
+		c1 = scalarCopy(c)
+	}
+
+	// --- Ring traversal ---
+	for i != l {
+		s[i] = randomScalarFrom(ctx.Rand)
+
+		// c_p = mu_P * c, c_c = mu_C * c
+		cP := scalarMul(muP, c)
+		cC := scalarMul(muC, c)
+
+		// L = s[i]*G + c_p*P[i] + c_c*C[i]
+		siG := edwards25519.NewGeneratorPoint().ScalarBaseMult(s[i])
+		cpPi := edwards25519.NewIdentityPoint().ScalarMult(cP, ctx.Ring[i])
+		ccCi := edwards25519.NewIdentityPoint().ScalarMult(cC, C[i])
+		L := edwards25519.NewIdentityPoint().Add(siG, cpPi)
+		L = edwards25519.NewIdentityPoint().Add(L, ccCi)
+
+		// R = s[i]*H_p(P[i]) + c_p*I + c_c*Dfull
+		// Prove code line 268: D_precomp from D (full, NOT D/8)
+		// Verify code line 897-902: D_precomp from 8*sig.D = D (full)
+		// Both use the FULL D for ring computation.
+		hpPiBytes := HashToEC(ctx.Ring[i].Bytes())
+		hpPi, _ := edwards25519.NewIdentityPoint().SetBytes(hpPiBytes)
+		siHp := edwards25519.NewIdentityPoint().ScalarMult(s[i], hpPi)
+		cpI := edwards25519.NewIdentityPoint().ScalarMult(cP, I)
+		ccDfull := edwards25519.NewIdentityPoint().ScalarMult(cC, Dfull)
+		R := edwards25519.NewIdentityPoint().Add(siHp, cpI)
+		R = edwards25519.NewIdentityPoint().Add(R, ccDfull)
+
+		// Next challenge
+		cData := make([]byte, 0, len(roundPrefix)+64)
+		cData = append(cData, roundPrefix...)
+		cData = append(cData, L.Bytes()...)
+		cData = append(cData, R.Bytes()...)
+		c = hashToScalar(cData)
+
+		i = (i + 1) % n
+		if i == 0 {
+			c1 = scalarCopy(c)
 		}
 	}
 
-	// Compute c[l+1] from the initial commitment
-	c := make([]*edwards25519.Scalar, ringSize)
-	cData := buildChallengeData(ctx.Message, aG, aHp, P, Cdiff, I, D, l)
-	c[(l+1)%ringSize] = hashToScalar(cData)
-
-	// Walk the ring from l+1 to l-1
-	for j := 1; j < ringSize; j++ {
-		i := (l + j) % ringSize
-
-		// W1 = s[i]*G + c[i] * (mu_P*P[i] + mu_C*Cdiff[i])
-		siG := edwards25519.NewGeneratorPoint().ScalarBaseMult(s[i])
-		muPPi := edwards25519.NewIdentityPoint().ScalarMult(muP, P[i])
-		muCCi := edwards25519.NewIdentityPoint().ScalarMult(muC, Cdiff[i])
-		combined := edwards25519.NewIdentityPoint().Add(muPPi, muCCi)
-		ciCombined := edwards25519.NewIdentityPoint().ScalarMult(c[i], combined)
-		W1 := edwards25519.NewIdentityPoint().Add(siG, ciCombined)
-
-		// W2 = s[i]*H_p(P[i]) + c[i] * (mu_P*I + mu_C*D)
-		hpPiBytes := HashToEC(P[i].Bytes())
-		hpPi, _ := edwards25519.NewIdentityPoint().SetBytes(hpPiBytes)
-		siHp := edwards25519.NewIdentityPoint().ScalarMult(s[i], hpPi)
-		muPI := edwards25519.NewIdentityPoint().ScalarMult(muP, I)
-		muCD := edwards25519.NewIdentityPoint().ScalarMult(muC, D)
-		imgCombined := edwards25519.NewIdentityPoint().Add(muPI, muCD)
-		ciImg := edwards25519.NewIdentityPoint().ScalarMult(c[i], imgCombined)
-		W2 := edwards25519.NewIdentityPoint().Add(siHp, ciImg)
-
-		// c[i+1] = H_s(msg || W1 || W2)
-		nextData := buildChallengeDataFromPoints(ctx.Message, W1, W2, P, Cdiff, I, D, i)
-		c[(i+1)%ringSize] = hashToScalar(nextData)
-	}
-
-	// Close the ring: s[l] = alpha - c[l] * (mu_P * x + mu_C * z)
-	muPx := scalarMul(muP, x)
+	// --- Close the ring ---
+	// s[l] = a - c * (mu_P * p + mu_C * z)
+	muPp := scalarMul(muP, p)
 	muCz := scalarMul(muC, z)
-	secret := scalarAdd(muPx, muCz)
-	s[l] = scalarSub(alpha, scalarMul(c[l], secret))
+	secret := scalarAdd(muPp, muCz)
+	s[l] = scalarSub(a, scalarMul(c, secret))
+
+	if c1 == nil {
+		// This happens when l == n-1 and we never wrapped to 0
+		// c1 should be the challenge computed after s[n-1]
+		// which is the initial c we started with from (l+1) % n = 0
+		// Actually if l = n-1, then i starts at 0, and c1 is set immediately.
+		// So c1 should always be set. Just in case:
+		c1 = scalarCopy(c)
+	}
 
 	return &CLSAGSignature{
 		S:  s,
-		C1: c[0],
+		C1: c1,
+		I:  I,
 		D:  D,
 	}, nil
 }
@@ -187,42 +222,9 @@ func (sig *CLSAGSignature) Serialize() []byte {
 	return out
 }
 
-func buildRingData(P []*edwards25519.Point, C []*edwards25519.Point) []byte {
-	var data []byte
-	for _, p := range P {
-		data = append(data, p.Bytes()...)
-	}
-	for _, c := range C {
-		data = append(data, c.Bytes()...)
-	}
-	return data
-}
-
-func buildChallengeData(msg []byte, aG, aHp *edwards25519.Point,
-	P []*edwards25519.Point, Cdiff []*edwards25519.Point,
-	I, D *edwards25519.Point, round int) []byte {
-	var data []byte
-	data = append(data, []byte("CLSAG_round")...)
-	data = append(data, msg...)
-	data = append(data, aG.Bytes()...)
-	data = append(data, aHp.Bytes()...)
-	return data
-}
-
-func buildChallengeDataFromPoints(msg []byte, W1, W2 *edwards25519.Point,
-	P []*edwards25519.Point, Cdiff []*edwards25519.Point,
-	I, D *edwards25519.Point, round int) []byte {
-	var data []byte
-	data = append(data, []byte("CLSAG_round")...)
-	data = append(data, msg...)
-	data = append(data, W1.Bytes()...)
-	data = append(data, W2.Bytes()...)
-	return data
-}
-
 func hashToScalar(data []byte) *edwards25519.Scalar {
 	hash := Keccak256(data)
-	reduced := ScalarReduce(hash)
+	reduced := ScReduce32(hash)
 	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
 	return s
 }

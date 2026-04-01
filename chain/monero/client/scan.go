@@ -196,7 +196,7 @@ func scanTransactionForOutputs(
 // and populates decoy ring members for each output.
 func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
 	// Scan for our outputs
-	ownedOutputs, err := c.ScanBlocksForOwnedOutputs(ctx, 200)
+	ownedOutputs, err := c.ScanBlocksForOwnedOutputs(ctx, 1000)
 	if err != nil {
 		return fmt.Errorf("output scanning failed: %w", err)
 	}
