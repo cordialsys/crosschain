@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
@@ -80,22 +82,75 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch ledger info: %w", err)
 	}
 
-	txInput.Sequence = currentSequence + 1
+	nextSequence := currentSequence + 1
+	txInput.Sequence = integer.Int64(nextSequence)
+	txInput.SequenceOld = nextSequence
 	txInput.MinLedgerSequence = ledger.Sequence
 
-	remainingBalance, err := accountDetails.GetNativeBalance()
+	// Determine which account pays fees: fee payer or sender
+	feeAccountDetails := accountDetails
+	feePayer, hasFeePayer := args.GetFeePayer()
+	if hasFeePayer {
+		feePayerDetails, err := client.FetchAccountDetails(feePayer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch fee payer account details: %w", err)
+		}
+		feePayerSequence, err := strconv.ParseInt(feePayerDetails.Sequence, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse fee payer sequence number: %w", err)
+		}
+		txInput.FeePayerSequence = integer.Int64(feePayerSequence + 1)
+		feeAccountDetails = feePayerDetails
+	}
+
+	// Check if destination account exists on the network.
+	// Stellar requires CreateAccount for new accounts instead of Payment.
+	_, destErr := client.FetchAccountDetails(args.GetTo())
+	if destErr != nil {
+		var queryErr *types.QueryProblem
+		if stderrors.As(destErr, &queryErr) && queryErr.Status == 404 {
+			txInput.DestinationFunded = false
+		} else {
+			return nil, fmt.Errorf("failed to fetch destination account details: %w", destErr)
+		}
+	} else {
+		txInput.DestinationFunded = true
+	}
+
+	// Check if the sender needs a trustline for the token asset.
+	// Stellar requires a ChangeTrust operation before receiving/sending a non-native asset.
+	if contract, ok := args.GetContract(); ok {
+		contractDetails, err := common.GetAssetAndIssuerFromContract(string(contract))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse contract: %w", err)
+		}
+		hasTrustline := false
+		for _, bal := range accountDetails.Balances {
+			if bal.AssetCode == contractDetails.AssetCode && bal.AssetIssuer == string(contractDetails.Issuer) {
+				hasTrustline = true
+				break
+			}
+		}
+		if !hasTrustline {
+			txInput.NeedsCreateTrustline = true
+		}
+	}
+
+	feeAccountBalance, err := feeAccountDetails.GetNativeBalance()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read native balance: %w", err)
 	}
 
-	// Validate the amount and deduct it from the balance if the input
-	// pertains to a native transaction
-	if _, ok := args.GetContract(); !ok {
-		amount := args.GetAmount()
-		if remainingBalance.Cmp(&amount) == -1 {
-			return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), remainingBalance.String())
+	// Validate the amount and deduct it from the sender's balance if the input
+	// pertains to a native transaction (only when sender pays fees)
+	if !hasFeePayer {
+		if _, ok := args.GetContract(); !ok {
+			amount := args.GetAmount()
+			if feeAccountBalance.Cmp(&amount) == -1 {
+				return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), feeAccountBalance.String())
+			}
+			feeAccountBalance = feeAccountBalance.Sub(&amount)
 		}
-		remainingBalance = remainingBalance.Sub(&amount)
 	}
 
 	// Stellar requires the MaxFee specification, which defines the maximum amount
@@ -104,10 +159,10 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 
 	// If balance is greater than blockchainFee, we can safely use specified MaxFee
 	// Use remaining balance as a max fee otherwise
-	if remainingBalance.Cmp(&maxFee) > 0 {
+	if feeAccountBalance.Cmp(&maxFee) > 0 {
 		txInput.MaxFee = uint32(maxFee.Uint64())
 	} else {
-		txInput.MaxFee = uint32(remainingBalance.Uint64())
+		txInput.MaxFee = uint32(feeAccountBalance.Uint64())
 	}
 
 	txInput.TransactionActiveTime = config.TransactionActiveTime
@@ -370,6 +425,10 @@ func (client *Client) FetchBalanceByAsset(address xc.Address, assetID string) (x
 	url := fmt.Sprintf("%s/accounts/%s", client.Url, string(address))
 	var response types.GetAccountResult
 	if err := client.Get(url, &response); err != nil {
+		// Unfunded accounts return 404; treat as zero balance
+		if queryErr, ok := err.(*types.QueryProblem); ok && queryErr.Status == 404 {
+			return xc.AmountBlockchain{}, nil
+		}
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch account balances: %w", err)
 	}
 

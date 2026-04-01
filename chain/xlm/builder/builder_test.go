@@ -29,7 +29,7 @@ func TestNewNativeTransfer(t *testing.T) {
 	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
 	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
 	amount := xc.NewAmountBlockchainFromUint64(10)
-	input := &tx_input.TxInput{}
+	input := &tx_input.TxInput{DestinationFunded: true}
 	args := buildertest.MustNewTransferArgs(chain.Base(), from, to, amount)
 	nt, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
@@ -45,6 +45,28 @@ func TestNewNativeTransfer(t *testing.T) {
 	require.Equal(t, payment.Destination, destination)
 
 	require.Equal(t, int64(payment.Amount), amount.Int().Int64())
+}
+
+func TestNewNativeTransferToNewAccount(t *testing.T) {
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, _ := builder.NewTxBuilder(chain.Base())
+	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
+	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
+	amount := xc.NewAmountBlockchainFromUint64(10)
+	input := &tx_input.TxInput{DestinationFunded: false}
+	args := buildertest.MustNewTransferArgs(chain.Base(), from, to, amount)
+	nt, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	require.NotNil(t, nt)
+
+	txEnvelope := nt.(*Tx).TxEnvelope
+	source := common.MustMuxedAccountFromAddres(from)
+	require.Equal(t, txEnvelope.SourceAccount(), source)
+
+	createAccount, ok := txEnvelope.Operations()[0].Body.GetCreateAccountOp()
+	require.True(t, ok)
+	require.Equal(t, createAccount.Destination.Address(), string(to))
+	require.Equal(t, int64(createAccount.StartingBalance), amount.Int().Int64())
 }
 
 func TestNewTokenTransfer(t *testing.T) {

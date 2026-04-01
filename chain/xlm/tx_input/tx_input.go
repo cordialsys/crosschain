@@ -7,24 +7,52 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/shopspring/decimal"
 )
 
 var _ xc.TxInput = &TxInput{}
 
+// XlmTxInputGetter is a local interface for type-safe access to XLM tx input fields
+// without requiring concrete type casts in IndependentOf/SafeFromDoubleSend.
+type XlmTxInputGetter interface {
+	GetXlmSequence() int64
+	GetXlmFeePayerSequence() int64
+}
+
+func (input *TxInput) GetXlmSequence() int64 {
+	if input.Sequence != 0 {
+		return int64(input.Sequence)
+	}
+	return input.SequenceOld
+}
+
+func (input *TxInput) GetXlmFeePayerSequence() int64 {
+	return int64(input.FeePayerSequence)
+}
+
 type TxInput struct {
 	xc.TxInputEnvelope
 	Passphrase string
-	// Changes how sequence number is checked.
-	// Is `Sequence == 0` then only transaction where
-	// `SourceAccount.Sequence == tx.Sequence - 1` is allowed
-	Sequence int64
+	// SequenceOld is kept for backwards compatibility with the old JSON field name.
+	SequenceOld int64 `json:"Sequence"`
+	// Sequence uses integer.Int64 to survive JSON roundtrip without float64 precision loss.
+	Sequence integer.Int64 `json:"sequence"`
 	// Stellar requires the MaxFee specification, which defines the maximum amount
 	// we are willing to spend on the transaction fee.
 	MaxFee uint32
 	// Specifies the duration for which a transaction remains valid after being submitted.
 	TransactionActiveTime time.Duration
 	MinLedgerSequence     int64
+	// FeePayerSequence is the sequence number for the fee payer account,
+	// used when a separate account pays the transaction fee.
+	FeePayerSequence integer.Int64 `json:"fee_payer_sequence,omitempty"`
+	// DestinationFunded indicates whether the destination account already exists on the network.
+	// Stellar requires a CreateAccount operation for new accounts instead of Payment.
+	DestinationFunded bool `json:"destination_funded,omitempty"`
+	// NeedsCreateTrustline indicates that the sender needs a trustline for the token asset.
+	// When true, a ChangeTrust operation is prepended to the transaction.
+	NeedsCreateTrustline bool `json:"needs_create_trustline,omitempty"`
 }
 
 func init() {
@@ -46,16 +74,20 @@ func (input *TxInput) GetDriver() xc.Driver {
 
 // IndependentOf implements xc.TxInputConflicts.IndependentOf
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if emvOther, ok := other.(*TxInput); ok {
-		return emvOther.Sequence != input.Sequence
+	otherInput, ok := other.(XlmTxInputGetter)
+	if !ok {
+		return false
 	}
-
-	return false
+	// Compare both sender and fee-payer sequences when applicable
+	if input.GetXlmFeePayerSequence() != 0 || otherInput.GetXlmFeePayerSequence() != 0 {
+		return otherInput.GetXlmFeePayerSequence() != input.GetXlmFeePayerSequence()
+	}
+	return otherInput.GetXlmSequence() != input.GetXlmSequence()
 }
 
 // SafeFromDoubleSend implements xc.TxInputConflicts.SafeFromDoubleSend
 func (input *TxInput) SafeFromDoubleSend(previousAttempt xc.TxInput) (safe bool) {
-	if !xc.IsTypeOf(previousAttempt, input) {
+	if _, ok := previousAttempt.(XlmTxInputGetter); !ok {
 		return false
 	}
 

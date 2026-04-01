@@ -859,6 +859,7 @@ chains:
     support:
       memo: string
       fee:
+        payer: true
     driver: xlm
     chain_name: xlm
     decimals: 7

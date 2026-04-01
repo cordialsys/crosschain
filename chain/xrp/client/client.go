@@ -9,7 +9,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/xrp/address/contract"
+	xrpcontract "github.com/cordialsys/crosschain/chain/xrp/address/contract"
 	"github.com/cordialsys/crosschain/chain/xrp/client/events"
 	"github.com/cordialsys/crosschain/chain/xrp/client/types"
 	xrptxinput "github.com/cordialsys/crosschain/chain/xrp/tx_input"
@@ -63,6 +63,28 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if !reserveAmountHuman.IsZero() {
 		reserveAmount := reserveAmountHuman.ToBlockchain(client.Asset.GetChain().GetDecimals())
 		txInput.ReserveAmount = reserveAmount
+	}
+
+	// Check if the sender needs a trustline for the token asset.
+	if contractAddr, ok := args.GetContract(); ok {
+		tokenAsset, tokenContract, err := xrpcontract.ExtractAssetAndContract(contractAddr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse contract: %w", err)
+		}
+		accountLines, err := client.getAccountLines(account)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch account lines: %w", err)
+		}
+		hasTrustline := false
+		for _, line := range accountLines.Result.Lines {
+			if line.Currency == tokenAsset && line.Account == tokenContract {
+				hasTrustline = true
+				break
+			}
+		}
+		if !hasTrustline {
+			txInput.NeedsCreateTrustline = true
+		}
 	}
 
 	tfAmount := args.GetAmount()
@@ -301,7 +323,7 @@ func (client *Client) FetchNativeBalance(ctx context.Context, address xc.Address
 func (client *Client) fetchContractBalance(ctx context.Context, address xc.Address, assetContract xc.ContractAddress) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 
-	asset, contract, err := contract.ExtractAssetAndContract(assetContract)
+	asset, contract, err := xrpcontract.ExtractAssetAndContract(assetContract)
 	if err != nil {
 		return zero, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}

@@ -16,6 +16,7 @@ import (
 const (
 	PAYMENT                 TransactionType = "Payment"
 	ACCOUNT_DELETE          TransactionType = "AccountDelete"
+	TRUST_SET               TransactionType = "TrustSet"
 	TRANSACTION_HASH_PREFIX                 = "54584E00"
 )
 
@@ -34,6 +35,8 @@ type XRPTransaction struct {
 	SigningPubKey      string           `json:"SigningPubKey"`
 	TransactionType    TransactionType  `json:"TransactionType"`
 	TxnSignature       string           `json:"TxnSignature"`
+	// LimitAmount is used for TrustSet transactions to define the trustline.
+	LimitAmount *Amount `json:"LimitAmount,omitempty"`
 }
 
 type AmountBlockchain struct {
@@ -189,8 +192,6 @@ func HashFromTx(encodeTx string) (string, error) {
 func RenderToMap(xrpTx XRPTransaction) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	result["Account"] = string(xrpTx.Account)
-	result["Destination"] = string(xrpTx.Destination)
-	result["DestinationTag"] = int(xrpTx.DestinationTag)
 	result["Fee"] = xrpTx.Fee
 	result["Flags"] = int(xrpTx.Flags)
 	result["LastLedgerSequence"] = int(xrpTx.LastLedgerSequence)
@@ -199,15 +200,28 @@ func RenderToMap(xrpTx XRPTransaction) (map[string]interface{}, error) {
 	result["TransactionType"] = string(xrpTx.TransactionType)
 	result["TxnSignature"] = xrpTx.TxnSignature
 
-	if xrpTx.TransactionType != ACCOUNT_DELETE {
-		if xrpTx.Amount.XRPAmount != "" {
-			amountRenderErr := RenderXrpAmount(result, xrpTx.Amount.XRPAmount)
-			if amountRenderErr != nil {
-				return nil, fmt.Errorf("failed to render XRP amount: %w", amountRenderErr)
+	if xrpTx.TransactionType == TRUST_SET {
+		if xrpTx.LimitAmount != nil {
+			result["LimitAmount"] = map[string]interface{}{
+				"currency": xrpTx.LimitAmount.Currency,
+				"issuer":   xrpTx.LimitAmount.Issuer,
+				"value":    xrpTx.LimitAmount.Value,
 			}
-		} else {
-			RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
-			RenderSendMax(result, &xrpTx.SendMax)
+		}
+	} else {
+		result["Destination"] = string(xrpTx.Destination)
+		result["DestinationTag"] = int(xrpTx.DestinationTag)
+
+		if xrpTx.TransactionType != ACCOUNT_DELETE {
+			if xrpTx.Amount.XRPAmount != "" {
+				amountRenderErr := RenderXrpAmount(result, xrpTx.Amount.XRPAmount)
+				if amountRenderErr != nil {
+					return nil, fmt.Errorf("failed to render XRP amount: %w", amountRenderErr)
+				}
+			} else {
+				RenderTokenAmount(result, xrpTx.Amount.TokenAmount)
+				RenderSendMax(result, &xrpTx.SendMax)
+			}
 		}
 	}
 

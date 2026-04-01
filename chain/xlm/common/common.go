@@ -86,6 +86,42 @@ func CreateAssetFromContractDetails(details AssetDetails) (xdr.Asset, error) {
 	}
 }
 
+func CreateChangeTrustAsset(details AssetDetails) (xdr.ChangeTrustAsset, error) {
+	length := len(details.AssetCode)
+	var issuer xdr.MuxedAccount
+	err := issuer.SetAddress(string(details.Issuer))
+	if err != nil {
+		return xdr.ChangeTrustAsset{}, fmt.Errorf("failed to create issuer account: %w", err)
+	}
+
+	switch {
+	case length == 0:
+		return xdr.ChangeTrustAsset{}, fmt.Errorf("invalid asset code length: %d", length)
+	case length < 5:
+		var assetCode [4]byte
+		copy(assetCode[:], []byte(details.AssetCode))
+		return xdr.ChangeTrustAsset{
+			Type: xdr.AssetTypeAssetTypeCreditAlphanum4,
+			AlphaNum4: &xdr.AlphaNum4{
+				AssetCode: assetCode,
+				Issuer:    issuer.ToAccountId(),
+			},
+		}, nil
+	case length < 13:
+		var assetCode [12]byte
+		copy(assetCode[:], []byte(details.AssetCode))
+		return xdr.ChangeTrustAsset{
+			Type: xdr.AssetTypeAssetTypeCreditAlphanum12,
+			AlphaNum12: &xdr.AlphaNum12{
+				AssetCode: assetCode,
+				Issuer:    issuer.ToAccountId(),
+			},
+		}, nil
+	default:
+		return xdr.ChangeTrustAsset{}, fmt.Errorf("invalid asset code length: %d", length)
+	}
+}
+
 func MuxedAccountFromAddress(address xc.Address) (xdr.MuxedAccount, error) {
 	var account xdr.MuxedAccount
 	err := account.SetAddress(string(address))
