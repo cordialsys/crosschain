@@ -9,15 +9,8 @@ import (
 	"filippo.io/edwards25519"
 )
 
-// H generator point - precomputed constant from Monero's crypto-ops-data.c
-var hPointBytes []byte
-
-func init() {
-	// This is the compressed Edwards representation of Monero's H point.
-	// H = toPoint(cn_fast_hash(G)) using Monero's specific derivation.
-	// Value from: ge_p3_tobytes(&result, &ge_p3_H) in crypto-ops-data.c
-	hPointBytes, _ = hex.DecodeString("8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94")
-}
+// hPointHex is the compressed Edwards representation of Monero's H point.
+const hPointHex = "8b655970153799af2aeadc9ff1add0ea6c7251d54154cfa92c173a0dd39c1f94"
 
 // scReduce32PureGo reduces a 32-byte value mod the ed25519 group order L.
 // L = 2^252 + 27742317777372353535851937790883648493
@@ -99,5 +92,6 @@ func GenerateKeyImagePureGo(keccakPub, sec []byte) []byte {
 
 // getHPureGo returns the precomputed H generator point.
 func GetHPureGo() []byte {
-	return hPointBytes
+	b, _ := hex.DecodeString(hPointHex)
+	return b
 }

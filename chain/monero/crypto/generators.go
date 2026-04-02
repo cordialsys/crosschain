@@ -1,8 +1,8 @@
 package crypto
 
 import (
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 	"filippo.io/edwards25519"
+	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 )
 
 // Generator points for Pedersen commitments and Bulletproofs+.
@@ -22,18 +22,22 @@ var Gi [maxMN]*edwards25519.Point
 var Hi [maxMN]*edwards25519.Point
 
 func init() {
-	// H is a precomputed constant in Monero: the secondary generator for Pedersen commitments.
-	// H = toPoint(cn_fast_hash(G)) but using Monero's specific derivation (hardcoded in crypto-ops-data.c)
-	hBytes := cref.GetH()
-	H, _ = edwards25519.NewIdentityPoint().SetBytes(hBytes[:])
+	ensureHtpInit() // must be called before using HashToECPureGo
 
-	// Gi and Hi vectors for BP+
+	// H is a precomputed constant from Monero's crypto-ops-data.c
+	H, _ = edwards25519.NewIdentityPoint().SetBytes(GetHPureGo())
+
+	// Gi and Hi vectors for BP+ using pure Go hash_to_ec
 	prefix := []byte("bulletproof_plus")
 	for i := 0; i < maxMN; i++ {
-		hiData := append(prefix, varintEncode(uint64(2*i))...)
-		giData := append(prefix, varintEncode(uint64(2*i+1))...)
-		hiBytes := HashToEC(hiData)
-		giBytes := HashToEC(giData)
+		hiData := make([]byte, len(prefix))
+		copy(hiData, prefix)
+		hiData = append(hiData, varintEncode(uint64(2*i))...)
+		giData := make([]byte, len(prefix))
+		copy(giData, prefix)
+		giData = append(giData, varintEncode(uint64(2*i+1))...)
+		hiBytes := HashToECPureGo(hiData)
+		giBytes := HashToECPureGo(giData)
 		Hi[i], _ = edwards25519.NewIdentityPoint().SetBytes(hiBytes)
 		Gi[i], _ = edwards25519.NewIdentityPoint().SetBytes(giBytes)
 	}
@@ -42,28 +46,17 @@ func init() {
 // HashToEC computes Monero's hash_to_ec:
 // Keccak256(data) -> ge_fromfe_frombytes_vartime -> multiply by cofactor 8 -> compress
 func HashToEC(data []byte) []byte {
-	kHash := Keccak256(data)
-	result := cref.HashToEC(kHash)
-	return result[:]
+	return HashToECPureGo(data)
 }
 
 // HashToPoint computes ge_fromfe_frombytes_vartime WITHOUT cofactor multiply.
 func HashToPoint(data []byte) []byte {
-	result := cref.HashToPointRaw(data)
-	return result[:]
+	return HashToPointPureGo(data).Bytes()
 }
 
 // ScReduce32 reduces a 32-byte value mod the ed25519 group order L.
-// This is Monero's sc_reduce32, NOT the 64-byte SetUniformBytes reduction.
 func ScReduce32(s []byte) []byte {
-	if len(s) != 32 {
-		// Pad or truncate to 32
-		buf := make([]byte, 32)
-		copy(buf, s)
-		s = buf
-	}
-	result := cref.ScReduce32(s)
-	return result[:]
+	return ScReduce32PureGo(s)
 }
 
 // PedersenCommit computes C = v*H + r*G
