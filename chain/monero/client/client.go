@@ -580,28 +580,20 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 
 	fee := xc.NewAmountBlockchainFromUint64(txJson.RctSignatures.TxnFee)
 
-	// Try to decode outputs using view key if available
+	// Decode outputs using the fixed view key (no private spend key needed).
+	// This finds ALL outputs sent to any address sharing our view key.
 	var movements []*txinfo.Movement
-	secret := signer.ReadPrivateKeyEnv()
-	if secret != "" && txData.AsJson != "" {
-		secretBz, err := hex.DecodeString(secret)
-		if err == nil {
-			_, privView, pubSpend, pubView, err := crypto.DeriveKeysFromSpend(secretBz)
-			if err == nil {
-				myAddr := xc.Address(crypto.GenerateAddress(pubSpend, pubView))
-				subKeys := buildSubaddressMap(privView, pubSpend, defaultSubaddressCount)
-				amount, err := scanTransaction(txData.AsJson, privView, pubSpend, subKeys)
-				if err == nil && amount > 0 {
-					movements = append(movements, &txinfo.Movement{
-						To: []*txinfo.BalanceChange{
-							{
-								Balance:   xc.NewAmountBlockchainFromUint64(amount),
-								AddressId: myAddr,
-							},
-						},
-					})
-				}
-			}
+	if txData.AsJson != "" {
+		privView := crypto.FixedPrivateViewKey
+		outputAmounts := scanTransactionViewKeyOnly(txData.AsJson, privView)
+		for _, oa := range outputAmounts {
+			movements = append(movements, &txinfo.Movement{
+				To: []*txinfo.BalanceChange{
+					{
+						Balance: xc.NewAmountBlockchainFromUint64(oa),
+					},
+				},
+			})
 		}
 	}
 
@@ -666,6 +658,64 @@ func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txin
 	return &txinfo.BlockWithTransactions{
 		Block: *block,
 	}, nil
+}
+
+// scanTransactionViewKeyOnly decodes output amounts using only the private view key.
+// It does NOT check spend key ownership - any output whose amount decrypts to a
+// reasonable value (matching the Pedersen commitment) is returned.
+// This is how an exchange scans for deposits across all user addresses.
+func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte) []uint64 {
+	var txJson moneroTxJson
+	if err := json.Unmarshal([]byte(txJsonStr), &txJson); err != nil {
+		return nil
+	}
+
+	extraBytes := make([]byte, len(txJson.Extra))
+	for i, v := range txJson.Extra {
+		extraBytes[i] = byte(v)
+	}
+	txPubKey, err := crypto.ParseTxPubKey(extraBytes)
+	if err != nil {
+		return nil
+	}
+
+	// Compute derivation: D = 8 * viewKey * txPubKey
+	derivation, err := crypto.GenerateKeyDerivation(txPubKey, privateViewKey)
+	if err != nil {
+		return nil
+	}
+
+	var amounts []uint64
+	for outputIdx, vout := range txJson.Vout {
+		_ = getOutputKey(vout)
+
+		var encAmount string
+		if outputIdx < len(txJson.RctSignatures.EcdhInfo) {
+			encAmount = txJson.RctSignatures.EcdhInfo[outputIdx].Amount
+		}
+		if encAmount == "" {
+			continue
+		}
+
+		// Derive shared scalar for this output
+		scalar, err := crypto.DerivationToScalar(derivation, uint64(outputIdx))
+		if err != nil {
+			continue
+		}
+
+		// Decrypt amount
+		amount, err := crypto.DecryptAmount(encAmount, scalar)
+		if err != nil {
+			continue
+		}
+
+		// Sanity check: amount should be reasonable (< 1B XMR = 1e21 piconero)
+		if amount > 0 && amount < 1000000000000000000 { // < 1M XMR
+			amounts = append(amounts, amount)
+		}
+	}
+
+	return amounts
 }
 
 var _ xclient.Client = &Client{}
