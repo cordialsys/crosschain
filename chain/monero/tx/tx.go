@@ -47,8 +47,8 @@ type Tx struct {
 func (tx *Tx) Hash() xc.TxHash {
 	// Monero v2 tx hash = Keccak256(prefix_hash || rct_base_hash || rct_prunable_hash)
 	prefixHash := tx.PrefixHash()
-	rctBaseHash := crypto.Keccak256(tx.serializeRctBase())
-	rctPrunableHash := crypto.Keccak256(tx.serializeRctPrunable())
+	rctBaseHash := crypto.Keccak256(tx.SerializeRctBase())
+	rctPrunableHash := crypto.Keccak256(tx.SerializeRctPrunable())
 
 	combined := make([]byte, 0, 96)
 	combined = append(combined, prefixHash...)
@@ -79,9 +79,9 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 // The bp_prunable hash uses only the BP+ key fields (not CLSAG or pseudoOuts).
 func (tx *Tx) CLSAGMessage() []byte {
 	// Serialize the full tx to get exact byte boundaries
-	prefix := tx.serializePrefix()
-	rctBase := tx.serializeRctBase()
-	bpKv := tx.serializeBpPrunable() // BP+ key fields only
+	prefix := tx.SerializePrefix()
+	rctBase := tx.SerializeRctBase()
+	bpKv := tx.SerializeBpPrunable() // BP+ key fields only
 
 	prefixHash := crypto.Keccak256(prefix)
 	rctBaseHash := crypto.Keccak256(rctBase)
@@ -99,18 +99,18 @@ func (tx *Tx) Serialize() ([]byte, error) {
 	var buf []byte
 
 	// Transaction prefix
-	buf = append(buf, tx.serializePrefix()...)
+	buf = append(buf, tx.SerializePrefix()...)
 
 	// RCT base (inline, not length-prefixed)
-	buf = append(buf, tx.serializeRctBase()...)
+	buf = append(buf, tx.SerializeRctBase()...)
 
 	// RCT prunable
-	buf = append(buf, tx.serializeRctPrunable()...)
+	buf = append(buf, tx.SerializeRctPrunable()...)
 
 	return buf, nil
 }
 
-func (tx *Tx) serializePrefix() []byte {
+func (tx *Tx) SerializePrefix() []byte {
 	var buf []byte
 	buf = append(buf, crypto.VarIntEncode(uint64(tx.Version))...)
 	buf = append(buf, crypto.VarIntEncode(tx.UnlockTime)...)
@@ -142,11 +142,11 @@ func (tx *Tx) serializePrefix() []byte {
 
 // PrefixHash = Keccak256(serialized prefix)
 func (tx *Tx) PrefixHash() []byte {
-	return crypto.Keccak256(tx.serializePrefix())
+	return crypto.Keccak256(tx.SerializePrefix())
 }
 
 // serializeRctBase: type || varint(fee) || ecdhInfo(8 bytes each) || outPk(32 bytes each)
-func (tx *Tx) serializeRctBase() []byte {
+func (tx *Tx) SerializeRctBase() []byte {
 	var buf []byte
 	buf = append(buf, tx.RctType)
 	if tx.RctType == 0 {
@@ -176,7 +176,7 @@ func (tx *Tx) serializeRctBase() []byte {
 
 // serializeBpPrunable: the BP+ proof fields as raw keys for hashing.
 // This matches get_pre_mlsag_hash's kv construction for RCTTypeBulletproofPlus.
-func (tx *Tx) serializeBpPrunable() []byte {
+func (tx *Tx) SerializeBpPrunable() []byte {
 	if tx.BpPlusNative != nil {
 		var kv []byte
 		bp := tx.BpPlusNative
@@ -215,7 +215,7 @@ func (tx *Tx) serializeBpPrunable() []byte {
 }
 
 // serializeRctPrunable: BP+ proof (with size-prefixed L/R) || CLSAGs || pseudoOuts
-func (tx *Tx) serializeRctPrunable() []byte {
+func (tx *Tx) SerializeRctPrunable() []byte {
 	var buf []byte
 
 	// BP+ proof

@@ -38,11 +38,17 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 	amountU64 := args.GetAmount().Uint64()
 
-	// Fee estimation
-	estimatedSize := uint64(2000)
-	fee := moneroInput.PerByteFee * estimatedSize
+	// Fee estimation - use high priority (200x base fee) to ensure quick mining
+	// The PerByteFee from the daemon is actually per kB, and is the minimum tier.
+	// We multiply generously to match what real wallets pay.
+	estimatedSize := uint64(2000) // estimated tx weight in bytes
+	fee := moneroInput.PerByteFee * 200 * estimatedSize / 1024 // ~200x minimum, per kB
 	if moneroInput.QuantizationMask > 0 {
 		fee = (fee + moneroInput.QuantizationMask - 1) / moneroInput.QuantizationMask * moneroInput.QuantizationMask
+	}
+	// Ensure minimum reasonable fee
+	if fee < 100000000 { // at least 0.0001 XMR
+		fee = 100000000
 	}
 
 	if len(moneroInput.Outputs) == 0 {
@@ -241,10 +247,21 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		RingSize:       ringSize,
 	}
 
-	// Phase 3: Compute the three-hash CLSAG message from the serialized blob
-	// This ensures the message matches what the verifier computes.
-	serializedForMsg, _ := moneroTx.Serialize()
-	clsagMessage := computeCLSAGMessageFromBlob(serializedForMsg, len(moneroTx.Inputs), len(moneroTx.Outputs))
+	// Phase 3: Compute the three-hash CLSAG message.
+	// Use the Tx methods directly (they don't depend on CLSAG being set).
+	prefix := moneroTx.SerializePrefix()
+	rctBase := moneroTx.SerializeRctBase()
+	bpKv := moneroTx.SerializeBpPrunable()
+
+	prefixHash := crypto.Keccak256(prefix)
+	rctBaseHash := crypto.Keccak256(rctBase)
+	bpKvHash := crypto.Keccak256(bpKv)
+
+	combined := make([]byte, 0, 96)
+	combined = append(combined, prefixHash...)
+	combined = append(combined, rctBaseHash...)
+	combined = append(combined, bpKvHash...)
+	clsagMessage := crypto.Keccak256(combined)
 
 	// Phase 4: Sign each input with CLSAG using the correct message
 	// Reset the deterministic RNG so this is repeatable
