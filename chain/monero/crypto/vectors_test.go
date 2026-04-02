@@ -140,6 +140,46 @@ func TestCLSAGSignatureVector(t *testing.T) {
 	D := "4eefe16af8d6dffbb2743088bb456b061382c9d951f1398ad42da7d1310dee98"
 	pseudoOut := "fc2f7e209a4fd9006c75743c5d637fe714eb821b9b2d5e16ae9b747b10e333e8"
 
+	// CLSAG s values (response scalars) from the tx blob
+	sValues := []string{
+		"a2ab2e972452aadbf02cffaf3ca4610226f4051a1014b9441501d2376dbbdf0e",
+		"f42b9d9aab3e2a1836f36c8f70cd87e32bf39843a13aa9058212b96ee0e97401",
+		"4ffa23910bee60f968f8125a85c17e8d0de4f7ef7ca1adb07dd0dbed504e1b09",
+		"752bf768a2d96b409e64b7a8b51cfab850f44456d7340d7357cbbd62ad50a502",
+		"d0b213c7e2c99e741fb1619240529256d6ba8ec4eb4acfef6d239bac83f17900",
+		"a4e3297994359b8f6ca157376627f1dfd9d6e124445f3ba3637471a276b2c005",
+		"4ca5817e2fccd9bb1cc28c6dbe1785cbc4fb2f206d837d212ec1f675be2a1b07",
+		"60dffcc58f69348d0a20210848bc8550fabf3959a5d6e756ce08d52509dd1603",
+		"c14ca6dcacd595f6f09f2ccc51897ce9ff58a6110b19fc24930cbef3bff10f00",
+		"c387e5604ab5e08a50bada90f2f2d1c929d7e87de904c59df84b90ab87debb06",
+		"f219e07cb2dd44008088c693e85db3eb7df11b2cd1a0c1d5d439f26715916206",
+		"061c9d014187d98e6bf2fd5f3c3ba37404abb05789a6928300eeb991f66efb08",
+		"389538d1a827b660d7182310126b43926bc913ca4fdafc9ed4f5bcec7ff02a08",
+		"172c6b02d26250f71286ed9925ee3e5aaeedf6b8e1378bf46debaa0d65ed4a05",
+		"459b82b5464d39bf33c4bf8e7355eb634d93a89286dca5c9790c2ae312c4bc04",
+		"86799c47bf41fdd314458d0f39c182a568fabf9e86754e425749013a4fdcd809",
+	}
+
+	// Ring member commitments from the blockchain
+	ringCommitments := []string{
+		"fcdef2f3620daf784c10244e31147465eaf3df468695ec91ece6c3342943ef9b",
+		"8b63e6ee0996f216d4888ae0eea7003da4a11ff945cdf3859708b7fc6067446e",
+		"fd3c5b3da9ccae3d5200e7ad1e35e25652d1880fb8c01dfa9a0a75a9a6d2f221",
+		"a3c0108e999ce7ffbc0ca1a54b24df9578def49fb113c824acfe5f466977f2f2",
+		"ac8d9d6c3ab5147d8facabf9d7e166b806403f9508b3b3a96d7e0e6c8e535232",
+		"86bd7563445c3d5bc29fd8d058f37dcd9fc930bb756df834218e5d52b999cddd",
+		"aaebd4b1296ab81014deb7bf21bbeeec8f81017f71706bb2492bd520a06a62e4",
+		"f5567155d095012854abcff68ae914b83f44d3f49981d954545c4b77ee40e10e",
+		"c8f06de5140a6222025d85becc221e5f4d7ba53afbf65d8c502da809e7549679",
+		"e99d5ee920b478d7616caa5bc11bcbb40dc814146381a117fac45152adefa603",
+		"153e9e09e3395bbe8879d3d431c89049c44b544cd16f48b5c87966ac2b5fe40a",
+		"6d1dcc9454d43a2cec919a6953f22d50334111b32190e06c4daca1226f9d81ee",
+		"9827ae31e5c2a77839f60b83ab4578e2a01efa4b3b14cc727314ffd7155363bf",
+		"9827ae31e5c2a77839f60b83ab4578e2a01efa4b3b14cc727314ffd7155363bf",
+		"9827ae31e5c2a77839f60b83ab4578e2a01efa4b3b14cc727314ffd7155363bf",
+		"3e28ea131721db162756240bcae9db1f305d317ac9af2df8c2824704734ab276",
+	}
+
 	// Ring member keys from the blockchain (16 members)
 	ringKeys := []string{
 		"c417566fba6262d487049d3e0b3054876da1dac114af757371dde977c57ff1ed",
@@ -181,8 +221,46 @@ func TestCLSAGSignatureVector(t *testing.T) {
 	// Key image from the tx input
 	keyImage := "a6c2a1d2b5daf949ed3460f7bf15a929cf143ab38790fb5a10ed48197b620f3d"
 
-	// All these values are from a confirmed on-chain transaction.
-	// A pure Go CLSAG verifier should accept this signature.
-	_ = clsagMessage
-	_ = keyImage
+	// Verify the CLSAG signature using our verifier
+	ring := make([]*edwards25519.Point, 16)
+	for i, k := range ringKeys {
+		b, _ := hex.DecodeString(k)
+		ring[i], _ = edwards25519.NewIdentityPoint().SetBytes(b)
+	}
+
+	commitments := make([]*edwards25519.Point, 16)
+	for i, c := range ringCommitments {
+		b, _ := hex.DecodeString(c)
+		commitments[i], _ = edwards25519.NewIdentityPoint().SetBytes(b)
+	}
+
+	pseudoOutBytes, _ := hex.DecodeString(pseudoOut)
+	pseudoOutPoint, _ := edwards25519.NewIdentityPoint().SetBytes(pseudoOutBytes)
+
+	c1Bytes, _ := hex.DecodeString(c1)
+	c1Scalar, _ := edwards25519.NewScalar().SetCanonicalBytes(c1Bytes)
+
+	dBytes, _ := hex.DecodeString(D)
+	dPoint, _ := edwards25519.NewIdentityPoint().SetBytes(dBytes)
+
+	kiBytes, _ := hex.DecodeString(keyImage)
+	kiPoint, _ := edwards25519.NewIdentityPoint().SetBytes(kiBytes)
+
+	sScalars := make([]*edwards25519.Scalar, 16)
+	for i, sHex := range sValues {
+		b, _ := hex.DecodeString(sHex)
+		sScalars[i], _ = edwards25519.NewScalar().SetCanonicalBytes(b)
+	}
+
+	sig := &CLSAGSignature{
+		S:  sScalars,
+		C1: c1Scalar,
+		I:  kiPoint,
+		D:  dPoint,
+	}
+
+	msgBytes, _ := hex.DecodeString(clsagMessage)
+
+	valid := CLSAGVerify(msgBytes, ring, commitments, pseudoOutPoint, sig)
+	require.True(t, valid, "CLSAG signature from confirmed testnet tx must verify")
 }
