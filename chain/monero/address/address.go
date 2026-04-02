@@ -43,6 +43,12 @@ func (ab *AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Add
 	pubSpend := publicKeyBytes[:32]
 	pubView := publicKeyBytes[32:]
 
+	// Determine address prefix based on network
+	prefix := moneroCrypto.MainnetAddressPrefix
+	if ab.cfg != nil && (string(ab.cfg.ChainID) == "testnet" || ab.cfg.Network == "testnet") {
+		prefix = moneroCrypto.TestnetAddressPrefix
+	}
+
 	// Check if subaddress format is requested
 	formatStr := string(ab.format)
 	if strings.HasPrefix(formatStr, "subaddress:") {
@@ -66,7 +72,7 @@ func (ab *AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Add
 		return xc.Address(addr), nil
 	}
 
-	addr := moneroCrypto.GenerateAddress(pubSpend, pubView)
+	addr := moneroCrypto.GenerateAddressWithPrefix(prefix, pubSpend, pubView)
 	return xc.Address(addr), nil
 }
 
