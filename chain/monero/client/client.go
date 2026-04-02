@@ -555,16 +555,8 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 	}
 
 	var confirmations uint64
-	state := txinfo.Succeeded
-	final := false
-	if txData.InPool {
-		confirmations = 0
-		state = txinfo.Mining
-	} else {
+	if !txData.InPool {
 		confirmations = blockCount - txData.BlockHeight
-		if confirmations >= uint64(c.cfg.XConfirmationsFinal) {
-			final = true
-		}
 	}
 
 	// Parse fee from tx JSON
@@ -581,56 +573,44 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 
 	fee := xc.NewAmountBlockchainFromUint64(txJson.RctSignatures.TxnFee)
 
+	// Build TxInfo using library constructors
+	block := txinfo.NewBlock(xc.XMR, txData.BlockHeight, "", time.Unix(int64(txData.BlockTimestamp), 0))
+	info := txinfo.NewTxInfo(block, c.cfg.GetChain(), string(hash), confirmations, nil)
+	info.Fees = []*txinfo.Balance{
+		txinfo.NewBalance(xc.XMR, "", fee, nil),
+	}
+
 	// Decode outputs using the fixed view key (no private spend key needed).
 	// This finds ALL outputs sent to any address sharing our view key,
 	// and recovers the recipient address for each.
-	var movements []*txinfo.Movement
 	if txData.AsJson != "" {
 		privView := crypto.FixedPrivateViewKey
-		// Determine address prefix from chain config
 		addrPrefix := crypto.MainnetAddressPrefix
 		if c.cfg != nil && (string(c.cfg.ChainID) == "testnet" || c.cfg.Network == "testnet") {
 			addrPrefix = crypto.TestnetAddressPrefix
 		}
 		outputs := scanTransactionViewKeyOnly(txData.AsJson, privView, addrPrefix)
 		if len(outputs) > 0 {
-			// Build a single movement with all decoded outputs as "to" entries.
-			// The "from" is the total spent (sum of outputs + fee), sender unknown
-			// due to Monero's ring signature privacy.
-			var toChanges []*txinfo.BalanceChange
+			// Native XMR transfer: empty contract = native asset
+			mv := txinfo.NewMovement(xc.XMR, "")
+
+			// From: total spent (sum of outputs + fee), sender hidden by ring sigs
 			var totalOut uint64
 			for _, out := range outputs {
-				toChanges = append(toChanges, &txinfo.BalanceChange{
-					Balance:   xc.NewAmountBlockchainFromUint64(out.amount),
-					AddressId: out.address,
-				})
 				totalOut += out.amount
 			}
-			movements = append(movements, &txinfo.Movement{
-				From: []*txinfo.BalanceChange{
-					{
-						Balance: xc.NewAmountBlockchainFromUint64(totalOut + txJson.RctSignatures.TxnFee),
-					},
-				},
-				To: toChanges,
-			})
+			mv.AddSource("", xc.NewAmountBlockchainFromUint64(totalOut+txJson.RctSignatures.TxnFee), nil)
+
+			// To: each decoded output with its recovered address
+			for _, out := range outputs {
+				mv.AddDestination(out.address, xc.NewAmountBlockchainFromUint64(out.amount), nil)
+			}
+
+			info.Movements = append(info.Movements, mv)
 		}
 	}
 
-	info := txinfo.TxInfo{
-		Name:      txinfo.TransactionName(fmt.Sprintf("chains/XMR/transactions/%s", hash)),
-		Hash:      string(hash),
-		State:     state,
-		Final:     final,
-		Movements: movements,
-		Fees: []*txinfo.Balance{
-			txinfo.NewBalance(xc.XMR, "", fee, nil),
-		},
-		Block:         txinfo.NewBlock(xc.XMR, txData.BlockHeight, "", time.Unix(int64(txData.BlockTimestamp), 0)),
-		Confirmations: confirmations,
-	}
-
-	return info, nil
+	return *info, nil
 }
 
 func (c *Client) FetchLegacyTxInfo(ctx context.Context, hash xc.TxHash) (txinfo.LegacyTxInfo, error) {
