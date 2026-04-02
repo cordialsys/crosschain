@@ -132,7 +132,7 @@ func (c *TxCall) IsRetryable() (bool, string) {
 }
 
 func (c *TxCall) SetInput(input xc.CallTxInput) error {
-	txInput := input.(*tx_input.CallInput)
+	txInput := input.(tx_input.GetTxInfo)
 
 	if ok, _ := c.IsRetryable(); !ok {
 		// we cannot modify the transaction in any way as it has an external signer.
@@ -141,18 +141,11 @@ func (c *TxCall) SetInput(input xc.CallTxInput) error {
 
 	// If the nonce account is used, do not use recent-blockhash, as this
 	// transaction is very likely using durable-nonce.
-	usingDurableNonce := false
-	for _, accountKey := range c.SolTx.Message.AccountKeys {
-		if !txInput.DurableNonceAccount.IsZero() && txInput.DurableNonceAccount.Equals(accountKey) {
-			usingDurableNonce = true
-			break
-		}
-
-	}
+	usingDurableNonce := txInput.DoesTxUseDurableNonce(c.SolTx)
 	if !usingDurableNonce {
 		// Update using the latest blockhash to prevent unwanted expiry.
 		// Otherwise it's bad experience if transaction was waiting for approval only to immediately expire after.
-		c.SolTx.Message.RecentBlockhash = txInput.RecentBlockHash
+		c.SolTx.Message.RecentBlockhash = txInput.GetRecentBlockhash()
 	}
 
 	return nil
@@ -219,4 +212,8 @@ func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
 
 func (c *TxCall) Serialize() ([]byte, error) {
 	return c.SolTx.MarshalBinary()
+}
+
+func (c *TxCall) GetPayload() (xc.TxCallPayload, bool) {
+	return tx_input.NewCallPayload(c.SolTx), true
 }

@@ -144,3 +144,7 @@ func (tx *TxCall) Serialize() ([]byte, error) {
 	}
 	return ethTx.MarshalBinary()
 }
+
+func (tx *TxCall) GetPayload() (xc.TxCallPayload, bool) {
+	return nil, false
+}

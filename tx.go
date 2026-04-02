@@ -20,6 +20,12 @@ type TxInputWithUnix interface {
 	SetUnix(int64)
 }
 
+// For transactions that come with their own payload, like Calls.
+// This may change how conflict resolution works, like on Solana.
+type TxInputWithCall interface {
+	SetCall(call TxCallPayload) error
+}
+
 type TxInputGasFeeMultiplier interface {
 	SetGasFeePriority(priority GasFeePriority) error
 }
@@ -215,4 +221,11 @@ type TxCall interface {
 	// Indicate if it's possible & safe to retry the call transaction.
 	// Meaning, can we re-sign the transaction with the a new input?
 	IsRetryable() (ok bool, reason string)
+
+	// Used if the tx-input needs to be updated retro-actively, like on Solana.
+	GetPayload() (TxCallPayload, bool)
+}
+
+type TxCallPayload interface {
+	IsTxCallPayload()
 }
