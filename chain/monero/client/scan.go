@@ -278,6 +278,16 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 			})
 		}
 
+		// Need at least 15 decoys for a ring size of 16
+		if len(ringMembers) < 15 {
+			logrus.WithFields(logrus.Fields{
+				"tx_hash":      out.TxHash,
+				"output_index": out.OutputIndex,
+				"decoys":       len(ringMembers),
+			}).Warn("insufficient decoys, skipping output")
+			continue
+		}
+
 		input.Outputs = append(input.Outputs, tx_input.Output{
 			Amount:      out.Amount,
 			Index:       out.OutputIndex,
