@@ -577,7 +577,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 	block := txinfo.NewBlock(xc.XMR, txData.BlockHeight, "", time.Unix(int64(txData.BlockTimestamp), 0))
 	info := txinfo.NewTxInfo(block, c.cfg.GetChain(), string(hash), confirmations, nil)
 	info.Fees = []*txinfo.Balance{
-		txinfo.NewBalance(xc.XMR, "", fee, nil),
+		txinfo.NewBalance(xc.XMR, xc.ContractAddress(xc.XMR), fee, nil),
 	}
 
 	// Decode outputs using the fixed view key (no private spend key needed).
