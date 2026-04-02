@@ -593,14 +593,26 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 			addrPrefix = crypto.TestnetAddressPrefix
 		}
 		outputs := scanTransactionViewKeyOnly(txData.AsJson, privView, addrPrefix)
-		for _, out := range outputs {
+		if len(outputs) > 0 {
+			// Build a single movement with all decoded outputs as "to" entries.
+			// The "from" is the total spent (sum of outputs + fee), sender unknown
+			// due to Monero's ring signature privacy.
+			var toChanges []*txinfo.BalanceChange
+			var totalOut uint64
+			for _, out := range outputs {
+				toChanges = append(toChanges, &txinfo.BalanceChange{
+					Balance:   xc.NewAmountBlockchainFromUint64(out.amount),
+					AddressId: out.address,
+				})
+				totalOut += out.amount
+			}
 			movements = append(movements, &txinfo.Movement{
-				To: []*txinfo.BalanceChange{
+				From: []*txinfo.BalanceChange{
 					{
-						Balance:   xc.NewAmountBlockchainFromUint64(out.amount),
-						AddressId: out.address,
+						Balance: xc.NewAmountBlockchainFromUint64(totalOut + txJson.RctSignatures.TxnFee),
 					},
 				},
+				To: toChanges,
 			})
 		}
 	}
