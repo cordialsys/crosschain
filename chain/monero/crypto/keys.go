@@ -14,6 +14,13 @@ const (
 	MainnetIntegratedPrefix byte = 0x13 // 19
 	// Monero mainnet subaddress prefix
 	MainnetSubaddressPrefix byte = 0x2a // 42
+
+	// Monero testnet address prefix
+	TestnetAddressPrefix byte = 0x35 // 53
+	// Monero testnet integrated address prefix
+	TestnetIntegratedPrefix byte = 0x36 // 54
+	// Monero testnet subaddress prefix
+	TestnetSubaddressPrefix byte = 0x3f // 63
 )
 
 // Keccak256 computes the Keccak-256 hash of data (NOT SHA3-256; Monero uses the pre-NIST Keccak)

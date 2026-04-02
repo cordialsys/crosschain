@@ -22,7 +22,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, address xc.Address) error {
 
 	// Check valid prefix
 	switch prefix {
-	case crypto.MainnetAddressPrefix, crypto.MainnetIntegratedPrefix, crypto.MainnetSubaddressPrefix:
+	case crypto.MainnetAddressPrefix, crypto.MainnetIntegratedPrefix, crypto.MainnetSubaddressPrefix,
+		crypto.TestnetAddressPrefix, crypto.TestnetIntegratedPrefix, crypto.TestnetSubaddressPrefix:
 		// valid
 	default:
 		return fmt.Errorf("invalid monero address prefix: %d", prefix)
