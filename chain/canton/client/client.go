@@ -128,14 +128,7 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	if err := cantonCfg.Validate(); err != nil {
 		return nil, err
 	}
-	keycloakURL, err := cantonCfg.KeycloakURL.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton keycloak url: %w", err)
-	}
-	keycloakRealm, err := cantonCfg.KeycloakRealm.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton keycloak realm: %w", err)
-	}
+
 	validatorAuthRaw, err := cantonCfg.ValidatorAuth.LoadNonEmpty()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load canton validator auth: %w", err)
@@ -144,22 +137,12 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	restAPIURL, err := cantonCfg.RestAPIURL.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton rest api url: %w", err)
-	}
-	validatorPartyID, err := fetchValidatorPartyID(context.Background(), restAPIURL)
+
+	validatorPartyID, err := fetchValidatorPartyID(context.Background(), cantonCfg.RestAPIURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch canton validator party id: %w", err)
 	}
-	scanProxyURL, err := cantonCfg.ScanProxyURL.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton scan proxy url: %w", err)
-	}
-	scanAPIURL, err := cantonCfg.ScanAPIURL.LoadNonEmpty()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load canton scan api url: %w", err)
-	}
+
 	cantonUIAuthRaw, err := cantonCfg.CantonUIAuth.LoadNonEmpty()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load canton ui auth: %w", err)
@@ -171,8 +154,8 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 	client := &Client{
 		Asset:            cfgI,
-		validatorKC:      cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
-		cantonUiKC:       cantonkc.NewClient(keycloakURL, keycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
+		validatorKC:      cantonkc.NewClient(cantonCfg.KeycloakURL, cantonCfg.KeycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
+		cantonUiKC:       cantonkc.NewClient(cantonCfg.KeycloakURL, cantonCfg.KeycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
 		cantonUiUsername: cantonUiUsername,
 		cantonUiPassword: cantonUiPassword,
 	}
@@ -193,9 +176,9 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 		validatorPartyID:       validatorPartyID,
 		validatorServiceUserID: validatorServiceUserID,
 		deduplicationWindow:    cfgI.TransactionActiveTime,
-		restAPIURL:             restAPIURL,
-		scanProxyURL:           scanProxyURL,
-		scanAPIURL:             scanAPIURL,
+		restAPIURL:             cantonCfg.RestAPIURL,
+		scanProxyURL:           cantonCfg.ScanProxyURL,
+		scanAPIURL:             cantonCfg.ScanAPIURL,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GrpcLedgerClient: %w", err)

@@ -459,13 +459,14 @@ chains:
       coin_gecko:
         asset_id: "canton-network"
     custom_config:
-      keycloak_url: "env:CANTON_KEYCLOAK_URL"
-      keycloak_realm: "env:CANTON_KEYCLOAK_REALM"
+      keycloak_url: ""
+      keycloak_realm: ""
+      rest_api_url: ""
+      scan_proxy_url: ""
+      scan_api_url: ""
       validator_auth: "env:CANTON_VALIDATOR_BASIC_AUTH"
-      rest_api_url: "env:CANTON_REST_API_URL"
-      scan_proxy_url: "env:CANTON_SCAN_API_URL"
-      scan_api_url: "env:CANTON_SCAN_NODE_URL"
       canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
+
   CHZ:
     chain: CHZ
     driver: evm-legacy

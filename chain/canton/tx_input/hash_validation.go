@@ -516,6 +516,7 @@ func encodeGenMapEntry(entry *v2.GenMap_Entry) ([]byte, error) {
 	return append(key, value...), nil
 }
 
+// dont use mapping since unsafe
 func createNodesDict(preparedTx *interactive.PreparedTransaction) (map[string]*interactive.DamlTransaction_Node, error) {
 	transaction := preparedTx.GetTransaction()
 	if transaction == nil {
