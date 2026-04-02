@@ -7,8 +7,10 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
+	"github.com/cordialsys/crosschain/testutil"
+	"google.golang.org/protobuf/proto"
 )
 
 type CreateAccountTx struct {
@@ -64,13 +66,17 @@ func (tx *CreateAccountTx) Sighashes() ([]*xc.SignatureRequest, error) {
 	}
 	switch tx.Input.Stage {
 	case tx_input.CreateAccountStageAllocate:
-		hash, err := tx_input.ComputeTopologyMultiHash(tx.Input.TopologyTransactions)
+		hash, err := ComputeTopologyMultiHash(tx.Input.TopologyTransactions)
 		if err != nil {
 			return nil, err
 		}
 		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 	case tx_input.CreateAccountStageAccept:
-		return tx.Input.Sighashes()
+		hash, err := computeCreateAccountAcceptSighash(tx.Input)
+		if err != nil {
+			return nil, err
+		}
+		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
 	default:
 		return nil, fmt.Errorf("unsupported create-account stage %q", tx.Input.Stage)
 	}
@@ -104,27 +110,6 @@ func (tx *CreateAccountTx) GetMetadata() ([]byte, bool, error) {
 	return bz, true, nil
 }
 
-func (tx *CreateAccountTx) KeyFingerprint() (string, error) {
-	if tx == nil || tx.Input == nil {
-		return "", fmt.Errorf("create-account tx input is nil")
-	}
-	switch tx.Input.Stage {
-	case tx_input.CreateAccountStageAllocate:
-		if tx.Input.PublicKeyFingerprint == "" {
-			return "", fmt.Errorf("public key fingerprint is empty")
-		}
-		return tx.Input.PublicKeyFingerprint, nil
-	case tx_input.CreateAccountStageAccept:
-		_, fingerprint, err := cantonaddress.ParsePartyID(xc.Address(tx.Input.PartyID))
-		if err != nil {
-			return "", fmt.Errorf("failed to parse party ID: %w", err)
-		}
-		return fingerprint, nil
-	default:
-		return "", fmt.Errorf("unsupported create-account stage %q", tx.Input.Stage)
-	}
-}
-
 func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.CreateAccountInput {
 	if input == nil {
 		return nil
@@ -139,6 +124,23 @@ func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.Creat
 		}
 	}
 	return &cloned
+}
+
+func computeCreateAccountAcceptSighash(input *tx_input.CreateAccountInput) ([]byte, error) {
+	if input == nil {
+		return nil, fmt.Errorf("create-account tx input is nil")
+	}
+	if len(input.SetupProposalPreparedTransaction) == 0 {
+		return nil, fmt.Errorf("setup proposal prepared transaction is empty")
+	}
+
+	var preparedTx interactive.PreparedTransaction
+	if err := proto.Unmarshal(input.SetupProposalPreparedTransaction, &preparedTx); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+	}
+	fmt.Println("-----")
+	testutil.JsonPrint(&preparedTx)
+	return tx_input.ComputePreparedTransactionHash(&preparedTx)
 }
 
 func parseCreateAccountSignaturePayload(data []byte) ([]byte, error) {

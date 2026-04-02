@@ -26,6 +26,7 @@ type TxInput struct {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithUnix = &TxInput{}
 
 func init() {
 	registry.RegisterTxBaseInput(&TxInput{})
@@ -41,6 +42,9 @@ func NewTxInput() *TxInput {
 
 func (input *TxInput) GetDriver() xc.Driver {
 	return xc.DriverCanton
+}
+func (input *TxInput) SetUnix(unix int64) {
+	// TODO
 }
 
 func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {

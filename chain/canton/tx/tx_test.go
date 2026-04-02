@@ -1,4 +1,4 @@
-package tx
+package tx_test
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
 	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
@@ -50,7 +51,7 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 				SubmissionId:        "submission-id",
 			}
 
-			tx, err := NewTx(input, args, 1)
+			tx, err := cantontx.NewTx(input, args, 1)
 			require.NoError(t, err)
 
 			hash, err := tx_input.ComputePreparedTransactionHash(vector.preparedTx)

@@ -36,6 +36,27 @@ func TestGetAddressFromPublicKey(t *testing.T) {
 	require.Equal(t, "122093aa96c5554371f0d1fd471ce282f3b590ab0758f35c124924c8e3715910bbe1", fingerprint)
 }
 
+func TestFingerprintFromPublicKey(t *testing.T) {
+	t.Parallel()
+
+	publicKeyBytes, err := hex.DecodeString("e5c86207770b9fb67d73eb4cb8cd6a5f6a5d6a63c66a5459bd77cca45fda6ede")
+	require.NoError(t, err)
+
+	fingerprint, err := FingerprintFromPublicKey(publicKeyBytes)
+	require.NoError(t, err)
+	require.Equal(t, "122079aa518eac66dcd662887155c5c7ee36d3b62e38ed0ded2ddc0c7050460bccc8", fingerprint)
+}
+
+func TestFingerprintFromPartyID(t *testing.T) {
+	t.Parallel()
+
+	addr := xc.Address("e5c86207770b9fb67d73eb4cb8cd6a5f6a5d6a63c66a5459bd77cca45fda6ede::122079aa518eac66dcd662887155c5c7ee36d3b62e38ed0ded2ddc0c7050460bccc8")
+
+	fingerprint, err := FingerprintFromPartyID(addr)
+	require.NoError(t, err)
+	require.Equal(t, "122079aa518eac66dcd662887155c5c7ee36d3b62e38ed0ded2ddc0c7050460bccc8", fingerprint)
+}
+
 func TestParsePartyID(t *testing.T) {
 	validFP := "1220" + hex.EncodeToString(make([]byte, 32)) // "1220" + 64 zeros
 

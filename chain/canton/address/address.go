@@ -34,10 +34,10 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 //   - 0x12 = SHA-256 algorithm code (varint)
 //   - 0x20 = 32-byte digest length (varint)
 func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	if len(publicKeyBytes) != 32 {
-		return "", fmt.Errorf("invalid ed25519 public key length: expected 32 bytes, got %d", len(publicKeyBytes))
+	fingerprint, err := FingerprintFromPublicKey(publicKeyBytes)
+	if err != nil {
+		return "", err
 	}
-	fingerprint := computeFingerprint(publicKeyBytes)
 	name := hex.EncodeToString(publicKeyBytes)
 	addr := xc.Address(name + "::" + fingerprint)
 
@@ -48,10 +48,11 @@ func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
 	return true
 }
 
-// computeFingerprint returns the Canton key fingerprint for a raw Ed25519 public key.
-//
-//	fingerprint = "1220" + hex(SHA-256(bigEndianUint32(12) || rawPubKey))
-func computeFingerprint(rawPubKey []byte) string {
+// FingerprintFromPublicKey returns the Canton key fingerprint for a raw Ed25519 public key.
+func FingerprintFromPublicKey(rawPubKey []byte) (string, error) {
+	if len(rawPubKey) != 32 {
+		return "", fmt.Errorf("invalid ed25519 public key length: expected 32 bytes, got %d", len(rawPubKey))
+	}
 	// HashPurpose.PublicKeyFingerprint id=12 encoded as big-endian int32 (4 bytes)
 	var purposeBytes [4]byte
 	binary.BigEndian.PutUint32(purposeBytes[:], 12)
@@ -62,7 +63,29 @@ func computeFingerprint(rawPubKey []byte) string {
 	digest := h.Sum(nil)
 
 	// Multihash: varint(0x12=SHA-256) || varint(0x20=32) || digest
-	return "1220" + hex.EncodeToString(digest)
+	return "1220" + hex.EncodeToString(digest), nil
+}
+
+// FingerprintFromPartyID recomputes the Canton key fingerprint from a party ID
+// whose name segment is the hex-encoded Ed25519 public key produced by AddressBuilder.
+func FingerprintFromPartyID(addr xc.Address) (string, error) {
+	name, fingerprint, err := ParsePartyID(addr)
+	if err != nil {
+		return "", err
+	}
+
+	publicKeyBytes, err := hex.DecodeString(name)
+	if err != nil {
+		return "", fmt.Errorf("invalid Canton party name %q: expected hex-encoded public key: %w", name, err)
+	}
+	computed, err := FingerprintFromPublicKey(publicKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	if computed != fingerprint {
+		return "", fmt.Errorf("canton party fingerprint mismatch: computed %q from address public key, got %q", computed, fingerprint)
+	}
+	return computed, nil
 }
 
 // ParsePartyID splits a Canton party ID into its name and fingerprint components.

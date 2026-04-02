@@ -24,8 +24,7 @@ func TestCreateAccountInputVerifySignaturePayloadsAllocateStage(t *testing.T) {
 
 	input := &CreateAccountInput{
 		Stage:                CreateAccountStageAllocate,
-		PartyID:              "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		PublicKeyFingerprint: "1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		PartyID:              "e5c86207770b9fb67d73eb4cb8cd6a5f6a5d6a63c66a5459bd77cca45fda6ede::122079aa518eac66dcd662887155c5c7ee36d3b62e38ed0ded2ddc0c7050460bccc8",
 		TopologyTransactions: [][]byte{{0x01, 0x02}},
 	}
 

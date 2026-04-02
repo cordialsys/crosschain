@@ -890,11 +890,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 
 // KeyFingerprintFromAddress extracts the key fingerprint from a Canton party address
 func KeyFingerprintFromAddress(addr xc.Address) (string, error) {
-	_, fingerprint, err := cantonaddress.ParsePartyID(addr)
-	if err != nil {
-		return "", err
-	}
-	return fingerprint, nil
+	return cantonaddress.FingerprintFromPartyID(addr)
 }
 
 var _ xclient.CreateAccountClient = &Client{}
@@ -1005,16 +1001,11 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			"multihash_len":     len(topologyResp.GetMultiHash()),
 		}).Info("create-account: generated external party topology")
 
-		txns := make([][]byte, 0, len(topologyResp.GetTopologyTransactions()))
-		for _, txBytes := range topologyResp.GetTopologyTransactions() {
-			txns = append(txns, txBytes)
-		}
-
 		input := &tx_input.CreateAccountInput{
 			Stage:                tx_input.CreateAccountStageAllocate,
 			PartyID:              partyID,
 			PublicKeyFingerprint: topologyResp.GetPublicKeyFingerprint(),
-			TopologyTransactions: txns,
+			TopologyTransactions: topologyResp.GetTopologyTransactions(),
 		}
 
 		if err := input.VerifySignaturePayloads(); err != nil {
@@ -1126,7 +1117,11 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 		if err != nil {
 			return fmt.Errorf("failed to resolve synchronizer for external party allocation: %w", err)
 		}
-		req := cantonproto.NewAllocateExternalPartyRequest(synchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, cantonInput.PublicKeyFingerprint)
+		keyFingerprint, err := cantonaddress.FingerprintFromPartyID(xc.Address(createAccountTx.Input.PartyID))
+		if err != nil {
+			return fmt.Errorf("failed to compute key fingerprint from party ID: %w", err)
+		}
+		req := cantonproto.NewAllocateExternalPartyRequest(synchronizerID, cantonInput.TopologyTransactions, cantonInput.Signature, keyFingerprint)
 		_, err = client.ledgerClient.AllocateExternalParty(ctx, req)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("AllocateExternalParty failed: %w", err)
@@ -1137,7 +1132,7 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 		if err := proto.Unmarshal(cantonInput.SetupProposalPreparedTransaction, &preparedTx); err != nil {
 			return fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
 		}
-		keyFingerprint, err := createAccountTx.KeyFingerprint()
+		keyFingerprint, err := KeyFingerprintFromAddress(xc.Address(cantonInput.PartyID))
 		if err != nil {
 			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}

@@ -27,7 +27,11 @@ type CreateAccountInput struct {
 	Stage string `json:"stage"`
 
 	// Used only for conflict checking, but not actually in the transaction?
+	// The PartyID is the same as the address, looks like this:
+	// e5c86207770b9fb67d73eb4cb8cd6a5f6a5d6a63c66a5459bd77cca45fda6ede::122079aa518eac66dcd662887155c5c7ee36d3b62e38ed0ded2ddc0c7050460bccc8
+	// or, <public_key>::<fingerprint>
 	PartyID string `json:"party_id"`
+
 	// Need to make the tx submit -- likely we can compute this on our own
 	// and drop it from the input
 	PublicKeyFingerprint string `json:"public_key_fingerprint,omitempty"`
@@ -128,26 +132,6 @@ func (i *CreateAccountInput) Serialize() ([]byte, error) {
 	return payload, nil
 }
 
-// Sighashes returns the payload for the current pending step.
-func (i *CreateAccountInput) Sighashes() ([]*xc.SignatureRequest, error) {
-	switch i.Stage {
-	case CreateAccountStageAllocate:
-		return nil, fmt.Errorf("allocate-stage sighash is derived by the Canton create-account tx")
-	case CreateAccountStageAccept:
-		preparedTx, err := i.setupProposalPreparedTransaction()
-		if err != nil {
-			return nil, err
-		}
-		hash, err := ComputePreparedTransactionHash(preparedTx)
-		if err != nil {
-			return nil, err
-		}
-		return []*xc.SignatureRequest{xc.NewSignatureRequest(hash)}, nil
-	default:
-		return nil, fmt.Errorf("unsupported create-account stage %q", i.Stage)
-	}
-}
-
 func (i *CreateAccountInput) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	if len(sigs) != 1 {
 		return fmt.Errorf("expected 1 signature, got %d", len(sigs))
@@ -162,9 +146,6 @@ func (i *CreateAccountInput) VerifySignaturePayloads() error {
 	}
 	switch i.Stage {
 	case CreateAccountStageAllocate:
-		if i.PublicKeyFingerprint == "" {
-			return fmt.Errorf("public key fingerprint is empty")
-		}
 		if len(i.TopologyTransactions) == 0 {
 			return fmt.Errorf("topology transactions are empty")
 		}

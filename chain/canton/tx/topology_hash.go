@@ -1,4 +1,4 @@
-package tx_input
+package tx
 
 import (
 	"crypto/sha256"
