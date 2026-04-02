@@ -95,15 +95,18 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	var outputs []tx.TxOutput
 	var amounts []uint64
 	var masks [][]byte
+	var recipientViews [][]byte // public view keys for each output (for amount encryption)
 
 	// Output 0: destination
 	destKey, destViewTag, err := deriveOutputKey(txPrivKey, string(args.GetTo()), 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive destination key: %w", err)
 	}
+	_, _, destPubView, _ := crypto.DecodeAddress(string(args.GetTo()))
 	outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: destKey, ViewTag: destViewTag})
 	amounts = append(amounts, amountU64)
 	masks = append(masks, generateMaskFrom(rng))
+	recipientViews = append(recipientViews, destPubView)
 
 	// Output 1: change
 	if change > 0 {
@@ -111,9 +114,11 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive change key: %w", err)
 		}
+		_, _, changePubView, _ := crypto.DecodeAddress(string(args.GetFrom()))
 		outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: changeKey, ViewTag: changeViewTag})
 		amounts = append(amounts, change)
 		masks = append(masks, generateMaskFrom(rng))
+		recipientViews = append(recipientViews, changePubView)
 	}
 
 	// Generate BP+ range proof using Monero's exact C++ implementation.
@@ -143,10 +148,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		commitments[i], _ = crypto.PedersenCommit(amounts[i], masks[i])
 	}
 
-	// Encrypt amounts
+	// Encrypt amounts using the correct ECDH shared secret per output
 	var ecdhInfo [][]byte
 	for i := range amounts {
-		enc, _ := encryptAmount(amounts[i], txPrivKey, i)
+		enc, _ := encryptAmount(amounts[i], txPrivKey, recipientViews[i], i)
 		ecdhInfo = append(ecdhInfo, enc)
 	}
 
@@ -417,36 +422,51 @@ func deriveOutputKey(txPrivKey []byte, address string, outputIndex int) ([]byte,
 		return nil, 0, err
 	}
 
-	rScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(txPrivKey)
-	pubViewPoint, err := edwards25519.NewIdentityPoint().SetBytes(pubView)
+	// D = 8 * txPrivKey * pubView (with cofactor, matching Monero's generate_key_derivation)
+	D, err := crypto.GenerateKeyDerivation(pubView, txPrivKey)
 	if err != nil {
 		return nil, 0, err
 	}
-	D := edwards25519.NewIdentityPoint().ScalarMult(rScalar, pubViewPoint)
 
-	sData := append(D.Bytes(), crypto.VarIntEncode(uint64(outputIndex))...)
-	sHash := crypto.Keccak256(sData)
-	s := crypto.ScalarReduce(sHash)
+	// s = H_s(D || output_index)
+	scalar, err := crypto.DerivationToScalar(D, uint64(outputIndex))
+	if err != nil {
+		return nil, 0, err
+	}
 
-	sScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(s)
+	// P = s*G + pubSpend
+	sScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(scalar)
 	sG := edwards25519.NewGeneratorPoint().ScalarBaseMult(sScalar)
 	B, _ := edwards25519.NewIdentityPoint().SetBytes(pubSpend)
 	P := edwards25519.NewIdentityPoint().Add(sG, B)
 
-	viewTagData := append([]byte("view_tag"), D.Bytes()...)
+	// View tag = first byte of H("view_tag" || D || output_index)
+	viewTagData := append([]byte("view_tag"), D...)
 	viewTagData = append(viewTagData, crypto.VarIntEncode(uint64(outputIndex))...)
 	viewTag := crypto.Keccak256(viewTagData)[0]
 
 	return P.Bytes(), viewTag, nil
 }
 
-func encryptAmount(amount uint64, txPrivKey []byte, outputIndex int) ([]byte, error) {
+// encryptAmount encrypts an output amount using the ECDH shared scalar.
+// The shared scalar is H_s(8*txPrivKey*recipientPubView || outputIndex).
+// Then: encrypted = amount XOR first_8_bytes(H("amount" || scalar))
+func encryptAmount(amount uint64, txPrivKey []byte, recipientPubView []byte, outputIndex int) ([]byte, error) {
 	amountBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(amountBytes, amount)
 
-	scalarData := append(txPrivKey, crypto.VarIntEncode(uint64(outputIndex))...)
-	scalarHash := crypto.Keccak256(scalarData)
-	amountKey := crypto.Keccak256(append([]byte("amount"), scalarHash[:32]...))
+	// Same derivation as used for output key
+	D, err := crypto.GenerateKeyDerivation(recipientPubView, txPrivKey)
+	if err != nil {
+		return nil, err
+	}
+	scalar, err := crypto.DerivationToScalar(D, uint64(outputIndex))
+	if err != nil {
+		return nil, err
+	}
+
+	// amount_key = H("amount" || scalar) - matches Monero's genAmountEncodingFactor
+	amountKey := crypto.Keccak256(append([]byte("amount"), scalar...))
 
 	encrypted := make([]byte, 8)
 	for i := 0; i < 8; i++ {
