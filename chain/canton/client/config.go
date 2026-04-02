@@ -9,13 +9,20 @@ import (
 )
 
 type CantonConfig struct {
-	KeycloakURL      config.Secret `yaml:"keycloak_url,omitempty"`
-	KeycloakRealm    config.Secret `yaml:"keycloak_realm,omitempty"`
-	ValidatorAuth    config.Secret `yaml:"validator_auth,omitempty"`
-	RestAPIURL       config.Secret `yaml:"rest_api_url,omitempty"`
-	ScanProxyURL     config.Secret `yaml:"scan_proxy_url,omitempty"`
-	ScanAPIURL       config.Secret `yaml:"scan_api_url,omitempty"`
-	CantonUIAuth     config.Secret `yaml:"canton_ui_auth,omitempty"`
+	// KeycloakURL is the Keycloak base URL used for validator and canton-ui token acquisition.
+	KeycloakURL   config.Secret `yaml:"keycloak_url,omitempty"`
+	// KeycloakRealm is the Keycloak realm that issues validator and canton-ui tokens.
+	KeycloakRealm config.Secret `yaml:"keycloak_realm,omitempty"`
+	// ValidatorAuth is validator client_credentials auth in id:secret form.
+	ValidatorAuth config.Secret `yaml:"validator_auth,omitempty"`
+	// RestAPIURL is the validator REST base URL used for validator-admin and public validator endpoints.
+	RestAPIURL    config.Secret `yaml:"rest_api_url,omitempty"`
+	// ScanProxyURL is the validator-hosted scan proxy endpoint we call from the Canton client.
+	ScanProxyURL  config.Secret `yaml:"scan_proxy_url,omitempty"`
+	// ScanAPIURL is the upstream Scan node base URL that the proxy targets on our behalf.
+	ScanAPIURL    config.Secret `yaml:"scan_api_url,omitempty"`
+	// CantonUIAuth is canton-ui password-grant auth in id:secret form, used to obtain scan proxy tokens.
+	CantonUIAuth  config.Secret `yaml:"canton_ui_auth,omitempty"`
 }
 
 func LoadCantonConfig(chain *xc.ChainConfig) (*CantonConfig, error) {
