@@ -252,21 +252,11 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		RingSize:       ringSize,
 	}
 
-	// Phase 3: Compute the three-hash CLSAG message.
-	// Use the Tx methods directly (they don't depend on CLSAG being set).
-	prefix := moneroTx.SerializePrefix()
-	rctBase := moneroTx.SerializeRctBase()
-	bpKv := moneroTx.SerializeBpPrunable()
-
-	prefixHash := crypto.Keccak256(prefix)
-	rctBaseHash := crypto.Keccak256(rctBase)
-	bpKvHash := crypto.Keccak256(bpKv)
-
-	combined := make([]byte, 0, 96)
-	combined = append(combined, prefixHash...)
-	combined = append(combined, rctBaseHash...)
-	combined = append(combined, bpKvHash...)
-	clsagMessage := crypto.Keccak256(combined)
+	// Phase 3: Compute the three-hash CLSAG message from the serialized blob.
+	// We serialize the tx (without CLSAGs) and parse the blob to get exact boundaries.
+	// This guarantees the message matches what the verifier computes.
+	blobForMsg, _ := moneroTx.Serialize()
+	clsagMessage := computeCLSAGMessageFromBlob(blobForMsg, len(txInputs), len(outputs))
 
 	// Phase 4: Sign each input with CLSAG using the correct message
 	// Reset the deterministic RNG so this is repeatable
