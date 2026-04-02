@@ -24,9 +24,7 @@ var (
 	scInvEight *edwards25519.Scalar
 	scMinusInvEight *edwards25519.Scalar
 
-	// Gi_bp and Hi_bp are the BP+ generator vectors (same as Gi/Hi in generators.go)
-	// but stored as points for direct use.
-	initialTranscript *edwards25519.Scalar
+	initialTranscriptBytes [32]byte
 )
 
 func init() {
@@ -48,9 +46,14 @@ func init() {
 
 	scMinusInvEight = edwards25519.NewScalar().Negate(scInvEight)
 
-	// initial_transcript = hash_to_scalar("bulletproof_plus_transcript")
+	// initial_transcript = ge_p3_tobytes(hash_to_p3(cn_fast_hash("bulletproof_plus_transcript")))
+	// This is raw 32-byte point representation, NOT reduced mod L
 	h := Keccak256([]byte("bulletproof_plus_transcript"))
-	initialTranscript, _ = edwards25519.NewScalar().SetCanonicalBytes(ScReduce32(h))
+	point := geFromfeFrombytesVartime(h)
+	p2 := edwards25519.NewIdentityPoint().Add(point, point)
+	p4 := edwards25519.NewIdentityPoint().Add(p2, p2)
+	p8 := edwards25519.NewIdentityPoint().Add(p4, p4)
+	copy(initialTranscriptBytes[:], p8.Bytes())
 }
 
 // BPPlusProvePureGo generates a Bulletproofs+ range proof in pure Go.
@@ -118,9 +121,10 @@ func BPPlusProvePureGo(amounts []uint64, masks [][]byte, randReader ...io.Reader
 		}
 	}
 
-	// Transcript
-	transcript := scalarCopy(initialTranscript)
-	transcript = transcriptUpdate1(transcript, hashKeyV(V))
+	// Fiat-Shamir transcript (raw 32-byte keys, not scalars)
+	ensureHtpInit()
+	transcript := initialTranscriptBytes
+	transcript, _ = transcriptUpdateKey(transcript, keyFromScalar(hashKeyV(V)))
 
 	// A = alpha*G/8 + sum(aL8[i]*Gi[i] + aR8[i]*Hi[i])
 	alpha := skGen(rng)
@@ -129,12 +133,16 @@ func BPPlusProvePureGo(amounts []uint64, masks [][]byte, randReader ...io.Reader
 	A := ptAdd(preA, ptScalarBaseMult(alphaInv8))
 
 	// Challenges y, z
-	y := transcriptUpdate1(transcript, ptToScalar(A))
+	var y *edwards25519.Scalar
+	transcript, y = transcriptUpdateKey(transcript, keyFromPoint(A))
 	if y.Equal(edwards25519.NewScalar()) == 1 {
 		return nil, fmt.Errorf("y is 0")
 	}
-	z := hashScalar(y.Bytes())
-	transcript = scalarCopy(z)
+	// z = hash_to_scalar(y)
+	zReduced := ScReduce32(Keccak256(y.Bytes()))
+	var z *edwards25519.Scalar
+	z, _ = edwards25519.NewScalar().SetCanonicalBytes(zReduced)
+	copy(transcript[:], zReduced) // transcript = z
 	if z.Equal(edwards25519.NewScalar()) == 1 {
 		return nil, fmt.Errorf("z is 0")
 	}
@@ -205,11 +213,11 @@ func BPPlusProvePureGo(amounts []uint64, masks [][]byte, randReader ...io.Reader
 		Rpoints[round] = computeLRWithGens(nprime, yPow[nprime],
 			Gprime[:nprime], Hprime[nprime:], aprime[nprime:2*nprime], bprime[:nprime], cR, dR)
 
-		challenge := transcriptUpdate2(transcript, ptToScalar(Lpoints[round]), ptToScalar(Rpoints[round]))
+		var challenge *edwards25519.Scalar
+		transcript, challenge = transcriptUpdateKey2(transcript, keyFromPoint(Lpoints[round]), keyFromPoint(Rpoints[round]))
 		if challenge.Equal(edwards25519.NewScalar()) == 1 {
 			return nil, fmt.Errorf("challenge is 0")
 		}
-		transcript = scalarCopy(challenge)
 		challengeInv := scalarInvert(challenge)
 
 		// Fold generators: Gprime[i] = challenge_inv * Gprime[i] + yinvpow[nprime]*challenge * Gprime[nprime+i]
@@ -267,7 +275,9 @@ func BPPlusProvePureGo(amounts []uint64, masks [][]byte, randReader ...io.Reader
 	B := addKeys2(etaInv8, rysInv8, H)
 
 	// Final challenge
-	e_challenge := transcriptUpdate2(transcript, ptToScalar(A1), ptToScalar(B))
+	var e_challenge *edwards25519.Scalar
+	transcript, e_challenge = transcriptUpdateKey2(transcript, keyFromPoint(A1), keyFromPoint(B))
+	_ = transcript
 	if e_challenge.Equal(edwards25519.NewScalar()) == 1 {
 		return nil, fmt.Errorf("e is 0")
 	}
@@ -357,19 +367,44 @@ func hashKeyV(keys []*edwards25519.Point) *edwards25519.Scalar {
 	return hashScalar(data)
 }
 
-func transcriptUpdate1(transcript *edwards25519.Scalar, update *edwards25519.Scalar) *edwards25519.Scalar {
+// transcriptUpdateKey updates the transcript with one 32-byte key (raw bytes).
+// Returns hash_to_scalar(transcript || update) as both raw bytes and scalar.
+func transcriptUpdateKey(transcript [32]byte, update [32]byte) ([32]byte, *edwards25519.Scalar) {
 	var data []byte
-	data = append(data, transcript.Bytes()...)
-	data = append(data, update.Bytes()...)
-	return hashScalar(data)
+	data = append(data, transcript[:]...)
+	data = append(data, update[:]...)
+	h := Keccak256(data)
+	reduced := ScReduce32(h)
+	var result [32]byte
+	copy(result[:], reduced)
+	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
+	return result, s
 }
 
-func transcriptUpdate2(transcript *edwards25519.Scalar, u0, u1 *edwards25519.Scalar) *edwards25519.Scalar {
+// transcriptUpdateKey2 updates the transcript with two 32-byte keys.
+func transcriptUpdateKey2(transcript [32]byte, u0, u1 [32]byte) ([32]byte, *edwards25519.Scalar) {
 	var data []byte
-	data = append(data, transcript.Bytes()...)
-	data = append(data, u0.Bytes()...)
-	data = append(data, u1.Bytes()...)
-	return hashScalar(data)
+	data = append(data, transcript[:]...)
+	data = append(data, u0[:]...)
+	data = append(data, u1[:]...)
+	h := Keccak256(data)
+	reduced := ScReduce32(h)
+	var result [32]byte
+	copy(result[:], reduced)
+	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
+	return result, s
+}
+
+func keyFromPoint(p *edwards25519.Point) [32]byte {
+	var k [32]byte
+	copy(k[:], p.Bytes())
+	return k
+}
+
+func keyFromScalar(s *edwards25519.Scalar) [32]byte {
+	var k [32]byte
+	copy(k[:], s.Bytes())
+	return k
 }
 
 func vectorExponent(a, b []*edwards25519.Scalar, n int) *edwards25519.Point {

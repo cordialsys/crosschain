@@ -27,19 +27,28 @@ func init() {
 	// H is a precomputed constant from Monero's crypto-ops-data.c
 	H, _ = edwards25519.NewIdentityPoint().SetBytes(GetHPureGo())
 
-	// Gi and Hi vectors for BP+ using pure Go hash_to_ec
-	prefix := []byte("bulletproof_plus")
+	// Gi and Hi vectors for BP+ using Monero's get_exponent:
+	// hash_to_p3(cn_fast_hash(H_bytes || "bulletproof_plus" || varint(idx)))
+	hBytes := H.Bytes()
+	bpExponent := []byte("bulletproof_plus")
 	for i := 0; i < maxMN; i++ {
-		hiData := make([]byte, len(prefix))
-		copy(hiData, prefix)
-		hiData = append(hiData, varintEncode(uint64(2*i))...)
-		giData := make([]byte, len(prefix))
-		copy(giData, prefix)
-		giData = append(giData, varintEncode(uint64(2*i+1))...)
-		hiBytes := HashToECPureGo(hiData)
-		giBytes := HashToECPureGo(giData)
-		Hi[i], _ = edwards25519.NewIdentityPoint().SetBytes(hiBytes)
-		Gi[i], _ = edwards25519.NewIdentityPoint().SetBytes(giBytes)
+		hiInput := append(append([]byte{}, hBytes...), bpExponent...)
+		hiInput = append(hiInput, varintEncode(uint64(2*i))...)
+		giInput := append(append([]byte{}, hBytes...), bpExponent...)
+		giInput = append(giInput, varintEncode(uint64(2*i+1))...)
+
+		// hash_to_p3 = hash_to_ec on the cn_fast_hash (already includes Keccak)
+		hiHash := Keccak256(hiInput)
+		giHash := Keccak256(giInput)
+		hiPoint := geFromfeFrombytesVartime(hiHash)
+		giPoint := geFromfeFrombytesVartime(giHash)
+		// Multiply by cofactor 8
+		hi2 := edwards25519.NewIdentityPoint().Add(hiPoint, hiPoint)
+		hi4 := edwards25519.NewIdentityPoint().Add(hi2, hi2)
+		Hi[i] = edwards25519.NewIdentityPoint().Add(hi4, hi4)
+		gi2 := edwards25519.NewIdentityPoint().Add(giPoint, giPoint)
+		gi4 := edwards25519.NewIdentityPoint().Add(gi2, gi2)
+		Gi[i] = edwards25519.NewIdentityPoint().Add(gi4, gi4)
 	}
 }
 
