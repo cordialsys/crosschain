@@ -10,7 +10,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 	"github.com/cordialsys/crosschain/chain/monero/tx"
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -133,20 +132,20 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 	// Generate BP+ range proof using Monero's exact C++ implementation.
 	// Cache the raw proof in TxInput for determinism (Transfer() is called multiple times).
-	var bpFields cref.BPPlusFields
+	var bpFields crypto.BPPlusFields
 	if len(moneroInput.CachedBpProof) > 0 {
-		_, bpFields, err = cref.ParseBPPlusProof(moneroInput.CachedBpProof)
+		_, bpFields, err = crypto.ParseBPPlusProofGo(moneroInput.CachedBpProof)
 		if err != nil {
 			return nil, fmt.Errorf("cached BP+ parse failed: %w", err)
 		}
 	} else {
 		var rawProof []byte
-		rawProof, err = cref.BPPlusProve(amounts, masks)
+		rawProof, err = crypto.BPPlusProvePureGo(amounts, masks)
 		if err != nil {
 			return nil, fmt.Errorf("BP+ proof failed: %w", err)
 		}
 		moneroInput.CachedBpProof = rawProof
-		_, bpFields, err = cref.ParseBPPlusProof(rawProof)
+		_, bpFields, err = crypto.ParseBPPlusProofGo(rawProof)
 		if err != nil {
 			return nil, fmt.Errorf("BP+ parse failed: %w", err)
 		}

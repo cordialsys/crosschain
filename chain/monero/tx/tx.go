@@ -5,7 +5,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 	"filippo.io/edwards25519"
 )
 
@@ -35,7 +34,7 @@ type Tx struct {
 	PseudoOuts     []*edwards25519.Point
 	EcdhInfo       [][]byte // 8 bytes each
 	BpPlus         *crypto.BulletproofPlus  // Go BP+ (deprecated, kept for compatibility)
-	BpPlusNative   *cref.BPPlusFields       // C++ BP+ proof fields
+	BpPlusNative   *crypto.BPPlusFields      // BP+ proof fields
 
 	// CLSAG signatures (pre-computed)
 	CLSAGs []*crypto.CLSAGSignature

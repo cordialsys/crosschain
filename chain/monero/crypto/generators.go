@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"filippo.io/edwards25519"
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 )
 
 // Generator points for Pedersen commitments and Bulletproofs+.
@@ -105,8 +104,11 @@ func RandomScalar(entropy []byte) []byte {
 	return ScReduce32(hash)
 }
 
-// BPPlusProveNative generates a BP+ proof using Monero's exact C++ implementation.
-// Returns (V commitments, serialized proof fields for tx, prunable hash data, error).
-func BPPlusProveNative(amounts []uint64, masks [][]byte) (commitments [][]byte, proofFields cref.BPPlusFields, err error) {
-	return cref.BPPlusProveRaw(amounts, masks)
+// BPPlusProveNative generates a BP+ proof using pure Go.
+func BPPlusProveNative(amounts []uint64, masks [][]byte) (commitments [][]byte, proofFields BPPlusFields, err error) {
+	raw, err := BPPlusProvePureGo(amounts, masks)
+	if err != nil {
+		return nil, BPPlusFields{}, err
+	}
+	return ParseBPPlusProofGo(raw)
 }

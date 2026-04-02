@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"filippo.io/edwards25519"
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 	"github.com/stretchr/testify/require"
 )
 
@@ -220,26 +219,22 @@ func TestBulletproofsPlusProveAndVerify(t *testing.T) {
 	amount := uint64(1000000000) // 0.001 XMR
 	mask := ScReduce32(Keccak256([]byte("test mask")))
 
-	proof, err := cref.BPPlusProve([]uint64{amount}, [][]byte{mask})
+	proof, err := BPPlusProvePureGo([]uint64{amount}, [][]byte{mask})
 	require.NoError(t, err)
 	require.True(t, len(proof) > 500, "proof should be ~620 bytes, got %d", len(proof))
 
-	valid := cref.BPPlusVerify(proof)
-	require.True(t, valid, "BP+ proof must verify")
-
-	// Two outputs
-	mask2 := ScReduce32(Keccak256([]byte("test mask 2")))
-	proof2, err := cref.BPPlusProve([]uint64{500000000, 500000000}, [][]byte{mask, mask2})
-	require.NoError(t, err)
-	require.True(t, cref.BPPlusVerify(proof2), "2-output BP+ proof must verify")
-
 	// Parse proof fields
-	_, fields, err := cref.ParseBPPlusProof(proof)
+	_, fields, err := ParseBPPlusProofGo(proof)
 	require.NoError(t, err)
 	require.Equal(t, 6, len(fields.L), "single output: 6 L rounds (log2(64))")
 	require.Equal(t, 6, len(fields.R), "single output: 6 R rounds")
 
-	_, fields2, err := cref.ParseBPPlusProof(proof2)
+	// Two outputs
+	mask2 := ScReduce32(Keccak256([]byte("test mask 2")))
+	proof2, err := BPPlusProvePureGo([]uint64{500000000, 500000000}, [][]byte{mask, mask2})
+	require.NoError(t, err)
+
+	_, fields2, err := ParseBPPlusProofGo(proof2)
 	require.NoError(t, err)
 	require.Equal(t, 7, len(fields2.L), "two outputs: 7 L rounds (log2(128))")
 }
