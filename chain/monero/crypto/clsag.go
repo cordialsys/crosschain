@@ -38,8 +38,9 @@ func init() {
 }
 
 // ComputeKeyImage computes I = x * H_p(P) for a given private key and public key.
+// Uses pure Go hash_to_ec.
 func ComputeKeyImage(privateKey *edwards25519.Scalar, publicKey *edwards25519.Point) *edwards25519.Point {
-	hpBytes := HashToEC(publicKey.Bytes())
+	hpBytes := HashToECPureGo(publicKey.Bytes())
 	hp, _ := edwards25519.NewIdentityPoint().SetBytes(hpBytes)
 	return edwards25519.NewIdentityPoint().ScalarMult(privateKey, hp)
 }

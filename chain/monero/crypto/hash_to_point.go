@@ -8,23 +8,27 @@ import (
 // Precomputed field element constants for ge_fromfe_frombytes_vartime.
 // These match Monero's crypto-ops-data.c values.
 var (
-	// fe_ma = -A = -486662 (Montgomery curve parameter)
-	feMA field.Element
-	// fe_ma2 = -2*A^2 = -2 * 486662^2
-	feMA2 field.Element
-	// fe_sqrtm1 = sqrt(-1) mod p
+	feMA     field.Element
+	feMA2    field.Element
 	feSqrtM1 field.Element
-	// fe_fffb1 = sqrt(-2 * A * (A + 2))
-	feFFfb1 field.Element
-	// fe_fffb2 = sqrt(2 * A * (A + 2))
-	feFFfb2 field.Element
-	// fe_fffb3 = sqrt(-sqrt(-1) * A * (A + 2))
-	feFFfb3 field.Element
-	// fe_fffb4 = sqrt(sqrt(-1) * A * (A + 2))
-	feFFfb4 field.Element
+	feFFfb1  field.Element
+	feFFfb2  field.Element
+	feFFfb3  field.Element
+	feFFfb4  field.Element
+	htpInitDone bool
 )
 
-func init() {
+// ensureHtpInit lazily initializes the Elligator constants.
+// Called before first use to avoid init() ordering issues.
+func ensureHtpInit() {
+	if htpInitDone {
+		return
+	}
+	htpInitDone = true
+	initHtpConstants()
+}
+
+func initHtpConstants() {
 	// Montgomery A = 486662
 	var feA, feTwo, feAp2 field.Element
 	feA.SetBytes(uint64ToLE(486662))
@@ -70,6 +74,7 @@ func init() {
 // Maps a 32-byte hash to an Edwards curve point (in projective X:Y:Z coordinates).
 // This is NOT the standard Ed25519 point decompression - it's an Elligator-like map.
 func geFromfeFrombytesVartime(s []byte) *edwards25519.Point {
+	ensureHtpInit()
 	var u, v, w, x, y, z field.Element
 
 	// u = field element from bytes.

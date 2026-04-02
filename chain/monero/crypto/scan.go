@@ -6,17 +6,14 @@ import (
 	"fmt"
 
 	"filippo.io/edwards25519"
-	"github.com/cordialsys/crosschain/chain/monero/crypto/cref"
 )
 
-// GenerateKeyDerivation computes D = 8 * viewKey * txPubKey
-// Uses Monero's exact C implementation for correctness.
+// GenerateKeyDerivation computes D = 8 * viewKey * txPubKey (pure Go).
 func GenerateKeyDerivation(txPubKey []byte, privateViewKey []byte) ([]byte, error) {
 	if len(txPubKey) != 32 || len(privateViewKey) != 32 {
 		return nil, fmt.Errorf("invalid key lengths: pub=%d, sec=%d", len(txPubKey), len(privateViewKey))
 	}
-	result := cref.GenerateKeyDerivation(txPubKey, privateViewKey)
-	return result[:], nil
+	return GenerateKeyDerivationPureGo(txPubKey, privateViewKey)
 }
 
 // DerivationToScalar computes s = H_s(derivation || varint(outputIndex))
