@@ -12,6 +12,7 @@ type ContractAddress Address
 // AddressBuilder is the interface for building addresses
 type AddressBuilder interface {
 	GetAddressFromPublicKey(publicKeyBytes []byte) (Address, error)
+	AddressRegistrationRequired(address Address) bool
 }
 
 type AddressBuilderWithFormats interface {

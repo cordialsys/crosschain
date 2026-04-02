@@ -40,3 +40,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	// Lowercase the address is our normalized format
 	return xc.Address(strings.ToLower(address)), nil
 }
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}

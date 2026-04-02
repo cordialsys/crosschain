@@ -138,6 +138,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(""), fmt.Errorf("invalid algorithm: %s", ab.alghoritm)
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func hash(ingest []byte, hashSize int) ([]byte, error) {
 	hash, err := blake2b.New(hashSize, nil)
 	if err != nil {

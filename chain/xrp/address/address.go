@@ -112,3 +112,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 
 	return xc.Address(address), nil
 }
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}

@@ -1,0 +1,6 @@
+# Regenerate protobuf types
+pb:
+    rm -rf types/com/daml/ledger/api/v2 types/google/rpc
+    cd proto && buf mod update && buf generate
+    # Use google.golang.org/genproto/googleapis/rpc/status rather than any local types.
+    for file in `rg -l 'github.com/cordialsys/crosschain/chain/canton/types/google/rpc' types/com/daml/ledger/api/v2 -g '*.go'`; do perl -0pi -e 's#github.com/cordialsys/crosschain/chain/canton/types/google/rpc#google.golang.org/genproto/googleapis/rpc/status#g' "$file"; done

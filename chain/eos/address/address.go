@@ -45,6 +45,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(prefixed), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return true
+}
+
 func Ripemd160Checksum(in []byte, curve ecc.CurveID) []byte {
 	h := ripemd160.New()
 	_, _ = h.Write(in) // this implementation has no error path

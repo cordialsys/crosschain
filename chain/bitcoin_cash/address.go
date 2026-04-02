@@ -97,6 +97,10 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(prefix + ":" + encoded), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
+
 func (ab AddressBuilder) GetLegacyAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
 	addressPubKey, err := NewBchAddressPubKey(publicKeyBytes, ab.params)
 	if err != nil {

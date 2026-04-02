@@ -195,3 +195,7 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 		return "", errors.New("failed to determine bitcoin address type")
 	}
 }
+
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	return false
+}
