@@ -278,6 +278,26 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 			})
 		}
 
+		// Verify commitment mask matches on-chain commitment
+		// This filters out outputs from old transfers with broken masks
+		if out.Commitment != "" {
+			inputMask := deriveCommitmentMask(privViewBytes, out)
+			computed, _ := crypto.PedersenCommit(out.Amount, inputMask)
+			if computed != nil {
+				onChainBytes, _ := hex.DecodeString(out.Commitment)
+				if len(onChainBytes) == 32 {
+					onChainPt, _ := edwards25519.NewIdentityPoint().SetBytes(onChainBytes)
+					if onChainPt != nil && computed.Equal(onChainPt) != 1 {
+						logrus.WithFields(logrus.Fields{
+							"tx_hash":      out.TxHash,
+							"output_index": out.OutputIndex,
+						}).Info("commitment mask mismatch, skipping unspendable output")
+						continue
+					}
+				}
+			}
+		}
+
 		// Need at least 15 decoys for a ring size of 16
 		if len(ringMembers) < 15 {
 			logrus.WithFields(logrus.Fields{
@@ -305,6 +325,18 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 	}
 
 	return nil
+}
+
+// deriveCommitmentMask derives the Pedersen commitment mask for an output.
+func deriveCommitmentMask(privView []byte, out OwnedOutput) []byte {
+	txPubKeyBytes, _ := hex.DecodeString(out.TxPubKey)
+	if len(txPubKeyBytes) != 32 {
+		return make([]byte, 32)
+	}
+	derivation, _ := crypto.GenerateKeyDerivation(txPubKeyBytes, privView)
+	scalar, _ := crypto.DerivationToScalar(derivation, out.OutputIndex)
+	data := append([]byte("commitment_mask"), scalar...)
+	return crypto.ScReduce32(crypto.Keccak256(data))
 }
 
 // isKeyImageSpent checks if a key image has been spent on chain or is in the mempool.
