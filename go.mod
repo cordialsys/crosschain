@@ -71,7 +71,6 @@ require (
 	github.com/harshavardhana/blake2b-simd v0.0.0-20160628082310-f6a3512276ac
 	github.com/holiman/uint256 v1.3.2
 	github.com/kaspanet/kaspad v0.12.22
-	github.com/noders-team/go-daml v0.6.1
 	github.com/pkg/errors v0.9.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/time v0.9.0
@@ -141,7 +140,6 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dgraph-io/badger/v4 v4.5.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.0.0 // indirect
-	github.com/digital-asset/dazl-client/v8 v8.9.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dvsekhvalnov/jose2go v1.6.0 // indirect
 	github.com/emicklei/dot v1.6.2 // indirect

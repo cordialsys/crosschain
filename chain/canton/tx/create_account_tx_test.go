@@ -9,7 +9,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )

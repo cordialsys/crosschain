@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
-	v1 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive/transaction/v1"
+	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
+	v1 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive/transaction/v1"
 )
 
 var preparedTransactionHashPurpose = []byte{0x00, 0x00, 0x00, 0x30}

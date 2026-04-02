@@ -7,11 +7,11 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
-	cantonproto "github.com/cordialsys/crosschain/chain/canton/proto"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
-	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
-	v1 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive/transaction/v1"
+	cantonproto "github.com/cordialsys/crosschain/chain/canton/types"
+	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
+	v1 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive/transaction/v1"
 	"google.golang.org/protobuf/proto"
 )
 

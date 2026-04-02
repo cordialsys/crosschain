@@ -7,8 +7,8 @@ import (
 	"time"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	cantonproto "github.com/cordialsys/crosschain/chain/canton/proto"
-	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
+	cantonproto "github.com/cordialsys/crosschain/chain/canton/types"
+	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
 )
 
 func transferAmountNumeric(args xcbuilder.TransferArgs, decimals int32) string {

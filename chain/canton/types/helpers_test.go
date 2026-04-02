@@ -1,11 +1,11 @@
-package proto
+package types
 
 import (
 	"testing"
 	"time"
 
-	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
+	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
 	"github.com/stretchr/testify/require"
 )
 

@@ -1,13 +1,13 @@
-package proto
+package types
 
 import (
 	"crypto/rand"
 	"fmt"
 	"time"
 
-	v2 "github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/admin"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
+	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/admin"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
-	"github.com/digital-asset/dazl-client/v8/go/api/com/daml/ledger/api/v2/interactive"
 )
 
 // TxInput for Canton holds the result of the prepare step in the
