@@ -46,10 +46,11 @@ func init() {
 
 	scMinusInvEight = edwards25519.NewScalar().Negate(scInvEight)
 
-	// initial_transcript = ge_p3_tobytes(hash_to_p3(cn_fast_hash("bulletproof_plus_transcript")))
-	// This is raw 32-byte point representation, NOT reduced mod L
-	h := Keccak256([]byte("bulletproof_plus_transcript"))
-	point := geFromfeFrombytesVartime(h)
+	// initial_transcript = hash_to_p3(cn_fast_hash("bulletproof_plus_transcript"))
+	// hash_to_p3(k) = ge_fromfe(cn_fast_hash(k)) * 8 -- note the DOUBLE hash!
+	h := Keccak256([]byte("bulletproof_plus_transcript")) // first hash
+	h2 := Keccak256(h)                                     // hash_to_p3 hashes again internally
+	point := geFromfeFrombytesVartime(h2)
 	p2 := edwards25519.NewIdentityPoint().Add(point, point)
 	p4 := edwards25519.NewIdentityPoint().Add(p2, p2)
 	p8 := edwards25519.NewIdentityPoint().Add(p4, p4)

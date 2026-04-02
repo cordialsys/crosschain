@@ -28,7 +28,8 @@ func init() {
 	H, _ = edwards25519.NewIdentityPoint().SetBytes(GetHPureGo())
 
 	// Gi and Hi vectors for BP+ using Monero's get_exponent:
-	// hash_to_p3(cn_fast_hash(H_bytes || "bulletproof_plus" || varint(idx)))
+	// get_exponent(H, idx) = hash_to_p3(cn_fast_hash(H || "bulletproof_plus" || varint(idx)))
+	// hash_to_p3(k) = ge_fromfe(cn_fast_hash(k)) * 8  -- DOUBLE hash!
 	hBytes := H.Bytes()
 	bpExponent := []byte("bulletproof_plus")
 	for i := 0; i < maxMN; i++ {
@@ -37,12 +38,15 @@ func init() {
 		giInput := append(append([]byte{}, hBytes...), bpExponent...)
 		giInput = append(giInput, varintEncode(uint64(2*i+1))...)
 
-		// hash_to_p3 = hash_to_ec on the cn_fast_hash (already includes Keccak)
-		hiHash := Keccak256(hiInput)
-		giHash := Keccak256(giInput)
-		hiPoint := geFromfeFrombytesVartime(hiHash)
-		giPoint := geFromfeFrombytesVartime(giHash)
-		// Multiply by cofactor 8
+		// First hash (cn_fast_hash of the concatenated input)
+		hiHash1 := Keccak256(hiInput)
+		giHash1 := Keccak256(giInput)
+		// Second hash (hash_to_p3 internally hashes again)
+		hiHash2 := Keccak256(hiHash1)
+		giHash2 := Keccak256(giHash1)
+		// Elligator map + cofactor
+		hiPoint := geFromfeFrombytesVartime(hiHash2)
+		giPoint := geFromfeFrombytesVartime(giHash2)
 		hi2 := edwards25519.NewIdentityPoint().Add(hiPoint, hiPoint)
 		hi4 := edwards25519.NewIdentityPoint().Add(hi2, hi2)
 		Hi[i] = edwards25519.NewIdentityPoint().Add(hi4, hi4)
