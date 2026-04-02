@@ -17,6 +17,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
+	"filippo.io/edwards25519"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory/signer"
@@ -581,16 +582,23 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 	fee := xc.NewAmountBlockchainFromUint64(txJson.RctSignatures.TxnFee)
 
 	// Decode outputs using the fixed view key (no private spend key needed).
-	// This finds ALL outputs sent to any address sharing our view key.
+	// This finds ALL outputs sent to any address sharing our view key,
+	// and recovers the recipient address for each.
 	var movements []*txinfo.Movement
 	if txData.AsJson != "" {
 		privView := crypto.FixedPrivateViewKey
-		outputAmounts := scanTransactionViewKeyOnly(txData.AsJson, privView)
-		for _, oa := range outputAmounts {
+		// Determine address prefix from chain config
+		addrPrefix := crypto.MainnetAddressPrefix
+		if c.cfg != nil && (string(c.cfg.ChainID) == "testnet" || c.cfg.Network == "testnet") {
+			addrPrefix = crypto.TestnetAddressPrefix
+		}
+		outputs := scanTransactionViewKeyOnly(txData.AsJson, privView, addrPrefix)
+		for _, out := range outputs {
 			movements = append(movements, &txinfo.Movement{
 				To: []*txinfo.BalanceChange{
 					{
-						Balance: xc.NewAmountBlockchainFromUint64(oa),
+						Balance:   xc.NewAmountBlockchainFromUint64(out.amount),
+						AddressId: out.address,
 					},
 				},
 			})
@@ -660,11 +668,15 @@ func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txin
 	}, nil
 }
 
-// scanTransactionViewKeyOnly decodes output amounts using only the private view key.
-// It does NOT check spend key ownership - any output whose amount decrypts to a
-// reasonable value (matching the Pedersen commitment) is returned.
+type decodedOutput struct {
+	amount  uint64
+	address xc.Address
+}
+
+// scanTransactionViewKeyOnly decodes output amounts using only the private view key,
+// then matches each output against known spend keys to determine the recipient address.
 // This is how an exchange scans for deposits across all user addresses.
-func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte) []uint64 {
+func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte, addressPrefix byte) []decodedOutput {
 	var txJson moneroTxJson
 	if err := json.Unmarshal([]byte(txJsonStr), &txJson); err != nil {
 		return nil
@@ -679,15 +691,17 @@ func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte) []uint6
 		return nil
 	}
 
-	// Compute derivation: D = 8 * viewKey * txPubKey
 	derivation, err := crypto.GenerateKeyDerivation(txPubKey, privateViewKey)
 	if err != nil {
 		return nil
 	}
 
-	var amounts []uint64
+	// Compute the public view key from the private view key
+	pubView, _ := crypto.PublicFromPrivate(privateViewKey)
+
+	var results []decodedOutput
 	for outputIdx, vout := range txJson.Vout {
-		_ = getOutputKey(vout)
+		outputKey := getOutputKey(vout)
 
 		var encAmount string
 		if outputIdx < len(txJson.RctSignatures.EcdhInfo) {
@@ -697,25 +711,55 @@ func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte) []uint6
 			continue
 		}
 
-		// Derive shared scalar for this output
 		scalar, err := crypto.DerivationToScalar(derivation, uint64(outputIdx))
 		if err != nil {
 			continue
 		}
 
-		// Decrypt amount
 		amount, err := crypto.DecryptAmount(encAmount, scalar)
 		if err != nil {
 			continue
 		}
 
-		// Sanity check: amount should be reasonable (< 1B XMR = 1e21 piconero)
-		if amount > 0 && amount < 1000000000000000000 { // < 1M XMR
-			amounts = append(amounts, amount)
+		if amount == 0 || amount >= 1000000000000000000 {
+			continue
 		}
+
+		// Derive the expected public spend key: pubSpend = P - H_s(D||idx)*G
+		// If we can recover a valid spend key, we can reconstruct the full address.
+		addr := recoverAddress(outputKey, scalar, pubView, addressPrefix)
+
+		results = append(results, decodedOutput{amount: amount, address: addr})
 	}
 
-	return amounts
+	return results
+}
+
+// recoverAddress recovers the recipient's Monero address from an output key.
+// Given output key P and derivation scalar s: pubSpend = P - s*G
+// Then address = base58(prefix || pubSpend || pubView || checksum)
+func recoverAddress(outputKeyHex string, scalar []byte, pubView []byte, prefix byte) xc.Address {
+	outputKeyBytes, err := hex.DecodeString(outputKeyHex)
+	if err != nil || len(outputKeyBytes) != 32 {
+		return ""
+	}
+
+	P, err := edwards25519.NewIdentityPoint().SetBytes(outputKeyBytes)
+	if err != nil {
+		return ""
+	}
+
+	sScalar, err := edwards25519.NewScalar().SetCanonicalBytes(scalar)
+	if err != nil {
+		return ""
+	}
+
+	// pubSpend = P - s*G
+	sG := edwards25519.NewGeneratorPoint().ScalarBaseMult(sScalar)
+	negSG := edwards25519.NewIdentityPoint().Negate(sG)
+	pubSpend := edwards25519.NewIdentityPoint().Add(P, negSG)
+
+	return xc.Address(crypto.GenerateAddressWithPrefix(prefix, pubSpend.Bytes(), pubView))
 }
 
 var _ xclient.Client = &Client{}
