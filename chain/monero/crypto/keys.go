@@ -29,11 +29,23 @@ func ScalarReduce(input []byte) []byte {
 	return ScReduce32(input)
 }
 
-// DeriveViewKey derives the private view key from the private spend key.
-// In Monero: view_key = Keccak256(spend_key) mod L
+// FixedPrivateViewKey is a well-known view key used by all crosschain-generated
+// Monero addresses. This allows a single view key to scan deposits across ALL
+// user addresses (each user has a unique spend key but shares this view key).
+//
+// This deliberately breaks Monero's default derivation (view = H(spend)) so that
+// an exchange can monitor all deposits with one key.
+var FixedPrivateViewKey []byte
+
+func init() {
+	// Derive a deterministic fixed view key from a known seed.
+	// Any 32-byte scalar works - we use H("crosschain_monero_view_key") mod L.
+	FixedPrivateViewKey = ScReduce32(Keccak256([]byte("crosschain_monero_view_key")))
+}
+
+// DeriveViewKey returns the fixed private view key (ignores the spend key).
 func DeriveViewKey(privateSpendKey []byte) []byte {
-	hash := Keccak256(privateSpendKey)
-	return ScalarReduce(hash)
+	return FixedPrivateViewKey
 }
 
 // PublicFromPrivate derives the ed25519 public key from a Monero private key scalar.
