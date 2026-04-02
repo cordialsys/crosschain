@@ -55,10 +55,16 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		return nil, fmt.Errorf("no spendable outputs available")
 	}
 
-	// Select outputs to spend
+	// Select outputs to spend (largest first to minimize inputs needed)
+	sortedOutputs := make([]tx_input.Output, len(moneroInput.Outputs))
+	copy(sortedOutputs, moneroInput.Outputs)
+	sort.Slice(sortedOutputs, func(i, j int) bool {
+		return sortedOutputs[i].Amount > sortedOutputs[j].Amount
+	})
+
 	var selectedOutputs []tx_input.Output
 	var totalInput uint64
-	for _, out := range moneroInput.Outputs {
+	for _, out := range sortedOutputs {
 		selectedOutputs = append(selectedOutputs, out)
 		totalInput += out.Amount
 		if totalInput >= amountU64+fee {
@@ -105,7 +111,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	_, _, destPubView, _ := crypto.DecodeAddress(string(args.GetTo()))
 	outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: destKey, ViewTag: destViewTag})
 	amounts = append(amounts, amountU64)
-	masks = append(masks, generateMaskFrom(rng))
+	// Compute mask from ECDH shared secret (standard Monero derivation)
+	// This ensures the recipient can derive the same mask when spending
+	destMask := deriveOutputMask(txPrivKey, destPubView, 0)
+	masks = append(masks, destMask)
 	recipientViews = append(recipientViews, destPubView)
 
 	// Output 1: change
@@ -117,7 +126,8 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		_, _, changePubView, _ := crypto.DecodeAddress(string(args.GetFrom()))
 		outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: changeKey, ViewTag: changeViewTag})
 		amounts = append(amounts, change)
-		masks = append(masks, generateMaskFrom(rng))
+		changeMask := deriveOutputMask(txPrivKey, changePubView, 1)
+		masks = append(masks, changeMask)
 		recipientViews = append(recipientViews, changePubView)
 	}
 
@@ -285,6 +295,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 	moneroTx.CLSAGs = clsags
 
+
 	return moneroTx, nil
 }
 
@@ -404,6 +415,20 @@ func deriveInputMask(privView *edwards25519.Scalar, out tx_input.Output) *edward
 	reduced := crypto.ScReduce32(hash)
 	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
 	return s
+}
+
+// deriveOutputMask computes the Pedersen commitment mask for an output.
+// mask = H_s("commitment_mask" || shared_scalar)
+// where shared_scalar = H_s(8 * txPrivKey * recipientPubView || outputIndex)
+// This matches Monero's genCommitmentMask and ensures the recipient can
+// derive the same mask when spending the output.
+func deriveOutputMask(txPrivKey []byte, recipientPubView []byte, outputIndex int) []byte {
+	D, _ := crypto.GenerateKeyDerivation(recipientPubView, txPrivKey)
+	scalar, _ := crypto.DerivationToScalar(D, uint64(outputIndex))
+	data := make([]byte, 0, 15+32)
+	data = append(data, []byte("commitment_mask")...)
+	data = append(data, scalar...)
+	return crypto.ScReduce32(crypto.Keccak256(data))
 }
 
 func deriveOutputKey(txPrivKey []byte, address string, outputIndex int) ([]byte, byte, error) {

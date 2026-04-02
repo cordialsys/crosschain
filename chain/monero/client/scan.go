@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
+	"filippo.io/edwards25519"
 )
 
 // OwnedOutput represents an output that belongs to our wallet, with all the
@@ -213,10 +214,14 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 		input.ViewKeyHex = hex.EncodeToString(privView)
 	}
 
-	// For each owned output, we need to find its global index.
-	// We do this by fetching the transaction and looking up output indices.
+	// Load spend key for key image computation
+	secretBz, _ := hex.DecodeString(secret)
+	privSpendBytes, privViewBytes, _, _, _ := crypto.DeriveKeysFromSpend(secretBz)
+	privSpend, _ := edwards25519.NewScalar().SetCanonicalBytes(privSpendBytes)
+
+	// For each owned output: get global index, compute key image, check if spent
+	var spendableOutputs []OwnedOutput
 	for i, out := range ownedOutputs {
-		// Get global output indices for this transaction
 		globalIdx, commitment, err := c.getOutputGlobalIndex(ctx, out.TxHash, out.OutputIndex)
 		if err != nil {
 			logrus.WithError(err).WithField("tx_hash", out.TxHash).Warn("failed to get global index, skipping output")
@@ -225,12 +230,32 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 		ownedOutputs[i].GlobalIndex = globalIdx
 		ownedOutputs[i].Commitment = commitment
 
-		logrus.WithFields(logrus.Fields{
-			"tx_hash":      out.TxHash,
-			"output_index": out.OutputIndex,
-			"global_index": globalIdx,
-		}).Debug("resolved global output index")
+		// Compute key image to check if this output was already spent
+		txPubKeyBytes, _ := hex.DecodeString(out.TxPubKey)
+		derivation, _ := crypto.GenerateKeyDerivation(txPubKeyBytes, privViewBytes)
+		scalar, _ := crypto.DerivationToScalar(derivation, out.OutputIndex)
+		hsScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(scalar)
+		oneTimePrivKey := edwards25519.NewScalar().Add(hsScalar, privSpend)
+		oneTimePubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(oneTimePrivKey)
+		keyImage := crypto.ComputeKeyImage(oneTimePrivKey, oneTimePubKey)
+		kiHex := hex.EncodeToString(keyImage.Bytes())
+
+		// Check if key image is already spent on chain
+		spent, err := c.isKeyImageSpent(ctx, kiHex)
+		if err != nil {
+			logrus.WithError(err).Warn("failed to check key image, including output anyway")
+		} else if spent {
+			logrus.WithFields(logrus.Fields{
+				"tx_hash":      out.TxHash,
+				"output_index": out.OutputIndex,
+				"key_image":    kiHex[:16],
+			}).Info("skipping already-spent output")
+			continue
+		}
+
+		spendableOutputs = append(spendableOutputs, ownedOutputs[i])
 	}
+	ownedOutputs = spendableOutputs
 
 	// Fetch decoys for each output
 	for _, out := range ownedOutputs {
@@ -270,6 +295,28 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 	}
 
 	return nil
+}
+
+// isKeyImageSpent checks if a key image has been spent on chain or is in the mempool.
+func (c *Client) isKeyImageSpent(ctx context.Context, keyImageHex string) (bool, error) {
+	result, err := c.httpRequest(ctx, "/is_key_image_spent", map[string]interface{}{
+		"key_images": []string{keyImageHex},
+	})
+	if err != nil {
+		return false, err
+	}
+	var resp struct {
+		SpentStatus []int  `json:"spent_status"`
+		Status      string `json:"status"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return false, err
+	}
+	if len(resp.SpentStatus) == 0 {
+		return false, fmt.Errorf("no spent status returned")
+	}
+	// 0 = unspent, 1 = in pool, 2 = on chain
+	return resp.SpentStatus[0] != 0, nil
 }
 
 // getOutputGlobalIndex fetches the global output index for a specific output in a transaction.
