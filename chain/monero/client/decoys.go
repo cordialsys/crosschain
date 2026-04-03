@@ -27,37 +27,26 @@ type DecoyOutput struct {
 // FetchDecoys selects decoy ring members for a transaction input.
 // It picks random outputs from the blockchain distribution, avoiding the real output.
 func (c *Client) FetchDecoys(ctx context.Context, realGlobalIndex uint64, count int) ([]DecoyOutput, error) {
-	// Get the output distribution to know how many outputs exist
-	result, err := c.jsonRPCRequest(ctx, "get_output_distribution", map[string]interface{}{
-		"amounts":         []uint64{0}, // RingCT outputs (amount=0)
-		"cumulative":      true,
-		"from_height":     0,
-		"to_height":       0,
-		"binary":          false,
-		"compress":        false,
-	})
+	// Get total output count from get_info (lightweight, no huge distribution array)
+	infoResult, err := c.jsonRPCRequest(ctx, "get_info", nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get output distribution: %w", err)
+		return nil, fmt.Errorf("failed to get info: %w", err)
+	}
+	var info struct {
+		TxCount uint64 `json:"tx_count"`
+		Height  uint64 `json:"height"`
+	}
+	if err := json.Unmarshal(infoResult, &info); err != nil {
+		return nil, fmt.Errorf("failed to parse info: %w", err)
 	}
 
-	var distResp struct {
-		Distributions []struct {
-			Amount       uint64   `json:"amount"`
-			StartHeight  uint64   `json:"start_height"`
-			Distribution []uint64 `json:"distribution"`
-		} `json:"distributions"`
+	// Use the real output's global index as the upper bound.
+	// Decoys should be from outputs that exist (index <= our output's index).
+	totalOutputs := realGlobalIndex
+	if totalOutputs < uint64(count+1) {
+		// On a very new chain, use tx count estimate
+		totalOutputs = info.TxCount * 2
 	}
-	if err := json.Unmarshal(result, &distResp); err != nil {
-		return nil, fmt.Errorf("failed to parse distribution: %w", err)
-	}
-
-	if len(distResp.Distributions) == 0 || len(distResp.Distributions[0].Distribution) == 0 {
-		return nil, fmt.Errorf("empty output distribution")
-	}
-
-	dist := distResp.Distributions[0].Distribution
-	totalOutputs := dist[len(dist)-1]
-
 	if totalOutputs < uint64(count+1) {
 		return nil, fmt.Errorf("not enough outputs on chain for ring size %d", count)
 	}
