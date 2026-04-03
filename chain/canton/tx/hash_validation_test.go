@@ -73,14 +73,81 @@ func TestValidatePreparedTransactionHashFlows(t *testing.T) {
 func TestCreateAccountAcceptSighashes_UsesPreparedTransactionHash(t *testing.T) {
 	t.Parallel()
 
-	preparedTx := hashTestPreparedTransaction("1", hashTestExerciseNode("ExternalPartySetupProposal_Accept", hashTestEmptyRecord()))
-	preparedBz, err := proto.Marshal(preparedTx)
-	require.NoError(t, err)
-
 	input := &tx_input.CreateAccountInput{
-		Stage:                            tx_input.CreateAccountStageAccept,
-		PartyID:                          "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		SetupProposalPreparedTransaction: preparedBz,
+		Stage:   tx_input.CreateAccountStageAccept,
+		PartyID: "party::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		SetupProposalAcceptInput: &tx_input.CreateAccountAcceptInput{
+			TransactionVersion: "2",
+			SubmitterActAs:     []string{"sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			SynchronizerID:     "sync-id",
+			CommandID:          "command-id",
+			SubmissionID:       "submission-id",
+			Hashing:            interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_V2,
+			TransactionUUID:    "transaction-uuid",
+			PreparationTime:    1,
+			Exercise: tx_input.CreateAccountAcceptExercise{
+				Contract: tx_input.CreateAccountContractInfo{
+					LfVersion:    "2",
+					ContractID:   "001122",
+					PackageName:  "splice-wallet",
+					TemplateID:   &v2.Identifier{PackageId: "pkg", ModuleName: "Splice.Wallet", EntityName: "Any"},
+					Signatories:  []string{"sig"},
+					Stakeholders: []string{"stake"},
+				},
+				ActingParties: []string{"sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			},
+			ProposalInputContract: tx_input.CreateAccountAcceptProposalContract{
+				Contract: tx_input.CreateAccountContractInfo{
+					LfVersion:    "2",
+					ContractID:   "001122",
+					PackageName:  "splice-wallet",
+					TemplateID:   &v2.Identifier{PackageId: "pkg", ModuleName: "Splice.AmuletRules", EntityName: "ExternalPartySetupProposal"},
+					Signatories:  []string{"sig"},
+					Stakeholders: []string{"stake"},
+				},
+				CreatedAt:            1,
+				CreatedEventBlob:     []byte{0x01},
+				Validator:            "validator",
+				User:                 "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				DSO:                  "dso",
+				ProposalCreatedAt:    1,
+				PreapprovalExpiresAt: 2,
+			},
+			ValidatorRight: tx_input.CreateAccountAcceptValidatorRight{
+				Contract: tx_input.CreateAccountContractInfo{
+					LfVersion:    "2",
+					ContractID:   "001122aa",
+					PackageName:  "splice-wallet",
+					TemplateID:   &v2.Identifier{PackageId: "pkg", ModuleName: "Splice.Amulet", EntityName: "ValidatorRight"},
+					Signatories:  []string{"sig"},
+					Stakeholders: []string{"stake"},
+				},
+				DSO:       "dso",
+				User:      "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				Validator: "validator",
+			},
+			TransferPreapproval: tx_input.CreateAccountAcceptTransferPreapproval{
+				Contract: tx_input.CreateAccountContractInfo{
+					LfVersion:    "2",
+					ContractID:   "001122bb",
+					PackageName:  "splice-wallet",
+					TemplateID:   &v2.Identifier{PackageId: "pkg", ModuleName: "Splice.AmuletRules", EntityName: "TransferPreapproval"},
+					Signatories:  []string{"sig"},
+					Stakeholders: []string{"stake"},
+				},
+				DSO:           "dso",
+				Receiver:      "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+				Provider:      "validator",
+				ValidFrom:     1,
+				LastRenewedAt: 1,
+				ExpiresAt:     2,
+			},
+			NodeSeeds: []tx_input.CreateAccountNodeSeed{
+				{NodeID: 0, Seed: bytes.Repeat([]byte{0x11}, 32)},
+				{NodeID: 1, Seed: bytes.Repeat([]byte{0x12}, 32)},
+				{NodeID: 2, Seed: bytes.Repeat([]byte{0x13}, 32)},
+			},
+		},
 	}
 
 	args, err := xcbuilder.NewCreateAccountArgs(xc.CANTON, xc.Address(input.PartyID), []byte{0x01, 0x02})
@@ -93,6 +160,9 @@ func TestCreateAccountAcceptSighashes_UsesPreparedTransactionHash(t *testing.T) 
 	require.NoError(t, err)
 	require.Len(t, sighashes, 1)
 
+	preparedTx, err := cantontx.BuildCreateAccountAcceptPreparedTransaction(input.SetupProposalAcceptInput)
+	require.NoError(t, err)
+
 	expectedHash, err := tx_input.ComputePreparedTransactionHash(preparedTx)
 	require.NoError(t, err)
 	require.Equal(t, expectedHash, sighashes[0].Payload)
@@ -103,12 +173,11 @@ func TestValidatePreparedTransactionHash_LiveCreateAccountAccept(t *testing.T) {
 
 	input := loadLiveAcceptInput(t)
 
-	var preparedTx interactive.PreparedTransaction
-	require.NoError(t, proto.Unmarshal(input.SetupProposalPreparedTransaction, &preparedTx))
-
-	expectedHash, err := tx_input.ComputePreparedTransactionHash(&preparedTx)
+	preparedTx, err := cantontx.BuildCreateAccountAcceptPreparedTransaction(input.SetupProposalAcceptInput)
 	require.NoError(t, err)
-	require.NoError(t, tx_input.ValidatePreparedTransactionHash(&preparedTx, expectedHash))
+	expectedHash, err := tx_input.ComputePreparedTransactionHash(preparedTx)
+	require.NoError(t, err)
+	require.NoError(t, tx_input.ValidatePreparedTransactionHash(preparedTx, expectedHash))
 	require.NoError(t, input.VerifySignaturePayloads())
 
 	args, err := xcbuilder.NewCreateAccountArgs(xc.CANTON, xc.Address(input.PartyID), []byte{0x01, 0x02})
@@ -120,6 +189,17 @@ func TestValidatePreparedTransactionHash_LiveCreateAccountAccept(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, sighashes, 1)
 	require.Equal(t, expectedHash, sighashes[0].Payload)
+}
+
+func TestBuildCreateAccountAcceptPreparedTransaction_LiveRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	input := loadLiveAcceptInput(t)
+	preparedTx := loadLegacyLiveAcceptPreparedTransaction(t)
+
+	rebuilt, err := cantontx.BuildCreateAccountAcceptPreparedTransaction(input.SetupProposalAcceptInput)
+	require.NoError(t, err)
+	require.True(t, proto.Equal(preparedTx, rebuilt))
 }
 
 func hashTestPreparedTransaction(nodeID string, node *v1.Node) *interactive.PreparedTransaction {

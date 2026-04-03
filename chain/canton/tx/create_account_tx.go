@@ -8,9 +8,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
-	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
-	"github.com/cordialsys/crosschain/testutil"
-	"google.golang.org/protobuf/proto"
 )
 
 type CreateAccountTx struct {
@@ -116,7 +113,7 @@ func cloneCreateAccountInput(input *tx_input.CreateAccountInput) *tx_input.Creat
 	}
 	cloned := *input
 	cloned.Signature = append([]byte(nil), input.Signature...)
-	cloned.SetupProposalPreparedTransaction = append([]byte(nil), input.SetupProposalPreparedTransaction...)
+	cloned.SetupProposalAcceptInput = input.SetupProposalAcceptInput.Clone()
 	if len(input.TopologyTransactions) > 0 {
 		cloned.TopologyTransactions = make([][]byte, len(input.TopologyTransactions))
 		for i, txn := range input.TopologyTransactions {
@@ -130,17 +127,14 @@ func computeCreateAccountAcceptSighash(input *tx_input.CreateAccountInput) ([]by
 	if input == nil {
 		return nil, fmt.Errorf("create-account tx input is nil")
 	}
-	if len(input.SetupProposalPreparedTransaction) == 0 {
-		return nil, fmt.Errorf("setup proposal prepared transaction is empty")
+	if input.SetupProposalAcceptInput == nil {
+		return nil, fmt.Errorf("setup proposal accept input is nil")
 	}
-
-	var preparedTx interactive.PreparedTransaction
-	if err := proto.Unmarshal(input.SetupProposalPreparedTransaction, &preparedTx); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+	preparedTx, err := BuildCreateAccountAcceptPreparedTransaction(input.SetupProposalAcceptInput)
+	if err != nil {
+		return nil, err
 	}
-	fmt.Println("-----")
-	testutil.JsonPrint(&preparedTx)
-	return tx_input.ComputePreparedTransactionHash(&preparedTx)
+	return tx_input.ComputePreparedTransactionHash(preparedTx)
 }
 
 func parseCreateAccountSignaturePayload(data []byte) ([]byte, error) {

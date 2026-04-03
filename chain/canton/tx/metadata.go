@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
-	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
 )
 
 const (
@@ -26,9 +25,7 @@ type CreateAccountMetadata struct {
 	PublicKeyFingerprint string   `json:"public_key_fingerprint,omitempty"`
 	TopologyTransactions [][]byte `json:"topology_transactions,omitempty"`
 
-	SetupProposalPreparedTransaction []byte                           `json:"setup_proposal_prepared_transaction,omitempty"`
-	SetupProposalHashing             interactive.HashingSchemeVersion `json:"setup_proposal_hashing,omitempty"`
-	SetupProposalSubmissionID        string                           `json:"setup_proposal_submission_id,omitempty"`
+	SetupProposalAcceptInput *tx_input.CreateAccountAcceptInput `json:"setup_proposal_accept_input,omitempty"`
 }
 
 func ParseMetadata(data []byte) (*Metadata, error) {
@@ -56,13 +53,11 @@ func NewCreateAccountMetadata(input *tx_input.CreateAccountInput) *Metadata {
 	return &Metadata{
 		TxType: TxTypeCreateAccount,
 		CreateAccount: &CreateAccountMetadata{
-			Stage:                            input.Stage,
-			PartyID:                          input.PartyID,
-			PublicKeyFingerprint:             input.PublicKeyFingerprint,
-			TopologyTransactions:             cloneMetadataBytes2D(input.TopologyTransactions),
-			SetupProposalPreparedTransaction: append([]byte(nil), input.SetupProposalPreparedTransaction...),
-			SetupProposalHashing:             input.SetupProposalHashing,
-			SetupProposalSubmissionID:        input.SetupProposalSubmissionID,
+			Stage:                    input.Stage,
+			PartyID:                  input.PartyID,
+			PublicKeyFingerprint:     input.PublicKeyFingerprint,
+			TopologyTransactions:     cloneMetadataBytes2D(input.TopologyTransactions),
+			SetupProposalAcceptInput: input.SetupProposalAcceptInput.Clone(),
 		},
 	}
 }
@@ -72,14 +67,12 @@ func (m *Metadata) CreateAccountInput(signature []byte) (*tx_input.CreateAccount
 		return nil, fmt.Errorf("missing Canton create-account metadata")
 	}
 	input := &tx_input.CreateAccountInput{
-		Stage:                            m.CreateAccount.Stage,
-		PartyID:                          m.CreateAccount.PartyID,
-		PublicKeyFingerprint:             m.CreateAccount.PublicKeyFingerprint,
-		TopologyTransactions:             cloneMetadataBytes2D(m.CreateAccount.TopologyTransactions),
-		SetupProposalPreparedTransaction: append([]byte(nil), m.CreateAccount.SetupProposalPreparedTransaction...),
-		SetupProposalHashing:             m.CreateAccount.SetupProposalHashing,
-		SetupProposalSubmissionID:        m.CreateAccount.SetupProposalSubmissionID,
-		Signature:                        append([]byte(nil), signature...),
+		Stage:                    m.CreateAccount.Stage,
+		PartyID:                  m.CreateAccount.PartyID,
+		PublicKeyFingerprint:     m.CreateAccount.PublicKeyFingerprint,
+		TopologyTransactions:     cloneMetadataBytes2D(m.CreateAccount.TopologyTransactions),
+		SetupProposalAcceptInput: m.CreateAccount.SetupProposalAcceptInput.Clone(),
+		Signature:                append([]byte(nil), signature...),
 	}
 	if err := input.VerifySignaturePayloads(); err != nil {
 		return nil, fmt.Errorf("invalid create-account metadata payload: %w", err)

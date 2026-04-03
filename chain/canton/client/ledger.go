@@ -21,6 +21,7 @@ import (
 	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
 	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/admin"
 	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -616,8 +617,12 @@ func (c *GrpcLedgerClient) HasTransferPreapprovalContract(ctx context.Context, c
 }
 
 // newRegisterCommandId generates a UUID-style command ID for registration calls.
-func newRegisterCommandId() string {
-	return cantonproto.NewCommandID()
+// func newRegisterCommandId() string {
+// 	return cantonproto.NewCommandID()
+// }
+
+func newCommandID() string {
+	return uuid.NewString()
 }
 
 func (c *GrpcLedgerClient) PrepareSubmissionRequest(ctx context.Context, command *v2.Command, commandID string, partyID string, synchronizerID string) (*interactive.PrepareSubmissionResponse, error) {
@@ -668,7 +673,7 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 		},
 	}
 
-	commandID := newRegisterCommandId()
+	commandID := newCommandID()
 	synchronizerID, err := c.ResolveSynchronizerID(ctx, partyId, "")
 	if err != nil {
 		return fmt.Errorf("failed to resolve synchronizer: %w", err)
@@ -704,7 +709,7 @@ func (c *GrpcLedgerClient) AcceptExternalPartySetupProposal(ctx context.Context,
 		DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
 			DeduplicationDuration: durationpb.New(c.deduplicationWindow),
 		},
-		SubmissionId:         newRegisterCommandId(),
+		SubmissionId:         newCommandID(),
 		HashingSchemeVersion: prepareResp.GetHashingSchemeVersion(),
 	}
 
@@ -1001,7 +1006,7 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 
 	prepareReq := &interactive.PrepareSubmissionRequest{
 		UserId:    c.validatorServiceUserID,
-		CommandId: newRegisterCommandId(),
+		CommandId: newCommandID(),
 		Commands:  []*v2.Command{cmd},
 		// ActAs:     []string{senderPartyID, ValidatorPartyId},
 		ReadAs: []string{senderPartyID, c.validatorPartyID},
@@ -1043,7 +1048,7 @@ func (c *GrpcLedgerClient) CompleteAcceptedTransferOffer(
 		DeduplicationPeriod: &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
 			DeduplicationDuration: durationpb.New(c.deduplicationWindow),
 		},
-		SubmissionId:         newRegisterCommandId(),
+		SubmissionId:         newCommandID(),
 		HashingSchemeVersion: prepareResp.GetHashingSchemeVersion(),
 	}
 
@@ -1284,9 +1289,4 @@ func ExtractAmuletBalance(record *v2.Record, decimals int32) (xc.AmountBlockchai
 		}
 	}
 	return xc.AmountBlockchain{}, false
-}
-
-// NewCommandId generates a UUID-style unique command ID
-func NewCommandId() string {
-	return cantonproto.NewCommandID()
 }

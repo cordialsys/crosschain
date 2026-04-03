@@ -1,8 +1,6 @@
 package types
 
 import (
-	"crypto/rand"
-	"fmt"
 	"time"
 
 	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
@@ -20,12 +18,12 @@ func ResolveDeduplicationWindow(window time.Duration) time.Duration {
 	return window
 }
 
-func NewCommandID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
+// func NewCommandID() string {
+// 	b := make([]byte, 16)
+// 	_, _ = rand.Read(b)
+// 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+// 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+// }
 
 func EmptyRecordValue() *v2.Value {
 	return RecordValue()

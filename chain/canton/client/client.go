@@ -219,7 +219,7 @@ func (client *Client) resolveValidatorSynchronizerID(ctx context.Context) (strin
 }
 
 func (client *Client) PrepareTransferOfferCommand(ctx context.Context, args xcbuilder.TransferArgs, amuletRules AmuletRules) (*interactive.PrepareSubmissionResponse, error) {
-	commandID := cantonproto.NewCommandID()
+	commandID := newCommandID()
 	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID, client.Asset.GetChain().Decimals)
 	synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), amuletRules.AmuletRulesUpdate.DomainID)
 	if err != nil {
@@ -253,7 +253,7 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 	if err != nil {
 		return nil, err
 	}
-	commandID := cantonproto.NewCommandID()
+	commandID := newCommandID()
 	synchronizerID, err := client.resolveSynchronizerID(ctx, senderPartyID, amuletRules.AmuletRulesUpdate.DomainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve transfer synchronizer: %w", err)
@@ -321,7 +321,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	input.PreparedTransaction = resp.GetPreparedTransaction()
-	input.SubmissionId = NewCommandId()
+	input.SubmissionId = newCommandID()
 	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
 	input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(client.Asset.TransactionActiveTime)
 
@@ -1059,7 +1059,7 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 		}
 
 		cmd := buildExternalPartySetupProposalAcceptCommand(tid, event.GetContractId())
-		commandID := cantonproto.NewCommandID()
+		commandID := newCommandID()
 		logger.WithFields(logrus.Fields{
 			"contract_id": event.GetContractId(),
 			"template_id": tid.String(),
@@ -1075,18 +1075,18 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 			logger.WithError(err).Error("create-account: prepare setup proposal accept failed")
 			return nil, fmt.Errorf("failed to prepare ExternalPartySetupProposal_Accept: %w", err)
 		}
-		preparedTxBz, err := proto.Marshal(prepareResp.GetPreparedTransaction())
+		acceptInput, err := tx_input.ParseCreateAccountAcceptInput(prepareResp.GetPreparedTransaction())
 		if err != nil {
-			logger.WithError(err).Error("create-account: marshal setup proposal prepared transaction failed")
-			return nil, fmt.Errorf("failed to marshal setup proposal prepared transaction: %w", err)
+			logger.WithError(err).Error("create-account: parse setup proposal prepared transaction failed")
+			return nil, fmt.Errorf("failed to parse setup proposal prepared transaction: %w", err)
 		}
 
+		acceptInput.Hashing = prepareResp.GetHashingSchemeVersion()
+		acceptInput.SubmissionID = newCommandID()
 		input := &tx_input.CreateAccountInput{
-			Stage:                            tx_input.CreateAccountStageAccept,
-			PartyID:                          partyID,
-			SetupProposalPreparedTransaction: preparedTxBz,
-			SetupProposalHashing:             prepareResp.GetHashingSchemeVersion(),
-			SetupProposalSubmissionID:        newRegisterCommandId(),
+			Stage:                    tx_input.CreateAccountStageAccept,
+			PartyID:                  partyID,
+			SetupProposalAcceptInput: acceptInput,
 		}
 		if err := input.VerifySignaturePayloads(); err != nil {
 			logger.WithError(err).Error("create-account: accept-stage input verification failed")
@@ -1094,7 +1094,7 @@ func (client *Client) FetchCreateAccountInput(ctx context.Context, args *xclient
 		}
 		logger.WithFields(logrus.Fields{
 			"stage":         input.Stage,
-			"submission_id": input.SetupProposalSubmissionID,
+			"submission_id": input.SetupProposalAcceptInput.SubmissionID,
 		}).Info("create-account: returning accept-stage input")
 		return input, nil
 	}
@@ -1128,15 +1128,15 @@ func (client *Client) submitCreateAccountTx(ctx context.Context, createAccountTx
 		}
 		return nil
 	case tx_input.CreateAccountStageAccept:
-		var preparedTx interactive.PreparedTransaction
-		if err := proto.Unmarshal(cantonInput.SetupProposalPreparedTransaction, &preparedTx); err != nil {
-			return fmt.Errorf("failed to unmarshal setup proposal prepared transaction: %w", err)
+		preparedTx, err := cantontx.BuildCreateAccountAcceptPreparedTransaction(cantonInput.SetupProposalAcceptInput)
+		if err != nil {
+			return fmt.Errorf("failed to build setup proposal prepared transaction: %w", err)
 		}
 		keyFingerprint, err := KeyFingerprintFromAddress(xc.Address(cantonInput.PartyID))
 		if err != nil {
 			return fmt.Errorf("failed to determine signing fingerprint for setup proposal accept: %w", err)
 		}
-		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(&preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalSubmissionID, cantonInput.SetupProposalHashing, client.ledgerClient.deduplicationWindow)
+		executeReq := cantonproto.NewExecuteSubmissionAndWaitRequest(preparedTx, cantonInput.PartyID, cantonInput.Signature, keyFingerprint, cantonInput.SetupProposalAcceptInput.SubmissionID, cantonInput.SetupProposalAcceptInput.Hashing, client.ledgerClient.deduplicationWindow)
 		_, err = client.ledgerClient.ExecuteSubmissionAndWait(ctx, executeReq)
 		if err != nil && !isAlreadyExists(err) {
 			return fmt.Errorf("ExternalPartySetupProposal_Accept failed: %w", err)

@@ -1,7 +1,10 @@
 package tx_test
 
 import (
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -57,10 +60,9 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, expectedHash, sighashes[0].Payload)
 			} else {
-				var preparedTx interactive.PreparedTransaction
-				err := proto.Unmarshal(tt.input.SetupProposalPreparedTransaction, &preparedTx)
+				preparedTx, err := cantontx.BuildCreateAccountAcceptPreparedTransaction(tt.input.SetupProposalAcceptInput)
 				require.NoError(t, err)
-				expectedHash, err := tx_input.ComputePreparedTransactionHash(&preparedTx)
+				expectedHash, err := tx_input.ComputePreparedTransactionHash(preparedTx)
 				require.NoError(t, err)
 				require.Equal(t, expectedHash, sighashes[0].Payload)
 			}
@@ -96,10 +98,89 @@ func TestCreateAccountTxRoundTrip(t *testing.T) {
 func loadLiveAcceptInput(t *testing.T) *tx_input.CreateAccountInput {
 	t.Helper()
 
+	metadata := loadLegacyLiveAcceptMetadata(t)
+
+	preparedTxBz, err := base64.StdEncoding.DecodeString(metadata.SetupProposalPreparedTx)
+	require.NoError(t, err)
+
+	var preparedTx interactive.PreparedTransaction
+	require.NoError(t, proto.Unmarshal(preparedTxBz, &preparedTx))
+
+	acceptInput, err := tx_input.ParseCreateAccountAcceptInput(&preparedTx)
+	require.NoError(t, err)
+
+	return &tx_input.CreateAccountInput{
+		Stage:   tx_input.CreateAccountStageAccept,
+		PartyID: metadata.PartyID,
+		SetupProposalAcceptInput: &tx_input.CreateAccountAcceptInput{
+			TransactionVersion:     acceptInput.TransactionVersion,
+			SubmitterActAs:         append([]string(nil), acceptInput.SubmitterActAs...),
+			SynchronizerID:         acceptInput.SynchronizerID,
+			MediatorGroup:          acceptInput.MediatorGroup,
+			CommandID:              acceptInput.CommandID,
+			SubmissionID:           metadata.SubmissionID,
+			Hashing:                metadata.Hashing,
+			TransactionUUID:        acceptInput.TransactionUUID,
+			PreparationTime:        acceptInput.PreparationTime,
+			MinLedgerEffectiveTime: cloneOptionalUint64Test(acceptInput.MinLedgerEffectiveTime),
+			MaxLedgerEffectiveTime: cloneOptionalUint64Test(acceptInput.MaxLedgerEffectiveTime),
+			Exercise:               acceptInput.Exercise,
+			ProposalInputContract:  acceptInput.ProposalInputContract,
+			ValidatorRight:         acceptInput.ValidatorRight,
+			TransferPreapproval:    acceptInput.TransferPreapproval,
+			NodeSeeds:              cloneCreateAccountNodeSeedsTest(acceptInput.NodeSeeds),
+		},
+	}
+}
+
+func loadLegacyLiveAcceptPreparedTransaction(t *testing.T) *interactive.PreparedTransaction {
+	t.Helper()
+
+	metadata := loadLegacyLiveAcceptMetadata(t)
+	preparedTxBz, err := base64.StdEncoding.DecodeString(metadata.SetupProposalPreparedTx)
+	require.NoError(t, err)
+
+	var preparedTx interactive.PreparedTransaction
+	require.NoError(t, proto.Unmarshal(preparedTxBz, &preparedTx))
+	return &preparedTx
+}
+
+type legacyLiveAcceptMetadata struct {
+	PartyID                 string                           `json:"party_id"`
+	SetupProposalPreparedTx string                           `json:"setup_proposal_prepared_transaction"`
+	Hashing                 interactive.HashingSchemeVersion `json:"setup_proposal_hashing"`
+	SubmissionID            string                           `json:"setup_proposal_submission_id"`
+}
+
+func loadLegacyLiveAcceptMetadata(t *testing.T) legacyLiveAcceptMetadata {
+	t.Helper()
+
 	encoded, err := hex.DecodeString(liveAcceptCreateAccountInputHex)
 	require.NoError(t, err)
 
-	input, err := tx_input.ParseCreateAccountInput(encoded)
+	metadataLen := binary.BigEndian.Uint64(encoded[:8])
+	var metadata legacyLiveAcceptMetadata
+	err = json.Unmarshal(encoded[8:8+metadataLen], &metadata)
 	require.NoError(t, err)
-	return input
+	return metadata
+}
+
+func cloneOptionalUint64Test(value *uint64) *uint64 {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
+}
+
+func cloneCreateAccountNodeSeedsTest(seeds []tx_input.CreateAccountNodeSeed) []tx_input.CreateAccountNodeSeed {
+	if len(seeds) == 0 {
+		return nil
+	}
+	cloned := make([]tx_input.CreateAccountNodeSeed, len(seeds))
+	copy(cloned, seeds)
+	for i := range cloned {
+		cloned[i].Seed = append([]byte(nil), seeds[i].Seed...)
+	}
+	return cloned
 }
