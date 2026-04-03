@@ -265,6 +265,10 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 			continue
 		}
 
+		logrus.WithFields(logrus.Fields{
+			"tx_hash":      out.TxHash,
+			"global_index": out.GlobalIndex,
+		}).Info("fetching decoys for output")
 		decoys, err := c.FetchDecoys(ctx, out.GlobalIndex, ringSize-1)
 		if err != nil {
 			logrus.WithError(err).Warn("failed to fetch decoys")
