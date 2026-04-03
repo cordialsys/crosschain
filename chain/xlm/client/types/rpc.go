@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 const (
@@ -50,11 +50,11 @@ type GetTransactionResult struct {
 	FeeCharged     string `json:"fee_charged"`
 	MaxFee         string `json:"max_fee"`
 	OperationCount int    `json:"operation_count"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionEnvelope XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionEnvelope XDR binary
 	EnvelopeXdr string `json:"envelope_xdr,omitempty"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionResult XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionResult XDR binary
 	ResultXdr string `json:"result_xdr,omitempty"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionResultMeta XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionResultMeta XDR binary
 	ResultMetaXdr string `json:"result_meta_xdr,omitempty"`
 	PagingToken   string `json:"paging_token,omitempty"`
 }

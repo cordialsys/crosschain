@@ -9,7 +9,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	"github.com/cordialsys/crosschain/chain/xlm/tx"
 	"github.com/cordialsys/crosschain/chain/xlm/tx_input"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 	"github.com/test-go/testify/require"
 )
 

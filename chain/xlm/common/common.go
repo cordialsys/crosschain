@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/strkey"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 // XLM Asset representation
@@ -119,6 +120,71 @@ func CreateChangeTrustAsset(details AssetDetails) (xdr.ChangeTrustAsset, error) 
 		}, nil
 	default:
 		return xdr.ChangeTrustAsset{}, fmt.Errorf("invalid asset code length: %d", length)
+	}
+}
+
+// IsContractAddress returns true if the address is a Soroban contract (C...) address.
+func IsContractAddress(address xc.Address) bool {
+	return strkey.IsValidContractAddress(string(address))
+}
+
+// ScAddressFromString creates an ScAddress from either a G (account) or C (contract) address.
+func ScAddressFromString(address string) (xdr.ScAddress, error) {
+	if strkey.IsValidContractAddress(address) {
+		contractBytes, err := strkey.Decode(strkey.VersionByteContract, address)
+		if err != nil {
+			return xdr.ScAddress{}, fmt.Errorf("failed to decode contract address: %w", err)
+		}
+		var contractId xdr.Hash
+		copy(contractId[:], contractBytes)
+		cid := xdr.ContractId(contractId)
+		return xdr.ScAddress{
+			Type:       xdr.ScAddressTypeScAddressTypeContract,
+			ContractId: &cid,
+		}, nil
+	}
+	accountId, err := xdr.AddressToAccountId(address)
+	if err != nil {
+		return xdr.ScAddress{}, fmt.Errorf("failed to decode account address: %w", err)
+	}
+	return xdr.ScAddress{
+		Type:      xdr.ScAddressTypeScAddressTypeAccount,
+		AccountId: &accountId,
+	}, nil
+}
+
+// ScValAddress creates an ScVal of type SCV_ADDRESS from a Stellar address string.
+func ScValAddress(address string) (xdr.ScVal, error) {
+	scAddr, err := ScAddressFromString(address)
+	if err != nil {
+		return xdr.ScVal{}, err
+	}
+	return xdr.ScVal{
+		Type:    xdr.ScValTypeScvAddress,
+		Address: &scAddr,
+	}, nil
+}
+
+// ScValI128 creates an ScVal of type SCV_I128 from an int64 value.
+func ScValI128(amount int64) xdr.ScVal {
+	hi := xdr.Int64(0)
+	if amount < 0 {
+		hi = -1
+	}
+	lo := xdr.Uint64(amount)
+	parts := xdr.Int128Parts{Hi: hi, Lo: lo}
+	return xdr.ScVal{
+		Type: xdr.ScValTypeScvI128,
+		I128: &parts,
+	}
+}
+
+// ScValSymbol creates an ScVal of type SCV_SYMBOL.
+func ScValSymbol(s string) xdr.ScVal {
+	sym := xdr.ScSymbol(s)
+	return xdr.ScVal{
+		Type: xdr.ScValTypeScvSymbol,
+		Sym:  &sym,
 	}
 }
 

@@ -24,7 +24,8 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
-	"github.com/stellar/go/xdr"
+	"github.com/sirupsen/logrus"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 type Client struct {
@@ -103,18 +104,36 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		feeAccountDetails = feePayerDetails
 	}
 
-	// Check if destination account exists on the network.
-	// Stellar requires CreateAccount for new accounts instead of Payment.
-	_, destErr := client.FetchAccountDetails(args.GetTo())
-	if destErr != nil {
-		var queryErr *types.QueryProblem
-		if stderrors.As(destErr, &queryErr) && queryErr.Status == 404 {
-			txInput.DestinationFunded = false
-		} else {
-			return nil, fmt.Errorf("failed to fetch destination account details: %w", destErr)
+	// Check if destination is a contract (C...) address or a regular account (G...).
+	if common.IsContractAddress(args.GetTo()) {
+		// Contract addresses require Soroban SAC invocation — skip account existence check.
+		// The builder will use InvokeHostFunction instead of Payment.
+		txInput.DestinationFunded = true
+		// Conservative defaults for Soroban SAC transfers.
+		txInput.SorobanResourceFee = 100_000
+		txInput.SorobanInstructions = 500_000
+		txInput.SorobanDiskReadBytes = 2000
+		txInput.SorobanWriteBytes = 500
+		// If Soroban RPC is configured, simulate to get accurate resource estimates.
+		if sorobanUrl := config.IndexerUrl; sorobanUrl != "" {
+			if err := client.estimateSorobanResourceFee(sorobanUrl, args, txInput); err != nil {
+				logrus.WithError(err).Warn("soroban simulation failed, using default resource fee")
+			}
 		}
 	} else {
-		txInput.DestinationFunded = true
+		// Check if destination account exists on the network.
+		// Stellar requires CreateAccount for new accounts instead of Payment.
+		_, destErr := client.FetchAccountDetails(args.GetTo())
+		if destErr != nil {
+			var queryErr *types.QueryProblem
+			if stderrors.As(destErr, &queryErr) && queryErr.Status == 404 {
+				txInput.DestinationFunded = false
+			} else {
+				return nil, fmt.Errorf("failed to fetch destination account details: %w", destErr)
+			}
+		} else {
+			txInput.DestinationFunded = true
+		}
 	}
 
 	// Check if the sender needs a trustline for the token asset.
@@ -153,16 +172,25 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 	}
 
-	// Stellar requires the MaxFee specification, which defines the maximum amount
-	// we are willing to spend on the transaction fee.
-	maxFee := config.GasBudgetDefault.ToBlockchain(config.Decimals)
+	// Set MaxFee (inclusion fee).
+	// For Soroban transactions, MaxFee may already be set from fee stats — only override
+	// with the gas budget default if it hasn't been set yet.
+	if txInput.MaxFee == 0 {
+		maxFee := config.GasBudgetDefault.ToBlockchain(config.Decimals)
+		if feeAccountBalance.Cmp(&maxFee) > 0 {
+			txInput.MaxFee = uint32(maxFee.Uint64())
+		} else {
+			txInput.MaxFee = uint32(feeAccountBalance.Uint64())
+		}
+	}
 
-	// If balance is greater than blockchainFee, we can safely use specified MaxFee
-	// Use remaining balance as a max fee otherwise
-	if feeAccountBalance.Cmp(&maxFee) > 0 {
-		txInput.MaxFee = uint32(maxFee.Uint64())
-	} else {
-		txInput.MaxFee = uint32(feeAccountBalance.Uint64())
+	// Apply chain gas-price multiplier to fees if configured.
+	// This allows remote adjustment of fee estimates.
+	if config.ChainGasMultiplier > 0 && config.ChainGasMultiplier != 1.0 {
+		txInput.MaxFee = uint32(float64(txInput.MaxFee) * config.ChainGasMultiplier)
+		if txInput.SorobanResourceFee > 0 {
+			txInput.SorobanResourceFee = uint32(float64(txInput.SorobanResourceFee) * config.ChainGasMultiplier)
+		}
 	}
 
 	txInput.TransactionActiveTime = config.TransactionActiveTime

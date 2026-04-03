@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 type Tx struct {

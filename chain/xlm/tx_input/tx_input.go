@@ -53,6 +53,13 @@ type TxInput struct {
 	// NeedsCreateTrustline indicates that the sender needs a trustline for the token asset.
 	// When true, a ChangeTrust operation is prepended to the transaction.
 	NeedsCreateTrustline bool `json:"needs_create_trustline,omitempty"`
+	// SorobanResourceFee is the resource fee (in stroops) for Soroban InvokeHostFunction transactions.
+	// It is added to MaxFee (the inclusion fee) to form the total transaction fee.
+	SorobanResourceFee uint32 `json:"soroban_resource_fee,omitempty"`
+	// Soroban resource limits for InvokeHostFunction transactions.
+	SorobanInstructions  uint32 `json:"soroban_instructions,omitempty"`
+	SorobanDiskReadBytes uint32 `json:"soroban_disk_read_bytes,omitempty"`
+	SorobanWriteBytes    uint32 `json:"soroban_write_bytes,omitempty"`
 }
 
 func init() {
@@ -110,16 +117,25 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 	if asInt > math.MaxUint32 {
 		return fmt.Errorf("multiplied (x%s) max fee exceeds XLM limit, consider decreasing fee priority", multiplier.String())
 	}
-
 	input.MaxFee = uint32(asInt)
+
+	if input.SorobanResourceFee > 0 {
+		multipliedResourceFee := multiplier.Mul(decimal.NewFromInt(int64(input.SorobanResourceFee)))
+		asInt := multipliedResourceFee.IntPart()
+		if asInt > math.MaxUint32 {
+			return fmt.Errorf("multiplied (x%s) soroban resource fee exceeds limit", multiplier.String())
+		}
+		input.SorobanResourceFee = uint32(asInt)
+	}
+
 	return nil
 }
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
-	return xc.NewAmountBlockchainFromUint64(uint64(input.MaxFee)), ""
+	totalFee := uint64(input.MaxFee) + uint64(input.SorobanResourceFee)
+	return xc.NewAmountBlockchainFromUint64(totalFee), ""
 }
 
 func (input *TxInput) IsFeeLimitAccurate() bool {
-	// currently getting a ~2 XLM fixed fee, not really accurate
-	return false
+	return true
 }
