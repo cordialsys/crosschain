@@ -12,7 +12,6 @@ import (
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
 	"github.com/cordialsys/crosschain/chain/monero/tx"
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
-	"github.com/cordialsys/crosschain/factory/signer"
 	"filippo.io/edwards25519"
 	"golang.org/x/crypto/sha3"
 )
@@ -35,18 +34,23 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		return nil, fmt.Errorf("expected monero TxInput, got %T", input)
 	}
 
+	// Get sender's public keys from TransferArgs (no private key access)
+	senderPubKey, ok := args.GetPublicKey()
+	if !ok || len(senderPubKey) != 64 {
+		return nil, fmt.Errorf("sender public key required (64 bytes: pubSpend||pubView)")
+	}
+	senderPubSpend := senderPubKey[:32]
+	senderPubView := senderPubKey[32:]
+
 	amountU64 := args.GetAmount().Uint64()
 
-	// Fee estimation - use high priority (200x base fee) to ensure quick mining
-	// The PerByteFee from the daemon is actually per kB, and is the minimum tier.
-	// We multiply generously to match what real wallets pay.
-	estimatedSize := uint64(2000) // estimated tx weight in bytes
-	fee := moneroInput.PerByteFee * 200 * estimatedSize / 1024 // ~200x minimum, per kB
+	// Fee estimation
+	estimatedSize := uint64(2000)
+	fee := moneroInput.PerByteFee * 200 * estimatedSize / 1024
 	if moneroInput.QuantizationMask > 0 {
 		fee = (fee + moneroInput.QuantizationMask - 1) / moneroInput.QuantizationMask * moneroInput.QuantizationMask
 	}
-	// Ensure minimum reasonable fee
-	if fee < 100000000 { // at least 0.0001 XMR
+	if fee < 100000000 {
 		fee = 100000000
 	}
 
@@ -54,7 +58,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		return nil, fmt.Errorf("no spendable outputs available")
 	}
 
-	// Select outputs to spend (largest first to minimize inputs needed)
+	// Select outputs (largest first)
 	sortedOutputs := make([]tx_input.Output, len(moneroInput.Outputs))
 	copy(sortedOutputs, moneroInput.Outputs)
 	sort.Slice(sortedOutputs, func(i, j int) bool {
@@ -71,20 +75,17 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		}
 	}
 	if totalInput < amountU64+fee {
-		return nil, fmt.Errorf("insufficient funds: have %d, need %d (amount %d + fee %d)",
-			totalInput, amountU64+fee, amountU64, fee)
+		return nil, fmt.Errorf("insufficient funds: have %d, need %d", totalInput, amountU64+fee)
 	}
 	change := totalInput - amountU64 - fee
 
-	// Load private keys for signing
-	privSpend, privView, pubSpend, _, err := loadKeys()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load keys: %w", err)
+	// Deterministic RNG from TxInput seed
+	rngSeed := moneroInput.RngSeed
+	if len(rngSeed) == 0 {
+		rngSeed = crypto.Keccak256([]byte("default_rng_seed"))
 	}
-
-	// Create deterministic RNG seeded from private key + tx parameters
-	// This ensures repeated Transfer() calls produce identical results
-	rngSeed := append(privSpend.Bytes(), []byte(args.GetTo())...)
+	// Include tx-specific data for uniqueness across repeated calls
+	rngSeed = append(rngSeed, []byte(args.GetTo())...)
 	rngSeed = append(rngSeed, args.GetAmount().Bytes()...)
 	for _, out := range selectedOutputs {
 		rngSeed = append(rngSeed, []byte(out.TxHash)...)
@@ -96,42 +97,39 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	txPrivScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(txPrivKey)
 	txPubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(txPrivScalar)
 
-	// Build outputs
+	// Build outputs using PUBLIC view keys from addresses (no private keys)
 	var outputs []tx.TxOutput
 	var amounts []uint64
 	var masks [][]byte
-	var recipientViews [][]byte // public view keys for each output (for amount encryption)
+	var recipientViews [][]byte
 
 	// Output 0: destination
-	destKey, destViewTag, err := deriveOutputKey(txPrivKey, string(args.GetTo()), 0)
+	_, destPubSpend, destPubView, err := crypto.DecodeAddress(string(args.GetTo()))
 	if err != nil {
-		return nil, fmt.Errorf("failed to derive destination key: %w", err)
+		return nil, fmt.Errorf("invalid destination address: %w", err)
 	}
-	_, _, destPubView, _ := crypto.DecodeAddress(string(args.GetTo()))
+	destKey, destViewTag, err := deriveOutputKey(txPrivKey, destPubSpend, destPubView, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive dest key: %w", err)
+	}
 	outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: destKey, ViewTag: destViewTag})
 	amounts = append(amounts, amountU64)
-	// Compute mask from ECDH shared secret (standard Monero derivation)
-	// This ensures the recipient can derive the same mask when spending
-	destMask := deriveOutputMask(txPrivKey, destPubView, 0)
-	masks = append(masks, destMask)
+	masks = append(masks, deriveOutputMask(txPrivKey, destPubView, 0))
 	recipientViews = append(recipientViews, destPubView)
 
-	// Output 1: change
+	// Output 1: change (back to sender, using sender's public view key)
 	if change > 0 {
-		changeKey, changeViewTag, err := deriveOutputKey(txPrivKey, string(args.GetFrom()), 1)
+		changeKey, changeViewTag, err := deriveOutputKey(txPrivKey, senderPubSpend, senderPubView, 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to derive change key: %w", err)
 		}
-		_, _, changePubView, _ := crypto.DecodeAddress(string(args.GetFrom()))
 		outputs = append(outputs, tx.TxOutput{Amount: 0, PublicKey: changeKey, ViewTag: changeViewTag})
 		amounts = append(amounts, change)
-		changeMask := deriveOutputMask(txPrivKey, changePubView, 1)
-		masks = append(masks, changeMask)
-		recipientViews = append(recipientViews, changePubView)
+		masks = append(masks, deriveOutputMask(txPrivKey, senderPubView, 1))
+		recipientViews = append(recipientViews, senderPubView)
 	}
 
-	// Generate BP+ range proof using Monero's exact C++ implementation.
-	// Cache the raw proof in TxInput for determinism (Transfer() is called multiple times).
+	// BP+ range proof (deterministic from rng)
 	var bpFields crypto.BPPlusFields
 	if len(moneroInput.CachedBpProof) > 0 {
 		_, bpFields, err = crypto.ParseBPPlusProofGo(moneroInput.CachedBpProof)
@@ -140,7 +138,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		}
 	} else {
 		var rawProof []byte
-		rawProof, err = crypto.BPPlusProvePureGo(amounts, masks)
+		rawProof, err = crypto.BPPlusProvePureGo(amounts, masks, rng)
 		if err != nil {
 			return nil, fmt.Errorf("BP+ proof failed: %w", err)
 		}
@@ -151,13 +149,13 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		}
 	}
 
-	// Compute outPk commitments (full, unscaled): C = gamma*G + v*H
+	// Compute outPk commitments
 	commitments := make([]*edwards25519.Point, len(amounts))
 	for i := range amounts {
 		commitments[i], _ = crypto.PedersenCommit(amounts[i], masks[i])
 	}
 
-	// Encrypt amounts using the correct ECDH shared secret per output
+	// Encrypt amounts
 	var ecdhInfo [][]byte
 	for i := range amounts {
 		enc, _ := encryptAmount(amounts[i], txPrivKey, recipientViews[i], i)
@@ -168,7 +166,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	extra := []byte{0x01}
 	extra = append(extra, txPubKey.Bytes()...)
 
-	// Compute pseudo-output commitments and masks
+	// Compute pseudo-output commitments
 	totalOutMask := edwards25519.NewScalar()
 	for _, mask := range masks {
 		m, _ := edwards25519.NewScalar().SetCanonicalBytes(mask)
@@ -196,28 +194,23 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		pseudoOuts[lastIdx], _ = crypto.PedersenCommit(selectedOutputs[lastIdx].Amount, lastMask.Bytes())
 	}
 
-	// Phase 1: Build inputs (key images, rings, key offsets) WITHOUT CLSAG sigs
-	type inputContext struct {
-		ring        []*edwards25519.Point
-		commitments []*edwards25519.Point
-		realPos     int
-		privKey     *edwards25519.Scalar
-		zKey        *edwards25519.Scalar
+	// Build inputs (key images left empty - computed by signer)
+	type clsagInputContext struct {
+		Ring           []*edwards25519.Point
+		CNonzero       []*edwards25519.Point
+		RealPos        int
+		KeyOffsets     []uint64
+		InputMask      *edwards25519.Scalar // pre-computed commitment mask
+		PseudoMask     *edwards25519.Scalar
+		OutputKey      string // hex, for signer to derive one-time private key
+		TxPubKeyHex    string // hex, original tx pub key
+		OutputIndex    uint64
 	}
-
 	var txInputs []tx.TxInput
-	var inputCtxs []inputContext
+	var clsagContexts []clsagInputContext
+
 	ringSize := 0
-
 	for i, selOut := range selectedOutputs {
-		oneTimePrivKey, err := deriveOneTimePrivKey(privSpend, privView, selOut, pubSpend)
-		if err != nil {
-			return nil, fmt.Errorf("failed to derive one-time private key for input %d: %w", i, err)
-		}
-
-		oneTimePubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(oneTimePrivKey)
-		keyImage := crypto.ComputeKeyImage(oneTimePrivKey, oneTimePubKey)
-
 		ring, ringCommitments, realPos, keyOffsets, err := buildRingFromMembers(
 			selOut.GlobalIndex, selOut.PublicKey, selOut.Commitment, selOut.RingMembers,
 		)
@@ -225,27 +218,44 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 			return nil, fmt.Errorf("failed to build ring for input %d: %w", i, err)
 		}
 
-		inputMask := deriveInputMask(privView, selOut)
+		// Use pre-computed commitment mask from TxInput
+		var inputMask *edwards25519.Scalar
+		if selOut.CommitmentMask != "" {
+			maskBytes, _ := hex.DecodeString(selOut.CommitmentMask)
+			inputMask, _ = edwards25519.NewScalar().SetCanonicalBytes(maskBytes)
+		} else {
+			return nil, fmt.Errorf("input %d missing pre-computed commitment mask", i)
+		}
+
+		// Set real output's commitment from our computed mask
 		inputCommitment, _ := crypto.PedersenCommit(selOut.Amount, inputMask.Bytes())
 		if realPos >= 0 && realPos < len(ringCommitments) {
 			ringCommitments[realPos] = inputCommitment
 		}
 
-		zKey := edwards25519.NewScalar().Subtract(inputMask, pseudoMasks[i])
+		// Key image placeholder (32 zero bytes - computed by signer)
+		keyImage := make([]byte, 32)
 
 		txInputs = append(txInputs, tx.TxInput{
 			Amount:     0,
 			KeyOffsets: keyOffsets,
-			KeyImage:   keyImage.Bytes(),
+			KeyImage:   keyImage,
 		})
-		inputCtxs = append(inputCtxs, inputContext{
-			ring: ring, commitments: ringCommitments,
-			realPos: realPos, privKey: oneTimePrivKey, zKey: zKey,
+		clsagContexts = append(clsagContexts, clsagInputContext{
+			Ring:        ring,
+			CNonzero:    ringCommitments,
+			RealPos:     realPos,
+			KeyOffsets:  keyOffsets,
+			InputMask:   inputMask,
+			PseudoMask:  pseudoMasks[i],
+			OutputKey:   selOut.PublicKey,
+			TxPubKeyHex: selOut.TxPubKey,
+			OutputIndex: selOut.Index,
 		})
 		ringSize = len(ring)
 	}
 
-	// Phase 2: Build the Tx object (without CLSAGs) to compute CLSAGMessage
+	// Build the unsigned Tx
 	moneroTx := &tx.Tx{
 		Version:        2,
 		UnlockTime:     0,
@@ -261,39 +271,30 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		RingSize:       ringSize,
 	}
 
-	// Phase 3: Compute the three-hash CLSAG message from the serialized blob.
-	// We serialize the tx (without CLSAGs) and parse the blob to get exact boundaries.
-	// This guarantees the message matches what the verifier computes.
+	// Compute the CLSAG message from the serialized blob
 	blobForMsg, _ := moneroTx.Serialize()
 	clsagMessage := computeCLSAGMessageFromBlob(blobForMsg, len(txInputs), len(outputs))
 
-	// Phase 4: Sign each input with CLSAG using the correct message
-	// Reset the deterministic RNG so this is repeatable
-	rng = newDeterministicRNG(append(rngSeed, []byte("clsag")...))
+	// Store CLSAG contexts on the Tx for the signer to use
+	moneroTx.CLSAGContexts = make([]tx.CLSAGInputContext, len(clsagContexts))
+	for i, ctx := range clsagContexts {
+		// Create per-input RNG seed for deterministic CLSAG nonces
+		clsagRngSeed := crypto.Keccak256(append(moneroInput.RngSeed, crypto.VarIntEncode(uint64(i))...))
 
-	var clsags []*crypto.CLSAGSignature
-	for i := range inputCtxs {
-		ctx := inputCtxs[i]
-		clsagCtx := &crypto.CLSAGContext{
+		moneroTx.CLSAGContexts[i] = tx.CLSAGInputContext{
 			Message:     clsagMessage,
-			Ring:        ctx.ring,
-			CNonzero:    ctx.commitments,
+			Ring:        ctx.Ring,
+			CNonzero:    ctx.CNonzero,
 			COffset:     pseudoOuts[i],
-			SecretIndex: ctx.realPos,
-			SecretKey:   ctx.privKey,
-			ZKey:        ctx.zKey,
-			Rand:        rng,
+			RealPos:     ctx.RealPos,
+			InputMask:   ctx.InputMask,
+			PseudoMask:  ctx.PseudoMask,
+			OutputKey:   ctx.OutputKey,
+			TxPubKeyHex: ctx.TxPubKeyHex,
+			OutputIndex: ctx.OutputIndex,
+			RngSeed:     clsagRngSeed,
 		}
-
-		clsag, err := crypto.CLSAGSign(clsagCtx)
-		if err != nil {
-			return nil, fmt.Errorf("CLSAG signing failed for input %d: %w", i, err)
-		}
-		clsags = append(clsags, clsag)
 	}
-
-	moneroTx.CLSAGs = clsags
-
 
 	return moneroTx, nil
 }
@@ -306,122 +307,32 @@ func (b TxBuilder) SupportsMemo() xc.MemoSupport {
 	return xc.MemoSupportNone
 }
 
-// loadKeys loads the private key from environment and derives all key material
-func loadKeys() (privSpend, privView, pubSpend, pubView *edwards25519.Scalar, err error) {
-	secret := signer.ReadPrivateKeyEnv()
-	if secret == "" {
-		return nil, nil, nil, nil, fmt.Errorf("XC_PRIVATE_KEY not set")
-	}
-	secretBz, err := hex.DecodeString(secret)
+// deriveOutputKey derives a stealth output key using PUBLIC view key only.
+func deriveOutputKey(txPrivKey, pubSpend, pubView []byte, outputIndex int) ([]byte, byte, error) {
+	D, err := crypto.GenerateKeyDerivation(pubView, txPrivKey)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, 0, err
 	}
-	privSpendBytes, privViewBytes, pubSpendBytes, pubViewBytes, err := crypto.DeriveKeysFromSpend(secretBz)
+
+	scalar, err := crypto.DerivationToScalar(D, uint64(outputIndex))
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, 0, err
 	}
 
-	ps, _ := edwards25519.NewScalar().SetCanonicalBytes(privSpendBytes)
-	pv, _ := edwards25519.NewScalar().SetCanonicalBytes(privViewBytes)
+	sScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(scalar)
+	sG := edwards25519.NewGeneratorPoint().ScalarBaseMult(sScalar)
+	B, _ := edwards25519.NewIdentityPoint().SetBytes(pubSpend)
+	P := edwards25519.NewIdentityPoint().Add(sG, B)
 
-	// For pubSpend/pubView we return as scalars of the byte representation
-	// (these are actually points, but we pass as scalars for convenience)
-	psBytes, _ := edwards25519.NewScalar().SetCanonicalBytes(crypto.ScalarReduce(pubSpendBytes))
-	pvBytes, _ := edwards25519.NewScalar().SetCanonicalBytes(crypto.ScalarReduce(pubViewBytes))
+	viewTagData := append([]byte("view_tag"), D...)
+	viewTagData = append(viewTagData, crypto.VarIntEncode(uint64(outputIndex))...)
+	viewTag := crypto.Keccak256(viewTagData)[0]
 
-	_ = psBytes
-	_ = pvBytes
-
-	return ps, pv, ps, pv, nil // Note: pubSpend/pubView returned as scalars (simplified)
+	return P.Bytes(), viewTag, nil
 }
 
-// deriveOneTimePrivKey derives the one-time private key for spending a specific output.
-// x = H_s(8 * viewKey * R || output_index) + spendKey
-// where R is the tx public key from the transaction that created this output.
-// The tx pub key R is stored in out.Mask during scanning.
-func deriveOneTimePrivKey(privSpend, privView *edwards25519.Scalar, out tx_input.Output, pubSpend *edwards25519.Scalar) (*edwards25519.Scalar, error) {
-	// Get the tx public key R (stored in the Mask field during scanning)
-	txPubKeyHex := out.Mask
-	if txPubKeyHex == "" {
-		return nil, fmt.Errorf("tx public key not available for output %s:%d", out.TxHash, out.Index)
-	}
-	txPubKeyBytes, err := hex.DecodeString(txPubKeyHex)
-	if err != nil {
-		return nil, fmt.Errorf("invalid tx pub key hex: %w", err)
-	}
-
-	// Compute derivation: D = 8 * viewKey * R (using Monero's exact C implementation)
-	derivation, err := crypto.GenerateKeyDerivation(txPubKeyBytes, privView.Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("key derivation failed: %w", err)
-	}
-
-	// Compute scalar: s = H_s(D || varint(output_index))
-	scalar, err := crypto.DerivationToScalar(derivation, out.Index)
-	if err != nil {
-		return nil, fmt.Errorf("derivation to scalar failed: %w", err)
-	}
-	hsScalar, err := edwards25519.NewScalar().SetCanonicalBytes(scalar)
-	if err != nil {
-		return nil, fmt.Errorf("invalid scalar: %w", err)
-	}
-
-	// x = s + a (one-time private key = derivation scalar + private spend key)
-	x := edwards25519.NewScalar().Add(hsScalar, privSpend)
-
-	// Verify: x*G should equal the output's public key
-	xG := edwards25519.NewGeneratorPoint().ScalarBaseMult(x)
-	outKeyBytes, err := hex.DecodeString(out.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid output public key: %w", err)
-	}
-	outPoint, err := edwards25519.NewIdentityPoint().SetBytes(outKeyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("invalid output point: %w", err)
-	}
-	if xG.Equal(outPoint) != 1 {
-		return nil, fmt.Errorf("derived one-time key does not match output public key (key derivation mismatch)")
-	}
-
-	return x, nil
-}
-
-// deriveInputMask derives the commitment mask for an input we own.
-// In Monero v2: mask = H_s("commitment_mask" || shared_scalar)
-// where shared_scalar = H_s(8 * viewKey * R || varint(output_index))
-func deriveInputMask(privView *edwards25519.Scalar, out tx_input.Output) *edwards25519.Scalar {
-	// Get tx public key R (stored in Mask field during scanning)
-	txPubKeyHex := out.Mask
-	if txPubKeyHex == "" {
-		// Fallback - shouldn't happen
-		s, _ := edwards25519.NewScalar().SetCanonicalBytes(make([]byte, 32))
-		return s
-	}
-	txPubKeyBytes, _ := hex.DecodeString(txPubKeyHex)
-
-	// Compute derivation: D = 8 * viewKey * R
-	derivation, _ := crypto.GenerateKeyDerivation(txPubKeyBytes, privView.Bytes())
-
-	// Compute shared scalar: s = H_s(D || varint(output_index))
-	sharedScalar, _ := crypto.DerivationToScalar(derivation, out.Index)
-
-	// Compute commitment mask: mask = H_s("commitment_mask" || sharedScalar)
-	// "commitment_mask" is 15 bytes (no null terminator)
-	data := make([]byte, 0, 15+32)
-	data = append(data, []byte("commitment_mask")...)
-	data = append(data, sharedScalar...)
-	hash := crypto.Keccak256(data)
-	reduced := crypto.ScReduce32(hash)
-	s, _ := edwards25519.NewScalar().SetCanonicalBytes(reduced)
-	return s
-}
-
-// deriveOutputMask computes the Pedersen commitment mask for an output.
-// mask = H_s("commitment_mask" || shared_scalar)
-// where shared_scalar = H_s(8 * txPrivKey * recipientPubView || outputIndex)
-// This matches Monero's genCommitmentMask and ensures the recipient can
-// derive the same mask when spending the output.
-func deriveOutputMask(txPrivKey []byte, recipientPubView []byte, outputIndex int) []byte {
+// deriveOutputMask computes the commitment mask for an output (uses public view key only).
+func deriveOutputMask(txPrivKey, recipientPubView []byte, outputIndex int) []byte {
 	D, _ := crypto.GenerateKeyDerivation(recipientPubView, txPrivKey)
 	scalar, _ := crypto.DerivationToScalar(D, uint64(outputIndex))
 	data := make([]byte, 0, 15+32)
@@ -430,56 +341,15 @@ func deriveOutputMask(txPrivKey []byte, recipientPubView []byte, outputIndex int
 	return crypto.ScReduce32(crypto.Keccak256(data))
 }
 
-func deriveOutputKey(txPrivKey []byte, address string, outputIndex int) ([]byte, byte, error) {
-	_, pubSpend, pubView, err := crypto.DecodeAddress(address)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// D = 8 * txPrivKey * pubView (with cofactor, matching Monero's generate_key_derivation)
-	D, err := crypto.GenerateKeyDerivation(pubView, txPrivKey)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// s = H_s(D || output_index)
-	scalar, err := crypto.DerivationToScalar(D, uint64(outputIndex))
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// P = s*G + pubSpend
-	sScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(scalar)
-	sG := edwards25519.NewGeneratorPoint().ScalarBaseMult(sScalar)
-	B, _ := edwards25519.NewIdentityPoint().SetBytes(pubSpend)
-	P := edwards25519.NewIdentityPoint().Add(sG, B)
-
-	// View tag = first byte of H("view_tag" || D || output_index)
-	viewTagData := append([]byte("view_tag"), D...)
-	viewTagData = append(viewTagData, crypto.VarIntEncode(uint64(outputIndex))...)
-	viewTag := crypto.Keccak256(viewTagData)[0]
-
-	return P.Bytes(), viewTag, nil
-}
-
-// encryptAmount encrypts an output amount using the ECDH shared scalar.
-// The shared scalar is H_s(8*txPrivKey*recipientPubView || outputIndex).
-// Then: encrypted = amount XOR first_8_bytes(H("amount" || scalar))
-func encryptAmount(amount uint64, txPrivKey []byte, recipientPubView []byte, outputIndex int) ([]byte, error) {
+func encryptAmount(amount uint64, txPrivKey, recipientPubView []byte, outputIndex int) ([]byte, error) {
 	amountBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(amountBytes, amount)
 
-	// Same derivation as used for output key
 	D, err := crypto.GenerateKeyDerivation(recipientPubView, txPrivKey)
 	if err != nil {
 		return nil, err
 	}
-	scalar, err := crypto.DerivationToScalar(D, uint64(outputIndex))
-	if err != nil {
-		return nil, err
-	}
-
-	// amount_key = H("amount" || scalar) - matches Monero's genAmountEncodingFactor
+	scalar, _ := crypto.DerivationToScalar(D, uint64(outputIndex))
 	amountKey := crypto.Keccak256(append([]byte("amount"), scalar...))
 
 	encrypted := make([]byte, 8)
@@ -489,9 +359,139 @@ func encryptAmount(amount uint64, txPrivKey []byte, recipientPubView []byte, out
 	return encrypted, nil
 }
 
-// deterministicRNG produces deterministic "random" bytes seeded from transaction parameters.
-// This ensures that repeated calls to Transfer() with the same inputs produce identical transactions,
-// which is required by the crosschain determinism check.
+func generateMaskFrom(rng io.Reader) []byte {
+	entropy := make([]byte, 64)
+	rng.Read(entropy)
+	return crypto.RandomScalar(entropy)
+}
+
+// buildRingFromMembers constructs a sorted ring.
+func buildRingFromMembers(
+	realGlobalIndex uint64, realKey string, realCommitment string,
+	decoys []tx_input.RingMember,
+) ([]*edwards25519.Point, []*edwards25519.Point, int, []uint64, error) {
+	type ringEntry struct {
+		globalIndex uint64
+		key         string
+		commitment  string
+	}
+
+	entries := make([]ringEntry, 0, len(decoys)+1)
+	entries = append(entries, ringEntry{realGlobalIndex, realKey, realCommitment})
+	for _, d := range decoys {
+		entries = append(entries, ringEntry{d.GlobalIndex, d.PublicKey, d.Commitment})
+	}
+
+	sort.Slice(entries, func(i, j int) bool { return entries[i].globalIndex < entries[j].globalIndex })
+
+	realPos := -1
+	ring := make([]*edwards25519.Point, len(entries))
+	commitments := make([]*edwards25519.Point, len(entries))
+	keyOffsets := make([]uint64, len(entries))
+
+	var prevIdx uint64
+	for i, e := range entries {
+		if e.globalIndex == realGlobalIndex && e.key == realKey {
+			realPos = i
+		}
+
+		keyBytes, err := hex.DecodeString(e.key)
+		if err != nil || len(keyBytes) != 32 {
+			ring[i] = edwards25519.NewIdentityPoint()
+		} else {
+			p, err := edwards25519.NewIdentityPoint().SetBytes(keyBytes)
+			if err != nil {
+				ring[i] = edwards25519.NewIdentityPoint()
+			} else {
+				ring[i] = p
+			}
+		}
+
+		if e.commitment != "" {
+			cBytes, _ := hex.DecodeString(e.commitment)
+			if len(cBytes) == 32 {
+				p, err := edwards25519.NewIdentityPoint().SetBytes(cBytes)
+				if err == nil {
+					commitments[i] = p
+				}
+			}
+		}
+		if commitments[i] == nil {
+			commitments[i] = edwards25519.NewIdentityPoint()
+		}
+
+		keyOffsets[i] = e.globalIndex - prevIdx
+		prevIdx = e.globalIndex
+	}
+
+	if realPos < 0 {
+		return nil, nil, -1, nil, fmt.Errorf("real output not found in ring")
+	}
+
+	return ring, commitments, realPos, keyOffsets, nil
+}
+
+// computeCLSAGMessageFromBlob parses the tx blob to compute the CLSAG message.
+func computeCLSAGMessageFromBlob(blob []byte, numInputs, numOutputs int) []byte {
+	pos := 0
+	readVarint := func() uint64 {
+		v := uint64(0); s := uint(0)
+		for blob[pos] & 0x80 != 0 { v |= uint64(blob[pos]&0x7f) << s; s += 7; pos++ }
+		v |= uint64(blob[pos]) << s; pos++
+		return v
+	}
+
+	readVarint(); readVarint() // version, unlock_time
+	numIn := readVarint()
+	for i := uint64(0); i < numIn; i++ {
+		pos++; readVarint()
+		count := readVarint()
+		for j := uint64(0); j < count; j++ { readVarint() }
+		pos += 32
+	}
+	numOut := readVarint()
+	for i := uint64(0); i < numOut; i++ {
+		readVarint(); tag := blob[pos]; pos++; pos += 32
+		if tag == 0x03 { pos++ }
+	}
+	extraLen := readVarint()
+	pos += int(extraLen)
+	prefixEnd := pos
+
+	pos++; readVarint()
+	pos += int(numOut) * 8
+	pos += int(numOut) * 32
+	rctBaseEnd := pos
+
+	readVarint() // nbp
+	kvStart := pos
+	pos += 6 * 32
+	nL := int(readVarint()); pos += nL * 32
+	nR := int(readVarint()); pos += nR * 32
+
+	var kv []byte
+	kvPos := kvStart
+	kv = append(kv, blob[kvPos:kvPos+6*32]...)
+	kvPos += 6 * 32
+	for blob[kvPos] & 0x80 != 0 { kvPos++ }; kvPos++
+	kv = append(kv, blob[kvPos:kvPos+nL*32]...)
+	kvPos += nL * 32
+	for blob[kvPos] & 0x80 != 0 { kvPos++ }; kvPos++
+	kv = append(kv, blob[kvPos:kvPos+nR*32]...)
+
+	prefixHash := crypto.Keccak256(blob[:prefixEnd])
+	rctBaseHash := crypto.Keccak256(blob[prefixEnd:rctBaseEnd])
+	bpKvHash := crypto.Keccak256(kv)
+
+	combined := make([]byte, 0, 96)
+	combined = append(combined, prefixHash...)
+	combined = append(combined, rctBaseHash...)
+	combined = append(combined, bpKvHash...)
+	return crypto.Keccak256(combined)
+}
+
+// --- Deterministic RNG ---
+
 type deterministicRNG struct {
 	state []byte
 	count uint64
@@ -520,171 +520,4 @@ func (r *deterministicRNG) Read(p []byte) (int, error) {
 		copy(p[i:end], chunk[:end-i])
 	}
 	return len(p), nil
-}
-
-func generateMaskFrom(rng io.Reader) []byte {
-	entropy := make([]byte, 64)
-	rng.Read(entropy)
-	return crypto.RandomScalar(entropy)
-}
-
-// buildRingFromMembers constructs a sorted ring from the real output and its decoy members.
-// Returns (ring points, commitment points, real position, relative key offsets, error).
-func buildRingFromMembers(
-	realGlobalIndex uint64, realKey string, realCommitment string,
-	decoys []tx_input.RingMember,
-) ([]*edwards25519.Point, []*edwards25519.Point, int, []uint64, error) {
-	type ringEntry struct {
-		globalIndex uint64
-		key         string
-		commitment  string
-	}
-
-	entries := make([]ringEntry, 0, len(decoys)+1)
-	entries = append(entries, ringEntry{realGlobalIndex, realKey, realCommitment})
-	for _, d := range decoys {
-		entries = append(entries, ringEntry{d.GlobalIndex, d.PublicKey, d.Commitment})
-	}
-
-	// Sort by global index
-	sort.Slice(entries, func(i, j int) bool { return entries[i].globalIndex < entries[j].globalIndex })
-
-	// Find real position and compute relative offsets
-	realPos := -1
-	ring := make([]*edwards25519.Point, len(entries))
-	commitments := make([]*edwards25519.Point, len(entries))
-	keyOffsets := make([]uint64, len(entries))
-
-	var prevIdx uint64
-	for i, e := range entries {
-		if e.globalIndex == realGlobalIndex && e.key == realKey {
-			realPos = i
-		}
-
-		keyBytes, err := hex.DecodeString(e.key)
-		if err != nil || len(keyBytes) != 32 {
-			// Use identity as fallback
-			ring[i] = edwards25519.NewIdentityPoint()
-		} else {
-			p, err := edwards25519.NewIdentityPoint().SetBytes(keyBytes)
-			if err != nil {
-				ring[i] = edwards25519.NewIdentityPoint()
-			} else {
-				ring[i] = p
-			}
-		}
-
-		if e.commitment != "" {
-			cBytes, err := hex.DecodeString(e.commitment)
-			if err == nil && len(cBytes) == 32 {
-				p, err := edwards25519.NewIdentityPoint().SetBytes(cBytes)
-				if err == nil {
-					commitments[i] = p
-				}
-			}
-		}
-		if commitments[i] == nil {
-			commitments[i] = edwards25519.NewIdentityPoint()
-		}
-
-		keyOffsets[i] = e.globalIndex - prevIdx
-		prevIdx = e.globalIndex
-	}
-
-	if realPos < 0 {
-		return nil, nil, -1, nil, fmt.Errorf("real output not found in ring")
-	}
-
-	return ring, commitments, realPos, keyOffsets, nil
-}
-
-// computeCLSAGMessageFromBlob parses the serialized transaction blob and computes
-// the three-hash CLSAG message exactly as the Monero verifier would.
-func computeCLSAGMessageFromBlob(blob []byte, numInputs, numOutputs int) []byte {
-	pos := 0
-	readVarint := func() uint64 {
-		v := uint64(0); s := uint(0)
-		for blob[pos] & 0x80 != 0 { v |= uint64(blob[pos]&0x7f) << s; s += 7; pos++ }
-		v |= uint64(blob[pos]) << s; pos++
-		return v
-	}
-
-	// Parse prefix
-	readVarint() // version
-	readVarint() // unlock_time
-	numIn := readVarint()
-	for i := uint64(0); i < numIn; i++ {
-		pos++ // tag
-		readVarint() // amount
-		count := readVarint()
-		for j := uint64(0); j < count; j++ { readVarint() }
-		pos += 32 // key image
-	}
-	numOut := readVarint()
-	for i := uint64(0); i < numOut; i++ {
-		readVarint() // amount
-		tag := blob[pos]; pos++
-		pos += 32 // key
-		if tag == 0x03 { pos++ }
-	}
-	extraLen := readVarint()
-	pos += int(extraLen)
-	prefixEnd := pos
-
-	// RCT base
-	pos++ // type byte
-	readVarint() // fee
-	pos += int(numOut) * 8  // ecdhInfo
-	pos += int(numOut) * 32 // outPk
-	unprunableEnd := pos
-
-	// Parse prunable to extract BP+ kv fields (without CLSAG and pseudoOuts)
-	prunableStart := unprunableEnd
-	ppos := prunableStart
-	readVarintAt := func() uint64 {
-		v := uint64(0); s := uint(0)
-		for blob[ppos] & 0x80 != 0 { v |= uint64(blob[ppos]&0x7f) << s; s += 7; ppos++ }
-		v |= uint64(blob[ppos]) << s; ppos++
-		return v
-	}
-	readVarintAt() // nbp count
-
-	// Extract BP+ key fields (A, A1, B, r1, s1, d1, then L[], R[])
-	var bpKv []byte
-	bpKv = append(bpKv, blob[ppos:ppos+6*32]...) // A, A1, B, r1, s1, d1
-	ppos += 6 * 32
-
-	nL := readVarintAt() // L length
-	bpKv = append(bpKv, blob[ppos:ppos+int(nL)*32]...)
-	ppos += int(nL) * 32
-
-	nR := readVarintAt() // R length
-	bpKv = append(bpKv, blob[ppos:ppos+int(nR)*32]...)
-
-	// Compute hashes
-	prefixHash := crypto.Keccak256(blob[:prefixEnd])
-	rctBaseHash := crypto.Keccak256(blob[prefixEnd:unprunableEnd])
-	bpKvHash := crypto.Keccak256(bpKv)
-
-	combined := make([]byte, 0, 96)
-	combined = append(combined, prefixHash...)
-	combined = append(combined, rctBaseHash...)
-	combined = append(combined, bpKvHash...)
-	return crypto.Keccak256(combined)
-}
-
-func computeTempPrefixHash(outputs []tx.TxOutput, extra []byte, fee uint64) []byte {
-	var buf []byte
-	buf = append(buf, crypto.VarIntEncode(2)...) // version
-	buf = append(buf, crypto.VarIntEncode(0)...) // unlock_time
-	buf = append(buf, crypto.VarIntEncode(uint64(len(outputs)))...)
-	for _, out := range outputs {
-		buf = append(buf, crypto.VarIntEncode(out.Amount)...)
-		buf = append(buf, 0x03)
-		buf = append(buf, out.PublicKey...)
-		buf = append(buf, out.ViewTag)
-	}
-	buf = append(buf, crypto.VarIntEncode(uint64(len(extra)))...)
-	buf = append(buf, extra...)
-	return crypto.Keccak256(buf)
 }

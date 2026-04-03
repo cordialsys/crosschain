@@ -204,12 +204,17 @@ func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
 	data := req.Payload
 	switch s.algorithm {
 	case xc.Ed255:
-		// Monero: CLSAG ring signatures are computed in the builder.
-		// The standard signer returns a pass-through signature.
+		// Monero two-phase signing:
+		// Phase 1: payload has OutputKey/TxPubKey/OutputIndex → return key image (32 bytes)
+		// Phase 2: payload has full CLSAG context → return CLSAG signature
 		if s.driver == xc.DriverMonero {
+			sig, err := moneroCrypto.SignCLSAGFromPayload(data, s.privateKey)
+			if err != nil {
+				return nil, fmt.Errorf("monero signing failed: %w", err)
+			}
 			return &xc.SignatureResponse{
 				Address:   "",
-				Signature: []byte(data), // pass-through: CLSAG is pre-computed
+				Signature: sig,
 				PublicKey: s.MustPublicKey(),
 			}, nil
 		}

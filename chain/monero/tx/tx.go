@@ -2,6 +2,7 @@ package tx
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
@@ -36,11 +37,33 @@ type Tx struct {
 	BpPlus         *crypto.BulletproofPlus  // Go BP+ (deprecated, kept for compatibility)
 	BpPlusNative   *crypto.BPPlusFields      // BP+ proof fields
 
-	// CLSAG signatures (pre-computed)
+	// CLSAG signatures (computed by signer via SetSignatures)
 	CLSAGs []*crypto.CLSAGSignature
+
+	// CLSAGContexts holds per-input data needed by the signer.
+	// Set by the builder, consumed by Sighashes().
+	CLSAGContexts []CLSAGInputContext `json:"-"`
 
 	// Ring size (mixin + 1), needed for CLSAG serialization
 	RingSize int
+
+	// signingPhase tracks the two-phase signing state
+	signingPhase int // 0=unsigned, 1=key images set, 2=fully signed
+}
+
+// CLSAGInputContext holds the data the signer needs for one CLSAG ring signature.
+type CLSAGInputContext struct {
+	Message     []byte                // CLSAG message hash (32 bytes)
+	Ring        []*edwards25519.Point // ring member public keys
+	CNonzero    []*edwards25519.Point // ring member commitments
+	COffset     *edwards25519.Point   // pseudo-output commitment
+	RealPos     int                   // position of real output in ring
+	InputMask   *edwards25519.Scalar  // pre-computed commitment mask
+	PseudoMask  *edwards25519.Scalar  // pseudo-output mask
+	OutputKey   string                // hex, output's one-time public key
+	TxPubKeyHex string                // hex, original tx public key R
+	OutputIndex uint64                // output index in the original tx
+	RngSeed     []byte                // for deterministic CLSAG nonces
 }
 
 func (tx *Tx) Hash() xc.TxHash {
@@ -58,17 +81,158 @@ func (tx *Tx) Hash() xc.TxHash {
 	return xc.TxHash(hex.EncodeToString(hash))
 }
 
-// Sighashes returns a dummy - CLSAG is computed in the builder.
+// Phase 1: Sighashes returns key-image requests. The signer computes key images
+// from the private key and returns them. SetSignatures fills them in, then
+// AdditionalSighashes returns the actual CLSAG signing requests.
 func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
-	prefixHash := tx.PrefixHash()
-	return []*xc.SignatureRequest{
-		{Payload: prefixHash},
-	}, nil
+	if len(tx.CLSAGContexts) == 0 {
+		// Already signed
+		return []*xc.SignatureRequest{{Payload: tx.PrefixHash()}}, nil
+	}
+
+	// Phase 1: request key images. Payload = JSON with just enough context
+	// for the signer to derive the one-time key and compute the key image.
+	requests := make([]*xc.SignatureRequest, len(tx.CLSAGContexts))
+	for i, ctx := range tx.CLSAGContexts {
+		sh := &MoneroSighash{
+			OutputKey:   ctx.OutputKey,
+			TxPubKey:    ctx.TxPubKeyHex,
+			OutputIndex: ctx.OutputIndex,
+		}
+		requests[i] = &xc.SignatureRequest{
+			Payload: EncodeSighash(sh),
+		}
+	}
+	return requests, nil
 }
 
-// SetSignatures is a no-op - CLSAG is pre-computed.
+// SetSignatures handles both phases:
+// Phase 1: receives key images (32-byte each). Fills them into tx inputs.
+// Phase 2: receives full CLSAG signatures.
 func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
+	if len(tx.CLSAGContexts) == 0 {
+		return nil
+	}
+
+	// Detect phase by signature size
+	if len(sigs) > 0 && len(sigs[0].Signature) == 32 {
+		// Phase 1: key images (32 bytes each)
+		for i, sig := range sigs {
+			if i < len(tx.Inputs) {
+				tx.Inputs[i].KeyImage = sig.Signature
+			}
+		}
+		tx.signingPhase = 1
+		return nil
+	}
+
+	// Phase 2: full CLSAG signatures
+	if len(sigs) != len(tx.Inputs) {
+		return fmt.Errorf("expected %d CLSAG sigs, got %d", len(tx.Inputs), len(sigs))
+	}
+
+	tx.CLSAGs = make([]*crypto.CLSAGSignature, len(sigs))
+	for i, sig := range sigs {
+		clsag, _, err := crypto.DeserializeCLSAG(sig.Signature, tx.RingSize)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize CLSAG %d: %w", i, err)
+		}
+		tx.CLSAGs[i] = clsag
+	}
+	tx.CLSAGContexts = nil
+	tx.signingPhase = 2
 	return nil
+}
+
+// AdditionalSighashes returns the CLSAG signing requests after key images are set.
+func (tx *Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
+	if tx.signingPhase != 1 || len(tx.CLSAGContexts) == 0 {
+		return nil, nil // no more sighashes needed
+	}
+
+	// Now that key images are set, recompute the CLSAG message from the blob
+	blob, _ := tx.Serialize()
+	clsagMessage := computeCLSAGMessage(blob, len(tx.Inputs), len(tx.Outputs))
+
+	requests := make([]*xc.SignatureRequest, len(tx.CLSAGContexts))
+	for i, ctx := range tx.CLSAGContexts {
+		ringKeys := make([]string, len(ctx.Ring))
+		ringCmts := make([]string, len(ctx.CNonzero))
+		for j := range ctx.Ring {
+			ringKeys[j] = hex.EncodeToString(ctx.Ring[j].Bytes())
+			ringCmts[j] = hex.EncodeToString(ctx.CNonzero[j].Bytes())
+		}
+		zKey := edwards25519.NewScalar().Subtract(ctx.InputMask, ctx.PseudoMask)
+
+		sh := &MoneroSighash{
+			Message:         clsagMessage,
+			RingKeys:        ringKeys,
+			RingCommitments: ringCmts,
+			COffset:         hex.EncodeToString(ctx.COffset.Bytes()),
+			RealPos:         ctx.RealPos,
+			ZKey:            hex.EncodeToString(zKey.Bytes()),
+			OutputKey:       ctx.OutputKey,
+			TxPubKey:        ctx.TxPubKeyHex,
+			OutputIndex:     ctx.OutputIndex,
+			RngSeed:         ctx.RngSeed,
+		}
+		requests[i] = &xc.SignatureRequest{
+			Payload: EncodeSighash(sh),
+		}
+	}
+	return requests, nil
+}
+
+// computeCLSAGMessage computes the three-hash CLSAG message from a serialized blob.
+func computeCLSAGMessage(blob []byte, numInputs, numOutputs int) []byte {
+	pos := 0
+	readVarint := func() uint64 {
+		v := uint64(0); s := uint(0)
+		for blob[pos]&0x80 != 0 { v |= uint64(blob[pos]&0x7f) << s; s += 7; pos++ }
+		v |= uint64(blob[pos]) << s; pos++
+		return v
+	}
+
+	readVarint(); readVarint()
+	numIn := readVarint()
+	for i := uint64(0); i < numIn; i++ {
+		pos++; readVarint()
+		count := readVarint()
+		for j := uint64(0); j < count; j++ { readVarint() }
+		pos += 32
+	}
+	numOut := readVarint()
+	for i := uint64(0); i < numOut; i++ {
+		readVarint(); tag := blob[pos]; pos++; pos += 32
+		if tag == 0x03 { pos++ }
+	}
+	extraLen := readVarint(); pos += int(extraLen)
+	prefixEnd := pos
+
+	pos++; readVarint()
+	pos += int(numOut)*8 + int(numOut)*32
+	rctBaseEnd := pos
+
+	readVarint() // nbp
+	kvStart := pos
+	pos += 6*32
+	nL := int(readVarint()); pos += nL*32
+	nR := int(readVarint()); pos += nR*32
+
+	var kv []byte
+	kvPos := kvStart
+	kv = append(kv, blob[kvPos:kvPos+6*32]...)
+	kvPos += 6*32
+	for blob[kvPos]&0x80 != 0 { kvPos++ }; kvPos++
+	kv = append(kv, blob[kvPos:kvPos+nL*32]...)
+	kvPos += nL*32
+	for blob[kvPos]&0x80 != 0 { kvPos++ }; kvPos++
+	kv = append(kv, blob[kvPos:kvPos+nR*32]...)
+
+	ph := crypto.Keccak256(blob[:prefixEnd])
+	bh := crypto.Keccak256(blob[prefixEnd:rctBaseEnd])
+	kh := crypto.Keccak256(kv)
+	return crypto.Keccak256(append(append(ph, bh...), kh...))
 }
 
 // CLSAGMessage computes the three-hash message that CLSAG signs:

@@ -211,7 +211,9 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 	if secret != "" {
 		secretBz, _ := hex.DecodeString(secret)
 		_, privView, _, _, _ := crypto.DeriveKeysFromSpend(secretBz)
-		input.ViewKeyHex = hex.EncodeToString(privView)
+		// Set deterministic RNG seed for the builder
+		rngSeedData := append(privView, crypto.VarIntEncode(input.BlockHeight)...)
+		input.RngSeed = crypto.Keccak256(rngSeedData)
 	}
 
 	// Load spend key for key image computation
@@ -308,15 +310,19 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 			continue
 		}
 
+		// Pre-compute commitment mask for the builder
+		inputMaskHex := hex.EncodeToString(deriveCommitmentMask(privViewBytes, out))
+
 		input.Outputs = append(input.Outputs, tx_input.Output{
-			Amount:      out.Amount,
-			Index:       out.OutputIndex,
-			TxHash:      out.TxHash,
-			GlobalIndex: out.GlobalIndex,
-			PublicKey:   out.PublicKey,
-			Commitment:  out.Commitment,
-			Mask:        out.TxPubKey, // Store tx pub key in Mask field for the builder
-			RingMembers: ringMembers,
+			Amount:         out.Amount,
+			Index:          out.OutputIndex,
+			TxHash:         out.TxHash,
+			GlobalIndex:    out.GlobalIndex,
+			PublicKey:      out.PublicKey,
+			Commitment:     out.Commitment,
+			TxPubKey:       out.TxPubKey,
+			CommitmentMask: inputMaskHex,
+			RingMembers:    ringMembers,
 		})
 	}
 
