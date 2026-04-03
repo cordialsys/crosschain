@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/cordialsys/crosschain/client/errors"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 // TimeBounds represents the time window during which a Stellar transaction is considered valid.

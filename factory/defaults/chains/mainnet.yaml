@@ -1625,6 +1625,7 @@ chains:
     support:
       memo: string
       fee:
+        accurate: true
         payer: true
     driver: xlm
     chain_name: xlm

@@ -37,14 +37,13 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
-	github.com/stellar/go v0.0.0-20220406183204-45b6f52202f3
 	github.com/stretchr/testify v1.10.0
 	github.com/test-go/testify v1.1.4
 	github.com/tidwall/btree v1.7.0
 	github.com/vedhavyas/go-subkey/v2 v2.0.0
 	github.com/xssnick/tonutils-go v1.9.8
 	github.com/xyield/xrpl-go v0.0.0-20230914223425-9abe75c05830
-	golang.org/x/crypto v0.40.0
+	golang.org/x/crypto v0.45.0
 	google.golang.org/api v0.185.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250804133106-a7a43d27e69b
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250804133106-a7a43d27e69b
@@ -72,6 +71,7 @@ require (
 	github.com/holiman/uint256 v1.3.2
 	github.com/kaspanet/kaspad v0.12.22
 	github.com/pkg/errors v0.9.1
+	github.com/stellar/go-stellar-sdk v0.4.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/time v0.9.0
 )
@@ -248,7 +248,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/stellar/go-xdr v0.0.0-20211103144802-8017fc4bdfee // indirect
+	github.com/stellar/go-xdr v0.0.0-20260312225820-cc2b0611aabf // indirect
 	github.com/streamingfast/logging v0.0.0-20250404134358-92b15d2fbd2e // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
@@ -280,12 +280,12 @@ require (
 	go.uber.org/ratelimit v0.2.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/term v0.33.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/genproto v0.0.0-20240617180043-68d350f18fd4 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
