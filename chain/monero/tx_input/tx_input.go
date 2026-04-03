@@ -25,8 +25,9 @@ type TxInput struct {
 	// Spendable outputs owned by this wallet (used for building transactions)
 	Outputs []Output `json:"outputs"`
 
-	// The private view key (hex) needed for output scanning and tx construction
-	ViewKeyHex string `json:"view_key_hex"`
+	// RngSeed is a 32-byte seed for deterministic randomness in the builder.
+	// Set by the client during FetchTransferInput.
+	RngSeed []byte `json:"rng_seed"`
 
 	// Cached BP+ proof bytes (from first Transfer() call, reused for determinism)
 	CachedBpProof []byte `json:"cached_bp_proof,omitempty"`
@@ -44,10 +45,13 @@ type Output struct {
 	GlobalIndex uint64 `json:"global_index"`
 	// The one-time public key for this output
 	PublicKey string `json:"public_key"`
-	// RingCT commitment for this output
+	// RingCT commitment for this output (from get_outs)
 	Commitment string `json:"commitment,omitempty"`
-	// RingCT mask (for RingCT outputs)
-	Mask string `json:"mask,omitempty"`
+	// TxPubKey is the transaction public key R (hex), needed for key derivation
+	TxPubKey string `json:"tx_pub_key,omitempty"`
+	// CommitmentMask is the pre-computed Pedersen commitment mask (hex).
+	// Computed by the client during scanning: H_s("commitment_mask" || shared_scalar)
+	CommitmentMask string `json:"commitment_mask,omitempty"`
 	// Ring members (decoys) for this output, populated by FetchTransferInput
 	RingMembers []RingMember `json:"ring_members,omitempty"`
 }

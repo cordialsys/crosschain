@@ -211,6 +211,48 @@ func CLSAGSign(ctx *CLSAGContext) (*CLSAGSignature, error) {
 	}, nil
 }
 
+// SerializeCLSAGWithKeyImage serializes a CLSAG signature + key image.
+// Format: key_image(32) || s[0](32) || ... || s[n-1](32) || c1(32) || D(32)
+func SerializeCLSAGWithKeyImage(sig *CLSAGSignature, keyImage *edwards25519.Point) []byte {
+	var out []byte
+	out = append(out, keyImage.Bytes()...)
+	for _, s := range sig.S {
+		out = append(out, s.Bytes()...)
+	}
+	out = append(out, sig.C1.Bytes()...)
+	out = append(out, sig.D.Bytes()...)
+	return out
+}
+
+// DeserializeCLSAG parses a CLSAG signature + key image from bytes.
+// Returns (signature, keyImage, error).
+func DeserializeCLSAG(data []byte, ringSize int) (*CLSAGSignature, []byte, error) {
+	expected := 32 + ringSize*32 + 32 + 32 // keyImage + s[] + c1 + D
+	if len(data) != expected {
+		return nil, nil, fmt.Errorf("expected %d bytes, got %d", expected, len(data))
+	}
+
+	pos := 0
+	keyImage := data[pos : pos+32]
+	pos += 32
+
+	s := make([]*edwards25519.Scalar, ringSize)
+	for i := 0; i < ringSize; i++ {
+		s[i], _ = edwards25519.NewScalar().SetCanonicalBytes(data[pos : pos+32])
+		pos += 32
+	}
+
+	c1, _ := edwards25519.NewScalar().SetCanonicalBytes(data[pos : pos+32])
+	pos += 32
+
+	D, _ := edwards25519.NewIdentityPoint().SetBytes(data[pos : pos+32])
+
+	// Reconstruct I from key image bytes
+	I, _ := edwards25519.NewIdentityPoint().SetBytes(keyImage)
+
+	return &CLSAGSignature{S: s, C1: c1, I: I, D: D}, keyImage, nil
+}
+
 // SerializeCLSAG serializes a CLSAG signature to bytes.
 // Format: s[0] || s[1] || ... || s[n-1] || c1 || D
 func (sig *CLSAGSignature) Serialize() []byte {
