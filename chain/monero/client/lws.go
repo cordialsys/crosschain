@@ -101,14 +101,14 @@ func (l *LWSClient) Login(ctx context.Context) error {
 
 // LWSOutput represents an output from the get_unspent_outs response.
 type LWSOutput struct {
-	Amount      string `json:"amount"`
-	Index       uint16 `json:"index"`
-	GlobalIndex string `json:"global_index"`
-	TxHash      string `json:"tx_hash"`
-	TxPubKey    string `json:"tx_pub_key"`
-	PublicKey   string `json:"public_key"`
-	Rct         string `json:"rct"`
-	Height      uint64 `json:"height"`
+	Amount      json.Number `json:"amount"`
+	Index       uint16      `json:"index"`
+	GlobalIndex json.Number `json:"global_index"`
+	TxHash      string      `json:"tx_hash"`
+	TxPubKey    string      `json:"tx_pub_key"`
+	PublicKey   string      `json:"public_key"`
+	Rct         string      `json:"rct"`
+	Height      uint64      `json:"height"`
 	Recipient   *struct {
 		MajI uint32 `json:"maj_i"`
 		MinI uint32 `json:"min_i"`
@@ -133,16 +133,16 @@ func (l *LWSClient) GetUnspentOuts(ctx context.Context) ([]LWSOutput, uint64, ui
 	var resp struct {
 		Outputs    []LWSOutput `json:"outputs"`
 		Amount     string      `json:"amount"`
-		PerByteFee string      `json:"per_byte_fee"`
-		FeeMask    string      `json:"fee_mask"`
+		PerByteFee uint64      `json:"per_byte_fee"`
+		FeeMask    uint64      `json:"fee_mask"`
+		Fees       []uint64    `json:"fees"`
 	}
 	if err := json.Unmarshal(result, &resp); err != nil {
 		return nil, 0, 0, fmt.Errorf("parse unspent outs: %w", err)
 	}
 
-	var perByteFee, feeMask uint64
-	fmt.Sscanf(resp.PerByteFee, "%d", &perByteFee)
-	fmt.Sscanf(resp.FeeMask, "%d", &feeMask)
+	perByteFee := resp.PerByteFee
+	feeMask := resp.FeeMask
 
 	logrus.WithFields(logrus.Fields{
 		"outputs":      len(resp.Outputs),
@@ -183,11 +183,8 @@ func ConvertLWSOutputs(outputs []LWSOutput, privateViewKey []byte) []tx_input.Ou
 	var result []tx_input.Output
 
 	for _, out := range outputs {
-		var amount uint64
-		fmt.Sscanf(out.Amount, "%d", &amount)
-
-		var globalIndex uint64
-		fmt.Sscanf(out.GlobalIndex, "%d", &globalIndex)
+		amount, _ := out.Amount.Int64()
+		globalIdx, _ := out.GlobalIndex.Int64()
 
 		// Extract commitment from rct field (first 64 hex chars = 32 bytes)
 		commitment := ""
@@ -208,10 +205,10 @@ func ConvertLWSOutputs(outputs []LWSOutput, privateViewKey []byte) []tx_input.Ou
 		}
 
 		result = append(result, tx_input.Output{
-			Amount:         amount,
+			Amount:         uint64(amount),
 			Index:          uint64(out.Index),
 			TxHash:         out.TxHash,
-			GlobalIndex:    globalIndex,
+			GlobalIndex:    uint64(globalIdx),
 			PublicKey:      out.PublicKey,
 			Commitment:     commitment,
 			TxPubKey:       out.TxPubKey,
