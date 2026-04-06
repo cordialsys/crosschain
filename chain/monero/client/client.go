@@ -28,6 +28,7 @@ type Client struct {
 	url  string
 	cfg  *xc.ChainConfig
 	http *http.Client
+	lws  *LWSClient // optional light wallet server for indexed queries
 }
 
 func NewClient(cfg *xc.ChainConfig) (*Client, error) {
@@ -36,13 +37,21 @@ func NewClient(cfg *xc.ChainConfig) (*Client, error) {
 		return nil, fmt.Errorf("monero RPC URL not configured")
 	}
 
-	return &Client{
+	c := &Client{
 		url: url,
 		cfg: cfg,
 		http: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-	}, nil
+	}
+
+	// If indexer_url is configured, use it as the LWS endpoint
+	if cfg.IndexerUrl != "" {
+		c.lws = NewLWSClient(cfg.IndexerUrl)
+		logrus.WithField("lws_url", cfg.IndexerUrl).Info("using monero-lws for indexed queries")
+	}
+
+	return c, nil
 }
 
 // jsonRPCRequest makes a JSON-RPC call to the Monero daemon
@@ -320,13 +329,102 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		}
 	}
 
-	// Scan for spendable outputs
+	// Populate spendable outputs: use LWS if available, otherwise scan blocks
 	from := args.GetFrom()
-	if err := c.PopulateTransferInput(ctx, input, from); err != nil {
-		return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
+	if c.lws != nil {
+		if err := c.populateFromLWS(ctx, input, from); err != nil {
+			logrus.WithError(err).Warn("LWS query failed, falling back to block scan")
+			if err := c.PopulateTransferInput(ctx, input, from); err != nil {
+				return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
+			}
+		}
+	} else {
+		if err := c.PopulateTransferInput(ctx, input, from); err != nil {
+			return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
+		}
 	}
 
 	return input, nil
+}
+
+// populateFromLWS fetches spendable outputs from the Light Wallet Server.
+// Instant - no block scanning needed.
+func (c *Client) populateFromLWS(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
+	// Derive view key for LWS auth
+	privView, _, err := deriveWalletKeys()
+	if err != nil {
+		return fmt.Errorf("cannot derive view key: %w", err)
+	}
+
+	// Set LWS credentials and login
+	c.lws.SetCredentials(string(from), hex.EncodeToString(privView))
+	if err := c.lws.Login(ctx); err != nil {
+		return fmt.Errorf("LWS login failed: %w", err)
+	}
+
+	// Fetch unspent outputs
+	outputs, perByteFee, feeMask, err := c.lws.GetUnspentOuts(ctx)
+	if err != nil {
+		return fmt.Errorf("get_unspent_outs failed: %w", err)
+	}
+
+	// Use LWS fee estimates if available
+	if perByteFee > 0 {
+		input.PerByteFee = perByteFee
+	}
+	if feeMask > 0 {
+		input.QuantizationMask = feeMask
+	}
+
+	// Set RNG seed
+	rngSeedData := append(privView, crypto.VarIntEncode(input.BlockHeight)...)
+	input.RngSeed = crypto.Keccak256(rngSeedData)
+
+	// Convert LWS outputs to tx_input format
+	converted := ConvertLWSOutputs(outputs, privView)
+
+	// Fetch decoys for each output
+	for i := range converted {
+		out := &converted[i]
+		if out.GlobalIndex == 0 {
+			continue
+		}
+
+		decoys, err := c.FetchDecoys(ctx, out.GlobalIndex, ringSize-1)
+		if err != nil {
+			logrus.WithError(err).WithField("tx_hash", out.TxHash).Warn("failed to fetch decoys")
+			continue
+		}
+
+		if len(decoys) < 15 {
+			logrus.WithField("tx_hash", out.TxHash).Warn("insufficient decoys")
+			continue
+		}
+
+		var ringMembers []tx_input.RingMember
+		for _, d := range decoys {
+			ringMembers = append(ringMembers, tx_input.RingMember{
+				GlobalIndex: d.GlobalIndex,
+				PublicKey:   d.PublicKey,
+				Commitment:  d.Commitment,
+			})
+		}
+		out.RingMembers = ringMembers
+	}
+
+	// Filter outputs with enough ring members
+	for _, out := range converted {
+		if len(out.RingMembers) >= 15 {
+			input.Outputs = append(input.Outputs, out)
+		}
+	}
+
+	if len(input.Outputs) == 0 {
+		return fmt.Errorf("no spendable outputs with sufficient decoys found via LWS")
+	}
+
+	logrus.WithField("spendable", len(input.Outputs)).Info("populated outputs from LWS")
+	return nil
 }
 
 func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
@@ -335,7 +433,32 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("address is required")
 	}
 
-	// Derive view key from our private key to scan outputs
+	// Use LWS for instant balance if available
+	if c.lws != nil {
+		privView, _, err := deriveWalletKeys()
+		if err == nil {
+			c.lws.SetCredentials(string(address), hex.EncodeToString(privView))
+			if err := c.lws.Login(ctx); err == nil {
+				info, err := c.lws.GetAddressInfo(ctx)
+				if err == nil {
+					var received, sent uint64
+					fmt.Sscanf(info.TotalReceived, "%d", &received)
+					fmt.Sscanf(info.TotalSent, "%d", &sent)
+					balance := received - sent
+					logrus.WithFields(logrus.Fields{
+						"received": received,
+						"sent":     sent,
+						"balance":  balance,
+						"scanned":  info.ScannedHeight,
+					}).Info("balance from LWS")
+					return xc.NewAmountBlockchainFromUint64(balance), nil
+				}
+				logrus.WithError(err).Warn("LWS balance failed, falling back to scan")
+			}
+		}
+	}
+
+	// Fallback: scan blocks
 	privView, pubSpend, err := deriveWalletKeys()
 	if err != nil {
 		logrus.WithError(err).Warn("cannot derive view key for balance scanning")
