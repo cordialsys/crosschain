@@ -20,6 +20,7 @@ import (
 	"github.com/cordialsys/crosschain/address"
 	cosmostypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cordialsys/crosschain/chain/dusk"
+	moneroCrypto "github.com/cordialsys/crosschain/chain/monero/crypto"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -148,6 +149,13 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 
 	switch alg {
 	case xc.Ed255:
+		// Monero uses raw scalars for key derivation (spend key → view key)
+		if driver == xc.DriverMonero {
+			if len(secretBz) == 32 {
+				return &Signer{driver, secretBz, alg}, nil
+			}
+			return nil, fmt.Errorf("monero key must be 32 bytes, got %d bytes", len(secretBz))
+		}
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			if len(secretBz) != 32 {
 				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
@@ -196,6 +204,20 @@ func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
 	data := req.Payload
 	switch s.algorithm {
 	case xc.Ed255:
+		// Monero two-phase signing:
+		// Phase 1: payload has OutputKey/TxPubKey/OutputIndex → return key image (32 bytes)
+		// Phase 2: payload has full CLSAG context → return CLSAG signature
+		if s.driver == xc.DriverMonero {
+			sig, err := moneroCrypto.SignCLSAGFromPayload(data, s.privateKey)
+			if err != nil {
+				return nil, fmt.Errorf("monero signing failed: %w", err)
+			}
+			return &xc.SignatureResponse{
+				Address:   "",
+				Signature: sig,
+				PublicKey: s.MustPublicKey(),
+			}, nil
+		}
 		var signatureRaw []byte
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			logrus.Debug("using raw scalar signing for ed25519 key")
@@ -286,6 +308,17 @@ func (s *Signer) MustSignAll(data []*xc.SignatureRequest) []*xc.SignatureRespons
 func (s *Signer) PublicKey() (PublicKey, error) {
 	switch s.algorithm {
 	case xc.Ed255:
+		// Monero: derive both public spend and public view keys
+		if s.driver == xc.DriverMonero {
+			_, _, pubSpend, pubView, err := moneroCrypto.DeriveKeysFromSpend(s.privateKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed to derive monero keys: %w", err)
+			}
+			combined := make([]byte, 64)
+			copy(combined[:32], pubSpend)
+			copy(combined[32:], pubView)
+			return PublicKey(combined), nil
+		}
 		privateKey := ed25519.PrivateKey(s.privateKey)
 
 		publicKey := privateKey.Public().(ed25519.PublicKey)
