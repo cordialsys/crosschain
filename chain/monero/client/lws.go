@@ -144,13 +144,25 @@ func (l *LWSClient) GetUnspentOuts(ctx context.Context) ([]LWSOutput, uint64, ui
 	perByteFee := resp.PerByteFee
 	feeMask := resp.FeeMask
 
+	// Filter outputs that LWS already knows are spent (have valid key image)
+	var unspent []LWSOutput
+	for _, out := range resp.Outputs {
+		if len(out.SpendKeyImages) > 0 && len(out.SpendKeyImages[0]) == 64 {
+			// LWS has a key image for this output - it's been spent
+			logrus.WithField("global_index", out.GlobalIndex).Debug("LWS reports output as spent (has key image)")
+			continue
+		}
+		unspent = append(unspent, out)
+	}
+
 	logrus.WithFields(logrus.Fields{
-		"outputs":      len(resp.Outputs),
+		"total":        len(resp.Outputs),
+		"unspent":      len(unspent),
 		"per_byte_fee": perByteFee,
 		"fee_mask":     feeMask,
 	}).Info("got unspent outputs from LWS")
 
-	return resp.Outputs, perByteFee, feeMask, nil
+	return unspent, perByteFee, feeMask, nil
 }
 
 // GetAddressInfo fetches balance info from the LWS.

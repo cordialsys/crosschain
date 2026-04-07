@@ -585,8 +585,20 @@ func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) er
 		return fmt.Errorf("empty transaction data")
 	}
 
+	txHex := hex.EncodeToString(txData)
+
+	// Submit via LWS too (so it tracks our key images for spent detection)
+	if c.lws != nil {
+		_, err := c.lws.post(ctx, "submit_raw_tx", map[string]interface{}{
+			"tx": txHex,
+		})
+		if err != nil {
+			logrus.WithError(err).Warn("LWS submit failed, submitting to daemon only")
+		}
+	}
+
 	params := map[string]interface{}{
-		"tx_as_hex":    hex.EncodeToString(txData),
+		"tx_as_hex":    txHex,
 		"do_not_relay": false,
 	}
 
