@@ -114,8 +114,7 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 		return nil
 	}
 
-	// Detect phase by signature size
-	if len(sigs) > 0 && len(sigs[0].Signature) == 32 {
+	if tx.signingPhase == 0 {
 		// Phase 1: key images (32 bytes each)
 		for i, sig := range sigs {
 			if i < len(tx.Inputs) {
@@ -126,13 +125,19 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 		return nil
 	}
 
-	// Phase 2: full CLSAG signatures
-	if len(sigs) != len(tx.Inputs) {
-		return fmt.Errorf("expected %d CLSAG sigs, got %d", len(tx.Inputs), len(sigs))
+	// Phase 2: full CLSAG signatures (from AdditionalSighashes)
+	numInputs := len(tx.Inputs)
+	clsagSigs := sigs
+	// The transfer command accumulates all signatures, so take only the latest batch
+	if len(sigs) > numInputs {
+		clsagSigs = sigs[len(sigs)-numInputs:]
 	}
 
-	tx.CLSAGs = make([]*crypto.CLSAGSignature, len(sigs))
-	for i, sig := range sigs {
+	tx.CLSAGs = make([]*crypto.CLSAGSignature, numInputs)
+	for i, sig := range clsagSigs {
+		if i >= numInputs {
+			break
+		}
 		clsag, _, err := crypto.DeserializeCLSAG(sig.Signature, tx.RingSize)
 		if err != nil {
 			return fmt.Errorf("failed to deserialize CLSAG %d: %w", i, err)
