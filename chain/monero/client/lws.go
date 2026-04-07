@@ -122,7 +122,7 @@ func (l *LWSClient) GetUnspentOuts(ctx context.Context) ([]LWSOutput, uint64, ui
 		"address":        l.address,
 		"view_key":       l.viewKey,
 		"amount":         "0",
-		"mixin":          16,
+		"mixin":          15,
 		"use_dust":       true,
 		"dust_threshold": "0",
 	})

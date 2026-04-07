@@ -272,7 +272,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	}
 
 	// Compute the CLSAG message from the serialized blob
-	blobForMsg, _ := moneroTx.Serialize()
+	blobForMsg, err := moneroTx.Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize unsigned tx: %w", err)
+	}
 	clsagMessage := computeCLSAGMessageFromBlob(blobForMsg, len(txInputs), len(outputs))
 
 	// Store CLSAG contexts on the Tx for the signer to use
