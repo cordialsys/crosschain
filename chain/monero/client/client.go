@@ -16,13 +16,16 @@ import (
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
-	"github.com/cordialsys/crosschain/client/errors"
 	"filippo.io/edwards25519"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 )
+
+// txBatchSize is the number of transactions to fetch per RPC request.
+// Public nodes limit requests in restricted mode.
+const txBatchSize = 25
 
 type Client struct {
 	url  string
@@ -517,9 +520,8 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 		}
 
 		// Fetch transactions in batches (public nodes limit requests in restricted mode)
-		const batchSize = 25
-		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += batchSize {
-			batchEnd := batchStart + batchSize
+		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += txBatchSize {
+			batchEnd := batchStart + txBatchSize
 			if batchEnd > len(block.TxHashes) {
 				batchEnd = len(block.TxHashes)
 			}
@@ -890,14 +892,3 @@ func recoverAddress(outputKeyHex string, scalar []byte, pubView []byte, prefix b
 }
 
 var _ xclient.Client = &Client{}
-
-func CheckError(err error) errors.Status {
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "not found") || strings.Contains(msg, "no transaction") {
-		return errors.TransactionNotFound
-	}
-	if strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline") {
-		return errors.NetworkError
-	}
-	return ""
-}

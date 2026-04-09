@@ -21,6 +21,9 @@ const (
 	TestnetIntegratedPrefix byte = 0x36 // 54
 	// Monero testnet subaddress prefix
 	TestnetSubaddressPrefix byte = 0x3f // 63
+
+	// CommitmentMaskLabel is the domain separator used when deriving Pedersen commitment masks.
+	CommitmentMaskLabel = "commitment_mask"
 )
 
 // Keccak256 computes the Keccak-256 hash of data (NOT SHA3-256; Monero uses the pre-NIST Keccak)

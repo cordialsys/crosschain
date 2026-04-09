@@ -111,6 +111,9 @@ func (r *detRNG) Read(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// MoneroSighash is intentionally duplicated from tx/sighash.go to avoid a
+// circular import between the crypto and tx packages. Both definitions must
+// be kept in sync.
 type MoneroSighash struct {
 	Message         []byte   `json:"message"`
 	RingKeys        []string `json:"ring_keys"`

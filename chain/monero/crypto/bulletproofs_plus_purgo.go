@@ -11,11 +11,7 @@ import (
 	"filippo.io/edwards25519"
 )
 
-const (
-	bpMaxN  = 64
-	bpMaxM  = 16
-	bpMaxMN = bpMaxN * bpMaxM
-)
+// BP+ constants maxN, maxM, maxMN are defined in generators.go.
 
 var (
 	scOne      *edwards25519.Scalar
@@ -60,7 +56,7 @@ func init() {
 // BPPlusProvePureGo generates a Bulletproofs+ range proof in pure Go.
 func BPPlusProvePureGo(amounts []uint64, masks [][]byte, randReader ...io.Reader) ([]byte, error) {
 	m := len(amounts)
-	if m == 0 || m > bpMaxM || len(masks) != m {
+	if m == 0 || m > maxM || len(masks) != m {
 		return nil, fmt.Errorf("invalid BP+ inputs: %d amounts, %d masks", m, len(masks))
 	}
 
