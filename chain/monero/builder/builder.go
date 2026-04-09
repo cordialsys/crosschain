@@ -195,19 +195,8 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	}
 
 	// Build inputs (key images left empty - computed by signer)
-	type clsagInputContext struct {
-		Ring           []*edwards25519.Point
-		CNonzero       []*edwards25519.Point
-		RealPos        int
-		KeyOffsets     []uint64
-		InputMask      *edwards25519.Scalar // pre-computed commitment mask
-		PseudoMask     *edwards25519.Scalar
-		OutputKey      string // hex, for signer to derive one-time private key
-		TxPubKeyHex    string // hex, original tx pub key
-		OutputIndex    uint64
-	}
 	var txInputs []tx.TxInput
-	var clsagContexts []clsagInputContext
+	var clsagContexts []tx.CLSAGInputContext
 
 	ringSize := 0
 	for i, selOut := range selectedOutputs {
@@ -241,11 +230,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 			KeyOffsets: keyOffsets,
 			KeyImage:   keyImage,
 		})
-		clsagContexts = append(clsagContexts, clsagInputContext{
+		clsagContexts = append(clsagContexts, tx.CLSAGInputContext{
 			Ring:        ring,
 			CNonzero:    ringCommitments,
 			RealPos:     realPos,
-			KeyOffsets:  keyOffsets,
 			InputMask:   inputMask,
 			PseudoMask:  pseudoMasks[i],
 			OutputKey:   selOut.PublicKey,
@@ -280,23 +268,12 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 
 	// Store CLSAG contexts on the Tx for the signer to use
 	moneroTx.CLSAGContexts = make([]tx.CLSAGInputContext, len(clsagContexts))
-	for i, ctx := range clsagContexts {
+	copy(moneroTx.CLSAGContexts, clsagContexts)
+	for i := range moneroTx.CLSAGContexts {
+		moneroTx.CLSAGContexts[i].Message = clsagMessage
+		moneroTx.CLSAGContexts[i].COffset = pseudoOuts[i]
 		// Create per-input RNG seed for deterministic CLSAG nonces
-		clsagRngSeed := crypto.Keccak256(append(moneroInput.RngSeed, crypto.VarIntEncode(uint64(i))...))
-
-		moneroTx.CLSAGContexts[i] = tx.CLSAGInputContext{
-			Message:     clsagMessage,
-			Ring:        ctx.Ring,
-			CNonzero:    ctx.CNonzero,
-			COffset:     pseudoOuts[i],
-			RealPos:     ctx.RealPos,
-			InputMask:   ctx.InputMask,
-			PseudoMask:  ctx.PseudoMask,
-			OutputKey:   ctx.OutputKey,
-			TxPubKeyHex: ctx.TxPubKeyHex,
-			OutputIndex: ctx.OutputIndex,
-			RngSeed:     clsagRngSeed,
-		}
+		moneroTx.CLSAGContexts[i].RngSeed = crypto.Keccak256(append(moneroInput.RngSeed, crypto.VarIntEncode(uint64(i))...))
 	}
 
 	return moneroTx, nil
@@ -339,7 +316,7 @@ func deriveOutputMask(txPrivKey, recipientPubView []byte, outputIndex int) []byt
 	D, _ := crypto.GenerateKeyDerivation(recipientPubView, txPrivKey)
 	scalar, _ := crypto.DerivationToScalar(D, uint64(outputIndex))
 	data := make([]byte, 0, 15+32)
-	data = append(data, []byte("commitment_mask")...)
+	data = append(data, []byte(crypto.CommitmentMaskLabel)...)
 	data = append(data, scalar...)
 	return crypto.ScReduce32(crypto.Keccak256(data))
 }
@@ -368,7 +345,8 @@ func generateMaskFrom(rng io.Reader) []byte {
 	return crypto.RandomScalar(entropy)
 }
 
-// buildRingFromMembers constructs a sorted ring.
+// buildRingFromMembers constructs a sorted ring from tx_input.RingMember entries.
+// See also: client.BuildRing which does the same for client.DecoyOutput types.
 func buildRingFromMembers(
 	realGlobalIndex uint64, realKey string, realCommitment string,
 	decoys []tx_input.RingMember,

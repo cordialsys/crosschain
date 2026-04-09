@@ -71,9 +71,8 @@ func (c *Client) ScanBlocksForOwnedOutputs(ctx context.Context, scanDepth uint64
 			continue
 		}
 
-		const batchSize = 25
-		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += batchSize {
-			batchEnd := batchStart + batchSize
+		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += txBatchSize {
+			batchEnd := batchStart + txBatchSize
 			if batchEnd > len(block.TxHashes) {
 				batchEnd = len(block.TxHashes)
 			}
@@ -345,7 +344,7 @@ func deriveCommitmentMask(privView []byte, out OwnedOutput) []byte {
 	}
 	derivation, _ := crypto.GenerateKeyDerivation(txPubKeyBytes, privView)
 	scalar, _ := crypto.DerivationToScalar(derivation, out.OutputIndex)
-	data := append([]byte("commitment_mask"), scalar...)
+	data := append([]byte(crypto.CommitmentMaskLabel), scalar...)
 	return crypto.ScReduce32(crypto.Keccak256(data))
 }
 

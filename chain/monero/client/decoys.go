@@ -158,6 +158,7 @@ func (c *Client) fetchOutputs(ctx context.Context, indices []uint64) ([]DecoyOut
 
 // BuildRing constructs a sorted ring of outputs for CLSAG signing.
 // Returns the ring (sorted by global index), the position of the real output, and relative key offsets.
+// See also: builder.buildRingFromMembers which does the same for tx_input.RingMember types.
 func BuildRing(realIndex uint64, realKey string, realCommitment string, decoys []DecoyOutput) (ring []DecoyOutput, realPos int, keyOffsets []uint64) {
 	// Combine real output with decoys
 	all := make([]DecoyOutput, 0, len(decoys)+1)

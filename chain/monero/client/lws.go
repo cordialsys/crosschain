@@ -211,7 +211,7 @@ func ConvertLWSOutputs(outputs []LWSOutput, privateViewKey []byte) []tx_input.Ou
 			derivation, err := crypto.GenerateKeyDerivation(txPubKeyBytes, privateViewKey)
 			if err == nil {
 				scalar, _ := crypto.DerivationToScalar(derivation, uint64(out.Index))
-				maskData := append([]byte("commitment_mask"), scalar...)
+				maskData := append([]byte(crypto.CommitmentMaskLabel), scalar...)
 				commitmentMask = hex.EncodeToString(crypto.ScReduce32(crypto.Keccak256(maskData)))
 			}
 		}
