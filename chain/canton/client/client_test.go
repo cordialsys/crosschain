@@ -15,7 +15,9 @@ import (
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
 	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
+	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/admin"
 	"github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2/interactive"
+	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/sirupsen/logrus"
@@ -66,7 +68,11 @@ func TestFetchDecimals(t *testing.T) {
 				Driver:   xc.DriverCanton,
 				Decimals: 18,
 			},
+			ChainClientConfig: &xc.ChainClientConfig{},
 		},
+	}
+	client.Asset.NativeAssets = []*xc.AdditionalNativeAsset{
+		xc.NewAdditionalNativeAsset("DUMMY", "", xc.ContractAddress("issuer-party#DummyHolding"), 10, xc.AmountHumanReadable{}),
 	}
 
 	decimals, err := client.FetchDecimals(context.Background(), "")
@@ -77,8 +83,79 @@ func TestFetchDecimals(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 18, decimals)
 
+	decimals, err = client.FetchDecimals(context.Background(), xc.ContractAddress("issuer-party#DummyHolding"))
+	require.NoError(t, err)
+	require.Equal(t, 10, decimals)
+
+	decimals, err = client.FetchDecimals(context.Background(), xc.ContractAddress("issuer-party#Unconfigured"))
+	require.NoError(t, err)
+	require.Equal(t, 18, decimals)
+
 	_, err = client.FetchDecimals(context.Background(), xc.ContractAddress("SOME_TOKEN"))
-	require.ErrorContains(t, err, "token decimals are not supported for Canton")
+	require.ErrorContains(t, err, "invalid Canton token contract")
+}
+
+func TestFetchBalanceTokenHolding(t *testing.T) {
+	t.Parallel()
+
+	party := xc.Address("owner-party")
+	stateStub := &stateServiceStub{
+		ledgerEnd: 123,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			{
+				ContractEntry: &v2.GetActiveContractsResponse_ActiveContract{
+					ActiveContract: &v2.ActiveContract{
+						CreatedEvent: testTokenHoldingCreatedEvent("owner-party", "issuer-party", "DummyHolding", "12.3456789012"),
+					},
+				},
+			},
+			{
+				ContractEntry: &v2.GetActiveContractsResponse_ActiveContract{
+					ActiveContract: &v2.ActiveContract{
+						CreatedEvent: testTokenHoldingCreatedEvent("owner-party", "issuer-party", "OtherToken", "99.0"),
+					},
+				},
+			},
+		},
+	}
+	packageStub := &packageManagementStub{
+		resp: &admin.ListKnownPackagesResponse{
+			PackageDetails: []*admin.PackageDetails{
+				{Name: "splice-api-token-holding-v1", PackageId: "holding-package-id"},
+			},
+		},
+	}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 18,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:               "token",
+			stateClient:             stateStub,
+			packageManagementClient: packageStub,
+			logger:                  logrus.NewEntry(logrus.New()),
+		},
+	}
+	client.Asset.NativeAssets = []*xc.AdditionalNativeAsset{
+		xc.NewAdditionalNativeAsset("DUMMY", "", xc.ContractAddress("issuer-party#DummyHolding"), 10, xc.AmountHumanReadable{}),
+	}
+
+	balance, err := client.FetchBalance(context.Background(), xclient.NewBalanceArgs(party, xclient.BalanceOptionContract(xc.ContractAddress("issuer-party#DummyHolding"))))
+	require.NoError(t, err)
+	require.Equal(t, "123456789012", balance.String())
+	require.NotNil(t, stateStub.lastActiveContractsReq)
+	require.Contains(t, stateStub.lastActiveContractsReq.GetEventFormat().GetFiltersByParty(), "owner-party")
+	filter := stateStub.lastActiveContractsReq.GetEventFormat().GetFiltersByParty()["owner-party"].GetCumulative()[0].GetInterfaceFilter()
+	require.NotNil(t, filter)
+	require.Equal(t, "holding-package-id", filter.GetInterfaceId().GetPackageId())
+	require.Equal(t, "Splice.Api.Token.HoldingV1", filter.GetInterfaceId().GetModuleName())
+	require.Equal(t, "Holding", filter.GetInterfaceId().GetEntityName())
+	require.True(t, filter.GetIncludeInterfaceView())
 }
 
 func TestValidatorServiceUserIDFromToken(t *testing.T) {
@@ -737,11 +814,18 @@ func (s *updateServiceStub) GetUpdateByOffset(context.Context, *v2.GetUpdateByOf
 }
 
 type stateServiceStub struct {
-	ledgerEnd int64
+	ledgerEnd               int64
+	lastActiveContractsReq  *v2.GetActiveContractsRequest
+	activeContractsResponses []*v2.GetActiveContractsResponse
+	activeContractsErr      error
 }
 
-func (s *stateServiceStub) GetActiveContracts(context.Context, *v2.GetActiveContractsRequest, ...grpc.CallOption) (grpc.ServerStreamingClient[v2.GetActiveContractsResponse], error) {
-	panic("unexpected call")
+func (s *stateServiceStub) GetActiveContracts(_ context.Context, req *v2.GetActiveContractsRequest, _ ...grpc.CallOption) (grpc.ServerStreamingClient[v2.GetActiveContractsResponse], error) {
+	s.lastActiveContractsReq = req
+	if s.activeContractsErr != nil {
+		return nil, s.activeContractsErr
+	}
+	return &activeContractsStreamStub{responses: s.activeContractsResponses}, nil
 }
 
 func (s *stateServiceStub) GetConnectedSynchronizers(context.Context, *v2.GetConnectedSynchronizersRequest, ...grpc.CallOption) (*v2.GetConnectedSynchronizersResponse, error) {
@@ -753,6 +837,49 @@ func (s *stateServiceStub) GetLedgerEnd(context.Context, *v2.GetLedgerEndRequest
 }
 
 func (s *stateServiceStub) GetLatestPrunedOffsets(context.Context, *v2.GetLatestPrunedOffsetsRequest, ...grpc.CallOption) (*v2.GetLatestPrunedOffsetsResponse, error) {
+	panic("unexpected call")
+}
+
+type activeContractsStreamStub struct {
+	grpc.ClientStream
+	responses []*v2.GetActiveContractsResponse
+	index     int
+}
+
+func (s *activeContractsStreamStub) Recv() (*v2.GetActiveContractsResponse, error) {
+	if s.index >= len(s.responses) {
+		return nil, io.EOF
+	}
+	resp := s.responses[s.index]
+	s.index++
+	return resp, nil
+}
+
+func (s *activeContractsStreamStub) Header() (metadata.MD, error) { return metadata.MD{}, nil }
+func (s *activeContractsStreamStub) Trailer() metadata.MD         { return metadata.MD{} }
+func (s *activeContractsStreamStub) CloseSend() error             { return nil }
+func (s *activeContractsStreamStub) Context() context.Context     { return context.Background() }
+func (s *activeContractsStreamStub) SendMsg(any) error            { return nil }
+func (s *activeContractsStreamStub) RecvMsg(any) error            { return nil }
+
+type packageManagementStub struct {
+	resp *admin.ListKnownPackagesResponse
+	err  error
+}
+
+func (s *packageManagementStub) ListKnownPackages(context.Context, *admin.ListKnownPackagesRequest, ...grpc.CallOption) (*admin.ListKnownPackagesResponse, error) {
+	return s.resp, s.err
+}
+
+func (s *packageManagementStub) UploadDarFile(context.Context, *admin.UploadDarFileRequest, ...grpc.CallOption) (*admin.UploadDarFileResponse, error) {
+	panic("unexpected call")
+}
+
+func (s *packageManagementStub) ValidateDarFile(context.Context, *admin.ValidateDarFileRequest, ...grpc.CallOption) (*admin.ValidateDarFileResponse, error) {
+	panic("unexpected call")
+}
+
+func (s *packageManagementStub) UpdateVettedPackages(context.Context, *admin.UpdateVettedPackagesRequest, ...grpc.CallOption) (*admin.UpdateVettedPackagesResponse, error) {
 	panic("unexpected call")
 }
 
@@ -785,6 +912,52 @@ func testAmuletCreatedEvent(owner string, initialAmount string) *v2.CreatedEvent
 									},
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func testTokenHoldingCreatedEvent(owner string, issuer string, instrumentID string, amount string) *v2.CreatedEvent {
+	return &v2.CreatedEvent{
+		ContractId: "token-contract-id",
+		InterfaceViews: []*v2.InterfaceView{
+			{
+				InterfaceId: &v2.Identifier{
+					PackageId:  "holding-package-id",
+					ModuleName: "Splice.Api.Token.HoldingV1",
+					EntityName: "Holding",
+				},
+				ViewValue: &v2.Record{
+					Fields: []*v2.RecordField{
+						{
+							Label: "owner",
+							Value: &v2.Value{Sum: &v2.Value_Party{Party: owner}},
+						},
+						{
+							Label: "instrumentId",
+							Value: &v2.Value{
+								Sum: &v2.Value_Record{
+									Record: &v2.Record{
+										Fields: []*v2.RecordField{
+											{
+												Label: "admin",
+												Value: &v2.Value{Sum: &v2.Value_Party{Party: issuer}},
+											},
+											{
+												Label: "id",
+												Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}},
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Label: "amount",
+							Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}},
 						},
 					},
 				},

@@ -61,6 +61,7 @@ type GrpcLedgerClient struct {
 	// Bearer token injected into every gRPC call
 	authToken                   string
 	adminClient                 admin.PartyManagementServiceClient
+	packageManagementClient     admin.PackageManagementServiceClient
 	commandClient               v2.CommandServiceClient
 	completionClient            v2.CommandCompletionServiceClient
 	interactiveSubmissionClient interactive.InteractiveSubmissionServiceClient
@@ -116,6 +117,7 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 	return &GrpcLedgerClient{
 		authToken:                   authToken,
 		adminClient:                 admin.NewPartyManagementServiceClient(conn),
+		packageManagementClient:     admin.NewPackageManagementServiceClient(conn),
 		stateClient:                 v2.NewStateServiceClient(conn),
 		updateClient:                v2.NewUpdateServiceClient(conn),
 		completionClient:            v2.NewCommandCompletionServiceClient(conn),
@@ -131,6 +133,32 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 		httpClient:                  http.DefaultClient,
 		logger:                      logger,
 	}, nil
+}
+
+func (c *GrpcLedgerClient) ResolvePackageIDByName(ctx context.Context, packageName string) (string, error) {
+	if packageName == "" {
+		return "", errors.New("empty required argument: packageName")
+	}
+
+	authCtx := c.authCtx(ctx)
+	resp, err := c.packageManagementClient.ListKnownPackages(authCtx, &admin.ListKnownPackagesRequest{})
+	if err != nil {
+		return "", fmt.Errorf("list known packages: %w", err)
+	}
+
+	var latest *admin.PackageDetails
+	for _, detail := range resp.GetPackageDetails() {
+		if detail.GetName() != packageName {
+			continue
+		}
+		if latest == nil || detail.GetKnownSince().AsTime().After(latest.GetKnownSince().AsTime()) {
+			latest = detail
+		}
+	}
+	if latest == nil {
+		return "", fmt.Errorf("package not found: %s", packageName)
+	}
+	return latest.GetPackageId(), nil
 }
 
 // authCtx injects the Canton validator bearer token into the gRPC context.
@@ -314,6 +342,62 @@ func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID strin
 		activeContracts = append(activeContracts, contract)
 	}
 
+	return activeContracts, nil
+}
+
+func (c *GrpcLedgerClient) GetTokenHoldingContracts(ctx context.Context, partyID string, ledgerEnd int64, packageID string) ([]*v2.ActiveContract, error) {
+	if partyID == "" {
+		return nil, errors.New("empty required argument: partyID")
+	}
+	if packageID == "" {
+		return nil, errors.New("empty required argument: packageID")
+	}
+
+	req := &v2.GetActiveContractsRequest{
+		ActiveAtOffset: ledgerEnd,
+		EventFormat: &v2.EventFormat{
+			Verbose: true,
+			FiltersByParty: map[string]*v2.Filters{
+				partyID: {
+					Cumulative: []*v2.CumulativeFilter{{
+						IdentifierFilter: &v2.CumulativeFilter_InterfaceFilter{
+							InterfaceFilter: &v2.InterfaceFilter{
+								InterfaceId: &v2.Identifier{
+									PackageId:  packageID,
+									ModuleName: "Splice.Api.Token.HoldingV1",
+									EntityName: "Holding",
+								},
+								IncludeInterfaceView:    true,
+								IncludeCreatedEventBlob: false,
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	authCtx := c.authCtx(ctx)
+	stream, err := c.stateClient.GetActiveContracts(authCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query token holding contracts for party %s: %w", partyID, err)
+	}
+
+	activeContracts := make([]*v2.ActiveContract, 0)
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error reading token holding contracts for party %s: %w", partyID, err)
+		}
+		contract := resp.GetActiveContract()
+		if contract == nil || contract.GetCreatedEvent() == nil {
+			continue
+		}
+		activeContracts = append(activeContracts, contract)
+	}
 	return activeContracts, nil
 }
 

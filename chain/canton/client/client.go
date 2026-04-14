@@ -794,6 +794,61 @@ func parseHumanAmountToBlockchain(value string, decimals int32) (xc.AmountBlockc
 	return human.ToBlockchain(decimals), true
 }
 
+func parseCantonTokenContract(contract xc.ContractAddress) (string, string, bool) {
+	parts := strings.SplitN(string(contract), "#", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", false
+	}
+	return parts[0], parts[1], true
+}
+
+func getRecordFieldValue(record *v2.Record, key string) (*v2.Value, bool) {
+	if record == nil {
+		return nil, false
+	}
+	for _, field := range record.GetFields() {
+		if field.GetLabel() == key {
+			return field.GetValue(), true
+		}
+	}
+	return nil, false
+}
+
+func extractTokenHoldingView(created *v2.CreatedEvent) (owner string, instrumentAdmin string, instrumentID string, amount string, ok bool) {
+	if created == nil {
+		return "", "", "", "", false
+	}
+	for _, view := range created.GetInterfaceViews() {
+		interfaceID := view.GetInterfaceId()
+		if interfaceID == nil || interfaceID.GetModuleName() != "Splice.Api.Token.HoldingV1" || interfaceID.GetEntityName() != "Holding" {
+			continue
+		}
+		record := view.GetViewValue()
+		ownerValue, ok := getRecordFieldValue(record, "owner")
+		if !ok || ownerValue.GetParty() == "" {
+			return "", "", "", "", false
+		}
+		instrumentValue, ok := getRecordFieldValue(record, "instrumentId")
+		if !ok || instrumentValue.GetRecord() == nil {
+			return "", "", "", "", false
+		}
+		adminValue, ok := getRecordFieldValue(instrumentValue.GetRecord(), "admin")
+		if !ok || adminValue.GetParty() == "" {
+			return "", "", "", "", false
+		}
+		idValue, ok := getRecordFieldValue(instrumentValue.GetRecord(), "id")
+		if !ok || idValue.GetText() == "" {
+			return "", "", "", "", false
+		}
+		amountValue, ok := getRecordFieldValue(record, "amount")
+		if !ok || amountValue.GetNumeric() == "" {
+			return "", "", "", "", false
+		}
+		return ownerValue.GetParty(), adminValue.GetParty(), idValue.GetText(), amountValue.GetNumeric(), true
+	}
+	return "", "", "", "", false
+}
+
 func parseRecoveryLookupId(value string) (int64, string, bool) {
 	idx := strings.Index(value, "-")
 	if idx <= 0 || idx == len(value)-1 {
@@ -809,7 +864,46 @@ func parseRecoveryLookupId(value string) (int64, string, bool) {
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	zero := xc.NewAmountBlockchainFromUint64(0)
 	if contract, ok := args.Contract(); ok {
-		return zero, fmt.Errorf("token balance queries not yet supported for Canton, contract: %s", contract)
+		partyID := string(args.Address())
+		if partyID == "" {
+			return zero, fmt.Errorf("empty address")
+		}
+		ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+		if err != nil {
+			return zero, fmt.Errorf("failed to get ledger end: %w", err)
+		}
+		packageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-api-token-holding-v1")
+		if err != nil {
+			return zero, fmt.Errorf("failed to resolve token holding interface package: %w", err)
+		}
+		contracts, err := client.ledgerClient.GetTokenHoldingContracts(ctx, partyID, ledgerEnd, packageID)
+		if err != nil {
+			return zero, fmt.Errorf("failed to query token holding contracts for party %s: %w", partyID, err)
+		}
+
+		admin, instrumentID, ok := parseCantonTokenContract(contract)
+		if !ok {
+			return zero, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
+		}
+		decimals := client.Asset.GetChain().Decimals
+		if assetCfg, ok := client.Asset.FindAdditionalNativeAsset(contract); ok && assetCfg.Decimals > 0 {
+			decimals = assetCfg.Decimals
+		}
+
+		totalBalance := xc.NewAmountBlockchainFromUint64(0)
+		for _, c := range contracts {
+			created := c.GetCreatedEvent()
+			_, holdingAdmin, holdingID, amount, ok := extractTokenHoldingView(created)
+			if !ok || holdingAdmin != admin || holdingID != instrumentID {
+				continue
+			}
+			bal, ok := parseHumanAmountToBlockchain(amount, decimals)
+			if !ok {
+				continue
+			}
+			totalBalance = totalBalance.Add(&bal)
+		}
+		return totalBalance, nil
 	}
 
 	return client.FetchNativeBalance(ctx, args.Address())
@@ -881,7 +975,13 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	if client.Asset.GetChain().IsChain(contract) {
 		return int(client.Asset.GetChain().GetDecimals()), nil
 	}
-	return 0, fmt.Errorf("token decimals are not supported for Canton, contract: %s", contract)
+	if assetCfg, ok := client.Asset.FindAdditionalNativeAsset(contract); ok && assetCfg.Decimals > 0 {
+		return int(assetCfg.Decimals), nil
+	}
+	if _, _, ok := parseCantonTokenContract(contract); ok {
+		return int(client.Asset.GetChain().GetDecimals()), nil
+	}
+	return 0, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
 }
 
 func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
