@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"strconv"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -60,9 +61,9 @@ type SpotMetaResponse struct {
 	Tokens   []Token       `json:"tokens"`
 }
 
-func (s SpotMetaResponse) GetTokenMetaByName(name string) (Token, bool) {
+func (s SpotMetaResponse) GetTokenMetaBySymbol(name string) (Token, bool) {
 	for _, token := range s.Tokens {
-		if token.Name == name {
+		if token.Name == name && token.Name != "" {
 			return token, true
 		}
 	}
@@ -70,9 +71,42 @@ func (s SpotMetaResponse) GetTokenMetaByName(name string) (Token, bool) {
 	return Token{}, false
 }
 
+func (s SpotMetaResponse) GetTokenMetaByContract(contract xc.ContractAddress) (Token, bool) {
+	if strings.Contains(string(contract), ":") {
+		parts := strings.Split(string(contract), ":")
+		contract = xc.ContractAddress(parts[1])
+	}
+	for _, token := range s.Tokens {
+		if token.TokenId == contract && token.TokenId != "" {
+			return token, true
+		}
+	}
+
+	return Token{}, false
+}
+
+func (s SpotMetaResponse) GetTokenMetaByNameOrSuffix(nameOrContract string) (Token, bool) {
+	name := nameOrContract
+	contract := nameOrContract
+	if strings.Contains(name, ":") {
+		parts := strings.Split(name, ":")
+		name = parts[0]
+		contract = parts[1]
+	}
+	token, ok := s.GetTokenMetaBySymbol(name)
+	if ok {
+		return token, true
+	}
+	token, ok = s.GetTokenMetaByContract(xc.ContractAddress(contract))
+	if ok {
+		return token, true
+	}
+	return Token{}, false
+}
+
 func (s SpotMetaResponse) GetTokenMetaByTokenId(contract xc.ContractAddress) (Token, bool) {
 	for _, token := range s.Tokens {
-		if token.TokenId == string(contract) {
+		if token.TokenId == contract {
 			return token, true
 		}
 	}
@@ -88,15 +122,15 @@ type TradingPair struct {
 }
 
 type Token struct {
-	Name                    string       `json:"name"`                    // "HYPE", "USDC"
-	SzDecimals              int          `json:"szDecimals"`              // Trading precision (0-2)
-	WeiDecimals             int          `json:"weiDecimals"`             // Token precision (0-8)
-	Index                   int          `json:"index"`                   // Numeric token identifier
-	TokenId                 string       `json:"tokenId"`                 // HyperCore token address
-	IsCanonical             bool         `json:"isCanonical"`             // Official/canonical token
-	EvmContract             *EvmContract `json:"evmContract"`             // HyperEVM bridge info
-	FullName                string       `json:"fullName"`                // Full token name
-	DeployerTradingFeeShare string       `json:"deployerTradingFeeShare"` // Fee share percentage
+	Name                    string             `json:"name"`                    // "HYPE", "USDC"
+	SzDecimals              int                `json:"szDecimals"`              // Trading precision (0-2)
+	WeiDecimals             int                `json:"weiDecimals"`             // Token precision (0-8)
+	Index                   int                `json:"index"`                   // Numeric token identifier
+	TokenId                 xc.ContractAddress `json:"tokenId"`                 // HyperCore token address
+	IsCanonical             bool               `json:"isCanonical"`             // Official/canonical token
+	EvmContract             *EvmContract       `json:"evmContract"`             // HyperEVM bridge info
+	FullName                string             `json:"fullName"`                // Full token name
+	DeployerTradingFeeShare string             `json:"deployerTradingFeeShare"` // Fee share percentage
 }
 
 type EvmContract struct {
@@ -267,8 +301,12 @@ func (t Transaction) IsSpotSend() bool {
 	return actionType == ActionSpotSend
 }
 
-func (t Transaction) GetContract() xc.ContractAddress {
+func (t Transaction) GetTokenId() xc.ContractAddress {
 	token, _ := GetValue[string](t.Action, "token")
+	if strings.Contains(token, ":") {
+		parts := strings.Split(token, ":")
+		token = parts[1]
+	}
 	return xc.ContractAddress(token)
 }
 

@@ -108,13 +108,25 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.TransactionTime = time.Now()
 
 	contract, _ := args.GetContract()
-	txInput.Token = contract
+	tokensMetadata, err := client.fetchTokensMetadata(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tokens metadata: %w", err)
+	}
+	var tokenMeta types.Token
+	var ok bool
+	tokenMeta, ok = tokensMetadata.GetTokenMetaByNameOrSuffix(string(contract))
+	if !ok {
+		return nil, fmt.Errorf("missing token metadata for contract: %s", contract)
+	}
+
+	txInput.TokenLabelOld = tx_input.NewTokenLabel(tokenMeta.Name, contract)
+	txInput.Symbol, _ = txInput.TokenLabelOld.GetSymbol()
 
 	decimals, err := client.FetchDecimals(ctx, contract)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
-	txInput.Decimals = int32(decimals)
+	txInput.DecimalsOld = int32(decimals)
 	txInput.HyperliquidChain = client.HyperliquidChain
 
 	return txInput, nil
@@ -212,7 +224,7 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (txi
 		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch tx details: %w", err)
 	}
 
-	contract := txDetails.GetContract()
+	contract := txDetails.GetTokenId()
 	action, err := txDetails.GetAction()
 	if err != nil {
 		return txinfo.TxInfo{}, fmt.Errorf("failed to get action: %w", err)
@@ -256,7 +268,8 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (txi
 
 	fee, feeToken, err := client.fetchTransactionFee(ctx, sourceAddress, txHash)
 	if err != nil {
-		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction fee: %w", err)
+		logrus.WithField("error", err).Warn("failed to fetch transaction fee")
+		// return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction fee: %w", err)
 	}
 	tokensMetadata, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
@@ -265,10 +278,10 @@ func (client *Client) fetchTxInfoByHash(ctx context.Context, txHash string) (txi
 
 	feeDecimals := HypeDecimals
 	feeContract := xc.ContractAddress("")
-	tokenMeta, ok := tokensMetadata.GetTokenMetaByName(feeToken)
+	tokenMeta, ok := tokensMetadata.GetTokenMetaByNameOrSuffix(string(feeToken))
 	if ok {
 		feeDecimals = tokenMeta.WeiDecimals
-		feeContract = xc.ContractAddress(tokenMeta.Name + ":" + tokenMeta.TokenId)
+		feeContract = xc.ContractAddress(tokenMeta.TokenId)
 	}
 
 	feeAmount := fee.ToBlockchain(int32(feeDecimals))
@@ -382,12 +395,7 @@ func (client *Client) fetchSpotBalance(ctx context.Context, address xc.Address, 
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch tokens metadata: %w", err)
 	}
 
-	n, _, ok := strings.Cut(string(contract), ":")
-	if !ok {
-		return xc.AmountBlockchain{}, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
-	}
-
-	tokenMeta, ok := tokensMetadata.GetTokenMetaByName(n)
+	tokenMeta, ok := tokensMetadata.GetTokenMetaByNameOrSuffix(string(contract))
 	if !ok {
 		return xc.AmountBlockchain{}, fmt.Errorf("missing token metadata for contract: %s", contract)
 	}
@@ -445,12 +453,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 		return 0, fmt.Errorf("failed to fetch token metadata: %w", err)
 	}
 
-	name, _, ok := strings.Cut(string(contract), ":")
-	if !ok {
-		return 0, fmt.Errorf("invalid contract format, expected 'Name:TokenId', got: %s", contract)
-	}
-
-	tm, ok := tokensMeta.GetTokenMetaByName(name)
+	tm, ok := tokensMeta.GetTokenMetaByNameOrSuffix(string(contract))
 	if !ok {
 		return 0, fmt.Errorf("missing token metadata for %s", contract)
 	}
