@@ -3,6 +3,7 @@ package builder
 import (
 	"fmt"
 	"math"
+	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -61,7 +62,7 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 	}
 
 	preconditions := xlm.Preconditions{
-		TimeBounds: xlm.NewTimeout(txInput.TransactionActiveTime),
+		TimeBounds: xlm.NewTimeout(time.Unix(txInput.Timestamp, 0), txInput.TransactionActiveTime),
 	}
 
 	xdrMemo := xdr.Memo{}

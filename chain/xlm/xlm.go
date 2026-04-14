@@ -23,8 +23,8 @@ type TimeBounds struct {
 	wasBuilt bool
 }
 
-func NewTimeout(timeout time.Duration) TimeBounds {
-	return TimeBounds{0, time.Now().Add(timeout).Unix(), true}
+func NewTimeout(currentTime time.Time, timeout time.Duration) TimeBounds {
+	return TimeBounds{0, currentTime.Add(timeout).Unix(), true}
 }
 
 func NewInfiniteTimeout() TimeBounds {
