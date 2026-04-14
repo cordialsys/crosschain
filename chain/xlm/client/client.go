@@ -19,11 +19,11 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
-	"github.com/cordialsys/crosschain/pkg/integer"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/sirupsen/logrus"
 	"github.com/stellar/go-stellar-sdk/xdr"
 )
@@ -65,6 +65,8 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 // FetchTransferInput returns tx input for a Stellar tx
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	return nil, errors.FailedPreconditionf("Transfers on XLM are temporarily disabled")
+
 	config := client.Asset.GetChain()
 	txInput := xlminput.NewTxInput(config.ChainID.AsString())
 	account := args.GetFrom()
