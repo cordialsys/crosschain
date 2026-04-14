@@ -12,6 +12,7 @@ import (
 )
 
 var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithUnix = &TxInput{}
 
 // XlmTxInputGetter is a local interface for type-safe access to XLM tx input fields
 // without requiring concrete type casts in IndependentOf/SafeFromDoubleSend.
@@ -60,6 +61,8 @@ type TxInput struct {
 	SorobanInstructions  uint32 `json:"soroban_instructions,omitempty"`
 	SorobanDiskReadBytes uint32 `json:"soroban_disk_read_bytes,omitempty"`
 	SorobanWriteBytes    uint32 `json:"soroban_write_bytes,omitempty"`
+
+	Timestamp int64 `json:"timestamp,omitempty"`
 }
 
 func init() {
@@ -138,4 +141,8 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 func (input *TxInput) IsFeeLimitAccurate() bool {
 	return true
+}
+
+func (input *TxInput) SetUnix(unix int64) {
+	input.Timestamp = unix
 }
