@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xlm/tx_input"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/test-go/testify/require"
 )
 
@@ -66,4 +67,13 @@ func TestTxInputGasMultiplier(t *testing.T) {
 			require.Equal(t, v.result, uint64(v.input.MaxFee), desc)
 		}
 	}
+}
+
+func TestTxInputUnmarshal(t *testing.T) {
+	// inputBz := "{\"asset\":\"XLM\",\"balance\":\"250000000\",\"chain\":\"XLM\",\"extra\":{},\"from\":\"GAUHHCJGQMRDNQAAWX22PF6YGZ27JFVISJHA7YYN5JRTO3RZ5YZVICQ7\",\"input\":{\"MaxFee\":10000000,\"MinLedgerSequence\":2035163,\"Passphrase\":\"Test SDF Network ; September 2015\",\"Sequence\":8740778138402817,\"TransactionActiveTime\":7200000000000,\"sequence\":\"8740778138402817\",\"type\":\"xlm\"},\"public_key\":\"28738926832236c000b5f5a797d83675f496a8924e0fe30dea63376e39ee3354\",\"raw_tx_input\":,\"to\":\"GCGJ3NRXDDMU67YVBGC76XSKNGUKTTI6M6AKKDB324OOHJYMYRFXLH76\"}"
+	inputBz := "{\"MaxFee\":10000000,\"MinLedgerSequence\":2035163,\"Passphrase\":\"Test SDF Network ; September 2015\",\"Sequence\":8740778138402817,\"TransactionActiveTime\":7200000000000,\"sequence\":\"8740778138402817\",\"type\":\"xlm\"}"
+
+	input, err := drivers.UnmarshalTxInput([]byte(inputBz))
+	require.NoError(t, err)
+	require.NotNil(t, input)
 }

@@ -76,18 +76,23 @@ func UnmarshalTxInput(data []byte) (xc.TxInput, error) {
 	buf := []byte(data)
 	err := json.Unmarshal(buf, &env)
 	if err != nil {
+		fmt.Println("--- error unmarshalling tx input 1:", err)
 		return nil, err
 	}
+	fmt.Println("--- unmarshalling tx input:", env.Type)
 	input, err := NewTxInput(env.Type)
 	if err != nil {
 		input2, err2 := NewVariantInput(xc.TxVariantInputType(env.Type))
 		if err2 != nil {
+			fmt.Println("--- error unmarshalling tx input 2:", err2)
 			return nil, err
 		}
 		input = input2
 	}
+	fmt.Println("--- unmarshalling tx input bytes:", string(buf))
 	err = json.Unmarshal(buf, input)
 	if err != nil {
+		fmt.Println("--- error unmarshalling tx input 3:", err)
 		return nil, err
 	}
 	return input, nil
