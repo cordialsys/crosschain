@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -83,6 +85,37 @@ type scanProxyRequest struct {
 	URL     string            `json:"url"`
 	Headers map[string]string `json:"headers,omitempty"`
 	Body    string            `json:"body"`
+}
+
+type TokenChoiceContext struct {
+	ChoiceContextData  map[string]any                   `json:"choiceContextData"`
+	DisclosedContracts []TokenRegistryDisclosedContract `json:"disclosedContracts"`
+}
+
+type TokenRegistryDisclosedContract struct {
+	TemplateID       string `json:"templateId"`
+	ContractID       string `json:"contractId"`
+	CreatedEventBlob string `json:"createdEventBlob"`
+	SynchronizerID   string `json:"synchronizerId"`
+}
+
+type TokenTransferFactoryContext struct {
+	FactoryID     string             `json:"factoryId"`
+	TransferKind  string             `json:"transferKind"`
+	ChoiceContext TokenChoiceContext `json:"choiceContext"`
+}
+
+type TokenInstrumentMetadata struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Symbol        string         `json:"symbol"`
+	Decimals      int32          `json:"decimals"`
+	SupportedAPIs map[string]any `json:"supportedApis"`
+}
+
+type TokenMetadataRegistryInfo struct {
+	AdminID       string         `json:"adminId"`
+	SupportedAPIs map[string]any `json:"supportedApis"`
 }
 
 func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityConfig) (*GrpcLedgerClient, error) {
@@ -159,6 +192,38 @@ func (c *GrpcLedgerClient) ResolvePackageIDByName(ctx context.Context, packageNa
 		return "", fmt.Errorf("package not found: %s", packageName)
 	}
 	return latest.GetPackageId(), nil
+}
+
+func (c *GrpcLedgerClient) ListKnownPackageIDsByName(ctx context.Context) (map[string]string, error) {
+	authCtx := c.authCtx(ctx)
+	resp, err := c.packageManagementClient.ListKnownPackages(authCtx, &admin.ListKnownPackagesRequest{})
+	if err != nil {
+		return nil, fmt.Errorf("list known packages: %w", err)
+	}
+
+	type packageVersion struct {
+		id         string
+		knownSince time.Time
+	}
+	latest := make(map[string]packageVersion)
+	for _, detail := range resp.GetPackageDetails() {
+		if detail.GetName() == "" || detail.GetPackageId() == "" {
+			continue
+		}
+		current, ok := latest[detail.GetName()]
+		if !ok || detail.GetKnownSince().AsTime().After(current.knownSince) {
+			latest[detail.GetName()] = packageVersion{
+				id:         detail.GetPackageId(),
+				knownSince: detail.GetKnownSince().AsTime(),
+			}
+		}
+	}
+
+	result := make(map[string]string, len(latest))
+	for name, detail := range latest {
+		result[name] = detail.id
+	}
+	return result, nil
 }
 
 // authCtx injects the Canton validator bearer token into the gRPC context.
@@ -401,6 +466,62 @@ func (c *GrpcLedgerClient) GetTokenHoldingContracts(ctx context.Context, partyID
 	return activeContracts, nil
 }
 
+func (c *GrpcLedgerClient) GetTokenTransferFactoryContracts(ctx context.Context, partyID string, ledgerEnd int64, packageID string) ([]*v2.ActiveContract, error) {
+	if partyID == "" {
+		return nil, errors.New("empty required argument: partyID")
+	}
+	if packageID == "" {
+		return nil, errors.New("empty required argument: packageID")
+	}
+
+	req := &v2.GetActiveContractsRequest{
+		ActiveAtOffset: ledgerEnd,
+		EventFormat: &v2.EventFormat{
+			Verbose: true,
+			FiltersByParty: map[string]*v2.Filters{
+				partyID: {
+					Cumulative: []*v2.CumulativeFilter{{
+						IdentifierFilter: &v2.CumulativeFilter_InterfaceFilter{
+							InterfaceFilter: &v2.InterfaceFilter{
+								InterfaceId: &v2.Identifier{
+									PackageId:  packageID,
+									ModuleName: "Splice.Api.Token.TransferInstructionV1",
+									EntityName: "TransferFactory",
+								},
+								IncludeInterfaceView:    true,
+								IncludeCreatedEventBlob: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	authCtx := c.authCtx(ctx)
+	stream, err := c.stateClient.GetActiveContracts(authCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query token transfer factory contracts for party %s: %w", partyID, err)
+	}
+
+	activeContracts := make([]*v2.ActiveContract, 0)
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error reading token transfer factory contracts for party %s: %w", partyID, err)
+		}
+		contract := resp.GetActiveContract()
+		if contract == nil || contract.GetCreatedEvent() == nil {
+			continue
+		}
+		activeContracts = append(activeContracts, contract)
+	}
+	return activeContracts, nil
+}
+
 func (c *GrpcLedgerClient) CreateUser(ctx context.Context, partyId string) error {
 	authCtx := c.authCtx(ctx)
 	req := &admin.GrantUserRightsRequest{
@@ -487,14 +608,21 @@ func (c *GrpcLedgerClient) CreateExternalPartySetupProposal(ctx context.Context,
 }
 
 func (c *GrpcLedgerClient) doScanProxyRequest(ctx context.Context, token string, path string, body any, out any) error {
-	requestBody, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("marshal scan proxy inner body: %w", err)
-	}
+	return c.doScanProxyRequestWithMethod(ctx, token, http.MethodPost, path, body, out)
+}
 
+func (c *GrpcLedgerClient) doScanProxyRequestWithMethod(ctx context.Context, token string, method string, path string, body any, out any) error {
+	requestBody := []byte("{}")
+	var err error
+	if body != nil {
+		requestBody, err = json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal scan proxy inner body: %w", err)
+		}
+	}
 	targetURL := strings.TrimRight(c.scanAPIURL, "/") + path
 	envelope := scanProxyRequest{
-		Method: "POST",
+		Method: method,
 		URL:    targetURL,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
@@ -679,6 +807,66 @@ func (c *GrpcLedgerClient) GetOpenAndIssuingMiningRound(ctx context.Context, tok
 		return nil, nil, fmt.Errorf("failed to get lastest issuing mining round: %w", err)
 	}
 	return latestOpenRound, latestIssuingRound, nil
+}
+
+func (c *GrpcLedgerClient) GetTokenTransferFactory(
+	ctx context.Context,
+	token string,
+	choiceArguments map[string]any,
+) (*TokenTransferFactoryContext, error) {
+	body := map[string]any{
+		"choiceArguments":    choiceArguments,
+		"excludeDebugFields": true,
+	}
+	var result TokenTransferFactoryContext
+	if err := c.doScanProxyRequest(ctx, token, "/registry/transfer-instruction/v1/transfer-factory", body, &result); err != nil {
+		return nil, fmt.Errorf("fetching token transfer factory: %w", err)
+	}
+	if result.FactoryID == "" {
+		return nil, errors.New("token transfer factory response missing factoryId")
+	}
+	return &result, nil
+}
+
+func (c *GrpcLedgerClient) GetTokenInstrumentMetadata(
+	ctx context.Context,
+	token string,
+	instrumentID string,
+) (*TokenInstrumentMetadata, error) {
+	path := "/registry/metadata/v1/instruments/" + url.PathEscape(instrumentID)
+	var result TokenInstrumentMetadata
+	if err := c.doScanProxyRequestWithMethod(ctx, token, http.MethodGet, path, nil, &result); err != nil {
+		return nil, fmt.Errorf("fetching token instrument metadata: %w", err)
+	}
+	if result.ID == "" {
+		return nil, errors.New("token instrument metadata response missing id")
+	}
+	return &result, nil
+}
+
+func (c *GrpcLedgerClient) GetTokenMetadataRegistryInfo(
+	ctx context.Context,
+	token string,
+) (*TokenMetadataRegistryInfo, error) {
+	var result TokenMetadataRegistryInfo
+	if err := c.doScanProxyRequestWithMethod(ctx, token, http.MethodGet, "/registry/metadata/v1/info", nil, &result); err != nil {
+		return nil, fmt.Errorf("fetching token metadata registry info: %w", err)
+	}
+	if result.AdminID == "" {
+		return nil, errors.New("token metadata registry info response missing adminId")
+	}
+	return &result, nil
+}
+
+func decodeCreatedEventBlob(value string) ([]byte, error) {
+	if value == "" {
+		return nil, errors.New("empty createdEventBlob")
+	}
+	blob, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return nil, fmt.Errorf("decode createdEventBlob: %w", err)
+	}
+	return blob, nil
 }
 
 func (c *GrpcLedgerClient) HasTransferPreapprovalContract(ctx context.Context, contracts []*v2.ActiveContract) bool {

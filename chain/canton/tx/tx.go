@@ -2,6 +2,7 @@ package tx
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -82,6 +83,11 @@ func validateTransferArgs(preparedTx *interactive.PreparedTransaction, args xcbu
 
 	wantReceiver := string(args.GetTo())
 	wantAmount := args.GetAmount()
+	var wantInstrumentAdmin string
+	var wantInstrumentID string
+	if contract, ok := args.GetContract(); ok {
+		wantInstrumentAdmin, wantInstrumentID = parseCantonTokenContract(contract)
+	}
 
 	for _, node := range damlTx.GetNodes() {
 		v1Node := node.GetV1()
@@ -96,7 +102,7 @@ func validateTransferArgs(preparedTx *interactive.PreparedTransaction, args xcbu
 		}
 
 		if exercise := v1Node.GetExercise(); exercise != nil {
-			if err := validateExerciseNode(exercise, wantReceiver, wantAmount, decimals); err != nil {
+			if err := validateExerciseNode(exercise, wantReceiver, wantAmount, decimals, wantInstrumentAdmin, wantInstrumentID); err != nil {
 				return err
 			}
 		}
@@ -125,23 +131,88 @@ func validateCreateNode(create *v1.Create, wantReceiver string, wantAmount xc.Am
 }
 
 // validateExerciseNode checks a TransferPreapproval_Send Exercise node for matching receiver and amount.
-func validateExerciseNode(exercise *v1.Exercise, wantReceiver string, wantAmount xc.AmountBlockchain, decimals int32) error {
-	if exercise.GetChoiceId() != "TransferPreapproval_Send" {
+func validateExerciseNode(exercise *v1.Exercise, wantReceiver string, wantAmount xc.AmountBlockchain, decimals int32, wantInstrumentAdmin string, wantInstrumentID string) error {
+	switch exercise.GetChoiceId() {
+	case "TransferPreapproval_Send":
+		chosen := exercise.GetChosenValue()
+		if chosen == nil {
+			return nil
+		}
+		record := chosen.GetRecord()
+		if record == nil {
+			return nil
+		}
+		// The receiver for TransferPreapproval_Send is the contract's stakeholder (the preapproval
+		// owner), not a field in the choice argument. Validate only the amount here.
+		return validateAmountField(record, wantAmount, decimals, "TransferPreapproval_Send")
+	case "TransferFactory_Transfer":
+		chosen := exercise.GetChosenValue()
+		if chosen == nil {
+			return nil
+		}
+		record := chosen.GetRecord()
+		if record == nil {
+			return nil
+		}
+		return validateTokenTransferFactoryRecord(record, wantReceiver, wantAmount, decimals, wantInstrumentAdmin, wantInstrumentID)
+	default:
 		return nil
 	}
+}
 
-	chosen := exercise.GetChosenValue()
-	if chosen == nil {
+func validateTokenTransferFactoryRecord(record *v2.Record, wantReceiver string, wantAmount xc.AmountBlockchain, decimals int32, wantInstrumentAdmin string, wantInstrumentID string) error {
+	transferValue, ok := getRecordFieldValue(record, "transfer")
+	if !ok || transferValue.GetRecord() == nil {
 		return nil
 	}
-	record := chosen.GetRecord()
+	transferRecord := transferValue.GetRecord()
+	if err := validateRecordReceiverAndAmount(transferRecord, wantReceiver, wantAmount, decimals, "TransferFactory_Transfer"); err != nil {
+		return err
+	}
+	if wantInstrumentAdmin == "" && wantInstrumentID == "" {
+		return nil
+	}
+	instrumentValue, ok := getRecordFieldValue(transferRecord, "instrumentId")
+	if !ok || instrumentValue.GetRecord() == nil {
+		return nil
+	}
+	gotAdminValue, _ := getRecordFieldValue(instrumentValue.GetRecord(), "admin")
+	gotIDValue, _ := getRecordFieldValue(instrumentValue.GetRecord(), "id")
+	gotAdmin := ""
+	gotID := ""
+	if gotAdminValue != nil {
+		gotAdmin = gotAdminValue.GetParty()
+	}
+	if gotIDValue != nil {
+		gotID = gotIDValue.GetText()
+	}
+	if gotAdmin != "" && gotAdmin != wantInstrumentAdmin {
+		return fmt.Errorf("TransferFactory_Transfer: instrument admin mismatch: transaction encodes %q, args specify %q", gotAdmin, wantInstrumentAdmin)
+	}
+	if gotID != "" && gotID != wantInstrumentID {
+		return fmt.Errorf("TransferFactory_Transfer: instrument id mismatch: transaction encodes %q, args specify %q", gotID, wantInstrumentID)
+	}
+	return nil
+}
+
+func parseCantonTokenContract(contract xc.ContractAddress) (string, string) {
+	parts := strings.SplitN(string(contract), "#", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", ""
+	}
+	return parts[0], parts[1]
+}
+
+func getRecordFieldValue(record *v2.Record, label string) (*v2.Value, bool) {
 	if record == nil {
-		return nil
+		return nil, false
 	}
-
-	// The receiver for TransferPreapproval_Send is the contract's stakeholder (the preapproval
-	// owner), not a field in the choice argument. Validate only the amount here.
-	return validateAmountField(record, wantAmount, decimals, "TransferPreapproval_Send")
+	for _, field := range record.GetFields() {
+		if field.GetLabel() == label {
+			return field.GetValue(), true
+		}
+	}
+	return nil, false
 }
 
 // validateRecordReceiverAndAmount checks both "receiver" party and "amount.amount" numeric fields.

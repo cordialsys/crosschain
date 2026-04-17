@@ -221,15 +221,15 @@ chains:
         accurate: true
     driver: canton
     chain_name: Canton (Testnet)
-    decimals: 18
+    decimals: 10
     fee_limit: "100.0"
     confirmations_final: 1
     custom_config:
-      keycloak_url: "env:CANTON_KEYCLOAK_URL"
-      keycloak_realm: "env:CANTON_KEYCLOAK_REALM"
-      rest_api_url: "env:CANTON_REST_API_URL"
-      scan_proxy_url: "env:CANTON_SCAN_API_URL"
-      scan_api_url: "env:CANTON_SCAN_NODE_URL"
+      keycloak_url: "http://keycloak.test.catalyst.rpc.cordialapis.com/auth"
+      keycloak_realm: "catalyst-canton"
+      rest_api_url: "https://wallet-validator-cordialsystems.canton.test.catalyst.rpc.cordialapis.com"
+      scan_proxy_url: "https://canton.test.catalyst.rpc.cordialapis.com/api/http-proxy"
+      scan_api_url: "https://scan.sv-1.test.global.canton.network.sync.global"
       validator_auth: "env:CANTON_VALIDATOR_BASIC_AUTH"
       canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
 

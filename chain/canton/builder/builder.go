@@ -26,7 +26,7 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 
 // Transfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	if contract, ok := args.GetContract(); ok {
+	if contract, ok := args.GetContract(); ok && string(contract) != string(txBuilder.Asset.Chain) {
 		return txBuilder.NewTokenTransfer(args, contract, input)
 	}
 	return txBuilder.NewNativeTransfer(args, input)
@@ -45,7 +45,16 @@ func (txBuilder TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input 
 
 // NewTokenTransfer is not supported for Canton
 func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
-	return nil, fmt.Errorf("token transfers are not supported for %s", txBuilder.Asset.Chain)
+	cantonInput, ok := input.(*tx_input.TxInput)
+	if !ok {
+		return nil, fmt.Errorf("invalid tx input type for Canton, expected *tx_input.TxInput")
+	}
+
+	decimals := cantonInput.Decimals
+	if decimals <= 0 {
+		decimals = txBuilder.Asset.Decimals
+	}
+	return cantontx.NewTx(cantonInput, args, decimals)
 }
 
 func (txBuilder TxBuilder) CreateAccount(args xcbuilder.CreateAccountArgs, input xc.CreateAccountTxInput) (xc.Tx, error) {

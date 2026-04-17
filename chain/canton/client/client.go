@@ -82,6 +82,17 @@ func validatorServiceUserIDFromToken(token string) (string, error) {
 	return claims.PreferredUsername, nil
 }
 
+func disclosedContractIDs(disclosedContracts []*v2.DisclosedContract) []string {
+	ids := make([]string, 0, len(disclosedContracts))
+	for _, disclosed := range disclosedContracts {
+		if disclosed == nil || disclosed.GetContractId() == "" {
+			continue
+		}
+		ids = append(ids, disclosed.GetContractId())
+	}
+	return ids
+}
+
 func fetchValidatorPartyID(ctx context.Context, restAPIURL string) (string, error) {
 	endpoint := strings.TrimRight(restAPIURL, "/") + "/api/validator/v0/validator-user"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
@@ -190,6 +201,9 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 
 // cantonUIToken acquires a canton-ui Keycloak token used for scan proxy HTTP calls.
 func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
+	if client.cantonUiKC == nil {
+		return "", errors.New("canton-ui auth client is not configured")
+	}
 	resp, err := client.cantonUiKC.AcquireCantonUiToken(ctx, client.cantonUiUsername, client.cantonUiPassword)
 	if err != nil {
 		return "", fmt.Errorf("failed to acquire canton-ui token: %w", err)
@@ -268,6 +282,202 @@ func (client *Client) PrepareTransferPreapprovalCommand(
 	return prepareResp, nil
 }
 
+func (client *Client) PrepareTokenTransferCommand(
+	ctx context.Context,
+	args xcbuilder.TransferArgs,
+	senderContracts []*v2.ActiveContract,
+	senderHoldings []*v2.ActiveContract,
+	decimals int32,
+) (*interactive.PrepareSubmissionResponse, error) {
+	transferPackageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-api-token-transfer-instruction-v1")
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve token transfer interface package: %w", err)
+	}
+
+	contract, ok := args.GetContract()
+	if !ok {
+		return nil, fmt.Errorf("missing token contract")
+	}
+	instrumentAdmin, instrumentID, ok := parseCantonTokenContract(contract)
+	if !ok {
+		return nil, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
+	}
+
+	inputHoldingCIDs := make([]string, 0, len(senderHoldings))
+	for _, holding := range senderHoldings {
+		created := holding.GetCreatedEvent()
+		owner, holdingAdmin, holdingID, _, ok := extractTokenHoldingView(created)
+		if !ok {
+			continue
+		}
+		if owner != string(args.GetFrom()) || holdingAdmin != instrumentAdmin || holdingID != instrumentID {
+			continue
+		}
+		inputHoldingCIDs = append(inputHoldingCIDs, created.GetContractId())
+	}
+	if len(inputHoldingCIDs) == 0 {
+		return nil, fmt.Errorf("no visible token holdings found for sender %s and %s#%s", args.GetFrom(), instrumentAdmin, instrumentID)
+	}
+
+	requestedAt := time.Now().UTC()
+	executeBefore := requestedAt.Add(24 * time.Hour)
+	choiceArgs := map[string]any{
+		"expectedAdmin": instrumentAdmin,
+		"transfer": map[string]any{
+			"sender":           string(args.GetFrom()),
+			"receiver":         string(args.GetTo()),
+			"amount":           transferAmountNumeric(args, decimals),
+			"instrumentId":     map[string]any{"admin": instrumentAdmin, "id": instrumentID},
+			"requestedAt":      requestedAt.Format(time.RFC3339Nano),
+			"executeBefore":    executeBefore.Format(time.RFC3339Nano),
+			"inputHoldingCids": inputHoldingCIDs,
+			"meta":             map[string]any{"values": map[string]string{}},
+		},
+		"extraArgs": map[string]any{
+			"context": map[string]any{"values": map[string]any{}},
+			"meta":    map[string]any{"values": map[string]string{}},
+		},
+	}
+	tryRegistry := func() (*interactive.PrepareSubmissionResponse, error) {
+		uiToken, err := client.cantonUIToken(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to acquire scan token for token transfer: %w", err)
+		}
+		packageMap, err := client.ledgerClient.ListKnownPackageIDsByName(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve package id map for token transfer disclosures: %w", err)
+		}
+		registryContext, err := client.ledgerClient.GetTokenTransferFactory(ctx, uiToken, choiceArgs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token transfer factory via registry: %w", err)
+		}
+		disclosedContracts, registrySynchronizerID, err := tokenDisclosedContractsToProto(registryContext.ChoiceContext.DisclosedContracts, packageMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert token transfer disclosures: %w", err)
+		}
+		cmd, err := buildTokenStandardTransferCommand(
+			args,
+			transferPackageID,
+			registryContext.FactoryID,
+			registryContext.ChoiceContext.ChoiceContextData,
+			senderHoldings,
+			decimals,
+			requestedAt,
+			executeBefore,
+		)
+		if err != nil {
+			return nil, err
+		}
+		commandID := cantonproto.NewCommandID()
+		synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), registrySynchronizerID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token transfer synchronizer: %w", err)
+		}
+		actAs := []string{string(args.GetFrom())}
+		readAs := []string{string(args.GetFrom())}
+		prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, actAs, readAs, []*v2.Command{cmd}, disclosedContracts)
+		client.ledgerClient.logger.WithFields(logrus.Fields{
+			"mode":                   "registry",
+			"contract":               contract,
+			"sender":                 args.GetFrom(),
+			"receiver":               args.GetTo(),
+			"amount":                 transferAmountNumeric(args, decimals),
+			"input_holding_cids":     inputHoldingCIDs,
+			"factory_contract_id":    registryContext.FactoryID,
+			"transfer_kind":          registryContext.TransferKind,
+			"command_id":             commandID,
+			"synchronizer_id":        synchronizerID,
+			"act_as":                 actAs,
+			"read_as":                readAs,
+			"disclosed_contract_ids": disclosedContractIDs(disclosedContracts),
+		}).Debug("canton token transfer: preparing registry-backed submission")
+		prepareResp, err := client.ledgerClient.PrepareSubmission(ctx, prepareReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare registry-backed TransferFactory_Transfer: %w", err)
+		}
+		return prepareResp, nil
+	}
+
+	tryLedgerFallback := func() (*interactive.PrepareSubmissionResponse, error) {
+		ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ledger end for token admin contracts: %w", err)
+		}
+		transferPackageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-api-token-transfer-instruction-v1")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token transfer interface package for ledger fallback: %w", err)
+		}
+		adminContracts, err := client.ledgerClient.GetTokenTransferFactoryContracts(ctx, instrumentAdmin, ledgerEnd, transferPackageID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch token transfer factory contracts for %s: %w", instrumentAdmin, err)
+		}
+		factoryCreated, err := resolveLedgerTokenTransferFactoryContract(adminContracts, instrumentAdmin, instrumentID)
+		if err != nil {
+			return nil, err
+		}
+		cmd, err := buildTokenStandardTransferCommand(
+			args,
+			transferPackageID,
+			factoryCreated.GetContractId(),
+			map[string]any{"values": map[string]any{}},
+			senderHoldings,
+			decimals,
+			requestedAt,
+			executeBefore,
+		)
+		if err != nil {
+			return nil, err
+		}
+		commandID := cantonproto.NewCommandID()
+		synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token transfer synchronizer: %w", err)
+		}
+		disclosedContracts := []*v2.DisclosedContract{{
+			TemplateId:       factoryCreated.GetTemplateId(),
+			ContractId:       factoryCreated.GetContractId(),
+			CreatedEventBlob: factoryCreated.GetCreatedEventBlob(),
+		}}
+		readAs := []string{string(args.GetFrom())}
+		if instrumentAdmin != string(args.GetFrom()) {
+			readAs = append(readAs, instrumentAdmin)
+		}
+		prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{string(args.GetFrom())}, readAs, []*v2.Command{cmd}, disclosedContracts)
+		client.ledgerClient.logger.WithFields(logrus.Fields{
+			"mode":                   "ledger-fallback",
+			"contract":               contract,
+			"sender":                 args.GetFrom(),
+			"receiver":               args.GetTo(),
+			"amount":                 transferAmountNumeric(args, decimals),
+			"input_holding_cids":     inputHoldingCIDs,
+			"factory_contract_id":    factoryCreated.GetContractId(),
+			"factory_template":       fmt.Sprintf("%s:%s", factoryCreated.GetTemplateId().GetModuleName(), factoryCreated.GetTemplateId().GetEntityName()),
+			"command_id":             commandID,
+			"synchronizer_id":        synchronizerID,
+			"act_as":                 []string{string(args.GetFrom())},
+			"read_as":                readAs,
+			"disclosed_contract_ids": disclosedContractIDs(disclosedContracts),
+		}).Debug("canton token transfer: preparing ledger-backed submission")
+		prepareResp, err := client.ledgerClient.PrepareSubmission(ctx, prepareReq)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare ledger-backed TransferFactory_Transfer: %w", err)
+		}
+		return prepareResp, nil
+	}
+
+	prepareResp, err := tryRegistry()
+	if err == nil {
+		return prepareResp, nil
+	}
+	client.ledgerClient.logger.WithError(err).WithField("contract", contract).Warn("registry-backed token transfer preparation failed, falling back to ledger token factory discovery")
+
+	prepareResp, fallbackErr := tryLedgerFallback()
+	if fallbackErr != nil {
+		return nil, fmt.Errorf("failed token transfer preparation via registry (%v) and ledger fallback (%w)", err, fallbackErr)
+	}
+	return prepareResp, nil
+}
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
 	from := args.GetFrom()
@@ -277,10 +487,37 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return input, fmt.Errorf("failed to get ledger end: %w", err)
 	}
+	input.LedgerEnd = ledgerEnd
 
 	senderContracts, err := client.ledgerClient.GetActiveContracts(ctx, string(from), ledgerEnd, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch active contracts: %w", err)
+	}
+
+	if contract, ok := args.GetContract(); ok && !client.Asset.GetChain().IsChain(contract) {
+		holdingPackageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-api-token-holding-v1")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token holding interface package: %w", err)
+		}
+		senderHoldings, err := client.ledgerClient.GetTokenHoldingContracts(ctx, string(from), ledgerEnd, holdingPackageID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch token holding contracts: %w", err)
+		}
+		decimals, err := resolveTransferTokenDecimals(ctx, client, args, contract)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token decimals: %w", err)
+		}
+		resp, err := client.PrepareTokenTransferCommand(ctx, args, senderContracts, senderHoldings, int32(decimals))
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare token transfer command: %w", err)
+		}
+
+		input.PreparedTransaction = resp.GetPreparedTransaction()
+		input.SubmissionId = NewCommandId()
+		input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
+		input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(client.Asset.TransactionActiveTime)
+		input.Decimals = int32(decimals)
+		return input, nil
 	}
 
 	// Check if the recipient has a TransferPreapproval contract.
@@ -291,7 +528,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 	isExternal := client.ledgerClient.HasTransferPreapprovalContract(ctx, recipientContracts)
 	input.IsExternalTransfer = isExternal
-	input.LedgerEnd = ledgerEnd
 
 	uiToken, err := client.cantonUIToken(ctx)
 	if err != nil {
@@ -324,6 +560,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	input.SubmissionId = NewCommandId()
 	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
 	input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(client.Asset.TransactionActiveTime)
+	input.Decimals = client.Asset.GetChain().Decimals
 
 	return input, nil
 }
@@ -397,10 +634,16 @@ func (client *Client) submitTransferTx(ctx context.Context, payload []byte) erro
 		"rpc":           "ExecuteSubmissionAndWait",
 		"submission_id": req.SubmissionId,
 		"parties":       parties,
+		"hashing":       req.HashingSchemeVersion.String(),
 	}).Trace("canton request")
 
 	_, err := client.ledgerClient.ExecuteSubmissionAndWait(ctx, andWaitReq)
 	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"submission_id": req.SubmissionId,
+			"parties":       parties,
+			"hashing":       req.HashingSchemeVersion.String(),
+		}).WithError(err).Warn("canton token transfer submit failed")
 		return fmt.Errorf("failed to submit Canton transaction: %w", err)
 	}
 	logrus.WithField("submission_id", req.SubmissionId).Trace("canton response: ExecuteSubmissionAndWait accepted")
@@ -802,6 +1045,13 @@ func parseCantonTokenContract(contract xc.ContractAddress) (string, string, bool
 	return parts[0], parts[1], true
 }
 
+func resolveTransferTokenDecimals(ctx context.Context, client *Client, args xcbuilder.TransferArgs, contract xc.ContractAddress) (int, error) {
+	if decimals, ok := args.GetDecimals(); ok {
+		return decimals, nil
+	}
+	return client.FetchDecimals(ctx, contract)
+}
+
 func getRecordFieldValue(record *v2.Record, key string) (*v2.Value, bool) {
 	if record == nil {
 		return nil, false
@@ -978,8 +1228,32 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	if assetCfg, ok := client.Asset.FindAdditionalNativeAsset(contract); ok && assetCfg.Decimals > 0 {
 		return int(assetCfg.Decimals), nil
 	}
-	if _, _, ok := parseCantonTokenContract(contract); ok {
-		return int(client.Asset.GetChain().GetDecimals()), nil
+	instrumentAdmin, instrumentID, ok := parseCantonTokenContract(contract)
+	if ok {
+		uiToken, err := client.cantonUIToken(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to acquire canton-ui token for decimals lookup: %w", err)
+		}
+		registryInfo, err := client.ledgerClient.GetTokenMetadataRegistryInfo(ctx, uiToken)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch token metadata registry info for Canton token contract %q: %w", contract, err)
+		}
+		if registryInfo.AdminID != instrumentAdmin {
+			return 0, fmt.Errorf(
+				"token metadata registry admin mismatch for Canton token contract %q: registry admin %q does not match instrument admin %q",
+				contract,
+				registryInfo.AdminID,
+				instrumentAdmin,
+			)
+		}
+		metadata, err := client.ledgerClient.GetTokenInstrumentMetadata(ctx, uiToken, instrumentID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch token metadata for Canton token contract %q: %w", contract, err)
+		}
+		if metadata.Decimals < 0 {
+			return 0, fmt.Errorf("invalid negative decimals %d for Canton token contract %q", metadata.Decimals, contract)
+		}
+		return int(metadata.Decimals), nil
 	}
 	return 0, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
 }

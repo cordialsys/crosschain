@@ -9,6 +9,10 @@ Create a live DummyHolding token contract on a Canton participant using grpcurl.
 This targets the example token implementation package:
   splice-token-test-dummy-holding
 
+This example is useful for balance/read-path testing only.
+It does not implement TransferFactory / TransferInstruction, so it is not a
+transfer-capable token-standard implementation.
+
 Required environment variables:
   PARTICIPANT_HOST   gRPC host:port of the participant
   AUTH_TOKEN         Bearer token value, unless AUTH_HEADER is provided

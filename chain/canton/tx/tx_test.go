@@ -25,15 +25,41 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 
 	vectors := []struct {
 		name       string
+		args       xcbuilder.TransferArgs
 		preparedTx *interactive.PreparedTransaction
 	}{
 		{
-			name:       "transfer_offer",
+			name: "transfer_offer",
+			args: func() xcbuilder.TransferArgs {
+				args, err := xcbuilder.NewTransferArgs(chainCfg, from, to, amount)
+				if err != nil {
+					panic(err)
+				}
+				return args
+			}(),
 			preparedTx: txPreparedTransaction("1", txCreateNode("TransferOffer", txTransferOfferArgument(string(to), "10.0"))),
 		},
 		{
-			name:       "transfer_preapproval_send",
+			name: "transfer_preapproval_send",
+			args: func() xcbuilder.TransferArgs {
+				args, err := xcbuilder.NewTransferArgs(chainCfg, from, to, amount)
+				if err != nil {
+					panic(err)
+				}
+				return args
+			}(),
 			preparedTx: txPreparedTransaction("1", txExerciseNode("TransferPreapproval_Send", txAmountRecord("10.0"))),
+		},
+		{
+			name: "token_transfer_factory",
+			args: func() xcbuilder.TransferArgs {
+				args, err := xcbuilder.NewTransferArgs(chainCfg, from, to, amount, xcbuilder.OptionContractAddress(xc.ContractAddress("issuer-party#XC")))
+				if err != nil {
+					panic(err)
+				}
+				return args
+			}(),
+			preparedTx: txPreparedTransaction("1", txExerciseNode("TransferFactory_Transfer", txTransferFactoryArgument(string(to), "issuer-party", "XC", "10.0"))),
 		},
 	}
 
@@ -42,16 +68,13 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 		t.Run(vector.name, func(t *testing.T) {
 			t.Parallel()
 
-			args, err := xcbuilder.NewTransferArgs(chainCfg, from, to, amount)
-			require.NoError(t, err)
-
 			input := &tx_input.TxInput{
 				PreparedTransaction: vector.preparedTx,
 				LedgerEnd:           12345,
 				SubmissionId:        "submission-id",
 			}
 
-			tx, err := cantontx.NewTx(input, args, 1)
+			tx, err := cantontx.NewTx(input, vector.args, 1)
 			require.NoError(t, err)
 
 			hash, err := tx_input.ComputePreparedTransactionHash(vector.preparedTx)
@@ -63,6 +86,79 @@ func TestNewTx_UsesPreparedTransactionForTransferFlows(t *testing.T) {
 			require.Equal(t, hash, sighashes[0].Payload)
 			require.Equal(t, xc.TxHash("12345-submission-id"), tx.Hash())
 		})
+	}
+}
+
+func TestNewTx_RejectsTokenTransferWithMismatchedContract(t *testing.T) {
+	t.Parallel()
+
+	from := xc.Address("sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	to := xc.Address("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+	args, err := xcbuilder.NewTransferArgs(
+		&xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(100),
+		xcbuilder.OptionContractAddress(xc.ContractAddress("issuer-party#XC")),
+	)
+	require.NoError(t, err)
+
+	input := &tx_input.TxInput{
+		PreparedTransaction: txPreparedTransaction("1", txExerciseNode("TransferFactory_Transfer", txTransferFactoryArgument(string(to), "other-issuer", "XC", "10.0"))),
+		LedgerEnd:           12345,
+		SubmissionId:        "submission-id",
+	}
+
+	_, err = cantontx.NewTx(input, args, 1)
+	require.ErrorContains(t, err, "instrument admin mismatch")
+}
+
+func txTransferFactoryArgument(receiver string, admin string, instrumentID string, amount string) *v2.Value {
+	return &v2.Value{
+		Sum: &v2.Value_Record{
+			Record: &v2.Record{
+				Fields: []*v2.RecordField{
+					{
+						Label: "transfer",
+						Value: &v2.Value{
+							Sum: &v2.Value_Record{
+								Record: &v2.Record{
+									Fields: []*v2.RecordField{
+										{
+											Label: "receiver",
+											Value: &v2.Value{Sum: &v2.Value_Party{Party: receiver}},
+										},
+										{
+											Label: "amount",
+											Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}},
+										},
+										{
+											Label: "instrumentId",
+											Value: &v2.Value{
+												Sum: &v2.Value_Record{
+													Record: &v2.Record{
+														Fields: []*v2.RecordField{
+															{
+																Label: "admin",
+																Value: &v2.Value{Sum: &v2.Value_Party{Party: admin}},
+															},
+															{
+																Label: "id",
+																Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

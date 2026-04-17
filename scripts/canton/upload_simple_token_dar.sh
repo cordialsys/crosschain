@@ -4,10 +4,10 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Upload a concrete Canton token implementation DAR to a participant using grpcurl.
+Upload the simple transfer-capable token implementation DAR to a Canton participant.
 
-This script targets the smallest token-standard example implementation:
-  splice-token-test-dummy-holding
+This targets:
+  splice-token-test-simple-transfer
 
 Required environment variables:
   PARTICIPANT_HOST   gRPC host:port of the participant
@@ -19,11 +19,7 @@ Optional environment variables:
   PACKAGE_PROTO      Defaults to com/daml/ledger/api/v2/admin/package_management_service.proto
   VALIDATE_FIRST     Defaults to 1. Set to 0 to skip ValidateDarFile calls.
   LIST_AFTER         Defaults to 1. Set to 0 to skip ListKnownPackages at the end.
-  TOKEN_IMPL_DAR     Defaults to the built dummy holding DAR in the Splice repo.
-
-Before using this script:
-  1. Upload the token-standard interface DARs first.
-  2. Build the implementation DAR if it is missing.
+  TOKEN_IMPL_DAR     Defaults to the built simple transfer DAR in the Splice repo.
 EOF
 }
 
@@ -39,18 +35,10 @@ PROTO_ROOT="${PROTO_ROOT:-$HOME/Source/splice/canton/community/ledger-api/src/ma
 PACKAGE_PROTO="${PACKAGE_PROTO:-com/daml/ledger/api/v2/admin/package_management_service.proto}"
 VALIDATE_FIRST="${VALIDATE_FIRST:-1}"
 LIST_AFTER="${LIST_AFTER:-1}"
-TOKEN_IMPL_DAR="${TOKEN_IMPL_DAR:-$HOME/Source/splice/token-standard/examples/splice-token-test-dummy-holding/.daml/dist/splice-token-test-dummy-holding-0.0.2.dar}"
+TOKEN_IMPL_DAR="${TOKEN_IMPL_DAR:-$HOME/Source/splice/token-standard/examples/splice-token-test-simple-transfer/.daml/dist/splice-token-test-simple-transfer-0.0.1.dar}"
 
 if [[ ! -f "$TOKEN_IMPL_DAR" ]]; then
   echo "DAR not found: $TOKEN_IMPL_DAR" >&2
-  echo "Build it first, for example:" >&2
-  echo '  cd ~/Source/splice/token-standard/examples/splice-token-test-dummy-holding' >&2
-  echo '  ~/.cache/daml-build/3.3.0-snapshot.20250502.13767.0.v2fc6c7e2/damlc/damlc build' >&2
-  exit 1
-fi
-
-if [[ ! -f "$PROTO_ROOT/$PACKAGE_PROTO" ]]; then
-  echo "Proto not found: $PROTO_ROOT/$PACKAGE_PROTO" >&2
   exit 1
 fi
 
@@ -110,27 +98,14 @@ json_for_dar() {
   fi
 }
 
-validate_dar() {
-  local dar="$1"
-  local sid="validate-$(basename "$dar")-$(date +%s)"
-  json_for_dar "$dar" "$sid" "validate" | grpc_call "com.daml.ledger.api.v2.admin.PackageManagementService/ValidateDarFile"
-}
-
-upload_dar() {
-  local dar="$1"
-  local sid="upload-$(basename "$dar")-$(date +%s)"
-  json_for_dar "$dar" "$sid" "upload" | grpc_call "com.daml.ledger.api.v2.admin.PackageManagementService/UploadDarFile"
-}
-
-echo "==> $(basename "$TOKEN_IMPL_DAR")"
 if [[ "$VALIDATE_FIRST" == "1" ]]; then
-  echo "    validating"
-  validate_dar "$TOKEN_IMPL_DAR"
+  sid="validate-$(basename "$TOKEN_IMPL_DAR")-$(date +%s)"
+  json_for_dar "$TOKEN_IMPL_DAR" "$sid" "validate" | grpc_call "com.daml.ledger.api.v2.admin.PackageManagementService/ValidateDarFile"
 fi
-echo "    uploading"
-upload_dar "$TOKEN_IMPL_DAR"
+
+sid="upload-$(basename "$TOKEN_IMPL_DAR")-$(date +%s)"
+json_for_dar "$TOKEN_IMPL_DAR" "$sid" "upload" | grpc_call "com.daml.ledger.api.v2.admin.PackageManagementService/UploadDarFile"
 
 if [[ "$LIST_AFTER" == "1" ]]; then
-  echo "==> listing known packages"
   printf '{}' | grpc_call "com.daml.ledger.api.v2.admin.PackageManagementService/ListKnownPackages"
 fi
