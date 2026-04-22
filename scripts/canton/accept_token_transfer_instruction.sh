@@ -54,7 +54,7 @@ if [[ -z "$TRANSFER_PACKAGE_ID" ]]; then
   exit 1
 fi
 
-REGISTRY_REQUEST='{"meta":{"values":{}}}'
+REGISTRY_REQUEST='{}'
 REGISTRY_RESPONSE="$(canton_scan_api_post "/registry/transfer-instruction/v1/${TRANSFER_INSTRUCTION_ID}/choice-contexts/accept" "$REGISTRY_REQUEST")"
 
 if ! jq -e '.choiceContextData and .disclosedContracts' >/dev/null <<<"$REGISTRY_RESPONSE"; then

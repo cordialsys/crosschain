@@ -33,8 +33,11 @@ canton_resolve_scan_auth_header() {
     printf '%s\n' "$SCAN_AUTH_HEADER"
     return 0
   fi
-  : "${SCAN_AUTH_TOKEN:?SCAN_AUTH_TOKEN is required unless SCAN_AUTH_HEADER is provided}"
-  printf 'Bearer %s\n' "$SCAN_AUTH_TOKEN"
+  if [[ -n "${SCAN_AUTH_TOKEN:-}" ]]; then
+    printf 'Bearer %s\n' "$SCAN_AUTH_TOKEN"
+    return 0
+  fi
+  return 1
 }
 
 canton_grpc_call() {
@@ -176,12 +179,12 @@ canton_scan_api_post() {
   local tmp
   local payload
 
-  scan_auth_header="$(canton_resolve_scan_auth_header)"
   tmp="$(mktemp)"
   base_url="${SCAN_API_URL:-${REGISTRY_BASE_URL:-}}"
 
   if [[ -n "${SCAN_PROXY_URL:-}" ]]; then
     : "${base_url:?SCAN_API_URL is required when SCAN_PROXY_URL is used}"
+    scan_auth_header="$(canton_resolve_scan_auth_header)"
     payload="$(
       jq -cn \
         --arg url "${base_url%/}${path}" \
@@ -204,14 +207,25 @@ canton_scan_api_post() {
     fi
   else
     : "${base_url:?SCAN_API_URL or REGISTRY_BASE_URL is required when SCAN_PROXY_URL is not set}"
-    if ! curl -fsSL \
-      -H "Authorization: $scan_auth_header" \
-      -H "Content-Type: application/json" \
-      -d "$body_json" \
-      "${base_url%/}${path}" >"$tmp"; then
-      cat "$tmp" >&2 || true
-      rm -f "$tmp"
-      return 1
+    if scan_auth_header="$(canton_resolve_scan_auth_header)"; then
+      if ! curl -fsSL \
+        -H "Authorization: $scan_auth_header" \
+        -H "Content-Type: application/json" \
+        -d "$body_json" \
+        "${base_url%/}${path}" >"$tmp"; then
+        cat "$tmp" >&2 || true
+        rm -f "$tmp"
+        return 1
+      fi
+    else
+      if ! curl -fsSL \
+        -H "Content-Type: application/json" \
+        -d "$body_json" \
+        "${base_url%/}${path}" >"$tmp"; then
+        cat "$tmp" >&2 || true
+        rm -f "$tmp"
+        return 1
+      fi
     fi
   fi
 
@@ -226,12 +240,12 @@ canton_scan_api_get() {
   local tmp
   local payload
 
-  scan_auth_header="$(canton_resolve_scan_auth_header)"
   tmp="$(mktemp)"
   base_url="${SCAN_API_URL:-${REGISTRY_BASE_URL:-}}"
 
   if [[ -n "${SCAN_PROXY_URL:-}" ]]; then
     : "${base_url:?SCAN_API_URL is required when SCAN_PROXY_URL is used}"
+    scan_auth_header="$(canton_resolve_scan_auth_header)"
     payload="$(
       jq -cn \
         --arg url "${base_url%/}${path}" \
@@ -252,12 +266,21 @@ canton_scan_api_get() {
     fi
   else
     : "${base_url:?SCAN_API_URL or REGISTRY_BASE_URL is required when SCAN_PROXY_URL is not set}"
-    if ! curl -fsSL \
-      -H "Authorization: $scan_auth_header" \
-      "${base_url%/}${path}" >"$tmp"; then
-      cat "$tmp" >&2 || true
-      rm -f "$tmp"
-      return 1
+    if scan_auth_header="$(canton_resolve_scan_auth_header)"; then
+      if ! curl -fsSL \
+        -H "Authorization: $scan_auth_header" \
+        "${base_url%/}${path}" >"$tmp"; then
+        cat "$tmp" >&2 || true
+        rm -f "$tmp"
+        return 1
+      fi
+    else
+      if ! curl -fsSL \
+        "${base_url%/}${path}" >"$tmp"; then
+        cat "$tmp" >&2 || true
+        rm -f "$tmp"
+        return 1
+      fi
     fi
   fi
 

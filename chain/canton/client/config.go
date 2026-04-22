@@ -19,6 +19,11 @@ type CantonConfig struct {
 	ScanProxyURL string `yaml:"scan_proxy_url,omitempty"`
 	// ScanAPIURL is the upstream Scan node base URL that the proxy targets on our behalf.
 	ScanAPIURL string `yaml:"scan_api_url,omitempty"`
+	// TokenRegistryAdminURLs maps token instrument-admin party ids to registry base URLs.
+	TokenRegistryAdminURLs map[string]string `yaml:"token_registry_admin_urls,omitempty"`
+	// UtilitiesRegistryBaseURL is the base URL prefix for Utilities token-standard registrars.
+	// Example: https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars
+	UtilitiesRegistryBaseURL string `yaml:"utilities_registry_base_url,omitempty"`
 
 	// ValidatorAuth is validator client_credentials auth in id:secret form.
 	ValidatorAuth config.Secret `yaml:"validator_auth,omitempty"`

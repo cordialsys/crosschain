@@ -82,6 +82,7 @@ func TestFetchDecimals(t *testing.T) {
 			},
 			ChainClientConfig: &xc.ChainClientConfig{},
 		},
+		cantonCfg: &CantonConfig{},
 		ledgerClient: &GrpcLedgerClient{
 			scanProxyURL: "https://proxy.example",
 			scanAPIURL:   "https://scan.example",
@@ -152,16 +153,17 @@ func TestFetchDecimalsReturnsMetadataLookupErrorForUnknownCantonToken(t *testing
 	}))
 	defer keycloakServer.Close()
 
-	client := &Client{
-		Asset: &xc.ChainConfig{
+		client := &Client{
+			Asset: &xc.ChainConfig{
 			ChainBaseConfig: &xc.ChainBaseConfig{
 				Chain:    xc.CANTON,
 				Driver:   xc.DriverCanton,
 				Decimals: 18,
 			},
-			ChainClientConfig: &xc.ChainClientConfig{},
-		},
-		ledgerClient: &GrpcLedgerClient{
+				ChainClientConfig: &xc.ChainClientConfig{},
+			},
+			cantonCfg: &CantonConfig{},
+			ledgerClient: &GrpcLedgerClient{
 			scanProxyURL: "https://proxy.example",
 			scanAPIURL:   "https://scan.example",
 			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -203,27 +205,30 @@ func TestFetchDecimalsReturnsErrorWhenRegistryAdminDoesNotMatchInstrumentAdmin(t
 	}))
 	defer keycloakServer.Close()
 
-	client := &Client{
-		Asset: &xc.ChainConfig{
-			ChainBaseConfig: &xc.ChainBaseConfig{
-				Chain:    xc.CANTON,
-				Driver:   xc.DriverCanton,
-				Decimals: 18,
+		client := &Client{
+			Asset: &xc.ChainConfig{
+				ChainBaseConfig: &xc.ChainBaseConfig{
+					Chain:    xc.CANTON,
+					Driver:   xc.DriverCanton,
+					Decimals: 18,
+				},
+				ChainClientConfig: &xc.ChainClientConfig{},
 			},
-			ChainClientConfig: &xc.ChainClientConfig{},
-		},
-		ledgerClient: &GrpcLedgerClient{
-			scanProxyURL: "https://proxy.example",
-			scanAPIURL:   "https://scan.example",
-			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				var envelope scanProxyRequest
-				require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
-				require.Equal(t, http.MethodGet, envelope.Method)
-				require.Equal(t, "https://scan.example/registry/metadata/v1/info", envelope.URL)
-				return httpJSONResponse(http.StatusOK, `{
-					"adminId":"other-admin",
-					"supportedApis":{}
-				}`), nil
+			cantonCfg: &CantonConfig{
+				TokenRegistryAdminURLs: map[string]string{
+					"issuer-party": "https://registry.example",
+				},
+			},
+			ledgerClient: &GrpcLedgerClient{
+				scanProxyURL: "https://proxy.example",
+				scanAPIURL:   "https://scan.example",
+				httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+					require.Equal(t, http.MethodGet, req.Method)
+					require.Equal(t, "https://registry.example/registry/metadata/v1/info", req.URL.String())
+					return httpJSONResponse(http.StatusOK, `{
+						"adminId":"other-admin",
+						"supportedApis":{}
+					}`), nil
 			})},
 			logger: logrus.NewEntry(logrus.New()),
 		},
@@ -257,6 +262,13 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 					},
 				},
 			},
+			{
+				ContractEntry: &v2.GetActiveContractsResponse_ActiveContract{
+					ActiveContract: &v2.ActiveContract{
+						CreatedEvent: testTokenHoldingCreatedEvent("other-owner", "issuer-party", "DummyHolding", "88.0"),
+					},
+				},
+			},
 		},
 	}
 	packageStub := &packageManagementStub{
@@ -275,20 +287,43 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 			},
 			ChainClientConfig: &xc.ChainClientConfig{},
 		},
+		cantonCfg: &CantonConfig{
+			TokenRegistryAdminURLs: map[string]string{
+				"issuer-party": "https://registry.example",
+			},
+		},
 		ledgerClient: &GrpcLedgerClient{
 			authToken:               "token",
 			stateClient:             stateStub,
 			packageManagementClient: packageStub,
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, http.MethodGet, req.Method)
+				require.Equal(t, "", req.Header.Get("Authorization"))
+				switch req.URL.String() {
+				case "https://registry.example/registry/metadata/v1/info":
+					return httpJSONResponse(http.StatusOK, `{
+						"adminId":"issuer-party",
+						"supportedApis":{}
+					}`), nil
+				case "https://registry.example/registry/metadata/v1/instruments/DummyHolding":
+					return httpJSONResponse(http.StatusOK, `{
+						"id":"DummyHolding",
+						"name":"Dummy Holding",
+						"symbol":"DUMMY",
+						"decimals":6,
+						"supportedApis":{}
+					}`), nil
+				default:
+					return nil, fmt.Errorf("unexpected registry URL %q", req.URL.String())
+				}
+			})},
 			logger:                  logrus.NewEntry(logrus.New()),
 		},
-	}
-	client.Asset.NativeAssets = []*xc.AdditionalNativeAsset{
-		xc.NewAdditionalNativeAsset("DUMMY", "", xc.ContractAddress("issuer-party#DummyHolding"), 10, xc.AmountHumanReadable{}),
 	}
 
 	balance, err := client.FetchBalance(context.Background(), xclient.NewBalanceArgs(party, xclient.BalanceOptionContract(xc.ContractAddress("issuer-party#DummyHolding"))))
 	require.NoError(t, err)
-	require.Equal(t, "123456789012", balance.String())
+	require.Equal(t, "12345678", balance.String())
 	require.NotNil(t, stateStub.lastActiveContractsReq)
 	require.Contains(t, stateStub.lastActiveContractsReq.GetEventFormat().GetFiltersByParty(), "owner-party")
 	filter := stateStub.lastActiveContractsReq.GetEventFormat().GetFiltersByParty()["owner-party"].GetCumulative()[0].GetInterfaceFilter()
@@ -297,6 +332,51 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 	require.Equal(t, "Splice.Api.Token.HoldingV1", filter.GetInterfaceId().GetModuleName())
 	require.Equal(t, "Holding", filter.GetInterfaceId().GetEntityName())
 	require.True(t, filter.GetIncludeInterfaceView())
+}
+
+func TestFetchDecimalsResolvesUtilitiesRegistrarByInstrumentAdmin(t *testing.T) {
+	t.Parallel()
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 18,
+				Network:  string(xc.NotMainnets),
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		cantonCfg: &CantonConfig{},
+		ledgerClient: &GrpcLedgerClient{
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, http.MethodGet, req.Method)
+				require.Equal(t, "", req.Header.Get("Authorization"))
+				switch req.URL.String() {
+				case "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f/registry/metadata/v1/info":
+					return httpJSONResponse(http.StatusOK, `{
+						"adminId":"cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+						"supportedApis":{}
+					}`), nil
+				case "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f/registry/metadata/v1/instruments/CBTC":
+					return httpJSONResponse(http.StatusOK, `{
+						"id":"CBTC",
+						"name":"CBTC",
+						"symbol":"CBTC",
+						"decimals":8,
+						"supportedApis":{}
+					}`), nil
+				default:
+					return nil, fmt.Errorf("unexpected utilities registry URL %q", req.URL.String())
+				}
+			})},
+			logger: logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	decimals, err := client.FetchDecimals(context.Background(), xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"))
+	require.NoError(t, err)
+	require.Equal(t, 8, decimals)
 }
 
 func TestValidatorServiceUserIDFromToken(t *testing.T) {
@@ -586,6 +666,142 @@ func TestFetchTxInfoLeavesMovementsEmptyWhenEventsDoNotExposeSender(t *testing.T
 	info, err := client.FetchTxInfo(context.Background(), txinfo.NewArgs("update-self", txinfo.OptionSender(xc.Address(sender))))
 	require.NoError(t, err)
 	require.Empty(t, info.Movements)
+}
+
+func TestFetchTxInfoParsesTokenTransferInstructionAcceptMovement(t *testing.T) {
+	t.Parallel()
+
+	sender := "sender::1220dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	receiver := "receiver::1220eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	updateStub := &updateServiceStub{
+		resp: &v2.GetUpdateResponse{
+			Update: &v2.GetUpdateResponse_Transaction{
+				Transaction: &v2.Transaction{
+					UpdateId:       "update-token-accept",
+					Offset:         105,
+					SynchronizerId: "sync-id",
+					EffectiveAt:    timestamppb.New(time.Unix(1700000000, 0)),
+					Events: []*v2.Event{
+						{
+							Event: &v2.Event_Exercised{
+								Exercised: &v2.ExercisedEvent{
+									NodeId:               1,
+									LastDescendantNodeId: 2,
+									ContractId:           "transfer-instruction-cid",
+									TemplateId: &v2.Identifier{
+										ModuleName: "Splice.Api.Token.Test.SimpleTransferToken",
+										EntityName: "SimpleTokenTransferInstruction",
+									},
+									InterfaceId: &v2.Identifier{
+										PackageId:  "transfer-package-id",
+										ModuleName: "Splice.Api.Token.TransferInstructionV1",
+										EntityName: "TransferInstruction",
+									},
+									Choice:        "TransferInstruction_Accept",
+									ChoiceArgument: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{}}},
+									ActingParties: []string{receiver},
+									Consuming:    true,
+									WitnessParties: []string{
+										sender,
+										receiver,
+									},
+								},
+							},
+						},
+						{
+							Event: &v2.Event_Created{
+								Created: testTokenHoldingCreatedEventWithNodeID(
+									"receiver-holding-cid",
+									2,
+									receiver,
+									"issuer-party",
+									"XC",
+									"10.0",
+								),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	eventQueryStub := &eventQueryServiceStub{
+		resp: &v2.GetEventsByContractIdResponse{
+			Created: &v2.Created{
+				CreatedEvent: testTokenTransferInstructionCreatedEvent(
+					"transfer-instruction-cid",
+					sender,
+					receiver,
+					"issuer-party",
+					"XC",
+					"10.0",
+				),
+			},
+		},
+	}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 6,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{
+				Confirmations: xc.ConfirmationsConfig{Final: 1},
+			},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:        "token",
+			stateClient:      &stateServiceStub{ledgerEnd: 110},
+			updateClient:     updateStub,
+			eventQueryClient: eventQueryStub,
+			logger:           logrus.NewEntry(logrus.New()),
+			packageManagementClient: &packageManagementStub{
+				resp: &admin.ListKnownPackagesResponse{
+					PackageDetails: []*admin.PackageDetails{
+						{
+							Name:      "splice-api-token-transfer-instruction-v1",
+							PackageId: "transfer-package-id",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	owner, admin, instrumentID, amount, ok := extractTokenHoldingView(updateStub.resp.GetTransaction().GetEvents()[1].GetCreated())
+	require.True(t, ok)
+	require.Equal(t, receiver, owner)
+	require.Equal(t, "issuer-party", admin)
+	require.Equal(t, "XC", instrumentID)
+	require.Equal(t, "10.0", amount)
+
+	movements, err := client.extractTokenMovementsFromExercise(
+		context.Background(),
+		sender,
+		updateStub.resp.GetTransaction().GetEvents()[0].GetExercised(),
+		[]tokenHoldingCreation{{
+			nodeID:          2,
+			owner:           receiver,
+			instrumentAdmin: "issuer-party",
+			instrumentID:    "XC",
+			amount:          "10.0",
+		}},
+		func(contract xc.ContractAddress) int32 { return 6 },
+	)
+	require.NoError(t, err)
+	require.Len(t, movements, 1)
+
+	info, err := client.FetchTxInfo(context.Background(), txinfo.NewArgs("update-token-accept", txinfo.OptionSender(xc.Address(sender))))
+	require.NoError(t, err)
+	require.Len(t, info.Movements, 1)
+	require.Equal(t, xc.ContractAddress("issuer-party#XC"), info.Movements[0].AssetId)
+	require.Equal(t, xc.Address(sender), info.Movements[0].From[0].AddressId)
+	require.Equal(t, xc.Address(receiver), info.Movements[0].To[0].AddressId)
+	require.Equal(t, "10000000", info.Movements[0].From[0].Balance.String())
+	require.NotNil(t, eventQueryStub.lastReq)
+	require.Equal(t, "transfer-instruction-cid", eventQueryStub.lastReq.GetContractId())
+	require.Contains(t, eventQueryStub.lastReq.GetEventFormat().GetFiltersByParty(), sender)
 }
 
 func TestExtractTransferFeeSupportsTransferPreapprovalSendResult(t *testing.T) {
@@ -1405,6 +1621,17 @@ func (s *updateServiceStub) GetUpdateByOffset(context.Context, *v2.GetUpdateByOf
 	panic("unexpected call")
 }
 
+type eventQueryServiceStub struct {
+	lastReq *v2.GetEventsByContractIdRequest
+	resp    *v2.GetEventsByContractIdResponse
+	err     error
+}
+
+func (s *eventQueryServiceStub) GetEventsByContractId(_ context.Context, req *v2.GetEventsByContractIdRequest, _ ...grpc.CallOption) (*v2.GetEventsByContractIdResponse, error) {
+	s.lastReq = req
+	return s.resp, s.err
+}
+
 type stateServiceStub struct {
 	ledgerEnd                  int64
 	lastActiveContractsReq     *v2.GetActiveContractsRequest
@@ -1530,6 +1757,26 @@ func testAmuletCreatedEvent(owner string, initialAmount string) *v2.CreatedEvent
 func testTokenHoldingCreatedEvent(owner string, issuer string, instrumentID string, amount string) *v2.CreatedEvent {
 	return &v2.CreatedEvent{
 		ContractId: "token-contract-id",
+		CreateArguments: &v2.Record{
+			Fields: []*v2.RecordField{
+				{
+					Label: "owner",
+					Value: &v2.Value{Sum: &v2.Value_Party{Party: owner}},
+				},
+				{
+					Label: "admin",
+					Value: &v2.Value{Sum: &v2.Value_Party{Party: issuer}},
+				},
+				{
+					Label: "symbol",
+					Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}},
+				},
+				{
+					Label: "amount",
+					Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}},
+				},
+			},
+		},
 		InterfaceViews: []*v2.InterfaceView{
 			{
 				InterfaceId: &v2.Identifier{
@@ -1579,6 +1826,13 @@ func testTokenHoldingCreatedEventWithContractID(contractID string, owner string,
 	return event
 }
 
+func testTokenHoldingCreatedEventWithNodeID(contractID string, nodeID int32, owner string, issuer string, instrumentID string, amount string) *v2.CreatedEvent {
+	event := testTokenHoldingCreatedEventWithContractID(contractID, owner, issuer, instrumentID, amount)
+	event.NodeId = nodeID
+	event.InterfaceViews = nil
+	return event
+}
+
 func testTokenTransferFactoryCreatedEvent(contractID string, admin string, instrumentID string) *v2.CreatedEvent {
 	return &v2.CreatedEvent{
 		ContractId: contractID,
@@ -1600,6 +1854,52 @@ func testTokenTransferFactoryCreatedEvent(contractID string, admin string, instr
 						{
 							Label: "admin",
 							Value: &v2.Value{Sum: &v2.Value_Party{Party: admin}},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func testTokenTransferInstructionCreatedEvent(contractID string, sender string, receiver string, admin string, instrumentID string, amount string) *v2.CreatedEvent {
+	return &v2.CreatedEvent{
+		ContractId: contractID,
+		InterfaceViews: []*v2.InterfaceView{
+			{
+				InterfaceId: &v2.Identifier{
+					PackageId:  "transfer-package-id",
+					ModuleName: "Splice.Api.Token.TransferInstructionV1",
+					EntityName: "TransferInstruction",
+				},
+				ViewValue: &v2.Record{
+					Fields: []*v2.RecordField{
+						{
+							Label: "transfer",
+							Value: &v2.Value{
+								Sum: &v2.Value_Record{
+									Record: &v2.Record{
+										Fields: []*v2.RecordField{
+											{Label: "sender", Value: &v2.Value{Sum: &v2.Value_Party{Party: sender}}},
+											{Label: "receiver", Value: &v2.Value{Sum: &v2.Value_Party{Party: receiver}}},
+											{Label: "amount", Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}}},
+											{
+												Label: "instrumentId",
+												Value: &v2.Value{
+													Sum: &v2.Value_Record{
+														Record: &v2.Record{
+															Fields: []*v2.RecordField{
+																{Label: "admin", Value: &v2.Value{Sum: &v2.Value_Party{Party: admin}}},
+																{Label: "id", Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}}},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},

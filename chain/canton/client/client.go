@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -43,6 +44,7 @@ type Client struct {
 
 	cantonUiUsername string
 	cantonUiPassword string
+	cantonCfg        *CantonConfig
 }
 
 var _ xclient.Client = &Client{}
@@ -169,6 +171,7 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 		cantonUiKC:       cantonkc.NewClient(cantonCfg.KeycloakURL, cantonCfg.KeycloakRealm, validatorAuthID, validatorAuthSecret, validatorPartyID),
 		cantonUiUsername: cantonUiUsername,
 		cantonUiPassword: cantonUiPassword,
+		cantonCfg:        cantonCfg,
 	}
 
 	authToken, err := client.validatorKC.AdminToken(context.Background())
@@ -209,6 +212,52 @@ func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to acquire canton-ui token: %w", err)
 	}
 	return resp.AccessToken, nil
+}
+
+func (client *Client) defaultUtilitiesRegistryBaseURL() string {
+	if client == nil || client.cantonCfg == nil {
+		return ""
+	}
+	if client.cantonCfg.UtilitiesRegistryBaseURL != "" {
+		return strings.TrimRight(client.cantonCfg.UtilitiesRegistryBaseURL, "/")
+	}
+	switch client.Asset.GetChain().Network {
+	case string(xc.Mainnets):
+		return "https://api.utilities.digitalasset.com/api/token-standard/v0/registrars"
+	default:
+		return "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars"
+	}
+}
+
+func encodeTokenRegistrarAdmin(admin string) string {
+	return strings.ReplaceAll(url.QueryEscape(admin), "+", "%20")
+}
+
+func (client *Client) resolveTokenRegistryBaseURL(ctx context.Context, instrumentAdmin string) (string, string, error) {
+	if instrumentAdmin == "" {
+		return "", "", errors.New("empty instrument admin")
+	}
+	if client != nil && client.cantonCfg != nil {
+		if baseURL := strings.TrimRight(client.cantonCfg.TokenRegistryAdminURLs[instrumentAdmin], "/"); baseURL != "" {
+			return baseURL, "", nil
+		}
+	}
+
+	if client != nil && client.ledgerClient != nil && client.ledgerClient.scanAPIURL != "" && client.ledgerClient.scanProxyURL != "" {
+		uiToken, err := client.cantonUIToken(ctx)
+		if err == nil {
+			registryInfo, infoErr := client.ledgerClient.GetTokenMetadataRegistryInfo(ctx, uiToken)
+			if infoErr == nil && registryInfo.AdminID == instrumentAdmin {
+				return strings.TrimRight(client.ledgerClient.scanAPIURL, "/"), uiToken, nil
+			}
+		}
+	}
+
+	if utilitiesBase := client.defaultUtilitiesRegistryBaseURL(); utilitiesBase != "" {
+		return utilitiesBase + "/" + encodeTokenRegistrarAdmin(instrumentAdmin), "", nil
+	}
+
+	return "", "", fmt.Errorf("no token registry configured for instrument admin %q", instrumentAdmin)
 }
 
 func (client *Client) resolveSynchronizerID(ctx context.Context, partyID string, fallback string) (string, error) {
@@ -660,6 +709,21 @@ type amuletCreation struct {
 	amount xc.AmountBlockchain
 }
 
+type tokenHoldingCreation struct {
+	nodeID          int32
+	owner           string
+	instrumentAdmin string
+	instrumentID    string
+	amount          string
+}
+
+type tokenMovement struct {
+	from     string
+	to       string
+	contract xc.ContractAddress
+	amount   xc.AmountBlockchain
+}
+
 // FetchTxInfo fetches and normalizes transaction info for a Canton update by its updateId.
 // Recovery tokens in the form "<ledger_end>-<submission_id>" are resolved via the completion stream.
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
@@ -718,9 +782,59 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	var transferOutputs []amuletCreation
 	totalFee := xc.NewAmountBlockchainFromUint64(0)
 	var amuletCreations []amuletCreation
+	var tokenHoldingCreations []tokenHoldingCreation
+	var tokenMovements []tokenMovement
+	tokenDecimalsCache := make(map[xc.ContractAddress]int32)
+	resolveTokenDecimals := func(contract xc.ContractAddress) int32 {
+		if decimals, ok := tokenDecimalsCache[contract]; ok {
+			return decimals
+		}
+		if assetCfg, ok := client.Asset.FindAdditionalNativeAsset(contract); ok && assetCfg.Decimals > 0 {
+			tokenDecimalsCache[contract] = int32(assetCfg.Decimals)
+			return int32(assetCfg.Decimals)
+		}
+		decimals, err := client.FetchDecimals(ctx, contract)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"contract": contract,
+				"update_id": updateId,
+			}).WithError(err).Debug("falling back to chain decimals for Canton token tx-info")
+			tokenDecimalsCache[contract] = chainCfg.Decimals
+			return chainCfg.Decimals
+		}
+		tokenDecimalsCache[contract] = int32(decimals)
+		return int32(decimals)
+	}
+
+	for _, event := range tx.GetEvents() {
+		if cr := event.GetCreated(); cr != nil {
+			owner, instrumentAdmin, instrumentID, amount, ok := extractTokenHoldingView(cr)
+			if ok {
+				tokenHoldingCreations = append(tokenHoldingCreations, tokenHoldingCreation{
+					nodeID:          cr.GetNodeId(),
+					owner:           owner,
+					instrumentAdmin: instrumentAdmin,
+					instrumentID:    instrumentID,
+					amount:          amount,
+				})
+			}
+		}
+	}
 
 	for _, event := range tx.GetEvents() {
 		if ex := event.GetExercised(); ex != nil {
+			movements, err := client.extractTokenMovementsFromExercise(
+				ctx,
+				string(sender),
+				ex,
+				tokenHoldingCreations,
+				resolveTokenDecimals,
+			)
+			if err != nil {
+				logrus.WithField("update_id", updateId).WithError(err).Debug("failed to reconstruct Canton token movements from tx-info events")
+			} else {
+				tokenMovements = append(tokenMovements, movements...)
+			}
 			if eventSender, ok := extractTransferSender(ex); ok && senderParty == "" {
 				senderParty = eventSender
 			}
@@ -756,6 +870,17 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 			}
 			amuletCreations = append(amuletCreations, amuletCreation{owner: owner, amount: bal})
 		}
+	}
+
+	for _, movement := range tokenMovements {
+		txInfo.AddSimpleTransfer(
+			xc.Address(movement.from),
+			xc.Address(movement.to),
+			movement.contract,
+			movement.amount,
+			nil,
+			"",
+		)
 	}
 
 	if len(transferOutputs) > 0 {
@@ -804,6 +929,70 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	txInfo.Fees = txInfo.CalculateFees()
 	txInfo.SyncDeprecatedFields()
 	return *txInfo, nil
+}
+
+func (client *Client) extractTokenMovementsFromExercise(
+	ctx context.Context,
+	queryingParty string,
+	ex *v2.ExercisedEvent,
+	createdHoldings []tokenHoldingCreation,
+	resolveTokenDecimals func(contract xc.ContractAddress) int32,
+) ([]tokenMovement, error) {
+	if ex == nil {
+		return nil, nil
+	}
+
+	var sender string
+	switch {
+	case isTokenTransferFactoryExercise(ex):
+		transfer, ok := extractTokenTransferRecordFromValue(ex.GetChoiceArgument())
+		if !ok {
+			return nil, nil
+		}
+		sender = transfer.sender
+	case isTokenTransferInstructionExercise(ex):
+		resp, err := client.ledgerClient.GetEventsByContractID(ctx, queryingParty, ex.GetContractId())
+		if err != nil {
+			return nil, err
+		}
+		created := resp.GetCreated()
+		if created == nil || created.GetCreatedEvent() == nil {
+			return nil, nil
+		}
+		transfer, ok := extractTokenTransferInstructionView(created.GetCreatedEvent())
+		if !ok {
+			return nil, nil
+		}
+		sender = transfer.sender
+	default:
+		return nil, nil
+	}
+
+	if sender == "" {
+		return nil, nil
+	}
+
+	movements := make([]tokenMovement, 0)
+	for _, create := range createdHoldings {
+		if create.nodeID <= ex.GetNodeId() || create.nodeID > ex.GetLastDescendantNodeId() {
+			continue
+		}
+		if create.owner == "" || create.owner == sender {
+			continue
+		}
+		contract := xc.ContractAddress(create.instrumentAdmin + "#" + create.instrumentID)
+		amount, ok := parseHumanAmountToBlockchain(create.amount, resolveTokenDecimals(contract))
+		if !ok {
+			continue
+		}
+		movements = append(movements, tokenMovement{
+			from:     sender,
+			to:       create.owner,
+			contract: contract,
+			amount:   amount,
+		})
+	}
+	return movements, nil
 }
 
 func extractTransferSender(ex *v2.ExercisedEvent) (string, bool) {
@@ -927,6 +1116,96 @@ func extractTransferFee(ex *v2.ExercisedEvent, decimals int32) (xc.AmountBlockch
 		return summaryFee, true
 	}
 	return xc.AmountBlockchain{}, false
+}
+
+func isTokenTransferFactoryExercise(ex *v2.ExercisedEvent) bool {
+	if ex == nil || ex.GetChoice() != "TransferFactory_Transfer" {
+		return false
+	}
+	interfaceID := ex.GetInterfaceId()
+	if interfaceID != nil {
+		return interfaceID.GetModuleName() == tokenTransferModule && interfaceID.GetEntityName() == tokenTransferEntity
+	}
+	templateID := ex.GetTemplateId()
+	return templateID != nil && templateID.GetModuleName() == tokenTransferModule && templateID.GetEntityName() == tokenTransferEntity
+}
+
+func isTokenTransferInstructionExercise(ex *v2.ExercisedEvent) bool {
+	if ex == nil {
+		return false
+	}
+	switch ex.GetChoice() {
+	case "TransferInstruction_Accept", "TransferInstruction_Reject", "TransferInstruction_Withdraw":
+	default:
+		return false
+	}
+	interfaceID := ex.GetInterfaceId()
+	if interfaceID != nil {
+		return interfaceID.GetModuleName() == tokenTransferModule && interfaceID.GetEntityName() == "TransferInstruction"
+	}
+	templateID := ex.GetTemplateId()
+	return templateID != nil && templateID.GetModuleName() == tokenTransferModule && templateID.GetEntityName() == "TransferInstruction"
+}
+
+type tokenTransferView struct {
+	sender          string
+	receiver        string
+	instrumentAdmin string
+	instrumentID    string
+	amount          string
+}
+
+func extractTokenTransferInstructionView(created *v2.CreatedEvent) (tokenTransferView, bool) {
+	if created == nil {
+		return tokenTransferView{}, false
+	}
+	for _, view := range created.GetInterfaceViews() {
+		interfaceID := view.GetInterfaceId()
+		if interfaceID == nil || interfaceID.GetModuleName() != tokenTransferModule || interfaceID.GetEntityName() != "TransferInstruction" {
+			continue
+		}
+		return extractTokenTransferRecord(view.GetViewValue())
+	}
+	if created.GetCreateArguments() != nil {
+		return extractTokenTransferRecord(created.GetCreateArguments())
+	}
+	return tokenTransferView{}, false
+}
+
+func extractTokenTransferRecordFromValue(value *v2.Value) (tokenTransferView, bool) {
+	if value == nil || value.GetRecord() == nil {
+		return tokenTransferView{}, false
+	}
+	return extractTokenTransferRecord(value.GetRecord())
+}
+
+func extractTokenTransferRecord(record *v2.Record) (tokenTransferView, bool) {
+	transferRecord := findRecordField(record, "transfer")
+	if transferRecord == nil {
+		return tokenTransferView{}, false
+	}
+
+	senderValue, hasSender := findValueField(transferRecord, "sender")
+	receiverValue, hasReceiver := findValueField(transferRecord, "receiver")
+	amountValue, hasAmount := findValueField(transferRecord, "amount")
+	instrumentValue, hasInstrument := findValueField(transferRecord, "instrumentId")
+	if !hasSender || !hasReceiver || !hasAmount || !hasInstrument || instrumentValue.GetRecord() == nil {
+		return tokenTransferView{}, false
+	}
+
+	adminValue, hasAdmin := findValueField(instrumentValue.GetRecord(), "admin")
+	idValue, hasID := findValueField(instrumentValue.GetRecord(), "id")
+	if !hasAdmin || !hasID {
+		return tokenTransferView{}, false
+	}
+
+	return tokenTransferView{
+		sender:          senderValue.GetParty(),
+		receiver:        receiverValue.GetParty(),
+		instrumentAdmin: adminValue.GetParty(),
+		instrumentID:    idValue.GetText(),
+		amount:          amountValue.GetNumeric(),
+	}, true
 }
 
 func isTransferExercise(ex *v2.ExercisedEvent) bool {
@@ -1096,6 +1375,24 @@ func extractTokenHoldingView(created *v2.CreatedEvent) (owner string, instrument
 		}
 		return ownerValue.GetParty(), adminValue.GetParty(), idValue.GetText(), amountValue.GetNumeric(), true
 	}
+	if args := created.GetCreateArguments(); args != nil {
+		ownerValue, hasOwner := getRecordFieldValue(args, "owner")
+		adminValue, hasAdmin := getRecordFieldValue(args, "admin")
+		amountValue, hasAmount := getRecordFieldValue(args, "amount")
+		if !hasOwner || !hasAdmin || !hasAmount || ownerValue.GetParty() == "" || amountValue.GetNumeric() == "" {
+			return "", "", "", "", false
+		}
+		if symbolValue, hasSymbol := getRecordFieldValue(args, "symbol"); hasSymbol && symbolValue.GetText() != "" {
+			return ownerValue.GetParty(), adminValue.GetParty(), symbolValue.GetText(), amountValue.GetNumeric(), true
+		}
+		if instrumentValue, hasInstrument := getRecordFieldValue(args, "instrumentId"); hasInstrument && instrumentValue.GetRecord() != nil {
+			instrumentAdminValue, hasInstrumentAdmin := getRecordFieldValue(instrumentValue.GetRecord(), "admin")
+			instrumentIDValue, hasInstrumentID := getRecordFieldValue(instrumentValue.GetRecord(), "id")
+			if hasInstrumentAdmin && hasInstrumentID && instrumentAdminValue.GetParty() != "" && instrumentIDValue.GetText() != "" {
+				return ownerValue.GetParty(), instrumentAdminValue.GetParty(), instrumentIDValue.GetText(), amountValue.GetNumeric(), true
+			}
+		}
+	}
 	return "", "", "", "", false
 }
 
@@ -1135,19 +1432,19 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 		if !ok {
 			return zero, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
 		}
-		decimals := client.Asset.GetChain().Decimals
-		if assetCfg, ok := client.Asset.FindAdditionalNativeAsset(contract); ok && assetCfg.Decimals > 0 {
-			decimals = assetCfg.Decimals
+		decimals, err := client.FetchDecimals(ctx, contract)
+		if err != nil {
+			return zero, fmt.Errorf("failed to resolve decimals for Canton token contract %q: %w", contract, err)
 		}
 
 		totalBalance := xc.NewAmountBlockchainFromUint64(0)
 		for _, c := range contracts {
 			created := c.GetCreatedEvent()
-			_, holdingAdmin, holdingID, amount, ok := extractTokenHoldingView(created)
-			if !ok || holdingAdmin != admin || holdingID != instrumentID {
+			owner, holdingAdmin, holdingID, amount, ok := extractTokenHoldingView(created)
+			if !ok || owner != partyID || holdingAdmin != admin || holdingID != instrumentID {
 				continue
 			}
-			bal, ok := parseHumanAmountToBlockchain(amount, decimals)
+			bal, ok := parseHumanAmountToBlockchain(amount, int32(decimals))
 			if !ok {
 				continue
 			}
@@ -1230,11 +1527,11 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 	instrumentAdmin, instrumentID, ok := parseCantonTokenContract(contract)
 	if ok {
-		uiToken, err := client.cantonUIToken(ctx)
+		registryBaseURL, registryToken, err := client.resolveTokenRegistryBaseURL(ctx, instrumentAdmin)
 		if err != nil {
-			return 0, fmt.Errorf("failed to acquire canton-ui token for decimals lookup: %w", err)
+			return 0, fmt.Errorf("failed to resolve token registry for Canton token contract %q: %w", contract, err)
 		}
-		registryInfo, err := client.ledgerClient.GetTokenMetadataRegistryInfo(ctx, uiToken)
+		registryInfo, err := client.ledgerClient.GetTokenMetadataRegistryInfoAt(ctx, registryToken, registryBaseURL)
 		if err != nil {
 			return 0, fmt.Errorf("failed to fetch token metadata registry info for Canton token contract %q: %w", contract, err)
 		}
@@ -1246,7 +1543,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 				instrumentAdmin,
 			)
 		}
-		metadata, err := client.ledgerClient.GetTokenInstrumentMetadata(ctx, uiToken, instrumentID)
+		metadata, err := client.ledgerClient.GetTokenInstrumentMetadataAt(ctx, registryToken, registryBaseURL, instrumentID)
 		if err != nil {
 			return 0, fmt.Errorf("failed to fetch token metadata for Canton token contract %q: %w", contract, err)
 		}

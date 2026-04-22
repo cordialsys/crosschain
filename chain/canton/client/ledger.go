@@ -66,6 +66,7 @@ type GrpcLedgerClient struct {
 	packageManagementClient     admin.PackageManagementServiceClient
 	commandClient               v2.CommandServiceClient
 	completionClient            v2.CommandCompletionServiceClient
+	eventQueryClient            v2.EventQueryServiceClient
 	interactiveSubmissionClient interactive.InteractiveSubmissionServiceClient
 	stateClient                 v2.StateServiceClient
 	updateClient                v2.UpdateServiceClient
@@ -154,6 +155,7 @@ func NewGrpcLedgerClient(target string, authToken string, cfg runtimeIdentityCon
 		stateClient:                 v2.NewStateServiceClient(conn),
 		updateClient:                v2.NewUpdateServiceClient(conn),
 		completionClient:            v2.NewCommandCompletionServiceClient(conn),
+		eventQueryClient:            v2.NewEventQueryServiceClient(conn),
 		interactiveSubmissionClient: interactive.NewInteractiveSubmissionServiceClient(conn),
 		userManagementClient:        admin.NewUserManagementServiceClient(conn),
 		commandClient:               v2.NewCommandServiceClient(conn),
@@ -522,6 +524,55 @@ func (c *GrpcLedgerClient) GetTokenTransferFactoryContracts(ctx context.Context,
 	return activeContracts, nil
 }
 
+func (c *GrpcLedgerClient) GetEventsByContractID(
+	ctx context.Context,
+	partyID string,
+	contractID string,
+	interfaceFilters ...*v2.InterfaceFilter,
+) (*v2.GetEventsByContractIdResponse, error) {
+	if partyID == "" {
+		return nil, errors.New("empty required argument: partyID")
+	}
+	if contractID == "" {
+		return nil, errors.New("empty required argument: contractID")
+	}
+
+	var cumulative []*v2.CumulativeFilter
+	for _, filter := range interfaceFilters {
+		if filter == nil {
+			continue
+		}
+		cumulative = append(cumulative, &v2.CumulativeFilter{
+			IdentifierFilter: &v2.CumulativeFilter_InterfaceFilter{
+				InterfaceFilter: filter,
+			},
+		})
+	}
+	if len(cumulative) == 0 {
+		cumulative = []*v2.CumulativeFilter{{
+			IdentifierFilter: &v2.CumulativeFilter_WildcardFilter{
+				WildcardFilter: &v2.WildcardFilter{},
+			},
+		}}
+	}
+
+	req := &v2.GetEventsByContractIdRequest{
+		ContractId: contractID,
+		EventFormat: &v2.EventFormat{
+			Verbose: true,
+			FiltersByParty: map[string]*v2.Filters{
+				partyID: {Cumulative: cumulative},
+			},
+		},
+	}
+
+	resp, err := c.eventQueryClient.GetEventsByContractId(c.authCtx(ctx), req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query events by contract id %s for party %s: %w", contractID, partyID, err)
+	}
+	return resp, nil
+}
+
 func (c *GrpcLedgerClient) CreateUser(ctx context.Context, partyId string) error {
 	authCtx := c.authCtx(ctx)
 	req := &admin.GrantUserRightsRequest{
@@ -612,6 +663,10 @@ func (c *GrpcLedgerClient) doScanProxyRequest(ctx context.Context, token string,
 }
 
 func (c *GrpcLedgerClient) doScanProxyRequestWithMethod(ctx context.Context, token string, method string, path string, body any, out any) error {
+	return c.doRegistryRequestWithMethod(ctx, token, strings.TrimRight(c.scanAPIURL, "/"), true, method, path, body, out)
+}
+
+func (c *GrpcLedgerClient) doRegistryRequestWithMethod(ctx context.Context, token string, baseURL string, useProxy bool, method string, path string, body any, out any) error {
 	requestBody := []byte("{}")
 	var err error
 	if body != nil {
@@ -620,33 +675,51 @@ func (c *GrpcLedgerClient) doScanProxyRequestWithMethod(ctx context.Context, tok
 			return fmt.Errorf("marshal scan proxy inner body: %w", err)
 		}
 	}
-	targetURL := strings.TrimRight(c.scanAPIURL, "/") + path
-	envelope := scanProxyRequest{
-		Method: method,
-		URL:    targetURL,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
-		Body: string(requestBody),
-	}
-	payload, err := json.Marshal(envelope)
-	if err != nil {
-		return fmt.Errorf("marshal scan proxy request: %w", err)
-	}
+	targetURL := strings.TrimRight(baseURL, "/") + path
 
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		c.scanProxyURL,
-		bytes.NewReader(payload),
-	)
-	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+	var req *http.Request
+	if useProxy {
+		envelope := scanProxyRequest{
+			Method: method,
+			URL:    targetURL,
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			Body: string(requestBody),
+		}
+		payload, err := json.Marshal(envelope)
+		if err != nil {
+			return fmt.Errorf("marshal scan proxy request: %w", err)
+		}
+		req, err = http.NewRequestWithContext(
+			ctx,
+			http.MethodPost,
+			c.scanProxyURL,
+			bytes.NewReader(payload),
+		)
+		if err != nil {
+			return fmt.Errorf("creating request: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+	} else {
+		var requestReader io.Reader
+		if method != http.MethodGet {
+			requestReader = bytes.NewReader(requestBody)
+		}
+		req, err = http.NewRequestWithContext(ctx, method, targetURL, requestReader)
+		if err != nil {
+			return fmt.Errorf("creating request: %w", err)
+		}
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+		if method != http.MethodGet {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		req.Header.Set("Accept", "application/json")
 	}
-
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -833,9 +906,19 @@ func (c *GrpcLedgerClient) GetTokenInstrumentMetadata(
 	token string,
 	instrumentID string,
 ) (*TokenInstrumentMetadata, error) {
+	return c.GetTokenInstrumentMetadataAt(ctx, token, strings.TrimRight(c.scanAPIURL, "/"), instrumentID)
+}
+
+func (c *GrpcLedgerClient) GetTokenInstrumentMetadataAt(
+	ctx context.Context,
+	token string,
+	registryBaseURL string,
+	instrumentID string,
+) (*TokenInstrumentMetadata, error) {
 	path := "/registry/metadata/v1/instruments/" + url.PathEscape(instrumentID)
 	var result TokenInstrumentMetadata
-	if err := c.doScanProxyRequestWithMethod(ctx, token, http.MethodGet, path, nil, &result); err != nil {
+	useProxy := strings.TrimRight(registryBaseURL, "/") == strings.TrimRight(c.scanAPIURL, "/") && c.scanProxyURL != ""
+	if err := c.doRegistryRequestWithMethod(ctx, token, registryBaseURL, useProxy, http.MethodGet, path, nil, &result); err != nil {
 		return nil, fmt.Errorf("fetching token instrument metadata: %w", err)
 	}
 	if result.ID == "" {
@@ -848,8 +931,17 @@ func (c *GrpcLedgerClient) GetTokenMetadataRegistryInfo(
 	ctx context.Context,
 	token string,
 ) (*TokenMetadataRegistryInfo, error) {
+	return c.GetTokenMetadataRegistryInfoAt(ctx, token, strings.TrimRight(c.scanAPIURL, "/"))
+}
+
+func (c *GrpcLedgerClient) GetTokenMetadataRegistryInfoAt(
+	ctx context.Context,
+	token string,
+	registryBaseURL string,
+) (*TokenMetadataRegistryInfo, error) {
 	var result TokenMetadataRegistryInfo
-	if err := c.doScanProxyRequestWithMethod(ctx, token, http.MethodGet, "/registry/metadata/v1/info", nil, &result); err != nil {
+	useProxy := strings.TrimRight(registryBaseURL, "/") == strings.TrimRight(c.scanAPIURL, "/") && c.scanProxyURL != ""
+	if err := c.doRegistryRequestWithMethod(ctx, token, registryBaseURL, useProxy, http.MethodGet, "/registry/metadata/v1/info", nil, &result); err != nil {
 		return nil, fmt.Errorf("fetching token metadata registry info: %w", err)
 	}
 	if result.AdminID == "" {
