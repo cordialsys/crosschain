@@ -277,6 +277,13 @@ func (tx Decoder) GetMemos() []instructionAtIndex[*memo.Create] {
 	return getallForVariant[*memo.Create](&tx, memo.DecodeInstruction, solana.MemoProgramID, tx.txData, memo.InstructionImplDef)
 }
 
+func (tx Decoder) GetResolvedInstructions() []ResolvedInstruction {
+	if tx.txData == nil {
+		return nil
+	}
+	return tx.txData.GetResolvedInstructions()
+}
+
 func (tx Decoder) GetAccountKeys() []solana.PublicKey {
 	return tx.txData.GetAccountKeys()
 }

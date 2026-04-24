@@ -452,7 +452,7 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 		return result, errors.TransactionNotFoundf("error resolving address-lookups: %v", err)
 	}
 
-	tx := tx.NewDecoderFromNativeTx(solTx, res.Meta)
+	decoder := tx.NewDecoderFromNativeTx(solTx, res.Meta)
 	meta := res.Meta
 	if res.BlockTime != nil {
 		result.BlockTime = res.BlockTime.Time().Unix()
@@ -476,16 +476,16 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 	// Include nonce account creation rent as part of the fee.
 	// When a durable nonce account is created (InitializeNonceAccount), the rent-exempt
 	// lamports paid via CreateAccountWithSeed should be attributed as a fee.
-	for _, nonceInit := range tx.GetInitializeNonceAccounts() {
+	for _, nonceInit := range decoder.GetInitializeNonceAccounts() {
 		nonceAccountKey := nonceInit.Instruction.GetNonceAccount().PublicKey
-		for _, createAccount := range tx.GetCreateAccounts() {
+		for _, createAccount := range decoder.GetCreateAccounts() {
 			if createAccount.Instruction.NewAccount.Equals(nonceAccountKey) {
 				totalFee += createAccount.Instruction.Lamports
 			}
 		}
 	}
 	result.Fee = xc.NewAmountBlockchainFromUint64(totalFee)
-	accountKeys := tx.GetAccountKeys()
+	accountKeys := decoder.GetAccountKeys()
 	if len(accountKeys) > 0 {
 		// The first account is the fee payer on solana
 		result.FeePayer = xc.Address(accountKeys[0].String())
@@ -493,240 +493,19 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 
 	result.TxID = string(txHash)
 
-	sources := []*txinfo.LegacyTxInfoEndpoint{}
-	dests := []*txinfo.LegacyTxInfoEndpoint{}
-
-	for _, instr := range tx.GetSystemTransfers() {
-		from := instr.Instruction.GetFundingAccount().PublicKey.String()
-		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(from),
-			Amount:  amount,
-			Event:   event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(to),
-			Amount:  amount,
-			Event:   event,
-		})
-	}
-	for _, instr := range tx.GetVoteWithdraws() {
-		from := instr.Instruction.GetWithdrawAuthorityAccount().PublicKey.String()
-		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(from),
-			Amount:  amount,
-			Event:   event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(to),
-			Amount:  amount,
-			Event:   event,
-		})
-	}
-	for _, instr := range tx.GetStakeWithdraws() {
-		from := instr.Instruction.GetStakeAccount().PublicKey.String()
-		to := instr.Instruction.GetRecipientAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(from),
-			Amount:  amount,
-			Event:   event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(to),
-			Amount:  amount,
-			Event:   event,
-		})
-	}
-	for _, instr := range tx.GetTokenTransferCheckeds() {
-		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
-		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
-		contract := xc.ContractAddress(instr.Instruction.GetMintAccount().PublicKey.String())
-		to := xc.Address(toTokenAccount.String())
-		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
-		if err != nil {
-			logrus.WithError(err).Warn("failed to lookup token account")
-		} else {
-			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-		}
-
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(from),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(to),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
+	accountResolver := NewSolanaTokenAccountResolver(client.SolClient)
+	sources, dests, err := BuildTransfersFromDecoder(
+		ctx,
+		client.SolClient,
+		decoder,
+		accountResolver,
+		client.Asset.GetChain().Chain,
+	)
+	if err != nil {
+		return result, err
 	}
 
-	for _, instr := range tx.GetTokenTransferCheckedWithFee() {
-		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
-		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
-		contract := xc.ContractAddress(instr.Instruction.GetMintAccount().PublicKey.String())
-		to := xc.Address(toTokenAccount.String())
-		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		tokenAccountInfo, err := client.LookupTokenAccount(ctx, toTokenAccount)
-		if err != nil {
-			logrus.WithError(err).Warn("failed to lookup token account")
-		} else {
-			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-		}
-
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(from),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(to),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
-	}
-	for _, instr := range tx.GetTokenTransfers() {
-		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
-		toTokenAccount := instr.Instruction.GetDestinationAccount().PublicKey
-		to := xc.Address(toTokenAccount.String())
-
-		tokenAccountInfo, toErr := client.LookupTokenAccount(ctx, toTokenAccount)
-		var contract xc.ContractAddress
-
-		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		if toErr != nil {
-			tokenAccountInfo, fromErr := client.LookupTokenAccount(ctx, instr.Instruction.GetSourceAccount().PublicKey)
-			if fromErr != nil {
-				// we must skip, as we can't determine the the asset to report this as.
-				logrus.WithError(err).Warn("failed to lookup to-or-from token accounts")
-				continue
-			}
-			logrus.WithError(toErr).Warn("failed to lookup to token account")
-			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
-		} else {
-			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
-		}
-
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(from),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(to),
-			Amount:          amount,
-			ContractAddress: contract,
-			Event:           event,
-		})
-	}
-
-	for _, instr := range tx.GetTokenMintTo() {
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		from := instr.Instruction.GetAuthorityAccount()
-		toTokenAccount := instr.Instruction.GetDestinationAccount()
-		tokenAccountInfo, toErr := client.LookupTokenAccount(ctx, toTokenAccount.PublicKey)
-		var contract = xc.ContractAddress(from.PublicKey.String())
-		to := xc.Address(toTokenAccount.PublicKey.String())
-
-		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		if toErr == nil {
-			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
-		} else {
-			logrus.WithError(toErr).Warn("failed to lookup to token account")
-		}
-
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(from.PublicKey.String()),
-			Amount:          amount,
-			Event:           event,
-			ContractAddress: contract,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address:         to,
-			Amount:          amount,
-			Event:           event,
-			ContractAddress: contract,
-		})
-	}
-
-	for _, instr := range tx.GetTokenMintToChecked() {
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Amount)
-		from := instr.Instruction.GetAuthorityAccount()
-		toTokenAccount := instr.Instruction.GetDestinationAccount()
-		tokenAccountInfo, toErr := client.LookupTokenAccount(ctx, toTokenAccount.PublicKey)
-		var contract = xc.ContractAddress(from.PublicKey.String())
-		to := xc.Address(toTokenAccount.PublicKey.String())
-
-		// Solana doesn't keep full historical state, so we can't rely on always being able to lookup the account.
-		if toErr == nil {
-			to = xc.Address(tokenAccountInfo.Parsed.Info.Owner)
-			contract = xc.ContractAddress(tokenAccountInfo.Parsed.Info.Mint)
-		} else {
-			logrus.WithError(toErr).Warn("failed to lookup to token account")
-		}
-
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address:         xc.Address(from.PublicKey.String()),
-			Amount:          amount,
-			Event:           event,
-			ContractAddress: contract,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address:         to,
-			Amount:          amount,
-			Event:           event,
-			ContractAddress: contract,
-		})
-	}
-
-	for _, instr := range tx.GetCloseTokenAccounts() {
-		from := instr.Instruction.GetOwnerAccount().PublicKey.String()
-		to := instr.Instruction.GetDestinationAccount().PublicKey.String()
-		// The balance is the minimum balance for rent.
-		// Technically this min amount could change, so this could be inaccurate for historical tx.
-		// https://spl.solana.com/token
-		const tokenProgramSize = 165
-		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, tokenProgramSize, rpc.CommitmentFinalized)
-		if err != nil {
-			return result, fmt.Errorf("failed to get minimum balance for rent exemption: %w", err)
-		}
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(from),
-			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
-			Event:   event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(to),
-			Amount:  xc.NewAmountBlockchainFromUint64(lamports),
-			Event:   event,
-		})
-	}
-
-	for _, instr := range tx.GetDelegateStake() {
+	for _, instr := range decoder.GetDelegateStake() {
 		xcStake := &txinfo.Stake{
 			Account:   instr.Instruction.GetStakeAccount().PublicKey.String(),
 			Validator: instr.Instruction.GetVoteAccount().PublicKey.String(),
@@ -734,7 +513,7 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 			// Needs to be looked up from separate instruction
 			Balance: xc.AmountBlockchain{},
 		}
-		for _, createAccount := range tx.GetCreateAccounts() {
+		for _, createAccount := range decoder.GetCreateAccounts() {
 			if createAccount.Instruction.NewAccount.Equals(instr.Instruction.GetStakeAccount().PublicKey) {
 				xcStake.Balance = xc.NewAmountBlockchainFromUint64(createAccount.Instruction.Lamports)
 			}
@@ -742,7 +521,7 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 
 		result.AddStakeEvent(xcStake)
 	}
-	for _, instr := range tx.GetDeactivateStakes() {
+	for _, instr := range decoder.GetDeactivateStakes() {
 		xcStake := &txinfo.Unstake{
 			Account: instr.Instruction.GetStakeAccount().PublicKey.String(),
 			Address: instr.Instruction.GetStakeAuthority().PublicKey.String(),
@@ -761,25 +540,7 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 		result.AddStakeEvent(xcStake)
 	}
 
-	for _, instr := range tx.GetCustomSystemIntentTransfers() {
-		from := instr.Instruction.GetFromAccount().PublicKey.String()
-		to := instr.Instruction.GetToAccount().PublicKey.String()
-		amount := xc.NewAmountBlockchainFromUint64(*instr.Instruction.Lamports)
-		event := txinfo.NewEvent(instr.ID, txinfo.MovementVariantNative)
-
-		sources = append(sources, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(from),
-			Amount:  amount,
-			Event:   event,
-		})
-		dests = append(dests, &txinfo.LegacyTxInfoEndpoint{
-			Address: xc.Address(to),
-			Amount:  amount,
-			Event:   event,
-		})
-	}
-
-	for i, instr := range tx.GetMemos() {
+	for i, instr := range decoder.GetMemos() {
 		message := instr.Instruction.Message
 		if i < len(dests) {
 			// Report nth memo to nth movement.
