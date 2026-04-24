@@ -1711,7 +1711,7 @@ chains:
       coin_gecko:
         asset_id: "linea"
       coin_market_cap:
-        asset_id: "27657"
+        chain_id: "198"
       indexing_co:
         chain_id: "linea"
   XPL:
