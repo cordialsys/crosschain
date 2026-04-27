@@ -59,11 +59,13 @@ func TestEstimateSorobanResourceFeeSupportsNativeXLM(t *testing.T) {
 	simDataBytes, err := simData.MarshalBinary()
 	require.NoError(t, err)
 
+	simulateCalls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req sorobanRpcRequest
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
 		switch req.Method {
 		case "simulateTransaction":
+			simulateCalls++
 			params, ok := req.Params.(map[string]interface{})
 			require.True(t, ok)
 			txBase64, ok := params["transaction"].(string)
@@ -73,8 +75,20 @@ func TestEstimateSorobanResourceFeeSupportsNativeXLM(t *testing.T) {
 			var envelope xdr.TransactionEnvelope
 			require.NoError(t, envelope.UnmarshalBinary(txBytes))
 			require.Equal(t, xdr.OperationTypeInvokeHostFunction, envelope.Operations()[0].Body.Type)
-			_, ok = envelope.V1.Tx.Ext.GetSorobanData()
+			invokeOp, ok := envelope.Operations()[0].Body.GetInvokeHostFunctionOp()
 			require.True(t, ok)
+
+			if simulateCalls == 1 {
+				require.Empty(t, params["authMode"])
+				_, ok = envelope.V1.Tx.Ext.GetSorobanData()
+				require.True(t, ok)
+				require.NotEmpty(t, invokeOp.Auth)
+			} else {
+				require.Equal(t, "record", params["authMode"])
+				_, ok = envelope.V1.Tx.Ext.GetSorobanData()
+				require.False(t, ok)
+				require.Empty(t, invokeOp.Auth)
+			}
 
 			require.NoError(t, json.NewEncoder(w).Encode(sorobanSimulateResponse{
 				Jsonrpc: "2.0",
@@ -128,6 +142,7 @@ func TestEstimateSorobanResourceFeeSupportsNativeXLM(t *testing.T) {
 	input.MaxFee = 100
 	client := &Client{HttpClient: server.Client(), Asset: chain}
 	require.NoError(t, client.estimateSorobanResourceFee(server.URL, args, input))
+	require.Equal(t, 2, simulateCalls)
 	require.Equal(t, uint32(222), input.SorobanResourceFee)
 	require.Equal(t, uint32(333), input.MaxFee)
 	require.Equal(t, uint32(123), input.SorobanInstructions)
