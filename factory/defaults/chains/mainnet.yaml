@@ -1474,13 +1474,31 @@ chains:
         asset_id: "22974"
       coin_gecko:
         asset_id: bittensor
-  # TEMPO:
-  #   chain: TEMPO
-  #   driver: evm
-  #   chain_id: 42431
-  #   chain_name: Tempo
-  #   decimals: 6
-  #   confirmations_final: 5
+  TEMPO:
+    chain: TEMPO
+    support:
+      fee:
+        accurate: true
+        payer: true
+    driver: tempo
+    chain_id: 4217
+    chain_name: Tempo
+    decimals: 6
+    # basically $50 limit as tempo is all stablecoins.
+    fee_limit: "50.0"
+    confirmations_final: 5
+    external:
+      coin_gecko:
+        chain_id: "tempo"
+      # TBD cmc chain-id
+      # coin_market_cap:
+      #   chain_id: "tempo"
+    native_assets:
+      - asset_id: "0x20c00000000000000000000014f22ca97301eb73"
+        contract_id: "0x20c00000000000000000000014f22ca97301eb73"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["USDT0"]
   TIA:
     chain: TIA
     support:
