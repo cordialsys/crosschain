@@ -17,6 +17,8 @@ type Client struct {
 	*evmclient.Client
 }
 
+var _ xclient.Client = &Client{}
+
 func NewClient(cfg *xc.ChainConfig) (*Client, error) {
 	evmClient, err := evmclient.NewClient(cfg)
 	if err != nil {
@@ -40,9 +42,10 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	if evmInput, ok := input.(*evminput.TxInput); ok {
-		evmInput.Type = xc.DriverTempo
+		return NewTxInputFromEVM(evmInput, contract), nil
+	} else {
+		return nil, fmt.Errorf("tempo inner client returned unexpected type: %T", input)
 	}
-	return input, nil
 }
 
 func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {
@@ -51,10 +54,16 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 		return nil, fmt.Errorf("Tempo multi-transfer requires at least one receiver")
 	}
 
+	feeContract := xc.ContractAddress("")
 	for i, receiver := range receivers {
 		contract, hasContract := receiver.GetContract()
 		if !hasContract || contract == "" {
 			return nil, fmt.Errorf("TEMPO requires --contract to be set (receiver %d missing contract)", i)
+		}
+		if i == 0 {
+			feeContract = contract
+		} else if feeContract != contract {
+			feeContract = ""
 		}
 	}
 
@@ -64,26 +73,34 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	}
 
 	if multiInput, ok := input.(*evminput.MultiTransferInput); ok {
-		multiInput.Type = xc.DriverTempo
+		return &MultiTransferInput{
+			TxInput: *NewTxInputFromEVM(&multiInput.TxInput, feeContract),
+		}, nil
+	} else {
+		return nil, fmt.Errorf("tempo inner client returned unexpected type: %T", input)
 	}
-	return input, nil
 }
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
-	contracts := call.ContractAddresses()
-	if len(contracts) == 0 {
-		return nil, fmt.Errorf("TEMPO requires --contract to be set")
-	}
-
 	input, err := client.Client.FetchCallInput(ctx, call)
 	if err != nil {
 		return nil, err
 	}
 
+	// For now just assume USDT0 will be used for fees
+	feeContract := xc.ContractAddress("")
+	if len(client.Asset.NativeAssets) > 0 {
+		feeContract = client.Asset.NativeAssets[0].ContractId
+	}
+
 	if callInput, ok := input.(*evminput.CallInput); ok {
 		callInput.Type = xc.DriverTempo
+		return &CallInput{
+			TxInput: *NewTxInputFromEVM(&callInput.TxInput, feeContract),
+		}, nil
+	} else {
+		return nil, fmt.Errorf("tempo inner client returned unexpected type: %T", input)
 	}
-	return input, nil
 }
 
 func (client *Client) FetchNativeBalance(ctx context.Context, addr xc.Address) (xc.AmountBlockchain, error) {
