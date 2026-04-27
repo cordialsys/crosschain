@@ -61,6 +61,14 @@ type TxInput struct {
 	SorobanInstructions  uint32 `json:"soroban_instructions,omitempty"`
 	SorobanDiskReadBytes uint32 `json:"soroban_disk_read_bytes,omitempty"`
 	SorobanWriteBytes    uint32 `json:"soroban_write_bytes,omitempty"`
+	// SorobanTransactionData is the base64-encoded XDR SorobanTransactionData
+	// returned by simulateTransaction. It carries the complete simulated
+	// footprint and resource limits.
+	SorobanTransactionData string `json:"soroban_transaction_data,omitempty"`
+	// SorobanAuthorizationEntries are base64-encoded XDR
+	// SorobanAuthorizationEntry values returned by simulateTransaction. Builders
+	// use only matching RootInvocation.SubInvocations from these entries.
+	SorobanAuthorizationEntries []string `json:"soroban_authorization_entries,omitempty"`
 
 	Timestamp int64 `json:"timestamp,omitempty"`
 }

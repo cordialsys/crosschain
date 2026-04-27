@@ -62,6 +62,16 @@ func TestCreateAlpha4AssetFromContractDetails(t *testing.T) {
 	})
 }
 
+func TestCreateAssetFromContractNative(t *testing.T) {
+	asset, err := common.CreateAssetFromContract("")
+	require.NoError(t, err)
+	require.True(t, asset.IsNative())
+
+	asset, err = common.CreateAssetFromContract("XLM")
+	require.NoError(t, err)
+	require.True(t, asset.IsNative())
+}
+
 func TestCreateAlpha12AssetFromContractDetails(t *testing.T) {
 	details := common.AssetDetails{
 		AssetCode: "ValidAsset",

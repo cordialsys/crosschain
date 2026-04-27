@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"bytes"
+	"encoding/base64"
 	"fmt"
 	"math"
 	"time"
@@ -201,6 +203,10 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 		}
 	}
 
+	if len(operations) == 0 {
+		return &xlmtx.Tx{}, fmt.Errorf("xlm transfer produced no operations: amount must be greater than 0 unless creating a trustline")
+	}
+
 	txe.Tx.Operations = operations
 
 	xlmTx, err := xdr.NewTransactionEnvelope(xdr.EnvelopeTypeEnvelopeTypeTx, txe)
@@ -220,18 +226,12 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 
 // buildSACTransfer builds an InvokeHostFunction operation that calls the SAC transfer function.
 // The SAC transfer signature is: transfer(from: Address, to: Address, amount: i128)
-// All Soroban data (auth, footprint, resources) is constructed natively — no simulation RPC needed.
+// Auth and the operation are constructed natively. Simulated transaction data
+// is used when present so the footprint matches Soroban RPC exactly.
 func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *TxInput, from xc.Address, to xc.Address) (*xdr.OperationBody, *xdr.SorobanTransactionData, error) {
-	// Derive the SAC contract address from the token asset
-	contract, ok := args.GetContract()
-	if !ok {
-		return nil, nil, fmt.Errorf("contract is required for SAC transfers")
-	}
-	contractDetails, err := common.GetAssetAndIssuerFromContract(string(contract))
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse contract: %w", err)
-	}
-	xdrAsset, err := common.CreateAssetFromContractDetails(contractDetails)
+	// Derive the SAC contract address from the asset. Missing contract means native XLM.
+	contract, _ := args.GetContract()
+	xdrAsset, err := common.CreateAssetFromContract(contract)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create asset: %w", err)
 	}
@@ -286,6 +286,16 @@ func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *
 			SubInvocations: nil,
 		},
 	}
+	if len(txInput.SorobanAuthorizationEntries) > 0 {
+		subInvocations, ok, err := sorobanSubInvocationsFromInput(txInput, contractFn)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !ok {
+			return nil, nil, fmt.Errorf("simulated soroban authorization entries did not match SAC transfer invocation")
+		}
+		authEntry.RootInvocation.SubInvocations = subInvocations
+	}
 
 	invokeOp := xdr.InvokeHostFunctionOp{
 		HostFunction: hostFn,
@@ -297,10 +307,18 @@ func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *
 		return nil, nil, fmt.Errorf("failed to create invoke host function operation: %w", err)
 	}
 
+	if txInput.SorobanTransactionData != "" {
+		sorobanData, err := sorobanTransactionDataFromInput(txInput)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &opBody, sorobanData, nil
+	}
+
 	// Construct the ledger footprint natively.
-	// SAC transfer touches:
-	//   ReadOnly: SAC contract instance
-	//   ReadWrite: sender's trustline (G-addr balance), receiver's contract data (C-addr balance)
+	// SAC transfer touches the SAC contract instance, sender balance, and
+	// receiver contract balance. Native account balances use Account entries;
+	// issued asset account balances use TrustLine entries.
 	fromAccountId, err := xdr.AddressToAccountId(string(from))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse from account: %w", err)
@@ -320,13 +338,20 @@ func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *
 		},
 	}
 
-	// Sender's classic trustline (SAC uses TrustLine entries for G-address balances)
-	senderTrustlineKey := xdr.LedgerKey{
-		Type: xdr.LedgerEntryTypeTrustline,
-		TrustLine: &xdr.LedgerKeyTrustLine{
-			AccountId: fromAccountId,
-			Asset:     xdrAsset.ToTrustLineAsset(),
-		},
+	var senderBalanceKey xdr.LedgerKey
+	if xdrAsset.IsNative() {
+		senderBalanceKey, err = accountLedgerKey(from)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		senderBalanceKey = xdr.LedgerKey{
+			Type: xdr.LedgerEntryTypeTrustline,
+			TrustLine: &xdr.LedgerKeyTrustLine{
+				AccountId: fromAccountId,
+				Asset:     xdrAsset.ToTrustLineAsset(),
+			},
+		}
 	}
 
 	// Receiver's contract balance (SAC uses ContractData for C-address balances)
@@ -347,11 +372,13 @@ func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *
 		},
 	}
 
+	readWriteKeys := []xdr.LedgerKey{senderBalanceKey, receiverBalanceKey}
+
 	sorobanData := xdr.SorobanTransactionData{
 		Resources: xdr.SorobanResources{
 			Footprint: xdr.LedgerFootprint{
 				ReadOnly:  []xdr.LedgerKey{sacInstanceKey},
-				ReadWrite: []xdr.LedgerKey{senderTrustlineKey, receiverBalanceKey},
+				ReadWrite: readWriteKeys,
 			},
 			Instructions:  xdr.Uint32(txInput.SorobanInstructions),
 			DiskReadBytes: xdr.Uint32(txInput.SorobanDiskReadBytes),
@@ -361,6 +388,82 @@ func (builder TxBuilder) buildSACTransfer(args xcbuilder.TransferArgs, txInput *
 	}
 
 	return &opBody, &sorobanData, nil
+}
+
+func sorobanTransactionDataFromInput(txInput *TxInput) (*xdr.SorobanTransactionData, error) {
+	dataBz, err := base64.StdEncoding.DecodeString(txInput.SorobanTransactionData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode soroban transaction data: %w", err)
+	}
+
+	var sorobanData xdr.SorobanTransactionData
+	if err := sorobanData.UnmarshalBinary(dataBz); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal soroban transaction data: %w", err)
+	}
+
+	if txInput.SorobanInstructions > 0 {
+		sorobanData.Resources.Instructions = xdr.Uint32(txInput.SorobanInstructions)
+	}
+	if txInput.SorobanDiskReadBytes > 0 {
+		sorobanData.Resources.DiskReadBytes = xdr.Uint32(txInput.SorobanDiskReadBytes)
+	}
+	if txInput.SorobanWriteBytes > 0 {
+		sorobanData.Resources.WriteBytes = xdr.Uint32(txInput.SorobanWriteBytes)
+	}
+	if txInput.SorobanResourceFee > 0 {
+		sorobanData.ResourceFee = xdr.Int64(txInput.SorobanResourceFee)
+	}
+
+	return &sorobanData, nil
+}
+
+func sorobanSubInvocationsFromInput(txInput *TxInput, rootFunction xdr.SorobanAuthorizedFunction) ([]xdr.SorobanAuthorizedInvocation, bool, error) {
+	for _, encoded := range txInput.SorobanAuthorizationEntries {
+		dataBz, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to decode soroban authorization entry: %w", err)
+		}
+
+		var entry xdr.SorobanAuthorizationEntry
+		if err := entry.UnmarshalBinary(dataBz); err != nil {
+			return nil, false, fmt.Errorf("failed to unmarshal soroban authorization entry: %w", err)
+		}
+
+		matches, err := sorobanAuthorizedFunctionEqual(entry.RootInvocation.Function, rootFunction)
+		if err != nil {
+			return nil, false, err
+		}
+		if !matches {
+			continue
+		}
+		return entry.RootInvocation.SubInvocations, true, nil
+	}
+	return nil, false, nil
+}
+
+func sorobanAuthorizedFunctionEqual(a xdr.SorobanAuthorizedFunction, b xdr.SorobanAuthorizedFunction) (bool, error) {
+	aBz, err := a.MarshalBinary()
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal soroban authorized function: %w", err)
+	}
+	bBz, err := b.MarshalBinary()
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal soroban authorized function: %w", err)
+	}
+	return bytes.Equal(aBz, bBz), nil
+}
+
+func accountLedgerKey(address xc.Address) (xdr.LedgerKey, error) {
+	accountID, err := xdr.AddressToAccountId(string(address))
+	if err != nil {
+		return xdr.LedgerKey{}, fmt.Errorf("failed to parse footprint account %s: %w", address, err)
+	}
+	return xdr.LedgerKey{
+		Type: xdr.LedgerEntryTypeAccount,
+		Account: &xdr.LedgerKeyAccount{
+			AccountId: accountID,
+		},
+	}, nil
 }
 
 func (txBuilder TxBuilder) SupportsMemo() xc.MemoSupport {
