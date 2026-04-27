@@ -95,6 +95,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 			},
@@ -112,6 +114,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -139,6 +143,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -167,6 +173,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -195,6 +203,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid ATA
@@ -223,6 +233,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -250,6 +262,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -291,6 +305,8 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account -> error getting token balance

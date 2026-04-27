@@ -84,6 +84,16 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 		return nil, fmt.Errorf("could not fetch durable nonce: %v", err)
 	}
 
+	if txInput.ShouldCreateDurableNonce {
+		// account for the durable nonce rent as part of the base fee
+		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
+		if err != nil {
+			return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
+		}
+		rent := xc.NewAmountBlockchainFromUint64(lamports)
+		txInput.BaseFee = txInput.BaseFee.Add(&rent)
+	}
+
 	return txInput, nil
 }
 
