@@ -47,6 +47,8 @@ func TestFetchStakingInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// vote account list
 				`{"jsonrpc":"2.0","result":{"current":[{"activatedStake":41061582618205,"commission":7,"epochCredits":[[645,196752727,196348579],[646,197152299,196752727],[647,197549513,197152299],[648,197955321,197549513],[649,198362807,197955321]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"CVAAQGA8GBzKi4kLdmpDuJnpkSik6PMWSvRk3RDds9K8","rootSlot":280799326,"votePubkey":"XBtfuT5gYU27UAukT3pEzgiKgHpHNQhSoa3zX2PYtiT"},{"activatedStake":32347208647108,"commission":7,"epochCredits":[[645,33158933,32754517],[646,33548343,33158933],[647,33944043,33548343],[648,34350430,33944043],[649,34758214,34350430]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"EqgfgrWR3D1As2aS7tYjoHfNxgxcfNYvdUL5zCsXFXBt","rootSlot":280799326,"votePubkey":"3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"}]}}`,
 			},
@@ -56,7 +58,7 @@ func TestFetchStakingInput(t *testing.T) {
 					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(2044280),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -71,6 +73,8 @@ func TestFetchStakingInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// vote account list
 				`{"jsonrpc":"2.0","result":{"current":[{"activatedStake":41061582618205,"commission":7,"epochCredits":[[645,196752727,196348579],[646,197152299,196752727],[647,197549513,197152299],[648,197955321,197549513],[649,198362807,197955321]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"CVAAQGA8GBzKi4kLdmpDuJnpkSik6PMWSvRk3RDds9K8","rootSlot":280799326,"votePubkey":"XBtfuT5gYU27UAukT3pEzgiKgHpHNQhSoa3zX2PYtiT"},{"activatedStake":32347208647108,"commission":7,"epochCredits":[[645,33158933,32754517],[646,33548343,33158933],[647,33944043,33548343],[648,34350430,33944043],[649,34758214,34350430]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"EqgfgrWR3D1As2aS7tYjoHfNxgxcfNYvdUL5zCsXFXBt","rootSlot":280799326,"votePubkey":"3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"}]}}`,
 			},
@@ -80,7 +84,7 @@ func TestFetchStakingInput(t *testing.T) {
 					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(2044280),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -95,6 +99,8 @@ func TestFetchStakingInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// vote account list
 				`{"jsonrpc":"2.0","result":{"current":[{"activatedStake":41061582618205,"commission":7,"epochCredits":[[645,196752727,196348579],[646,197152299,196752727],[647,197549513,197152299],[648,197955321,197549513],[649,198362807,197955321]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"CVAAQGA8GBzKi4kLdmpDuJnpkSik6PMWSvRk3RDds9K8","rootSlot":280799326,"votePubkey":"XBtfuT5gYU27UAukT3pEzgiKgHpHNQhSoa3zX2PYtiT"},{"activatedStake":32347208647108,"commission":7,"epochCredits":[[645,33158933,32754517],[646,33548343,33158933],[647,33944043,33548343],[648,34350430,33944043],[649,34758214,34350430]],"epochVoteAccount":true,"lastVote":280799357,"nodePubkey":"EqgfgrWR3D1As2aS7tYjoHfNxgxcfNYvdUL5zCsXFXBt","rootSlot":280799326,"votePubkey":"3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"}]}}`,
 			},
@@ -182,6 +188,8 @@ func TestFetchUnstakingInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// epoch info
 				`{"absoluteSlot": 166598,"blockHeight": 166500,"epoch": 650,"slotIndex": 2790,"slotsInEpoch": 8192,"transactionCount": 22661093}`,
 			},
@@ -191,7 +199,7 @@ func TestFetchUnstakingInput(t *testing.T) {
 					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(2044280),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
@@ -286,6 +294,8 @@ func TestFetchWithdrawInput(t *testing.T) {
 				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
 				// nonce account not found
 				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+				// rent exemption for nonce account creation
+				`2039280`,
 				// epoch info
 				`{"absoluteSlot": 166598,"blockHeight": 166500,"epoch": 652,"slotIndex": 2790,"slotsInEpoch": 8192,"transactionCount": 22661093}`,
 			},
@@ -295,7 +305,7 @@ func TestFetchWithdrawInput(t *testing.T) {
 					TxInputEnvelope:          xc.TxInputEnvelope{Type: xc.DriverSolana},
 					RecentBlockHash:          solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
 					PrioritizationFee:        xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:                  xc.NewAmountBlockchainFromUint64(5000),
+					BaseFee:                  xc.NewAmountBlockchainFromUint64(2044280),
 					DurableNonceAccount:      solana.MustPublicKeyFromBase58("7cmEYRxhkbb9c8oxK9N7tz76cmZwY5TowpRGfWCUPA14"),
 					ShouldCreateDurableNonce: true,
 				},
