@@ -9,7 +9,8 @@ import (
 	"net/http"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	"github.com/cordialsys/crosschain/chain/xlm/common"
+	xlmbuilder "github.com/cordialsys/crosschain/chain/xlm/builder"
+	xlmtx "github.com/cordialsys/crosschain/chain/xlm/tx"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
 	"github.com/stellar/go-stellar-sdk/xdr"
 )
@@ -23,6 +24,7 @@ type sorobanRpcRequest struct {
 
 type sorobanSimulateParams struct {
 	Transaction string `json:"transaction"`
+	AuthMode    string `json:"authMode,omitempty"`
 }
 
 type sorobanSimulateResponse struct {
@@ -33,9 +35,14 @@ type sorobanSimulateResponse struct {
 }
 
 type sorobanSimulateResult struct {
-	TransactionData string      `json:"transactionData"`
-	MinResourceFee  json.Number `json:"minResourceFee"`
-	Error           string      `json:"error,omitempty"`
+	TransactionData string                              `json:"transactionData"`
+	MinResourceFee  json.Number                         `json:"minResourceFee"`
+	Error           string                              `json:"error,omitempty"`
+	Results         []sorobanSimulateHostFunctionResult `json:"results,omitempty"`
+}
+
+type sorobanSimulateHostFunctionResult struct {
+	Auth []string `json:"auth,omitempty"`
 }
 
 type sorobanRpcError struct {
@@ -43,156 +50,37 @@ type sorobanRpcError struct {
 	Message string `json:"message"`
 }
 
-// estimateSorobanResourceFee builds a temporary InvokeHostFunction transaction
-// with natively constructed auth and footprint, then simulates it via Soroban RPC
-// to get an accurate resource fee estimate. Only the fee is used from the response.
+// estimateSorobanResourceFee builds the transaction through the XLM TxBuilder,
+// then simulates that unsigned envelope via Soroban RPC to get resource
+// estimates, transaction data, and any recorded auth sub-invocations.
 func (client *Client) estimateSorobanResourceFee(sorobanUrl string, args xcbuilder.TransferArgs, txInput *xlminput.TxInput) error {
-	from := args.GetFrom()
-	to := args.GetTo()
-
-	contract, ok := args.GetContract()
-	if !ok {
-		return fmt.Errorf("contract is required for Soroban SAC transfers")
-	}
-	contractDetails, err := common.GetAssetAndIssuerFromContract(string(contract))
+	simulationTx, err := client.buildSorobanSimulationTransaction(args, txInput)
 	if err != nil {
-		return fmt.Errorf("failed to parse contract: %w", err)
+		return err
 	}
-	xdrAsset, err := common.CreateAssetFromContractDetails(contractDetails)
+
+	simResult, err := client.simulateSorobanTransaction(sorobanUrl, simulationTx, "")
 	if err != nil {
-		return fmt.Errorf("failed to create asset: %w", err)
-	}
-	sacId, err := xdrAsset.ContractID(txInput.Passphrase)
-	if err != nil {
-		return fmt.Errorf("failed to derive SAC contract ID: %w", err)
-	}
-	contractId := xdr.ContractId(sacId)
-	contractAddr := xdr.ScAddress{
-		Type:       xdr.ScAddressTypeScAddressTypeContract,
-		ContractId: &contractId,
-	}
-
-	fromScVal, err := common.ScValAddress(string(from))
-	if err != nil {
-		return fmt.Errorf("failed to encode from address: %w", err)
-	}
-	toScVal, err := common.ScValAddress(string(to))
-	if err != nil {
-		return fmt.Errorf("failed to encode to address: %w", err)
-	}
-	amountScVal := common.ScValI128(args.GetAmount().Int().Int64())
-
-	invokeArgs := xdr.InvokeContractArgs{
-		ContractAddress: contractAddr,
-		FunctionName:    "transfer",
-		Args:            []xdr.ScVal{fromScVal, toScVal, amountScVal},
-	}
-
-	hostFn, err := xdr.NewHostFunction(xdr.HostFunctionTypeHostFunctionTypeInvokeContract, invokeArgs)
-	if err != nil {
-		return fmt.Errorf("failed to create host function: %w", err)
-	}
-
-	opBody, err := xdr.NewOperationBody(xdr.OperationTypeInvokeHostFunction, xdr.InvokeHostFunctionOp{
-		HostFunction: hostFn,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create operation body: %w", err)
-	}
-
-	txSourceAccount, err := common.MuxedAccountFromAddress(from)
-	if err != nil {
-		return fmt.Errorf("invalid source address: %w", err)
-	}
-
-	simTxe := xdr.TransactionV1Envelope{
-		Tx: xdr.Transaction{
-			SourceAccount: txSourceAccount,
-			Fee:           xdr.Uint32(txInput.MaxFee),
-			SeqNum:        xdr.SequenceNumber(txInput.GetXlmSequence()),
-			Cond:          xdr.Preconditions{Type: xdr.PreconditionTypePrecondNone},
-			Operations: []xdr.Operation{
-				{
-					SourceAccount: &txSourceAccount,
-					Body:          opBody,
-				},
-			},
-		},
-	}
-
-	simEnvelope, err := xdr.NewTransactionEnvelope(xdr.EnvelopeTypeEnvelopeTypeTx, simTxe)
-	if err != nil {
-		return fmt.Errorf("failed to create simulation envelope: %w", err)
-	}
-
-	envBytes, err := simEnvelope.MarshalBinary()
-	if err != nil {
-		return fmt.Errorf("failed to marshal simulation envelope: %w", err)
-	}
-
-	// Call Soroban RPC simulateTransaction
-	reqBody := sorobanRpcRequest{
-		Jsonrpc: "2.0",
-		Id:      1,
-		Method:  "simulateTransaction",
-		Params: sorobanSimulateParams{
-			Transaction: base64.StdEncoding.EncodeToString(envBytes),
-		},
-	}
-
-	bodyBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return fmt.Errorf("failed to marshal simulate request: %w", err)
-	}
-
-	resp, err := client.HttpClient.Post(sorobanUrl, "application/json", bytes.NewReader(bodyBytes))
-	if err != nil {
-		return fmt.Errorf("failed to call soroban simulateTransaction: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read simulate response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("soroban simulateTransaction returned status %d: %s", resp.StatusCode, string(respBytes))
-	}
-
-	var simResp sorobanSimulateResponse
-	if err := json.Unmarshal(respBytes, &simResp); err != nil {
-		return fmt.Errorf("failed to unmarshal simulate response: %w", err)
-	}
-
-	if simResp.Error != nil {
-		return fmt.Errorf("soroban rpc error (code %d): %s", simResp.Error.Code, simResp.Error.Message)
-	}
-
-	if simResp.Result == nil {
-		return fmt.Errorf("soroban simulation returned no result")
-	}
-
-	if simResp.Result.Error != "" {
-		return fmt.Errorf("soroban simulation error: %s", simResp.Result.Error)
+		return err
 	}
 
 	// Use the resource fee from simulation
-	resourceFee, err := simResp.Result.MinResourceFee.Int64()
+	resourceFee, err := simResult.MinResourceFee.Int64()
 	if err != nil {
 		return fmt.Errorf("failed to parse resource fee: %w", err)
 	}
 	txInput.SorobanResourceFee = uint32(resourceFee)
 
-	// Parse resource limits from the simulation's transactionData
-	if simResp.Result.TransactionData != "" {
-		dataBz, err := base64.StdEncoding.DecodeString(simResp.Result.TransactionData)
-		if err == nil {
-			var simData xdr.SorobanTransactionData
-			if err := simData.UnmarshalBinary(dataBz); err == nil {
-				txInput.SorobanInstructions = uint32(simData.Resources.Instructions)
-				txInput.SorobanDiskReadBytes = uint32(simData.Resources.DiskReadBytes)
-				txInput.SorobanWriteBytes = uint32(simData.Resources.WriteBytes)
+	if simResult.TransactionData != "" {
+		if err := applySorobanSimulationData(txInput, simResult.TransactionData); err != nil {
+			return err
+		}
+	}
+
+	if authSimulationTx, err := buildSorobanAuthRecordingTransaction(simulationTx); err == nil {
+		if authResult, err := client.simulateSorobanTransaction(sorobanUrl, authSimulationTx, "record"); err == nil {
+			if err := applySorobanSimulationAuth(txInput, authResult.Results); err != nil {
+				return err
 			}
 		}
 	}
@@ -204,6 +92,174 @@ func (client *Client) estimateSorobanResourceFee(sorobanUrl string, args xcbuild
 	}
 
 	return nil
+}
+
+func (client *Client) simulateSorobanTransaction(sorobanUrl string, transaction string, authMode string) (*sorobanSimulateResult, error) {
+	reqBody := sorobanRpcRequest{
+		Jsonrpc: "2.0",
+		Id:      1,
+		Method:  "simulateTransaction",
+		Params: sorobanSimulateParams{
+			Transaction: transaction,
+			AuthMode:    authMode,
+		},
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal simulate request: %w", err)
+	}
+
+	resp, err := client.HttpClient.Post(sorobanUrl, "application/json", bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call soroban simulateTransaction: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read simulate response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("soroban simulateTransaction returned status %d: %s", resp.StatusCode, string(respBytes))
+	}
+
+	var simResp sorobanSimulateResponse
+	if err := json.Unmarshal(respBytes, &simResp); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal simulate response: %w", err)
+	}
+
+	if simResp.Error != nil {
+		return nil, fmt.Errorf("soroban rpc error (code %d): %s", simResp.Error.Code, simResp.Error.Message)
+	}
+
+	if simResp.Result == nil {
+		return nil, fmt.Errorf("soroban simulation returned no result")
+	}
+
+	if simResp.Result.Error != "" {
+		return nil, fmt.Errorf("soroban simulation error: %s", simResp.Result.Error)
+	}
+
+	return simResp.Result, nil
+}
+
+func (client *Client) buildSorobanSimulationTransaction(args xcbuilder.TransferArgs, txInput *xlminput.TxInput) (string, error) {
+	if client.Asset == nil {
+		return "", fmt.Errorf("stellar client is missing asset configuration")
+	}
+
+	txBuilder, err := xlmbuilder.NewTxBuilder(client.Asset.Base())
+	if err != nil {
+		return "", fmt.Errorf("failed to create xlm tx builder: %w", err)
+	}
+
+	simulationInput := *txInput
+	simulationInput.SorobanTransactionData = ""
+	simulationInput.SorobanAuthorizationEntries = nil
+	unsignedTx, err := txBuilder.Transfer(args, &simulationInput)
+	if err != nil {
+		return "", fmt.Errorf("failed to build soroban simulation transaction: %w", err)
+	}
+
+	xlmTx, ok := unsignedTx.(*xlmtx.Tx)
+	if !ok {
+		return "", fmt.Errorf("unexpected xlm transaction type %T", unsignedTx)
+	}
+	if xlmTx.TxEnvelope == nil {
+		return "", fmt.Errorf("missing xlm transaction envelope")
+	}
+
+	envBytes, err := xlmTx.TxEnvelope.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal simulation envelope: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(envBytes), nil
+}
+
+func buildSorobanAuthRecordingTransaction(transaction string) (string, error) {
+	envBytes, err := base64.StdEncoding.DecodeString(transaction)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode simulation envelope: %w", err)
+	}
+
+	var envelope xdr.TransactionEnvelope
+	if err := envelope.UnmarshalBinary(envBytes); err != nil {
+		return "", fmt.Errorf("failed to unmarshal simulation envelope: %w", err)
+	}
+	if envelope.Type != xdr.EnvelopeTypeEnvelopeTypeTx || envelope.V1 == nil {
+		return "", fmt.Errorf("expected xlm transaction envelope")
+	}
+
+	envelope.V1.Tx.Ext = xdr.TransactionExt{}
+	for i := range envelope.V1.Tx.Operations {
+		invokeOp, ok := envelope.V1.Tx.Operations[i].Body.GetInvokeHostFunctionOp()
+		if !ok {
+			continue
+		}
+		invokeOp.Auth = nil
+		body, err := xdr.NewOperationBody(xdr.OperationTypeInvokeHostFunction, invokeOp)
+		if err != nil {
+			return "", fmt.Errorf("failed to clear simulation auth: %w", err)
+		}
+		envelope.V1.Tx.Operations[i].Body = body
+	}
+
+	envBytes, err = envelope.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal auth recording envelope: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(envBytes), nil
+}
+
+func applySorobanSimulationData(txInput *xlminput.TxInput, transactionData string) error {
+	dataBz, err := base64.StdEncoding.DecodeString(transactionData)
+	if err != nil {
+		return fmt.Errorf("failed to decode soroban transaction data: %w", err)
+	}
+
+	var simData xdr.SorobanTransactionData
+	if err := simData.UnmarshalBinary(dataBz); err != nil {
+		return fmt.Errorf("failed to unmarshal soroban transaction data: %w", err)
+	}
+
+	txInput.SorobanInstructions = uint32(simData.Resources.Instructions)
+	txInput.SorobanDiskReadBytes = uint32(simData.Resources.DiskReadBytes)
+	txInput.SorobanWriteBytes = uint32(simData.Resources.WriteBytes)
+	txInput.SorobanTransactionData = transactionData
+
+	return nil
+}
+
+func applySorobanSimulationAuth(txInput *xlminput.TxInput, results []sorobanSimulateHostFunctionResult) error {
+	txInput.SorobanAuthorizationEntries = nil
+	for _, result := range results {
+		for _, authEntry := range result.Auth {
+			entry, err := sorobanAuthorizationEntryFromBase64(authEntry)
+			if err != nil {
+				return err
+			}
+			if len(entry.RootInvocation.SubInvocations) == 0 {
+				continue
+			}
+			txInput.SorobanAuthorizationEntries = append(txInput.SorobanAuthorizationEntries, authEntry)
+		}
+	}
+	return nil
+}
+
+func sorobanAuthorizationEntryFromBase64(encoded string) (*xdr.SorobanAuthorizationEntry, error) {
+	dataBz, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode soroban authorization entry: %w", err)
+	}
+
+	var entry xdr.SorobanAuthorizationEntry
+	if err := entry.UnmarshalBinary(dataBz); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal soroban authorization entry: %w", err)
+	}
+	return &entry, nil
 }
 
 type sorobanFeeStatsResponse struct {

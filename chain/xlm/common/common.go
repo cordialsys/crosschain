@@ -87,6 +87,18 @@ func CreateAssetFromContractDetails(details AssetDetails) (xdr.Asset, error) {
 	}
 }
 
+func CreateAssetFromContract(contract xc.ContractAddress) (xdr.Asset, error) {
+	if contract == "" || contract == xc.ContractAddress("XLM") {
+		return xdr.NewAsset(xdr.AssetTypeAssetTypeNative, nil)
+	}
+
+	contractDetails, err := GetAssetAndIssuerFromContract(string(contract))
+	if err != nil {
+		return xdr.Asset{}, err
+	}
+	return CreateAssetFromContractDetails(contractDetails)
+}
+
 func CreateChangeTrustAsset(details AssetDetails) (xdr.ChangeTrustAsset, error) {
 	length := len(details.AssetCode)
 	var issuer xdr.MuxedAccount
