@@ -19,11 +19,11 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	xlminput "github.com/cordialsys/crosschain/chain/xlm/tx_input"
-	"github.com/cordialsys/crosschain/pkg/integer"
 	xclient "github.com/cordialsys/crosschain/client"
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/sirupsen/logrus"
 	"github.com/stellar/go-stellar-sdk/xdr"
 )
@@ -87,6 +87,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.Sequence = integer.Int64(nextSequence)
 	txInput.SequenceOld = nextSequence
 	txInput.MinLedgerSequence = ledger.Sequence
+	txInput.TransactionActiveTime = config.TransactionActiveTime
 
 	// Determine which account pays fees: fee payer or sender
 	feeAccountDetails := accountDetails
@@ -193,7 +194,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 	}
 
-	txInput.TransactionActiveTime = config.TransactionActiveTime
 	return txInput, nil
 }
 
