@@ -14,6 +14,7 @@ import (
 func CmdRpcBalance() *cobra.Command {
 	var contract string
 	var decimal bool
+	var decimals int
 	var privateKeyRef string
 	var format string
 	cmd := &cobra.Command{
@@ -37,6 +38,9 @@ func CmdRpcBalance() *cobra.Command {
 			options := []client.GetBalanceOption{}
 			if contract != "" {
 				options = append(options, client.BalanceOptionContract(xc.ContractAddress(contract)))
+				if decimals >= 0 {
+					options = append(options, client.BalanceOptionDecimals(decimals))
+				}
 			}
 			balanceArgs := client.NewBalanceArgs(address, options...)
 
@@ -45,14 +49,18 @@ func CmdRpcBalance() *cobra.Command {
 				return fmt.Errorf("could not fetch balance for address %s: %v", address, err)
 			}
 			if decimal {
-				// For native assets, pass empty string to FetchDecimals
-				// For tokens, pass the contract address
-				contractForDecimals := xc.ContractAddress(contract)
-				decimals, err := rpcClient.FetchDecimals(context.Background(), contractForDecimals)
-				if err != nil {
-					return fmt.Errorf("could not fetch decimals: %v", err)
+				decimalsForDisplay := decimals
+				if decimalsForDisplay < 0 {
+					// For native assets, pass empty string to FetchDecimals
+					// For tokens, pass the contract address
+					contractForDecimals := xc.ContractAddress(contract)
+					resolvedDecimals, err := rpcClient.FetchDecimals(context.Background(), contractForDecimals)
+					if err != nil {
+						return fmt.Errorf("could not fetch decimals: %v", err)
+					}
+					decimalsForDisplay = resolvedDecimals
 				}
-				amount := balance.ToHuman(int32(decimals))
+				amount := balance.ToHuman(int32(decimalsForDisplay))
 				fmt.Println(amount.String())
 			} else {
 				fmt.Println(balance.String())
@@ -64,6 +72,7 @@ func CmdRpcBalance() *cobra.Command {
 	cmd.Flags().StringVar(&privateKeyRef, "key", "env:"+signer.EnvPrivateKey, "Private key reference")
 	cmd.Flags().StringVar(&contract, "contract", "", "Optional contract of token asset")
 	cmd.Flags().BoolVar(&decimal, "decimal", false, "Report balance as a decimal.  If set, the decimals will be looked up.")
+	cmd.Flags().IntVar(&decimals, "decimals", -1, "Optional decimals override for token balances")
 	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
 	return cmd
 }

@@ -404,7 +404,7 @@ func (c *GrpcLedgerClient) GetActiveContracts(ctx context.Context, partyID strin
 
 		c.logger.
 			WithField(KeyContractId, event.GetContractId()).
-			Info("found contract")
+			Debug("found contract")
 
 		activeContracts = append(activeContracts, contract)
 	}
@@ -522,6 +522,46 @@ func (c *GrpcLedgerClient) GetTokenTransferFactoryContracts(ctx context.Context,
 		activeContracts = append(activeContracts, contract)
 	}
 	return activeContracts, nil
+}
+
+func (c *GrpcLedgerClient) GetVisibleContractsByTemplate(
+	ctx context.Context,
+	partyID string,
+	ledgerEnd int64,
+	moduleName string,
+	entityName string,
+) ([]*v2.ActiveContract, error) {
+	if partyID == "" {
+		return nil, errors.New("empty required argument: partyID")
+	}
+	if moduleName == "" {
+		return nil, errors.New("empty required argument: moduleName")
+	}
+	if entityName == "" {
+		return nil, errors.New("empty required argument: entityName")
+	}
+
+	contracts, err := c.GetActiveContracts(ctx, partyID, ledgerEnd, false)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered := make([]*v2.ActiveContract, 0, len(contracts))
+	for _, contract := range contracts {
+		created := contract.GetCreatedEvent()
+		if created == nil {
+			continue
+		}
+		templateID := created.GetTemplateId()
+		if templateID == nil {
+			continue
+		}
+		if templateID.GetModuleName() != moduleName || templateID.GetEntityName() != entityName {
+			continue
+		}
+		filtered = append(filtered, contract)
+	}
+	return filtered, nil
 }
 
 func (c *GrpcLedgerClient) GetEventsByContractID(
@@ -946,6 +986,24 @@ func (c *GrpcLedgerClient) GetTokenMetadataRegistryInfoAt(
 	}
 	if result.AdminID == "" {
 		return nil, errors.New("token metadata registry info response missing adminId")
+	}
+	return &result, nil
+}
+
+func (c *GrpcLedgerClient) GetTokenTransferInstructionAcceptContextAt(
+	ctx context.Context,
+	token string,
+	registryBaseURL string,
+	contractID string,
+) (*TokenChoiceContext, error) {
+	if contractID == "" {
+		return nil, errors.New("empty contract id")
+	}
+	path := fmt.Sprintf("/registry/transfer-instruction/v1/%s/choice-contexts/accept", url.PathEscape(contractID))
+	var result TokenChoiceContext
+	useProxy := strings.TrimRight(registryBaseURL, "/") == strings.TrimRight(c.scanAPIURL, "/") && c.scanProxyURL != ""
+	if err := c.doRegistryRequestWithMethod(ctx, token, registryBaseURL, useProxy, http.MethodPost, path, map[string]any{}, &result); err != nil {
+		return nil, fmt.Errorf("fetching token transfer instruction accept context: %w", err)
 	}
 	return &result, nil
 }

@@ -225,14 +225,15 @@ chains:
     fee_limit: "100.0"
     confirmations_final: 1
     custom_config:
-      keycloak_url: "https://example.invalid/auth"
+      keycloak_url: "http://keycloak.test.catalyst.rpc.cordialapis.com/auth"
       keycloak_realm: "catalyst-canton"
-      rest_api_url: "https://validator-api.example.invalid"
-      scan_proxy_url: "https://scan-proxy.example.invalid/api/http-proxy"
-      scan_api_url: "https://scan-api.example.invalid"
+      rest_api_url: "https://wallet-validator-cordialsystems.canton.test.catalyst.rpc.cordialapis.com"
+      scan_proxy_url: "https://canton.test.catalyst.rpc.cordialapis.com/api/http-proxy"
+      scan_api_url: "https://scan.sv-1.test.global.canton.network.sync.global"
+      token_registry_urls:
+        "cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC": "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f"
       validator_auth: "env:CANTON_VALIDATOR_BASIC_AUTH"
       canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
-
   CHZ:
     chain: CHZ
     driver: "evm-legacy"

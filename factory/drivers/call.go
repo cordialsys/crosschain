@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/call"
+	cantoncall "github.com/cordialsys/crosschain/chain/canton/call"
 	evmcall "github.com/cordialsys/crosschain/chain/evm/call"
 	solanacall "github.com/cordialsys/crosschain/chain/solana/call"
 )
@@ -15,6 +16,8 @@ var ErrCallNotSupported = errors.New("call not supported for this chain")
 
 func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddress xc.Address) (xc.TxCall, error) {
 	switch xc.Driver(cfg.Driver) {
+	case xc.DriverCanton:
+		return cantoncall.NewCall(cfg, method, msg, signingAddress)
 	case xc.DriverEVM:
 		return evmcall.NewCall(cfg, method, msg, signingAddress)
 	case xc.DriverSolana:

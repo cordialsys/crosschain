@@ -9,13 +9,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	xccall "github.com/cordialsys/crosschain/call"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
 	cantonkc "github.com/cordialsys/crosschain/chain/canton/keycloak"
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
@@ -48,6 +48,8 @@ type Client struct {
 }
 
 var _ xclient.Client = &Client{}
+var _ xclient.CallClient = &Client{}
+var _ xclient.OfferClient = &Client{}
 
 func parseBasicAuthSecret(value string, field string) (string, string, error) {
 	parts := strings.SplitN(value, ":", 2)
@@ -214,31 +216,12 @@ func (client *Client) cantonUIToken(ctx context.Context) (string, error) {
 	return resp.AccessToken, nil
 }
 
-func (client *Client) defaultUtilitiesRegistryBaseURL() string {
-	if client == nil || client.cantonCfg == nil {
-		return ""
-	}
-	if client.cantonCfg.UtilitiesRegistryBaseURL != "" {
-		return strings.TrimRight(client.cantonCfg.UtilitiesRegistryBaseURL, "/")
-	}
-	switch client.Asset.GetChain().Network {
-	case string(xc.Mainnets):
-		return "https://api.utilities.digitalasset.com/api/token-standard/v0/registrars"
-	default:
-		return "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars"
-	}
-}
-
-func encodeTokenRegistrarAdmin(admin string) string {
-	return strings.ReplaceAll(url.QueryEscape(admin), "+", "%20")
-}
-
-func (client *Client) resolveTokenRegistryBaseURL(ctx context.Context, instrumentAdmin string) (string, string, error) {
-	if instrumentAdmin == "" {
-		return "", "", errors.New("empty instrument admin")
+func (client *Client) resolveTokenRegistryBaseURL(ctx context.Context, contract xc.ContractAddress, instrumentAdmin string) (string, string, error) {
+	if contract == "" {
+		return "", "", errors.New("empty token contract")
 	}
 	if client != nil && client.cantonCfg != nil {
-		if baseURL := strings.TrimRight(client.cantonCfg.TokenRegistryAdminURLs[instrumentAdmin], "/"); baseURL != "" {
+		if baseURL := strings.TrimRight(client.cantonCfg.TokenRegistryURLs[contract], "/"); baseURL != "" {
 			return baseURL, "", nil
 		}
 	}
@@ -253,11 +236,7 @@ func (client *Client) resolveTokenRegistryBaseURL(ctx context.Context, instrumen
 		}
 	}
 
-	if utilitiesBase := client.defaultUtilitiesRegistryBaseURL(); utilitiesBase != "" {
-		return utilitiesBase + "/" + encodeTokenRegistrarAdmin(instrumentAdmin), "", nil
-	}
-
-	return "", "", fmt.Errorf("no token registry configured for instrument admin %q", instrumentAdmin)
+	return "", "", fmt.Errorf("no token registry configured for contract %q", contract)
 }
 
 func (client *Client) resolveSynchronizerID(ctx context.Context, partyID string, fallback string) (string, error) {
@@ -283,7 +262,11 @@ func (client *Client) resolveValidatorSynchronizerID(ctx context.Context) (strin
 
 func (client *Client) PrepareTransferOfferCommand(ctx context.Context, args xcbuilder.TransferArgs, amuletRules AmuletRules) (*interactive.PrepareSubmissionResponse, error) {
 	commandID := cantonproto.NewCommandID()
-	cmd := buildTransferOfferCreateCommand(args, amuletRules, commandID, client.Asset.GetChain().Decimals)
+	walletPackageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-wallet")
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve splice-wallet package: %w", err)
+	}
+	cmd := buildTransferOfferCreateCommand(args, amuletRules, walletPackageID, commandID, client.Asset.GetChain().Decimals)
 	synchronizerID, err := client.resolveSynchronizerID(ctx, string(args.GetFrom()), amuletRules.AmuletRulesUpdate.DomainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve transfer synchronizer: %w", err)
@@ -575,9 +558,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch recipient active contracts: %w", err)
 	}
-	isExternal := client.ledgerClient.HasTransferPreapprovalContract(ctx, recipientContracts)
-	input.IsExternalTransfer = isExternal
-
+	isPreapproval := client.ledgerClient.HasTransferPreapprovalContract(ctx, recipientContracts)
 	uiToken, err := client.cantonUIToken(ctx)
 	if err != nil {
 		return nil, err
@@ -589,7 +570,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	var resp *interactive.PrepareSubmissionResponse
-	if isExternal {
+	if isPreapproval {
 		openMiningRound, issuingMiningRound, err := client.ledgerClient.GetOpenAndIssuingMiningRound(ctx, uiToken)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch mining rounds: %w", err)
@@ -796,7 +777,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 		decimals, err := client.FetchDecimals(ctx, contract)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"contract": contract,
+				"contract":  contract,
 				"update_id": updateId,
 			}).WithError(err).Debug("falling back to chain decimals for Canton token tx-info")
 			tokenDecimalsCache[contract] = chainCfg.Decimals
@@ -1396,6 +1377,516 @@ func extractTokenHoldingView(created *v2.CreatedEvent) (owner string, instrument
 	return "", "", "", "", false
 }
 
+func extractOfferAmountAndAsset(value *v2.Value) (xc.ContractAddress, string, bool) {
+	if value == nil {
+		return "", "", false
+	}
+	if numeric := value.GetNumeric(); numeric != "" {
+		return xc.ContractAddress(xc.CANTON), numeric, true
+	}
+	record := value.GetRecord()
+	if record == nil {
+		return "", "", false
+	}
+	if instrumentValue, ok := getRecordFieldValue(record, "instrumentId"); ok && instrumentValue.GetRecord() != nil {
+		adminValue, hasAdmin := getRecordFieldValue(instrumentValue.GetRecord(), "admin")
+		idValue, hasID := getRecordFieldValue(instrumentValue.GetRecord(), "id")
+		amountValue, hasAmount := getRecordFieldValue(record, "amount")
+		if hasAdmin && hasID && hasAmount && adminValue.GetParty() != "" && idValue.GetText() != "" && amountValue.GetNumeric() != "" {
+			return xc.ContractAddress(adminValue.GetParty() + "#" + idValue.GetText()), amountValue.GetNumeric(), true
+		}
+	}
+	amountValue, hasAmount := getRecordFieldValue(record, "amount")
+	if !hasAmount {
+		return "", "", false
+	}
+	if amountValue.GetNumeric() != "" {
+		if instrumentValue, ok := getRecordFieldValue(record, "instrument"); ok && instrumentValue.GetRecord() != nil {
+			adminValue, hasAdmin := getRecordFieldValue(instrumentValue.GetRecord(), "source")
+			idValue, hasID := getRecordFieldValue(instrumentValue.GetRecord(), "id")
+			if hasAdmin && hasID && adminValue.GetParty() != "" && idValue.GetText() != "" {
+				return xc.ContractAddress(adminValue.GetParty() + "#" + idValue.GetText()), amountValue.GetNumeric(), true
+			}
+		}
+		return xc.ContractAddress(xc.CANTON), amountValue.GetNumeric(), true
+	}
+	if amountRecord := amountValue.GetRecord(); amountRecord != nil {
+		numericValue, hasNumeric := getRecordFieldValue(amountRecord, "amount")
+		if !hasNumeric || numericValue.GetNumeric() == "" {
+			return "", "", false
+		}
+		if unitValue, ok := getRecordFieldValue(amountRecord, "unit"); ok {
+			if enumValue := unitValue.GetEnum(); enumValue != nil && enumValue.GetConstructor() == "AmuletUnit" {
+				return xc.ContractAddress(xc.CANTON), numericValue.GetNumeric(), true
+			}
+			if unitRecord := unitValue.GetRecord(); unitRecord != nil {
+				adminValue, hasAdmin := getRecordFieldValue(unitRecord, "admin")
+				idValue, hasID := getRecordFieldValue(unitRecord, "id")
+				if hasAdmin && hasID && adminValue.GetParty() != "" && idValue.GetText() != "" {
+					return xc.ContractAddress(adminValue.GetParty() + "#" + idValue.GetText()), numericValue.GetNumeric(), true
+				}
+			}
+		}
+		return xc.ContractAddress(xc.CANTON), numericValue.GetNumeric(), true
+	}
+	return "", "", false
+}
+
+func extractLedgerOffer(created *v2.CreatedEvent) (from xc.Address, to xc.Address, assetID xc.ContractAddress, amount string, expiresAt *time.Time, trackingID string, ok bool) {
+	if created == nil {
+		return "", "", "", "", nil, "", false
+	}
+	args := created.GetCreateArguments()
+	if args == nil {
+		return "", "", "", "", nil, "", false
+	}
+
+	var senderValue, receiverValue, amountValue, transferValue *v2.Value
+	if value, found := getRecordFieldValue(args, "sender"); found {
+		senderValue = value
+	}
+	if value, found := getRecordFieldValue(args, "receiver"); found {
+		receiverValue = value
+	}
+	if value, found := getRecordFieldValue(args, "amount"); found {
+		amountValue = value
+	}
+	if senderValue == nil || receiverValue == nil || amountValue == nil {
+		if value, found := getRecordFieldValue(args, "transfer"); found && value.GetRecord() != nil {
+			transferValue = value
+			transferRecord := transferValue.GetRecord()
+			senderValue, _ = getRecordFieldValue(transferRecord, "sender")
+			receiverValue, _ = getRecordFieldValue(transferRecord, "receiver")
+			amountValue = transferValue
+		}
+	}
+	if senderValue == nil || receiverValue == nil || amountValue == nil || senderValue.GetParty() == "" || receiverValue.GetParty() == "" {
+		return "", "", "", "", nil, "", false
+	}
+
+	assetID, amount, ok = extractOfferAmountAndAsset(amountValue)
+	if !ok {
+		return "", "", "", "", nil, "", false
+	}
+
+	if trackingValue, found := getRecordFieldValue(args, "trackingId"); found {
+		trackingID = trackingValue.GetText()
+	}
+	if expiresValue, found := getRecordFieldValue(args, "expiresAt"); found {
+		if ts := expiresValue.GetTimestamp(); ts != 0 {
+			expiry := time.UnixMicro(ts).UTC()
+			expiresAt = &expiry
+		}
+	}
+	if expiresAt == nil && transferValue != nil {
+		if executeBeforeValue, found := getRecordFieldValue(transferValue.GetRecord(), "executeBefore"); found {
+			if ts := executeBeforeValue.GetTimestamp(); ts != 0 {
+				expiry := time.UnixMicro(ts).UTC()
+				expiresAt = &expiry
+			}
+		}
+	}
+
+	return xc.Address(senderValue.GetParty()), xc.Address(receiverValue.GetParty()), assetID, amount, expiresAt, trackingID, true
+}
+
+func (client *Client) resolveOfferAmount(ctx context.Context, assetID xc.ContractAddress, amount string, decimalsCache map[xc.ContractAddress]int) (xc.AmountBlockchain, error) {
+	decimals, ok := decimalsCache[assetID]
+	if !ok {
+		var err error
+		decimals, err = client.FetchDecimals(ctx, assetID)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"asset_id": assetID,
+				"amount":   amount,
+			}).WithError(err).Debug("failed to resolve offer decimals, falling back to zero amount")
+			return xc.NewAmountBlockchainFromUint64(0), nil
+		}
+		decimalsCache[assetID] = decimals
+	}
+	blockchainAmount, ok := parseHumanAmountToBlockchain(amount, int32(decimals))
+	if !ok {
+		return xc.AmountBlockchain{}, fmt.Errorf("invalid offer amount %q for asset %q", amount, assetID)
+	}
+	return blockchainAmount, nil
+}
+
+func isPendingOfferTemplate(templateID *v2.Identifier) bool {
+	if templateID == nil {
+		return false
+	}
+	return (templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "TransferOffer") ||
+		(templateID.GetModuleName() == "Utility.Registry.App.V0.Model.Transfer" && templateID.GetEntityName() == "TransferOffer")
+}
+
+func isSettlementTemplate(templateID *v2.Identifier) bool {
+	if templateID == nil {
+		return false
+	}
+	return templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "AcceptedTransferOffer"
+}
+
+func (client *Client) listOffers(ctx context.Context, args *xclient.OfferArgs, includeTemplate func(*v2.Identifier) bool) ([]*xclient.Offer, error) {
+	partyID := string(args.Address())
+	if partyID == "" {
+		return nil, fmt.Errorf("empty address")
+	}
+	ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ledger end: %w", err)
+	}
+	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query visible offers for party %s: %w", partyID, err)
+	}
+	filterContract, filterByContract := args.Contract()
+	decimalsCache := map[xc.ContractAddress]int{}
+	offers := make([]*xclient.Offer, 0, len(contracts))
+	for _, contract := range contracts {
+		created := contract.GetCreatedEvent()
+		if created == nil || !includeTemplate(created.GetTemplateId()) {
+			continue
+		}
+		from, to, assetID, amountText, expiresAt, trackingID, ok := extractLedgerOffer(created)
+		if !ok {
+			continue
+		}
+		if from != args.Address() && to != args.Address() {
+			continue
+		}
+		if filterByContract && assetID != filterContract {
+			continue
+		}
+		amount, err := client.resolveOfferAmount(ctx, assetID, amountText, decimalsCache)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve amount for offer %s: %w", created.GetContractId(), err)
+		}
+		offers = append(offers, &xclient.Offer{
+			ID:         created.GetContractId(),
+			AssetID:    assetID,
+			From:       from,
+			To:         to,
+			Amount:     amount,
+			ExpiresAt:  expiresAt,
+			TrackingID: trackingID,
+		})
+	}
+	return offers, nil
+}
+
+func (client *Client) ListPendingOffers(ctx context.Context, args *xclient.OfferArgs) ([]*xclient.Offer, error) {
+	return client.listOffers(ctx, args, isPendingOfferTemplate)
+}
+
+func (client *Client) ListSettlements(ctx context.Context, args *xclient.OfferArgs) ([]*xclient.Settlement, error) {
+	offers, err := client.listOffers(ctx, args, isSettlementTemplate)
+	if err != nil {
+		return nil, err
+	}
+	settlements := make([]*xclient.Settlement, 0, len(offers))
+	for _, offer := range offers {
+		settlements = append(settlements, &xclient.Settlement{
+			ID:         offer.ID,
+			AssetID:    offer.AssetID,
+			From:       offer.From,
+			To:         offer.To,
+			Amount:     offer.Amount,
+			ExpiresAt:  offer.ExpiresAt,
+			TrackingID: offer.TrackingID,
+		})
+	}
+	return settlements, nil
+}
+
+func newCallInputFromPrepareResponse(ledgerEnd int64, activeTime time.Duration, resp *interactive.PrepareSubmissionResponse) *tx_input.CallInput {
+	input := tx_input.NewCallInput()
+	input.LedgerEnd = ledgerEnd
+	input.PreparedTransaction = resp.GetPreparedTransaction()
+	input.SubmissionId = NewCommandId()
+	input.HashingSchemeVersion = resp.GetHashingSchemeVersion()
+	input.DeduplicationWindow = cantonproto.ResolveDeduplicationWindow(activeTime)
+	return input
+}
+
+func findVisibleActiveContractByID(contracts []*v2.ActiveContract, contractID string) *v2.ActiveContract {
+	for _, contract := range contracts {
+		created := contract.GetCreatedEvent()
+		if created == nil {
+			continue
+		}
+		if created.GetContractId() == contractID {
+			return contract
+		}
+	}
+	return nil
+}
+
+func (client *Client) prepareWalletOfferAccept(ctx context.Context, partyID string, target *v2.ActiveContract) (*interactive.PrepareSubmissionResponse, error) {
+	created := target.GetCreatedEvent()
+	if created == nil || created.GetTemplateId() == nil {
+		return nil, fmt.Errorf("wallet offer contract is missing created event data")
+	}
+	commandID := cantonproto.NewCommandID()
+	synchronizerID, err := client.resolveSynchronizerID(ctx, partyID, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve synchronizer for wallet offer accept: %w", err)
+	}
+	cmd := buildWalletTransferOfferAcceptCommand(created.GetTemplateId(), created.GetContractId())
+	return client.ledgerClient.PrepareSubmissionRequest(ctx, cmd, commandID, partyID, synchronizerID)
+}
+
+func (client *Client) prepareTokenOfferAccept(ctx context.Context, partyID string, target *v2.ActiveContract) (*interactive.PrepareSubmissionResponse, error) {
+	created := target.GetCreatedEvent()
+	if created == nil {
+		return nil, fmt.Errorf("token offer contract is missing created event data")
+	}
+	_, _, assetID, _, _, _, ok := extractLedgerOffer(created)
+	if !ok {
+		return nil, fmt.Errorf("unsupported token offer contract %s: could not extract transfer fields", created.GetContractId())
+	}
+	instrumentAdmin, _, ok := parseCantonTokenContract(assetID)
+	if !ok {
+		return nil, fmt.Errorf("unsupported token offer contract %s: invalid asset id %q", created.GetContractId(), assetID)
+	}
+	transferPackageID, err := client.ledgerClient.ResolvePackageIDByName(ctx, "splice-api-token-transfer-instruction-v1")
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve token transfer interface package: %w", err)
+	}
+
+	tryRegistry := func() (*interactive.PrepareSubmissionResponse, error) {
+		registryBaseURL, registryToken, err := client.resolveTokenRegistryBaseURL(ctx, assetID, instrumentAdmin)
+		if err != nil {
+			return nil, err
+		}
+		choiceContext, err := client.ledgerClient.GetTokenTransferInstructionAcceptContextAt(ctx, registryToken, registryBaseURL, created.GetContractId())
+		if err != nil {
+			return nil, err
+		}
+		packageMap, err := client.ledgerClient.ListKnownPackageIDsByName(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve package id map for token accept disclosures: %w", err)
+		}
+		disclosedContracts, registrySynchronizerID, err := tokenDisclosedContractsToProto(choiceContext.DisclosedContracts, packageMap)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert token accept disclosures: %w", err)
+		}
+		cmd, err := buildTokenTransferInstructionAcceptCommand(transferPackageID, created.GetContractId(), choiceContext.ChoiceContextData)
+		if err != nil {
+			return nil, err
+		}
+		commandID := cantonproto.NewCommandID()
+		synchronizerID, err := client.resolveSynchronizerID(ctx, partyID, registrySynchronizerID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token accept synchronizer: %w", err)
+		}
+		prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{cmd}, disclosedContracts)
+		return client.ledgerClient.PrepareSubmission(ctx, prepareReq)
+	}
+
+	tryFallback := func() (*interactive.PrepareSubmissionResponse, error) {
+		cmd, err := buildTokenTransferInstructionAcceptCommand(transferPackageID, created.GetContractId(), map[string]any{"values": map[string]any{}})
+		if err != nil {
+			return nil, err
+		}
+		commandID := cantonproto.NewCommandID()
+		synchronizerID, err := client.resolveSynchronizerID(ctx, partyID, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve token accept synchronizer: %w", err)
+		}
+		prepareReq := cantonproto.NewPrepareRequest(commandID, synchronizerID, []string{partyID}, []string{partyID}, []*v2.Command{cmd}, nil)
+		return client.ledgerClient.PrepareSubmission(ctx, prepareReq)
+	}
+
+	prepareResp, err := tryRegistry()
+	if err == nil {
+		return prepareResp, nil
+	}
+	client.ledgerClient.logger.WithError(err).WithField("contract_id", created.GetContractId()).Warn("registry-backed token accept preparation failed, falling back to ledger-only accept")
+
+	prepareResp, fallbackErr := tryFallback()
+	if fallbackErr != nil {
+		return nil, fmt.Errorf("failed token offer accept via registry (%v) and fallback (%w)", err, fallbackErr)
+	}
+	return prepareResp, nil
+}
+
+func (client *Client) prepareAcceptedTransferOfferComplete(ctx context.Context, partyID string, acceptedOffer *v2.ActiveContract, visibleContracts []*v2.ActiveContract) (*interactive.PrepareSubmissionResponse, error) {
+	created := acceptedOffer.GetCreatedEvent()
+	if created == nil || created.GetTemplateId() == nil {
+		return nil, fmt.Errorf("settlement contract is missing created event data")
+	}
+
+	uiToken, err := client.cantonUIToken(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire scan token for settlement completion: %w", err)
+	}
+	amuletRules, err := client.ledgerClient.GetAmuletRules(ctx, uiToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch amulet rules: %w", err)
+	}
+	openMiningRound, issuingMiningRound, err := client.ledgerClient.GetOpenAndIssuingMiningRound(ctx, uiToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch mining rounds: %w", err)
+	}
+
+	amulets := FilterToAmuletContracts(visibleContracts)
+	transferInputs := make([]*v2.Value, 0, len(amulets))
+	disclosedContracts := make([]*v2.DisclosedContract, 0, len(amulets)+3)
+	for _, contract := range amulets {
+		event := contract.GetCreatedEvent()
+		if event == nil {
+			continue
+		}
+		if event.GetTemplateId().GetEntityName() == "Amulet" {
+			transferInputs = append(transferInputs, &v2.Value{
+				Sum: &v2.Value_Variant{
+					Variant: &v2.Variant{
+						Constructor: "InputAmulet",
+						Value:       cantonproto.ContractIDValue(event.GetContractId()),
+					},
+				},
+			})
+			disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
+				TemplateId:       event.GetTemplateId(),
+				ContractId:       event.GetContractId(),
+				CreatedEventBlob: event.GetCreatedEventBlob(),
+			})
+		}
+	}
+
+	amuletRulesTemplateParts := strings.SplitN(amuletRules.AmuletRulesUpdate.Contract.TemplateID, ":", 3)
+	if len(amuletRulesTemplateParts) == 3 {
+		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
+			TemplateId: &v2.Identifier{
+				PackageId:  amuletRulesTemplateParts[0],
+				ModuleName: amuletRulesTemplateParts[1],
+				EntityName: amuletRulesTemplateParts[2],
+			},
+			ContractId:       amuletRules.AmuletRulesUpdate.Contract.ContractID,
+			CreatedEventBlob: amuletRules.AmuletRulesUpdate.Contract.CreatedEventBlob,
+		})
+	}
+
+	openParts := strings.Split(openMiningRound.Contract.TemplateID, ":")
+	if len(openParts) == 3 {
+		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
+			TemplateId: &v2.Identifier{
+				PackageId:  openParts[0],
+				ModuleName: openParts[1],
+				EntityName: openParts[2],
+			},
+			ContractId:       openMiningRound.Contract.ContractID,
+			CreatedEventBlob: openMiningRound.Contract.CreatedEventBlob,
+		})
+	}
+
+	issuingParts := strings.Split(issuingMiningRound.Contract.TemplateID, ":")
+	if len(issuingParts) == 3 {
+		disclosedContracts = append(disclosedContracts, &v2.DisclosedContract{
+			TemplateId: &v2.Identifier{
+				PackageId:  issuingParts[0],
+				ModuleName: issuingParts[1],
+				EntityName: issuingParts[2],
+			},
+			ContractId:       issuingMiningRound.Contract.ContractID,
+			CreatedEventBlob: issuingMiningRound.Contract.CreatedEventBlob,
+		})
+	}
+
+	roundNumber, err := strconv.ParseInt(issuingMiningRound.Contract.Payload.Round.Number, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse issuing mining round number: %w", err)
+	}
+
+	cmd := buildAcceptedTransferOfferCompleteCommand(
+		created.GetTemplateId(),
+		created.GetContractId(),
+		partyID,
+		amuletRules.AmuletRulesUpdate.Contract.ContractID,
+		openMiningRound.Contract.ContractID,
+		issuingMiningRound.Contract.ContractID,
+		roundNumber,
+		transferInputs,
+	)
+	prepareReq := &interactive.PrepareSubmissionRequest{
+		UserId:             client.ledgerClient.validatorServiceUserID,
+		CommandId:          newRegisterCommandId(),
+		Commands:           []*v2.Command{cmd},
+		ReadAs:             []string{partyID, client.ledgerClient.validatorPartyID},
+		ActAs:              []string{partyID},
+		SynchronizerId:     amuletRules.AmuletRulesUpdate.DomainID,
+		DisclosedContracts: disclosedContracts,
+		VerboseHashing:     false,
+	}
+	return client.ledgerClient.PrepareSubmission(ctx, prepareReq)
+}
+
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
+	signers := call.SigningAddresses()
+	if len(signers) == 0 {
+		return nil, fmt.Errorf("no signing address provided for Canton call")
+	}
+	partyID := string(signers[0])
+	contractAddresses := call.ContractAddresses()
+	if len(contractAddresses) == 0 || contractAddresses[0] == "" {
+		return nil, fmt.Errorf("missing target contract id for Canton call %q", call.GetMethod())
+	}
+	contractID := string(contractAddresses[0])
+
+	ledgerEnd, err := client.ledgerClient.GetLedgerEnd(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ledger end: %w", err)
+	}
+	contracts, err := client.ledgerClient.GetActiveContracts(ctx, partyID, ledgerEnd, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch visible contracts for party %s: %w", partyID, err)
+	}
+	target := findVisibleActiveContractByID(contracts, contractID)
+	if target == nil {
+		return nil, fmt.Errorf("contract %s is not visible to caller %s", contractID, partyID)
+	}
+	created := target.GetCreatedEvent()
+	if created == nil || created.GetTemplateId() == nil {
+		return nil, fmt.Errorf("contract %s is missing created event data", contractID)
+	}
+
+	var prepareResp *interactive.PrepareSubmissionResponse
+	switch call.GetMethod() {
+	case xccall.OfferAccept:
+		templateID := created.GetTemplateId()
+		if templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "TransferOffer" {
+			prepareResp, err = client.prepareWalletOfferAccept(ctx, partyID, target)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+		if _, _, assetID, _, _, _, ok := extractLedgerOffer(created); ok {
+			if _, _, tokenOK := parseCantonTokenContract(assetID); tokenOK {
+				prepareResp, err = client.prepareTokenOfferAccept(ctx, partyID, target)
+				if err != nil {
+					return nil, err
+				}
+				break
+			}
+		}
+		return nil, fmt.Errorf("unsupported offer accept target %s (%s:%s)", contractID, templateID.GetModuleName(), templateID.GetEntityName())
+	case xccall.SettlementComplete:
+		templateID := created.GetTemplateId()
+		if !isSettlementTemplate(templateID) {
+			return nil, fmt.Errorf("unsupported settlement completion target %s (%s:%s)", contractID, templateID.GetModuleName(), templateID.GetEntityName())
+		}
+		prepareResp, err = client.prepareAcceptedTransferOfferComplete(ctx, partyID, target, contracts)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported Canton call method %q", call.GetMethod())
+	}
+
+	return newCallInputFromPrepareResponse(ledgerEnd, client.Asset.TransactionActiveTime, prepareResp), nil
+}
+
 func parseRecoveryLookupId(value string) (int64, string, bool) {
 	idx := strings.Index(value, "-")
 	if idx <= 0 || idx == len(value)-1 {
@@ -1432,9 +1923,13 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 		if !ok {
 			return zero, fmt.Errorf("invalid Canton token contract %q, expected <instrument-admin>#<instrument-id>", contract)
 		}
-		decimals, err := client.FetchDecimals(ctx, contract)
-		if err != nil {
-			return zero, fmt.Errorf("failed to resolve decimals for Canton token contract %q: %w", contract, err)
+		decimals, ok := args.Decimals()
+		if !ok {
+			var err error
+			decimals, err = client.FetchDecimals(ctx, contract)
+			if err != nil {
+				return zero, fmt.Errorf("failed to resolve decimals for Canton token contract %q: %w", contract, err)
+			}
 		}
 
 		totalBalance := xc.NewAmountBlockchainFromUint64(0)
@@ -1527,7 +2022,7 @@ func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAdd
 	}
 	instrumentAdmin, instrumentID, ok := parseCantonTokenContract(contract)
 	if ok {
-		registryBaseURL, registryToken, err := client.resolveTokenRegistryBaseURL(ctx, instrumentAdmin)
+		registryBaseURL, registryToken, err := client.resolveTokenRegistryBaseURL(ctx, contract, instrumentAdmin)
 		if err != nil {
 			return 0, fmt.Errorf("failed to resolve token registry for Canton token contract %q: %w", contract, err)
 		}

@@ -86,14 +86,13 @@ func transferAmountNumeric(args xcbuilder.TransferArgs, decimals int32) string {
 	return amount.ToHuman(decimals).String()
 }
 
-func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules AmuletRules, commandID string, decimals int32) *v2.Command {
+func buildTransferOfferCreateCommand(args xcbuilder.TransferArgs, amuletRules AmuletRules, walletPackageID string, commandID string, decimals int32) *v2.Command {
 	amountNumeric := transferAmountNumeric(args, decimals)
-	packageID := amuletRules.GetSpliceId()
 	return &v2.Command{
 		Command: &v2.Command_Create{
 			Create: &v2.CreateCommand{
 				TemplateId: &v2.Identifier{
-					PackageId:  packageID,
+					PackageId:  walletPackageID,
 					ModuleName: "Splice.Wallet.TransferOffer",
 					EntityName: "TransferOffer",
 				},
@@ -125,6 +124,19 @@ func buildExternalPartySetupProposalAcceptCommand(templateID *v2.Identifier, con
 				TemplateId:     templateID,
 				ContractId:     contractID,
 				Choice:         "ExternalPartySetupProposal_Accept",
+				ChoiceArgument: cantonproto.EmptyRecordValue(),
+			},
+		},
+	}
+}
+
+func buildWalletTransferOfferAcceptCommand(templateID *v2.Identifier, contractID string) *v2.Command {
+	return &v2.Command{
+		Command: &v2.Command_Exercise{
+			Exercise: &v2.ExerciseCommand{
+				TemplateId:     templateID,
+				ContractId:     contractID,
+				Choice:         "TransferOffer_Accept",
 				ChoiceArgument: cantonproto.EmptyRecordValue(),
 			},
 		},
@@ -389,6 +401,102 @@ func buildTokenStandardTransferCommand(
 			},
 		},
 	}, nil
+}
+
+func buildTokenTransferInstructionAcceptCommand(
+	transferPackageID string,
+	contractID string,
+	choiceContextData map[string]any,
+) (*v2.Command, error) {
+	choiceContextValue, err := tokenChoiceContextToValue(choiceContextData)
+	if err != nil {
+		return nil, fmt.Errorf("build token accept choice context: %w", err)
+	}
+
+	return &v2.Command{
+		Command: &v2.Command_Exercise{
+			Exercise: &v2.ExerciseCommand{
+				TemplateId: &v2.Identifier{
+					PackageId:  transferPackageID,
+					ModuleName: "Splice.Api.Token.TransferInstructionV1",
+					EntityName: "TransferInstruction",
+				},
+				ContractId: contractID,
+				Choice:     "TransferInstruction_Accept",
+				ChoiceArgument: cantonproto.RecordValue(
+					cantonproto.Field("extraArgs", cantonproto.RecordValue(
+						cantonproto.Field("context", choiceContextValue),
+						cantonproto.Field("meta", cantonproto.RecordValue(
+							cantonproto.Field("values", &v2.Value{
+								Sum: &v2.Value_TextMap{
+									TextMap: &v2.TextMap{Entries: []*v2.TextMap_Entry{}},
+								},
+							}),
+						)),
+					)),
+				),
+			},
+		},
+	}, nil
+}
+
+func buildAcceptedTransferOfferCompleteCommand(
+	templateID *v2.Identifier,
+	contractID string,
+	senderPartyID string,
+	amuletRulesID string,
+	openMiningRoundID string,
+	issuingMiningRoundID string,
+	issuingMiningRoundNumber int64,
+	transferInputs []*v2.Value,
+) *v2.Command {
+	issuingMiningRounds := &v2.Value{
+		Sum: &v2.Value_GenMap{
+			GenMap: &v2.GenMap{
+				Entries: []*v2.GenMap_Entry{
+					{
+						Key: cantonproto.RecordValue(
+							cantonproto.Field("number", &v2.Value{Sum: &v2.Value_Int64{Int64: issuingMiningRoundNumber}}),
+						),
+						Value: cantonproto.ContractIDValue(issuingMiningRoundID),
+					},
+				},
+			},
+		},
+	}
+
+	return &v2.Command{
+		Command: &v2.Command_Exercise{
+			Exercise: &v2.ExerciseCommand{
+				TemplateId: templateID,
+				ContractId: contractID,
+				Choice:     "AcceptedTransferOffer_Complete",
+				ChoiceArgument: cantonproto.RecordValue(
+					cantonproto.Field("inputs", &v2.Value{
+						Sum: &v2.Value_List{
+							List: &v2.List{Elements: transferInputs},
+						},
+					}),
+					cantonproto.Field("transferContext", cantonproto.RecordValue(
+						cantonproto.Field("amuletRules", cantonproto.ContractIDValue(amuletRulesID)),
+						cantonproto.Field("context", cantonproto.RecordValue(
+							cantonproto.Field("openMiningRound", cantonproto.ContractIDValue(openMiningRoundID)),
+							cantonproto.Field("issuingMiningRounds", issuingMiningRounds),
+							cantonproto.Field("validatorRights", &v2.Value{
+								Sum: &v2.Value_GenMap{
+									GenMap: &v2.GenMap{Entries: []*v2.GenMap_Entry{}},
+								},
+							}),
+							cantonproto.Field("featuredAppRight", &v2.Value{
+								Sum: &v2.Value_Optional{Optional: &v2.Optional{}},
+							}),
+						)),
+					)),
+					cantonproto.Field("walletProvider", cantonproto.PartyValue(senderPartyID)),
+				),
+			},
+		},
+	}
 }
 
 func tokenDisclosedContractsToProto(disclosed []TokenRegistryDisclosedContract, packageMap map[string]string) ([]*v2.DisclosedContract, string, error) {

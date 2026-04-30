@@ -14,6 +14,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	xccall "github.com/cordialsys/crosschain/call"
+	cantoncall "github.com/cordialsys/crosschain/chain/canton/call"
 	cantonkc "github.com/cordialsys/crosschain/chain/canton/keycloak"
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
 	"github.com/cordialsys/crosschain/chain/canton/tx_input"
@@ -82,7 +84,11 @@ func TestFetchDecimals(t *testing.T) {
 			},
 			ChainClientConfig: &xc.ChainClientConfig{},
 		},
-		cantonCfg: &CantonConfig{},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"): "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+			},
+		},
 		ledgerClient: &GrpcLedgerClient{
 			scanProxyURL: "https://proxy.example",
 			scanAPIURL:   "https://scan.example",
@@ -153,17 +159,21 @@ func TestFetchDecimalsReturnsMetadataLookupErrorForUnknownCantonToken(t *testing
 	}))
 	defer keycloakServer.Close()
 
-		client := &Client{
-			Asset: &xc.ChainConfig{
+	client := &Client{
+		Asset: &xc.ChainConfig{
 			ChainBaseConfig: &xc.ChainBaseConfig{
 				Chain:    xc.CANTON,
 				Driver:   xc.DriverCanton,
 				Decimals: 18,
 			},
-				ChainClientConfig: &xc.ChainClientConfig{},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"): "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
 			},
-			cantonCfg: &CantonConfig{},
-			ledgerClient: &GrpcLedgerClient{
+		},
+		ledgerClient: &GrpcLedgerClient{
 			scanProxyURL: "https://proxy.example",
 			scanAPIURL:   "https://scan.example",
 			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -205,27 +215,27 @@ func TestFetchDecimalsReturnsErrorWhenRegistryAdminDoesNotMatchInstrumentAdmin(t
 	}))
 	defer keycloakServer.Close()
 
-		client := &Client{
-			Asset: &xc.ChainConfig{
-				ChainBaseConfig: &xc.ChainBaseConfig{
-					Chain:    xc.CANTON,
-					Driver:   xc.DriverCanton,
-					Decimals: 18,
-				},
-				ChainClientConfig: &xc.ChainClientConfig{},
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 18,
 			},
-			cantonCfg: &CantonConfig{
-				TokenRegistryAdminURLs: map[string]string{
-					"issuer-party": "https://registry.example",
-				},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("issuer-party#XC"): "https://registry.example",
 			},
-			ledgerClient: &GrpcLedgerClient{
-				scanProxyURL: "https://proxy.example",
-				scanAPIURL:   "https://scan.example",
-				httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-					require.Equal(t, http.MethodGet, req.Method)
-					require.Equal(t, "https://registry.example/registry/metadata/v1/info", req.URL.String())
-					return httpJSONResponse(http.StatusOK, `{
+		},
+		ledgerClient: &GrpcLedgerClient{
+			scanProxyURL: "https://proxy.example",
+			scanAPIURL:   "https://scan.example",
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, http.MethodGet, req.Method)
+				require.Equal(t, "https://registry.example/registry/metadata/v1/info", req.URL.String())
+				return httpJSONResponse(http.StatusOK, `{
 						"adminId":"other-admin",
 						"supportedApis":{}
 					}`), nil
@@ -288,8 +298,8 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 			ChainClientConfig: &xc.ChainClientConfig{},
 		},
 		cantonCfg: &CantonConfig{
-			TokenRegistryAdminURLs: map[string]string{
-				"issuer-party": "https://registry.example",
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("issuer-party#DummyHolding"): "https://registry.example",
 			},
 		},
 		ledgerClient: &GrpcLedgerClient{
@@ -317,7 +327,7 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 					return nil, fmt.Errorf("unexpected registry URL %q", req.URL.String())
 				}
 			})},
-			logger:                  logrus.NewEntry(logrus.New()),
+			logger: logrus.NewEntry(logrus.New()),
 		},
 	}
 
@@ -334,7 +344,7 @@ func TestFetchBalanceTokenHolding(t *testing.T) {
 	require.True(t, filter.GetIncludeInterfaceView())
 }
 
-func TestFetchDecimalsResolvesUtilitiesRegistrarByInstrumentAdmin(t *testing.T) {
+func TestFetchDecimalsResolvesConfiguredRegistryByContract(t *testing.T) {
 	t.Parallel()
 
 	client := &Client{
@@ -347,7 +357,11 @@ func TestFetchDecimalsResolvesUtilitiesRegistrarByInstrumentAdmin(t *testing.T) 
 			},
 			ChainClientConfig: &xc.ChainClientConfig{},
 		},
-		cantonCfg: &CantonConfig{},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"): "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+			},
+		},
 		ledgerClient: &GrpcLedgerClient{
 			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 				require.Equal(t, http.MethodGet, req.Method)
@@ -377,6 +391,715 @@ func TestFetchDecimalsResolvesUtilitiesRegistrarByInstrumentAdmin(t *testing.T) 
 	decimals, err := client.FetchDecimals(context.Background(), xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"))
 	require.NoError(t, err)
 	require.Equal(t, 8, decimals)
+}
+
+func TestListPendingOffers(t *testing.T) {
+	t.Parallel()
+
+	stateStub := &stateServiceStub{
+		ledgerEnd: 42,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"pending-1",
+				"TransferOffer",
+				"owner-party",
+				"receiver-party",
+				cantonAmuletOfferAmount("10.0000000000"),
+				"tracking-1",
+				time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC),
+			)),
+			activeContractResponse(testWalletOfferContract(
+				"pending-unrelated",
+				"TransferOffer",
+				"other-sender",
+				"other-receiver",
+				cantonAmuletOfferAmount("1.0000000000"),
+				"tracking-unrelated",
+				time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC),
+			)),
+			activeContractResponse(testWalletOfferContract(
+				"accepted-1",
+				"AcceptedTransferOffer",
+				"owner-party",
+				"receiver-party",
+				cantonAmuletOfferAmount("5.0000000000"),
+				"tracking-accepted",
+				time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	offers, err := client.ListPendingOffers(context.Background(), xclient.NewOfferArgs(xc.Address("owner-party")))
+	require.NoError(t, err)
+	require.Len(t, offers, 1)
+	require.Equal(t, "pending-1", offers[0].ID)
+	require.Equal(t, xc.ContractAddress(xc.CANTON), offers[0].AssetID)
+	require.Equal(t, xc.Address("owner-party"), offers[0].From)
+	require.Equal(t, xc.Address("receiver-party"), offers[0].To)
+	require.Equal(t, "100000000000", offers[0].Amount.String())
+	require.Equal(t, "tracking-1", offers[0].TrackingID)
+	require.NotNil(t, offers[0].ExpiresAt)
+	require.NotNil(t, stateStub.lastActiveContractsReq)
+	require.Contains(t, stateStub.lastActiveContractsReq.GetEventFormat().GetFiltersByParty(), "owner-party")
+}
+
+func TestListPendingOffersFiltersByTokenContract(t *testing.T) {
+	t.Parallel()
+
+	stateStub := &stateServiceStub{
+		ledgerEnd: 7,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletTransferRecordContract(
+				"token-pending",
+				"TransferOffer",
+				"owner-party",
+				"receiver-party",
+				"issuer-party",
+				"XC",
+				"10.500000",
+				"tracking-token",
+				time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC),
+			)),
+			activeContractResponse(testWalletTransferRecordContract(
+				"other-token",
+				"TransferOffer",
+				"owner-party",
+				"receiver-party",
+				"issuer-party",
+				"OTHER",
+				"2.000000",
+				"tracking-other",
+				time.Date(2026, 4, 29, 13, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+	client.Asset.NativeAssets = []*xc.AdditionalNativeAsset{
+		xc.NewAdditionalNativeAsset("XC", "", xc.ContractAddress("issuer-party#XC"), 6, xc.AmountHumanReadable{}),
+		xc.NewAdditionalNativeAsset("OTHER", "", xc.ContractAddress("issuer-party#OTHER"), 6, xc.AmountHumanReadable{}),
+	}
+
+	offers, err := client.ListPendingOffers(
+		context.Background(),
+		xclient.NewOfferArgs(xc.Address("owner-party"), xclient.OfferOptionContract(xc.ContractAddress("issuer-party#XC"))),
+	)
+	require.NoError(t, err)
+	require.Len(t, offers, 1)
+	require.Equal(t, "token-pending", offers[0].ID)
+	require.Equal(t, xc.ContractAddress("issuer-party#XC"), offers[0].AssetID)
+	require.Equal(t, "10500000", offers[0].Amount.String())
+}
+
+func TestListPendingOffersIncludesUtilitiesTransferOffer(t *testing.T) {
+	t.Parallel()
+
+	executeBefore := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
+	stateStub := &stateServiceStub{
+		ledgerEnd: 9,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testUtilitiesTransferOfferContract(
+				"cbtc-offer",
+				"BitSafe-validator-1::1220sender",
+				"owner-party",
+				"cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+				"CBTC",
+				"0.0010000000",
+				executeBefore,
+			)),
+			activeContractResponse(testWalletOfferContract(
+				"accepted-1",
+				"AcceptedTransferOffer",
+				"owner-party",
+				"receiver-party",
+				cantonAmuletOfferAmount("5.0000000000"),
+				"tracking-accepted",
+				time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"): "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+			},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, http.MethodGet, req.Method)
+				switch req.URL.String() {
+				case "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f/registry/metadata/v1/info":
+					return httpJSONResponse(http.StatusOK, `{
+						"adminId":"cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+						"supportedApis":{}
+					}`), nil
+				case "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f/registry/metadata/v1/instruments/CBTC":
+					return httpJSONResponse(http.StatusOK, `{
+						"id":"CBTC",
+						"name":"CBTC",
+						"symbol":"CBTC",
+						"decimals":8,
+						"supportedApis":{}
+					}`), nil
+				default:
+					return nil, fmt.Errorf("unexpected utilities registry URL %q", req.URL.String())
+				}
+			})},
+			logger: logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	offers, err := client.ListPendingOffers(
+		context.Background(),
+		xclient.NewOfferArgs(xc.Address("owner-party"), xclient.OfferOptionContract(xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"))),
+	)
+	require.NoError(t, err)
+	require.Len(t, offers, 1)
+	require.Equal(t, "cbtc-offer", offers[0].ID)
+	require.Equal(t, xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"), offers[0].AssetID)
+	require.Equal(t, xc.Address("BitSafe-validator-1::1220sender"), offers[0].From)
+	require.Equal(t, xc.Address("owner-party"), offers[0].To)
+	require.Equal(t, "100000", offers[0].Amount.String())
+	require.NotNil(t, offers[0].ExpiresAt)
+	require.True(t, offers[0].ExpiresAt.Equal(executeBefore))
+}
+
+func TestListPendingOffersFallsBackToZeroAmountWhenDecimalsLookupFails(t *testing.T) {
+	t.Parallel()
+
+	stateStub := &stateServiceStub{
+		ledgerEnd: 13,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletTransferRecordContract(
+				"token-pending-no-decimals",
+				"TransferOffer",
+				"owner-party",
+				"receiver-party",
+				"issuer-party",
+				"XC",
+				"10.500000",
+				"tracking-token",
+				time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	offers, err := client.ListPendingOffers(context.Background(), xclient.NewOfferArgs(xc.Address("owner-party")))
+	require.NoError(t, err)
+	require.Len(t, offers, 1)
+	require.Equal(t, "token-pending-no-decimals", offers[0].ID)
+	require.Equal(t, xc.ContractAddress("issuer-party#XC"), offers[0].AssetID)
+	require.Equal(t, "0", offers[0].Amount.String())
+}
+
+func TestListSettlements(t *testing.T) {
+	t.Parallel()
+
+	stateStub := &stateServiceStub{
+		ledgerEnd: 11,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"pending-1",
+				"TransferOffer",
+				"owner-party",
+				"receiver-party",
+				cantonAmuletOfferAmount("10.0000000000"),
+				"tracking-pending",
+				time.Date(2026, 4, 29, 12, 0, 0, 0, time.UTC),
+			)),
+			activeContractResponse(testWalletOfferContract(
+				"settlement-1",
+				"AcceptedTransferOffer",
+				"owner-party",
+				"receiver-party",
+				cantonAmuletOfferAmount("3.2500000000"),
+				"tracking-settlement",
+				time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC),
+			)),
+			activeContractResponse(testWalletOfferContract(
+				"settlement-unrelated",
+				"AcceptedTransferOffer",
+				"other-sender",
+				"other-receiver",
+				cantonAmuletOfferAmount("7.0000000000"),
+				"tracking-unrelated",
+				time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	settlements, err := client.ListSettlements(context.Background(), xclient.NewOfferArgs(xc.Address("owner-party")))
+	require.NoError(t, err)
+	require.Len(t, settlements, 1)
+	require.Equal(t, "settlement-1", settlements[0].ID)
+	require.Equal(t, xc.ContractAddress(xc.CANTON), settlements[0].AssetID)
+	require.Equal(t, "32500000000", settlements[0].Amount.String())
+	require.Equal(t, "tracking-settlement", settlements[0].TrackingID)
+}
+
+func TestListSettlementsFallsBackToZeroAmountWhenDecimalsLookupFails(t *testing.T) {
+	t.Parallel()
+
+	stateStub := &stateServiceStub{
+		ledgerEnd: 14,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletTransferRecordContract(
+				"settlement-no-decimals",
+				"AcceptedTransferOffer",
+				"owner-party",
+				"receiver-party",
+				"issuer-party",
+				"XC",
+				"3.250000",
+				"tracking-settlement",
+				time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC),
+			)),
+		},
+	}
+
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig: &xc.ChainBaseConfig{
+				Chain:    xc.CANTON,
+				Driver:   xc.DriverCanton,
+				Decimals: 10,
+			},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	settlements, err := client.ListSettlements(context.Background(), xclient.NewOfferArgs(xc.Address("owner-party")))
+	require.NoError(t, err)
+	require.Len(t, settlements, 1)
+	require.Equal(t, "settlement-no-decimals", settlements[0].ID)
+	require.Equal(t, xc.ContractAddress("issuer-party#XC"), settlements[0].AssetID)
+	require.Equal(t, "0", settlements[0].Amount.String())
+}
+
+func TestFetchCallInputOfferAcceptWallet(t *testing.T) {
+	t.Parallel()
+
+	sender := "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	receiver := "receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	prepareResp := &interactive.PrepareSubmissionResponse{
+		PreparedTransaction:  &interactive.PreparedTransaction{Transaction: &interactive.DamlTransaction{}},
+		HashingSchemeVersion: interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_V2,
+	}
+	stateStub := &stateServiceStub{
+		ledgerEnd: 123,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"wallet-offer-cid",
+				"TransferOffer",
+				sender,
+				receiver,
+				cantonAmuletOfferAmount("12.5"),
+				"tracking-wallet",
+				time.Unix(1710000000, 0).UTC(),
+			)),
+		},
+	}
+	interactiveStub := &interactiveSubmissionStub{prepareResp: prepareResp}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:                   "token",
+			stateClient:                 stateStub,
+			interactiveSubmissionClient: interactiveStub,
+			logger:                      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	payload, err := json.Marshal(xccall.OfferAcceptCall{ContractID: "wallet-offer-cid"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(receiver))
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	require.NoError(t, err)
+	input := inputI.(*tx_input.CallInput)
+	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
+	require.NotEmpty(t, input.SubmissionId)
+	require.NotNil(t, interactiveStub.lastPrepareReq)
+
+	exercise := interactiveStub.lastPrepareReq.GetCommands()[0].GetExercise()
+	require.Equal(t, "wallet-offer-cid", exercise.GetContractId())
+	require.Equal(t, "TransferOffer_Accept", exercise.GetChoice())
+	require.Equal(t, "Splice.Wallet.TransferOffer", exercise.GetTemplateId().GetModuleName())
+	require.Equal(t, []string{receiver}, interactiveStub.lastPrepareReq.GetActAs())
+	require.Equal(t, []string{receiver}, interactiveStub.lastPrepareReq.GetReadAs())
+}
+
+func TestFetchCallInputOfferAcceptUtilitiesTransferOffer(t *testing.T) {
+	t.Parallel()
+
+	sender := "BitSafe-validator-1::1220c6fc2e729dd1e4171702d2871841bb660a6d2ffa8d8b5bfe7415c9bc3d8cf362"
+	receiver := "d6ed91f336502ff706d97729d7ab5521e230c39353ca79372d2b1fc239eaa72c::12203a20475db3ac28b1e0591c90de7826a205cacd9c7b724a2e5822851f029ee2fc"
+	instrumentAdmin := "cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f"
+	prepareResp := &interactive.PrepareSubmissionResponse{
+		PreparedTransaction:  &interactive.PreparedTransaction{Transaction: &interactive.DamlTransaction{}},
+		HashingSchemeVersion: interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_V2,
+	}
+	stateStub := &stateServiceStub{
+		ledgerEnd: 456,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testUtilitiesTransferOfferContract(
+				"utility-offer-cid",
+				sender,
+				receiver,
+				instrumentAdmin,
+				"CBTC",
+				"0.0010000000",
+				time.Unix(1710003600, 0).UTC(),
+			)),
+		},
+	}
+	interactiveStub := &interactiveSubmissionStub{prepareResp: prepareResp}
+	packageStub := &packageManagementStub{
+		resp: &admin.ListKnownPackagesResponse{
+			PackageDetails: []*admin.PackageDetails{
+				{Name: "splice-api-token-transfer-instruction-v1", PackageId: "transfer-package-id"},
+			},
+		},
+	}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				xc.ContractAddress("cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC"): "https://utilities.example/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f",
+			},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:                   "token",
+			stateClient:                 stateStub,
+			packageManagementClient:     packageStub,
+			interactiveSubmissionClient: interactiveStub,
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, http.MethodPost, req.Method)
+				require.Equal(t, "https://utilities.example/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f/registry/transfer-instruction/v1/utility-offer-cid/choice-contexts/accept", req.URL.String())
+				body := `{
+					"choiceContextData":{"values":{"note":{"tag":"AV_Text","value":"registry"}}},
+					"disclosedContracts":[
+						{
+							"templateId":"#splice-api-token-transfer-instruction-v1:Splice.Api.Token.TransferInstructionV1:TransferFactory",
+							"contractId":"factory-cid",
+							"createdEventBlob":"AQ==",
+							"synchronizerId":"sync-id"
+						}
+					]
+				}`
+				return httpJSONResponse(http.StatusOK, body), nil
+			})},
+			logger: logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	payload, err := json.Marshal(xccall.OfferAcceptCall{ContractID: "utility-offer-cid"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(receiver))
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	require.NoError(t, err)
+	input := inputI.(*tx_input.CallInput)
+	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
+	require.NotNil(t, interactiveStub.lastPrepareReq)
+	require.Equal(t, "sync-id", interactiveStub.lastPrepareReq.GetSynchronizerId())
+	require.Len(t, interactiveStub.lastPrepareReq.GetDisclosedContracts(), 1)
+
+	exercise := interactiveStub.lastPrepareReq.GetCommands()[0].GetExercise()
+	require.Equal(t, "utility-offer-cid", exercise.GetContractId())
+	require.Equal(t, "TransferInstruction_Accept", exercise.GetChoice())
+	require.Equal(t, "transfer-package-id", exercise.GetTemplateId().GetPackageId())
+	require.Equal(t, "Splice.Api.Token.TransferInstructionV1", exercise.GetTemplateId().GetModuleName())
+	extraArgsValue, ok := getRecordFieldValue(exercise.GetChoiceArgument().GetRecord(), "extraArgs")
+	require.True(t, ok)
+	contextValue, ok := getRecordFieldValue(extraArgsValue.GetRecord(), "context")
+	require.True(t, ok)
+	valuesField, ok := getRecordFieldValue(contextValue.GetRecord(), "values")
+	require.True(t, ok)
+	require.Len(t, valuesField.GetTextMap().GetEntries(), 1)
+}
+
+func TestFetchCallInputSettlementCompleteTargetsExactContract(t *testing.T) {
+	t.Parallel()
+
+	sender := "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	receiver := "receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	prepareResp := &interactive.PrepareSubmissionResponse{
+		PreparedTransaction:  &interactive.PreparedTransaction{Transaction: &interactive.DamlTransaction{}},
+		HashingSchemeVersion: interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_V2,
+	}
+	stateStub := &stateServiceStub{
+		ledgerEnd: 789,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"settlement-1",
+				"AcceptedTransferOffer",
+				sender,
+				receiver,
+				cantonAmuletOfferAmount("1.0"),
+				"tracking-1",
+				time.Unix(1710000000, 0).UTC(),
+			)),
+			activeContractResponse(&v2.ActiveContract{
+				CreatedEvent: testAmuletCreatedEvent(sender, "100.0"),
+			}),
+			activeContractResponse(testWalletOfferContract(
+				"settlement-2",
+				"AcceptedTransferOffer",
+				sender,
+				receiver,
+				cantonAmuletOfferAmount("2.0"),
+				"tracking-2",
+				time.Unix(1710003600, 0).UTC(),
+			)),
+		},
+	}
+	interactiveStub := &interactiveSubmissionStub{prepareResp: prepareResp}
+	now := time.Now().UTC()
+	keycloakServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+			"access_token": "scan-token",
+			"expires_in":   300,
+		}))
+	}))
+	defer keycloakServer.Close()
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:                   "token",
+			stateClient:                 stateStub,
+			interactiveSubmissionClient: interactiveStub,
+			validatorPartyID:            "validator-party",
+			scanProxyURL:                "https://proxy.example",
+			scanAPIURL:                  "https://scan.example",
+			httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				require.Equal(t, "https://proxy.example", req.URL.String())
+				var envelope scanProxyRequest
+				require.NoError(t, json.NewDecoder(req.Body).Decode(&envelope))
+				switch envelope.URL {
+				case "https://scan.example/api/scan/v0/amulet-rules":
+					body := `{
+						"amulet_rules_update":{
+							"contract":{
+								"template_id":"rules-pkg:Splice.AmuletRules:AmuletRules",
+								"contract_id":"rules-cid",
+								"created_event_blob":"AQ==",
+								"payload":{"dso":"dso-party"}
+							},
+							"domain_id":"sync-id"
+						}
+					}`
+					return httpJSONResponse(http.StatusOK, body), nil
+				case "https://scan.example/api/scan/v0/open-and-issuing-mining-rounds":
+					body := fmt.Sprintf(`{
+						"open_mining_rounds":{
+							"1":{
+								"contract":{
+									"contract_id":"open-cid",
+									"template_id":"round-pkg:Splice.Round:OpenMiningRound",
+									"created_event_blob":"AQ==",
+									"payload":{
+										"round":{"number":"1"},
+										"opensAt":%q,
+										"targetClosesAt":%q
+									}
+								},
+								"domain_id":"sync-id"
+							}
+						},
+						"issuing_mining_rounds":{
+							"1":{
+								"contract":{
+									"contract_id":"issuing-cid",
+									"template_id":"round-pkg:Splice.Round:IssuingMiningRound",
+									"created_event_blob":"AQ==",
+									"payload":{
+										"round":{"number":"1"},
+										"opensAt":%q,
+										"targetClosesAt":%q
+									}
+								},
+								"domain_id":"sync-id"
+							}
+						}
+					}`, now.Add(-time.Hour).Format(time.RFC3339Nano), now.Add(time.Hour).Format(time.RFC3339Nano), now.Add(-time.Hour).Format(time.RFC3339Nano), now.Add(time.Hour).Format(time.RFC3339Nano))
+					return httpJSONResponse(http.StatusOK, body), nil
+				default:
+					return nil, fmt.Errorf("unexpected scan URL %q", envelope.URL)
+				}
+			})},
+			logger: logrus.NewEntry(logrus.New()),
+		},
+		cantonUiKC:       cantonkc.NewClient(keycloakServer.URL, "test", "client", "secret", "validator-party"),
+		cantonUiUsername: "ui-user",
+		cantonUiPassword: "ui-pass",
+	}
+
+	payload, err := json.Marshal(xccall.SettlementCompleteCall{ContractID: "settlement-2"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(sender))
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	require.NoError(t, err)
+	input := inputI.(*tx_input.CallInput)
+	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
+	require.NotNil(t, interactiveStub.lastPrepareReq)
+	require.Equal(t, "sync-id", interactiveStub.lastPrepareReq.GetSynchronizerId())
+
+	exercise := interactiveStub.lastPrepareReq.GetCommands()[0].GetExercise()
+	require.Equal(t, "settlement-2", exercise.GetContractId())
+	require.Equal(t, "AcceptedTransferOffer_Complete", exercise.GetChoice())
+	require.Contains(t, interactiveStub.lastPrepareReq.GetReadAs(), sender)
+	require.Contains(t, interactiveStub.lastPrepareReq.GetReadAs(), "validator-party")
+}
+
+func TestFetchCallInputReturnsUnsupportedTargetError(t *testing.T) {
+	t.Parallel()
+
+	party := "owner::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	stateStub := &stateServiceStub{
+		ledgerEnd: 1,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"holding-cid",
+				"SomethingElse",
+				party,
+				"receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+				cantonAmuletOfferAmount("1.0"),
+				"tracking",
+				time.Unix(1710000000, 0).UTC(),
+			)),
+		},
+	}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:   "token",
+			stateClient: stateStub,
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	payload, err := json.Marshal(xccall.OfferAcceptCall{ContractID: "holding-cid"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(party))
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx)
+	require.ErrorContains(t, err, "unsupported offer accept target")
+}
+
+func TestFetchCallInputReturnsNotVisibleError(t *testing.T) {
+	t.Parallel()
+
+	party := "owner::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		ledgerClient: &GrpcLedgerClient{
+			authToken:   "token",
+			stateClient: &stateServiceStub{ledgerEnd: 1},
+			logger:      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	payload, err := json.Marshal(xccall.SettlementCompleteCall{ContractID: "missing-cid"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(party))
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx)
+	require.ErrorContains(t, err, "is not visible to caller")
 }
 
 func TestValidatorServiceUserIDFromToken(t *testing.T) {
@@ -697,10 +1420,10 @@ func TestFetchTxInfoParsesTokenTransferInstructionAcceptMovement(t *testing.T) {
 										ModuleName: "Splice.Api.Token.TransferInstructionV1",
 										EntityName: "TransferInstruction",
 									},
-									Choice:        "TransferInstruction_Accept",
+									Choice:         "TransferInstruction_Accept",
 									ChoiceArgument: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{}}},
-									ActingParties: []string{receiver},
-									Consuming:    true,
+									ActingParties:  []string{receiver},
+									Consuming:      true,
 									WitnessParties: []string{
 										sender,
 										receiver,
@@ -918,11 +1641,11 @@ func TestBuildTransferOfferCreateCommandUsesArgsAmount(t *testing.T) {
 				}{DSO: "validator-party"},
 			},
 		},
-	}, "command-id", 1)
+	}, "splice-wallet-package-id", "command-id", 1)
 
 	create := cmd.GetCreate()
 	require.NotNil(t, create)
-	require.Equal(t, "pkg-from-amulet-rules", create.GetTemplateId().GetPackageId())
+	require.Equal(t, "splice-wallet-package-id", create.GetTemplateId().GetPackageId())
 	require.Equal(t, "12.3", extractCommandAmountNumeric(t, create.GetCreateArguments()))
 }
 
@@ -1695,6 +2418,120 @@ func (s *activeContractsStreamStub) CloseSend() error             { return nil }
 func (s *activeContractsStreamStub) Context() context.Context     { return context.Background() }
 func (s *activeContractsStreamStub) SendMsg(any) error            { return nil }
 func (s *activeContractsStreamStub) RecvMsg(any) error            { return nil }
+
+func activeContractResponse(contract *v2.ActiveContract) *v2.GetActiveContractsResponse {
+	return &v2.GetActiveContractsResponse{
+		ContractEntry: &v2.GetActiveContractsResponse_ActiveContract{
+			ActiveContract: contract,
+		},
+	}
+}
+
+func testWalletOfferContract(contractID string, entityName string, sender string, receiver string, amountValue *v2.Value, trackingID string, expiresAt time.Time) *v2.ActiveContract {
+	return &v2.ActiveContract{
+		CreatedEvent: &v2.CreatedEvent{
+			ContractId: contractID,
+			TemplateId: &v2.Identifier{
+				PackageId:  "wallet-package",
+				ModuleName: "Splice.Wallet.TransferOffer",
+				EntityName: entityName,
+			},
+			CreateArguments: &v2.Record{
+				Fields: []*v2.RecordField{
+					{Label: "sender", Value: &v2.Value{Sum: &v2.Value_Party{Party: sender}}},
+					{Label: "receiver", Value: &v2.Value{Sum: &v2.Value_Party{Party: receiver}}},
+					{Label: "amount", Value: amountValue},
+					{Label: "trackingId", Value: &v2.Value{Sum: &v2.Value_Text{Text: trackingID}}},
+					{Label: "expiresAt", Value: &v2.Value{Sum: &v2.Value_Timestamp{Timestamp: expiresAt.UnixMicro()}}},
+				},
+			},
+		},
+	}
+}
+
+func testWalletTransferRecordContract(contractID string, entityName string, sender string, receiver string, admin string, instrumentID string, amount string, trackingID string, expiresAt time.Time) *v2.ActiveContract {
+	return &v2.ActiveContract{
+		CreatedEvent: &v2.CreatedEvent{
+			ContractId: contractID,
+			TemplateId: &v2.Identifier{
+				PackageId:  "wallet-package",
+				ModuleName: "Splice.Wallet.TransferOffer",
+				EntityName: entityName,
+			},
+			CreateArguments: &v2.Record{
+				Fields: []*v2.RecordField{
+					{
+						Label: "transfer",
+						Value: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{
+							Fields: []*v2.RecordField{
+								{Label: "sender", Value: &v2.Value{Sum: &v2.Value_Party{Party: sender}}},
+								{Label: "receiver", Value: &v2.Value{Sum: &v2.Value_Party{Party: receiver}}},
+								{Label: "amount", Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}}},
+								{
+									Label: "instrumentId",
+									Value: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{
+										Fields: []*v2.RecordField{
+											{Label: "admin", Value: &v2.Value{Sum: &v2.Value_Party{Party: admin}}},
+											{Label: "id", Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}}},
+										},
+									}}},
+								},
+							},
+						}}},
+					},
+					{Label: "trackingId", Value: &v2.Value{Sum: &v2.Value_Text{Text: trackingID}}},
+					{Label: "expiresAt", Value: &v2.Value{Sum: &v2.Value_Timestamp{Timestamp: expiresAt.UnixMicro()}}},
+				},
+			},
+		},
+	}
+}
+
+func testUtilitiesTransferOfferContract(contractID string, sender string, receiver string, admin string, instrumentID string, amount string, executeBefore time.Time) *v2.ActiveContract {
+	return &v2.ActiveContract{
+		CreatedEvent: &v2.CreatedEvent{
+			ContractId: contractID,
+			TemplateId: &v2.Identifier{
+				PackageId:  "utilities-package",
+				ModuleName: "Utility.Registry.App.V0.Model.Transfer",
+				EntityName: "TransferOffer",
+			},
+			CreateArguments: &v2.Record{
+				Fields: []*v2.RecordField{
+					{
+						Label: "transfer",
+						Value: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{
+							Fields: []*v2.RecordField{
+								{Label: "sender", Value: &v2.Value{Sum: &v2.Value_Party{Party: sender}}},
+								{Label: "receiver", Value: &v2.Value{Sum: &v2.Value_Party{Party: receiver}}},
+								{Label: "amount", Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}}},
+								{
+									Label: "instrumentId",
+									Value: &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{
+										Fields: []*v2.RecordField{
+											{Label: "admin", Value: &v2.Value{Sum: &v2.Value_Party{Party: admin}}},
+											{Label: "id", Value: &v2.Value{Sum: &v2.Value_Text{Text: instrumentID}}},
+										},
+									}}},
+								},
+								{Label: "executeBefore", Value: &v2.Value{Sum: &v2.Value_Timestamp{Timestamp: executeBefore.UnixMicro()}}},
+							},
+						}}},
+					},
+				},
+			},
+		},
+	}
+}
+
+func cantonAmuletOfferAmount(amount string) *v2.Value {
+	return &v2.Value{Sum: &v2.Value_Record{Record: &v2.Record{
+		Fields: []*v2.RecordField{
+			{Label: "amount", Value: &v2.Value{Sum: &v2.Value_Numeric{Numeric: amount}}},
+			{Label: "unit", Value: &v2.Value{Sum: &v2.Value_Enum{Enum: &v2.Enum{Constructor: "AmuletUnit"}}}},
+		},
+	}}}
+}
 
 type packageManagementStub struct {
 	resp *admin.ListKnownPackagesResponse
