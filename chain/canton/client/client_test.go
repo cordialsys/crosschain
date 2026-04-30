@@ -1884,6 +1884,11 @@ func TestFetchTransferInputTokenStandard(t *testing.T) {
 		cantonUiKC:       cantonkc.NewClient(keycloakServer.URL, "test", "client", "secret", "validator-party"),
 		cantonUiUsername: "ui-user",
 		cantonUiPassword: "ui-pass",
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				contract: "https://scan.example",
+			},
+		},
 	}
 	client.Asset.NativeAssets = []*xc.AdditionalNativeAsset{
 		xc.NewAdditionalNativeAsset("XC", "", contract, 10, xc.AmountHumanReadable{}),
@@ -2005,6 +2010,11 @@ func TestFetchTransferInputTokenStandardUsesExplicitArgDecimals(t *testing.T) {
 		cantonUiKC:       cantonkc.NewClient(keycloakServer.URL, "test", "client", "secret", "validator-party"),
 		cantonUiUsername: "ui-user",
 		cantonUiPassword: "ui-pass",
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				contract: "https://scan.example",
+			},
+		},
 	}
 
 	args, err := xcbuilder.NewTransferArgs(
@@ -2119,6 +2129,11 @@ func TestFetchTransferInputTokenStandardFallsBackToLedgerFactory(t *testing.T) {
 		cantonUiKC:       cantonkc.NewClient(keycloakServer.URL, "test", "client", "secret", "validator-party"),
 		cantonUiUsername: "ui-user",
 		cantonUiPassword: "ui-pass",
+		cantonCfg: &CantonConfig{
+			TokenRegistryURLs: map[xc.ContractAddress]string{
+				contract: "https://scan.example",
+			},
+		},
 	}
 
 	args, err := xcbuilder.NewTransferArgs(

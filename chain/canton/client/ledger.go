@@ -926,12 +926,22 @@ func (c *GrpcLedgerClient) GetTokenTransferFactory(
 	token string,
 	choiceArguments map[string]any,
 ) (*TokenTransferFactoryContext, error) {
+	return c.GetTokenTransferFactoryAt(ctx, token, strings.TrimRight(c.scanAPIURL, "/"), choiceArguments)
+}
+
+func (c *GrpcLedgerClient) GetTokenTransferFactoryAt(
+	ctx context.Context,
+	token string,
+	registryBaseURL string,
+	choiceArguments map[string]any,
+) (*TokenTransferFactoryContext, error) {
 	body := map[string]any{
 		"choiceArguments":    choiceArguments,
 		"excludeDebugFields": true,
 	}
 	var result TokenTransferFactoryContext
-	if err := c.doScanProxyRequest(ctx, token, "/registry/transfer-instruction/v1/transfer-factory", body, &result); err != nil {
+	useProxy := strings.TrimRight(registryBaseURL, "/") == strings.TrimRight(c.scanAPIURL, "/") && c.scanProxyURL != ""
+	if err := c.doRegistryRequestWithMethod(ctx, token, registryBaseURL, useProxy, http.MethodPost, "/registry/transfer-instruction/v1/transfer-factory", body, &result); err != nil {
 		return nil, fmt.Errorf("fetching token transfer factory: %w", err)
 	}
 	if result.FactoryID == "" {

@@ -222,6 +222,13 @@ func (client *Client) resolveTokenRegistryBaseURL(ctx context.Context, contract 
 	}
 	if client != nil && client.cantonCfg != nil {
 		if baseURL := strings.TrimRight(client.cantonCfg.TokenRegistryURLs[contract], "/"); baseURL != "" {
+			if client.ledgerClient != nil && strings.TrimRight(baseURL, "/") == strings.TrimRight(client.ledgerClient.scanAPIURL, "/") && client.ledgerClient.scanProxyURL != "" {
+				uiToken, err := client.cantonUIToken(ctx)
+				if err != nil {
+					return "", "", fmt.Errorf("failed to acquire canton-ui token for configured scan registry %q: %w", contract, err)
+				}
+				return baseURL, uiToken, nil
+			}
 			return baseURL, "", nil
 		}
 	}
@@ -371,15 +378,15 @@ func (client *Client) PrepareTokenTransferCommand(
 		},
 	}
 	tryRegistry := func() (*interactive.PrepareSubmissionResponse, error) {
-		uiToken, err := client.cantonUIToken(ctx)
+		registryBaseURL, registryToken, err := client.resolveTokenRegistryBaseURL(ctx, contract, instrumentAdmin)
 		if err != nil {
-			return nil, fmt.Errorf("failed to acquire scan token for token transfer: %w", err)
+			return nil, err
 		}
 		packageMap, err := client.ledgerClient.ListKnownPackageIDsByName(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve package id map for token transfer disclosures: %w", err)
 		}
-		registryContext, err := client.ledgerClient.GetTokenTransferFactory(ctx, uiToken, choiceArgs)
+		registryContext, err := client.ledgerClient.GetTokenTransferFactoryAt(ctx, registryToken, registryBaseURL, choiceArgs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve token transfer factory via registry: %w", err)
 		}
