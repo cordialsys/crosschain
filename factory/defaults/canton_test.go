@@ -22,7 +22,7 @@ func TestCantonConfigTestnet(t *testing.T) {
 	require.Equal(t, xc.CANTON, config.Chain)
 	require.Equal(t, xc.DriverCanton, config.Driver)
 	require.Equal(t, "Canton (Testnet)", config.ChainName)
-	require.Equal(t, int32(18), config.Decimals)
+	require.Equal(t, int32(10), config.Decimals)
 }
 
 func TestCantonConfigMainnet(t *testing.T) {

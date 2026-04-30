@@ -324,7 +324,7 @@ func (tx *Tx) SetSignatures(sigs ...*xc.SignatureResponse) error {
 	return nil
 }
 
-// Serialize marshals the ExecuteSubmissionRequest proto so SubmitTx can send it over gRPC
+// Serialize marshals the ExecuteSubmissionAndWaitRequest proto so SubmitTx can send it over gRPC.
 func (tx Tx) Serialize() ([]byte, error) {
 	if len(tx.signature) == 0 {
 		return nil, fmt.Errorf("transaction is not signed")
@@ -333,11 +333,11 @@ func (tx Tx) Serialize() ([]byte, error) {
 		return nil, fmt.Errorf("prepared transaction is nil")
 	}
 
-	req := cantonproto.NewExecuteSubmissionRequest(tx.PreparedTransaction, tx.Party, tx.signature, tx.KeyFingerprint, tx.SubmissionId, tx.HashingSchemeVersion, tx.DeduplicationWindow)
+	req := cantonproto.NewExecuteSubmissionAndWaitRequest(tx.PreparedTransaction, tx.Party, tx.signature, tx.KeyFingerprint, tx.SubmissionId, tx.HashingSchemeVersion, tx.DeduplicationWindow)
 
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal Canton execute request: %w", err)
+		return nil, fmt.Errorf("failed to marshal Canton execute-and-wait request: %w", err)
 	}
 	return data, nil
 }

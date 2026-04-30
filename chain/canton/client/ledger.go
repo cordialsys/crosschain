@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -1006,17 +1005,6 @@ func (c *GrpcLedgerClient) GetTokenTransferInstructionAcceptContextAt(
 		return nil, fmt.Errorf("fetching token transfer instruction accept context: %w", err)
 	}
 	return &result, nil
-}
-
-func decodeCreatedEventBlob(value string) ([]byte, error) {
-	if value == "" {
-		return nil, errors.New("empty createdEventBlob")
-	}
-	blob, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return nil, fmt.Errorf("decode createdEventBlob: %w", err)
-	}
-	return blob, nil
 }
 
 func (c *GrpcLedgerClient) HasTransferPreapprovalContract(ctx context.Context, contracts []*v2.ActiveContract) bool {

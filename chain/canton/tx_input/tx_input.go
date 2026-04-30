@@ -12,9 +12,9 @@ import (
 // interactive-submission (external-party signing) flow.
 type TxInput struct {
 	xc.TxInputEnvelope
-	LedgerEnd            int64 `json:"ledger_end"`
-	PreparedTransaction  *interactive.PreparedTransaction
-	HashingSchemeVersion interactive.HashingSchemeVersion
+	LedgerEnd            int64                             `json:"ledger_end"`
+	PreparedTransaction  *interactive.PreparedTransaction  `json:"prepared_transaction,omitempty"`
+	HashingSchemeVersion interactive.HashingSchemeVersion  `json:"hashing_scheme_version,omitempty"`
 	// SubmissionId for deduplication (UUID)
 	SubmissionId string `json:"submission_id"`
 	// DeduplicationWindow controls how long Canton treats the submission ID as deduplicatable.

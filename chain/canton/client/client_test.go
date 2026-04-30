@@ -1125,7 +1125,7 @@ func TestSubmitTxRequiresMetadata(t *testing.T) {
 		},
 	}
 
-	req := &interactive.ExecuteSubmissionRequest{
+	req := &interactive.ExecuteSubmissionAndWaitRequest{
 		SubmissionId: "submission-id",
 	}
 	payload, err := proto.Marshal(req)
@@ -1169,7 +1169,7 @@ func TestSubmitTxUsesMetadataToRouteTransferPayload(t *testing.T) {
 		},
 	}
 
-	req := &interactive.ExecuteSubmissionRequest{SubmissionId: "submission-id"}
+	req := &interactive.ExecuteSubmissionAndWaitRequest{SubmissionId: "submission-id"}
 	payload, err := proto.Marshal(req)
 	require.NoError(t, err)
 

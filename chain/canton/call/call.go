@@ -152,7 +152,7 @@ func (c *TxCall) Serialize() ([]byte, error) {
 	if len(c.signature) == 0 {
 		return nil, fmt.Errorf("transaction is not signed")
 	}
-	req := cantonproto.NewExecuteSubmissionRequest(
+	req := cantonproto.NewExecuteSubmissionAndWaitRequest(
 		c.input.PreparedTransaction,
 		string(c.signingAddress),
 		c.signature,
@@ -163,7 +163,7 @@ func (c *TxCall) Serialize() ([]byte, error) {
 	)
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal Canton execute request: %w", err)
+		return nil, fmt.Errorf("failed to marshal Canton execute-and-wait request: %w", err)
 	}
 	return data, nil
 }

@@ -217,6 +217,7 @@ chains:
   CANTON:
     chain: CANTON
     support:
+      call: true
       fee:
         accurate: true
     driver: canton

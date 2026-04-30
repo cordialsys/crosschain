@@ -15,6 +15,14 @@ type AddressBuilder struct{}
 
 var _ xc.AddressBuilder = AddressBuilder{}
 
+// The purpose prefix is big-endian uint32(cantonPublicKeyFingerprintHashPurpose),
+// matching Canton's internal HashPurpose.PublicKeyFingerprint.
+//
+// References:
+//   - https://docs.digitalasset.com/build/3.4/tutorials/app-dev/external_signing_topology_transaction.html#fingerprint
+//   - https://github.com/digital-asset/canton/blob/main/community/base/src/main/scala/com/digitalasset/canton/crypto/HashPurpose.scala
+const cantonPublicKeyFingerprintHashPurpose uint32 = 12
+
 func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 	return AddressBuilder{}, nil
 }
@@ -26,9 +34,6 @@ func NewAddressBuilder(cfgI *xc.ChainBaseConfig) (xc.AddressBuilder, error) {
 // Where:
 //   - <name>        = hex-encoded public key (64 hex chars)
 //   - <fingerprint> = "1220" + hex(SHA-256(purposeBytes || rawPubKey))
-//
-// The purpose prefix is big-endian uint32(12), matching Canton's internal
-// HashPurpose.PublicKeyFingerprint (id=12) in Hash.digest().
 //
 // The "1220" multihash prefix encodes:
 //   - 0x12 = SHA-256 algorithm code (varint)
@@ -53,9 +58,8 @@ func FingerprintFromPublicKey(rawPubKey []byte) (string, error) {
 	if len(rawPubKey) != 32 {
 		return "", fmt.Errorf("invalid ed25519 public key length: expected 32 bytes, got %d", len(rawPubKey))
 	}
-	// HashPurpose.PublicKeyFingerprint id=12 encoded as big-endian int32 (4 bytes)
 	var purposeBytes [4]byte
-	binary.BigEndian.PutUint32(purposeBytes[:], 12)
+	binary.BigEndian.PutUint32(purposeBytes[:], cantonPublicKeyFingerprintHashPurpose)
 
 	h := sha256.New()
 	h.Write(purposeBytes[:])

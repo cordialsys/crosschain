@@ -351,7 +351,7 @@ func (client *Client) PrepareTokenTransferCommand(
 		return nil, fmt.Errorf("no visible token holdings found for sender %s and %s#%s", args.GetFrom(), instrumentAdmin, instrumentID)
 	}
 
-	requestedAt := time.Now().UTC()
+	requestedAt := time.Now().UTC().Truncate(time.Microsecond)
 	executeBefore := requestedAt.Add(24 * time.Hour)
 	choiceArgs := map[string]any{
 		"expectedAdmin": instrumentAdmin,
@@ -630,28 +630,9 @@ func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxRe
 }
 
 func (client *Client) submitTransferTx(ctx context.Context, payload []byte) error {
-	var req interactive.ExecuteSubmissionRequest
+	var req interactive.ExecuteSubmissionAndWaitRequest
 	if err := proto.Unmarshal(payload, &req); err != nil {
-		return fmt.Errorf("failed to unmarshal Canton execute request: %w", err)
-	}
-
-	andWaitReq := &interactive.ExecuteSubmissionAndWaitRequest{
-		PreparedTransaction:  req.PreparedTransaction,
-		PartySignatures:      req.PartySignatures,
-		SubmissionId:         req.SubmissionId,
-		UserId:               req.UserId,
-		HashingSchemeVersion: req.HashingSchemeVersion,
-	}
-	// Convert deduplication period (unexported oneof interface - handle each concrete type)
-	switch v := req.DeduplicationPeriod.(type) {
-	case *interactive.ExecuteSubmissionRequest_DeduplicationDuration:
-		andWaitReq.DeduplicationPeriod = &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationDuration{
-			DeduplicationDuration: v.DeduplicationDuration,
-		}
-	case *interactive.ExecuteSubmissionRequest_DeduplicationOffset:
-		andWaitReq.DeduplicationPeriod = &interactive.ExecuteSubmissionAndWaitRequest_DeduplicationOffset{
-			DeduplicationOffset: v.DeduplicationOffset,
-		}
+		return fmt.Errorf("failed to unmarshal Canton execute-and-wait request: %w", err)
 	}
 
 	parties := []string{}
@@ -667,7 +648,7 @@ func (client *Client) submitTransferTx(ctx context.Context, payload []byte) erro
 		"hashing":       req.HashingSchemeVersion.String(),
 	}).Trace("canton request")
 
-	_, err := client.ledgerClient.ExecuteSubmissionAndWait(ctx, andWaitReq)
+	_, err := client.ledgerClient.ExecuteSubmissionAndWait(ctx, &req)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"submission_id": req.SubmissionId,

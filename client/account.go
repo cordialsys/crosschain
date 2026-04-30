@@ -23,9 +23,9 @@ type CreateAccountClient interface {
 type AccountStateEnum string
 
 const (
-	CreateAccountCallRequired AccountStateEnum = "CreateAccountCallRequired"
-	Pending                   AccountStateEnum = "Pending"
-	Created                   AccountStateEnum = "Created"
+	CreateAccountCallRequired AccountStateEnum = "inactive"
+	Pending                   AccountStateEnum = "registering"
+	Created                   AccountStateEnum = "active"
 )
 
 type AccountState struct {
