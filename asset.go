@@ -82,6 +82,7 @@ const (
 	KLAY     = NativeAsset("KLAY")     // Klaytn
 	KSM      = NativeAsset("KSM")      // Kusama
 	MATIC    = NativeAsset("MATIC")    // Polygon
+	MegaETH  = NativeAsset("MegaETH")  // MegaETH
 	MON      = NativeAsset("MON")      // MONAD
 	NEAR     = NativeAsset("NEAR")     // Near
 	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
@@ -163,6 +164,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	KSM,
 	XDC,
 	MATIC,
+	MegaETH,
 	MON,
 	NEAR,
 	OAS,
@@ -329,7 +331,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX:
+	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

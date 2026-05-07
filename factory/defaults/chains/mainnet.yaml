@@ -1224,6 +1224,36 @@ chains:
         asset_id: polygon-pos
       indexing_co:
         chain_id: polygon
+  MegaETH:
+    chain: MegaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 4326
+    chain_name: MegaETH
+    decimals: 18
+    fee_limit: "5.0"
+    confirmations_final: 30
+    native_assets:
+      - asset_id: "MegaETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # MegaETH is settled in ETH
+    explorer_urls:
+      tx: "https://mega.etherscan.io/tx/{}"
+      address: "https://mega.etherscan.io/address/{}"
+      token: "https://mega.etherscan.io/token/{}"
+    external:
+      coin_gecko:
+        chain_id: megaeth
+        asset_id: "megaeth"
+      coin_market_cap:
+        chain_id: "278"
+        asset_id: "38770"
+      indexing_co:
+        chain_id: megaeth
   MON:
     chain: MON
     support:

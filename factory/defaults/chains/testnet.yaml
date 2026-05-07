@@ -600,6 +600,21 @@ chains:
     chain_id: 80001
     chain_name: Polygon (Mumbai)
     decimals: 18
+  MegaETH:
+    chain: MegaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 6343
+    chain_name: MegaETH Testnet
+    decimals: 18
+    explorer_urls:
+      tx: "https://megaeth-testnet-v2.blockscout.com/tx/{}"
+      address: "https://megaeth-testnet-v2.blockscout.com/address/{}"
+      token: "https://megaeth-testnet-v2.blockscout.com/token/{}"
   MON:
     chain: MON
     support:
