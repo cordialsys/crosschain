@@ -15,7 +15,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	xccall "github.com/cordialsys/crosschain/call"
 	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
 	cantonkc "github.com/cordialsys/crosschain/chain/canton/keycloak"
 	cantontx "github.com/cordialsys/crosschain/chain/canton/tx"
@@ -354,7 +353,7 @@ func (client *Client) PrepareTokenTransferCommand(
 
 	requestedAt := time.Now().UTC().Truncate(time.Microsecond)
 	executeBefore := requestedAt.Add(24 * time.Hour)
-	inputHoldingCIDs := tokenTransferInputHoldingCIDs(senderHoldings, string(args.GetFrom()), InstrumentAdmin, InstrumentID, requestedAt)
+	inputHoldingCIDs := tokenTransferInputHoldingCIDs(senderHoldings, string(args.GetFrom()), InstrumentAdmin, InstrumentID, args.GetAmount(), decimals, requestedAt)
 	if len(inputHoldingCIDs) == 0 {
 		return nil, fmt.Errorf("no visible token holdings found for sender %s and %s#%s", args.GetFrom(), InstrumentAdmin, InstrumentID)
 	}
@@ -542,7 +541,7 @@ func (client *Client) PrepareNativeTokenStandardTransferCommand(
 
 	requestedAt := time.Now().UTC().Truncate(time.Microsecond)
 	executeBefore := requestedAt.Add(24 * time.Hour)
-	inputHoldingCIDs := tokenTransferInputHoldingCIDs(senderHoldings, string(args.GetFrom()), InstrumentAdmin, InstrumentID, requestedAt)
+	inputHoldingCIDs := tokenTransferInputHoldingCIDs(senderHoldings, string(args.GetFrom()), InstrumentAdmin, InstrumentID, args.GetAmount(), decimals, requestedAt)
 	if len(inputHoldingCIDs) == 0 {
 		return nil, "", fmt.Errorf("no visible token-standard Amulet holdings found for sender %s", args.GetFrom())
 	}
@@ -1698,8 +1697,21 @@ func isPendingOfferTemplate(templateID *v2.Identifier) bool {
 	if templateID == nil {
 		return false
 	}
-	return (templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "TransferOffer") ||
-		(templateID.GetModuleName() == "Utility.Registry.App.V0.Model.Transfer" && templateID.GetEntityName() == "TransferOffer")
+	return isWalletTransferOfferTemplate(templateID) || isTokenTransferOfferTemplate(templateID)
+}
+
+func isWalletTransferOfferTemplate(templateID *v2.Identifier) bool {
+	if templateID == nil {
+		return false
+	}
+	return templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "TransferOffer"
+}
+
+func isTokenTransferOfferTemplate(templateID *v2.Identifier) bool {
+	if templateID == nil {
+		return false
+	}
+	return templateID.GetModuleName() == "Utility.Registry.App.V0.Model.Transfer" && templateID.GetEntityName() == "TransferOffer"
 }
 
 func isSettlementTemplate(templateID *v2.Identifier) bool {
@@ -2033,41 +2045,32 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.Ca
 		return nil, fmt.Errorf("contract %s is missing created event data", contractID)
 	}
 
-	var prepareResp *interactive.PrepareSubmissionResponse
-	switch call.GetMethod() {
-	case xccall.OfferAccept:
-		templateID := created.GetTemplateId()
-		if templateID.GetModuleName() == "Splice.Wallet.TransferOffer" && templateID.GetEntityName() == "TransferOffer" {
-			prepareResp, err = client.prepareWalletOfferAccept(ctx, partyID, target)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-		if _, _, assetID, _, _, _, ok := extractLedgerOffer(created); ok {
-			if tokenRegistryKey(assetID).Valid() {
-				prepareResp, err = client.prepareTokenOfferAccept(ctx, partyID, target)
-				if err != nil {
-					return nil, err
-				}
-				break
-			}
-		}
-		return nil, fmt.Errorf("unsupported offer accept target %s (%s:%s)", contractID, templateID.GetModuleName(), templateID.GetEntityName())
-	case xccall.SettlementComplete:
-		templateID := created.GetTemplateId()
-		if !isSettlementTemplate(templateID) {
-			return nil, fmt.Errorf("unsupported settlement completion target %s (%s:%s)", contractID, templateID.GetModuleName(), templateID.GetEntityName())
-		}
-		prepareResp, err = client.prepareAcceptedTransferOfferComplete(ctx, partyID, target, contracts)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unsupported Canton call method %q", call.GetMethod())
+	templateID := created.GetTemplateId()
+	prepareResp, err := client.prepareCallForTemplate(ctx, partyID, target, contracts)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported Canton call target %s (%s:%s): %w", contractID, templateID.GetModuleName(), templateID.GetEntityName(), err)
 	}
 
 	return newCallInputFromPrepareResponse(ledgerEnd, client.Asset.TransactionActiveTime, prepareResp), nil
+}
+
+func (client *Client) prepareCallForTemplate(ctx context.Context, partyID string, target *v2.ActiveContract, visibleContracts []*v2.ActiveContract) (*interactive.PrepareSubmissionResponse, error) {
+	created := target.GetCreatedEvent()
+	templateID := created.GetTemplateId()
+
+	switch {
+	case isWalletTransferOfferTemplate(templateID):
+		return client.prepareWalletOfferAccept(ctx, partyID, target)
+	case isTokenTransferOfferTemplate(templateID):
+		if _, _, assetID, _, _, _, ok := extractLedgerOffer(created); ok && tokenRegistryKey(assetID).Valid() {
+			return client.prepareTokenOfferAccept(ctx, partyID, target)
+		}
+		return nil, fmt.Errorf("token transfer offer is missing a supported asset id")
+	case isSettlementTemplate(templateID):
+		return client.prepareAcceptedTransferOfferComplete(ctx, partyID, target, visibleContracts)
+	}
+
+	return nil, fmt.Errorf("unsupported template")
 }
 
 func parseRecoveryLookupId(value string) (int64, string, bool) {

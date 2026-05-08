@@ -853,6 +853,56 @@ func TestFetchCallInputOfferAcceptWallet(t *testing.T) {
 	require.Equal(t, []string{receiver}, interactiveStub.lastPrepareReq.GetReadAs())
 }
 
+func TestFetchCallInputDispatchesByContractTemplateNotMethod(t *testing.T) {
+	t.Parallel()
+
+	sender := "sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	receiver := "receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	prepareResp := &interactive.PrepareSubmissionResponse{
+		PreparedTransaction:  &interactive.PreparedTransaction{Transaction: &interactive.DamlTransaction{}},
+		HashingSchemeVersion: interactive.HashingSchemeVersion_HASHING_SCHEME_VERSION_V2,
+	}
+	stateStub := &stateServiceStub{
+		ledgerEnd: 123,
+		activeContractsResponses: []*v2.GetActiveContractsResponse{
+			activeContractResponse(testWalletOfferContract(
+				"wallet-offer-cid",
+				"TransferOffer",
+				sender,
+				receiver,
+				cantonAmuletOfferAmount("12.5"),
+				"tracking-wallet",
+				time.Unix(1710000000, 0).UTC(),
+			)),
+		},
+	}
+	interactiveStub := &interactiveSubmissionStub{prepareResp: prepareResp}
+	client := &Client{
+		Asset: &xc.ChainConfig{
+			ChainBaseConfig:   &xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+			ChainClientConfig: &xc.ChainClientConfig{},
+		},
+		LedgerClient: &GrpcLedgerClient{
+			AuthToken:                   "token",
+			StateClient:                 stateStub,
+			InteractiveSubmissionClient: interactiveStub,
+			Logger:                      logrus.NewEntry(logrus.New()),
+		},
+	}
+
+	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "wallet-offer-cid"})
+	require.NoError(t, err)
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(receiver))
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx)
+	require.NoError(t, err)
+
+	exercise := interactiveStub.lastPrepareReq.GetCommands()[0].GetExercise()
+	require.Equal(t, "wallet-offer-cid", exercise.GetContractId())
+	require.Equal(t, "TransferOffer_Accept", exercise.GetChoice())
+}
+
 func TestFetchCallInputOfferAcceptUtilitiesTransferOffer(t *testing.T) {
 	t.Parallel()
 
@@ -1122,7 +1172,7 @@ func TestFetchCallInputReturnsUnsupportedTargetError(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = client.FetchCallInput(context.Background(), callTx)
-	require.ErrorContains(t, err, "unsupported offer accept target")
+	require.ErrorContains(t, err, "unsupported Canton call target")
 }
 
 func TestFetchCallInputReturnsNotVisibleError(t *testing.T) {
@@ -2029,7 +2079,7 @@ func TestBuildTokenStandardTransferCommandUsesArgsAmount(t *testing.T) {
 	require.Len(t, valuesField.GetTextMap().GetEntries(), 1)
 }
 
-func TestBuildTokenStandardTransferCommandSkipsUnexpiredLockedHoldings(t *testing.T) {
+func TestBuildTokenStandardTransferCommandPrefersUnlockedHoldings(t *testing.T) {
 	t.Parallel()
 
 	contract := xc.ContractAddress("issuer-party#XC")
@@ -2049,6 +2099,7 @@ func TestBuildTokenStandardTransferCommandSkipsUnexpiredLockedHoldings(t *testin
 		"factory-cid",
 		map[string]any{"values": map[string]any{}},
 		[]*v2.ActiveContract{
+			{CreatedEvent: testTokenHoldingCreatedEventWithContractID("small-unlocked-cid", string(args.GetFrom()), "issuer-party", "XC", "1.0")},
 			{CreatedEvent: testTokenHoldingCreatedEventWithContractID("unlocked-cid", string(args.GetFrom()), "issuer-party", "XC", "100.0")},
 			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-future-cid", string(args.GetFrom()), "issuer-party", "XC", "100.0", requestedAt.Add(time.Hour))},
 			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-expired-cid", string(args.GetFrom()), "issuer-party", "XC", "100.0", requestedAt.Add(-time.Hour))},
@@ -2064,9 +2115,50 @@ func TestBuildTokenStandardTransferCommandSkipsUnexpiredLockedHoldings(t *testin
 	require.True(t, ok)
 	inputHoldingValue, ok := GetRecordFieldValue(transferValue.GetRecord(), "inputHoldingCids")
 	require.True(t, ok)
-	require.Len(t, inputHoldingValue.GetList().GetElements(), 2)
+	require.Len(t, inputHoldingValue.GetList().GetElements(), 1)
 	require.Equal(t, "unlocked-cid", inputHoldingValue.GetList().GetElements()[0].GetContractId())
-	require.Equal(t, "locked-expired-cid", inputHoldingValue.GetList().GetElements()[1].GetContractId())
+}
+
+func TestBuildTokenStandardTransferCommandUsesOneExpiredLockGroup(t *testing.T) {
+	t.Parallel()
+
+	contract := xc.ContractAddress("issuer-party#XC")
+	args, err := xcbuilder.NewTransferArgs(
+		&xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
+		xc.Address("sender::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		xc.Address("receiver::1220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+		xc.NewAmountBlockchainFromUint64(123),
+		xcbuilder.OptionContractAddress(contract),
+	)
+	require.NoError(t, err)
+
+	requestedAt := time.Unix(1700000000, 0).UTC()
+	expiredAt := requestedAt.Add(-time.Hour)
+	cmd, err := BuildTokenStandardTransferCommand(
+		args,
+		"transfer-package-id",
+		"factory-cid",
+		map[string]any{"values": map[string]any{}},
+		[]*v2.ActiveContract{
+			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-group-a-1", string(args.GetFrom()), "issuer-party", "XC", "7.0", expiredAt)},
+			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-future-cid", string(args.GetFrom()), "issuer-party", "XC", "100.0", requestedAt.Add(time.Hour))},
+			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-group-b", string(args.GetFrom()), "issuer-party", "XC", "10.0", requestedAt.Add(-2*time.Hour))},
+			{CreatedEvent: testLockedTokenHoldingCreatedEventWithContractID("locked-group-a-2", string(args.GetFrom()), "issuer-party", "XC", "7.0", expiredAt)},
+		},
+		1,
+		requestedAt,
+		requestedAt.Add(24*time.Hour),
+	)
+	require.NoError(t, err)
+
+	choiceArgument := cmd.GetExercise().GetChoiceArgument().GetRecord()
+	transferValue, ok := GetRecordFieldValue(choiceArgument, "transfer")
+	require.True(t, ok)
+	inputHoldingValue, ok := GetRecordFieldValue(transferValue.GetRecord(), "inputHoldingCids")
+	require.True(t, ok)
+	require.Len(t, inputHoldingValue.GetList().GetElements(), 2)
+	require.Equal(t, "locked-group-a-1", inputHoldingValue.GetList().GetElements()[0].GetContractId())
+	require.Equal(t, "locked-group-a-2", inputHoldingValue.GetList().GetElements()[1].GetContractId())
 }
 
 func TestFetchTransferInputTokenStandard(t *testing.T) {

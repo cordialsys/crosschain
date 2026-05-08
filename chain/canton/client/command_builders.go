@@ -4,14 +4,17 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	cantonproto "github.com/cordialsys/crosschain/chain/canton/types"
 	v2 "github.com/cordialsys/crosschain/chain/canton/types/com/daml/ledger/api/v2"
 	cantonclientconfig "github.com/cordialsys/crosschain/client/canton"
+	"github.com/cordialsys/crosschain/pkg/safe_map"
 )
 
 const (
@@ -96,31 +99,124 @@ func transferMemo(args xcbuilder.TransferArgs) string {
 	return memo
 }
 
-func tokenTransferInputHoldingCIDs(senderHoldings []*v2.ActiveContract, owner string, InstrumentAdmin string, InstrumentID string, asOf time.Time) []string {
-	inputHoldingCIDs := make([]string, 0, len(senderHoldings))
-	for _, holding := range senderHoldings {
-		created := holding.GetCreatedEvent()
-		if !tokenHoldingMatchesTransfer(created, owner, InstrumentAdmin, InstrumentID, asOf) {
-			continue
-		}
+func tokenTransferInputHoldingCIDs(senderHoldings []*v2.ActiveContract, owner string, InstrumentAdmin string, InstrumentID string, wantAmount xc.AmountBlockchain, decimals int32, asOf time.Time) []string {
+	holdings := tokenTransferInputHoldings(senderHoldings, owner, InstrumentAdmin, InstrumentID, wantAmount, decimals, asOf)
+	inputHoldingCIDs := make([]string, 0, len(holdings))
+	for _, created := range holdings {
 		inputHoldingCIDs = append(inputHoldingCIDs, created.GetContractId())
 	}
 	return inputHoldingCIDs
 }
 
-func tokenHoldingMatchesTransfer(created *v2.CreatedEvent, owner string, InstrumentAdmin string, InstrumentID string, asOf time.Time) bool {
-	Owner, holdingAdmin, holdingID, _, ok := ExtractTokenHoldingView(created)
+type tokenTransferHolding struct {
+	created *v2.CreatedEvent
+	amount  xc.AmountBlockchain
+}
+
+func tokenTransferInputHoldings(senderHoldings []*v2.ActiveContract, owner string, InstrumentAdmin string, InstrumentID string, wantAmount xc.AmountBlockchain, decimals int32, asOf time.Time) []*v2.CreatedEvent {
+	unlocked := make([]tokenTransferHolding, 0, len(senderHoldings))
+	// TransferFactory requires all locked input holdings to share the same lock metadata.
+	lockedByLock := safe_map.New[[]tokenTransferHolding]()
+	for _, holding := range senderHoldings {
+		created := holding.GetCreatedEvent()
+		tokenHolding, ok := tokenTransferHoldingFromCreated(created, owner, InstrumentAdmin, InstrumentID, decimals, asOf)
+		if !ok {
+			continue
+		}
+		lockKey, locked := tokenHoldingLockKey(created)
+		if !locked {
+			unlocked = append(unlocked, tokenHolding)
+			continue
+		}
+		group, _ := lockedByLock.Get(lockKey)
+		lockedByLock.Set(lockKey, append(group, tokenHolding))
+	}
+	// Prefer unlocked holdings; locked holdings are only used when they are the only set that can cover the transfer.
+	if selected := selectTokenTransferHoldingGroup(unlocked, wantAmount); len(selected) > 0 {
+		return tokenTransferCreatedEvents(selected)
+	}
+	var selected []tokenTransferHolding
+	lockedByLock.Range(func(_ string, group []tokenTransferHolding) bool {
+		candidate := selectTokenTransferHoldingGroup(group, wantAmount)
+		if len(candidate) > 0 && (len(selected) == 0 || len(candidate) < len(selected)) {
+			selected = candidate
+		}
+		return true
+	})
+	return tokenTransferCreatedEvents(selected)
+}
+
+func tokenTransferHoldingFromCreated(created *v2.CreatedEvent, owner string, InstrumentAdmin string, InstrumentID string, decimals int32, asOf time.Time) (tokenTransferHolding, bool) {
+	Owner, holdingAdmin, holdingID, holdingAmount, ok := ExtractTokenHoldingView(created)
 	if !ok {
-		return false
+		return tokenTransferHolding{}, false
 	}
 	if Owner != owner || holdingAdmin != InstrumentAdmin || holdingID != InstrumentID {
-		return false
+		return tokenTransferHolding{}, false
 	}
-	return !isUnexpiredLockedHolding(created, asOf)
+	if isUnexpiredLockedHolding(created, asOf) {
+		return tokenTransferHolding{}, false
+	}
+	amount, ok := parseHumanAmountToBlockchain(holdingAmount, decimals)
+	if !ok {
+		return tokenTransferHolding{}, false
+	}
+	return tokenTransferHolding{created: created, amount: amount}, true
+}
+
+func selectTokenTransferHoldingGroup(holdings []tokenTransferHolding, wantAmount xc.AmountBlockchain) []tokenTransferHolding {
+	if len(holdings) == 0 {
+		return nil
+	}
+	sortedHoldings := append([]tokenTransferHolding(nil), holdings...)
+	// Use the fewest holdings needed; extra inputs can mix incompatible locks and fail in Daml.
+	sort.Slice(sortedHoldings, func(i, j int) bool {
+		if cmp := sortedHoldings[i].amount.Cmp(&sortedHoldings[j].amount); cmp != 0 {
+			return cmp > 0
+		}
+		return sortedHoldings[i].created.GetContractId() < sortedHoldings[j].created.GetContractId()
+	})
+	total := xc.NewAmountBlockchainFromUint64(0)
+	selected := make([]tokenTransferHolding, 0, len(sortedHoldings))
+	for _, holding := range sortedHoldings {
+		selected = append(selected, holding)
+		total = total.Add(&holding.amount)
+		if total.Cmp(&wantAmount) >= 0 {
+			return selected
+		}
+	}
+	return nil
+}
+
+func tokenTransferCreatedEvents(holdings []tokenTransferHolding) []*v2.CreatedEvent {
+	created := make([]*v2.CreatedEvent, 0, len(holdings))
+	for _, holding := range holdings {
+		created = append(created, holding.created)
+	}
+	return created
+}
+
+func tokenHoldingLockKey(created *v2.CreatedEvent) (string, bool) {
+	if created == nil {
+		return "", false
+	}
+	// The registry-backed flow can expose locks on holding create args even when the template is not LockedAmulet.
+	lockValue, ok := GetRecordFieldValue(created.GetCreateArguments(), "lock")
+	if !ok || lockValue == nil {
+		return "", created.GetTemplateId().GetEntityName() == EntityLockedAmulet
+	}
+	bz, err := json.Marshal(lockValue)
+	if err != nil {
+		return "", true
+	}
+	return string(bz), true
 }
 
 func isUnexpiredLockedHolding(created *v2.CreatedEvent, asOf time.Time) bool {
-	if created == nil || created.GetTemplateId().GetEntityName() != EntityLockedAmulet {
+	if created == nil {
+		return false
+	}
+	if _, locked := tokenHoldingLockKey(created); !locked {
 		return false
 	}
 	expiresAt, ok := lockedHoldingExpiresAt(created)
@@ -453,12 +549,9 @@ func BuildTokenStandardTransferCommandForInstrument(
 		return nil, fmt.Errorf("missing token transfer factory contract id for %s#%s", InstrumentAdmin, InstrumentID)
 	}
 
-	inputHoldingElements := make([]*v2.Value, 0, len(senderHoldings))
-	for _, holding := range senderHoldings {
-		created := holding.GetCreatedEvent()
-		if !tokenHoldingMatchesTransfer(created, string(args.GetFrom()), InstrumentAdmin, InstrumentID, requestedAt) {
-			continue
-		}
+	inputHoldings := tokenTransferInputHoldings(senderHoldings, string(args.GetFrom()), InstrumentAdmin, InstrumentID, args.GetAmount(), decimals, requestedAt)
+	inputHoldingElements := make([]*v2.Value, 0, len(inputHoldings))
+	for _, created := range inputHoldings {
 		inputHoldingElements = append(inputHoldingElements, cantonproto.ContractIDValue(created.GetContractId()))
 	}
 	if len(inputHoldingElements) == 0 {
