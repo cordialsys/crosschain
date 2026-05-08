@@ -110,7 +110,7 @@ func (client *Client) FetchStakeBalance(ctx context.Context, args xclient.Staked
 }
 
 func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.StakeArgs) (xc.StakeTxInput, error) {
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), "", xc.NewAmountBlockchainFromUint64(builder.RentExemptLamportsThreshold))
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (client *Client) FetchUnstakingInput(ctx context.Context, args xcbuilder.St
 		return nil, fmt.Errorf("amount to unstake is below the rent exempt threshold (%s SOL)", builder.RentExemptLamportsThresholdHuman)
 	}
 
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), "", xc.NewAmountBlockchainFromUint64(0))
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (client *Client) FetchWithdrawInput(ctx context.Context, args xcbuilder.Sta
 	if err != nil {
 		return nil, err
 	}
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), "", xc.NewAmountBlockchainFromUint64(0))
 	if err != nil {
 		return nil, err
 	}

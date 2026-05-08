@@ -54,7 +54,7 @@ func DeriveNonceAccount(from solana.PublicKey) (solana.PublicKey, error) {
 	return solana.CreateWithSeed(from, builder.DurableNonceSeed, solana.SystemProgramID)
 }
 
-func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (*tx_input.TxInput, error) {
+func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
 	// get recent block hash (always needed as fallback and for nonce account creation)
@@ -79,17 +79,25 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address) (
 	if err != nil {
 		return nil, fmt.Errorf("could not derive nonce account: %v", err)
 	}
-	err = client.FetchDurableNonceInput(ctx, txInput, nonceAccountPub)
+	// account for the durable nonce rent as part of the base fee
+	lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
+	if err != nil {
+		return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
+	}
+
+	nativeBalanceAfterTransfer, err := client.FetchNativeBalance(ctx, fromAddr)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch native balance: %v", err)
+	}
+	if contractMaybe == "" || contractMaybe == xc.ContractAddress(client.Asset.Chain) {
+		nativeBalanceAfterTransfer = nativeBalanceAfterTransfer.Sub(&amountMaybe)
+	}
+
+	err = client.FetchDurableNonceInput(ctx, txInput, nonceAccountPub, nativeBalanceAfterTransfer, lamports)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch durable nonce: %v", err)
 	}
-
 	if txInput.ShouldCreateDurableNonce {
-		// account for the durable nonce rent as part of the base fee
-		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
-		if err != nil {
-			return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
-		}
 		rent := xc.NewAmountBlockchainFromUint64(lamports)
 		txInput.BaseFee = txInput.BaseFee.Add(&rent)
 	}
@@ -154,7 +162,7 @@ func (client *Client) FetchNonceAccount(ctx context.Context, nonceAccountAddr so
 // FetchDurableNonceInput populates the TxInput with durable nonce information.
 // If the nonce account exists and is initialized, it reads the current nonce value.
 // If the nonce account doesn't exist, it sets ShouldCreateDurableNonce=true.
-func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_input.TxInput, nonceAccount solana.PublicKey) error {
+func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_input.TxInput, nonceAccount solana.PublicKey, nativeBalanceAfterTransfer xc.AmountBlockchain, rent uint64) error {
 	txInput.DurableNonceAccount = nonceAccount
 
 	nonceState, err := client.FetchNonceAccount(ctx, nonceAccount)
@@ -162,21 +170,28 @@ func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_in
 		// If account doesn't exist or is not initialized, mark it for creation
 		txInput.ShouldCreateDurableNonce = true
 		logrus.WithField("nonce_account", nonceAccount.String()).WithError(err).Info("nonce account not found or not initialized, will need setup")
-		return nil
+	} else {
+		txInput.DurableNonce = nonceState.Nonce
 	}
 
-	txInput.DurableNonce = nonceState.Nonce
+	rentB := xc.NewAmountBlockchainFromUint64(rent)
+	if txInput.ShouldCreateDurableNonce && nativeBalanceAfterTransfer.Cmp(&rentB) > 0 {
+		// we can afford the rent for rent for a durable nonce account, so we cannot use it.
+		txInput.ShouldCreateDurableNonce = false
+		txInput.DurableNonceAccount = solana.PublicKey{}
+		txInput.DurableNonce = solana.Hash{}
+	}
 	return nil
 }
 
 // FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom())
+	contract, _ := args.GetContract()
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, xc.NewAmountBlockchainFromUint64(0))
 	if err != nil {
 		return nil, err
 	}
 
-	contract, _ := args.GetContract()
 	if contract == "" {
 		// native transfer
 		return client.WithTransferSimulation(ctx, args, txInput)
