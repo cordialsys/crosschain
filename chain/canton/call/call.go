@@ -1,6 +1,7 @@
 package call
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -75,8 +76,46 @@ func (c *TxCall) SetInput(input xc.CallTxInput) error {
 	if callInput.PreparedTransaction == nil {
 		return fmt.Errorf("prepared transaction is nil")
 	}
+	if !preparedTransactionExercisesContract(callInput.PreparedTransaction, c.contractID) {
+		return fmt.Errorf("prepared transaction does not exercise requested contract %q; exercised contracts: %v", c.contractID, exerciseContractIDs(callInput.PreparedTransaction))
+	}
 	c.input = callInput
 	return nil
+}
+
+func preparedTransactionExercisesContract(prepared *interactive.PreparedTransaction, contractID string) bool {
+	if prepared == nil || contractID == "" {
+		return false
+	}
+	for _, node := range prepared.GetTransaction().GetNodes() {
+		v1Node := node.GetV1()
+		if v1Node == nil {
+			continue
+		}
+		if exercise := v1Node.GetExercise(); exercise != nil && exercise.GetContractId() == contractID {
+			return true
+		}
+	}
+	return false
+}
+
+func exerciseContractIDs(prepared *interactive.PreparedTransaction) []string {
+	if prepared == nil {
+		return nil
+	}
+	contractIDs := []string{}
+	for _, node := range prepared.GetTransaction().GetNodes() {
+		v1Node := node.GetV1()
+		if v1Node == nil {
+			continue
+		}
+		exercise := v1Node.GetExercise()
+		if exercise == nil || exercise.GetContractId() == "" {
+			continue
+		}
+		contractIDs = append(contractIDs, exercise.GetContractId())
+	}
+	return contractIDs
 }
 
 func (c *TxCall) SigningAddresses() []xc.Address {
@@ -110,7 +149,7 @@ func (c *TxCall) Hash() xc.TxHash {
 	if err != nil {
 		return ""
 	}
-	return xc.TxHash(hash)
+	return xc.TxHash(hex.EncodeToString(hash))
 }
 
 func (c *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
