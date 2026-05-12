@@ -39,9 +39,25 @@ type TxInput struct {
 	SequenceOld int64 `json:"Sequence"`
 	// Sequence uses integer.Int64 to survive JSON roundtrip without float64 precision loss.
 	Sequence integer.Int64 `json:"sequence"`
-	// Stellar requires the MaxFee specification, which defines the maximum amount
-	// we are willing to spend on the transaction fee.
+	// MaxFee is the per-tx inclusion fee written into the tx envelope. We
+	// populate it with the actual fee the network is expected to charge
+	// (base_fee_in_stroops * num_operations from the latest ledger), so that
+	// the on-chain charge and the inclusive-fee deduction line up.
+	// ChainGasMultiplier can be used to add headroom for fee surges.
 	MaxFee uint32
+	// MinBalance is the minimum balance the source account must hold, derived
+	// from (2 + subentry_count) * base_reserve. Used to drive the sweep logic.
+	MinBalance xc.AmountBlockchain `json:"min_balance,omitempty"`
+	// AccountMerge is set when the user is sweeping their full balance and the
+	// account is eligible to be merged into the destination (subentry_count == 0
+	// and destination is funded). The builder will then emit an AccountMerge
+	// operation instead of Payment so the network reserve is released too.
+	AccountMerge bool `json:"account_merge,omitempty"`
+	// MustReserve is set when the user is sweeping but the account is not
+	// eligible for AccountMerge. The minimum balance must remain in the source
+	// account, so inclusive-fee spending deducts it in addition to the network
+	// fee (see GetFeeLimit).
+	MustReserve bool `json:"must_reserve,omitempty"`
 	// Specifies the duration for which a transaction remains valid after being submitted.
 	TransactionActiveTime time.Duration
 	MinLedgerSequence     int64
@@ -144,6 +160,9 @@ func (input *TxInput) SetGasFeePriority(priority xc.GasFeePriority) error {
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	totalFee := uint64(input.MaxFee) + uint64(input.SorobanResourceFee)
+	if input.MustReserve {
+		totalFee += input.MinBalance.Uint64()
+	}
 	return xc.NewAmountBlockchainFromUint64(totalFee), ""
 }
 

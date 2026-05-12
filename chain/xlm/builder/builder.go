@@ -164,6 +164,28 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput)
 					Body:          xdrOperationBody,
 				})
 			}
+		} else if !isToken && txInput.AccountMerge && args.InclusiveFeeSpendingEnabled() {
+			// Sweep transfer: merge the source account into the destination.
+			// AccountMerge only operates on the native asset, so we require
+			// !isToken here in addition to the AccountMerge flag itself — that
+			// way a stray flag on a token transfer cannot accidentally drain
+			// the sender's XLM balance. AccountMerge releases the network
+			// reserve and transfers the entire remaining XLM balance, so the
+			// on-chain effect matches a true "send all". Guarded with
+			// InclusiveFeeSpendingEnabled so callers that did not opt in to
+			// inclusive-fee never see their amount silently replaced.
+			destinationMuxedAccount, err := common.MuxedAccountFromAddress(to)
+			if err != nil {
+				return &xlmtx.Tx{}, fmt.Errorf("invalid `to` address for merge: %w", err)
+			}
+			mergeBody, err := xdr.NewOperationBody(xdr.OperationTypeAccountMerge, destinationMuxedAccount)
+			if err != nil {
+				return &xlmtx.Tx{}, fmt.Errorf("failed to create account-merge operation: %w", err)
+			}
+			operations = append(operations, xdr.Operation{
+				SourceAccount: &opSourceAccount,
+				Body:          mergeBody,
+			})
 		} else {
 			// Use Payment for funded accounts or token transfers
 			destinationMuxedAccount, err := common.MuxedAccountFromAddress(to)
