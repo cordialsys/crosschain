@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 
 	comettypes "github.com/cometbft/cometbft/rpc/core/types"
@@ -153,12 +154,114 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		logrus.WithFields(logrus.Fields{
 			"gas_limit_multiplier": gasLimitMultiplier,
 			"gas_used":             res.GasInfo.GasUsed,
+			"gas_wanted":           res.GasInfo.GasWanted,
 			"from":                 args.GetFrom(),
 			"contract":             contract,
 		}).Debug("simulated tx")
 	}
 
+	// Clamp GasLimit and rescale GasPrice so total fee (Amount = GasPrice *
+	// GasLimit) stays constant. Provenance with x/flatfees illustrates why
+	// this is needed: its simulator returns gas_used = msg_fee_in_nhash, a
+	// number that can far exceed the chain's per-tx ceiling (= block max_gas)
+	// when used as the literal GasLimit. On standard cosmos chains the clamp
+	// is a no-op because sim.GasUsed is real execution gas, well under the
+	// ceiling.
+	if err := client.clampGasLimit(ctx, baseTxInput); err != nil {
+		// A failure here just means we couldn't query the chain ceiling; the
+		// tx may still succeed if GasLimit happens to be small enough.
+		logrus.WithError(err).WithField("chain", client.Asset.GetChain().Chain).Debug("could not query block max_gas; submitting un-clamped")
+	}
+
 	return baseTxInput, nil
+}
+
+// clampGasLimit caps txInput.GasLimit at the chain's per-tx ceiling (block
+// max_gas, queried via consensus params) while keeping the total fee constant
+// by scaling GasPrice up. The final GasLimit is also bounded below by what's
+// required to keep the resulting virtual GasPrice >= the mempool floor (so
+// validators accept the tx).
+//
+// Normal cosmos txs use well under a million gas; we only bother querying
+// consensus params when the simulated GasLimit is large enough that the
+// chain ceiling might actually bind. The pathological case is Provenance
+// flatfees, where the simulator can return billions of "gas" as a way of
+// encoding the msg fee.
+const gasLimitClampThreshold = 5_000_000
+
+func (client *Client) clampGasLimit(ctx context.Context, input *tx_input.TxInput) error {
+	if input.GasLimit <= gasLimitClampThreshold || input.GasPrice <= 0 {
+		return nil
+	}
+	maxGas, err := client.queryBlockMaxGas(ctx)
+	if err != nil {
+		return err
+	}
+	// Leave some headroom under block.max_gas so the tx can still share a
+	// block with anything else.
+	const headroomDivisor = 2
+	var safeMax uint64
+	if maxGas > 0 {
+		safeMax = maxGas / headroomDivisor
+	}
+	if safeMax == 0 || input.GasLimit <= safeMax {
+		// Nothing to clamp.
+		return nil
+	}
+
+	// Query the validator's local mempool floor. The configured GasPrice may
+	// be below this floor (e.g. on Provenance flatfees we set it to 1 so the
+	// simulator returns the correct fee in gas_used, but the real mempool
+	// floor is much higher). After clamping, the resulting virtual GasPrice
+	// must still clear that floor.
+	denoms := feeDenoms(client.Asset.GetChain())
+	mempoolFloor := input.GasPrice
+	if floor, err := client.queryNodeMinGasPrice(ctx, denoms); err == nil && !floor.Amount.IsNil() && !floor.Amount.IsZero() {
+		if f, _ := floor.Amount.Float64(); f > mempoolFloor {
+			mempoolFloor = f
+		}
+	}
+	// Add a small headroom over the floor so a tiny upward fluctuation
+	// between simulate and broadcast doesn't get our tx rejected.
+	mempoolFloor *= 1.10
+
+	totalFee := float64(input.GasLimit) * input.GasPrice
+	newLimit := safeMax
+	if newLimit > uint64(math.Floor(totalFee/mempoolFloor)) {
+		newLimit = uint64(math.Floor(totalFee / mempoolFloor))
+	}
+	if newLimit >= input.GasLimit {
+		return nil
+	}
+
+	prevLimit := input.GasLimit
+	prevPrice := input.GasPrice
+	input.GasLimit = newLimit
+	input.GasPrice = totalFee / float64(newLimit)
+
+	logrus.WithFields(logrus.Fields{
+		"chain":          client.Asset.GetChain().Chain,
+		"block_max_gas":  maxGas,
+		"mempool_floor":  mempoolFloor,
+		"previous_limit": prevLimit,
+		"previous_price": prevPrice,
+		"new_limit":      input.GasLimit,
+		"new_price":      input.GasPrice,
+		"total_fee":      totalFee,
+	}).Debug("clamped gas_limit and rescaled gas_price")
+
+	return nil
+}
+
+func feeDenoms(cfg *xc.ChainConfig) []string {
+	denoms := []string{}
+	if cfg.GasCoin != "" {
+		denoms = append(denoms, cfg.GasCoin)
+	}
+	if cfg.ChainCoin != "" && cfg.ChainCoin != cfg.GasCoin {
+		denoms = append(denoms, cfg.ChainCoin)
+	}
+	return denoms
 }
 
 type txBuilder func(input xc.TxInput) (xc.Tx, error)
