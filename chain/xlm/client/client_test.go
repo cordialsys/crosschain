@@ -141,7 +141,9 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
 				SequenceOld:     1213,
 				Sequence:        integer.Int64(1213),
-				MaxFee:          100,
+				// MaxFee = base_fee * num_operations = 100 * 1 = 100 stroops.
+				// Not a sweep, so MinBalance is left zero.
+				MaxFee: 100,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
@@ -150,7 +152,7 @@ func TestFetchTxInput(t *testing.T) {
 			},
 		},
 		{
-			name: "Check fee greater than balance",
+			name: "Native payment ignores gas-budget-default",
 			asset: xc.NewChainConfig(xc.XLM).
 				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(5.00000)).
 				WithTransactionActiveTime(txActiveTime).
@@ -181,8 +183,11 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
 				SequenceOld:     1213,
 				Sequence:        integer.Int64(1213),
-				// Balance*10^7 - Amount
-				MaxFee: 20000000 - 100,
+				// Even when gas_budget_default is much larger, MaxFee is set to
+				// the actual inclusion fee (base_fee * num_ops). The previous
+				// behaviour subtracted the transfer amount and capped against
+				// gas_budget_default, which broke inclusive-fee sweeps.
+				MaxFee: 100,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
@@ -247,14 +252,97 @@ func TestFetchTxInput(t *testing.T) {
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
 				SequenceOld:     1213,
 				Sequence:        integer.Int64(1213),
-				// Balance*10^7
-				MaxFee: 20000000,
+				// Token transfer with trustline creation: 2 operations
+				// (ChangeTrust + Payment), so MaxFee = base_fee * num_ops = 100 * 2.
+				// MinBalance is not relevant for token transfers (the native
+				// balance is not the transferred asset).
+				MaxFee: 200,
 				// 2h * nanoseconds (10^9)
 				TransactionActiveTime: time.Duration(7200 * 1e9),
 				MinLedgerSequence:     1111,
 				Passphrase:            "Test SDF Network ; September 2015",
 				DestinationFunded:     true,
-				NeedsCreateTrustline: true,
+				NeedsCreateTrustline:  true,
+			},
+		},
+		{
+			// Full sweep on an account with no subentries -> AccountMerge.
+			name: "Sweep with account-merge",
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(1.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
+			// Balance is 2 XLM, sweep the entire amount.
+			amount: xc.NewAmountBlockchainFromUint64(20_000_000),
+			getAccountResult: types.GetAccountResult{
+				Sequence:      "1212",
+				SubentryCount: 0,
+				Balances: []types.Balance{
+					{Balance: "2.0", AssetType: "native"},
+				},
+			},
+			getLatestLedgerResult: types.GetLatestLedgerResult{
+				Embedded: types.Records{
+					Records: []types.GetLedgerResult{
+						{Id: "5", Hash: "h", Sequence: 1111},
+					},
+				},
+			},
+			err: "",
+			expectedTxInput: txinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
+				SequenceOld:     1213,
+				Sequence:        integer.Int64(1213),
+				// MaxFee = base_fee * num_ops = 100 * 1 (the AccountMerge op).
+				MaxFee: 100,
+				// AccountMerge releases the reserve, so we do not need to
+				// surface MinBalance — GetFeeLimit only reads it under
+				// MustReserve.
+				AccountMerge:          true,
+				TransactionActiveTime: time.Duration(7200 * 1e9),
+				MinLedgerSequence:     1111,
+				Passphrase:            "Test SDF Network ; September 2015",
+				DestinationFunded:     true,
+			},
+		},
+		{
+			// Full sweep on an account that holds at least one subentry (e.g.
+			// a trustline) -> AccountMerge is forbidden, so the reserve must
+			// remain in the source.
+			name: "Sweep with reserve (subentry blocks merge)",
+			asset: xc.NewChainConfig(xc.XLM).
+				WithGasBudgetDefault(xc.NewAmountHumanReadableFromFloat(1.00000)).
+				WithTransactionActiveTime(txActiveTime).
+				WithChainID("Test SDF Network ; September 2015"),
+			amount: xc.NewAmountBlockchainFromUint64(20_000_000),
+			getAccountResult: types.GetAccountResult{
+				Sequence:      "1212",
+				SubentryCount: 1,
+				Balances: []types.Balance{
+					{Balance: "2.0", AssetType: "native"},
+				},
+			},
+			getLatestLedgerResult: types.GetLatestLedgerResult{
+				Embedded: types.Records{
+					Records: []types.GetLedgerResult{
+						{Id: "5", Hash: "h", Sequence: 1111},
+					},
+				},
+			},
+			err: "",
+			expectedTxInput: txinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{Type: "xlm"},
+				SequenceOld:     1213,
+				Sequence:        integer.Int64(1213),
+				// MaxFee = base_fee * num_ops = 100 * 1.
+				MaxFee: 100,
+				// (2 + 1) * 5_000_000 = 15_000_000 stroops (1.5 XLM).
+				MinBalance:            xc.NewAmountBlockchainFromUint64(15_000_000),
+				MustReserve:           true,
+				TransactionActiveTime: time.Duration(7200 * 1e9),
+				MinLedgerSequence:     1111,
+				Passphrase:            "Test SDF Network ; September 2015",
+				DestinationFunded:     true,
 			},
 		},
 	}

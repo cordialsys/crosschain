@@ -64,6 +64,13 @@ type GetLedgerResult struct {
 	Hash     string `json:"hash"`
 	Sequence int64  `json:"sequence"`
 	ClosedAt string `json:"closed_at"`
+	// BaseFeeInStroops is the network's per-operation inclusion fee at this ledger
+	// (typically 100). Used to compute the actual fee a Payment will be charged.
+	BaseFeeInStroops int64 `json:"base_fee_in_stroops,omitempty"`
+	// BaseReserveInStroops is the per-subentry reserve at this ledger (typically
+	// 5_000_000 = 0.5 XLM). The minimum balance an account must hold is
+	// (2 + subentry_count) * BaseReserveInStroops.
+	BaseReserveInStroops int64 `json:"base_reserve_in_stroops,omitempty"`
 }
 
 type Balance struct {
@@ -76,8 +83,12 @@ type Balance struct {
 }
 
 type GetAccountResult struct {
-	Sequence string    `json:"sequence"`
-	Balances []Balance `json:"balances"`
+	Sequence string `json:"sequence"`
+	// SubentryCount counts the trustlines, signers, offers, data entries and
+	// sponsorships owned by the account. AccountMerge requires this to be 0;
+	// the account's minimum balance is (2 + SubentryCount) * base_reserve.
+	SubentryCount int       `json:"subentry_count"`
+	Balances      []Balance `json:"balances"`
 }
 
 func (account *GetAccountResult) GetNativeBalance() (xc.AmountBlockchain, error) {

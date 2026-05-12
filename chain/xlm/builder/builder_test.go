@@ -50,6 +50,57 @@ func TestNewNativeTransfer(t *testing.T) {
 	require.Equal(t, int64(payment.Amount), amount.Int().Int64())
 }
 
+func TestAccountMergeSweep(t *testing.T) {
+	chain := xc.NewChainConfig(xc.XLM)
+	txBuilder, _ := builder.NewTxBuilder(chain.Base())
+	from := xc.Address("GB7BDSZU2Y27LYNLALKKALB52WS2IZWYBDGY6EQBLEED3TJOCVMZRH7H")
+	to := xc.Address("GCITKPHEIYPB743IM4DYB23IOZIRBAQ76J6QNKPPXVI2N575JZ3Z65DI")
+	amount := xc.NewAmountBlockchainFromUint64(20_000_000)
+	input := &tx_input.TxInput{
+		DestinationFunded: true,
+		AccountMerge:      true,
+		MaxFee:            100,
+	}
+	args := buildertest.MustNewTransferArgs(
+		chain.Base(), from, to, amount,
+		buildertest.OptionInclusiveFeeSpending(true),
+	)
+	nt, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	require.NotNil(t, nt)
+
+	txEnvelope := nt.(*Tx).TxEnvelope
+	op := txEnvelope.Operations()[0]
+	require.Equal(t, xdr.OperationTypeAccountMerge, op.Body.Type)
+	mergeDest, ok := op.Body.GetDestination()
+	require.True(t, ok)
+	require.Equal(t, string(to), mergeDest.Address())
+
+	// Without inclusive-fee spending the builder must fall back to a Payment
+	// so callers that did not opt in cannot accidentally have their amount
+	// replaced by a full-balance merge.
+	argsNoInclusive := buildertest.MustNewTransferArgs(chain.Base(), from, to, amount)
+	nt2, err := txBuilder.Transfer(argsNoInclusive, input)
+	require.NoError(t, err)
+	_, isPayment := nt2.(*Tx).TxEnvelope.Operations()[0].Body.GetPaymentOp()
+	require.True(t, isPayment)
+
+	// And if AccountMerge is somehow set on a token transfer the builder must
+	// still emit a regular token Payment — AccountMerge only operates on the
+	// native asset, so honouring the flag would silently drain the sender's
+	// XLM instead of moving the requested token.
+	argsToken := buildertest.MustNewTransferArgs(
+		chain.Base(), from, to, amount,
+		buildertest.OptionContractAddress("USDC-GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"),
+		buildertest.OptionInclusiveFeeSpending(true),
+	)
+	nt3, err := txBuilder.Transfer(argsToken, input)
+	require.NoError(t, err)
+	payment, isPayment := nt3.(*Tx).TxEnvelope.Operations()[0].Body.GetPaymentOp()
+	require.True(t, isPayment)
+	require.Equal(t, xdr.AssetTypeAssetTypeCreditAlphanum4, payment.Asset.Type)
+}
+
 func TestNewNativeTransferToNewAccount(t *testing.T) {
 	chain := xc.NewChainConfig(xc.XLM)
 	txBuilder, _ := builder.NewTxBuilder(chain.Base())

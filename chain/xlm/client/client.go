@@ -83,6 +83,17 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch ledger info: %w", err)
 	}
 
+	// Defaults for Stellar mainnet/testnet today; the network reports current
+	// values via /ledgers (base_fee_in_stroops / base_reserve_in_stroops).
+	baseFee := uint32(100)
+	baseReserve := int64(5_000_000)
+	if ledger.BaseFeeInStroops > 0 {
+		baseFee = uint32(ledger.BaseFeeInStroops)
+	}
+	if ledger.BaseReserveInStroops > 0 {
+		baseReserve = ledger.BaseReserveInStroops
+	}
+
 	nextSequence := currentSequence + 1
 	txInput.Sequence = integer.Int64(nextSequence)
 	txInput.SequenceOld = nextSequence
@@ -161,28 +172,26 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to read native balance: %w", err)
 	}
 
-	// Validate the amount and deduct it from the sender's balance if the input
-	// pertains to a native transaction (only when sender pays fees)
+	// Validate the amount when the sender pays fees in the native asset. We
+	// intentionally do NOT subtract the amount from the balance before
+	// computing MaxFee; doing so caused MaxFee to collapse to 0 for sweep
+	// transfers and the submission to fail with tx_insufficient_fee.
 	if !hasFeePayer {
 		if _, ok := args.GetContract(); !ok {
 			amount := args.GetAmount()
 			if feeAccountBalance.Cmp(&amount) == -1 {
 				return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), feeAccountBalance.String())
 			}
-			feeAccountBalance = feeAccountBalance.Sub(&amount)
 		}
 	}
 
-	// Set MaxFee (inclusion fee).
-	// For Soroban transactions, MaxFee may already be set from fee stats — only override
-	// with the gas budget default if it hasn't been set yet.
+	// Set MaxFee to the inclusion fee the network will actually charge
+	// (base_fee * num_operations, mirroring the operation branches in the
+	// builder). ChainGasMultiplier below adds headroom for fee surges.
+	// For Soroban transactions MaxFee may already be set from fee stats —
+	// leave that path alone.
 	if txInput.MaxFee == 0 {
-		maxFee := config.GasBudgetDefault.ToBlockchain(config.Decimals)
-		if feeAccountBalance.Cmp(&maxFee) > 0 {
-			txInput.MaxFee = uint32(maxFee.Uint64())
-		} else {
-			txInput.MaxFee = uint32(feeAccountBalance.Uint64())
-		}
+		txInput.MaxFee = baseFee * countOperations(args, txInput)
 	}
 
 	// Apply chain gas-price multiplier to fees if configured.
@@ -194,7 +203,71 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 	}
 
+	// Sweep handling for native XLM payments when the sender pays its own fees.
+	// Stellar accounts must keep at least (2 + subentry_count) * base_reserve
+	// in their balance; trying to send the entire balance otherwise fails with
+	// tx_insufficient_balance. If the destination is funded and the sender
+	// has no subentries, an AccountMerge releases the reserve entirely;
+	// otherwise the reserve must remain in the account and inclusive-fee
+	// spending needs to deduct it in addition to the network fee.
+	if !hasFeePayer {
+		if _, isToken := args.GetContract(); !isToken && !common.IsContractAddress(args.GetTo()) {
+			subentries := int64(accountDetails.SubentryCount)
+			minBalance := xc.NewAmountBlockchainFromUint64(uint64((2 + subentries) * baseReserve))
+
+			amount := args.GetAmount()
+			actualFee := xc.NewAmountBlockchainFromUint64(uint64(txInput.MaxFee))
+			remainder := feeAccountBalance.Sub(&amount)
+			feeAndReserve := actualFee.Add(&minBalance)
+
+			if remainder.Cmp(&feeAndReserve) < 0 {
+				if txInput.DestinationFunded && subentries == 0 {
+					logrus.WithFields(logrus.Fields{
+						"balance":     feeAccountBalance,
+						"amount":      amount,
+						"min_balance": minBalance,
+						"fee":         actualFee,
+					}).Debug("XLM sweep: using account-merge to release the reserve")
+					txInput.AccountMerge = true
+				} else {
+					logrus.WithFields(logrus.Fields{
+						"balance":            feeAccountBalance,
+						"amount":             amount,
+						"min_balance":        minBalance,
+						"fee":                actualFee,
+						"subentry_count":     subentries,
+						"destination_funded": txInput.DestinationFunded,
+					}).Debug("XLM sweep: account is ineligible for merge; reserve must remain in account")
+					// MinBalance is only consumed by GetFeeLimit in the
+					// MustReserve branch, so set it only here.
+					txInput.MustReserve = true
+					txInput.MinBalance = minBalance
+				}
+			}
+		}
+	}
+
 	return txInput, nil
+}
+
+// countOperations mirrors the branches in chain/xlm/builder/builder.go so the
+// inclusion fee (base_fee * num_operations) can be computed without building
+// the tx. Soroban paths return 1; resource fees are tracked separately.
+func countOperations(args xcbuilder.TransferArgs, txInput *xlminput.TxInput) uint32 {
+	var ops uint32
+	if txInput.NeedsCreateTrustline {
+		ops++
+	}
+	// The builder skips the payment op when amount is zero (trustline-only).
+	amount := args.GetAmount()
+	zero := xc.NewAmountBlockchainFromUint64(0)
+	if amount.Cmp(&zero) > 0 || !txInput.NeedsCreateTrustline {
+		ops++
+	}
+	if ops == 0 {
+		ops = 1
+	}
+	return ops
 }
 
 // Deprecated method - use FetchTransferInput
