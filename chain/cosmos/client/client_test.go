@@ -31,6 +31,18 @@ func TestNewClient(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// makeNodeConfigUnsupportedResponse returns an abci_query response that looks
+// like the node does not support the cosmos.base.node.v1beta1.Service/Config
+// endpoint. The Cosmos client uses this as its primary source for the
+// minimum gas price; an "unimplemented" reply makes it fall through to the
+// legacy free-tx hack which the rest of these test responses exercise.
+func makeNodeConfigUnsupportedResponse(id int) string {
+	return fmt.Sprintf(
+		`{"jsonrpc":"2.0","id":%d,"result":{"response":{"code":12,"log":"unknown query path","codespace":"sdk"}}}`,
+		id,
+	)
+}
+
 func makeSimulateResponse(gasUsed uint64, gasRequested uint64) string {
 	response := cosmostx.SimulateResponse{
 		GasInfo: &types.GasInfo{
@@ -78,11 +90,14 @@ func TestFetchTxInput(t *testing.T) {
 			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {"latest_block_height": "123"},"validator_info": {}}}`,
-				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// node Config endpoint (new primary source); pretend it's not
+				// supported so the legacy free-tx hack below is exercised.
+				makeNodeConfigUnsupportedResponse(2),
+				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get tx simulate
-				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -104,11 +119,12 @@ func TestFetchTxInput(t *testing.T) {
 			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
-				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				makeNodeConfigUnsupportedResponse(2),
+				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get tx simulate
-				fmt.Sprintf(`{"jsonrpc":"2.0","id":4,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -133,14 +149,16 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
 				// chain status
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
-				// fee estimation
-				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// node Config (unsupported -> fall through to legacy hack)
+				makeNodeConfigUnsupportedResponse(2),
+				// fee estimation (legacy free-tx hack)
+				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance (fail)
-				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":1,"log":"","info":"bad denom","index":"0","key":null,"value":"","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get x/wasm cw20 balance
-				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":5,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChZ7ImJhbGFuY2UiOiI0Mzk4NDEyNyJ9","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get tx simulate
-				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":6,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},
@@ -168,12 +186,14 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","id":1,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqgBCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBKDAQoreHBsYTFoZHZmNnZ2NWFtYzd3cDg0anMwbHMyN2FwZWt3eHByMGdlOTZrZxJPCigvZXRoZXJtaW50LmNyeXB0by52MS5ldGhzZWNwMjU2azEuUHViS2V5EiMKIQK3jbFRLCBKbDkZ7HGZcc6O14WuCUStGu7+qycD0eVNAhiiCyAE","proofOps":null,"height":"1359950","codespace":""}}}`,
 				// chain status
 				`{"jsonrpc": "2.0","id": 2,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {},"validator_info": {}}}`,
-				// fee estimation
-				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				// node Config (unsupported -> fall through to legacy hack)
+				makeNodeConfigUnsupportedResponse(3),
+				// fee estimation (legacy free-tx hack)
+				`{"jsonrpc":"2.0","id":4,"result":{"code":13,"data":"","log":"insufficient fees; got: 0axpla required: 850000000000axpla: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":5,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get tx simulate
-				fmt.Sprintf(`{"jsonrpc":"2.0","id":5,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
+				fmt.Sprintf(`{"jsonrpc":"2.0","id":6,"result":%s}`, makeSimulateResponse(50_000, 100_000)),
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope:       xc.TxInputEnvelope{Type: "cosmos"},
@@ -197,12 +217,13 @@ func TestFetchTxInput(t *testing.T) {
 			resp: []string{
 				`{"jsonrpc":"2.0","id":0,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"CqABCiAvY29zbW9zLmF1dGgudjFiZXRhMS5CYXNlQWNjb3VudBJ8Cix0ZXJyYTFkcDNxMzA1aGd0dHQ4bjM0cnQ4cmc5eHBhbmM0Mno0eWU3dXBmZxJGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQL89yTJff+sICHvoYGML+87y7dTyiKROo21557Eo97g0RjZhgEgAw==","proofOps":null,"height":"2803726","codespace":""}}}`,
 				`{"jsonrpc": "2.0","id": 1,"result": {"node_info": {"protocol_version": {},"network": "chainId"},"sync_info": {"latest_block_height": "123"},"validator_info": {}}}`,
-				`{"jsonrpc":"2.0","id":2,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
+				makeNodeConfigUnsupportedResponse(2),
+				`{"jsonrpc":"2.0","id":3,"result":{"code":13,"data":"","log":"insufficient fees; got: 0uluna required: 15000uluna: insufficient fee","codespace":"sdk","hash":"C96E183E5FE6288EFA254C8003F5DD37D3EA51889E09F45CAA0749EF6FE25420"}}`,
 				// get x/bank balance
-				`{"jsonrpc":"2.0","id":3,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
+				`{"jsonrpc":"2.0","id":4,"result":{"response":{"code":0,"log":"","info":"","index":"0","key":null,"value":"ChAKBXVsdW5hEgc0OTc5MDYz","proofOps":null,"height":"12817698","codespace":""}}}`,
 				// get tx simulate
-				`{"jsonrpc":"2.0","id":4,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
-				`{"jsonrpc":"2.0","id":4,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
+				`{"jsonrpc":"2.0","id":5,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
+				`{"jsonrpc":"2.0","id":5,"error":{"message": "account sequence mismatch: ...", "code": 123}}`,
 			},
 			txInput: &tx_input.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{Type: "cosmos"},

@@ -787,8 +787,14 @@ chains:
     chain_coin: nhash
     chain_coin_hd_path: 1
     decimals: 9
-    chain_gas_multiplier: 10.0
-    # translates to roughly max 50 HASH in gas per tx
+    # Provenance migrated to the x/flatfees module in v1.28: simulation now
+    # returns the required fee in nhash via gas_used (assuming gas_price=1).
+    # We therefore set chain_min_gas_price to 1nhash (=1e-9 in human units)
+    # and skip both fee multipliers so that fee = sim.gas_used * 1 = msg_fee
+    # exactly.
+    chain_min_gas_price: 1.0e-9
+    chain_gas_multiplier: 1.0
+    chain_gas_limit_multiplier: 1.0
     chain_max_gas_price: 125000.0
     native_assets:
       - asset_id: "HASH"
