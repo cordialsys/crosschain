@@ -40,3 +40,34 @@ type FeeLevels struct {
 	OpenLedgerLevel xc.AmountBlockchain `json:"open_ledger_level"`
 	ReferenceLevel  xc.AmountBlockchain `json:"reference_level"`
 }
+
+// ServerInfoRequest is used to query the rippled `server_info` endpoint.  We
+// use it to read the network's current base reserve and per-object reserve,
+// which determine when AccountDelete is required to sweep an account and how
+// much is burned by the AccountDelete itself.
+type ServerInfoRequest struct {
+	Method string             `json:"method"`
+	Params []ServerInfoParams `json:"params"`
+}
+
+type ServerInfoParams struct{}
+
+type ServerInfoResponse struct {
+	Result ServerInfoResult `json:"result"`
+}
+
+type ServerInfoResult struct {
+	Info ServerInfo `json:"info"`
+}
+
+type ServerInfo struct {
+	ValidatedLedger ValidatedLedgerInfo `json:"validated_ledger"`
+}
+
+// XRP-denominated reserves (e.g. 1.0, 0.2). Convert to drops by multiplying
+// by 1_000_000 (XRP_NATIVE_DECIMALS).
+type ValidatedLedgerInfo struct {
+	BaseFeeXRP     float64 `json:"base_fee_xrp"`
+	ReserveBaseXRP float64 `json:"reserve_base_xrp"`
+	ReserveIncXRP  float64 `json:"reserve_inc_xrp"`
+}

@@ -18,6 +18,11 @@ type TxInput struct {
 	XrpBalance           xc.AmountBlockchain `json:"xrp_balance,omitempty"`
 	// Indicate if account-delete is needed to send the full amount requested
 	AccountDelete bool `json:"account_delete,omitempty"`
+	// MustReserve is set when the sender wants to send (almost) the full balance but
+	// the account is ineligible for AccountDelete (account too new, or has owned objects).
+	// In that case the network reserve must remain in the account, so inclusive-fee
+	// spending must deduct the reserve in addition to the regular network fee.
+	MustReserve bool `json:"must_reserve,omitempty"`
 	// NeedsCreateTrustline indicates that the sender needs a trustline for the token asset.
 	// When true, a TrustSet transaction is built instead of Payment.
 	NeedsCreateTrustline bool `json:"should_create_trustline,omitempty"`
@@ -54,7 +59,11 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	if input.AccountDelete {
-		return input.ReserveAmount, ""
+		return input.AccountDeleteFee, ""
+	}
+	if input.MustReserve {
+		total := input.Fee.Add(&input.ReserveAmount)
+		return total, ""
 	}
 	return input.Fee, ""
 }
