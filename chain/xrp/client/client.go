@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
@@ -55,10 +56,39 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.V2Sequence = currentSequencePtr
 
 	txInput.XrpBalance = xc.NewAmountBlockchainFromStr(accountInfo.Result.AccountData.Balance)
-	// Currently the reserve amount is 1XRP and the delete-account fee is 0.2XRP
-	// We'll use the 0.2 as the threshold for account deletion.
-	txInput.AccountDeleteFee = xc.NewAmountBlockchainFromUint64(200_000)
-	txInput.ReserveAmount = xc.NewAmountBlockchainFromUint64(200_000)
+
+	// Query the network's current reserve values.  reserve_base_xrp is the
+	// minimum balance an account must hold; reserve_inc_xrp is the per-object
+	// reserve and is also the fee burned by an AccountDelete transaction.
+	// These values change occasionally (e.g. mainnet has reduced its base
+	// reserve several times) so it is unsafe to hardcode them.
+	const xrpDecimals = types.XRP_NATIVE_DECIMALS
+	if serverInfo, err := client.getServerInfo(); err == nil {
+		ledger := serverInfo.Result.Info.ValidatedLedger
+		if ledger.ReserveBaseXRP > 0 {
+			reserveHuman, err := xc.NewAmountHumanReadableFromStr(strconv.FormatFloat(ledger.ReserveBaseXRP, 'f', -1, 64))
+			if err == nil {
+				txInput.ReserveAmount = reserveHuman.ToBlockchain(xrpDecimals)
+			}
+		}
+		if ledger.ReserveIncXRP > 0 {
+			feeHuman, err := xc.NewAmountHumanReadableFromStr(strconv.FormatFloat(ledger.ReserveIncXRP, 'f', -1, 64))
+			if err == nil {
+				txInput.AccountDeleteFee = feeHuman.ToBlockchain(xrpDecimals)
+			}
+		}
+	} else {
+		logrus.WithError(err).Debug("server_info failed; falling back to default XRP reserves")
+	}
+	if txInput.AccountDeleteFee.IsZero() {
+		// Pre-July-2024 mainnet default; safe lower bound on most networks.
+		txInput.AccountDeleteFee = xc.NewAmountBlockchainFromUint64(200_000)
+	}
+	if txInput.ReserveAmount.IsZero() {
+		txInput.ReserveAmount = xc.NewAmountBlockchainFromUint64(1_000_000)
+	}
+	// Allow the chain config to override the base reserve (kept for backwards
+	// compatibility with operators that hardcode this value).
 	reserveAmountHuman := client.Asset.GetChain().ChainClientConfig.ReserveAmount
 	if !reserveAmountHuman.IsZero() {
 		reserveAmount := reserveAmountHuman.ToBlockchain(client.Asset.GetChain().GetDecimals())
@@ -98,14 +128,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			tfAmount.ToHuman(decimals),
 		)
 	}
-	if remainder.Cmp(&txInput.ReserveAmount) <= 0 {
-		logrus.WithFields(logrus.Fields{
-			"balance": txInput.XrpBalance,
-			"reserve": txInput.ReserveAmount,
-			"amount":  tfAmount,
-		}).Debug("XRP balance is less than reserve amount, setting account delete")
-		txInput.AccountDelete = true
-	}
 
 	ledger, err := client.getLatestLedger(false)
 	if err != nil {
@@ -115,6 +137,36 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	ledgerOffset := int64(20) // Ledger offset
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
 	txInput.V2LastLedgerSequence = lastLedgerSequence
+
+	if remainder.Cmp(&txInput.ReserveAmount) <= 0 {
+		// The user is trying to send (almost) their entire balance.  XRP requires
+		// that a base-reserve remain in the account; the only way to release it
+		// is via an AccountDelete transaction.  AccountDelete itself has two
+		// on-chain preconditions:
+		//   - the account must own no ledger objects (OwnerCount == 0)
+		//   - the account's Sequence + 256 must be less than the current ledger
+		//     index (otherwise rippled returns tecTOO_SOON)
+		// If either precondition fails, fall back to a regular Payment that
+		// leaves the reserve in place.  Inclusive-fee spending will then deduct
+		// the reserve in addition to the network fee (see GetFeeLimit).
+		ownerCount := accountInfo.Result.AccountData.OwnerCount
+		canAccountDelete := ownerCount == 0 && ledgerSequencePtr > txInput.V2Sequence+256
+		log := logrus.WithFields(logrus.Fields{
+			"balance":        txInput.XrpBalance,
+			"reserve":        txInput.ReserveAmount,
+			"amount":         tfAmount,
+			"owner_count":    ownerCount,
+			"sequence":       txInput.V2Sequence,
+			"current_ledger": ledgerSequencePtr,
+		})
+		if canAccountDelete {
+			log.Debug("XRP balance is less than reserve amount, using account-delete to sweep")
+			txInput.AccountDelete = true
+		} else {
+			log.Debug("XRP balance is less than reserve amount but account-delete is not yet allowed; reserve must remain in account")
+			txInput.MustReserve = true
+		}
+	}
 
 	feeInfo, err := client.getFee()
 	if err != nil {

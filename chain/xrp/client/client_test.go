@@ -36,6 +36,20 @@ func TestFetchTxInput(t *testing.T) {
 	to := xc.Address("rs2x5gvFupB22myz86BUu7m5F4YuizsFna")
 	asset := xc.NewChainConfig(xc.XRP).WithDecimals(types.XRP_NATIVE_DECIMALS)
 
+	// All test cases share the same server_info response: 1 XRP base reserve and
+	// 0.2 XRP per-object reserve (which is also the AccountDelete fee).
+	serverInfoResp := types.ServerInfoResponse{
+		Result: types.ServerInfoResult{
+			Info: types.ServerInfo{
+				ValidatedLedger: types.ValidatedLedgerInfo{
+					BaseFeeXRP:     0.00001,
+					ReserveBaseXRP: 1.0,
+					ReserveIncXRP:  0.2,
+				},
+			},
+		},
+	}
+
 	vectors := []struct {
 		name string
 		args xcbuilder.TransferArgs
@@ -77,7 +91,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2Sequence:           861823,
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
-				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
 				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
@@ -113,7 +127,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2Sequence:           0,
 				V2LastLedgerSequence: 1221021,
 				Fee:                  xc.NewAmountBlockchainFromUint64(10),
-				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
 				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
@@ -147,7 +161,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2Sequence:           861823,
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
-				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
 				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 			},
@@ -173,19 +187,97 @@ func TestFetchTxInput(t *testing.T) {
 				},
 			},
 			ledgerResp: types.LedgerResponse{
-				Result: types.LedgerResult{},
+				// Account-delete requires Sequence + 256 < current ledger.
+				Result: types.LedgerResult{LedgerCurrentIndex: 862080},
 			},
 			expectedTxInput: xrptxinput.TxInput{
 				TxInputEnvelope: xc.TxInputEnvelope{
 					Type: "xrp",
 				},
 				V2Sequence:           861823,
-				V2LastLedgerSequence: 20,
+				V2LastLedgerSequence: 862100,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
-				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
 				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 				AccountDelete:        true,
+			},
+		},
+		{
+			name: "must reserve when account-delete is too soon",
+			// Same as the account-delete case but the account is too young: Sequence + 256
+			// is not yet less than the current ledger index, so account-delete would fail
+			// on chain with tecTOO_SOON.  The reserve must stay in the account.
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromUint64(10000000-200_000)),
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
+						Sequence: 861823,
+						Balance:  "10000000",
+					},
+				},
+			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+			},
+			ledgerResp: types.LedgerResponse{
+				// Sequence + 256 = 862079, current ledger = 862000 -> too soon.
+				Result: types.LedgerResult{LedgerCurrentIndex: 862000},
+			},
+			expectedTxInput: xrptxinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{
+					Type: "xrp",
+				},
+				V2Sequence:           861823,
+				V2LastLedgerSequence: 862020,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
+				MustReserve:          true,
+			},
+		},
+		{
+			name: "must reserve when account owns objects",
+			// Account has trustlines or other owned objects, so account-delete is impossible.
+			args: buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromUint64(10000000-200_000)),
+			accountInfoResp: types.AccountInfoResponse{
+				Result: types.AccountInfoResultDetails{
+					AccountData: types.AccountData{
+						Sequence:   861823,
+						Balance:    "10000000",
+						OwnerCount: 1,
+					},
+				},
+			},
+			feeResp: types.FeeResponse{
+				Result: types.FeeResult{
+					Drops: types.FeeDrops{
+						BaseFee:   xc.NewAmountBlockchainFromUint64(10),
+						MedianFee: xc.NewAmountBlockchainFromUint64(100),
+					},
+				},
+			},
+			ledgerResp: types.LedgerResponse{
+				// Old enough by sequence, but OwnerCount > 0 still blocks account-delete.
+				Result: types.LedgerResult{LedgerCurrentIndex: 862080},
+			},
+			expectedTxInput: xrptxinput.TxInput{
+				TxInputEnvelope: xc.TxInputEnvelope{
+					Type: "xrp",
+				},
+				V2Sequence:           861823,
+				V2LastLedgerSequence: 862100,
+				Fee:                  xc.NewAmountBlockchainFromUint64(100),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
+				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
+				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
+				MustReserve:          true,
 			},
 		},
 		{
@@ -218,7 +310,7 @@ func TestFetchTxInput(t *testing.T) {
 				V2Sequence:           861823,
 				V2LastLedgerSequence: 20,
 				Fee:                  xc.NewAmountBlockchainFromUint64(100),
-				ReserveAmount:        xc.NewAmountBlockchainFromUint64(200_000),
+				ReserveAmount:        xc.NewAmountBlockchainFromUint64(1_000_000),
 				AccountDeleteFee:     xc.NewAmountBlockchainFromUint64(200_000),
 				XrpBalance:           xc.NewAmountBlockchainFromStr("10000000"),
 				AccountDelete:        true,
@@ -244,6 +336,9 @@ func TestFetchTxInput(t *testing.T) {
 				require.NoError(t, err)
 			} else if method == "fee" {
 				err := json.NewEncoder(w).Encode(vector.feeResp)
+				require.NoError(t, err)
+			} else if method == "server_info" {
+				err := json.NewEncoder(w).Encode(serverInfoResp)
 				require.NoError(t, err)
 			} else {
 				t.Errorf("unexpected method: %s", method)
