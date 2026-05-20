@@ -34,9 +34,18 @@ func Keccak256(data []byte) []byte {
 }
 
 // ScalarReduce reduces a 32-byte value modulo the ed25519 group order L.
-// Uses Monero's sc_reduce32 (32-byte input, not 64-byte).
+// Uses 64-byte wide reduction (pad with zeros) for consistency with the
+// original key derivation that generated existing addresses/wallets.
+// NOTE: This differs from Monero's sc_reduce32 for inputs >= L.
+// Do NOT change this without migrating all existing addresses.
 func ScalarReduce(input []byte) []byte {
-	return ScReduce32(input)
+	wide := make([]byte, 64)
+	copy(wide, input)
+	sc, err := edwards25519.NewScalar().SetUniformBytes(wide)
+	if err != nil {
+		panic(fmt.Sprintf("ScalarReduce failed: %v", err))
+	}
+	return sc.Bytes()
 }
 
 // FixedPrivateViewKey is a well-known view key used by all crosschain-generated
