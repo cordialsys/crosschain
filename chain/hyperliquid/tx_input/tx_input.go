@@ -14,12 +14,15 @@ const SafetyTimeoutMargin = (48 * time.Hour)
 type TxInput struct {
 	xc.TxInputEnvelope
 	TransactionTime time.Time `json:"transaction_time"`
-	// Token decimals
-	Decimals int32 `json:"decimals"`
-	// Token
-	Token xc.ContractAddress `json:"token"`
+	// Token Symbol (the "HYPE:" prefix discovered for a contract address)
+	Symbol string `json:"symbol"`
 	// "Mainnet" or "Testnet"
 	HyperliquidChain string `json:"chain"`
+
+	// Token decimals (deprecated, use transferArgs .GetDecimals() instead)
+	DecimalsOld int32 `json:"decimals"`
+	// Token "label" Deprecated -- should use simple "symbol" field instead, combined with transferArgs .GetContract()
+	TokenLabelOld TokenLabel `json:"token"`
 }
 
 var _ xc.TxInput = &TxInput{}

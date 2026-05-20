@@ -29,6 +29,10 @@ import (
 	bitcoinaddress "github.com/cordialsys/crosschain/chain/bitcoin/address"
 	bitcoinbuilder "github.com/cordialsys/crosschain/chain/bitcoin/builder"
 	"github.com/cordialsys/crosschain/chain/bitcoin_cash"
+	canton "github.com/cordialsys/crosschain/chain/canton"
+	cantonaddress "github.com/cordialsys/crosschain/chain/canton/address"
+	cantonbuilder "github.com/cordialsys/crosschain/chain/canton/builder"
+	cantonclient "github.com/cordialsys/crosschain/chain/canton/client"
 	cardano "github.com/cordialsys/crosschain/chain/cardano"
 	cardanoaddress "github.com/cordialsys/crosschain/chain/cardano/address"
 	cardanobuilder "github.com/cordialsys/crosschain/chain/cardano/builder"
@@ -100,6 +104,8 @@ import (
 
 func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 	switch driver {
+	case xc.DriverCanton:
+		return cantonclient.NewClient(cfg)
 	case xc.DriverCardano:
 		return cardanoclient.NewClient(cfg)
 	case xc.DriverEVM:
@@ -202,6 +208,8 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg *xc.ChainConf
 
 func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error) {
 	switch xc.Driver(cfg.Driver) {
+	case xc.DriverCanton:
+		return cantonbuilder.NewTxBuilder(cfg)
 	case xc.DriverCardano:
 		return cardanobuilder.NewTxBuilder(cfg)
 	case xc.DriverEVM:
@@ -264,6 +272,8 @@ func NewSigner(chain *xc.ChainBaseConfig, secret string, options ...xcaddress.Ad
 
 func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
 	switch xc.Driver(cfg.Driver) {
+	case xc.DriverCanton:
+		return cantonaddress.NewAddressBuilder(cfg)
 	case xc.DriverDusk:
 		return duskaddress.NewAddressBuilder(cfg)
 	case xc.DriverEGLD:
@@ -325,6 +335,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return err.Status
 	}
 	switch driver {
+	case xc.DriverCanton:
+		return canton.CheckError(err)
 	case xc.DriverCardano:
 		return cardano.CheckError(err)
 	case xc.DriverDusk:
@@ -388,6 +400,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return fmt.Errorf("empty address")
 	}
 	switch cfg.Driver {
+	case xc.DriverCanton:
+		return canton.ValidateAddress(cfg, addr)
 	case xc.DriverCardano:
 		return cardano.ValidateAddress(cfg, addr)
 	case xc.DriverDusk:

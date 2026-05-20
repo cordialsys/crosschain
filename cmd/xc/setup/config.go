@@ -36,7 +36,7 @@ func OverwriteCrosschainSettings(overrides map[string]*ChainOverride, xcFactory 
 			if override.Rpc != "" {
 				logrus.WithField("chain", chain.Chain).Info("overriding rpc")
 				chain.URL = override.Rpc
-				if strings.Contains(override.Rpc, "cordialapis.com") {
+				if strings.Contains(override.Rpc, "cordialapis.com") && chain.Driver != xc.DriverCanton {
 					logrus.WithField("chain", chain.Chain).WithField("rpc", chain.URL).Info("using cordialapis driver")
 					// ensure crosschain driver is used
 					chain.Driver = xc.DriverCrosschain

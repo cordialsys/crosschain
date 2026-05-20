@@ -7,6 +7,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	cantonclientconfig "github.com/cordialsys/crosschain/client/canton"
 )
 
 type NetworkSetting string
@@ -47,6 +48,9 @@ func (cfg *Config) MigrateFields() {
 		}
 		if chain.ChainClientConfig == nil {
 			chain.ChainClientConfig = &xc.ChainClientConfig{}
+		}
+		if chain.CantonConfig == nil {
+			chain.CantonConfig = &cantonclientconfig.CantonConfig{}
 		}
 		chain.Configure(cfg.HttpTimeout)
 	}

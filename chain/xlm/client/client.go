@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -22,7 +23,9 @@ import (
 	"github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
-	"github.com/stellar/go/xdr"
+	"github.com/cordialsys/crosschain/pkg/integer"
+	"github.com/sirupsen/logrus"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 type Client struct {
@@ -80,38 +83,191 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch ledger info: %w", err)
 	}
 
-	txInput.Sequence = currentSequence + 1
-	txInput.MinLedgerSequence = ledger.Sequence
+	// Defaults for Stellar mainnet/testnet today; the network reports current
+	// values via /ledgers (base_fee_in_stroops / base_reserve_in_stroops).
+	baseFee := uint32(100)
+	baseReserve := int64(5_000_000)
+	if ledger.BaseFeeInStroops > 0 {
+		baseFee = uint32(ledger.BaseFeeInStroops)
+	}
+	if ledger.BaseReserveInStroops > 0 {
+		baseReserve = ledger.BaseReserveInStroops
+	}
 
-	remainingBalance, err := accountDetails.GetNativeBalance()
+	nextSequence := currentSequence + 1
+	txInput.Sequence = integer.Int64(nextSequence)
+	txInput.SequenceOld = nextSequence
+	txInput.MinLedgerSequence = ledger.Sequence
+	txInput.TransactionActiveTime = config.TransactionActiveTime
+
+	// Determine which account pays fees: fee payer or sender
+	feeAccountDetails := accountDetails
+	feePayer, hasFeePayer := args.GetFeePayer()
+	if hasFeePayer {
+		feePayerDetails, err := client.FetchAccountDetails(feePayer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch fee payer account details: %w", err)
+		}
+		feePayerSequence, err := strconv.ParseInt(feePayerDetails.Sequence, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse fee payer sequence number: %w", err)
+		}
+		txInput.FeePayerSequence = integer.Int64(feePayerSequence + 1)
+		feeAccountDetails = feePayerDetails
+	}
+
+	// Check if destination is a contract (C...) address or a regular account (G...).
+	if common.IsContractAddress(args.GetTo()) {
+		// Contract addresses require Soroban SAC invocation — skip account existence check.
+		// The builder will use InvokeHostFunction instead of Payment.
+		txInput.DestinationFunded = true
+		// Conservative defaults for Soroban SAC transfers.
+		txInput.SorobanResourceFee = 100_000
+		txInput.SorobanInstructions = 500_000
+		txInput.SorobanDiskReadBytes = 2000
+		txInput.SorobanWriteBytes = 500
+		// If Soroban RPC is configured, simulate to get accurate resource estimates.
+		if sorobanUrl := config.IndexerUrl; sorobanUrl != "" {
+			if err := client.estimateSorobanResourceFee(sorobanUrl, args, txInput); err != nil {
+				logrus.WithError(err).Warn("soroban simulation failed, using default resource fee")
+			}
+		}
+	} else {
+		// Check if destination account exists on the network.
+		// Stellar requires CreateAccount for new accounts instead of Payment.
+		_, destErr := client.FetchAccountDetails(args.GetTo())
+		if destErr != nil {
+			var queryErr *types.QueryProblem
+			if stderrors.As(destErr, &queryErr) && queryErr.Status == 404 {
+				txInput.DestinationFunded = false
+			} else {
+				return nil, fmt.Errorf("failed to fetch destination account details: %w", destErr)
+			}
+		} else {
+			txInput.DestinationFunded = true
+		}
+	}
+
+	// Check if the sender needs a trustline for the token asset.
+	// Stellar requires a ChangeTrust operation before receiving/sending a non-native asset.
+	if contract, ok := args.GetContract(); ok {
+		contractDetails, err := common.GetAssetAndIssuerFromContract(string(contract))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse contract: %w", err)
+		}
+		hasTrustline := false
+		for _, bal := range accountDetails.Balances {
+			if bal.AssetCode == contractDetails.AssetCode && bal.AssetIssuer == string(contractDetails.Issuer) {
+				hasTrustline = true
+				break
+			}
+		}
+		if !hasTrustline {
+			txInput.NeedsCreateTrustline = true
+		}
+	}
+
+	feeAccountBalance, err := feeAccountDetails.GetNativeBalance()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read native balance: %w", err)
 	}
 
-	// Validate the amount and deduct it from the balance if the input
-	// pertains to a native transaction
-	if _, ok := args.GetContract(); !ok {
-		amount := args.GetAmount()
-		if remainingBalance.Cmp(&amount) == -1 {
-			return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), remainingBalance.String())
+	// Validate the amount when the sender pays fees in the native asset. We
+	// intentionally do NOT subtract the amount from the balance before
+	// computing MaxFee; doing so caused MaxFee to collapse to 0 for sweep
+	// transfers and the submission to fail with tx_insufficient_fee.
+	if !hasFeePayer {
+		if _, ok := args.GetContract(); !ok {
+			amount := args.GetAmount()
+			if feeAccountBalance.Cmp(&amount) == -1 {
+				return nil, fmt.Errorf("failed to create tx input, tx amount(%s) greater than balance(%s)", amount.String(), feeAccountBalance.String())
+			}
 		}
-		remainingBalance = remainingBalance.Sub(&amount)
 	}
 
-	// Stellar requires the MaxFee specification, which defines the maximum amount
-	// we are willing to spend on the transaction fee.
-	maxFee := config.GasBudgetDefault.ToBlockchain(config.Decimals)
-
-	// If balance is greater than blockchainFee, we can safely use specified MaxFee
-	// Use remaining balance as a max fee otherwise
-	if remainingBalance.Cmp(&maxFee) > 0 {
-		txInput.MaxFee = uint32(maxFee.Uint64())
-	} else {
-		txInput.MaxFee = uint32(remainingBalance.Uint64())
+	// Set MaxFee to the inclusion fee the network will actually charge
+	// (base_fee * num_operations, mirroring the operation branches in the
+	// builder). ChainGasMultiplier below adds headroom for fee surges.
+	// For Soroban transactions MaxFee may already be set from fee stats —
+	// leave that path alone.
+	if txInput.MaxFee == 0 {
+		txInput.MaxFee = baseFee * countOperations(args, txInput)
 	}
 
-	txInput.TransactionActiveTime = config.TransactionActiveTime
+	// Apply chain gas-price multiplier to fees if configured.
+	// This allows remote adjustment of fee estimates.
+	if config.ChainGasMultiplier > 0 && config.ChainGasMultiplier != 1.0 {
+		txInput.MaxFee = uint32(float64(txInput.MaxFee) * config.ChainGasMultiplier)
+		if txInput.SorobanResourceFee > 0 {
+			txInput.SorobanResourceFee = uint32(float64(txInput.SorobanResourceFee) * config.ChainGasMultiplier)
+		}
+	}
+
+	// Sweep handling for native XLM payments when the sender pays its own fees.
+	// Stellar accounts must keep at least (2 + subentry_count) * base_reserve
+	// in their balance; trying to send the entire balance otherwise fails with
+	// tx_insufficient_balance. If the destination is funded and the sender
+	// has no subentries, an AccountMerge releases the reserve entirely;
+	// otherwise the reserve must remain in the account and inclusive-fee
+	// spending needs to deduct it in addition to the network fee.
+	if !hasFeePayer {
+		if _, isToken := args.GetContract(); !isToken && !common.IsContractAddress(args.GetTo()) {
+			subentries := int64(accountDetails.SubentryCount)
+			minBalance := xc.NewAmountBlockchainFromUint64(uint64((2 + subentries) * baseReserve))
+
+			amount := args.GetAmount()
+			actualFee := xc.NewAmountBlockchainFromUint64(uint64(txInput.MaxFee))
+			remainder := feeAccountBalance.Sub(&amount)
+			feeAndReserve := actualFee.Add(&minBalance)
+
+			if remainder.Cmp(&feeAndReserve) < 0 {
+				if txInput.DestinationFunded && subentries == 0 {
+					logrus.WithFields(logrus.Fields{
+						"balance":     feeAccountBalance,
+						"amount":      amount,
+						"min_balance": minBalance,
+						"fee":         actualFee,
+					}).Debug("XLM sweep: using account-merge to release the reserve")
+					txInput.AccountMerge = true
+				} else {
+					logrus.WithFields(logrus.Fields{
+						"balance":            feeAccountBalance,
+						"amount":             amount,
+						"min_balance":        minBalance,
+						"fee":                actualFee,
+						"subentry_count":     subentries,
+						"destination_funded": txInput.DestinationFunded,
+					}).Debug("XLM sweep: account is ineligible for merge; reserve must remain in account")
+					// MinBalance is only consumed by GetFeeLimit in the
+					// MustReserve branch, so set it only here.
+					txInput.MustReserve = true
+					txInput.MinBalance = minBalance
+				}
+			}
+		}
+	}
+
 	return txInput, nil
+}
+
+// countOperations mirrors the branches in chain/xlm/builder/builder.go so the
+// inclusion fee (base_fee * num_operations) can be computed without building
+// the tx. Soroban paths return 1; resource fees are tracked separately.
+func countOperations(args xcbuilder.TransferArgs, txInput *xlminput.TxInput) uint32 {
+	var ops uint32
+	if txInput.NeedsCreateTrustline {
+		ops++
+	}
+	// The builder skips the payment op when amount is zero (trustline-only).
+	amount := args.GetAmount()
+	zero := xc.NewAmountBlockchainFromUint64(0)
+	if amount.Cmp(&zero) > 0 || !txInput.NeedsCreateTrustline {
+		ops++
+	}
+	if ops == 0 {
+		ops = 1
+	}
+	return ops
 }
 
 // Deprecated method - use FetchTransferInput
@@ -370,6 +526,10 @@ func (client *Client) FetchBalanceByAsset(address xc.Address, assetID string) (x
 	url := fmt.Sprintf("%s/accounts/%s", client.Url, string(address))
 	var response types.GetAccountResult
 	if err := client.Get(url, &response); err != nil {
+		// Unfunded accounts return 404; treat as zero balance
+		if queryErr, ok := err.(*types.QueryProblem); ok && queryErr.Status == 404 {
+			return xc.AmountBlockchain{}, nil
+		}
 		return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch account balances: %w", err)
 	}
 

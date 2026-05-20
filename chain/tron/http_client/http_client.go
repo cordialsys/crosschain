@@ -160,7 +160,22 @@ type TransactionInBlock struct {
 
 type TriggerConstantContractResponse struct {
 	Error
-	ConstantResult []Bytes `json:"constant_result"`
+	Result         ContractTriggerResult `json:"result"`
+	EnergyUsed     int64                 `json:"energy_used"`
+	EnergyPenalty  int64                 `json:"energy_penalty"`
+	ConstantResult []Bytes               `json:"constant_result"`
+}
+
+type ContractTriggerResult struct {
+	Result  bool   `json:"result"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+type EstimateEnergyResponse struct {
+	Error
+	Result         ContractTriggerResult `json:"result"`
+	EnergyRequired int64                 `json:"energy_required"`
 }
 
 type FreezeV2 struct {
@@ -490,6 +505,35 @@ func (c *Client) TriggerConstantContracts(ownerAddress string, contract string, 
 		return nil, err
 	}
 	parsed, err := parseResponse(resp, &TriggerConstantContractResponse{})
+	if err != nil {
+		return nil, err
+	}
+	err = checkError(parsed.Error)
+	if err != nil {
+		return parsed, err
+	}
+
+	return parsed, nil
+}
+
+func (c *Client) EstimateEnergy(ownerAddress string, contract string, funcSelector string, param string) (*EstimateEnergyResponse, error) {
+	req, err := postRequest(c.Url("wallet/estimateenergy"), map[string]interface{}{
+		"owner_address":     ownerAddress,
+		"contract_address":  contract,
+		"function_selector": funcSelector,
+		"parameter":         param,
+		"visible":           true,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	parsed, err := parseResponse(resp, &EstimateEnergyResponse{})
 	if err != nil {
 		return nil, err
 	}

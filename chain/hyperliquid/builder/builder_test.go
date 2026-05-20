@@ -32,8 +32,9 @@ func TestNewTransfer(t *testing.T) {
 	input := &TxInput{
 		TxInputEnvelope:  xc.TxInputEnvelope{},
 		TransactionTime:  time.UnixMilli(0),
-		Decimals:         0,
-		Token:            "",
+		DecimalsOld:      0,
+		TokenLabelOld:    "",
+		Symbol:           "",
 		HyperliquidChain: "",
 	}
 	args := buildertest.MustNewTransferArgs(

@@ -74,8 +74,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	gasLimitInt.SetUint64(input.GasLimit)
 	gasLimit := decimal.NewFromBigInt(gasLimitInt, 0)
 
-	// gasPrice * gasLimit
-	totalSpend := gasPrice.Mul(gasLimit)
+	// gasPrice * gasLimit, rounded up so fractional gas prices match the
+	// builder's Ceil and the inclusive-fee deduction is sufficient to cover
+	// the on-chain fee.
+	totalSpend := gasPrice.Mul(gasLimit).Ceil()
 	totalSpendInt := xc.AmountBlockchain(*totalSpend.BigInt())
 
 	// TODO: consider alt assets fees in cosmos

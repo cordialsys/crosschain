@@ -22,6 +22,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tron_input "github.com/cordialsys/crosschain/chain/tron/txinput"
 	xrp "github.com/cordialsys/crosschain/chain/xrp/tx_input"
+	cantonclientconfig "github.com/cordialsys/crosschain/client/canton"
 	"github.com/cordialsys/crosschain/client/errors"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -91,6 +92,20 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 	if driver == xc.DriverHedera {
 		fakeAsset.ChainID = "0.0.3"
 	}
+	if driver == xc.DriverCanton {
+		fakeAsset.URL = "https://canton.example.com"
+		fakeAsset.CantonConfig = &cantonclientconfig.CantonConfig{
+			KeycloakURL:           "raw:https://keycloak.example.com/auth",
+			KeycloakRealm:         "raw:test-realm",
+			ValidatorClientID:     "validator-bob",
+			ValidatorClientSecret: "raw:validator:test-secret",
+			RestAPIURL:            "raw:https://wallet.example.com",
+			ScanProxyURL:          "raw:https://scan-proxy.example.com",
+			ScanAPIURL:            "raw:https://scan-api.example.com",
+			CatalystUsername:      "catalyst-username",
+			CatalystPassword:      "raw:catalyst:test-secret",
+		}
+	}
 	return fakeAsset
 }
 
@@ -98,8 +113,8 @@ func (s *CrosschainTestSuite) TestAllNewClient() {
 	require := s.Require()
 
 	for _, driver := range xc.SupportedDrivers {
-		// TODO: these require custom params for NewClient
-		if driver == xc.DriverAptos || driver == xc.DriverSubstrate {
+		// TODO: these require custom params or live auth for NewClient
+		if driver == xc.DriverAptos || driver == xc.DriverSubstrate || driver == xc.DriverCanton {
 			continue
 		}
 
@@ -202,6 +217,9 @@ func (s *CrosschainTestSuite) TestAllNewStakingInput() {
 			case "calling":
 				_, err := drivers.UnmarshalCallInput(bz)
 				require.NoError(err)
+			case "create-account":
+				_, err := drivers.UnmarshalCreateAccountInput(bz)
+				require.NoError(err)
 			default:
 				require.Fail("unexpected txType ", inputType)
 			}
@@ -215,7 +233,7 @@ func (s *CrosschainTestSuite) TestStakingVariants() {
 	for _, variant := range registry.GetSupportedTxVariants() {
 		variantType := variant.GetVariant()
 		parts := strings.Split(string(variantType), "/")
-		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer", "calling"}
+		inputColumns := []string{"staking", "unstaking", "withdrawing", "multi-transfer", "calling", "create-account"}
 		require.Len(parts, 4, "variant must be in format drivers/:driver/[ "+strings.Join(inputColumns, "|")+" ]/:id")
 		require.Equal("drivers", parts[0])
 		require.Contains(inputColumns, parts[2], "input type column must be one of: "+strings.Join(inputColumns, ", "))

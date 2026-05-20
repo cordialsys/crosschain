@@ -330,6 +330,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 8453
     gas_price_oracle_address: "0x420000000000000000000000000000000000000F"
     secondary_chain_gas_multiplier: 1.0
     confirmations_final: 64
@@ -367,6 +368,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 80094
     chain_name: Berachain
     decimals: 18
     fee_limit: "10.0"
@@ -441,6 +443,28 @@ chains:
         asset_id: celo
       indexing_co:
         chain_id: celo
+  CANTON:
+    chain: CANTON
+    support:
+      call: true
+      fee:
+        accurate: true
+      memo: string
+    driver: canton
+    chain_name: Canton
+    decimals: 10
+    fee_limit: "100.0"
+    confirmations_final: 1
+    external:
+      coin_market_cap:
+        asset_id: "37263"
+      coin_gecko:
+        asset_id: "canton-network"
+    canton_config:
+      enable_transfer_offers: false
+      lighthouse_api_url: "https://lighthouse.cantonloop.com"
+      validator_client_secret: "env:CANTON_VALIDATOR_CLIENT_SECRET"
+      canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
   CHZ:
     chain: CHZ
     driver: evm-legacy
@@ -792,6 +816,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 988
     chain_name: Stable
     decimals: 18
     confirmations_final: 15
@@ -816,10 +841,15 @@ chains:
     chain_coin_hd_path: 1
     decimals: 9
     fee_limit: "200.0"
-    chain_gas_multiplier: 10.0
-    # translates to roughly max 50 HASH in gas per tx
+    # Provenance migrated to the x/flatfees module: simulation returns the
+    # required fee in nhash via gas_used (assuming gas_price=1nhash/gas).
+    # Set chain_min_gas_price to 1nhash so Amount = sim.gas_used * 1 = msg_fee
+    # and let the cosmos client clamp the resulting (huge) gas_limit to fit
+    # within block.max_gas (rescaling the virtual gas_price up to compensate).
+    chain_min_gas_price: 1.0e-9
+    chain_gas_multiplier: 1.0
+    chain_gas_limit_multiplier: 1.0
     chain_max_gas_price: 125000.0
-    chain_min_gas_price: 0.000002
     native_assets:
       - asset_id: "HASH"
         contract_id: "nhash"
@@ -1199,6 +1229,36 @@ chains:
         asset_id: polygon-pos
       indexing_co:
         chain_id: polygon
+  MegaETH:
+    chain: MegaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 4326
+    chain_name: MegaETH
+    decimals: 18
+    fee_limit: "5.0"
+    confirmations_final: 30
+    native_assets:
+      - asset_id: "MegaETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # MegaETH is settled in ETH
+    explorer_urls:
+      tx: "https://mega.etherscan.io/tx/{}"
+      address: "https://mega.etherscan.io/address/{}"
+      token: "https://mega.etherscan.io/token/{}"
+    external:
+      coin_gecko:
+        chain_id: megaeth
+        asset_id: "megaeth"
+      coin_market_cap:
+        chain_id: "278"
+        asset_id: "38770"
+      indexing_co:
+        chain_id: megaeth
   MON:
     chain: MON
     support:
@@ -1207,6 +1267,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 143
     chain_name: Monad
     chain_gas_multiplier: 4
     chain_gas_tip: 20
@@ -1470,13 +1531,31 @@ chains:
         asset_id: "22974"
       coin_gecko:
         asset_id: bittensor
-  # TEMPO:
-  #   chain: TEMPO
-  #   driver: evm
-  #   chain_id: 42431
-  #   chain_name: Tempo
-  #   decimals: 6
-  #   confirmations_final: 5
+  TEMPO:
+    chain: TEMPO
+    support:
+      fee:
+        accurate: true
+        payer: true
+    driver: tempo
+    chain_id: 4217
+    chain_name: Tempo
+    decimals: 6
+    # basically $50 limit as tempo is all stablecoins.
+    fee_limit: "50.0"
+    confirmations_final: 5
+    external:
+      coin_gecko:
+        chain_id: "tempo"
+      # TBD cmc chain-id
+      # coin_market_cap:
+      #   chain_id: "tempo"
+    native_assets:
+      - asset_id: "0x20c00000000000000000000014f22ca97301eb73"
+        contract_id: "0x20c00000000000000000000014f22ca97301eb73"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["USDT0"]
   TIA:
     chain: TIA
     support:
@@ -1621,6 +1700,8 @@ chains:
     support:
       memo: string
       fee:
+        accurate: true
+        payer: true
     driver: xlm
     chain_name: xlm
     decimals: 7
@@ -1724,7 +1805,7 @@ chains:
       coin_gecko:
         asset_id: "linea"
       coin_market_cap:
-        asset_id: "27657"
+        chain_id: "198"
       indexing_co:
         chain_id: "linea"
   XPL:
@@ -1736,6 +1817,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
+    chain_id: 9745
     chain_name: Plasma
     gas_budget_default: "0.1"
     decimals: 18
@@ -1753,7 +1835,7 @@ chains:
         accurate: true
         payer: true
     driver: evm
-    chain_id: 1
+    chain_id: 16661
     chain_name: 0g
     decimals: 18
     fee_limit: "300.0"

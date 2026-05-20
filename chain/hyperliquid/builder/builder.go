@@ -30,7 +30,13 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		return nil, errors.New("invalid input type")
 	}
 
-	transaction := tx.NewTx(args, *txInput)
+	_, hasContract := args.GetContract()
+	decimals, ok := args.GetDecimals()
+	if hasContract && !ok {
+		return nil, errors.New("decimals are required when contract is provided")
+	}
+
+	transaction := tx.NewTx(args, *txInput, decimals)
 	return &transaction, nil
 }
 

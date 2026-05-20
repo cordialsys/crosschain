@@ -35,6 +35,8 @@ const UnknownError Status = "UnknownError"
 // Failed to due to an on-chain condition that could resolve in time.
 const FailedPrecondition Status = "FailedPrecondition"
 
+const AddressAlreadyActive Status = "AddressAlreadyActive"
+
 func (s Status) ToGrpcCode() (codes.Code, bool) {
 	switch s {
 	case TransactionNotFound:
@@ -43,7 +45,7 @@ func (s Status) ToGrpcCode() (codes.Code, bool) {
 	case FailedPrecondition:
 		// on-chain error, retryable
 		return codes.FailedPrecondition, true
-	case TransactionExists:
+	case TransactionExists, AddressAlreadyActive:
 		// transaction already exists, should fetch
 		return codes.AlreadyExists, true
 	case NetworkError:
@@ -133,4 +135,19 @@ func Unknownf(format string, args ...interface{}) error {
 		Status:  UnknownError,
 		Message: fmt.Sprintf(format, args...),
 	}
+}
+
+func AddressAlreadyActivef(format string, args ...interface{}) error {
+	return &Error{
+		Status:  AddressAlreadyActive,
+		Message: fmt.Sprintf(format, args...),
+	}
+}
+
+func Is(err error, status Status) bool {
+	xcErr, ok := err.(*Error)
+	if !ok {
+		return false
+	}
+	return xcErr.Status == status
 }

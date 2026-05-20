@@ -70,6 +70,11 @@ func (c *TxCall) GetMethod() call.Method {
 	return c.method
 }
 
+func (c *TxCall) IsRetryable() (bool, string) {
+	// EVM calls should always be retryable as there's no external signer typically.
+	return true, ""
+}
+
 func (c *TxCall) SetInput(input xc.CallTxInput) error {
 	if input == nil {
 		return fmt.Errorf("input not set")
@@ -138,4 +143,8 @@ func (tx *TxCall) Serialize() ([]byte, error) {
 		return nil, err
 	}
 	return ethTx.MarshalBinary()
+}
+
+func (tx *TxCall) GetPayload() (xc.TxCallPayload, bool) {
+	return nil, false
 }

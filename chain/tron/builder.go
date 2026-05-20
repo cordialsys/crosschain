@@ -35,6 +35,8 @@ const (
 var ErrVotingInputRequired error = errors.New("voting required but no vote input provided")
 var ErrFreezeInputRequired error = errors.New("freezing required but no vote input provided")
 
+const TRC20_TRANSFER_FUNCTION = "transfer(address,uint256)"
+
 // TxBuilder for Template
 type TxBuilder struct {
 	Asset *xc.ChainBaseConfig
@@ -107,21 +109,10 @@ func Signature(method string) []byte {
 	return b[:4]
 }
 
-// NewTokenTransfer creates a new transfer for a token asset
-func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
-	from_bytes, err := GetAddressHash(string(from))
-	if err != nil {
-		return nil, fmt.Errorf("invalid from address: %v", err)
-	}
-
+func trc20TransferParameter(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
 	to_bytes, err := GetAddressHash(string(to))
 	if err != nil {
 		return nil, fmt.Errorf("invalid to address: %v", err)
-	}
-
-	contract_bytes, err := GetAddressHash(string(contract))
-	if err != nil {
-		return nil, fmt.Errorf("invalid contract address: %v", err)
 	}
 
 	addrType, err := eABI.NewType("address", "", nil)
@@ -148,8 +139,37 @@ func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amou
 	if err != nil {
 		return nil, fmt.Errorf("could not pack: %v", err)
 	}
-	methodSig := Signature("transfer(address,uint256)")
+
+	return paramBz, nil
+}
+
+func trc20TransferData(to xc.Address, amount xc.AmountBlockchain) ([]byte, error) {
+	paramBz, err := trc20TransferParameter(to, amount)
+	if err != nil {
+		return nil, err
+	}
+
+	methodSig := Signature(TRC20_TRANSFER_FUNCTION)
 	data := append(methodSig, paramBz...)
+	return data, nil
+}
+
+// NewTokenTransfer creates a new transfer for a token asset
+func (txBuilder TxBuilder) NewTokenTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
+	from_bytes, err := GetAddressHash(string(from))
+	if err != nil {
+		return nil, fmt.Errorf("invalid from address: %v", err)
+	}
+
+	contract_bytes, err := GetAddressHash(string(contract))
+	if err != nil {
+		return nil, fmt.Errorf("invalid contract address: %v", err)
+	}
+
+	data, err := trc20TransferData(to, amount)
+	if err != nil {
+		return nil, err
+	}
 
 	params := &core.TriggerSmartContract{}
 	params.ContractAddress = contract_bytes

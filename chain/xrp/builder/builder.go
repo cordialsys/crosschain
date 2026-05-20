@@ -43,6 +43,14 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	}
 
 	if contract, ok := args.GetContract(); ok {
+		txInput := input.(*TxInput)
+		if txInput.NeedsCreateTrustline {
+			amount := args.GetAmount()
+			if !amount.IsZero() {
+				return nil, fmt.Errorf("must send a 0-amount transfer to setup trustline for token %s", contract)
+			}
+			return txBuilder.NewTrustSet(args, contract, input)
+		}
 		return txBuilder.NewTokenTransfer(args, contract, destinationTag, input)
 	} else {
 		return txBuilder.NewNativeTransfer(args, destinationTag, input)
@@ -97,6 +105,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, assetId
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
 	}
+
 	pubKey, ok := args.GetPublicKey()
 	if !ok || len(pubKey) == 0 {
 		return nil, fmt.Errorf("must set from public-key in transfer args: %s", args.GetFrom())
@@ -144,6 +153,43 @@ func (txBuilder TxBuilder) NewTokenTransfer(args xcbuilder.TransferArgs, assetId
 
 	return &xrptx.Tx{
 		XRPTx:      &xrpTx,
+		SignPubKey: pubKey,
+	}, nil
+}
+
+// NewTrustSet creates a TrustSet transaction to establish a trustline for a token asset.
+func (txBuilder TxBuilder) NewTrustSet(args xcbuilder.TransferArgs, assetId xc.ContractAddress, input xc.TxInput) (xc.Tx, error) {
+	txInput := input.(*TxInput)
+
+	tokenAsset, tokenContract, err := contract.ExtractAssetAndContract(assetId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse and extract asset and contract: %w", err)
+	}
+
+	pubKey, ok := args.GetPublicKey()
+	if !ok || len(pubKey) == 0 {
+		return nil, fmt.Errorf("must set from public-key in transfer args: %s", args.GetFrom())
+	}
+
+	// The TrustSet limit is the maximum amount the account can hold of this token.
+	// XRPL's maximum representable token value is 9999999999999999e80.
+	xrpTx := xrptx.XRPTransaction{
+		Account:            args.GetFrom(),
+		Fee:                txInput.Fee.String(),
+		Flags:              0,
+		LastLedgerSequence: txInput.V2LastLedgerSequence,
+		Sequence:           txInput.V2Sequence,
+		SigningPubKey:      hex.EncodeToString(pubKey),
+		TransactionType:    xrptx.TRUST_SET,
+		LimitAmount: &xrptx.Amount{
+			Currency: tokenAsset,
+			Issuer:   tokenContract,
+			Value:    "9999999999999999e80",
+		},
+	}
+
+	return &xrptx.Tx{
+		XRPTx:     &xrpTx,
 		SignPubKey: pubKey,
 	}, nil
 }

@@ -57,10 +57,6 @@ func NewTxInput(driver xc.Driver) (xc.TxInput, error) {
 			if txInput.GetDriver() == xc.DriverCosmos {
 				return makeCopy(txInput), nil
 			}
-		case xc.DriverTempo:
-			if txInput.GetDriver() == xc.DriverEVM {
-				return makeCopy(txInput), nil
-			}
 		case xc.DriverEGLD:
 			if txInput.GetDriver() == xc.DriverEGLD {
 				return makeCopy(txInput), nil
@@ -200,4 +196,16 @@ func UnmarshalCallInput(data []byte) (xc.CallTxInput, error) {
 		return call, fmt.Errorf("not a call input: %T", inp)
 	}
 	return call, nil
+}
+
+func UnmarshalCreateAccountInput(data []byte) (xc.CreateAccountTxInput, error) {
+	inp, err := UnmarshalVariantInput(data)
+	if err != nil {
+		return nil, err
+	}
+	createAccount, ok := inp.(xc.CreateAccountTxInput)
+	if !ok {
+		return createAccount, fmt.Errorf("not a create-account input: %T", inp)
+	}
+	return createAccount, nil
 }

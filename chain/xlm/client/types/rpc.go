@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 )
 
 const (
@@ -50,11 +50,11 @@ type GetTransactionResult struct {
 	FeeCharged     string `json:"fee_charged"`
 	MaxFee         string `json:"max_fee"`
 	OperationCount int    `json:"operation_count"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionEnvelope XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionEnvelope XDR binary
 	EnvelopeXdr string `json:"envelope_xdr,omitempty"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionResult XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionResult XDR binary
 	ResultXdr string `json:"result_xdr,omitempty"`
-	// base64 encoded github.com/stellar/go/xdr.TransactionResultMeta XDR binary
+	// base64 encoded github.com/stellar/go-stellar-sdk/xdr.TransactionResultMeta XDR binary
 	ResultMetaXdr string `json:"result_meta_xdr,omitempty"`
 	PagingToken   string `json:"paging_token,omitempty"`
 }
@@ -64,6 +64,13 @@ type GetLedgerResult struct {
 	Hash     string `json:"hash"`
 	Sequence int64  `json:"sequence"`
 	ClosedAt string `json:"closed_at"`
+	// BaseFeeInStroops is the network's per-operation inclusion fee at this ledger
+	// (typically 100). Used to compute the actual fee a Payment will be charged.
+	BaseFeeInStroops int64 `json:"base_fee_in_stroops,omitempty"`
+	// BaseReserveInStroops is the per-subentry reserve at this ledger (typically
+	// 5_000_000 = 0.5 XLM). The minimum balance an account must hold is
+	// (2 + subentry_count) * BaseReserveInStroops.
+	BaseReserveInStroops int64 `json:"base_reserve_in_stroops,omitempty"`
 }
 
 type Balance struct {
@@ -76,8 +83,12 @@ type Balance struct {
 }
 
 type GetAccountResult struct {
-	Sequence string    `json:"sequence"`
-	Balances []Balance `json:"balances"`
+	Sequence string `json:"sequence"`
+	// SubentryCount counts the trustlines, signers, offers, data entries and
+	// sponsorships owned by the account. AccountMerge requires this to be 0;
+	// the account's minimum balance is (2 + SubentryCount) * base_reserve.
+	SubentryCount int       `json:"subentry_count"`
+	Balances      []Balance `json:"balances"`
 }
 
 func (account *GetAccountResult) GetNativeBalance() (xc.AmountBlockchain, error) {

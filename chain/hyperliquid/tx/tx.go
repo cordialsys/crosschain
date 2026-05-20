@@ -32,7 +32,7 @@ type Tx struct {
 	Amount           xc.AmountBlockchain
 	Decimals         int32
 	Destination      xc.Address
-	Token            xc.ContractAddress
+	Token            tx_input.TokenLabel
 	Nonce            uint64
 	HyperliquidChain string
 	Signature        SignatureResult
@@ -40,12 +40,19 @@ type Tx struct {
 
 var _ xc.Tx = &Tx{}
 
-func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput) Tx {
+func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput, decimals int) Tx {
+
+	var tokenLabel tx_input.TokenLabel
+	contract, ok := args.GetContract()
+	if ok {
+		tokenLabel = tx_input.NewTokenLabel(input.Symbol, contract)
+	}
+
 	return Tx{
 		Amount:           args.GetAmount(),
-		Decimals:         input.Decimals,
+		Decimals:         int32(decimals),
 		Destination:      args.GetTo(),
-		Token:            input.Token,
+		Token:            tokenLabel,
 		Nonce:            uint64(input.TransactionTime.UnixMilli()),
 		HyperliquidChain: input.HyperliquidChain,
 	}

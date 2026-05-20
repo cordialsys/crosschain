@@ -5,7 +5,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,6 +60,16 @@ func TestCreateAlpha4AssetFromContractDetails(t *testing.T) {
 			Issuer:    common.MustMuxedAccountFromAddres(details.Issuer).ToAccountId(),
 		},
 	})
+}
+
+func TestCreateAssetFromContractNative(t *testing.T) {
+	asset, err := common.CreateAssetFromContract("")
+	require.NoError(t, err)
+	require.True(t, asset.IsNative())
+
+	asset, err = common.CreateAssetFromContract("XLM")
+	require.NoError(t, err)
+	require.True(t, asset.IsNative())
 }
 
 func TestCreateAlpha12AssetFromContractDetails(t *testing.T) {

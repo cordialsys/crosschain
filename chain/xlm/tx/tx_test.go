@@ -7,7 +7,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/xlm"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
-	"github.com/stellar/go/xdr"
+	"github.com/stellar/go-stellar-sdk/xdr"
 	"github.com/stretchr/testify/require"
 )
 

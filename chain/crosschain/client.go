@@ -41,6 +41,7 @@ type Client struct {
 var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 var _ xclient.MultiTransferClient = &Client{}
+var _ xclient.CreateAccountClient = &Client{}
 
 const ServiceApiKeyHeader = "x-service-api-key"
 

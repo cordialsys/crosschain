@@ -7,6 +7,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/call"
+	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/pkg/hex"
 	"github.com/gagliardetto/solana-go"
 )
@@ -111,8 +112,42 @@ func (c *TxCall) GetMethod() call.Method {
 	return c.Method
 }
 
-func (c *TxCall) SetInput(_ xc.CallTxInput) error {
-	// noop
+func (c *TxCall) IsRetryable() (bool, string) {
+	signers := 0
+
+	accountMetaList, err := c.SolTx.AccountMetaList()
+	if err != nil {
+		// invalid transaction, default false
+		return false, fmt.Sprintf("invalid transaction: %v", err)
+	}
+	for _, accountMeta := range accountMetaList {
+		if accountMeta.IsSigner {
+			signers++
+		}
+	}
+	if signers <= 1 {
+		return true, ""
+	}
+	return false, "transaction has external signers"
+}
+
+func (c *TxCall) SetInput(input xc.CallTxInput) error {
+	txInput := input.(tx_input.GetTxInfo)
+
+	if ok, _ := c.IsRetryable(); !ok {
+		// we cannot modify the transaction in any way as it has an external signer.
+		return nil
+	}
+
+	// If the nonce account is used, do not use recent-blockhash, as this
+	// transaction is very likely using durable-nonce.
+	usingDurableNonce := txInput.DoesTxUseDurableNonce(c.SolTx)
+	if !usingDurableNonce {
+		// Update using the latest blockhash to prevent unwanted expiry.
+		// Otherwise it's bad experience if transaction was waiting for approval only to immediately expire after.
+		c.SolTx.Message.RecentBlockhash = txInput.GetRecentBlockhash()
+	}
+
 	return nil
 }
 
@@ -177,4 +212,8 @@ func (c *TxCall) SetSignatures(signatures ...*xc.SignatureResponse) error {
 
 func (c *TxCall) Serialize() ([]byte, error) {
 	return c.SolTx.MarshalBinary()
+}
+
+func (c *TxCall) GetPayload() (xc.TxCallPayload, bool) {
+	return tx_input.NewCallPayload(c.SolTx), true
 }

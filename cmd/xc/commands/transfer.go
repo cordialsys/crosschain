@@ -221,9 +221,14 @@ func CmdTxTransfer() *cobra.Command {
 				}
 			}
 
-			input, err = xcFactory.TxInputRoundtrip(input)
+			// verify we can marshal/unmarshal the input
+			inputBz, err := drivers.MarshalTxInput(input)
 			if err != nil {
-				return fmt.Errorf("failed tx input roundtrip: %w", err)
+				return fmt.Errorf("could not marshal transaction input: %v", err)
+			}
+			_, err = drivers.UnmarshalTxInput(inputBz)
+			if err != nil {
+				return fmt.Errorf("could not unmarshal transaction input: %v", err)
 			}
 
 			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)

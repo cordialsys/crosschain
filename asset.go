@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	cantonclientconfig "github.com/cordialsys/crosschain/client/canton"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
@@ -44,6 +45,7 @@ const (
 	BCH      = NativeAsset("BCH")      // Bitcoin Cash
 	BNB      = NativeAsset("BNB")      // Binance Coin
 	BTC      = NativeAsset("BTC")      // Bitcoin
+	CANTON   = NativeAsset("CANTON")   // Canton
 	CELO     = NativeAsset("CELO")     // Celo
 	CHZ      = NativeAsset("CHZ")      // Chiliz
 	CHZ2     = NativeAsset("CHZ2")     // Chiliz 2.0
@@ -80,6 +82,7 @@ const (
 	KLAY     = NativeAsset("KLAY")     // Klaytn
 	KSM      = NativeAsset("KSM")      // Kusama
 	MATIC    = NativeAsset("MATIC")    // Polygon
+	MegaETH  = NativeAsset("MegaETH")  // MegaETH
 	MON      = NativeAsset("MON")      // MONAD
 	NEAR     = NativeAsset("NEAR")     // Near
 	XMR      = NativeAsset("XMR")      // Monero
@@ -115,6 +118,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	BABY,
 	BCH,
 	BTC,
+	CANTON,
 	DASH,
 	DOGE,
 	LTC,
@@ -161,6 +165,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	KSM,
 	XDC,
 	MATIC,
+	MegaETH,
 	MON,
 	NEAR,
 	XMR,
@@ -198,6 +203,7 @@ const (
 	DriverBitcoin                  = Driver("bitcoin")
 	DriverBitcoinCash              = Driver("bitcoin-cash")
 	DriverBitcoinLegacy            = Driver("bitcoin-legacy")
+	DriverCanton                   = Driver("canton")
 	DriverCardano                  = Driver("cardano")
 	DriverCosmos                   = Driver("cosmos")
 	DriverCosmosEvmos              = Driver("evmos")
@@ -231,6 +237,7 @@ var SupportedDrivers = []Driver{
 	DriverBitcoin,
 	DriverBitcoinCash,
 	DriverBitcoinLegacy,
+	DriverCanton,
 	DriverCosmos,
 	DriverCosmosEvmos,
 	DriverEGLD,
@@ -290,6 +297,10 @@ func NewWithdrawingInputType(driver Driver, variant string) TxVariantInputType {
 	return TxVariantInputType(fmt.Sprintf("drivers/%s/withdrawing/%s", driver, variant))
 }
 
+func NewCreateAccountInputType(driver Driver, variant string) TxVariantInputType {
+	return TxVariantInputType(fmt.Sprintf("drivers/%s/create-account/%s", driver, variant))
+}
+
 func NewCallingInputType(driver Driver) TxVariantInputType {
 	return TxVariantInputType(fmt.Sprintf("drivers/%s/calling/%s", driver, driver))
 }
@@ -318,11 +329,13 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoin
 	case BCH:
 		return DriverBitcoinCash
+	case CANTON:
+		return DriverCanton
 	case DOGE, LTC, DASH:
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX:
+	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
@@ -382,7 +395,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverMonero:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton, DriverMonero:
 		return []SignatureType{Ed255}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
@@ -407,7 +420,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
-		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverMonero:
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton, DriverMonero:
 		return Raw
 	}
 	return ""
@@ -523,6 +536,7 @@ func NewChainConfig(nativeAsset NativeAsset, driverMaybe ...Driver) *ChainConfig
 			Driver: driver,
 		},
 		ChainClientConfig: &ChainClientConfig{},
+		CantonConfig:      &cantonclientconfig.CantonConfig{},
 	}
 	cfg.Configure(0)
 	return cfg
@@ -625,6 +639,7 @@ func (chain *ChainConfig) DefaultHttpClient() *http.Client {
 type ChainConfig struct {
 	*ChainBaseConfig   `yaml:",inline"`
 	*ChainClientConfig `yaml:",inline"`
+	CantonConfig       *cantonclientconfig.CantonConfig `yaml:"canton_config,omitempty"`
 }
 
 type MemoSupport string

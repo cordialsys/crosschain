@@ -186,3 +186,17 @@ func (client *Client) getFee() (*types.FeeResponse, error) {
 
 	return &submitResponse, nil
 }
+
+func (client *Client) getServerInfo() (*types.ServerInfoResponse, error) {
+	request := &types.ServerInfoRequest{
+		Method: "server_info",
+		Params: []types.ServerInfoParams{{}},
+	}
+
+	var response types.ServerInfoResponse
+	err := client.Send(MethodPost, request, &response)
+	if err != nil {
+		return nil, err
+	}
+	return &response, nil
+}

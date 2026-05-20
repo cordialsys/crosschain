@@ -18,7 +18,7 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	log "github.com/sirupsen/logrus"
-	"github.com/stellar/go/support/time"
+	"github.com/stellar/go-stellar-sdk/support/time"
 )
 
 // Client for Filecoin

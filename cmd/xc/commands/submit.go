@@ -11,6 +11,8 @@ import (
 )
 
 func CmdRpcSubmit() *cobra.Command {
+	var inputHex string
+
 	cmd := &cobra.Command{
 		Use:     "submit [hex-encoded-tx]",
 		Aliases: []string{"broadcast"},
@@ -25,8 +27,15 @@ func CmdRpcSubmit() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not decode payload: %v", err)
 			}
+			var broadcastInput []byte
+			if inputHex != "" {
+				broadcastInput, err = hex.DecodeString(inputHex)
+				if err != nil {
+					return fmt.Errorf("could not decode input: %v", err)
+				}
+			}
 
-			binaryTx := xctypes.NewBinaryTx(payload, nil)
+			binaryTx := xctypes.NewBinaryTx(payload, broadcastInput)
 			req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, binaryTx)
 			if err != nil {
 				return fmt.Errorf("failed to convert to SubmitTxReq: %w", err)
@@ -44,5 +53,6 @@ func CmdRpcSubmit() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&inputHex, "input", "", "Hex-encoded broadcast input / tx metadata")
 	return cmd
 }

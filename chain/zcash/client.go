@@ -61,10 +61,12 @@ func (client Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tran
 	if err != nil {
 		return nil, err
 	}
+	btcInput := input.(*tx_input.TxInput)
+	numInputs := len(btcInput.UnspentOutputs)
 
 	// 2 outputs (one destination, one change)
-	input.(*tx_input.TxInput).Zcash = client.GetZcashInput(2)
-	return input, nil
+	btcInput.Zcash = client.GetZcashInput(numInputs + 2)
+	return btcInput, nil
 }
 
 func (client Client) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {

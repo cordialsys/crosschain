@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	stdmath "math"
 	"math/big"
 	"sort"
 
@@ -145,10 +146,13 @@ func (txBuilder TxBuilder) calculateFees(amount xc.AmountBlockchain, contractMay
 	if gasDenom == "" {
 		gasDenom = asset.ChainCoin
 	}
+	// Use Ceil so fractional gas prices (e.g. Celestia's 0.004 utia/gas)
+	// don't truncate the fee one stroop short of the validator's required
+	// minimum.
 	feeCoins := types.Coins{
 		{
 			Denom:  gasDenom,
-			Amount: math.NewIntFromUint64(uint64(input.GasPrice * float64(input.GasLimit))),
+			Amount: math.NewIntFromUint64(uint64(stdmath.Ceil(input.GasPrice * float64(input.GasLimit)))),
 		},
 	}
 	if includeTax {

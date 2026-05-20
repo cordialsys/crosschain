@@ -214,6 +214,26 @@ chains:
     chain_id: 44787
     chain_name: Celo (Testnet)
     decimals: 18
+  CANTON:
+    chain: CANTON
+    support:
+      call: true
+      fee:
+        accurate: true
+      memo: string
+    driver: canton
+    chain_name: Canton (Testnet)
+    decimals: 10
+    fee_limit: "100.0"
+    confirmations_final: 1
+    canton_config:
+      keycloak_realm: "catalyst-canton"
+      token_registry_urls:
+        "cbtc-network::12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f#CBTC": "https://api.utilities.digitalasset-staging.com/api/token-standard/v0/registrars/cbtc-network%3A%3A12201b1741b63e2494e4214cf0bedc3d5a224da53b3bf4d76dba468f8e97eb15508f"
+      enable_transfer_offers: false
+      lighthouse_api_url: "https://lighthouse.testnet.cantonloop.com"
+      validator_client_secret: "env:CANTON_VALIDATOR_CLIENT_SECRET"
+      canton_ui_auth: "env:CANTON_UI_BASIC_AUTH"
   CHZ:
     chain: CHZ
     driver: "evm-legacy"
@@ -580,6 +600,21 @@ chains:
     chain_id: 80001
     chain_name: Polygon (Mumbai)
     decimals: 18
+  MegaETH:
+    chain: MegaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 6343
+    chain_name: MegaETH Testnet
+    decimals: 18
+    explorer_urls:
+      tx: "https://megaeth-testnet-v2.blockscout.com/tx/{}"
+      address: "https://megaeth-testnet-v2.blockscout.com/address/{}"
+      token: "https://megaeth-testnet-v2.blockscout.com/token/{}"
   MON:
     chain: MON
     support:
@@ -752,8 +787,14 @@ chains:
     chain_coin: nhash
     chain_coin_hd_path: 1
     decimals: 9
-    chain_gas_multiplier: 10.0
-    # translates to roughly max 50 HASH in gas per tx
+    # Provenance migrated to the x/flatfees module in v1.28: simulation now
+    # returns the required fee in nhash via gas_used (assuming gas_price=1).
+    # We therefore set chain_min_gas_price to 1nhash (=1e-9 in human units)
+    # and skip both fee multipliers so that fee = sim.gas_used * 1 = msg_fee
+    # exactly.
+    chain_min_gas_price: 1.0e-9
+    chain_gas_multiplier: 1.0
+    chain_gas_limit_multiplier: 1.0
     chain_max_gas_price: 125000.0
     native_assets:
       - asset_id: "HASH"
@@ -859,6 +900,8 @@ chains:
     support:
       memo: string
       fee:
+        accurate: true
+        payer: true
     driver: xlm
     chain_name: xlm
     decimals: 7

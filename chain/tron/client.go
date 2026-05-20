@@ -2,6 +2,7 @@ package tron
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -30,10 +31,13 @@ const (
 	CREATE_TRANSACTION         = "createtransaction"
 	KEY_FEE_PER_BANDWIDTH      = "getTransactionFee"
 	KEY_CREATE_ACCOUNT_FEE     = "getCreateNewAccountFeeInSystemContract"
+	KEY_ENERGY_FEE             = "getEnergyFee"
 	TRANSFER_EVENT_HASH_HEX    = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 	STAKE_TRANSACTION_MAX_WAIT = time.Second * 30
 	// Transaction on chain includes transaction result, which increases tx size
 	TRANSACTION_RESULT_OVERHEAD = 64
+	REF_BLOCK_HASH_START        = 8
+	REF_BLOCK_HASH_END          = 16
 )
 
 // Client for Template
@@ -63,18 +67,27 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	}, nil
 }
 
-func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.CreateInputParams) (*txinput.TxInput, error) {
-	input := new(txinput.TxInput)
+func (client *Client) FetchBaseInputFromLatestBlock(ctx context.Context) (*txinput.TxInput, error) {
+	response, err := client.client.GetBlockByLatest(1)
+	if err != nil {
+		return nil, err
+	}
+	if len(response.Block) == 0 {
+		return nil, fmt.Errorf("no blocks found on chain")
+	}
 
-	// Getting blockhash details from the CreateTransfer endpoint as TRON uses an unusual hashing algorithm (SHA2256SM3), so we can't do a minimal
-	// retrieval and just get the blockheaders
-	dummyTx, err := client.client.CreateTransaction(params)
+	refBlockBytes, refBlockHash, err := refBlockFromBlock(response.Block[0])
 	if err != nil {
 		return nil, err
 	}
 
-	input.RefBlockBytes = dummyTx.RawData.RefBlockBytes
-	input.RefBlockHash = dummyTx.RawData.RefBlockHashBytes
+	return client.newBaseInput(refBlockBytes, refBlockHash), nil
+}
+
+func (client *Client) newBaseInput(refBlockBytes []byte, refBlockHash []byte) *txinput.TxInput {
+	input := new(txinput.TxInput)
+	input.RefBlockBytes = append([]byte(nil), refBlockBytes...)
+	input.RefBlockHash = append([]byte(nil), refBlockHash...)
 	// set timeout period
 	input.Timestamp = time.Now().Unix()
 	input.Expiration = time.Now().Add(txinput.TX_TIMEOUT).Unix()
@@ -82,7 +95,26 @@ func (client *Client) FetchBaseInput(ctx context.Context, params httpclient.Crea
 	maxFee := client.chain.GasBudgetDefault.ToBlockchain(client.chain.Decimals)
 	input.MaxFee = maxFee
 
-	return input, nil
+	return input
+}
+
+func refBlockFromBlock(block *httpclient.BlockResponse) ([]byte, []byte, error) {
+	if block == nil {
+		return nil, nil, fmt.Errorf("missing block")
+	}
+
+	blockID, err := hex.DecodeString(block.BlockId)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decode block id: %w", err)
+	}
+	if len(blockID) < REF_BLOCK_HASH_END {
+		return nil, nil, fmt.Errorf("block id too short")
+	}
+
+	blockNumberBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockNumberBytes, block.BlockHeader.RawData.Number)
+
+	return blockNumberBytes[6:8], blockID[REF_BLOCK_HASH_START:REF_BLOCK_HASH_END], nil
 }
 
 func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc.Tx, sender xc.Address, receiver xc.Address) (uint64, error) {
@@ -129,6 +161,84 @@ func (client *Client) EstimateTransactionFee(ctx context.Context, transaction xc
 	return fee, nil
 }
 
+func (client *Client) EstimateTokenTransferFee(ctx context.Context, args xcbuilder.TransferArgs) (uint64, error) {
+	contract, ok := args.GetContract()
+	if !ok {
+		return 0, fmt.Errorf("missing token contract")
+	}
+
+	paramBz, err := trc20TransferParameter(args.GetTo(), args.GetAmount())
+	if err != nil {
+		return 0, err
+	}
+
+	energyRequired, err := client.EstimateContractEnergy(
+		ctx,
+		args.GetFrom(),
+		contract,
+		TRC20_TRANSFER_FUNCTION,
+		hex.EncodeToString(paramBz),
+	)
+	if err != nil {
+		return 0, err
+	}
+	if energyRequired <= 0 {
+		return 0, fmt.Errorf("invalid energy estimate")
+	}
+
+	chainParameters, err := client.client.GetChainParameters()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get chain parameters: %w", err)
+	}
+	energyFee, ok := chainParameters.GetParam(KEY_ENERGY_FEE)
+	if !ok || energyFee <= 0 {
+		return 0, errors.New("failed to get energy price")
+	}
+	if uint64(energyRequired) > ^uint64(0)/uint64(energyFee) {
+		return 0, fmt.Errorf("energy fee overflow")
+	}
+
+	return uint64(energyRequired) * uint64(energyFee), nil
+}
+
+func (client *Client) EstimateContractEnergy(ctx context.Context, owner xc.Address, contract xc.ContractAddress, functionSelector string, parameter string) (int64, error) {
+	estimate, estimateErr := client.client.EstimateEnergy(string(owner), string(contract), functionSelector, parameter)
+	if estimateErr == nil {
+		if estimate.EnergyRequired > 0 {
+			return estimate.EnergyRequired, nil
+		}
+		estimateErr = contractTriggerError("estimateenergy", estimate.Result, "energy_required")
+	}
+
+	trigger, triggerErr := client.client.TriggerConstantContracts(string(owner), string(contract), functionSelector, parameter)
+	if triggerErr != nil {
+		if estimateErr != nil {
+			return 0, fmt.Errorf("estimateenergy failed: %v; triggerconstantcontract failed: %w", estimateErr, triggerErr)
+		}
+		return 0, triggerErr
+	}
+	if trigger.EnergyUsed > 0 {
+		return trigger.EnergyUsed, nil
+	}
+	if err := contractTriggerError("triggerconstantcontract", trigger.Result, "energy_used"); err != nil {
+		return 0, err
+	}
+	if estimateErr != nil {
+		return 0, fmt.Errorf("estimateenergy failed: %w; triggerconstantcontract returned no energy_used", estimateErr)
+	}
+	return 0, fmt.Errorf("triggerconstantcontract returned no energy_used")
+}
+
+func contractTriggerError(method string, result httpclient.ContractTriggerResult, energyField string) error {
+	if result.Message != "" {
+		return fmt.Errorf("%s failed: %s", method, result.Message)
+	}
+	if result.Code != "" {
+		return fmt.Errorf("%s failed: %s", method, result.Code)
+	}
+	return fmt.Errorf("%s returned no %s", method, energyField)
+}
+
 func setDummySignatures(tx xc.Tx) error {
 	sighashes, err := tx.Sighashes()
 	if err != nil {
@@ -146,13 +256,8 @@ func setDummySignatures(tx xc.Tx) error {
 }
 
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
-	params := httpclient.CreateTransactionParams{
-		From:   args.GetFrom(),
-		To:     args.GetTo(),
-		Amount: args.GetAmount(),
-	}
-
-	baseInput, err := client.FetchBaseInput(ctx, params)
+	_, isTokenTransfer := args.GetContract()
+	baseInput, err := client.FetchBaseInputFromLatestBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,9 +275,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to set dummy signatures for fee estimation: %w", err)
 	}
 
-	// Call EstimateTransactionFee for native transfers
-	_, ok := args.GetContract()
-	if !ok {
+	if isTokenTransfer {
+		fee, err := client.EstimateTokenTransferFee(ctx, args)
+		if err != nil {
+			return nil, fmt.Errorf("failed to estimate token transfer fee: %w", err)
+		}
+		baseInput.MaxFee = xc.NewAmountBlockchainFromUint64(fee)
+	} else {
 		fee, err := client.EstimateTransactionFee(ctx, dummyTx, args.GetFrom(), args.GetTo())
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate transaction fee: %w", err)

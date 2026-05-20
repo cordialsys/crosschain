@@ -45,6 +45,12 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	return xc.Address(prefixed), nil
 }
 
+func (ab AddressBuilder) AddressRegistrationRequired(address xc.Address) bool {
+	// Note that EOS addresses do in fact require registration, but we don't support doing
+	// it automatically, so we return false for now (it's on the user to do so manually...).
+	return false
+}
+
 func Ripemd160Checksum(in []byte, curve ecc.CurveID) []byte {
 	h := ripemd160.New()
 	_, _ = h.Write(in) // this implementation has no error path

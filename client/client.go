@@ -56,6 +56,11 @@ type CallClient interface {
 	FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error)
 }
 
+type OfferClient interface {
+	ListPendingOffers(ctx context.Context, args *OfferArgs) ([]*Offer, error)
+	ListSettlements(ctx context.Context, args *OfferArgs) ([]*Settlement, error)
+}
+
 // Special 3rd-party interface for Ethereum as ethereum doesn't understand delegated staking
 type ManualUnstakingClient interface {
 	CompleteManualUnstaking(ctx context.Context, unstake *txinfo.Unstake) error

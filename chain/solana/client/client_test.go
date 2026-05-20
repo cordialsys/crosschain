@@ -25,6 +25,29 @@ import (
 
 type TxInput = tx_input.TxInput
 
+const (
+	solanaValidBlockhashResponse      = `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`
+	solanaValidBlockhashJSONRPCResult = `{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`
+	solanaRentExemptionResponse       = `2039280`
+	solanaNativeBalanceResponse       = `{"context":{"slot":83986105},"value":0}`
+	solanaMissingNonceAccountResponse = `{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`
+)
+
+func solanaBaseInputResponses(blockhashResp string, rest ...string) []string {
+	responses := []string{
+		blockhashResp,
+		solanaRentExemptionResponse,
+		solanaNativeBalanceResponse,
+		solanaMissingNonceAccountResponse,
+	}
+	return append(responses, rest...)
+}
+
+func solanaResponsesWithBaseInput(prefix []string, blockhashResp string, rest ...string) []string {
+	responses := append([]string{}, prefix...)
+	return append(responses, solanaBaseInputResponses(blockhashResp, rest...)...)
+}
+
 func TestNewClient(t *testing.T) {
 	client, err := client.NewClient(xc.NewChainConfig(""))
 	require.NotNil(t, client)
@@ -89,15 +112,11 @@ func TestFetchTxInput(t *testing.T) {
 	}{
 		{
 			asset: xc.NewChainConfig(""),
-			// valid blockhash
-			resp: []string{
-				// valid blockhash
-				`{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashResponse,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: false,
@@ -106,12 +125,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -124,7 +139,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: false,
@@ -133,12 +148,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -151,7 +162,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: true,
@@ -161,12 +172,8 @@ func TestFetchTxInput(t *testing.T) {
 			// Token2022
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account
@@ -179,7 +186,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			tokenProgram:    solana.Token2022ProgramID.String(),
 			toIsATA:         false,
@@ -189,12 +196,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid ATA
@@ -208,7 +211,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         true,
 			shouldCreateATA: false,
@@ -217,12 +220,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -235,7 +234,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 0,"slot": 252519673},{"prioritizationFee": 0,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: true,
@@ -244,12 +243,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// empty ATA
@@ -262,7 +257,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:         "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:           false,
 			shouldCreateATA:   true,
@@ -285,12 +280,8 @@ func TestFetchTxInput(t *testing.T) {
 		{
 			asset:    xc.NewChainConfig(""),
 			contract: xc.ContractAddress("invalid-contract"),
-			resp: []string{
-				// valid blockhash
-				// `{"context":{"slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","feeCalculator":{"lamportsPerSignature":5000}}}`,
-				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"blockhash":"DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK","lastValidBlockHeight":308641695}},"id":"6acad392-db4b-4728-9385-2b2f7dd105b1"}`,
-				// nonce account not found
-				`{"context":{"apiVersion":"2.0.5","slot":83986105},"value":null}`,
+			resp: solanaBaseInputResponses(
+				solanaValidBlockhashJSONRPCResult,
 				// get-account-info for token account
 				`{"jsonrpc":"2.0","result":{"context":{"apiVersion":"1.18.16","slot":274176079},"value":{"data":["","base58"],"executable":false,"lamports":55028723345,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":0}},"id":1}`,
 				// valid owner account -> error getting token balance
@@ -299,7 +290,7 @@ func TestFetchTxInput(t *testing.T) {
 				`{"jsonrpc":"2.0","result":[{"prioritizationFee": 50,"slot": 252519673},{"prioritizationFee": 100,"slot": 252519674}],"id":1}`,
 				// simulation
 				`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 30000,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
-			},
+			),
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: true,
@@ -599,13 +590,13 @@ func TestFetchTxInfo(t *testing.T) {
 			},
 			txinfo.LegacyTxInfo{
 				TxID:            "5ZrG8iS4RxLXDRQEWkAoddWHzkS1fA1m6ppxaAekgGzskhcFqjkw1ZaFCsLorbhY5V4YUUkjE3SLY2JNLyVanxrM",
-				From:            "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
+				From:            "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 				To:              "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 				ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 				Amount:          xc.NewAmountBlockchainFromUint64(200000),
 				Sources: []*txinfo.LegacyTxInfoEndpoint{
 					{
-						Address:         "Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb",
+						Address:         "6Yg9GttAiHjbHMoiomBuGBDULP7HxQyez45dEiR9CJqw",
 						ContractAddress: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
 						Amount:          xc.NewAmountBlockchainFromUint64(200000),
 						Event:           txinfo.NewEvent("1", txinfo.MovementVariantNative),
@@ -706,11 +697,17 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
 				// getTokenAccount
 				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
+				// getTokenAccount (failure)
+				`{}`,
+				// getTokenAccount (failure)
+				`{}`,
+				// getTokenAccount (failure)
+				`{}`,
 			},
 			txinfo.LegacyTxInfo{
 				TxID:            "2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
 				From:            "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
-				To:              "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+				To:              "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
 				ContractAddress: "",
 				Amount:          xc.NewAmountBlockchainFromUint64(2460497),
 				Sources: []*txinfo.LegacyTxInfoEndpoint{
@@ -721,36 +718,24 @@ func TestFetchTxInfo(t *testing.T) {
 						Event:           txinfo.NewEvent("3.4", txinfo.MovementVariantNative),
 					},
 					{
-						Address:         "EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg",
+						Address:         "3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47",
 						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
 						Event:           txinfo.NewEvent("3.2", txinfo.MovementVariantNative),
 					},
-					{
-						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
-						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-						Amount:          xc.NewAmountBlockchainFromUint64(4608152451),
-						Event:           txinfo.NewEvent("3.3", txinfo.MovementVariantNative),
-					},
 				},
 				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
-						Address:         "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
 						ContractAddress: "",
 						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
 						Event:           txinfo.NewEvent("3.4", txinfo.MovementVariantNative),
 					},
 					{
-						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						Address:         "E6GtXLPfi351xWpxXMBnqQUaHvQNkuz8Z5wfnmuRD81G",
 						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
 						Event:           txinfo.NewEvent("3.2", txinfo.MovementVariantNative),
-					},
-					{
-						Address:         "3CznQLcJWpyNKrYyq7qCvZsHn19csgB8g5wvisx4us47",
-						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-						Amount:          xc.NewAmountBlockchainFromUint64(4608152451),
-						Event:           txinfo.NewEvent("3.3", txinfo.MovementVariantNative),
 					},
 				},
 				Fee:           xc.NewAmountBlockchainFromUint64(91404),
@@ -775,11 +760,17 @@ func TestFetchTxInfo(t *testing.T) {
 				`{"context":{"apiVersion":"2.1.18","slot":334289709},"value":{"data":{"parsed":{"info":{"isNative":false,"mint":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","owner":"41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux","state":"initialized","tokenAmount":{"amount":"0","decimals":6,"uiAmount":0.0,"uiAmountString":"0"}},"type":"account"},"program":"spl-token","space":165},"executable":false,"lamports":2039280,"owner":"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA","rentEpoch":18446744073709551615,"space":165}}`,
 				// getTokenAccount (failure)
 				`{}`,
+				// getTokenAccount (failure)
+				`{}`,
+				// getTokenAccount (failure)
+				`{}`,
+				// getTokenAccount (failure)
+				`{}`,
 			},
 			txinfo.LegacyTxInfo{
 				TxID:            "2aoWC4uMT9zznC5m3ALE45Rb9YtmD6sNCabSgz4vACC9fKmwjaTooKVsn7mgoJ2Er3pa2xi8rbLcPzogNVwV5KSv",
 				From:            "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
-				To:              "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+				To:              "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
 				ContractAddress: "",
 				Amount:          xc.NewAmountBlockchainFromUint64(2460497),
 				Sources: []*txinfo.LegacyTxInfoEndpoint{
@@ -790,7 +781,7 @@ func TestFetchTxInfo(t *testing.T) {
 						Event:           txinfo.NewEvent("3.4", txinfo.MovementVariantNative),
 					},
 					{
-						Address:         "EM1GQEerfKsrT6eJbehX4nwV3MdTCdjvhUYVytFAuEVg",
+						Address:         "BT72p68Jp5eJUpuHThxSoeTRS9p4upTM8969X79GeQRF",
 						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
 						Event:           txinfo.NewEvent("3.2", txinfo.MovementVariantNative),
@@ -798,13 +789,13 @@ func TestFetchTxInfo(t *testing.T) {
 				},
 				Destinations: []*txinfo.LegacyTxInfoEndpoint{
 					{
-						Address:         "3RY3ngufsn1aPSWE46Ga7sX5pZi2KPCvZG5uGS6TFLZJ",
+						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
 						ContractAddress: "",
 						Amount:          xc.NewAmountBlockchainFromUint64(2460497),
 						Event:           txinfo.NewEvent("3.4", txinfo.MovementVariantNative),
 					},
 					{
-						Address:         "41fkvu8LhJDqkF325GTz6HuQRvZmCXVtYoYWPZeVCdux",
+						Address:         "E6GtXLPfi351xWpxXMBnqQUaHvQNkuz8Z5wfnmuRD81G",
 						ContractAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 						Amount:          xc.NewAmountBlockchainFromUint64(16838513),
 						Event:           txinfo.NewEvent("3.2", txinfo.MovementVariantNative),

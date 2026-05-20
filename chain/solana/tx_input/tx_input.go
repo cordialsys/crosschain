@@ -37,14 +37,13 @@ type TxInput struct {
 type GetTxInfo interface {
 	GetTimestamp() int64
 	GetRecentBlockhash() solana.Hash
-}
 
-// GetDurableNonceInfo is an interface to retrieve durable nonce information from a TxInput.
-type GetDurableNonceInfo interface {
 	GetDurableNonceAccount() solana.PublicKey
 	GetDurableNonceValue() solana.Hash
 	HasDurableNonce() bool
 	IsCreatingDurableNonceAccount() bool
+
+	DoesTxUseDurableNonce(tx *solana.Transaction) bool
 }
 
 type TokenAccount struct {
@@ -54,7 +53,6 @@ type TokenAccount struct {
 
 var _ xc.TxInput = &TxInput{}
 var _ GetTxInfo = &TxInput{}
-var _ GetDurableNonceInfo = &TxInput{}
 var _ xc.TxInputWithUnix = &TxInput{}
 
 func init() {
@@ -88,6 +86,25 @@ func (input *TxInput) GetDurableNonceValue() solana.Hash {
 
 func (input *TxInput) IsCreatingDurableNonceAccount() bool {
 	return input.ShouldCreateDurableNonce && !input.DurableNonceAccount.IsZero()
+}
+
+func (input *TxInput) DoesTxUseDurableNonce(tx *solana.Transaction) bool {
+	if !input.HasDurableNonce() {
+		return false
+	}
+
+	if tx.Message.RecentBlockhash.Equals(input.DurableNonce) {
+		return true
+	}
+	usingDurableNonce := false
+	for _, accountKey := range tx.Message.AccountKeys {
+		if input.DurableNonceAccount.Equals(accountKey) {
+			usingDurableNonce = true
+			break
+		}
+	}
+
+	return usingDurableNonce
 }
 
 // GetBlockhashForTx returns the blockhash to use for the transaction.
@@ -155,50 +172,71 @@ func (input *TxInput) IsFeeLimitAccurate() bool {
 	return true
 }
 
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if otherNonce, ok := other.(GetDurableNonceInfo); ok {
-		sameAccount := !input.DurableNonceAccount.IsZero() &&
-			input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
-		if sameAccount {
-			// Both creating the same nonce account = conflict
-			if input.IsCreatingDurableNonceAccount() && otherNonce.IsCreatingDurableNonceAccount() {
-				return false
-			}
-			// Both using the same nonce value = conflict (only one can succeed)
-			// Different nonce values = independent (each uses its own nonce)
-			if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
-				return !input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
-			}
+func (input *TxInput) MatchDurableNonce(otherNonce GetTxInfo) (accountMatch, nonceMatch bool) {
+	sameAccount := input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
+	if sameAccount {
+		// Both creating the same nonce account = conflict
+		if input.IsCreatingDurableNonceAccount() && otherNonce.IsCreatingDurableNonceAccount() {
+			return true, true
 		}
+		// Both using the same nonce value = conflict (only one can succeed)
+		// Different nonce values = independent (each uses its own nonce)
+		if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
+			return true, input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
+		}
+	}
+	// different accounts = independent
+	return false, false
+}
+
+func (input *TxInput) DidTimeoutOccur(other GetTxInfo) (timeout bool) {
+	diff := input.Timestamp - other.GetTimestamp()
+	if diff < int64(SafetyTimeoutMargin.Seconds()) || other.GetRecentBlockhash().Equals(input.GetRecentBlockhash()) {
+		return false
 	}
 	return true
 }
 
-func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if otherNonce, ok := other.(GetDurableNonceInfo); ok {
-		sameAccount := !input.DurableNonceAccount.IsZero() &&
-			input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
-		if sameAccount {
-			// Safe only when both have actual nonce values and they match
-			// (the nonce can only be consumed once, so only one tx can land).
-			// If either is missing a nonce (e.g. setup phase), not safe.
-			if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
-				return input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
-			}
+func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if otherNonce, ok := other.(GetTxInfo); ok {
+		// if input.HasDurableNonce() {
+		_, sameNonce := input.MatchDurableNonce(otherNonce)
+		if sameNonce {
+			// one of the transactions will fail
 			return false
+		} else {
+			// both work
+			return true
+		}
+	}
+	// solana transactions are always independent if no durable nonce
+	return true
+}
+
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	otherInput, ok := other.(GetTxInfo)
+	if !ok {
+		return false
+	}
+
+	if input.HasDurableNonce() {
+		sameAccount, sameNonce := input.MatchDurableNonce(otherInput)
+		if sameAccount {
+			if sameNonce {
+				// safe
+				return true
+			} else {
+				return false
+			}
 		}
 	}
 
 	// For recent blockhash (non-durable-nonce) transactions
-	oldInput, ok := other.(GetTxInfo)
-	if !ok {
-		return false
+	if input.DidTimeoutOccur(otherInput) {
+		return true
 	}
-	diff := input.Timestamp - oldInput.GetTimestamp()
-	if diff < int64(SafetyTimeoutMargin.Seconds()) || oldInput.GetRecentBlockhash().Equals(input.GetRecentBlockhash()) {
-		return false
-	}
-	return true
+
+	return false
 }
 
 func (input *TxInput) SetUnix(unix int64) {

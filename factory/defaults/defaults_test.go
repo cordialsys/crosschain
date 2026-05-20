@@ -18,7 +18,7 @@ func TestDefaultChainConfigurationDriver(t *testing.T) {
 	for _, xcf := range factories {
 		for _, chain := range xcf.GetAllChains() {
 			switch chain.Driver {
-			case xc.DriverEVM:
+			case xc.DriverEVM, xc.DriverEVMLegacy:
 				err := evm.ValidateConfig(chain)
 				require.NoError(t, err)
 			case xc.DriverTempo:

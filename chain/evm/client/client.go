@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/sirupsen/logrus"
@@ -35,6 +36,7 @@ import (
 
 const DEFAULT_GAS_PRICE = 20_000_000_000
 const DEFAULT_GAS_TIP = 3_000_000_000
+const tempoFeeManagerAddress = "0xfeec000000000000000000000000000000000000"
 
 var ERC20 abi.ABI
 
@@ -44,6 +46,86 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+type tempoFeePayment struct {
+	Payer    xc.Address
+	Contract xc.ContractAddress
+	Amount   xc.AmountBlockchain
+	EventIds map[string]struct{}
+}
+
+func parseTempoFeePayment(receipt *types.Receipt) (*tempoFeePayment, bool) {
+	feeManager := common.HexToAddress(tempoFeeManagerAddress)
+	var payment *tempoFeePayment
+	for _, receiptLog := range receipt.Logs {
+		if len(receiptLog.Topics) == 0 {
+			continue
+		}
+		event, _ := ERC20.EventByID(receiptLog.Topics[0])
+		if event == nil || event.RawName != "Transfer" {
+			continue
+		}
+		token, _ := erc20.NewErc20(receiptLog.Address, nil)
+		transfer, err := token.ParseTransfer(*receiptLog)
+		if err != nil {
+			logrus.WithError(err).WithField("index", receiptLog.Index).Warn("could not parse Tempo fee log")
+			continue
+		}
+		if transfer.To != feeManager {
+			continue
+		}
+
+		amount := xc.AmountBlockchain(*transfer.Tokens)
+		payer := xc.Address(transfer.From.String())
+		contract := xc.ContractAddress(receiptLog.Address.String())
+		if payment == nil {
+			payment = &tempoFeePayment{
+				Payer:    payer,
+				Contract: contract,
+				Amount:   amount,
+				EventIds: map[string]struct{}{
+					fmt.Sprintf("%d", receiptLog.Index): {},
+				},
+			}
+			continue
+		}
+		if !strings.EqualFold(string(payment.Payer), string(payer)) || !strings.EqualFold(string(payment.Contract), string(contract)) {
+			logrus.WithFields(logrus.Fields{
+				"existing_payer":    payment.Payer,
+				"existing_contract": payment.Contract,
+				"payer":             payer,
+				"contract":          contract,
+			}).Warn("multiple Tempo fee-token transfers found")
+			return nil, false
+		}
+		payment.Amount = payment.Amount.Add(&amount)
+		payment.EventIds[fmt.Sprintf("%d", receiptLog.Index)] = struct{}{}
+	}
+	return payment, payment != nil
+}
+
+func removeTempoFeePayment(movements tx.SourcesAndDests, payment *tempoFeePayment) tx.SourcesAndDests {
+	if payment == nil {
+		return movements
+	}
+	return tx.SourcesAndDests{
+		Sources:      removeTempoFeePaymentEndpoints(movements.Sources, payment),
+		Destinations: removeTempoFeePaymentEndpoints(movements.Destinations, payment),
+	}
+}
+
+func removeTempoFeePaymentEndpoints(endpoints []*txinfo.LegacyTxInfoEndpoint, payment *tempoFeePayment) []*txinfo.LegacyTxInfoEndpoint {
+	filtered := make([]*txinfo.LegacyTxInfoEndpoint, 0, len(endpoints))
+	for _, endpoint := range endpoints {
+		if endpoint.Event != nil {
+			if _, ok := payment.EventIds[endpoint.Event.Id]; ok {
+				continue
+			}
+		}
+		filtered = append(filtered, endpoint)
+	}
+	return filtered
 }
 
 // Client for EVM
@@ -281,6 +363,15 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 	}
 	result.Fee = tx.Fee(trans.MaxPriorityFeePerGas, trans.GasPrice, baseFee, gasUsed)
 	result.FeePayer = xc.Address(trans.From)
+	if nativeAsset.Driver == xc.DriverTempo {
+		if feePayment, ok := parseTempoFeePayment(receipt); ok {
+			result.Fee = feePayment.Amount
+			result.FeeContract = feePayment.Contract
+			result.FeePayer = feePayment.Payer
+			ethMovements = removeTempoFeePayment(ethMovements, feePayment)
+			tokenMovements = removeTempoFeePayment(tokenMovements, feePayment)
+		}
+	}
 	result.Sources = append(ethMovements.Sources, tokenMovements.Sources...)
 	result.Destinations = append(ethMovements.Destinations, tokenMovements.Destinations...)
 
