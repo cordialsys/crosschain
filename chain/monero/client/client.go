@@ -150,34 +150,6 @@ func (c *Client) getBlockCount(ctx context.Context) (uint64, error) {
 	return resp.Count, nil
 }
 
-// walletKeysForAddress returns the (privateViewKey, publicSpendKey) needed for output scanning.
-// The view key is the fixed shared constant (no private spend key needed).
-// The public spend key is decoded directly from the address.
-func walletKeysForAddress(address xc.Address) (privView, pubSpend []byte, err error) {
-	_, pubSpendBz, _, err := crypto.DecodeAddress(string(address))
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid address: %w", err)
-	}
-	return crypto.FixedPrivateViewKey, pubSpendBz, nil
-}
-
-// defaultSubaddressCount is the number of subaddresses to precompute for scanning.
-// An exchange would set this to the number of user addresses generated.
-const defaultSubaddressCount = 100
-
-// buildSubaddressMap precomputes subaddress spend keys for scanning.
-func buildSubaddressMap(privView, pubSpend []byte, count uint32) map[crypto.SubaddressIndex][]byte {
-	subKeys := make(map[crypto.SubaddressIndex][]byte, count)
-	for i := uint32(1); i <= count; i++ {
-		idx := crypto.SubaddressIndex{Major: 0, Minor: i}
-		subSpend, _, err := crypto.DeriveSubaddressKeys(privView, pubSpend, idx)
-		if err != nil {
-			continue
-		}
-		subKeys[idx] = subSpend
-	}
-	return subKeys
-}
 
 // moneroTxJson represents the parsed JSON of a Monero transaction
 type moneroTxJson struct {
@@ -227,66 +199,6 @@ func getOutputKey(vout struct {
 	return vout.Target.Key
 }
 
-// scanTransaction scans a single transaction for outputs belonging to the given wallet,
-// including both the main address and all precomputed subaddresses.
-// Returns the total amount received in this transaction.
-func scanTransaction(txJsonStr string, privateViewKey, publicSpendKey []byte, subKeys map[crypto.SubaddressIndex][]byte) (uint64, error) {
-	var txJson moneroTxJson
-	if err := json.Unmarshal([]byte(txJsonStr), &txJson); err != nil {
-		return 0, fmt.Errorf("failed to parse tx JSON: %w", err)
-	}
-
-	// Extract tx public key from extra field
-	extraBytes := make([]byte, len(txJson.Extra))
-	for i, v := range txJson.Extra {
-		extraBytes[i] = byte(v)
-	}
-	txPubKey, err := crypto.ParseTxPubKey(extraBytes)
-	if err != nil {
-		logrus.WithError(err).Debug("failed to parse tx pub key from extra")
-		return 0, nil
-	}
-
-	var totalReceived uint64
-	for outputIdx, vout := range txJson.Vout {
-		outputKey := getOutputKey(vout)
-		if outputKey == "" {
-			continue
-		}
-
-		// Get encrypted amount from ecdh info
-		var encryptedAmount string
-		if outputIdx < len(txJson.RctSignatures.EcdhInfo) {
-			encryptedAmount = txJson.RctSignatures.EcdhInfo[outputIdx].Amount
-		}
-
-		// Scan against main address + all subaddresses
-		matched, matchedIdx, amount, err := crypto.ScanOutputForSubaddresses(
-			txPubKey,
-			uint64(outputIdx),
-			outputKey,
-			encryptedAmount,
-			privateViewKey,
-			publicSpendKey,
-			subKeys,
-		)
-		if err != nil {
-			logrus.WithError(err).WithField("output_index", outputIdx).Debug("error scanning output")
-			continue
-		}
-		if matched {
-			logrus.WithFields(logrus.Fields{
-				"output_index":    outputIdx,
-				"amount":          amount,
-				"subaddress_major": matchedIdx.Major,
-				"subaddress_minor": matchedIdx.Minor,
-			}).Info("found owned output")
-			totalReceived += amount
-		}
-	}
-
-	return totalReceived, nil
-}
 
 func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	input := tx_input.NewTxInput()
@@ -320,19 +232,13 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		}
 	}
 
-	// Populate spendable outputs: use LWS if available, otherwise scan blocks
-	from := args.GetFrom()
-	if c.lws != nil {
-		if err := c.populateFromLWS(ctx, input, from); err != nil {
-			logrus.WithError(err).Warn("LWS query failed, falling back to block scan")
-			if err := c.PopulateTransferInput(ctx, input, from); err != nil {
-				return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
-			}
-		}
-	} else {
-		if err := c.PopulateTransferInput(ctx, input, from); err != nil {
-			return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
-		}
+	// Populate spendable outputs from the Light Wallet Server.
+	// LWS is required - this implementation does not support block scanning.
+	if c.lws == nil {
+		return nil, fmt.Errorf("monero-lws indexer_url is required (block scanning not supported)")
+	}
+	if err := c.populateFromLWS(ctx, input, args.GetFrom()); err != nil {
+		return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
 	}
 
 	return input, nil
@@ -420,142 +326,29 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 	if address == "" {
 		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("address is required")
 	}
+	if c.lws == nil {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("monero-lws indexer_url is required (block scanning not supported)")
+	}
 
-	// Derive view key (fixed) and spend key from the requested address
-	privView, pubSpend, err := walletKeysForAddress(address)
+	c.lws.SetCredentials(string(address), hex.EncodeToString(crypto.FixedPrivateViewKey))
+	if err := c.lws.Login(ctx); err != nil {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("LWS login: %w", err)
+	}
+	info, err := c.lws.GetAddressInfo(ctx)
 	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), err
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("LWS get_address_info: %w", err)
 	}
-
-	// Use LWS for instant balance if available
-	if c.lws != nil {
-		c.lws.SetCredentials(string(address), hex.EncodeToString(privView))
-		if err := c.lws.Login(ctx); err == nil {
-			info, err := c.lws.GetAddressInfo(ctx)
-			if err == nil {
-				var received, sent uint64
-				fmt.Sscanf(info.TotalReceived, "%d", &received)
-				fmt.Sscanf(info.TotalSent, "%d", &sent)
-				balance := received - sent
-				logrus.WithFields(logrus.Fields{
-					"received": received,
-					"sent":     sent,
-					"balance":  balance,
-					"scanned":  info.ScannedHeight,
-				}).Info("balance from LWS")
-				return xc.NewAmountBlockchainFromUint64(balance), nil
-			}
-			logrus.WithError(err).Warn("LWS balance failed, falling back to scan")
-		}
-	}
-
-	// Precompute subaddress spend keys for scanning
-	subKeys := buildSubaddressMap(privView, pubSpend, defaultSubaddressCount)
-
-	blockCount, err := c.getBlockCount(ctx)
-	if err != nil {
-		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("failed to get block count: %w", err)
-	}
-
-	// Scan the last 200 blocks for outputs belonging to us.
-	// This is a practical limit for detecting recent deposits.
-	// A full wallet scan would require scanning from genesis.
-	scanDepth := uint64(1000)
-	startHeight := blockCount - scanDepth
-	if startHeight > blockCount { // underflow check
-		startHeight = 0
-	}
-
+	var received, sent uint64
+	fmt.Sscanf(info.TotalReceived, "%d", &received)
+	fmt.Sscanf(info.TotalSent, "%d", &sent)
+	balance := received - sent
 	logrus.WithFields(logrus.Fields{
-		"start_height": startHeight,
-		"end_height":   blockCount,
-		"scan_depth":   scanDepth,
-	}).Info("scanning blocks for Monero outputs")
-
-	var totalBalance uint64
-
-	// Scan blocks in batches
-	for height := startHeight; height < blockCount; height++ {
-		// Get block at this height
-		blockResult, err := c.jsonRPCRequest(ctx, "get_block", map[string]interface{}{
-			"height": height,
-		})
-		if err != nil {
-			logrus.WithError(err).WithField("height", height).Debug("failed to get block")
-			continue
-		}
-
-		var block struct {
-			BlockHeader struct {
-				Height uint64 `json:"height"`
-			} `json:"block_header"`
-			Json     string   `json:"json"`
-			TxHashes []string `json:"tx_hashes"`
-		}
-		if err := json.Unmarshal(blockResult, &block); err != nil {
-			continue
-		}
-
-		if len(block.TxHashes) == 0 {
-			continue
-		}
-
-		// Fetch transactions in batches (public nodes limit requests in restricted mode)
-		for batchStart := 0; batchStart < len(block.TxHashes); batchStart += txBatchSize {
-			batchEnd := batchStart + txBatchSize
-			if batchEnd > len(block.TxHashes) {
-				batchEnd = len(block.TxHashes)
-			}
-			batch := block.TxHashes[batchStart:batchEnd]
-
-			txParams := map[string]interface{}{
-				"txs_hashes":     batch,
-				"decode_as_json": true,
-			}
-			txResult, err := c.httpRequest(ctx, "/get_transactions", txParams)
-			if err != nil {
-				logrus.WithError(err).WithField("height", height).Debug("failed to get transactions")
-				continue
-			}
-
-			var txResp struct {
-				Txs []struct {
-					AsJson string `json:"as_json"`
-					TxHash string `json:"tx_hash"`
-				} `json:"txs"`
-				Status string `json:"status"`
-			}
-			if err := json.Unmarshal(txResult, &txResp); err != nil {
-				continue
-			}
-			if txResp.Status != "OK" {
-				logrus.WithField("status", txResp.Status).WithField("height", height).Debug("get_transactions returned non-OK status")
-				continue
-			}
-
-			for _, tx := range txResp.Txs {
-				if tx.AsJson == "" {
-					continue
-				}
-				amount, err := scanTransaction(tx.AsJson, privView, pubSpend, subKeys)
-				if err != nil {
-					logrus.WithError(err).WithField("tx_hash", tx.TxHash).Debug("error scanning transaction")
-					continue
-				}
-				if amount > 0 {
-					logrus.WithFields(logrus.Fields{
-						"tx_hash": tx.TxHash,
-						"amount":  amount,
-						"height":  height,
-					}).Info("found incoming transfer")
-					totalBalance += amount
-				}
-			}
-		}
-	}
-
-	logrus.WithField("total_balance", totalBalance).Info("scan complete")
-	return xc.NewAmountBlockchainFromUint64(totalBalance), nil
+		"received": received,
+		"sent":     sent,
+		"balance":  balance,
+		"scanned":  info.ScannedHeight,
+	}).Info("balance from LWS")
+	return xc.NewAmountBlockchainFromUint64(balance), nil
 }
 
 func (c *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
