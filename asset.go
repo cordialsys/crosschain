@@ -21,6 +21,11 @@ const (
 	Ed255             = SignatureType("ed255")
 	Schnorr           = SignatureType("schnorr")
 	Bls12_381G2Blake2 = SignatureType("bls12-381-g2-blake2")
+	// Clsag is Monero's linkable ring signature scheme (Concise Linkable
+	// Spontaneous Anonymous Group). Uses the edwards25519 curve but is NOT
+	// Ed25519: the payload encodes a CLSAG context (ring members, message,
+	// per-input nonce seed) and the response includes a key image.
+	Clsag = SignatureType("clsag")
 )
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
@@ -395,8 +400,10 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256}
 	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
 		return []SignatureType{K256Keccak}
-	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton, DriverMonero:
+	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
 		return []SignatureType{Ed255}
+	case DriverMonero:
+		return []SignatureType{Clsag}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
 	case DriverKaspa:
