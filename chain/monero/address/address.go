@@ -1,6 +1,7 @@
 package address
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,8 +12,10 @@ import (
 )
 
 type AddressBuilder struct {
-	cfg    *xc.ChainBaseConfig
-	format xc.AddressFormat
+	cfg     *xc.ChainBaseConfig
+	format  xc.AddressFormat
+	viewKey []byte // private view key (required for Monero)
+	pubView []byte // public view key derived from viewKey
 }
 
 func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
@@ -20,26 +23,43 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 	if err != nil {
 		return nil, err
 	}
+
+	viewKeyHex, ok := opts.GetViewKey()
+	if !ok || viewKeyHex == "" {
+		return nil, fmt.Errorf("monero address builder requires a view key (set chain.view_key or pass via xcaddress.OptionViewKey)")
+	}
+	viewKey, err := hex.DecodeString(viewKeyHex)
+	if err != nil || len(viewKey) != 32 {
+		return nil, fmt.Errorf("monero view key must be 64 hex chars (32 bytes): %w", err)
+	}
+	pubView, err := moneroCrypto.PublicFromPrivate(viewKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid monero view key: %w", err)
+	}
+
 	var format xc.AddressFormat
 	if f, ok := opts.GetFormat(); ok {
 		format = f
 	}
-	return &AddressBuilder{cfg: cfg, format: format}, nil
+	return &AddressBuilder{cfg: cfg, format: format, viewKey: viewKey, pubView: pubView}, nil
 }
 
-// GetAddressFromPublicKey derives a Monero address from a 64-byte public key
-// (publicSpendKey || publicViewKey).
+// GetAddressFromPublicKey derives a Monero address from a 32-byte public spend key.
+// The public view key comes from the configured view key (set at builder construction).
 //
 // When format is "subaddress:N" or "subaddress:M/N", it generates a subaddress.
-// Subaddress generation requires the private view key, which is loaded from
-// the XC_PRIVATE_KEY environment variable.
 func (ab *AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Address, error) {
-	if len(publicKeyBytes) != 64 {
-		return "", fmt.Errorf("monero requires 64-byte public key (spend||view), got %d bytes", len(publicKeyBytes))
+	var pubSpend []byte
+	switch len(publicKeyBytes) {
+	case 32:
+		pubSpend = publicKeyBytes
+	case 64:
+		// Accept 64-byte (spend||view) form for compatibility; ignore the view part
+		// since this builder owns the view key.
+		pubSpend = publicKeyBytes[:32]
+	default:
+		return "", fmt.Errorf("monero requires 32-byte public spend key, got %d bytes", len(publicKeyBytes))
 	}
-
-	pubSpend := publicKeyBytes[:32]
-	pubView := publicKeyBytes[32:]
 
 	// Determine address prefix based on network
 	prefix := moneroCrypto.MainnetAddressPrefix
@@ -55,31 +75,15 @@ func (ab *AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Add
 		if err != nil {
 			return "", fmt.Errorf("invalid subaddress format: %w", err)
 		}
-
-		// For subaddress derivation we need the private view key.
-		// Derive it from the private spend key in the environment.
-		privView, err := loadPrivateViewKey()
-		if err != nil {
-			return "", fmt.Errorf("subaddress generation requires private key: %w", err)
-		}
-
-		addr, err := moneroCrypto.GenerateSubaddress(privView, pubSpend, index)
+		addr, err := moneroCrypto.GenerateSubaddress(ab.viewKey, pubSpend, index)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate subaddress: %w", err)
 		}
 		return xc.Address(addr), nil
 	}
 
-	addr := moneroCrypto.GenerateAddressWithPrefix(prefix, pubSpend, pubView)
+	addr := moneroCrypto.GenerateAddressWithPrefix(prefix, pubSpend, ab.pubView)
 	return xc.Address(addr), nil
-}
-
-// loadPrivateViewKey returns the fixed shared view key.
-// The view key is independent of the spend key in this implementation - it's a
-// single shared constant used across all addresses, allowing one LWS registration
-// (with the master spend key + view key) to detect deposits to any subaddress.
-func loadPrivateViewKey() ([]byte, error) {
-	return moneroCrypto.FixedPrivateViewKey, nil
 }
 
 // ParseSubaddressIndex parses a format string like "0", "5", "0/3" into a SubaddressIndex.

@@ -267,10 +267,22 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 }
 
 func NewSigner(chain *xc.ChainBaseConfig, secret string, options ...xcaddress.AddressOption) (*signer.Signer, error) {
+	options = injectChainOptions(chain, options)
 	return signer.New(chain.Driver, secret, chain, options...)
 }
 
+// injectChainOptions prepends chain-level defaults (like view key) to user-supplied
+// address options so callers don't need to plumb them through manually. User-supplied
+// options take precedence since they appear later in the slice.
+func injectChainOptions(chain *xc.ChainBaseConfig, options []xcaddress.AddressOption) []xcaddress.AddressOption {
+	if chain != nil && chain.ViewKey != "" {
+		options = append([]xcaddress.AddressOption{xcaddress.OptionViewKey(chain.ViewKey)}, options...)
+	}
+	return options
+}
+
 func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOption) (xc.AddressBuilder, error) {
+	options = injectChainOptions(cfg, options)
 	switch xc.Driver(cfg.Driver) {
 	case xc.DriverCanton:
 		return cantonaddress.NewAddressBuilder(cfg)
