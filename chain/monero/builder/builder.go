@@ -17,11 +17,23 @@ import (
 )
 
 type TxBuilder struct {
-	Asset *xc.ChainBaseConfig
+	Asset   *xc.ChainBaseConfig
+	pubView []byte // public view key derived from chain.view_key (used for change-output stealth addresses)
 }
 
 func NewTxBuilder(cfg *xc.ChainBaseConfig) (TxBuilder, error) {
-	return TxBuilder{Asset: cfg}, nil
+	if cfg == nil || cfg.ViewKey == "" {
+		return TxBuilder{}, fmt.Errorf("monero tx builder requires chain.view_key to be configured")
+	}
+	viewKey, err := hex.DecodeString(cfg.ViewKey)
+	if err != nil || len(viewKey) != 32 {
+		return TxBuilder{}, fmt.Errorf("monero view_key must be 64 hex chars (32 bytes)")
+	}
+	pubView, err := crypto.PublicFromPrivate(viewKey)
+	if err != nil {
+		return TxBuilder{}, fmt.Errorf("invalid monero view_key: %w", err)
+	}
+	return TxBuilder{Asset: cfg, pubView: pubView}, nil
 }
 
 func (b TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
@@ -34,13 +46,23 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		return nil, fmt.Errorf("expected monero TxInput, got %T", input)
 	}
 
-	// Get sender's public keys from TransferArgs (no private key access)
+	// Get sender's public spend key from TransferArgs (no private key access).
+	// The public view key comes from the builder's configured view key.
 	senderPubKey, ok := args.GetPublicKey()
-	if !ok || len(senderPubKey) != 64 {
-		return nil, fmt.Errorf("sender public key required (64 bytes: pubSpend||pubView)")
+	if !ok {
+		return nil, fmt.Errorf("sender public key required")
 	}
-	senderPubSpend := senderPubKey[:32]
-	senderPubView := senderPubKey[32:]
+	var senderPubSpend []byte
+	switch len(senderPubKey) {
+	case 32:
+		senderPubSpend = senderPubKey
+	case 64:
+		// Backward-compat: accept (pubSpend||pubView) form; trust our configured view key.
+		senderPubSpend = senderPubKey[:32]
+	default:
+		return nil, fmt.Errorf("sender public key must be 32 bytes (pubSpend), got %d", len(senderPubKey))
+	}
+	senderPubView := b.pubView
 
 	amountU64 := args.GetAmount().Uint64()
 
