@@ -19,7 +19,6 @@ import (
 	"filippo.io/edwards25519"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
-	"github.com/cordialsys/crosschain/factory/signer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -151,26 +150,15 @@ func (c *Client) getBlockCount(ctx context.Context) (uint64, error) {
 	return resp.Count, nil
 }
 
-// deriveWalletKeys loads the private key from env and derives the full key set.
-// Returns (privateViewKey, publicSpendKey, error).
-// The address parameter is used to verify we're scanning the right wallet (main address or subaddress).
-func deriveWalletKeys() (privView, pubSpend []byte, err error) {
-	secret := signer.ReadPrivateKeyEnv()
-	if secret == "" {
-		return nil, nil, fmt.Errorf("XC_PRIVATE_KEY not set - required for Monero view key scanning")
-	}
-
-	secretBz, err := hex.DecodeString(secret)
+// walletKeysForAddress returns the (privateViewKey, publicSpendKey) needed for output scanning.
+// The view key is the fixed shared constant (no private spend key needed).
+// The public spend key is decoded directly from the address.
+func walletKeysForAddress(address xc.Address) (privView, pubSpend []byte, err error) {
+	_, pubSpendBz, _, err := crypto.DecodeAddress(string(address))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to decode private key: %w", err)
+		return nil, nil, fmt.Errorf("invalid address: %w", err)
 	}
-
-	_, privViewKey, pubSpendKey, _, err := crypto.DeriveKeysFromSpend(secretBz)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to derive keys: %w", err)
-	}
-
-	return privViewKey, pubSpendKey, nil
+	return crypto.FixedPrivateViewKey, pubSpendBz, nil
 }
 
 // defaultSubaddressCount is the number of subaddresses to precompute for scanning.
@@ -353,11 +341,8 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 // populateFromLWS fetches spendable outputs from the Light Wallet Server.
 // Instant - no block scanning needed.
 func (c *Client) populateFromLWS(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
-	// Derive view key for LWS auth
-	privView, _, err := deriveWalletKeys()
-	if err != nil {
-		return fmt.Errorf("cannot derive view key: %w", err)
-	}
+	// Use the fixed shared view key (no private spend key needed)
+	privView := crypto.FixedPrivateViewKey
 
 	// Set LWS credentials and login
 	c.lws.SetCredentials(string(from), hex.EncodeToString(privView))
@@ -436,36 +421,32 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("address is required")
 	}
 
-	// Use LWS for instant balance if available
-	if c.lws != nil {
-		privView, _, err := deriveWalletKeys()
-		if err == nil {
-			c.lws.SetCredentials(string(address), hex.EncodeToString(privView))
-			if err := c.lws.Login(ctx); err == nil {
-				info, err := c.lws.GetAddressInfo(ctx)
-				if err == nil {
-					var received, sent uint64
-					fmt.Sscanf(info.TotalReceived, "%d", &received)
-					fmt.Sscanf(info.TotalSent, "%d", &sent)
-					balance := received - sent
-					logrus.WithFields(logrus.Fields{
-						"received": received,
-						"sent":     sent,
-						"balance":  balance,
-						"scanned":  info.ScannedHeight,
-					}).Info("balance from LWS")
-					return xc.NewAmountBlockchainFromUint64(balance), nil
-				}
-				logrus.WithError(err).Warn("LWS balance failed, falling back to scan")
-			}
-		}
+	// Derive view key (fixed) and spend key from the requested address
+	privView, pubSpend, err := walletKeysForAddress(address)
+	if err != nil {
+		return xc.NewAmountBlockchainFromUint64(0), err
 	}
 
-	// Fallback: scan blocks
-	privView, pubSpend, err := deriveWalletKeys()
-	if err != nil {
-		logrus.WithError(err).Warn("cannot derive view key for balance scanning")
-		return xc.NewAmountBlockchainFromUint64(0), nil
+	// Use LWS for instant balance if available
+	if c.lws != nil {
+		c.lws.SetCredentials(string(address), hex.EncodeToString(privView))
+		if err := c.lws.Login(ctx); err == nil {
+			info, err := c.lws.GetAddressInfo(ctx)
+			if err == nil {
+				var received, sent uint64
+				fmt.Sscanf(info.TotalReceived, "%d", &received)
+				fmt.Sscanf(info.TotalSent, "%d", &sent)
+				balance := received - sent
+				logrus.WithFields(logrus.Fields{
+					"received": received,
+					"sent":     sent,
+					"balance":  balance,
+					"scanned":  info.ScannedHeight,
+				}).Info("balance from LWS")
+				return xc.NewAmountBlockchainFromUint64(balance), nil
+			}
+			logrus.WithError(err).Warn("LWS balance failed, falling back to scan")
+		}
 	}
 
 	// Precompute subaddress spend keys for scanning

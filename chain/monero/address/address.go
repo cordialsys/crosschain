@@ -1,7 +1,6 @@
 package address
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,7 +8,6 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
 	moneroCrypto "github.com/cordialsys/crosschain/chain/monero/crypto"
-	"github.com/cordialsys/crosschain/factory/signer"
 )
 
 type AddressBuilder struct {
@@ -76,21 +74,12 @@ func (ab *AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Add
 	return xc.Address(addr), nil
 }
 
-// loadPrivateViewKey loads the private key from env and derives the view key
+// loadPrivateViewKey returns the fixed shared view key.
+// The view key is independent of the spend key in this implementation - it's a
+// single shared constant used across all addresses, allowing one LWS registration
+// (with the master spend key + view key) to detect deposits to any subaddress.
 func loadPrivateViewKey() ([]byte, error) {
-	secret := signer.ReadPrivateKeyEnv()
-	if secret == "" {
-		return nil, fmt.Errorf("XC_PRIVATE_KEY not set")
-	}
-	secretBz, err := hex.DecodeString(secret)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode private key: %w", err)
-	}
-	_, privView, _, _, err := moneroCrypto.DeriveKeysFromSpend(secretBz)
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive view key: %w", err)
-	}
-	return privView, nil
+	return moneroCrypto.FixedPrivateViewKey, nil
 }
 
 // ParseSubaddressIndex parses a format string like "0", "5", "0/3" into a SubaddressIndex.

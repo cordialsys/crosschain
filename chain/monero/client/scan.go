@@ -30,12 +30,12 @@ type OwnedOutput struct {
 	SubaddressIndex crypto.SubaddressIndex
 }
 
-// ScanBlocksForOwnedOutputs scans recent blocks for outputs belonging to this wallet.
-// Returns all owned outputs found within the scan range.
-func (c *Client) ScanBlocksForOwnedOutputs(ctx context.Context, scanDepth uint64) ([]OwnedOutput, error) {
-	privView, pubSpend, err := deriveWalletKeys()
+// ScanBlocksForOwnedOutputs scans recent blocks for outputs belonging to the given address.
+// Uses the fixed shared view key + address's public spend key (no private spend key needed).
+func (c *Client) ScanBlocksForOwnedOutputs(ctx context.Context, scanDepth uint64, address xc.Address) ([]OwnedOutput, error) {
+	privView, pubSpend, err := walletKeysForAddress(address)
 	if err != nil {
-		return nil, fmt.Errorf("cannot derive keys: %w", err)
+		return nil, err
 	}
 	subKeys := buildSubaddressMap(privView, pubSpend, defaultSubaddressCount)
 
@@ -196,7 +196,7 @@ func scanTransactionForOutputs(
 // and populates decoy ring members for each output.
 func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
 	// Scan for our outputs
-	ownedOutputs, err := c.ScanBlocksForOwnedOutputs(ctx, 1000)
+	ownedOutputs, err := c.ScanBlocksForOwnedOutputs(ctx, 1000, from)
 	if err != nil {
 		return fmt.Errorf("output scanning failed: %w", err)
 	}
@@ -205,19 +205,17 @@ func (c *Client) PopulateTransferInput(ctx context.Context, input *tx_input.TxIn
 		return fmt.Errorf("no spendable outputs found")
 	}
 
-	// Store the view key hex for the builder
-	secret := signer.ReadPrivateKeyEnv()
-	if secret != "" {
-		secretBz, _ := hex.DecodeString(secret)
-		_, privView, _, _, _ := crypto.DeriveKeysFromSpend(secretBz)
-		// Set deterministic RNG seed for the builder
-		rngSeedData := append(privView, crypto.VarIntEncode(input.BlockHeight)...)
-		input.RngSeed = crypto.Keccak256(rngSeedData)
-	}
+	// Set deterministic RNG seed from the fixed view key + block height
+	privViewBytes := crypto.FixedPrivateViewKey
+	rngSeedData := append(append([]byte{}, privViewBytes...), crypto.VarIntEncode(input.BlockHeight)...)
+	input.RngSeed = crypto.Keccak256(rngSeedData)
 
-	// Load spend key for key image computation
+	// Load spend key from env for key image computation (used to check spent status).
+	// This is the only place in the client that touches the private spend key, and
+	// only on the block-scanning fallback path (LWS path doesn't need this).
+	secret := signer.ReadPrivateKeyEnv()
 	secretBz, _ := hex.DecodeString(secret)
-	privSpendBytes, privViewBytes, _, _, _ := crypto.DeriveKeysFromSpend(secretBz)
+	privSpendBytes, _, _, _, _ := crypto.DeriveKeysFromSpend(secretBz)
 	privSpend, _ := edwards25519.NewScalar().SetCanonicalBytes(privSpendBytes)
 
 	// For each owned output: get global index, compute key image, check if spent
