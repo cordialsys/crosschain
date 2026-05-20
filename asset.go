@@ -21,6 +21,11 @@ const (
 	Ed255             = SignatureType("ed255")
 	Schnorr           = SignatureType("schnorr")
 	Bls12_381G2Blake2 = SignatureType("bls12-381-g2-blake2")
+	// Clsag is Monero's linkable ring signature scheme (Concise Linkable
+	// Spontaneous Anonymous Group). Uses the edwards25519 curve but is NOT
+	// Ed25519: the payload encodes a CLSAG context (ring members, message,
+	// per-input nonce seed) and the response includes a key image.
+	Clsag = SignatureType("clsag")
 )
 
 // NativeAsset is an asset on a blockchain used to pay gas fees.
@@ -85,6 +90,7 @@ const (
 	MegaETH  = NativeAsset("MegaETH")  // MegaETH
 	MON      = NativeAsset("MON")      // MONAD
 	NEAR     = NativeAsset("NEAR")     // Near
+	XMR      = NativeAsset("XMR")      // Monero
 	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
 	OAS      = NativeAsset("OAS")      // Oasys (not Oasis!)
 	OptETH   = NativeAsset("OptETH")   // Optimism
@@ -167,6 +173,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	MegaETH,
 	MON,
 	NEAR,
+	XMR,
 	OAS,
 	OptETH,
 	EmROSE,
@@ -224,6 +231,7 @@ const (
 	DriverTon                      = Driver("ton")
 	DriverXrp                      = Driver("xrp")
 	DriverXlm                      = Driver("xlm")
+	DriverMonero                   = Driver("monero")
 	DriverZcash                    = Driver("zcash")
 	// Crosschain is a client-only driver
 	DriverCrosschain = Driver("crosschain")
@@ -254,6 +262,7 @@ var SupportedDrivers = []Driver{
 	DriverTon,
 	DriverXrp,
 	DriverXlm,
+	DriverMonero,
 	DriverZcash,
 }
 
@@ -353,6 +362,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverSubstrate
 	case NEAR:
 		return DriverNear
+	case XMR:
+		return DriverMonero
 	case TRX:
 		return DriverTron
 	case TON:
@@ -391,6 +402,8 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Keccak}
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
 		return []SignatureType{Ed255}
+	case DriverMonero:
+		return []SignatureType{Clsag}
 	case DriverDusk:
 		return []SignatureType{Bls12_381G2Blake2}
 	case DriverKaspa:
@@ -414,7 +427,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
-		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
+		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton, DriverMonero:
 		return Raw
 	}
 	return ""
@@ -743,6 +756,11 @@ type ChainBaseConfig struct {
 
 	// Optional address configuration
 	Address AddressConfig `yaml:"address,omitempty"`
+
+	// Private view key for privacy chains (Monero).  Required by Monero to
+	// authenticate with the light-wallet server and decode owned outputs.
+	// Treat as a secret credential.
+	ViewKey string `yaml:"view_key,omitempty"`
 
 	// Annotations for what the chain currently supports.
 	// This must accurately reflect the implementation and is unit-tested.

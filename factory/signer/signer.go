@@ -20,6 +20,7 @@ import (
 	"github.com/cordialsys/crosschain/address"
 	cosmostypes "github.com/cordialsys/crosschain/chain/cosmos/types"
 	"github.com/cordialsys/crosschain/chain/dusk"
+	moneroCrypto "github.com/cordialsys/crosschain/chain/monero/crypto"
 	cosmoscrypto "github.com/cosmos/cosmos-sdk/crypto"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -38,6 +39,9 @@ type Signer struct {
 	driver     xc.Driver
 	privateKey []byte
 	algorithm  xc.SignatureType
+	// Optional Monero view key (hex). Required for Monero signing/key derivation
+	// because the view key is independent of the spend key in this implementation.
+	moneroViewKey []byte
 }
 
 // PrivateKey is a private key or reference to private key
@@ -147,19 +151,35 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 	}
 
 	switch alg {
+	case xc.Clsag:
+		// Monero CLSAG ring signatures. Requires a 32-byte spend key scalar and
+		// an explicit private view key (the view key is independent of the spend
+		// key in this implementation; payloads include CLSAG context).
+		viewKeyHex, ok := opts.GetViewKey()
+		if !ok || viewKeyHex == "" {
+			return nil, fmt.Errorf("clsag signer requires a view key (set chain.view_key)")
+		}
+		moneroViewKey, err := hex.DecodeString(viewKeyHex)
+		if err != nil || len(moneroViewKey) != 32 {
+			return nil, fmt.Errorf("view key must be 64 hex chars (32 bytes)")
+		}
+		if len(secretBz) != 32 {
+			return nil, fmt.Errorf("clsag spend key must be 32 bytes, got %d bytes", len(secretBz))
+		}
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg, moneroViewKey: moneroViewKey}, nil
 	case xc.Ed255:
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
 			if len(secretBz) != 32 {
 				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
 			}
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 		}
 		if len(secretBz) == ed25519.SeedSize {
 			key := ed25519.NewKeyFromSeed(secretBz)
-			return &Signer{driver, key, alg}, nil
+			return &Signer{driver: driver, privateKey: key, algorithm: alg}, nil
 		}
 		if len(secretBz) == ed25519.PrivateKeySize {
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 		}
 		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
 	case xc.K256Keccak, xc.K256Sha256:
@@ -167,10 +187,10 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 		if err != nil {
 			return nil, err
 		}
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	case xc.Schnorr:
 		_, _ = btcec.PrivKeyFromBytes(secretBz)
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	case xc.Bls12_381G2Blake2:
 		if len(secretBz) != 32 {
 			return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
@@ -186,7 +206,7 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 				return nil, err
 			}
 		}
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
 	}
@@ -195,6 +215,19 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
 	data := req.Payload
 	switch s.algorithm {
+	case xc.Clsag:
+		// Two-phase signing:
+		// Phase 1: payload has OutputKey/TxPubKey/OutputIndex → return key image (32 bytes)
+		// Phase 2: payload has full CLSAG context → return CLSAG signature
+		sig, err := moneroCrypto.SignCLSAGFromPayload(data, s.privateKey, s.moneroViewKey)
+		if err != nil {
+			return nil, fmt.Errorf("clsag signing failed: %w", err)
+		}
+		return &xc.SignatureResponse{
+			Address:   "",
+			Signature: sig,
+			PublicKey: s.MustPublicKey(),
+		}, nil
 	case xc.Ed255:
 		var signatureRaw []byte
 		if val := os.Getenv(EnvEd25519ScalarSigning); val == "1" || val == "true" {
@@ -285,9 +318,16 @@ func (s *Signer) MustSignAll(data []*xc.SignatureRequest) []*xc.SignatureRespons
 }
 func (s *Signer) PublicKey() (PublicKey, error) {
 	switch s.algorithm {
+	case xc.Clsag:
+		// CLSAG public key is just the public spend key (32 bytes).
+		// The public view key belongs to the address builder, not the signer.
+		pubSpend, err := moneroCrypto.PublicFromPrivate(moneroCrypto.ScalarReduce(s.privateKey))
+		if err != nil {
+			return nil, fmt.Errorf("failed to derive public spend key: %w", err)
+		}
+		return PublicKey(pubSpend), nil
 	case xc.Ed255:
 		privateKey := ed25519.PrivateKey(s.privateKey)
-
 		publicKey := privateKey.Public().(ed25519.PublicKey)
 		return PublicKey(publicKey), nil
 	case xc.K256Keccak, xc.K256Sha256:
