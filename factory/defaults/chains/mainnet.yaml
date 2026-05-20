@@ -1728,6 +1728,9 @@ chains:
     chain_name: Monero
     decimals: 12
     fee_limit: "0.0001"
+    # Monero enforces CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE = 10:
+    # an output must be at least 10 blocks deep before it can be spent.
+    # Attempting to spend an immature output results in `invalid_input` rejection.
     confirmations_final: 10
     native_assets:
       - asset_id: "XMR"
