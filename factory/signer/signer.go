@@ -39,6 +39,9 @@ type Signer struct {
 	driver     xc.Driver
 	privateKey []byte
 	algorithm  xc.SignatureType
+	// Optional Monero view key (hex). Required for Monero signing/key derivation
+	// because the view key is independent of the spend key in this implementation.
+	moneroViewKey []byte
 }
 
 // PrivateKey is a private key or reference to private key
@@ -147,12 +150,26 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 		alg = algorithmOverride
 	}
 
+	// Monero requires an explicit view key (independent of the spend key in
+	// this implementation). Read it from the address options.
+	var moneroViewKey []byte
+	if driver == xc.DriverMonero {
+		viewKeyHex, ok := opts.GetViewKey()
+		if !ok || viewKeyHex == "" {
+			return nil, fmt.Errorf("monero signer requires a view key (set chain.view_key)")
+		}
+		moneroViewKey, err = hex.DecodeString(viewKeyHex)
+		if err != nil || len(moneroViewKey) != 32 {
+			return nil, fmt.Errorf("monero view key must be 64 hex chars (32 bytes)")
+		}
+	}
+
 	switch alg {
 	case xc.Ed255:
 		// Monero uses raw scalars for key derivation (spend key → view key)
 		if driver == xc.DriverMonero {
 			if len(secretBz) == 32 {
-				return &Signer{driver, secretBz, alg}, nil
+				return &Signer{driver: driver, privateKey: secretBz, algorithm: alg, moneroViewKey: moneroViewKey}, nil
 			}
 			return nil, fmt.Errorf("monero key must be 32 bytes, got %d bytes", len(secretBz))
 		}
@@ -160,14 +177,14 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 			if len(secretBz) != 32 {
 				return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
 			}
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 		}
 		if len(secretBz) == ed25519.SeedSize {
 			key := ed25519.NewKeyFromSeed(secretBz)
-			return &Signer{driver, key, alg}, nil
+			return &Signer{driver: driver, privateKey: key, algorithm: alg}, nil
 		}
 		if len(secretBz) == ed25519.PrivateKeySize {
-			return &Signer{driver, secretBz, alg}, nil
+			return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 		}
 		return nil, errors.New("expected ed25519 key to be 64 or 32 bytes")
 	case xc.K256Keccak, xc.K256Sha256:
@@ -175,10 +192,10 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 		if err != nil {
 			return nil, err
 		}
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	case xc.Schnorr:
 		_, _ = btcec.PrivKeyFromBytes(secretBz)
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	case xc.Bls12_381G2Blake2:
 		if len(secretBz) != 32 {
 			return nil, fmt.Errorf("scalar must be 32 bytes, got %d bytes", len(secretBz))
@@ -194,7 +211,7 @@ func New(driver xc.Driver, secret string, cfgMaybe *xc.ChainBaseConfig, options 
 				return nil, err
 			}
 		}
-		return &Signer{driver, secretBz, alg}, nil
+		return &Signer{driver: driver, privateKey: secretBz, algorithm: alg}, nil
 	default:
 		return nil, fmt.Errorf("unsupported signing alg: %v", alg)
 	}
@@ -208,7 +225,7 @@ func (s *Signer) Sign(req *xc.SignatureRequest) (*xc.SignatureResponse, error) {
 		// Phase 1: payload has OutputKey/TxPubKey/OutputIndex → return key image (32 bytes)
 		// Phase 2: payload has full CLSAG context → return CLSAG signature
 		if s.driver == xc.DriverMonero {
-			sig, err := moneroCrypto.SignCLSAGFromPayload(data, s.privateKey)
+			sig, err := moneroCrypto.SignCLSAGFromPayload(data, s.privateKey, s.moneroViewKey)
 			if err != nil {
 				return nil, fmt.Errorf("monero signing failed: %w", err)
 			}
@@ -308,16 +325,16 @@ func (s *Signer) MustSignAll(data []*xc.SignatureRequest) []*xc.SignatureRespons
 func (s *Signer) PublicKey() (PublicKey, error) {
 	switch s.algorithm {
 	case xc.Ed255:
-		// Monero: derive both public spend and public view keys
+		// Monero: derive only the public spend key.
+		// The public view key is derived from the configured view key in the
+		// address builder, not exposed here, since the signer should not
+		// dictate the view key for the wallet.
 		if s.driver == xc.DriverMonero {
-			_, _, pubSpend, pubView, err := moneroCrypto.DeriveKeysFromSpend(s.privateKey)
+			pubSpend, err := moneroCrypto.PublicFromPrivate(moneroCrypto.ScalarReduce(s.privateKey))
 			if err != nil {
-				return nil, fmt.Errorf("failed to derive monero keys: %w", err)
+				return nil, fmt.Errorf("failed to derive monero public spend key: %w", err)
 			}
-			combined := make([]byte, 64)
-			copy(combined[:32], pubSpend)
-			copy(combined[32:], pubView)
-			return PublicKey(combined), nil
+			return PublicKey(pubSpend), nil
 		}
 		privateKey := ed25519.PrivateKey(s.privateKey)
 

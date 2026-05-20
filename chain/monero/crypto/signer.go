@@ -12,16 +12,21 @@ import (
 // SignCLSAGFromPayload handles both phases of Monero signing:
 // Phase 1 (no Message/RingKeys): derives one-time key → returns key image (32 bytes)
 // Phase 2 (has Message/RingKeys): produces full CLSAG ring signature
-func SignCLSAGFromPayload(payload []byte, privateSpendKey []byte) ([]byte, error) {
+//
+// privateViewKey is required (independent of the spend key in this implementation).
+func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte) ([]byte, error) {
 	var sh MoneroSighash
 	if err := json.Unmarshal(payload, &sh); err != nil {
 		return nil, fmt.Errorf("failed to decode sighash: %w", err)
+	}
+	if len(privateViewKey) != 32 {
+		return nil, fmt.Errorf("monero signing requires a 32-byte private view key")
 	}
 
 	// Derive keys
 	privSpendReduced := ScalarReduce(privateSpendKey)
 	privSpend, _ := edwards25519.NewScalar().SetCanonicalBytes(privSpendReduced)
-	privView := DeriveViewKey(privSpendReduced)
+	privView := privateViewKey
 
 	// Derive one-time private key
 	txPubKeyBytes, _ := hex.DecodeString(sh.TxPubKey)

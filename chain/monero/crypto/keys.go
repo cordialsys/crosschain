@@ -48,25 +48,6 @@ func ScalarReduce(input []byte) []byte {
 	return sc.Bytes()
 }
 
-// FixedPrivateViewKey is a well-known view key used by all crosschain-generated
-// Monero addresses. This allows a single view key to scan deposits across ALL
-// user addresses (each user has a unique spend key but shares this view key).
-//
-// This deliberately breaks Monero's default derivation (view = H(spend)) so that
-// an exchange can monitor all deposits with one key.
-var FixedPrivateViewKey []byte
-
-func init() {
-	// Derive a deterministic fixed view key from a known seed.
-	// Any 32-byte scalar works - we use H("crosschain_monero_view_key") mod L.
-	FixedPrivateViewKey = ScReduce32(Keccak256([]byte("crosschain_monero_view_key")))
-}
-
-// DeriveViewKey returns the fixed private view key (ignores the spend key).
-func DeriveViewKey(privateSpendKey []byte) []byte {
-	return FixedPrivateViewKey
-}
-
 // PublicFromPrivate derives the ed25519 public key from a Monero private key scalar.
 // In Monero, the private key is a scalar s and the public key is s*G.
 func PublicFromPrivate(privateKey []byte) ([]byte, error) {
@@ -124,22 +105,15 @@ func DecodeAddress(address string) (byte, []byte, []byte, error) {
 	return prefix, pubSpend, pubView, nil
 }
 
-// DeriveKeysFromSpend derives the full Monero key set from a private spend key:
-// Returns (privateSpendKey, privateViewKey, publicSpendKey, publicViewKey, error)
-func DeriveKeysFromSpend(privateSpendKey []byte) (privSpend, privView, pubSpend, pubView []byte, err error) {
-	// Ensure spend key is properly reduced
+// DeriveKeysFromSpend derives the spend keys from a private spend key.
+// Returns (reducedPrivateSpendKey, publicSpendKey, error).
+// The view key is independent of the spend key in this implementation; callers
+// that need the full key set must supply the private view key separately.
+func DeriveKeysFromSpend(privateSpendKey []byte) (privSpend, pubSpend []byte, err error) {
 	privSpend = ScalarReduce(privateSpendKey)
-	privView = DeriveViewKey(privSpend)
-
 	pubSpend, err = PublicFromPrivate(privSpend)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to derive public spend key: %w", err)
+		return nil, nil, fmt.Errorf("failed to derive public spend key: %w", err)
 	}
-
-	pubView, err = PublicFromPrivate(privView)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to derive public view key: %w", err)
-	}
-
-	return privSpend, privView, pubSpend, pubView, nil
+	return privSpend, pubSpend, nil
 }

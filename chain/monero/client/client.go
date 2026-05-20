@@ -27,10 +27,11 @@ import (
 const txBatchSize = 25
 
 type Client struct {
-	url  string
-	cfg  *xc.ChainConfig
-	http *http.Client
-	lws  *LWSClient // optional light wallet server for indexed queries
+	url     string
+	cfg     *xc.ChainConfig
+	http    *http.Client
+	lws     *LWSClient // light wallet server for indexed queries (required)
+	viewKey []byte     // shared private view key
 }
 
 func NewClient(cfg *xc.ChainConfig) (*Client, error) {
@@ -38,20 +39,27 @@ func NewClient(cfg *xc.ChainConfig) (*Client, error) {
 	if url == "" {
 		return nil, fmt.Errorf("monero RPC URL not configured")
 	}
+	if cfg.ViewKey == "" {
+		return nil, fmt.Errorf("monero requires chain.view_key to be configured")
+	}
+	viewKey, err := hex.DecodeString(cfg.ViewKey)
+	if err != nil || len(viewKey) != 32 {
+		return nil, fmt.Errorf("monero view_key must be 64 hex chars (32 bytes)")
+	}
+	if cfg.IndexerUrl == "" {
+		return nil, fmt.Errorf("monero requires chain.indexer_url (monero-lws endpoint)")
+	}
 
 	c := &Client{
-		url: url,
-		cfg: cfg,
+		url:     url,
+		cfg:     cfg,
+		viewKey: viewKey,
 		http: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		lws: NewLWSClient(cfg.IndexerUrl),
 	}
-
-	// If indexer_url is configured, use it as the LWS endpoint
-	if cfg.IndexerUrl != "" {
-		c.lws = NewLWSClient(cfg.IndexerUrl)
-		logrus.WithField("lws_url", cfg.IndexerUrl).Info("using monero-lws for indexed queries")
-	}
+	logrus.WithField("lws_url", cfg.IndexerUrl).Info("using monero-lws for indexed queries")
 
 	return c, nil
 }
@@ -248,7 +256,7 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 // Instant - no block scanning needed.
 func (c *Client) populateFromLWS(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
 	// Use the fixed shared view key (no private spend key needed)
-	privView := crypto.FixedPrivateViewKey
+	privView := c.viewKey
 
 	// Set LWS credentials and login
 	c.lws.SetCredentials(string(from), hex.EncodeToString(privView))
@@ -330,7 +338,7 @@ func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (x
 		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("monero-lws indexer_url is required (block scanning not supported)")
 	}
 
-	c.lws.SetCredentials(string(address), hex.EncodeToString(crypto.FixedPrivateViewKey))
+	c.lws.SetCredentials(string(address), hex.EncodeToString(c.viewKey))
 	if err := c.lws.Login(ctx); err != nil {
 		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("LWS login: %w", err)
 	}
@@ -495,7 +503,7 @@ func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxI
 	// This finds ALL outputs sent to any address sharing our view key,
 	// and recovers the recipient address for each.
 	if txData.AsJson != "" {
-		privView := crypto.FixedPrivateViewKey
+		privView := c.viewKey
 		addrPrefix := crypto.MainnetAddressPrefix
 		if c.cfg != nil && (string(c.cfg.ChainID) == "testnet" || c.cfg.Network == "testnet") {
 			addrPrefix = crypto.TestnetAddressPrefix

@@ -61,28 +61,17 @@ func TestHGeneratorPoint(t *testing.T) {
 		hex.EncodeToString(H.Bytes()))
 }
 
-func TestFixedViewKey(t *testing.T) {
-	// Fixed view key is deterministic from seed
-	expected := ScReduce32(Keccak256([]byte("crosschain_monero_view_key")))
-	require.Equal(t, hex.EncodeToString(expected), hex.EncodeToString(FixedPrivateViewKey))
-
-	// Calling DeriveViewKey with ANY spend key returns the fixed view key
-	randomSpend := ScReduce32(Keccak256([]byte("random spend key")))
-	viewKey := DeriveViewKey(randomSpend)
-	require.Equal(t, hex.EncodeToString(FixedPrivateViewKey), hex.EncodeToString(viewKey))
-}
-
 func TestDeriveKeysAndAddress(t *testing.T) {
 	seed := hexDec(t, "c071fe9b1096538b047087a4ee3fdae204e4682eb2dfab78f3af752704b0f700")
-	privSpend, privView, pubSpend, pubView, err := DeriveKeysFromSpend(seed)
+	privSpend, pubSpend, err := DeriveKeysFromSpend(seed)
 	require.NoError(t, err)
 	require.Len(t, privSpend, 32)
-	require.Len(t, privView, 32)
 	require.Len(t, pubSpend, 32)
-	require.Len(t, pubView, 32)
 
-	// View key should be the fixed key, not derived from spend
-	require.Equal(t, hex.EncodeToString(FixedPrivateViewKey), hex.EncodeToString(privView))
+	// Caller supplies the view key independently.
+	privView := ScReduce32(Keccak256([]byte("crosschain_monero_view_key")))
+	pubView, err := PublicFromPrivate(privView)
+	require.NoError(t, err)
 
 	// Address roundtrip
 	addr := GenerateAddress(pubSpend, pubView)
@@ -155,7 +144,7 @@ func TestOutputKeyDerivationRoundtrip(t *testing.T) {
 	// Scanner checks:  P == H_s(8*viewKey*R || idx)*G + pubSpend
 	// Where R = r*G
 
-	privView := FixedPrivateViewKey
+	privView := ScReduce32(Keccak256([]byte("crosschain_monero_view_key")))
 	pubView, _ := PublicFromPrivate(privView)
 
 	privSpend := ScReduce32(Keccak256([]byte("test spend key")))

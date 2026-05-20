@@ -750,6 +750,11 @@ type ChainBaseConfig struct {
 	// Optional address configuration
 	Address AddressConfig `yaml:"address,omitempty"`
 
+	// Private view key for privacy chains (Monero).  Required by Monero to
+	// authenticate with the light-wallet server and decode owned outputs.
+	// Treat as a secret credential.
+	ViewKey string `yaml:"view_key,omitempty"`
+
 	// Annotations for what the chain currently supports.
 	// This must accurately reflect the implementation and is unit-tested.
 	Support ChainSupport `yaml:"support"`
