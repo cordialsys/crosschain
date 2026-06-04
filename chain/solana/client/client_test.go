@@ -82,6 +82,58 @@ func TestErrors(t *testing.T) {
 	require.Equal(t, errors.TransactionTimedOut, xcsolana.CheckError(fmt.Errorf("Transaction simulation failed: Blockhash not found")))
 }
 
+func TestFetchDurableNonceInputRentAffordability(t *testing.T) {
+	nonceAccount := solana.MustPublicKeyFromBase58("11111111111111111111111111111112")
+	rent := uint64(2039280)
+
+	vectors := []struct {
+		name       string
+		balance    uint64
+		wantCreate bool
+	}{
+		{
+			name:       "below_rent",
+			balance:    rent - 1,
+			wantCreate: false,
+		},
+		{
+			name:       "equal_rent",
+			balance:    rent,
+			wantCreate: true,
+		},
+		{
+			name:       "above_rent",
+			balance:    rent + 1,
+			wantCreate: true,
+		},
+	}
+
+	for _, v := range vectors {
+		t.Run(v.name, func(t *testing.T) {
+			server, close := testtypes.MockJSONRPC(t, solanaMissingNonceAccountResponse)
+			defer close()
+
+			asset := xc.NewChainConfig("")
+			asset.URL = server.URL
+			client, err := client.NewClient(asset)
+			require.NoError(t, err)
+
+			input := tx_input.NewTxInput()
+			err = client.FetchDurableNonceInput(
+				context.Background(),
+				input,
+				nonceAccount,
+				xc.NewAmountBlockchainFromUint64(v.balance),
+				rent,
+			)
+			require.NoError(t, err)
+			require.Equal(t, v.wantCreate, input.ShouldCreateDurableNonce)
+			require.Equal(t, v.wantCreate, !input.DurableNonceAccount.IsZero())
+			require.True(t, input.DurableNonce.IsZero())
+		})
+	}
+}
+
 /*
 curl https://api.devnet.solana.com -X POST -H "Content-Type: application/json" -d '
 
