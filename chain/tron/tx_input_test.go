@@ -1,24 +1,23 @@
-package tron
+package tron_test
 
 import (
-	"encoding/json"
-	"fmt"
+	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/tron/txinput"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *CrosschainTestSuite) TestTxInputConflicts() {
-	require := s.Require()
-	type testcase struct {
-		newInput xc.TxInput
-		oldInput xc.TxInput
-
+func TestTxInputConflicts(t *testing.T) {
+	testcases := []struct {
+		name            string
+		newInput        xc.TxInput
+		oldInput        xc.TxInput
 		independent     bool
 		doubleSpendSafe bool
-	}
-	vectors := []testcase{
+	}{
 		{
+			name: "expired old input",
 			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
@@ -31,6 +30,7 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: true,
 		},
 		{
+			name: "overlapping old input",
 			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
@@ -43,6 +43,7 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: false,
 		},
 		{
+			name: "old input contains new input",
 			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
@@ -55,6 +56,7 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: false,
 		},
 		{
+			name: "nil old input",
 			newInput: &txinput.TxInput{
 				Timestamp:  1000,
 				Expiration: 2000,
@@ -65,20 +67,21 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			doubleSpendSafe: false,
 		},
 	}
-	for i, v := range vectors {
-		newBz, _ := json.Marshal(v.newInput)
-		oldBz, _ := json.Marshal(v.oldInput)
-		fmt.Printf("testcase %d - expect safe=%t, independent=%t\n     newInput = %s\n     oldInput = %s\n", i, v.doubleSpendSafe, v.independent, string(newBz), string(oldBz))
-		fmt.Println()
-		require.Equal(
-			v.newInput.IndependentOf(v.oldInput),
-			v.independent,
-			"IndependentOf",
-		)
-		require.Equal(
-			v.newInput.SafeFromDoubleSend(v.oldInput),
-			v.doubleSpendSafe,
-			"SafeFromDoubleSend",
-		)
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				tc.independent,
+				tc.newInput.IndependentOf(tc.oldInput),
+				"IndependentOf",
+			)
+			require.Equal(
+				t,
+				tc.doubleSpendSafe,
+				tc.newInput.SafeFromDoubleSend(tc.oldInput),
+				"SafeFromDoubleSend",
+			)
+		})
 	}
 }

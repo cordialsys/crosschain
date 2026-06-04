@@ -94,15 +94,19 @@ func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 	oldInput, ok := other.(TimestampGetter)
 	if ok {
-		if input.GetTimestamp() <= oldInput.GetExpiration() {
+		if oldInput.GetExpiration() == 0 {
+			// cannot retry because there is no expiration
+			return false
+		}
+		if input.GetTimestamp() > (oldInput.GetExpiration() + 60) {
+			return true
+		} else {
 			return false
 		}
 	} else {
 		// can't tell (this shouldn't happen) - default false
 		return false
 	}
-	// all others timed out - we're safe
-	return true
 }
 
 func (input *TxInput) ToRawData(contract *core.Transaction_Contract) *core.TransactionRaw {

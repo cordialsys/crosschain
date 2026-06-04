@@ -535,6 +535,11 @@ func TestNewTxBuilder(t *testing.T) {
 			tx, ok := txI.(*tron.Tx)
 			require.True(t, ok)
 
+			// every tx should have an expiration
+			for _, ttx := range tx.TronTxs {
+				require.NotZero(t, ttx.RawData.Expiration)
+			}
+
 			require.Equal(t, len(tc.expectedTransactions), len(tx.TronTxs))
 			for i, etx := range tc.expectedTransactions {
 				require.Equal(t, etx, tx.TronTxs[i].RawData.Contract[0].Type)
