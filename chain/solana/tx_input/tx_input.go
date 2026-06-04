@@ -43,7 +43,10 @@ type GetTxInfo interface {
 	HasDurableNonce() bool
 	IsCreatingDurableNonceAccount() bool
 
-	DoesTxUseDurableNonce(tx *solana.Transaction) bool
+	// Check if the transaction is using our durable nonce account.
+	// If so, we should try to sync to using our detect nonce value,
+	// to ensure smooth conflict resolution.
+	DoesTxUseOurDurableNonce(tx *solana.Transaction) bool
 }
 
 type TokenAccount struct {
@@ -88,12 +91,12 @@ func (input *TxInput) IsCreatingDurableNonceAccount() bool {
 	return input.ShouldCreateDurableNonce && !input.DurableNonceAccount.IsZero()
 }
 
-func (input *TxInput) DoesTxUseDurableNonce(tx *solana.Transaction) bool {
+func (input *TxInput) DoesTxUseOurDurableNonce(tx *solana.Transaction) bool {
 	if !input.HasDurableNonce() {
 		return false
 	}
 
-	if tx.Message.RecentBlockhash.Equals(input.DurableNonce) {
+	if tx.Message.RecentBlockhash.Equals(input.DurableNonce) && !input.DurableNonce.IsZero() {
 		return true
 	}
 	usingDurableNonce := false
