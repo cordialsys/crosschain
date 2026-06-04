@@ -19,7 +19,7 @@ func TestTxInputConflicts(t *testing.T) {
 		{
 			name: "expired old input",
 			newInput: &txinput.TxInput{
-				Timestamp:  1000,
+				Timestamp:  1000 + 60,
 				Expiration: 2000,
 			},
 			oldInput: &txinput.TxInput{
