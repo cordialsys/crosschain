@@ -46,8 +46,14 @@ func (input *CallInput) SetCall(call xc.TxCallPayload) error {
 	}
 
 	solanaTx := txCall.solTx
+	// We want to sync the information from the call (which may have been edited via .SetInput()).
+	// This allows the best chance conflict resolution resolution to work.
+
+	// Take whatever recent-blockhash that it ended up using.
 	input.TxInput.RecentBlockHash = solanaTx.Message.RecentBlockhash
 	if input.DoesTxUseDurableNonce(solanaTx) {
+		// If the transaction is using a durable nonce, then the recent-blockhash is the durable nonce,
+		// and we should sync that too for conflict resolution.
 		input.TxInput.DurableNonce = solanaTx.Message.RecentBlockhash
 	} else {
 		input.TxInput.DurableNonceAccount = solana.PublicKey{}

@@ -175,8 +175,9 @@ func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_in
 	}
 
 	rentB := xc.NewAmountBlockchainFromUint64(rent)
-	if txInput.ShouldCreateDurableNonce && nativeBalanceAfterTransfer.Cmp(&rentB) > 0 {
-		// we can afford the rent for rent for a durable nonce account, so we cannot use it.
+	if txInput.ShouldCreateDurableNonce && nativeBalanceAfterTransfer.Cmp(&rentB) < 0 {
+		// The sender cannot afford rent for a durable nonce account, so do not create one.
+		logrus.WithField("nonce_account", nonceAccount.String()).Info("cannot afford rent for durable nonce account, will not use it")
 		txInput.ShouldCreateDurableNonce = false
 		txInput.DurableNonceAccount = solana.PublicKey{}
 		txInput.DurableNonce = solana.Hash{}
