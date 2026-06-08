@@ -38,7 +38,7 @@ type Call struct {
 
 var _ xc.TxCall = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddress xc.Address) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddresses []xc.Address) (*TxCall, error) {
 	var call Call
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
@@ -51,6 +51,11 @@ func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, s
 
 	var input *tx_input.CallInput = nil
 	var signature xc.TxSignature = nil
+
+	if len(signingAddresses) != 1 {
+		return nil, fmt.Errorf("expected exactly one signing address for EVM calls, got %d", len(signingAddresses))
+	}
+	signingAddress := signingAddresses[0]
 
 	return &TxCall{cfg, method, msg, call, signingAddress, contractAddress, amount, data, input, signature}, nil
 }

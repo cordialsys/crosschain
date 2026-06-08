@@ -81,7 +81,7 @@ func newCallActionCommand(use string, short string, method xccall.Method) *cobra
 			if err != nil {
 				return err
 			}
-			callTx, err := drivers.NewCall(chainConfig.Base(), method, payload, address)
+			callTx, err := drivers.NewCall(chainConfig.Base(), method, payload, []xc.Address{address})
 			if err != nil {
 				return fmt.Errorf("could not build call transaction: %v", err)
 			}

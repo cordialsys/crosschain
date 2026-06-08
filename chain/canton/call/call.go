@@ -30,7 +30,11 @@ type TxCall struct {
 var _ xc.TxCall = &TxCall{}
 var _ xc.TxWithMetadata = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, method xccall.Method, msg json.RawMessage, signingAddress xc.Address) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, method xccall.Method, msg json.RawMessage, signingAddresses []xc.Address) (*TxCall, error) {
+	if len(signingAddresses) != 1 {
+		return nil, fmt.Errorf("expected exactly one signing address for Canton calls, got %d", len(signingAddresses))
+	}
+	signingAddress := signingAddresses[0]
 	if signingAddress == "" {
 		return nil, fmt.Errorf("empty signing address")
 	}

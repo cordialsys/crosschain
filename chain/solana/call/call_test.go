@@ -76,7 +76,7 @@ func TestSetSignatures_PreservesExisting(t *testing.T) {
 	// Build Call JSON targeting k1 as the requested account
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	cfg := &xc.ChainBaseConfig{}
-	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
+	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, []xc.Address{xc.Address(k1.String())})
 	require.NoError(t, err, "NewCall failed")
 
 	txInput := &tx_input.CallInput{
@@ -137,7 +137,7 @@ func TestSetInput_OneSigner(t *testing.T) {
 	// Build Call JSON targeting k1 as the requested account
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 	cfg := &xc.ChainBaseConfig{}
-	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
+	c, err := call.NewCall(cfg, xccall.SolanaSignTransaction, raw, []xc.Address{xc.Address(k1.String())})
 	require.NoError(t, err, "NewCall failed")
 
 	txInput := &tx_input.CallInput{
@@ -163,7 +163,7 @@ func TestSighashesAndHashBehavior(t *testing.T) {
 	require.NoError(t, err)
 
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(k1.String()))
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, []xc.Address{xc.Address(k1.String())})
 	require.NoError(t, err)
 
 	// Hash should be empty initially
@@ -203,7 +203,7 @@ func TestNewCall_ErrsWhenAccountNotSigner(t *testing.T) {
 	bad := solana.NewWallet().PublicKey()
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
 
-	_, err = call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(bad.String()))
+	_, err = call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, []xc.Address{xc.Address(bad.String())})
 	require.Error(t, err)
 }
 
@@ -215,7 +215,7 @@ func TestSolanaNewCall_ContractAddresses_NoDuplicates(t *testing.T) {
 	require.NoError(t, err)
 
 	raw := mustMarshalCall(t, call.Call{Transaction: msgBytes})
-	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, xc.Address(payer.String()))
+	c, err := call.NewCall(&xc.ChainBaseConfig{}, xccall.SolanaSignTransaction, raw, []xc.Address{xc.Address(payer.String())})
 	require.NoError(t, err)
 
 	addrs := c.ContractAddresses()

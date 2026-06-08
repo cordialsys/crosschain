@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/call"
@@ -19,7 +20,7 @@ type TxCall struct {
 	msg               json.RawMessage
 	call              Call
 	SolTx             *solana.Transaction
-	signingAddress    xc.Address
+	signingAddresses  []xc.Address
 	contractAddresses []xc.ContractAddress
 }
 
@@ -37,7 +38,7 @@ type Call struct {
 
 var _ xc.TxCall = &TxCall{}
 
-func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, address xc.Address) (*TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddresses []xc.Address) (*TxCall, error) {
 	var call Call
 	if err := json.Unmarshal(msg, &call); err != nil {
 		return nil, fmt.Errorf("could not parse call: %w", err)
@@ -48,15 +49,15 @@ func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, a
 		return nil, fmt.Errorf("failed to deserialize solana transaction: %w", err)
 	}
 
-	var signingAddress xc.Address = ""
-	for _, signer := range solanaTx.Message.Signers() {
-		if signer.String() == string(address) {
-			signingAddress = xc.Address(signer.String())
-			break
-		}
+	solanaTxSigners := solanaTx.Message.Signers()
+	solanaTxSignersString := make([]string, len(solanaTxSigners))
+	for i, signer := range solanaTxSigners {
+		solanaTxSignersString[i] = signer.String()
 	}
-	if signingAddress == "" {
-		return nil, fmt.Errorf("requested address %s is not referenced in transaction", address)
+	for _, address := range signingAddresses {
+		if !slices.Contains(solanaTxSignersString, string(address)) {
+			return nil, fmt.Errorf("requested signing address %s is not referenced in transaction signers", address)
+		}
 	}
 
 	programIDs, err := solanaTx.GetProgramIDs()
@@ -93,11 +94,11 @@ func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, a
 		}
 	}
 
-	return &TxCall{cfg, method, msg, call, solanaTx, signingAddress, contractAddresses}, nil
+	return &TxCall{cfg, method, msg, call, solanaTx, signingAddresses, contractAddresses}, nil
 }
 
 func (c *TxCall) SigningAddresses() []xc.Address {
-	return []xc.Address{c.signingAddress}
+	return c.signingAddresses
 }
 
 func (c *TxCall) ContractAddresses() []xc.ContractAddress {
@@ -169,12 +170,14 @@ func (c *TxCall) Sighashes() ([]*xc.SignatureRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []*xc.SignatureRequest{
-		{
-			Signer:  c.signingAddress,
+	requests := make([]*xc.SignatureRequest, len(c.signingAddresses))
+	for i, address := range c.signingAddresses {
+		requests[i] = &xc.SignatureRequest{
+			Signer:  address,
 			Payload: txMessagePayload,
-		},
-	}, nil
+		}
+	}
+	return requests, nil
 }
 
 func (c *TxCall) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
