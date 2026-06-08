@@ -58,7 +58,7 @@ func newTestCall(t *testing.T, contractID string) *cantoncall.TxCall {
 		&xc.ChainBaseConfig{Chain: xc.CANTON, Driver: xc.DriverCanton},
 		xccall.OfferAccept,
 		payload,
-		xc.Address("signer::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+		[]xc.Address{xc.Address("signer::1220aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")},
 	)
 	require.NoError(t, err)
 	return callTx

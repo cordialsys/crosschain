@@ -835,7 +835,7 @@ func TestFetchCallInputOfferAcceptWallet(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "wallet-offer-cid"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(receiver))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
 	inputI, err := client.FetchCallInput(context.Background(), callTx)
@@ -892,7 +892,7 @@ func TestFetchCallInputDispatchesByContractTemplateNotMethod(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "wallet-offer-cid"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(receiver))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
 	_, err = client.FetchCallInput(context.Background(), callTx)
@@ -972,7 +972,7 @@ func TestFetchCallInputOfferAcceptUtilitiesTransferOffer(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "utility-offer-cid"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(receiver))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
 	inputI, err := client.FetchCallInput(context.Background(), callTx)
@@ -1119,7 +1119,7 @@ func TestFetchCallInputSettlementCompleteTargetsExactContract(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "settlement-2"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(sender))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(sender)})
 	require.NoError(t, err)
 
 	inputI, err := client.FetchCallInput(context.Background(), callTx)
@@ -1168,7 +1168,7 @@ func TestFetchCallInputReturnsUnsupportedTargetError(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "holding-cid"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, xc.Address(party))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(party)})
 	require.NoError(t, err)
 
 	_, err = client.FetchCallInput(context.Background(), callTx)
@@ -1193,7 +1193,7 @@ func TestFetchCallInputReturnsNotVisibleError(t *testing.T) {
 
 	payload, err := json.Marshal(xccall.SomeContractCall{ContractID: "missing-cid"})
 	require.NoError(t, err)
-	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, xc.Address(party))
+	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(party)})
 	require.NoError(t, err)
 
 	_, err = client.FetchCallInput(context.Background(), callTx)

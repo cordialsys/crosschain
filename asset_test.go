@@ -422,7 +422,7 @@ func TestChainSupportAnnotations(t *testing.T) {
 					fmt.Sprintf("chain.support.fee.payer should be set to %t, or the chain input %T implementation is wrong", supportsFeePayer, input),
 				)
 
-				_, err = drivers.NewCall(chain.ChainBaseConfig, call.Method(""), json.RawMessage("{}"), "")
+				_, err = drivers.NewCall(chain.ChainBaseConfig, call.Method(""), json.RawMessage("{}"), []Address{})
 				// hacky way to determine chain's call support...
 				callSupported := !errors.Is(err, drivers.ErrCallNotSupported)
 

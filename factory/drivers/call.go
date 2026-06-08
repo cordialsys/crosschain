@@ -14,14 +14,14 @@ import (
 
 var ErrCallNotSupported = errors.New("call not supported for this chain")
 
-func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddress xc.Address) (xc.TxCall, error) {
+func NewCall(cfg *xc.ChainBaseConfig, method call.Method, msg json.RawMessage, signingAddresses []xc.Address) (xc.TxCall, error) {
 	switch xc.Driver(cfg.Driver) {
 	case xc.DriverCanton:
-		return cantoncall.NewCall(cfg, method, msg, signingAddress)
+		return cantoncall.NewCall(cfg, method, msg, signingAddresses)
 	case xc.DriverEVM:
-		return evmcall.NewCall(cfg, method, msg, signingAddress)
+		return evmcall.NewCall(cfg, method, msg, signingAddresses)
 	case xc.DriverSolana:
-		return solanacall.NewCall(cfg, method, msg, signingAddress)
+		return solanacall.NewCall(cfg, method, msg, signingAddresses)
 	}
 	return nil, fmt.Errorf("%w: %s", ErrCallNotSupported, string(cfg.Chain))
 }
