@@ -186,6 +186,10 @@ func (args *MultiTransferArgs) GetTransactionAttempts() []string {
 	return args.options.GetTransactionAttempts()
 }
 
+func (args *MultiTransferArgs) GetNonceAccount() (string, bool) {
+	return args.options.GetNonceAccount()
+}
+
 func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {
 	transfers := make([]*TransferArgs, len(args.spenders))
 	if len(args.spenders) != len(args.receivers) {

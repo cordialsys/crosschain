@@ -65,7 +65,9 @@ func (args *TransferArgs) GetToIdentity() (string, bool) {
 	return args.options.GetToIdentity()
 }
 
-
+func (args *TransferArgs) GetNonceAccount() (string, bool) {
+	return args.options.GetNonceAccount()
+}
 
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()

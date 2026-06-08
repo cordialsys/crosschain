@@ -11,5 +11,7 @@ func CmdCanton() *cobra.Command {
 	}
 	cmd.AddCommand(CmdPreapproval())
 	cmd.AddCommand(CmdTraffic())
+	cmd.AddCommand(CmdOfferAccept())
+	cmd.AddCommand(CmdSettlementComplete())
 	return cmd
 }

@@ -81,8 +81,8 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	}
 }
 
-func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
-	input, err := client.Client.FetchCallInput(ctx, call)
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args xcbuilder.CallArgs) (xc.CallTxInput, error) {
+	input, err := client.Client.FetchCallInput(ctx, call, args)
 	if err != nil {
 		return nil, err
 	}

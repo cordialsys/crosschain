@@ -54,7 +54,7 @@ func DeriveNonceAccount(from solana.PublicKey) (solana.PublicKey, error) {
 	return solana.CreateWithSeed(from, builder.DurableNonceSeed, solana.SystemProgramID)
 }
 
-func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain) (*tx_input.TxInput, error) {
+func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain, nonceAccountMaybe *solana.PublicKey) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
 	// get recent block hash (always needed as fallback and for nonce account creation)
@@ -75,9 +75,14 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, c
 	if err != nil {
 		return nil, fmt.Errorf("invalid from address: %v", err)
 	}
+	// derive nonce account if not provided
 	nonceAccountPub, err := DeriveNonceAccount(fromPub)
 	if err != nil {
 		return nil, fmt.Errorf("could not derive nonce account: %v", err)
+	}
+	if nonceAccountMaybe != nil && !nonceAccountMaybe.IsZero() {
+		// use user provided nonce account
+		nonceAccountPub = *nonceAccountMaybe
 	}
 	// account for the durable nonce rent as part of the base fee
 	lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
@@ -188,7 +193,16 @@ func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_in
 // FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, xc.NewAmountBlockchainFromUint64(0))
+	var nonceAccountMaybe *solana.PublicKey
+	nonceAccountInput, ok := args.GetNonceAccount()
+	if ok {
+		nonceAccountPub, err := solana.PublicKeyFromBase58(nonceAccountInput)
+		if err != nil {
+			return nil, fmt.Errorf("invalid nonce account: %s: %v", nonceAccountInput, err)
+		}
+		nonceAccountMaybe = &nonceAccountPub
+	}
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, xc.NewAmountBlockchainFromUint64(0), nonceAccountMaybe)
 	if err != nil {
 		return nil, err
 	}

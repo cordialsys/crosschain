@@ -336,7 +336,7 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 	return result, nil
 }
 
-func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args xcbuilder.CallArgs) (xc.CallTxInput, error) {
 	// no fee-payer for calls currently.
 	// feePayer, _ := args.GetFeePayer()
 	feePayer := xc.Address("")

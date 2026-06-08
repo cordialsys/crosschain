@@ -42,6 +42,7 @@ var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 var _ xclient.MultiTransferClient = &Client{}
 var _ xclient.CreateAccountClient = &Client{}
+var _ xclient.CallClient = &Client{}
 
 const ServiceApiKeyHeader = "x-service-api-key"
 
@@ -198,6 +199,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	priorityMaybe, _ := args.GetPriority()
 	fromIdentityMaybe, _ := args.GetFromIdentity()
 	feePayerIdentityMaybe, _ := args.GetFeePayerIdentity()
+	nonceAccountMaybe, _ := args.GetNonceAccount()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
 		Chain:     client.Asset.GetChain().Chain,
@@ -214,6 +216,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			TransactionAttempts: args.GetTransactionAttempts(),
 			Memo:                memoMaybe,
 			Priority:            string(priorityMaybe),
+			NonceAccount:        nonceAccountMaybe,
 		},
 	})
 	if err != nil {
@@ -233,6 +236,8 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	priorityMaybe, _ := args.GetPriority()
 	senders := []*types.Sender{}
 	receivers := []*types.Receiver{}
+	nonceAccountMaybe, _ := args.GetNonceAccount()
+
 	for _, sender := range args.Spenders() {
 		fromIdentityMaybe, _ := sender.GetFromIdentity()
 		senders = append(senders, &types.Sender{
@@ -262,6 +267,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 			Priority:            string(priorityMaybe),
 			Memo:                memoMaybe,
 			TransactionAttempts: args.GetTransactionAttempts(),
+			NonceAccount:        nonceAccountMaybe,
 		},
 	})
 	if err != nil {
@@ -377,16 +383,18 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	return r.GetBalance(), err
 }
 
-func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args xcbuilder.CallArgs) (xc.CallTxInput, error) {
 	chain := client.Asset.GetChain().Chain
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/calls",
 		client.URL,
 		chain,
 	)
+	nonceAccount, _ := args.GetNonceAccount()
 	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, &types.CallInputReq{
-		Method:    call.GetMethod(),
-		Request:   call.GetMsg(),
-		Addresses: call.SigningAddresses(),
+		Method:       call.GetMethod(),
+		Request:      call.GetMsg(),
+		Addresses:    call.SigningAddresses(),
+		NonceAccount: nonceAccount,
 	})
 	if err != nil {
 		return nil, err

@@ -309,7 +309,6 @@ func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, i
 	return tx, nil
 }
 
-
 func (txBuilder TxBuilder) BuildUnwrapEverythingTx(from xc.Address, to xc.Address, amount xc.AmountBlockchain, contract xc.ContractAddress, txInput *TxInput) (xc.Tx, error) {
 	accountFrom, err := solana.PublicKeyFromBase58(string(from))
 	if err != nil {

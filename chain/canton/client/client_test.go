@@ -14,6 +14,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xccall "github.com/cordialsys/crosschain/call"
 	cantoncall "github.com/cordialsys/crosschain/chain/canton/call"
@@ -838,7 +839,10 @@ func TestFetchCallInputOfferAcceptWallet(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
-	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.NoError(t, err)
 	input := inputI.(*tx_input.CallInput)
 	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
@@ -895,7 +899,10 @@ func TestFetchCallInputDispatchesByContractTemplateNotMethod(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
-	_, err = client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.NoError(t, err)
 
 	exercise := interactiveStub.lastPrepareReq.GetCommands()[0].GetExercise()
@@ -975,7 +982,10 @@ func TestFetchCallInputOfferAcceptUtilitiesTransferOffer(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(receiver)})
 	require.NoError(t, err)
 
-	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.NoError(t, err)
 	input := inputI.(*tx_input.CallInput)
 	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
@@ -1122,7 +1132,10 @@ func TestFetchCallInputSettlementCompleteTargetsExactContract(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(sender)})
 	require.NoError(t, err)
 
-	inputI, err := client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	inputI, err := client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.NoError(t, err)
 	input := inputI.(*tx_input.CallInput)
 	require.Equal(t, prepareResp.GetPreparedTransaction(), input.PreparedTransaction)
@@ -1171,7 +1184,10 @@ func TestFetchCallInputReturnsUnsupportedTargetError(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.OfferAccept, payload, []xc.Address{xc.Address(party)})
 	require.NoError(t, err)
 
-	_, err = client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.ErrorContains(t, err, "unsupported Canton call target")
 }
 
@@ -1196,7 +1212,10 @@ func TestFetchCallInputReturnsNotVisibleError(t *testing.T) {
 	callTx, err := cantoncall.NewCall(client.Asset.Base(), xccall.SettlementComplete, payload, []xc.Address{xc.Address(party)})
 	require.NoError(t, err)
 
-	_, err = client.FetchCallInput(context.Background(), callTx)
+	callArgs, err := builder.NewCallArgs(client.Asset.Base())
+	require.NoError(t, err)
+
+	_, err = client.FetchCallInput(context.Background(), callTx, callArgs)
 	require.ErrorContains(t, err, "is not visible to caller")
 }
 
