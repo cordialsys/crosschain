@@ -33,6 +33,9 @@ type builderOptions struct {
 	toIdentity *string
 	// On some chains staking amount is not required
 	stakeAmount *xc.AmountBlockchain
+
+	// On some chains a nonce account may be specified for the transaction (solana)
+	nonceAccount *string
 }
 
 func newBuilderOptions() builderOptions {
@@ -68,6 +71,9 @@ func (opts *builderOptions) GetFeePayer() (xc.Address, bool)         { return ge
 func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)    { return get(opts.feePayerPublicKey) }
 func (opts *builderOptions) GetTransactionAttempts() []string {
 	return opts.transactionAttempts
+}
+func (opts *builderOptions) GetNonceAccount() (string, bool) {
+	return get(opts.nonceAccount)
 }
 
 // Other options
@@ -120,6 +126,9 @@ func (opts *builderOptions) SetToIdentity(toIdentity string) {
 }
 func (opts *builderOptions) SetFeePayerIdentity(feePayerIdentity string) {
 	opts.feePayerIdentity = &feePayerIdentity
+}
+func (opts *builderOptions) SetNonceAccount(nonceAccount string) {
+	opts.nonceAccount = &nonceAccount
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -232,6 +241,12 @@ func OptionFeePayerIdentity(feePayerIdentity string) BuilderOption {
 func OptionStakeAmount(amount xc.AmountBlockchain) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.stakeAmount = &amount
+		return nil
+	}
+}
+func OptionNonceAccount(nonceAccount string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.nonceAccount = &nonceAccount
 		return nil
 	}
 }

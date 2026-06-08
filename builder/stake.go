@@ -40,6 +40,10 @@ func (args *StakeArgs) GetFeePayerIdentity() (string, bool) {
 }
 func (args *StakeArgs) GetFromIdentity() (string, bool) { return args.options.GetFromIdentity() }
 
+func (args *StakeArgs) GetNonceAccount() (string, bool) {
+	return args.options.GetNonceAccount()
+}
+
 func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOption) (StakeArgs, error) {
 	builderOptions := builderOptions{}
 	args := StakeArgs{

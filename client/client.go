@@ -53,7 +53,7 @@ type StakingClient interface {
 
 type CallClient interface {
 	// Fetch inputs required for a call transaction
-	FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error)
+	FetchCallInput(ctx context.Context, call xc.TxCall, args builder.CallArgs) (xc.CallTxInput, error)
 }
 
 type OfferClient interface {

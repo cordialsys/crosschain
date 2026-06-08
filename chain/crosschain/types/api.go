@@ -63,6 +63,8 @@ type TransferInputReqExtra struct {
 	// Memo and priority are not currently used.
 	Memo     string `json:"memo,omitempty"`
 	Priority string `json:"priority,omitempty"`
+
+	NonceAccount string `json:"nonce_account,omitempty"`
 }
 
 type TransferInputReq struct {
@@ -130,6 +132,7 @@ type MultiTransferInputReqExtra struct {
 	Priority            string   `json:"priority,omitempty"`
 	Memo                string   `json:"memo,omitempty"`
 	TransactionAttempts []string `json:"transaction_attempts,omitempty"`
+	NonceAccount        string   `json:"nonce_account,omitempty"`
 }
 
 type MultiTransferInputReq struct {
@@ -146,6 +149,7 @@ type StakingInputReqExtra struct {
 
 	FromIdentity     string `json:"from_identity,omitempty"`
 	FeePayerIdentity string `json:"fee_payer_identity,omitempty"`
+	NonceAccount     string `json:"nonce_account,omitempty"`
 }
 
 type StakingInputReq struct {
@@ -294,4 +298,6 @@ type CallInputReq struct {
 	Method    call.Method     `json:"method"`
 	Request   json.RawMessage `json:"request"`
 	Addresses []xc.Address    `json:"addresses"`
+
+	NonceAccount string `json:"nonce_account,omitempty"`
 }

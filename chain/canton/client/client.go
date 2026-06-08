@@ -2016,7 +2016,7 @@ func (client *Client) prepareAcceptedTransferOfferComplete(ctx context.Context, 
 	return client.LedgerClient.PrepareSubmission(ctx, prepareReq)
 }
 
-func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall) (xc.CallTxInput, error) {
+func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args xcbuilder.CallArgs) (xc.CallTxInput, error) {
 	signers := call.SigningAddresses()
 	if len(signers) == 0 {
 		return nil, fmt.Errorf("no signing address provided for Canton call")
