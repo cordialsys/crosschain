@@ -83,6 +83,17 @@ func (client *Client) GetTx(ctx context.Context, txHash string) (types.Transacti
 	return data, nil
 }
 
+func (client *Client) GetOutput(ctx context.Context, txHash string, vout uint32) (types.Vout, error) {
+	tx, err := client.GetTx(ctx, txHash)
+	if err != nil {
+		return types.Vout{}, err
+	}
+	if int(vout) >= len(tx.Vout) {
+		return types.Vout{}, fmt.Errorf("output %d not found in transaction %s", vout, txHash)
+	}
+	return tx.Vout[vout], nil
+}
+
 func (client *Client) GetBlock(ctx context.Context, block uint64) (types.Block, error) {
 	var data types.Block
 	err := client.get(ctx, fmt.Sprintf("/api/v2/block/%d", block), &data)

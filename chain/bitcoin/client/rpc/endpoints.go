@@ -357,6 +357,10 @@ func (client *Client) GetTx(ctx context.Context, txid string) (types.Transaction
 	return response, nil
 }
 
+func (client *Client) GetOutput(ctx context.Context, txid string, vout uint32) (types.Vout, error) {
+	return client.bbClient.GetOutput(ctx, txid, vout)
+}
+
 func (client *Client) ListUtxo(ctx context.Context, addr string, confirmed bool) (types.UtxoResponse, error) {
 	return client.bbClient.ListUtxo(ctx, addr, confirmed)
 }

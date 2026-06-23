@@ -28,6 +28,7 @@ type BitcoinClientDriver interface {
 	LatestBlock(ctx context.Context) (uint64, error)
 	SubmitTx(ctx context.Context, txBytes []byte) (string, error)
 	GetTx(ctx context.Context, txHash string) (TransactionResponse, error)
+	GetOutput(ctx context.Context, txHash string, vout uint32) (Vout, error)
 	GetBlock(ctx context.Context, block uint64) (Block, error)
 }
 
