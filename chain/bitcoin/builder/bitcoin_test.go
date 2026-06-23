@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/btcsuite/btcd/txscript"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
@@ -258,6 +259,42 @@ func (s *CrosschainTestSuite) TestTxAddSignature() {
 		},
 	}...)
 	require.NoError(err)
+}
+
+func (s *CrosschainTestSuite) TestTxAddSignaturePayToPubKey() {
+	require := s.Require()
+	chain := xc.NewChainConfig(xc.DOGE).WithNet("mainnet")
+	builder, err := NewTxBuilder(chain.Base())
+	require.NoError(err)
+
+	publicKey := []byte{
+		0x02, 0x05, 0xf0, 0x72, 0x74, 0x48, 0x9c, 0x05, 0xcc, 0x2b, 0xc6,
+		0x03, 0xf3, 0xf4, 0x84, 0x14, 0x44, 0x2b, 0xae, 0xab, 0xe8, 0x44,
+		0xeb, 0xb3, 0x40, 0x77, 0x4c, 0x35, 0x69, 0xa4, 0x5d, 0x26, 0x46,
+	}
+	p2pkScript := append([]byte{txscript.OP_DATA_33}, publicKey...)
+	p2pkScript = append(p2pkScript, txscript.OP_CHECKSIG)
+	input := &tx_input.TxInput{UnspentOutputs: []tx_input.Output{{
+		Value:        xc.NewAmountBlockchainFromUint64(1000),
+		PubKeyScript: p2pkScript,
+	}}}
+	tf, err := builder.NewNativeTransfer(
+		xc.Address("DKh5jsaK4duMy3Lvi8VpV9gSLtwVeWQ9gg"),
+		xc.Address("DBFELp67Dsgog58X3E7UVtRw9VoUsoLn7E"),
+		xc.NewAmountBlockchainFromUint64(10),
+		input,
+	)
+	require.NoError(err)
+
+	signature := append(make([]byte, 64), byte(0))
+	require.NoError(tf.SetSignatures(&xc.SignatureResponse{
+		Signature: signature,
+		PublicKey: publicKey,
+	}))
+
+	pushedData, err := txscript.PushedData(tf.(*tx.Tx).MsgTx.TxIn[0].SignatureScript)
+	require.NoError(err)
+	require.Len(pushedData, 1)
 }
 
 func genInput(addr string, totalAmount int, numberUtxos int) tx_input.TxInput {

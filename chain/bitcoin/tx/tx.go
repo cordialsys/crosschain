@@ -194,10 +194,11 @@ func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 			tx.MsgTx.TxIn[i].Witness = wire.TxWitness([][]byte{signatureWithSuffix, signatureResponses[i].PublicKey})
 		} else {
 			log.Debug("append signature (legacy)")
-			// Support non-segwit
 			builder := txscript.NewScriptBuilder()
 			builder.AddData(signatureWithSuffix)
-			builder.AddData(signatureResponses[i].PublicKey)
+			if !txscript.IsPayToPubKey(pubKeyScript) {
+				builder.AddData(signatureResponses[i].PublicKey)
+			}
 			tx.MsgTx.TxIn[i].SignatureScript, err = builder.Script()
 			if err != nil {
 				return err

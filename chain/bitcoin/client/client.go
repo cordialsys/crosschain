@@ -145,6 +145,22 @@ func (client *BlockbookClient) UnspentOutputs(ctx context.Context, addr xc.Addre
 
 	// TODO try filtering using confirmed UTXO only for target amount, using heuristic as fallback.
 	data = tx_input.FilterUnconfirmedHeuristic(data)
+	if client.Asset.GetChain().Chain == xc.DOGE {
+		outputs := tx_input.NewOutputs(data, nil, addr)
+		for i, utxo := range data {
+			prevout, err := client.bbClient.GetOutput(ctx, utxo.GetTxHash(), utxo.GetIndex())
+			if err != nil {
+				return nil, fmt.Errorf("could not fetch prevout %s:%d: %w", utxo.GetTxHash(), utxo.GetIndex(), err)
+			}
+			script, err := hex.DecodeString(prevout.Hex)
+			if err != nil {
+				return nil, fmt.Errorf("could not decode prevout script %s:%d: %w", utxo.GetTxHash(), utxo.GetIndex(), err)
+			}
+			outputs[i].PubKeyScript = script
+		}
+		return outputs, nil
+	}
+
 	btcAddr, err := client.decoder.Decode(addr, client.Chaincfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not decode address: %v", err)
