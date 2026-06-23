@@ -6,6 +6,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/filecoin/builder"
+	filecointx "github.com/cordialsys/crosschain/chain/filecoin/tx"
 	"github.com/cordialsys/crosschain/chain/filecoin/tx_input"
 	"github.com/stretchr/testify/require"
 )
@@ -34,4 +35,28 @@ func TestNewTransfer(t *testing.T) {
 	tf, err := builder1.Transfer(buildertest.MustNewTransferArgs(chainCfg, from, to, amount), input)
 	require.NoError(t, err)
 	require.NotNil(t, tf)
+}
+
+func TestNewTransferPreservesLargeAmount(t *testing.T) {
+	builder1, err := builder.NewTxBuilder(xc.NewChainConfig(xc.FIL).Base())
+	require.NoError(t, err)
+
+	amount := xc.NewAmountBlockchainFromStr("37000000000000000000000")
+	input := &TxInput{
+		GasLimit:   100000,
+		GasFeeCap:  xc.NewAmountBlockchainFromStr("150000"),
+		GasPremium: xc.NewAmountBlockchainFromStr("250000"),
+	}
+	chainCfg := xc.NewChainConfig(xc.FIL).Base()
+	tf, err := builder1.Transfer(buildertest.MustNewTransferArgs(
+		chainCfg,
+		xc.Address("f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy"),
+		xc.Address("f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q"),
+		amount,
+	), input)
+	require.NoError(t, err)
+
+	filecoinTx, ok := tf.(*filecointx.Tx)
+	require.True(t, ok)
+	require.Equal(t, amount.String(), filecoinTx.Message.Value.String())
 }

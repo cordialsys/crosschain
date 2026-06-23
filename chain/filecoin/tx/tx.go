@@ -42,7 +42,7 @@ func NewMessage(args xcbuilder.TransferArgs, txInput tx_input.TxInput) Message {
 		To:         to,
 		From:       from,
 		Nonce:      txInput.Nonce,
-		Value:      xc.NewAmountBlockchainFromUint64(amount.Int().Uint64()),
+		Value:      amount,
 		GasLimit:   txInput.GasLimit,
 		GasFeeCap:  txInput.GasFeeCap,
 		GasPremium: txInput.GasPremium,
