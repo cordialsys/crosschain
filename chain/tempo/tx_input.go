@@ -1,6 +1,8 @@
 package tempo
 
 import (
+	"math/big"
+
 	xc "github.com/cordialsys/crosschain"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -49,13 +51,23 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (independent bool) {
 }
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	// Tempo reports fee pricing with extra precision, while fee limits are
-	// compared in the TIP-20 contract precision.
+	// compared in the TIP-20 contract precision. Round up so inclusive-fee
+	// sweeps reserve enough balance for the fee token before the token transfer
+	// executes.
 	attoTempo := xc.NewAmountBlockchainFromUint64(1_000_000_000_000)
 	feeLimit, contract := input.TxInput.GetFeeLimit()
 	if contract == "" {
 		contract = input.FeeContract
 	}
-	return feeLimit.Div(&attoTempo), contract
+	return divCeil(feeLimit, attoTempo), contract
+}
+
+func divCeil(amount xc.AmountBlockchain, divisor xc.AmountBlockchain) xc.AmountBlockchain {
+	quotient, remainder := new(big.Int).QuoRem(amount.Int(), divisor.Int(), new(big.Int))
+	if remainder.Sign() != 0 {
+		quotient.Add(quotient, big.NewInt(1))
+	}
+	return xc.AmountBlockchain(*quotient)
 }
 
 func (input *TxInput) GetFeePayerAddress() string {
