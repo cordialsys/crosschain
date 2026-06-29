@@ -31,6 +31,9 @@ type TxInput struct {
 	DurableNonce solana.Hash `json:"durable_nonce,omitempty"`
 	// The on-chain nonce account address.
 	DurableNonceAccount solana.PublicKey `json:"durable_nonce_account,omitempty"`
+	// The authority/base account for the durable nonce account. Omitted in older
+	// inputs, which should continue to use the transaction's from address.
+	DurableNonceAuthority solana.PublicKey `json:"durable_nonce_authority,omitempty"`
 	// If true, the nonce account needs to be created and initialized before use.
 	ShouldCreateDurableNonce bool `json:"should_create_durable_nonce,omitempty"`
 }

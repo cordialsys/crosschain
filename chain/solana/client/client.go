@@ -55,6 +55,10 @@ func DeriveNonceAccount(from solana.PublicKey) (solana.PublicKey, error) {
 }
 
 func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain, nonceAccountMaybe *solana.PublicKey) (*tx_input.TxInput, error) {
+	return client.FetchBaseInputWithNonceAuthority(ctx, fromAddr, fromAddr, contractMaybe, amountMaybe, nonceAccountMaybe)
+}
+
+func (client *Client) FetchBaseInputWithNonceAuthority(ctx context.Context, fromAddr xc.Address, nonceAuthorityAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain, nonceAccountMaybe *solana.PublicKey) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 
 	// get recent block hash (always needed as fallback and for nonce account creation)
@@ -75,8 +79,12 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, c
 	if err != nil {
 		return nil, fmt.Errorf("invalid from address: %v", err)
 	}
+	initialNonceAuthorityPub, err := solana.PublicKeyFromBase58(string(nonceAuthorityAddr))
+	if err != nil {
+		return nil, fmt.Errorf("invalid durable nonce authority address: %v", err)
+	}
 	// derive nonce account if not provided
-	nonceAccountPub, err := DeriveNonceAccount(fromPub)
+	nonceAccountPub, err := DeriveNonceAccount(initialNonceAuthorityPub)
 	if err != nil {
 		return nil, fmt.Errorf("could not derive nonce account: %v", err)
 	}
@@ -90,15 +98,15 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, c
 		return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
 	}
 
-	nativeBalanceAfterTransfer, err := client.FetchNativeBalance(ctx, fromAddr)
+	nativeBalanceAfterTransfer, err := client.FetchNativeBalance(ctx, nonceAuthorityAddr)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch native balance: %v", err)
 	}
-	if contractMaybe == "" || contractMaybe == xc.ContractAddress(client.Asset.Chain) {
+	if nonceAuthorityAddr == fromAddr && (contractMaybe == "" || contractMaybe == xc.ContractAddress(client.Asset.Chain)) {
 		nativeBalanceAfterTransfer = nativeBalanceAfterTransfer.Sub(&amountMaybe)
 	}
 
-	err = client.FetchDurableNonceInput(ctx, txInput, nonceAccountPub, nativeBalanceAfterTransfer, lamports)
+	err = client.FetchDurableNonceInput(ctx, txInput, nonceAccountPub, fromPub, initialNonceAuthorityPub, nativeBalanceAfterTransfer, lamports)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch durable nonce: %v", err)
 	}
@@ -167,15 +175,24 @@ func (client *Client) FetchNonceAccount(ctx context.Context, nonceAccountAddr so
 // FetchDurableNonceInput populates the TxInput with durable nonce information.
 // If the nonce account exists and is initialized, it reads the current nonce value.
 // If the nonce account doesn't exist, it sets ShouldCreateDurableNonce=true.
-func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_input.TxInput, nonceAccount solana.PublicKey, nativeBalanceAfterTransfer xc.AmountBlockchain, rent uint64) error {
+func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_input.TxInput, nonceAccount solana.PublicKey, fromAuthority solana.PublicKey, initialAuthority solana.PublicKey, nativeBalanceAfterTransfer xc.AmountBlockchain, rent uint64) error {
 	txInput.DurableNonceAccount = nonceAccount
 
 	nonceState, err := client.FetchNonceAccount(ctx, nonceAccount)
 	if err != nil {
 		// If account doesn't exist or is not initialized, mark it for creation
 		txInput.ShouldCreateDurableNonce = true
+		// The authority to use to create/own the nonce account.
+		txInput.DurableNonceAuthority = initialAuthority
 		logrus.WithField("nonce_account", nonceAccount.String()).WithError(err).Info("nonce account not found or not initialized, will need setup")
 	} else {
+		txInput.ShouldCreateDurableNonce = false
+		if !nonceState.AuthorizedPubkey.Equals(fromAuthority) && !nonceState.AuthorizedPubkey.Equals(initialAuthority) {
+			return fmt.Errorf("nonce account %s is authorized by %s, which does not match from address %s or fee payer address %s", nonceAccount, nonceState.AuthorizedPubkey, fromAuthority, initialAuthority)
+		}
+		// We update the authority to match reality.
+		// We would have only used the input `txInput.DurableNonceAuthority` if the nonce account didn't exist yet.
+		txInput.DurableNonceAuthority = nonceState.AuthorizedPubkey
 		txInput.DurableNonce = nonceState.Nonce
 	}
 
@@ -185,6 +202,7 @@ func (client *Client) FetchDurableNonceInput(ctx context.Context, txInput *tx_in
 		logrus.WithField("nonce_account", nonceAccount.String()).Info("cannot afford rent for durable nonce account, will not use it")
 		txInput.ShouldCreateDurableNonce = false
 		txInput.DurableNonceAccount = solana.PublicKey{}
+		txInput.DurableNonceAuthority = solana.PublicKey{}
 		txInput.DurableNonce = solana.Hash{}
 	}
 	return nil
@@ -202,7 +220,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 		nonceAccountMaybe = &nonceAccountPub
 	}
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, xc.NewAmountBlockchainFromUint64(0), nonceAccountMaybe)
+	nonceAuthority := args.GetFrom()
+	if feePayer, ok := args.GetFeePayer(); ok {
+		nonceAuthority = feePayer
+	}
+	txInput, err := client.FetchBaseInputWithNonceAuthority(ctx, args.GetFrom(), nonceAuthority, contract, xc.NewAmountBlockchainFromUint64(0), nonceAccountMaybe)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	xcsolana "github.com/cordialsys/crosschain/chain/solana"
 	"github.com/cordialsys/crosschain/chain/solana/client"
@@ -84,6 +85,7 @@ func TestErrors(t *testing.T) {
 
 func TestFetchDurableNonceInputRentAffordability(t *testing.T) {
 	nonceAccount := solana.MustPublicKeyFromBase58("11111111111111111111111111111112")
+	initialAuthority := solana.MustPublicKeyFromBase58("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
 	rent := uint64(2039280)
 
 	vectors := []struct {
@@ -123,12 +125,19 @@ func TestFetchDurableNonceInputRentAffordability(t *testing.T) {
 				context.Background(),
 				input,
 				nonceAccount,
+				initialAuthority,
+				initialAuthority,
 				xc.NewAmountBlockchainFromUint64(v.balance),
 				rent,
 			)
 			require.NoError(t, err)
 			require.Equal(t, v.wantCreate, input.ShouldCreateDurableNonce)
 			require.Equal(t, v.wantCreate, !input.DurableNonceAccount.IsZero())
+			if v.wantCreate {
+				require.Equal(t, initialAuthority, input.DurableNonceAuthority)
+			} else {
+				require.True(t, input.DurableNonceAuthority.IsZero())
+			}
 			require.True(t, input.DurableNonce.IsZero())
 		})
 	}
@@ -416,6 +425,157 @@ func TestFetchTxInput(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFetchTransferInputUsesFeePayerDurableNonce(t *testing.T) {
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
+		`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
+	expectedNonceAccount, err := client.DeriveNonceAccount(feePayerPub)
+	require.NoError(t, err)
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+
+	txInput := input.(*TxInput)
+	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
+	require.Equal(t, expectedNonceAccount, txInput.DurableNonceAccount)
+	require.True(t, txInput.ShouldCreateDurableNonce)
+}
+
+func TestFetchTransferInputUsesManualNonceAccountAuthority(t *testing.T) {
+	nonceAccountResponse := `{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"data":["AAAAAAEAAAAPG/b9JA7QaYF+Nxq/RiP/wNpsnKYydqOW2ERH8LsfQLG5Wh+2FsPTlk9M1gKbZN6qg6bOAZ0f5erphxaL0YC8iBMAAAAAAAA=","base64"],"executable":false,"lamports":2039280,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":80}}`
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		nonceAccountResponse,
+		`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	manualNonceAccount := solana.MustPublicKeyFromBase58("8MbiEQjXFmsrpnRw4VV9TQNSfzMKrRZ3NPDHNnUeQXks")
+	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+		builder.OptionNonceAccount(manualNonceAccount.String()),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+
+	txInput := input.(*TxInput)
+	require.Equal(t, manualNonceAccount, txInput.DurableNonceAccount)
+	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
+	require.False(t, txInput.ShouldCreateDurableNonce)
+	require.Equal(t, "Cxm69hccnEtjtbzSUqV3QmxTRDh56ZD5sjVxvRHEpZ7y", txInput.DurableNonce.String())
+}
+
+func TestFetchTransferInputUsesFeePayerAuthorityForMissingManualNonceAccount(t *testing.T) {
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
+		`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	manualNonceAccount := solana.MustPublicKeyFromBase58("8MbiEQjXFmsrpnRw4VV9TQNSfzMKrRZ3NPDHNnUeQXks")
+	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+		builder.OptionNonceAccount(manualNonceAccount.String()),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+
+	txInput := input.(*TxInput)
+	require.Equal(t, manualNonceAccount, txInput.DurableNonceAccount)
+	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
+	require.True(t, txInput.ShouldCreateDurableNonce)
+	require.True(t, txInput.DurableNonce.IsZero())
+}
+
+func TestFetchTransferInputRejectsManualNonceAccountWithUnexpectedAuthority(t *testing.T) {
+	nonceAccountResponse := `{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"data":["AAAAAAEAAACcKgZWItAWfKAiXufOTPtDXIJiRaSh6upS4DjjZbG6ILG5Wh+2FsPTlk9M1gKbZN6qg6bOAZ0f5erphxaL0YC8iBMAAAAAAAA=","base64"],"executable":false,"lamports":2039280,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":80}}`
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		nonceAccountResponse,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	manualNonceAccount := solana.MustPublicKeyFromBase58("8MbiEQjXFmsrpnRw4VV9TQNSfzMKrRZ3NPDHNnUeQXks")
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+		builder.OptionNonceAccount(manualNonceAccount.String()),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.Nil(t, input)
+	require.ErrorContains(t, err, "nonce account 8MbiEQjXFmsrpnRw4VV9TQNSfzMKrRZ3NPDHNnUeQXks is authorized by BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
+	require.ErrorContains(t, err, "does not match from address 4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a or fee payer address 21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
 }
 
 func TestSubmitTxSuccess(t *testing.T) {
