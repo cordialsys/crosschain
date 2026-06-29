@@ -32,9 +32,19 @@ func (s *CrosschainTestSuite) TestCoinEqual() {
 			newPoint("01", 2),
 		),
 	)
+	require.False(
+		sui.CoinEqual(
+			newPointWithVersion("01", 1, 1),
+			newPointWithVersion("01", 1, 2),
+		),
+	)
 }
 
 func newPoint(hexDigest string, globalId byte) *types.Coin {
+	return newPointWithVersion(hexDigest, globalId, 0)
+}
+
+func newPointWithVersion(hexDigest string, globalId byte, version int) *types.Coin {
 	hexDigest = fmt.Sprintf("%02s", hexDigest)
 	digest, err := hex.DecodeString(hexDigest)
 	if err != nil {
@@ -45,7 +55,7 @@ func newPoint(hexDigest string, globalId byte) *types.Coin {
 		// 32 byte hex, 0 padded
 		fmt.Sprintf("%064s", hex.EncodeToString([]byte{(globalId)})),
 		base58.Encode(digest),
-		0, 0,
+		0, version,
 	)
 }
 
@@ -96,6 +106,24 @@ func (s *CrosschainTestSuite) TestTxInputConflicts() {
 			},
 			independent:     false,
 			doubleSpendSafe: true,
+		},
+		{
+			newInput: &sui.TxInput{
+				GasCoin: *newPointWithVersion("00", 100, 1),
+				Coins: []*types.Coin{
+					newPoint("00", 1),
+					newPoint("00", 2),
+				},
+			},
+			oldInput: &sui.TxInput{
+				GasCoin: *newPointWithVersion("00", 100, 2),
+				Coins: []*types.Coin{
+					newPoint("00", 11),
+					newPoint("00", 21),
+				},
+			},
+			independent:     true,
+			doubleSpendSafe: false,
 		},
 		{
 			newInput: &sui.TxInput{
