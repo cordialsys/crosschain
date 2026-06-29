@@ -11,6 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	"github.com/gagliardetto/solana-go"
+	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/gagliardetto/solana-go/programs/token"
 	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/stretchr/testify/require"
@@ -356,6 +357,99 @@ func TestNewTransfer(t *testing.T) {
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 1, len(solTx.Message.Instructions))
 	require.Equal(t, uint16(0x2), solTx.Message.Instructions[0].ProgramIDIndex) // system tx
+}
+
+func TestDurableNonceAuthority(t *testing.T) {
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
+	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
+	nonceAccount := solana.MustPublicKeyFromBase58("11111111111111111111111111111112")
+	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
+	fromPub := solana.MustPublicKeyFromBase58(string(from))
+
+	args := buildertest.MustNewTransferArgs(
+		chainCfg,
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1200000),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+
+	input := &TxInput{
+		DurableNonceAccount:   nonceAccount,
+		DurableNonceAuthority: feePayerPub,
+		DurableNonce:          solana.Hash([32]byte{10}),
+	}
+	trxn, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	solTx := trxn.(*Tx).SolTx
+	advanceNonce := decodeSystemInstruction[*system.AdvanceNonceAccount](t, solTx, 0)
+	require.Equal(t, nonceAccount, advanceNonce.GetNonceAccount().PublicKey)
+	require.Equal(t, feePayerPub, advanceNonce.GetNonceAuthorityAccount().PublicKey)
+	require.Equal(t, solana.Hash([32]byte{10}), solTx.Message.RecentBlockhash)
+
+	legacyInput := &TxInput{
+		DurableNonceAccount: nonceAccount,
+		DurableNonce:        solana.Hash([32]byte{11}),
+	}
+	trxn, err = txBuilder.Transfer(args, legacyInput)
+	require.NoError(t, err)
+	solTx = trxn.(*Tx).SolTx
+	advanceNonce = decodeSystemInstruction[*system.AdvanceNonceAccount](t, solTx, 0)
+	require.Equal(t, fromPub, advanceNonce.GetNonceAuthorityAccount().PublicKey)
+}
+
+func TestDurableNonceCreateUsesAuthority(t *testing.T) {
+	chainCfg := xc.NewChainConfig(xc.SOL).Base()
+	txBuilder, _ := builder.NewTxBuilder(chainCfg)
+	from := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("BWbmXj5ckAaWCAtzMZ97qnJhBAKegoXtgNrv9BUpAB11")
+	nonceAccount := solana.MustPublicKeyFromBase58("11111111111111111111111111111112")
+	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
+
+	args := buildertest.MustNewTransferArgs(
+		chainCfg,
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1200000),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input := &TxInput{
+		RecentBlockHash:          solana.Hash([32]byte{1}),
+		DurableNonceAccount:      nonceAccount,
+		DurableNonceAuthority:    feePayerPub,
+		ShouldCreateDurableNonce: true,
+	}
+	trxn, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	solTx := trxn.(*Tx).SolTx
+
+	createNonce := decodeSystemInstruction[*system.CreateAccountWithSeed](t, solTx, 0)
+	require.Equal(t, feePayerPub, createNonce.GetFundingAccount().PublicKey)
+	require.Equal(t, nonceAccount, createNonce.GetCreatedAccount().PublicKey)
+	require.Equal(t, feePayerPub, createNonce.GetBaseAccount().PublicKey)
+	require.Equal(t, feePayerPub, *createNonce.Base)
+
+	initNonce := decodeSystemInstruction[*system.InitializeNonceAccount](t, solTx, 1)
+	require.Equal(t, nonceAccount, initNonce.GetNonceAccount().PublicKey)
+	require.Equal(t, feePayerPub, *initNonce.Authorized)
+	require.Equal(t, solana.Hash([32]byte{1}), solTx.Message.RecentBlockhash)
+}
+
+func decodeSystemInstruction[T any](t *testing.T, solTx *solana.Transaction, instructionIndex int) T {
+	t.Helper()
+
+	instr := solTx.Message.Instructions[instructionIndex]
+	accounts, err := instr.ResolveInstructionAccounts(&solTx.Message)
+	require.NoError(t, err)
+	decoded, err := system.DecodeInstruction(accounts, instr.Data)
+	require.NoError(t, err)
+	impl, ok := decoded.Impl.(T)
+	require.True(t, ok)
+	return impl
 }
 
 func Bytes32(i byte) []byte {
