@@ -88,6 +88,7 @@ func (input *TxInput) IsFeeLimitAccurate() bool {
 }
 func CoinEqual(coin1 *types.Coin, coin2 *types.Coin) bool {
 	return bytes.Equal(coin1.CoinObjectId.Data(), (coin2.CoinObjectId.Data())) &&
+		coin1.Version.Uint64() == coin2.Version.Uint64() &&
 		bytes.Equal(coin1.Digest.Data(), coin2.Digest.Data())
 }
 
