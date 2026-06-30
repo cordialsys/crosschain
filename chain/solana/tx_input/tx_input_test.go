@@ -181,6 +181,121 @@ func TestTxInputConflicts(t *testing.T) {
 			independent:     true,
 			doubleSpendSafe: true,
 		},
+		{
+			// fee-payer durable nonce: same account and nonce = NOT independent and SAFE
+			newInput: &TxInput{
+				RecentBlockHash:             solana.Hash([32]byte{1}),
+				Timestamp:                   startTime,
+				FeePayerDurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				FeePayerDurableNonce:        solana.Hash([32]byte{10}),
+				DurableNonceAccount:         solana.MustPublicKeyFromBase58("11111111111111111111111111111113"),
+				ShouldCreateDurableNonce:    true,
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:             solana.Hash([32]byte{2}),
+				Timestamp:                   startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+				FeePayerDurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				FeePayerDurableNonce:        solana.Hash([32]byte{10}),
+				DurableNonceAccount:         solana.MustPublicKeyFromBase58("11111111111111111111111111111114"),
+				ShouldCreateDurableNonce:    true,
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+		{
+			// fee-payer durable nonce: same account, different nonce = independent but NOT safe
+			newInput: &TxInput{
+				RecentBlockHash:             solana.Hash([32]byte{1}),
+				Timestamp:                   startTime,
+				FeePayerDurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				FeePayerDurableNonce:        solana.Hash([32]byte{10}),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:             solana.Hash([32]byte{2}),
+				Timestamp:                   startTime - int64(SafetyTimeoutMargin.Seconds()) - 1,
+				FeePayerDurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				FeePayerDurableNonce:        solana.Hash([32]byte{11}),
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+		{
+			// fee-payer durable nonce setup: ignore the main nonce setup state when the
+			// transaction serializes through the fee-payer nonce path.
+			newInput: &TxInput{
+				RecentBlockHash:             solana.Hash([32]byte{1}),
+				Timestamp:                   startTime,
+				DurableNonceAccount:         solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				ShouldCreateDurableNonce:    true,
+				FeePayerDurableNonceAccount: solana.MustPublicKeyFromBase58("11111111111111111111111111111113"),
+				FeePayerDurableNonce:        solana.Hash([32]byte{10}),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash:               solana.Hash([32]byte{2}),
+				Timestamp:                     startTime,
+				DurableNonceAccount:           solana.MustPublicKeyFromBase58("11111111111111111111111111111112"),
+				ShouldCreateDurableNonce:      true,
+				FeePayerDurableNonceAccount:   solana.MustPublicKeyFromBase58("11111111111111111111111111111113"),
+				ShouldCreateFeePayerNonce:     true,
+				FeePayerDurableNonceAuthority: solana.MustPublicKeyFromBase58("11111111111111111111111111111114"),
+				FeePayerDurableNonce:          solana.Hash{},
+			},
+			independent:     true,
+			doubleSpendSafe: false,
+		},
+
+		{
+			// using same fee-payer durable nonce = not independent and safe
+			newInput: &TxInput{
+				RecentBlockHash: solana.Hash([32]byte{1}),
+				Timestamp:       startTime,
+
+				FeePayerDurableNonce:          solana.MustHashFromBase58("6MJ5iWWQRr5Pwu8efVWo2LhkmmtfZ64CYjaHTiDQpjjP"),
+				FeePayerDurableNonceAccount:   solana.MustPublicKeyFromBase58("BNC16RAQsgnkM3o5eX3s4FHUtuaF4QaAhFCneSzuPUbR"),
+				FeePayerDurableNonceAuthority: solana.MustPublicKeyFromBase58("G4FH1agHuh47YqBmHk8Pg4m6TQ4uhPNFFujjpjrcuhw5"),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash: solana.Hash([32]byte{2}),
+				Timestamp:       startTime,
+
+				FeePayerDurableNonce:          solana.MustHashFromBase58("6MJ5iWWQRr5Pwu8efVWo2LhkmmtfZ64CYjaHTiDQpjjP"),
+				FeePayerDurableNonceAccount:   solana.MustPublicKeyFromBase58("BNC16RAQsgnkM3o5eX3s4FHUtuaF4QaAhFCneSzuPUbR"),
+				FeePayerDurableNonceAuthority: solana.MustPublicKeyFromBase58("G4FH1agHuh47YqBmHk8Pg4m6TQ4uhPNFFujjpjrcuhw5"),
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
+
+		{
+			// using same fee-payer durable nonce = not independent and safe
+			// (should ignore the value of the main durable nonce)
+			newInput: &TxInput{
+				RecentBlockHash: solana.Hash([32]byte{1}),
+				Timestamp:       startTime,
+
+				DurableNonce:          solana.MustHashFromBase58("DMXsZD8LPPeUzjxFPG3erNgT6cQjYaBcVzmT1GxRupEF"),
+				DurableNonceAccount:   solana.MustPublicKeyFromBase58("4QDJYFDBH6xLCoyGBqUBq3S5LmV91K39szrm7AE8aCgg"),
+				DurableNonceAuthority: solana.MustPublicKeyFromBase58("Dv3NqyhkSERDafaZByHeFXWJMjURo4G8SHkjbkmHVTJs"),
+
+				FeePayerDurableNonce:          solana.MustHashFromBase58("6MJ5iWWQRr5Pwu8efVWo2LhkmmtfZ64CYjaHTiDQpjjP"),
+				FeePayerDurableNonceAccount:   solana.MustPublicKeyFromBase58("BNC16RAQsgnkM3o5eX3s4FHUtuaF4QaAhFCneSzuPUbR"),
+				FeePayerDurableNonceAuthority: solana.MustPublicKeyFromBase58("G4FH1agHuh47YqBmHk8Pg4m6TQ4uhPNFFujjpjrcuhw5"),
+			},
+			oldInput: &TxInput{
+				RecentBlockHash: solana.Hash([32]byte{2}),
+				Timestamp:       startTime,
+
+				DurableNonce:          solana.MustHashFromBase58("naHWJnt9VmL4pHBni3oBTxpMvqWU6B88phKvSn9ooEP"),
+				DurableNonceAccount:   solana.MustPublicKeyFromBase58("4QDJYFDBH6xLCoyGBqUBq3S5LmV91K39szrm7AE8aCgg"),
+				DurableNonceAuthority: solana.MustPublicKeyFromBase58("Dv3NqyhkSERDafaZByHeFXWJMjURo4G8SHkjbkmHVTJs"),
+
+				FeePayerDurableNonce:          solana.MustHashFromBase58("6MJ5iWWQRr5Pwu8efVWo2LhkmmtfZ64CYjaHTiDQpjjP"),
+				FeePayerDurableNonceAccount:   solana.MustPublicKeyFromBase58("BNC16RAQsgnkM3o5eX3s4FHUtuaF4QaAhFCneSzuPUbR"),
+				FeePayerDurableNonceAuthority: solana.MustPublicKeyFromBase58("G4FH1agHuh47YqBmHk8Pg4m6TQ4uhPNFFujjpjrcuhw5"),
+			},
+			independent:     false,
+			doubleSpendSafe: true,
+		},
 	}
 	for i, v := range vectors {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {

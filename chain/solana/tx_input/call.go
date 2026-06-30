@@ -51,7 +51,8 @@ func (input *CallInput) SetCall(call xc.TxCallPayload) error {
 
 	// Take whatever recent-blockhash that it ended up using.
 	input.TxInput.RecentBlockHash = solanaTx.Message.RecentBlockhash
-	if input.DoesTxUseOurDurableNonce(solanaTx) {
+	usingDurableNonce, _, _ := input.DoesTxUseOurDurableNonce(solanaTx)
+	if usingDurableNonce {
 		// If the transaction is using a durable nonce, then the recent-blockhash is the durable nonce,
 		// and we should sync that too for conflict resolution.
 		input.TxInput.DurableNonce = solanaTx.Message.RecentBlockhash

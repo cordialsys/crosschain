@@ -36,20 +36,27 @@ type TxInput struct {
 	DurableNonceAuthority solana.PublicKey `json:"durable_nonce_authority,omitempty"`
 	// If true, the nonce account needs to be created and initialized before use.
 	ShouldCreateDurableNonce bool `json:"should_create_durable_nonce,omitempty"`
+
+	// Fee-payer durable nonce fields are separate from the legacy durable_nonce
+	// fields so older builders keep using the main address nonce account.
+	FeePayerDurableNonce          solana.Hash         `json:"fee_payer_durable_nonce,omitempty"`
+	FeePayerDurableNonceAccount   solana.PublicKey    `json:"fee_payer_durable_nonce_account,omitempty"`
+	FeePayerDurableNonceAuthority solana.PublicKey    `json:"fee_payer_durable_nonce_authority,omitempty"`
+	ShouldCreateFeePayerNonce     bool                `json:"should_create_fee_payer_durable_nonce,omitempty"`
+	FeePayerBaseFee               xc.AmountBlockchain `json:"fee_payer_base_fee,omitempty"`
 }
 type GetTxInfo interface {
 	GetTimestamp() int64
 	GetRecentBlockhash() solana.Hash
 
-	GetDurableNonceAccount() solana.PublicKey
-	GetDurableNonceValue() solana.Hash
-	HasDurableNonce() bool
-	IsCreatingDurableNonceAccount() bool
+	GetFromAddressDurableNonceValue() solana.Hash
+	HasFromAddressDurableNonce() bool
+	EffectiveDurableNonceState() DurableNonceState
 
 	// Check if the transaction is using our durable nonce account.
 	// If so, we should try to sync to using our detect nonce value,
 	// to ensure smooth conflict resolution.
-	DoesTxUseOurDurableNonce(tx *solana.Transaction) bool
+	DoesTxUseOurDurableNonce(tx *solana.Transaction) (isAccountReferenced bool, nonceValue solana.Hash, nonceOk bool)
 }
 
 type TokenAccount struct {
@@ -76,17 +83,33 @@ func (input *TxInput) GetRecentBlockhash() solana.Hash {
 	return input.RecentBlockHash
 }
 
+func (input *TxInput) GetDurableNonceForFromAddress(fromAddress solana.PublicKey) (nonceAuthority solana.PublicKey, nonceAccount solana.PublicKey, nonceValue solana.Hash, needsCreation bool) {
+	authority := input.DurableNonceAuthority
+	if authority.IsZero() {
+		authority = fromAddress
+	}
+	return authority, input.DurableNonceAccount, input.DurableNonce, input.ShouldCreateDurableNonce
+}
+
+func (input *TxInput) GetDurableNonceForFeePayerAddress(feePayerAddress solana.PublicKey) (nonceAuthority solana.PublicKey, nonceAccount solana.PublicKey, nonceValue solana.Hash, needsCreation bool) {
+	authority := input.FeePayerDurableNonceAuthority
+	if authority.IsZero() {
+		authority = feePayerAddress
+	}
+	return authority, input.FeePayerDurableNonceAccount, input.FeePayerDurableNonce, input.ShouldCreateFeePayerNonce
+}
+
 // HasDurableNonce returns true if the transaction should use an existing durable nonce.
 // Returns false when the nonce account needs to be created (ShouldCreateDurableNonce=true).
-func (input *TxInput) HasDurableNonce() bool {
+func (input *TxInput) HasFromAddressDurableNonce() bool {
 	return !input.DurableNonceAccount.IsZero() && !input.ShouldCreateDurableNonce
 }
 
-func (input *TxInput) GetDurableNonceAccount() solana.PublicKey {
+func (input *TxInput) GetFromAddressDurableNonceAccount() solana.PublicKey {
 	return input.DurableNonceAccount
 }
 
-func (input *TxInput) GetDurableNonceValue() solana.Hash {
+func (input *TxInput) GetFromAddressDurableNonceValue() solana.Hash {
 	return input.DurableNonce
 }
 
@@ -94,33 +117,46 @@ func (input *TxInput) IsCreatingDurableNonceAccount() bool {
 	return input.ShouldCreateDurableNonce && !input.DurableNonceAccount.IsZero()
 }
 
-func (input *TxInput) DoesTxUseOurDurableNonce(tx *solana.Transaction) bool {
-	if !input.HasDurableNonce() {
-		return false
+func (input *TxInput) HasFeePayerDurableNonce() bool {
+	return !input.FeePayerDurableNonceAccount.IsZero() && !input.ShouldCreateFeePayerNonce
+}
+
+func (input *TxInput) IsCreatingFeePayerDurableNonceAccount() bool {
+	return input.ShouldCreateFeePayerNonce && !input.FeePayerDurableNonceAccount.IsZero()
+}
+
+func (input *TxInput) DoesTxUseOurDurableNonce(tx *solana.Transaction) (isAccountReferenced bool, nonceValue solana.Hash, nonceOk bool) {
+	referenced := false
+
+	if input.doesTxUseDurableNonce(tx, input.DurableNonceAccount, input.DurableNonce) {
+		referenced = true
+		if input.HasFromAddressDurableNonce() {
+			return true, input.DurableNonce, true
+		}
 	}
 
-	if tx.Message.RecentBlockhash.Equals(input.DurableNonce) && !input.DurableNonce.IsZero() {
+	if input.doesTxUseDurableNonce(tx, input.FeePayerDurableNonceAccount, input.FeePayerDurableNonce) {
+		referenced = true
+		if input.HasFeePayerDurableNonce() {
+			return true, input.FeePayerDurableNonce, true
+		}
+	}
+	return referenced, solana.Hash{}, false
+}
+
+func (input *TxInput) doesTxUseDurableNonce(tx *solana.Transaction, account solana.PublicKey, nonce solana.Hash) bool {
+	if tx.Message.RecentBlockhash.Equals(nonce) && !nonce.IsZero() {
 		return true
 	}
 	usingDurableNonce := false
 	for _, accountKey := range tx.Message.AccountKeys {
-		if input.DurableNonceAccount.Equals(accountKey) {
+		if account.Equals(accountKey) {
 			usingDurableNonce = true
 			break
 		}
 	}
 
 	return usingDurableNonce
-}
-
-// GetBlockhashForTx returns the blockhash to use for the transaction.
-// If a durable nonce is set and initialized, the nonce value is used instead of a recent blockhash.
-// When the nonce account needs to be created first, the recent blockhash is used.
-func (input *TxInput) GetBlockhashForTx() solana.Hash {
-	if input.HasDurableNonce() {
-		return input.DurableNonce
-	}
-	return input.RecentBlockHash
 }
 
 func (input *TxInput) GetDriver() xc.Driver {
@@ -166,6 +202,10 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 
 	// calculate the base fee (# of signatures * base fee)
 	feePerSignature := input.BaseFee
+	if input.ShouldCreateFeePayerNonce && !input.FeePayerBaseFee.IsZero() {
+		// use base-fee for the fee-payer nonce account
+		feePerSignature = input.FeePayerBaseFee
+	}
 	numSignatures := xc.NewAmountBlockchainFromUint64(1)
 	totalBaseFee := feePerSignature.Mul(&numSignatures)
 
@@ -179,20 +219,47 @@ func (input *TxInput) IsFeeLimitAccurate() bool {
 }
 
 func (input *TxInput) MatchDurableNonce(otherNonce GetTxInfo) (accountMatch, nonceMatch bool) {
-	sameAccount := input.DurableNonceAccount.Equals(otherNonce.GetDurableNonceAccount())
-	if sameAccount {
-		// Both creating the same nonce account = conflict
-		if input.IsCreatingDurableNonceAccount() && otherNonce.IsCreatingDurableNonceAccount() {
-			return true, true
-		}
-		// Both using the same nonce value = conflict (only one can succeed)
-		// Different nonce values = independent (each uses its own nonce)
-		if input.HasDurableNonce() && otherNonce.HasDurableNonce() {
-			return true, input.DurableNonce.Equals(otherNonce.GetDurableNonceValue())
-		}
+	mine := input.EffectiveDurableNonceState()
+	otherState := otherNonce.EffectiveDurableNonceState()
+	if mine.account.IsZero() || otherState.account.IsZero() || !mine.account.Equals(otherState.account) {
+		return false, false
 	}
-	// different accounts = independent
-	return false, false
+	// Both creating the same nonce account = conflict
+	if mine.creating && otherState.creating {
+		return true, true
+	}
+	// Both using the same nonce value = conflict (only one can succeed)
+	// Different nonce values = independent (each uses its own nonce)
+	if mine.has && otherState.has {
+		return true, mine.nonce.Equals(otherState.nonce)
+	}
+	return true, false
+}
+
+type DurableNonceState struct {
+	account  solana.PublicKey
+	nonce    solana.Hash
+	has      bool
+	creating bool
+}
+
+func (input *TxInput) EffectiveDurableNonceState() DurableNonceState {
+	// consider fee-payer first as it is prioritized by the transaction builder
+	feePayerState := DurableNonceState{
+		account:  input.FeePayerDurableNonceAccount,
+		nonce:    input.FeePayerDurableNonce,
+		has:      input.HasFeePayerDurableNonce(),
+		creating: input.IsCreatingFeePayerDurableNonceAccount(),
+	}
+	if feePayerState.has || feePayerState.creating {
+		return feePayerState
+	}
+	return DurableNonceState{
+		account:  input.DurableNonceAccount,
+		nonce:    input.DurableNonce,
+		has:      input.HasFromAddressDurableNonce(),
+		creating: input.IsCreatingDurableNonceAccount(),
+	}
 }
 
 func (input *TxInput) DidTimeoutOccur(other GetTxInfo) (timeout bool) {
@@ -225,7 +292,7 @@ func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
 		return false
 	}
 
-	if input.HasDurableNonce() {
+	if input.HasFromAddressDurableNonce() || input.HasFeePayerDurableNonce() {
 		sameAccount, sameNonce := input.MatchDurableNonce(otherInput)
 		if sameAccount {
 			if sameNonce {

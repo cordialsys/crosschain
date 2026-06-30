@@ -399,6 +399,25 @@ func TestDurableNonceAuthority(t *testing.T) {
 	solTx = trxn.(*Tx).SolTx
 	advanceNonce = decodeSystemInstruction[*system.AdvanceNonceAccount](t, solTx, 0)
 	require.Equal(t, fromPub, advanceNonce.GetNonceAuthorityAccount().PublicKey)
+
+	mainNonceAccount := solana.MustPublicKeyFromBase58("11111111111111111111111111111113")
+	feePayerNonceInput := &TxInput{
+		DurableNonceAccount:           mainNonceAccount,
+		DurableNonceAuthority:         fromPub,
+		DurableNonce:                  solana.Hash([32]byte{12}),
+		FeePayerDurableNonceAccount:   nonceAccount,
+		FeePayerDurableNonceAuthority: feePayerPub,
+		FeePayerDurableNonce:          solana.Hash([32]byte{13}),
+		ShouldCreateFeePayerNonce:     false,
+		ShouldCreateDurableNonce:      false,
+	}
+	trxn, err = txBuilder.Transfer(args, feePayerNonceInput)
+	require.NoError(t, err)
+	solTx = trxn.(*Tx).SolTx
+	advanceNonce = decodeSystemInstruction[*system.AdvanceNonceAccount](t, solTx, 0)
+	require.Equal(t, nonceAccount, advanceNonce.GetNonceAccount().PublicKey)
+	require.Equal(t, feePayerPub, advanceNonce.GetNonceAuthorityAccount().PublicKey)
+	require.Equal(t, solana.Hash([32]byte{13}), solTx.Message.RecentBlockhash)
 }
 
 func TestDurableNonceCreateUsesAuthority(t *testing.T) {
