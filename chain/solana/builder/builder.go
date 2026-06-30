@@ -247,21 +247,23 @@ func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, i
 		return nil, err
 	}
 	accountFrom, _ := solana.PublicKeyFromBase58(string(from))
-	nonceAuthority := accountFrom
-	if !txInput.DurableNonceAuthority.IsZero() {
-		nonceAuthority = txInput.DurableNonceAuthority
+
+	nonceAuthority, nonceAccount, nonceValue, shouldCreateNonce := txInput.GetDurableNonceForFromAddress(accountFrom)
+
+	if feePayer != from && (txInput.HasFeePayerDurableNonce() || txInput.IsCreatingFeePayerDurableNonceAccount()) {
+		nonceAuthority, nonceAccount, nonceValue, shouldCreateNonce = txInput.GetDurableNonceForFeePayerAddress(accountFeePayer)
 	}
 
 	// If the durable nonce account needs to be created, prepend creation instructions.
 	// The transaction will use the recent blockhash (not nonce) since the nonce account doesn't exist yet.
-	if txInput.ShouldCreateDurableNonce && !txInput.DurableNonceAccount.IsZero() {
+	if shouldCreateNonce && !nonceAccount.IsZero() {
 		// Nonce account requires 80 bytes, minimum rent is ~0.00144768 SOL
 		const nonceAccountSize = 80
 		const rentExemptLamports = 1447680
 
 		createInstr := system.NewCreateAccountWithSeedInstructionBuilder().
 			SetFundingAccount(accountFeePayer).
-			SetCreatedAccount(txInput.DurableNonceAccount).
+			SetCreatedAccount(nonceAccount).
 			SetBaseAccount(nonceAuthority).
 			SetBase(nonceAuthority).
 			SetSeed(DurableNonceSeed).
@@ -271,16 +273,16 @@ func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, i
 			Build()
 		initInstr := system.NewInitializeNonceAccountInstruction(
 			nonceAuthority,
-			txInput.DurableNonceAccount,
+			nonceAccount,
 			solana.SysVarRecentBlockHashesPubkey,
 			solana.SysVarRentPubkey,
 		).Build()
 		instructions = append([]solana.Instruction{createInstr, initInstr}, instructions...)
-	} else if txInput.HasDurableNonce() {
+	} else if !nonceAccount.IsZero() && !nonceValue.IsZero() {
 		// If using an existing durable nonce, prepend the AdvanceNonceAccount instruction.
 		// This must be the first instruction in the transaction.
 		advanceNonce := system.NewAdvanceNonceAccountInstruction(
-			txInput.DurableNonceAccount,
+			nonceAccount,
 			solana.SysVarRecentBlockHashesPubkey,
 			nonceAuthority,
 		).Build()
@@ -294,7 +296,10 @@ func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, i
 	}
 
 	// Use durable nonce value as blockhash if available, otherwise recent blockhash.
-	blockhash := txInput.GetBlockhashForTx()
+	blockhash := txInput.GetRecentBlockhash()
+	if !shouldCreateNonce && !nonceValue.IsZero() {
+		blockhash = nonceValue
+	}
 
 	tx1, err := solana.NewTransaction(
 		instructions,

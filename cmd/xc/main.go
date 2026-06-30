@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/cordialsys/crosschain/client/services"
 	"github.com/cordialsys/crosschain/cmd/xc/canton"
@@ -109,5 +110,7 @@ func CmdXc() *cobra.Command {
 
 func main() {
 	rootCmd := CmdXc()
-	_ = rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

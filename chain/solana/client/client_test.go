@@ -433,6 +433,9 @@ func TestFetchTransferInputUsesFeePayerDurableNonce(t *testing.T) {
 		solanaRentExemptionResponse,
 		`{"context":{"slot":83986105},"value":5000000}`,
 		solanaMissingNonceAccountResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
 		`{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`,
 	})
 	defer close()
@@ -445,8 +448,11 @@ func TestFetchTransferInputUsesFeePayerDurableNonce(t *testing.T) {
 	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
 	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
 	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	fromPub := solana.MustPublicKeyFromBase58(string(from))
 	feePayerPub := solana.MustPublicKeyFromBase58(string(feePayer))
-	expectedNonceAccount, err := client.DeriveNonceAccount(feePayerPub)
+	expectedMainNonceAccount, err := client.DeriveNonceAccount(fromPub)
+	require.NoError(t, err)
+	expectedFeePayerNonceAccount, err := client.DeriveNonceAccount(feePayerPub)
 	require.NoError(t, err)
 
 	args := buildertest.MustNewTransferArgs(
@@ -460,15 +466,21 @@ func TestFetchTransferInputUsesFeePayerDurableNonce(t *testing.T) {
 	require.NoError(t, err)
 
 	txInput := input.(*TxInput)
-	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
-	require.Equal(t, expectedNonceAccount, txInput.DurableNonceAccount)
+	require.Equal(t, fromPub, txInput.DurableNonceAuthority)
+	require.Equal(t, expectedMainNonceAccount, txInput.DurableNonceAccount)
 	require.True(t, txInput.ShouldCreateDurableNonce)
+	require.Equal(t, feePayerPub, txInput.FeePayerDurableNonceAuthority)
+	require.Equal(t, expectedFeePayerNonceAccount, txInput.FeePayerDurableNonceAccount)
+	require.True(t, txInput.ShouldCreateFeePayerNonce)
 }
 
 func TestFetchTransferInputUsesManualNonceAccountAuthority(t *testing.T) {
 	nonceAccountResponse := `{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"data":["AAAAAAEAAAAPG/b9JA7QaYF+Nxq/RiP/wNpsnKYydqOW2ERH8LsfQLG5Wh+2FsPTlk9M1gKbZN6qg6bOAZ0f5erphxaL0YC8iBMAAAAAAAA=","base64"],"executable":false,"lamports":2039280,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":80}}`
 	server, close := testtypes.MockJSONRPC(t, []string{
 		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
 		solanaRentExemptionResponse,
 		`{"context":{"slot":83986105},"value":5000000}`,
 		nonceAccountResponse,
@@ -499,15 +511,20 @@ func TestFetchTransferInputUsesManualNonceAccountAuthority(t *testing.T) {
 	require.NoError(t, err)
 
 	txInput := input.(*TxInput)
-	require.Equal(t, manualNonceAccount, txInput.DurableNonceAccount)
-	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
-	require.False(t, txInput.ShouldCreateDurableNonce)
-	require.Equal(t, "Cxm69hccnEtjtbzSUqV3QmxTRDh56ZD5sjVxvRHEpZ7y", txInput.DurableNonce.String())
+	require.NotEqual(t, manualNonceAccount, txInput.DurableNonceAccount)
+	require.True(t, txInput.ShouldCreateDurableNonce)
+	require.Equal(t, manualNonceAccount, txInput.FeePayerDurableNonceAccount)
+	require.Equal(t, feePayerPub, txInput.FeePayerDurableNonceAuthority)
+	require.False(t, txInput.ShouldCreateFeePayerNonce)
+	require.Equal(t, "Cxm69hccnEtjtbzSUqV3QmxTRDh56ZD5sjVxvRHEpZ7y", txInput.FeePayerDurableNonce.String())
 }
 
 func TestFetchTransferInputUsesFeePayerAuthorityForMissingManualNonceAccount(t *testing.T) {
 	server, close := testtypes.MockJSONRPC(t, []string{
 		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
 		solanaRentExemptionResponse,
 		`{"context":{"slot":83986105},"value":5000000}`,
 		solanaMissingNonceAccountResponse,
@@ -538,16 +555,21 @@ func TestFetchTransferInputUsesFeePayerAuthorityForMissingManualNonceAccount(t *
 	require.NoError(t, err)
 
 	txInput := input.(*TxInput)
-	require.Equal(t, manualNonceAccount, txInput.DurableNonceAccount)
-	require.Equal(t, feePayerPub, txInput.DurableNonceAuthority)
+	require.NotEqual(t, manualNonceAccount, txInput.DurableNonceAccount)
 	require.True(t, txInput.ShouldCreateDurableNonce)
-	require.True(t, txInput.DurableNonce.IsZero())
+	require.Equal(t, manualNonceAccount, txInput.FeePayerDurableNonceAccount)
+	require.Equal(t, feePayerPub, txInput.FeePayerDurableNonceAuthority)
+	require.True(t, txInput.ShouldCreateFeePayerNonce)
+	require.True(t, txInput.FeePayerDurableNonce.IsZero())
 }
 
 func TestFetchTransferInputRejectsManualNonceAccountWithUnexpectedAuthority(t *testing.T) {
 	nonceAccountResponse := `{"context":{"apiVersion":"2.0.5","slot":83986105},"value":{"data":["AAAAAAEAAACcKgZWItAWfKAiXufOTPtDXIJiRaSh6upS4DjjZbG6ILG5Wh+2FsPTlk9M1gKbZN6qg6bOAZ0f5erphxaL0YC8iBMAAAAAAAA=","base64"],"executable":false,"lamports":2039280,"owner":"11111111111111111111111111111111","rentEpoch":18446744073709551615,"space":80}}`
 	server, close := testtypes.MockJSONRPC(t, []string{
 		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		`{"context":{"slot":83986105},"value":5000000}`,
+		solanaMissingNonceAccountResponse,
 		solanaRentExemptionResponse,
 		`{"context":{"slot":83986105},"value":5000000}`,
 		nonceAccountResponse,

@@ -142,11 +142,11 @@ func (c *TxCall) SetInput(input xc.CallTxInput) error {
 
 	// If the nonce account is used, do not use recent-blockhash, as this
 	// transaction is very likely using durable-nonce.
-	usingDurableNonce := txInput.DoesTxUseOurDurableNonce(c.SolTx)
+	usingDurableNonce, nonceValue, nonceOk := txInput.DoesTxUseOurDurableNonce(c.SolTx)
 	if usingDurableNonce {
-		if txInput.HasDurableNonce() {
+		if nonceOk {
 			// use our detected durable nonce value since tx is using our durable nonce account.
-			c.SolTx.Message.RecentBlockhash = txInput.GetDurableNonceValue()
+			c.SolTx.Message.RecentBlockhash = nonceValue
 		}
 	} else {
 		// Update using the latest blockhash to prevent unwanted expiry.

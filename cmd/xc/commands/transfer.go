@@ -178,6 +178,10 @@ func CmdTxTransfer() *cobra.Command {
 			if memo != "" {
 				tfOptions = append(tfOptions, builder.OptionMemo(memo))
 			}
+			if nonceAccount := os.Getenv("NONCE_ACCOUNT"); nonceAccount != "" {
+				logrus.WithField("nonce-account", nonceAccount).Info("using durable nonce account")
+				tfOptions = append(tfOptions, builder.OptionNonceAccount(nonceAccount))
+			}
 			if contract != "" {
 				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
 			}
