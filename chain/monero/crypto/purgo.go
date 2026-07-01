@@ -1,7 +1,6 @@
 package crypto
 
 // Pure Go implementations of Monero crypto primitives.
-// These replace the CGO functions in cref/monero_crypto.go.
 
 import (
 	"encoding/hex"
