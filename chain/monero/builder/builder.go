@@ -17,23 +17,35 @@ import (
 )
 
 type TxBuilder struct {
-	Asset   *xc.ChainBaseConfig
-	pubView []byte // public view key derived from chain.view_key (used for change-output stealth addresses)
+	Asset *xc.ChainBaseConfig
 }
 
+// NewTxBuilder returns a Monero tx builder.  The view key is NOT read from
+// the chain config; it must be supplied per-transfer via
+// builder.OptionViewKey (the CLI plumbs this automatically from the client
+// config).
 func NewTxBuilder(cfg *xc.ChainBaseConfig) (TxBuilder, error) {
-	if cfg == nil || cfg.ViewKey == "" {
-		return TxBuilder{}, fmt.Errorf("monero tx builder requires chain.view_key to be configured")
+	return TxBuilder{Asset: cfg}, nil
+}
+
+// senderPubViewFromArgs derives the sender's public view key from the
+// private view key supplied via builder.OptionViewKey.  Returns an error if
+// the option is missing or malformed - the tx builder cannot construct a
+// stealth-address change output without it.
+func senderPubViewFromArgs(args xcbuilder.TransferArgs) ([]byte, error) {
+	vkHex, ok := args.GetViewKey()
+	if !ok || vkHex == "" {
+		return nil, fmt.Errorf("monero tx builder requires a view key (pass builder.OptionViewKey)")
 	}
-	viewKey, err := hex.DecodeString(cfg.ViewKey)
-	if err != nil || len(viewKey) != 32 {
-		return TxBuilder{}, fmt.Errorf("monero view_key must be 64 hex chars (32 bytes)")
+	vk, err := hex.DecodeString(vkHex)
+	if err != nil || len(vk) != 32 {
+		return nil, fmt.Errorf("monero view key must be 64 hex chars (32 bytes)")
 	}
-	pubView, err := crypto.PublicFromPrivate(viewKey)
+	pubView, err := crypto.PublicFromPrivate(vk)
 	if err != nil {
-		return TxBuilder{}, fmt.Errorf("invalid monero view_key: %w", err)
+		return nil, fmt.Errorf("invalid monero view key: %w", err)
 	}
-	return TxBuilder{Asset: cfg, pubView: pubView}, nil
+	return pubView, nil
 }
 
 func (b TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
@@ -62,7 +74,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	default:
 		return nil, fmt.Errorf("sender public key must be 32 bytes (pubSpend), got %d", len(senderPubKey))
 	}
-	senderPubView := b.pubView
+	senderPubView, err := senderPubViewFromArgs(args)
+	if err != nil {
+		return nil, err
+	}
 
 	amountU64 := args.GetAmount().Uint64()
 

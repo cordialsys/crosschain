@@ -77,7 +77,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
 			algorithm, _ := cmd.Flags().GetString("algorithm")
-			addressArgs := []xcaddress.AddressOption{}
+			addressArgs := ChainAddressOptions(chainConfig)
 			addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat(addressFormat)))
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
@@ -122,6 +122,8 @@ func CmdTxTransfer() *cobra.Command {
 				builder.OptionTimestamp(time.Now().Unix()),
 				builder.OptionTransactionAttempts(previousAttempts),
 			}
+			// Bridge chain-config view key (for Monero) to the tx builder.
+			tfOptions = append(tfOptions, ChainBuilderOptions(chainConfig)...)
 
 			mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
 			if err != nil {
@@ -158,7 +160,7 @@ func CmdTxTransfer() *cobra.Command {
 				if feePayerPrivateKey == "" {
 					return fmt.Errorf("fee-payer secret reference loaded an empty value")
 				}
-				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey, ChainAddressOptions(chainConfig)...)
 				if err != nil {
 					return fmt.Errorf("could not import fee-payer private key: %v", err)
 				}

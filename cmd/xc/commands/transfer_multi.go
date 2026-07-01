@@ -129,7 +129,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 					return fmt.Errorf("from address at position %d loaded a blank value for secret", i)
 				}
 				algorithm := algorithms[i]
-				addressArgs := []xcaddress.AddressOption{}
+				addressArgs := ChainAddressOptions(chainConfig)
 				if algorithm != "" {
 					addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 				}
@@ -193,6 +193,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
 			}
+			tfOptions = append(tfOptions, ChainBuilderOptions(chainConfig)...)
 
 			txBuilder, err := xcFactory.NewTxBuilder(chainConfig.GetChain().Base())
 			if err != nil {
@@ -214,7 +215,8 @@ func CmdTxMultiTransfer() *cobra.Command {
 				if feePayerPrivateKey == "" {
 					return fmt.Errorf("fee-payer secret reference loaded an empty value")
 				}
-				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+				chainOpts := ChainAddressOptions(chainConfig)
+				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey, chainOpts...)
 				if err != nil {
 					return fmt.Errorf("could not import fee-payer private key: %v", err)
 				}
@@ -222,7 +224,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("could not create fee-payer public key: %v", err)
 				}
-				addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
+				addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), chainOpts...)
 				if err != nil {
 					return fmt.Errorf("could not create address builder: %v", err)
 				}

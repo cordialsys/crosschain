@@ -757,11 +757,6 @@ type ChainBaseConfig struct {
 	// Optional address configuration
 	Address AddressConfig `yaml:"address,omitempty"`
 
-	// Private view key for privacy chains (Monero).  Required by Monero to
-	// authenticate with the light-wallet server and decode owned outputs.
-	// Treat as a secret credential.
-	ViewKey string `yaml:"view_key,omitempty"`
-
 	// Annotations for what the chain currently supports.
 	// This must accurately reflect the implementation and is unit-tested.
 	Support ChainSupport `yaml:"support"`
@@ -803,6 +798,16 @@ type ChainClientConfig struct {
 	// may be set here.
 	IndexerUrl  string `yaml:"indexer_url,omitempty"`
 	IndexerType string `yaml:"indexer_type,omitempty"`
+
+	// Private view key for privacy chains (Monero).  Required by the Monero
+	// client to authenticate with the light-wallet server and decode owned
+	// outputs.  Treat as a secret credential.
+	//
+	// The Monero tx-builder does NOT read this field; pass it via
+	// builder.OptionViewKey when constructing a transfer (the CLI bridges the
+	// two so `xc transfer` and library callers using the client config both
+	// just work).
+	ViewKey string `yaml:"view_key,omitempty"`
 	// Maximun depth to scan for transaction, if there is no index to use (substrate...)
 	MaxScanDepth int `yaml:"max_scan_depth,omitempty"`
 

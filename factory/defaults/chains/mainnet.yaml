@@ -1736,10 +1736,6 @@ chains:
     # this implementation, so a single key can scan deposits across all addresses.
     # Treat as a secret credential - it grants read access to all transactions.
     view_key: "ca4cb494a26e6780ef43746bd01b73b4a4595dc2dc8b442994e8c081b7cd960b"
-    native_assets:
-      - asset_id: "XMR"
-        decimals: 12
-        fee_limit: "0.0001"
     external:
       coin_gecko:
         asset_id: monero

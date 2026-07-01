@@ -350,6 +350,12 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "crosschain-near",
 			out:   "crosschain-near",
 		},
+		{
+			// Monero addresses are case-sensitive base58 - normalize is a no-op.
+			chain: xc.XMR,
+			inp:   "A1QNoLe4UHyVg7v9EPWLMoMP2XRqPytg7DXjSqJhSJd635qPGsW9yE2aRsnw212iFtBeYrzfn6bGMYNXhDvcwDXY8uV3Sf2",
+			out:   "A1QNoLe4UHyVg7v9EPWLMoMP2XRqPytg7DXjSqJhSJd635qPGsW9yE2aRsnw212iFtBeYrzfn6bGMYNXhDvcwDXY8uV3Sf2",
+		},
 	}
 
 	// test that we have a test vector for each chain

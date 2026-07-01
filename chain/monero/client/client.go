@@ -39,10 +39,10 @@ func NewClient(cfg *xc.ChainConfig) (*Client, error) {
 	if url == "" {
 		return nil, fmt.Errorf("monero RPC URL not configured")
 	}
-	if cfg.ViewKey == "" {
+	if cfg.ChainClientConfig == nil || cfg.ChainClientConfig.ViewKey == "" {
 		return nil, fmt.Errorf("monero requires chain.view_key to be configured")
 	}
-	viewKey, err := hex.DecodeString(cfg.ViewKey)
+	viewKey, err := hex.DecodeString(cfg.ChainClientConfig.ViewKey)
 	if err != nil || len(viewKey) != 32 {
 		return nil, fmt.Errorf("monero view_key must be 64 hex chars (32 bytes)")
 	}
