@@ -2,6 +2,7 @@ package tx
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	xc "github.com/cordialsys/crosschain"
@@ -13,6 +14,15 @@ type TxInput struct {
 	Amount     uint64
 	KeyOffsets []uint64
 	KeyImage   []byte // 32 bytes
+}
+
+// SpentOutputRef identifies the on-chain output consumed by an input, so that
+// after signing (which computes the key image) the client can report the
+// authoritative (output, key_image) pair to the light-wallet server. Parallel
+// to Tx.Inputs; set by the builder and retained through signing.
+type SpentOutputRef struct {
+	GlobalIndex uint64 // global output index on the chain (LWS output id)
+	PublicKey   string // hex one-time output public key (for debugging/sanity)
 }
 
 type TxOutput struct {
@@ -44,6 +54,16 @@ type Tx struct {
 	// Set by the builder, consumed by Sighashes().
 	CLSAGContexts []CLSAGInputContext `json:"-"`
 
+	// SpentOutputs identifies the consumed output for each input (parallel to
+	// Inputs). Unlike CLSAGContexts it is retained after signing so SubmitTx can
+	// report the (output, key_image) pairs to the light-wallet server.
+	SpentOutputs []SpentOutputRef
+
+	// FromAddress is the sender wallet address. Retained so the (output,
+	// key_image) pairs can be imported to the light-wallet server under the
+	// correct account.
+	FromAddress string
+
 	// Ring size (mixin + 1), needed for CLSAG serialization
 	RingSize int
 
@@ -64,6 +84,55 @@ type CLSAGInputContext struct {
 	PseudoMask  *edwards25519.Scalar  // pseudo-output mask
 	TxPubKeyHex string                // hex, original tx public key R
 	OutputIndex uint64                // output index in the original tx
+}
+
+// BroadcastMetadata travels alongside the serialized tx (in
+// SubmitTxReq.BroadcastInput) so the client can report the authoritative
+// (output, key_image) pairs to the light-wallet server after broadcast.
+type BroadcastMetadata struct {
+	Sender         string          `json:"sender"`
+	SpentKeyImages []SpentKeyImage `json:"spent_key_images"`
+}
+
+type SpentKeyImage struct {
+	GlobalIndex uint64 `json:"global_index"`
+	KeyImage    string `json:"key_image"` // hex
+}
+
+// GetMetadata returns the sender address and the (output, key_image) pairs for
+// the signed inputs, so SubmitTx can import them to the light-wallet server for
+// authoritative spent-output tracking. Returns (nil, false, nil) before signing
+// (key images not yet computed) so it is a no-op on unsigned txs.
+func (tx *Tx) GetMetadata() ([]byte, bool, error) {
+	if len(tx.SpentOutputs) == 0 || len(tx.SpentOutputs) != len(tx.Inputs) {
+		return nil, false, nil
+	}
+	meta := BroadcastMetadata{Sender: tx.FromAddress}
+	for i, ref := range tx.SpentOutputs {
+		ki := tx.Inputs[i].KeyImage
+		if len(ki) != 32 || isZero(ki) {
+			// not signed yet
+			return nil, false, nil
+		}
+		meta.SpentKeyImages = append(meta.SpentKeyImages, SpentKeyImage{
+			GlobalIndex: ref.GlobalIndex,
+			KeyImage:    hex.EncodeToString(ki),
+		})
+	}
+	bz, err := json.Marshal(meta)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to encode monero broadcast metadata: %w", err)
+	}
+	return bz, len(meta.SpentKeyImages) > 0, nil
+}
+
+func isZero(b []byte) bool {
+	for _, x := range b {
+		if x != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func (tx *Tx) Hash() xc.TxHash {

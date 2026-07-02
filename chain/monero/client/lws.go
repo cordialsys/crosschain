@@ -144,25 +144,59 @@ func (l *LWSClient) GetUnspentOuts(ctx context.Context) ([]LWSOutput, uint64, ui
 	perByteFee := resp.PerByteFee
 	feeMask := resp.FeeMask
 
-	// Filter outputs that LWS already knows are spent (have valid key image)
-	var unspent []LWSOutput
-	for _, out := range resp.Outputs {
-		if len(out.SpendKeyImages) > 0 && len(out.SpendKeyImages[0]) == 64 {
-			// LWS has a key image for this output - it's been spent
-			logrus.WithField("global_index", out.GlobalIndex).Debug("LWS reports output as spent (has key image)")
-			continue
-		}
-		unspent = append(unspent, out)
-	}
+	// NOTE: we intentionally do NOT filter on the per-output SpendKeyImages
+	// field here. Those are candidate key images the LWS scanner records for
+	// any tx that used the output as a ring member - which includes decoy uses,
+	// producing false positives (especially under a shared view key). The
+	// LWS `get_unspent_outs` endpoint already excludes outputs that have a
+	// client-imported *authoritative* key image (see /import_key_images), so
+	// everything returned here is genuinely spendable.
+	unspent := resp.Outputs
 
 	logrus.WithFields(logrus.Fields{
-		"total":        len(resp.Outputs),
 		"unspent":      len(unspent),
 		"per_byte_fee": perByteFee,
 		"fee_mask":     feeMask,
 	}).Info("got unspent outputs from LWS")
 
 	return unspent, perByteFee, feeMask, nil
+}
+
+// ImportKeyImage is one authoritative (output, key_image) pair for
+// ImportKeyImages.
+type ImportKeyImage struct {
+	GlobalIndex uint64 `json:"global_index"`
+	KeyImage    string `json:"key_image"` // hex
+}
+
+// ImportKeyImages reports authoritative key images for `address`'s outputs to
+// the LWS so it can distinguish real spends from decoy ring-membership. The
+// view key (from SetCredentials) authenticates the account.
+func (l *LWSClient) ImportKeyImages(ctx context.Context, address string, images []ImportKeyImage) error {
+	if len(images) == 0 {
+		return nil
+	}
+	result, err := l.post(ctx, "import_key_images", map[string]interface{}{
+		"address":  address,
+		"view_key": l.viewKey,
+		"images":   images,
+	})
+	if err != nil {
+		return fmt.Errorf("import_key_images failed: %w", err)
+	}
+	var resp struct {
+		Imported       string `json:"imported"`
+		UnknownOutputs string `json:"unknown_outputs"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return fmt.Errorf("parse import_key_images response: %w", err)
+	}
+	logrus.WithFields(logrus.Fields{
+		"address":  address,
+		"imported": resp.Imported,
+		"unknown":  resp.UnknownOutputs,
+	}).Info("imported key images to LWS")
+	return nil
 }
 
 // GetAddressInfo fetches balance info from the LWS.

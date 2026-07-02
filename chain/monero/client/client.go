@@ -14,6 +14,7 @@ import (
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/monero/crypto"
+	monerotx "github.com/cordialsys/crosschain/chain/monero/tx"
 	"github.com/cordialsys/crosschain/chain/monero/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	"filippo.io/edwards25519"
@@ -371,7 +372,29 @@ func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) er
 
 	txHex := hex.EncodeToString(txData)
 
-	// Submit via LWS too (so it tracks our key images for spent detection)
+	// Import authoritative key images to LWS *before* broadcasting so a
+	// concurrent FetchTransferInput can't re-select an output we're consuming.
+	// A failed broadcast leaves the imports "pending"; the LWS expires them if
+	// they never appear on-chain, reverting the outputs to spendable.
+	if c.lws != nil && submitReq.BroadcastInput != "" {
+		var meta monerotx.BroadcastMetadata
+		if err := json.Unmarshal([]byte(submitReq.BroadcastInput), &meta); err != nil {
+			logrus.WithError(err).Warn("could not parse monero broadcast metadata; skipping key-image import")
+		} else if meta.Sender != "" && len(meta.SpentKeyImages) > 0 {
+			imgs := make([]ImportKeyImage, 0, len(meta.SpentKeyImages))
+			for _, s := range meta.SpentKeyImages {
+				imgs = append(imgs, ImportKeyImage{GlobalIndex: s.GlobalIndex, KeyImage: s.KeyImage})
+			}
+			c.lws.SetCredentials(meta.Sender, hex.EncodeToString(c.viewKey))
+			if err := c.lws.ImportKeyImages(ctx, meta.Sender, imgs); err != nil {
+				// Non-fatal: broadcast still proceeds; import is retryable and the
+				// network is the real double-spend arbiter.
+				logrus.WithError(err).Warn("failed to import key images to LWS (non-fatal)")
+			}
+		}
+	}
+
+	// Also relay via LWS (best-effort; the daemon send below is authoritative).
 	if c.lws != nil {
 		_, err := c.lws.post(ctx, "submit_raw_tx", map[string]interface{}{
 			"tx": txHex,

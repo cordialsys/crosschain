@@ -234,6 +234,7 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	// Build inputs (key images left empty - computed by signer)
 	var txInputs []tx.TxInput
 	var clsagContexts []tx.CLSAGInputContext
+	var spentOutputs []tx.SpentOutputRef
 
 	ringSize := 0
 	for i, selOut := range selectedOutputs {
@@ -275,6 +276,10 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 			TxPubKeyHex: selOut.TxPubKey,
 			OutputIndex: selOut.Index,
 		})
+		spentOutputs = append(spentOutputs, tx.SpentOutputRef{
+			GlobalIndex: selOut.GlobalIndex,
+			PublicKey:   selOut.PublicKey,
+		})
 		ringSize = len(ring)
 	}
 
@@ -292,6 +297,8 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		EcdhInfo:       ecdhInfo,
 		BpPlusNative:   &bpFields,
 		RingSize:       ringSize,
+		SpentOutputs:   spentOutputs,
+		FromAddress:    string(args.GetFrom()),
 	}
 
 	// Compute the CLSAG message from the serialized blob
