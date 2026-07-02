@@ -39,7 +39,8 @@ func CmdCreateAccount() *cobra.Command {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
-			xcSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
+			chainOpts := ChainAddressOptions(chainConfig)
+			xcSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, chainOpts...)
 			if err != nil {
 				return fmt.Errorf("could not import private key: %v", err)
 			}
@@ -49,7 +50,7 @@ func CmdCreateAccount() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not derive public key: %v", err)
 			}
-			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
+			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), chainOpts...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
 			}

@@ -106,6 +106,14 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 			CatalystPassword:      "raw:catalyst:test-secret",
 		}
 	}
+	if driver == xc.DriverMonero {
+		// Monero requires a private view key and an indexer URL for the
+		// client, plus a view key for the address builder / signer.  Use a
+		// fixed canonical scalar so tests don't depend on entropy.
+		fakeAsset.URL = "http://monerod.example"
+		fakeAsset.IndexerUrl = "http://lws.example"
+		fakeAsset.ViewKey = "ca4cb494a26e6780ef43746bd01b73b4a4595dc2dc8b442994e8c081b7cd960b"
+	}
 	return fakeAsset
 }
 
@@ -274,7 +282,14 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 
 	for _, chainCfg := range factory.GetAllChains() {
 		driver := chainCfg.Driver
-		addressBuilder, err := drivers.NewAddressBuilder(chainCfg.Base())
+		// Chain-level defaults (e.g. Monero's view key from client config)
+		// must be plumbed to signer/address builder via options - the factory
+		// no longer auto-injects.
+		var chainOpts []xcaddress.AddressOption
+		if chainCfg.ChainClientConfig != nil && chainCfg.ChainClientConfig.ViewKey != "" {
+			chainOpts = append(chainOpts, xcaddress.OptionViewKey(chainCfg.ChainClientConfig.ViewKey))
+		}
+		addressBuilder, err := drivers.NewAddressBuilder(chainCfg.Base(), chainOpts...)
 		require.NoError(err, "Missing driver for NewAddressBuilder: "+driver)
 		require.NotNil(addressBuilder)
 
@@ -285,7 +300,7 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 
 		// verify valid address is accepted for all known formats
 		testSecret := "cbfffd116c66668df349e724719a160fdb30808157c0242ba0f21d2222c284a9"
-		signer, err := signer.New(driver, testSecret, chainCfg.Base())
+		signer, err := signer.New(driver, testSecret, chainCfg.Base(), chainOpts...)
 		require.NoError(err)
 		publicKey, err := signer.PublicKey()
 		require.NoError(err)
@@ -294,7 +309,9 @@ func (s *CrosschainTestSuite) TestAllNewAddressBuilder() {
 			addressBuilder,
 		}
 		for _, format := range chainCfg.Address.Formats {
-			builder, err := drivers.NewAddressBuilder(chainCfg.Base(), xcaddress.OptionFormat(xc.AddressFormat(format)))
+			opts := append([]xcaddress.AddressOption{}, chainOpts...)
+			opts = append(opts, xcaddress.OptionFormat(xc.AddressFormat(format)))
+			builder, err := drivers.NewAddressBuilder(chainCfg.Base(), opts...)
 			require.NoError(err)
 			addressBuilders = append(addressBuilders, builder)
 		}

@@ -987,6 +987,21 @@ chains:
     gas_budget_default: "0.1"
     decimals: 18
     fee_limit: "100.0"
+  XMR:
+    chain: XMR
+    support:
+      fee:
+        accurate: false
+    driver: monero
+    chain_name: Monero Testnet
+    decimals: 12
+    fee_limit: "0.01"
+    confirmations_final: 5
+    chain_id: "testnet"
+    # Shared private view key (hex). Required: independent of any spend key in
+    # this implementation, so a single key can scan deposits across all addresses.
+    # Treat as a secret credential - it grants read access to all transactions.
+    view_key: "ca4cb494a26e6780ef43746bd01b73b4a4595dc2dc8b442994e8c081b7cd960b"
   0G:
     chain: 0G
     support:

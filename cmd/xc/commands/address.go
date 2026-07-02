@@ -22,7 +22,7 @@ func CmdAddress() *cobra.Command {
 			xcFactory := setup.UnwrapXc(cmd.Context())
 			chainConfig := setup.UnwrapChain(cmd.Context())
 			algorithm, _ := cmd.Flags().GetString("algorithm")
-			addressArgs := []xcaddress.AddressOption{}
+			addressArgs := ChainAddressOptions(chainConfig)
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
 			}

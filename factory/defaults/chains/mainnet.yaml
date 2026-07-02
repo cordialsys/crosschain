@@ -1719,6 +1719,28 @@ chains:
         asset_id: stellar
       indexing_co:
         chain_id: stellar
+  XMR:
+    chain: XMR
+    support:
+      fee:
+        accurate: false
+    driver: monero
+    chain_name: Monero
+    decimals: 12
+    fee_limit: "0.0001"
+    # Monero enforces CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE = 10:
+    # an output must be at least 10 blocks deep before it can be spent.
+    # Attempting to spend an immature output results in `invalid_input` rejection.
+    confirmations_final: 10
+    # Shared private view key (hex). Required: independent of any spend key in
+    # this implementation, so a single key can scan deposits across all addresses.
+    # Treat as a secret credential - it grants read access to all transactions.
+    view_key: "ca4cb494a26e6780ef43746bd01b73b4a4595dc2dc8b442994e8c081b7cd960b"
+    external:
+      coin_gecko:
+        asset_id: monero
+      coin_market_cap:
+        asset_id: "328"
   ZETA:
     chain: ZETA
     support:

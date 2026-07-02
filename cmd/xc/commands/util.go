@@ -6,10 +6,35 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcaddress "github.com/cordialsys/crosschain/address"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/cordialsys/crosschain/factory/signer"
 )
+
+// ChainAddressOptions returns the base xcaddress options implied by the
+// chain client config.  Currently this bridges the private view key from
+// ChainClientConfig to xcaddress.OptionViewKey so signer and address-builder
+// construction "just works" for Monero when the CLI has a view key
+// configured.  Returns an empty slice if no bridged options apply.
+func ChainAddressOptions(chainConfig *xc.ChainConfig) []xcaddress.AddressOption {
+	var opts []xcaddress.AddressOption
+	if chainConfig != nil && chainConfig.ChainClientConfig != nil && chainConfig.ChainClientConfig.ViewKey != "" {
+		opts = append(opts, xcaddress.OptionViewKey(chainConfig.ChainClientConfig.ViewKey))
+	}
+	return opts
+}
+
+// ChainBuilderOptions returns builder options implied by the chain client
+// config (currently just the view key, for privacy chains).  Callers should
+// prepend these so user-supplied builder options can still override.
+func ChainBuilderOptions(chainConfig *xc.ChainConfig) []builder.BuilderOption {
+	var opts []builder.BuilderOption
+	if chainConfig != nil && chainConfig.ChainClientConfig != nil && chainConfig.ChainClientConfig.ViewKey != "" {
+		opts = append(opts, builder.OptionViewKey(chainConfig.ChainClientConfig.ViewKey))
+	}
+	return opts
+}
 
 func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, args []string, keyRef string, format string) (xc.Address, error) {
 	if len(args) > 0 {
@@ -28,12 +53,13 @@ func inputAddressOrDerived(xcFactory *factory.Factory, chainConfig *xc.ChainConf
 	if privateKeyInput == "" {
 		return "", fmt.Errorf("must provide [address] as input, set env %s for it to be derived", signer.EnvPrivateKey)
 	}
-	signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
+	chainOpts := ChainAddressOptions(chainConfig)
+	signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, chainOpts...)
 	if err != nil {
 		return "", fmt.Errorf("could not import private key: %v", err)
 	}
 
-	addressArgs := []xcaddress.AddressOption{}
+	addressArgs := chainOpts
 	addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat(format)))
 	publicKey, err := signer.PublicKey()
 	if err != nil {

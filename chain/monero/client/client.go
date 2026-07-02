@@ -1,0 +1,699 @@
+package client
+
+import (
+	"bytes"
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/monero/crypto"
+	monerotx "github.com/cordialsys/crosschain/chain/monero/tx"
+	"github.com/cordialsys/crosschain/chain/monero/tx_input"
+	xclient "github.com/cordialsys/crosschain/client"
+	"filippo.io/edwards25519"
+	txinfo "github.com/cordialsys/crosschain/client/tx_info"
+	xctypes "github.com/cordialsys/crosschain/client/types"
+	"github.com/sirupsen/logrus"
+)
+
+// txBatchSize is the number of transactions to fetch per RPC request.
+// Public nodes limit requests in restricted mode.
+const txBatchSize = 25
+
+type Client struct {
+	url     string
+	cfg     *xc.ChainConfig
+	http    *http.Client
+	lws     *LWSClient // light wallet server for indexed queries (required)
+	viewKey []byte     // shared private view key
+}
+
+func NewClient(cfg *xc.ChainConfig) (*Client, error) {
+	url, _ := cfg.ClientURL()
+	if url == "" {
+		return nil, fmt.Errorf("monero RPC URL not configured")
+	}
+	if cfg.ChainClientConfig == nil || cfg.ChainClientConfig.ViewKey == "" {
+		return nil, fmt.Errorf("monero requires chain.view_key to be configured")
+	}
+	viewKey, err := hex.DecodeString(cfg.ChainClientConfig.ViewKey)
+	if err != nil || len(viewKey) != 32 {
+		return nil, fmt.Errorf("monero view_key must be 64 hex chars (32 bytes)")
+	}
+	if cfg.IndexerUrl == "" {
+		return nil, fmt.Errorf("monero requires chain.indexer_url (monero-lws endpoint)")
+	}
+
+	c := &Client{
+		url:     url,
+		cfg:     cfg,
+		viewKey: viewKey,
+		http: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		lws: NewLWSClient(cfg.IndexerUrl),
+	}
+	logrus.WithField("lws_url", cfg.IndexerUrl).Info("using monero-lws for indexed queries")
+
+	return c, nil
+}
+
+// jsonRPCRequest makes a JSON-RPC call to the Monero daemon
+func (c *Client) jsonRPCRequest(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
+	reqBody := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      "0",
+		"method":  method,
+	}
+	if params != nil {
+		reqBody["params"] = params
+	}
+
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	endpoint := strings.TrimRight(c.url, "/") + "/json_rpc"
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("RPC request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var rpcResp struct {
+		Result json.RawMessage `json:"result"`
+		Error  *struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(respBody, &rpcResp); err != nil {
+		return nil, fmt.Errorf("failed to parse RPC response: %w (body: %s)", err, string(respBody))
+	}
+	if rpcResp.Error != nil {
+		return nil, fmt.Errorf("RPC error %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+	}
+
+	return rpcResp.Result, nil
+}
+
+// httpRequest makes a direct HTTP request to a Monero daemon endpoint
+func (c *Client) httpRequest(ctx context.Context, path string, params interface{}) (json.RawMessage, error) {
+	bodyBytes, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	endpoint := strings.TrimRight(c.url, "/") + path
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return json.RawMessage(respBody), nil
+}
+
+// getBlockCount returns the current block height
+func (c *Client) getBlockCount(ctx context.Context) (uint64, error) {
+	result, err := c.jsonRPCRequest(ctx, "get_block_count", nil)
+	if err != nil {
+		return 0, err
+	}
+	var resp struct {
+		Count uint64 `json:"count"`
+	}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		return 0, err
+	}
+	return resp.Count, nil
+}
+
+
+// moneroTxJson represents the parsed JSON of a Monero transaction
+type moneroTxJson struct {
+	Version    int    `json:"version"`
+	UnlockTime uint64 `json:"unlock_time"`
+	Vin        []struct {
+		Key struct {
+			Amount     uint64   `json:"amount"`
+			KeyOffsets []uint64 `json:"key_offsets"`
+			KImage     string   `json:"k_image"`
+		} `json:"key"`
+	} `json:"vin"`
+	Vout []struct {
+		Amount uint64 `json:"amount"`
+		Target struct {
+			TaggedKey struct {
+				Key     string `json:"key"`
+				ViewTag string `json:"view_tag"`
+			} `json:"tagged_key"`
+			Key string `json:"key"`
+		} `json:"target"`
+	} `json:"vout"`
+	Extra         []int `json:"extra"`
+	RctSignatures struct {
+		Type      int    `json:"type"`
+		TxnFee   uint64 `json:"txnFee"`
+		EcdhInfo []struct {
+			Amount string `json:"amount"`
+		} `json:"ecdhInfo"`
+	} `json:"rct_signatures"`
+}
+
+// getOutputKey extracts the output one-time public key from a transaction output
+func getOutputKey(vout struct {
+	Amount uint64 `json:"amount"`
+	Target struct {
+		TaggedKey struct {
+			Key     string `json:"key"`
+			ViewTag string `json:"view_tag"`
+		} `json:"tagged_key"`
+		Key string `json:"key"`
+	} `json:"target"`
+}) string {
+	if vout.Target.TaggedKey.Key != "" {
+		return vout.Target.TaggedKey.Key
+	}
+	return vout.Target.Key
+}
+
+
+func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	input := tx_input.NewTxInput()
+
+	blockCount, err := c.getBlockCount(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block count: %w", err)
+	}
+	input.BlockHeight = blockCount
+
+	// Get fee estimation via JSON-RPC
+	feeResult, err := c.jsonRPCRequest(ctx, "get_fee_estimate", nil)
+	if err != nil {
+		logrus.WithError(err).Warn("failed to get fee estimate, using default")
+		input.PerByteFee = 20000
+	} else {
+		var feeEstimate struct {
+			Fee              uint64 `json:"fee"`
+			QuantizationMask uint64 `json:"quantization_mask"`
+		}
+		if err := json.Unmarshal(feeResult, &feeEstimate); err != nil {
+			logrus.WithError(err).Warn("failed to parse fee estimate")
+			input.PerByteFee = 20000
+		} else {
+			input.PerByteFee = feeEstimate.Fee
+			input.QuantizationMask = feeEstimate.QuantizationMask
+			logrus.WithFields(logrus.Fields{
+				"fee_per_byte":      feeEstimate.Fee,
+				"quantization_mask": feeEstimate.QuantizationMask,
+			}).Info("fee estimate")
+		}
+	}
+
+	// Populate spendable outputs from the Light Wallet Server.
+	// LWS is required - this implementation does not support block scanning.
+	if c.lws == nil {
+		return nil, fmt.Errorf("monero-lws indexer_url is required (block scanning not supported)")
+	}
+	if err := c.populateFromLWS(ctx, input, args.GetFrom()); err != nil {
+		return nil, fmt.Errorf("failed to find spendable outputs: %w", err)
+	}
+
+	return input, nil
+}
+
+// populateFromLWS fetches spendable outputs from the Light Wallet Server.
+// Instant - no block scanning needed.
+func (c *Client) populateFromLWS(ctx context.Context, input *tx_input.TxInput, from xc.Address) error {
+	// Use the fixed shared view key (no private spend key needed)
+	privView := c.viewKey
+
+	// Set LWS credentials and login
+	c.lws.SetCredentials(string(from), hex.EncodeToString(privView))
+	if err := c.lws.Login(ctx); err != nil {
+		return fmt.Errorf("LWS login failed: %w", err)
+	}
+
+	// Fetch unspent outputs
+	outputs, perByteFee, feeMask, err := c.lws.GetUnspentOuts(ctx)
+	if err != nil {
+		return fmt.Errorf("get_unspent_outs failed: %w", err)
+	}
+
+	// Use LWS fee estimates if available
+	if perByteFee > 0 {
+		input.PerByteFee = perByteFee
+	}
+	if feeMask > 0 {
+		input.QuantizationMask = feeMask
+	}
+
+	// Set RNG seed
+	rngSeedData := append(privView, crypto.VarIntEncode(input.BlockHeight)...)
+	input.RngSeed = crypto.Keccak256(rngSeedData)
+
+	// Convert LWS outputs to tx_input format
+	converted := ConvertLWSOutputs(outputs, privView)
+
+	// Fetch decoys for each output
+	for i := range converted {
+		out := &converted[i]
+		if out.GlobalIndex == 0 {
+			continue
+		}
+
+		decoys, err := c.FetchDecoys(ctx, out.GlobalIndex, ringSize-1)
+		if err != nil {
+			logrus.WithError(err).WithField("tx_hash", out.TxHash).Warn("failed to fetch decoys")
+			continue
+		}
+
+		if len(decoys) < 15 {
+			logrus.WithField("tx_hash", out.TxHash).Warn("insufficient decoys")
+			continue
+		}
+
+		var ringMembers []tx_input.RingMember
+		for _, d := range decoys {
+			ringMembers = append(ringMembers, tx_input.RingMember{
+				GlobalIndex: d.GlobalIndex,
+				PublicKey:   d.PublicKey,
+				Commitment:  d.Commitment,
+			})
+		}
+		out.RingMembers = ringMembers
+	}
+
+	// Filter outputs with enough ring members
+	for _, out := range converted {
+		if len(out.RingMembers) >= 15 {
+			input.Outputs = append(input.Outputs, out)
+		}
+	}
+
+	if len(input.Outputs) == 0 {
+		return fmt.Errorf("no spendable outputs with sufficient decoys found via LWS")
+	}
+
+	logrus.WithField("spendable", len(input.Outputs)).Info("populated outputs from LWS")
+	return nil
+}
+
+func (c *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
+	address := args.Address()
+	if address == "" {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("address is required")
+	}
+	if c.lws == nil {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("monero-lws indexer_url is required (block scanning not supported)")
+	}
+
+	c.lws.SetCredentials(string(address), hex.EncodeToString(c.viewKey))
+	if err := c.lws.Login(ctx); err != nil {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("LWS login: %w", err)
+	}
+	info, err := c.lws.GetAddressInfo(ctx)
+	if err != nil {
+		return xc.NewAmountBlockchainFromUint64(0), fmt.Errorf("LWS get_address_info: %w", err)
+	}
+	var received, sent uint64
+	fmt.Sscanf(info.TotalReceived, "%d", &received)
+	fmt.Sscanf(info.TotalSent, "%d", &sent)
+	balance := received - sent
+	logrus.WithFields(logrus.Fields{
+		"received": received,
+		"sent":     sent,
+		"balance":  balance,
+		"scanned":  info.ScannedHeight,
+	}).Info("balance from LWS")
+	return xc.NewAmountBlockchainFromUint64(balance), nil
+}
+
+func (c *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
+	return 12, nil
+}
+
+func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
+	txData := submitReq.TxData
+	if len(txData) == 0 {
+		return fmt.Errorf("empty transaction data")
+	}
+
+	txHex := hex.EncodeToString(txData)
+
+	// Import authoritative key images to LWS *before* broadcasting so a
+	// concurrent FetchTransferInput can't re-select an output we're consuming.
+	// A failed broadcast leaves the imports "pending"; the LWS expires them if
+	// they never appear on-chain, reverting the outputs to spendable.
+	if c.lws != nil && submitReq.BroadcastInput != "" {
+		var meta monerotx.BroadcastMetadata
+		if err := json.Unmarshal([]byte(submitReq.BroadcastInput), &meta); err != nil {
+			logrus.WithError(err).Warn("could not parse monero broadcast metadata; skipping key-image import")
+		} else if meta.Sender != "" && len(meta.SpentKeyImages) > 0 {
+			imgs := make([]ImportKeyImage, 0, len(meta.SpentKeyImages))
+			for _, s := range meta.SpentKeyImages {
+				imgs = append(imgs, ImportKeyImage{GlobalIndex: s.GlobalIndex, KeyImage: s.KeyImage})
+			}
+			c.lws.SetCredentials(meta.Sender, hex.EncodeToString(c.viewKey))
+			if err := c.lws.ImportKeyImages(ctx, meta.Sender, imgs); err != nil {
+				// Non-fatal: broadcast still proceeds; import is retryable and the
+				// network is the real double-spend arbiter.
+				logrus.WithError(err).Warn("failed to import key images to LWS (non-fatal)")
+			}
+		}
+	}
+
+	// Also relay via LWS (best-effort; the daemon send below is authoritative).
+	if c.lws != nil {
+		_, err := c.lws.post(ctx, "submit_raw_tx", map[string]interface{}{
+			"tx": txHex,
+		})
+		if err != nil {
+			logrus.WithError(err).Warn("LWS submit failed, submitting to daemon only")
+		}
+	}
+
+	params := map[string]interface{}{
+		"tx_as_hex":    txHex,
+		"do_not_relay": false,
+	}
+
+	result, err := c.httpRequest(ctx, "/send_raw_transaction", params)
+	if err != nil {
+		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	var submitResult struct {
+		Status           string `json:"status"`
+		Reason           string `json:"reason"`
+		DoubleSpend      bool   `json:"double_spend"`
+		FeeTooLow        bool   `json:"fee_too_low"`
+		InvalidInput     bool   `json:"invalid_input"`
+		InvalidOutput    bool   `json:"invalid_output"`
+		LowMixin         bool   `json:"low_mixin"`
+		NotRelayed       bool   `json:"not_relayed"`
+		Overspend        bool   `json:"overspend"`
+		TooBig           bool   `json:"too_big"`
+		TooFewOutputs    bool   `json:"too_few_outputs"`
+		SanityCheckFailed bool  `json:"sanity_check_failed"`
+	}
+	if err := json.Unmarshal(result, &submitResult); err != nil {
+		return fmt.Errorf("failed to parse submit result: %w (raw: %s)", err, string(result))
+	}
+	if submitResult.Status != "OK" {
+		logrus.WithFields(logrus.Fields{
+			"status":        submitResult.Status,
+			"reason":        submitResult.Reason,
+			"double_spend":  submitResult.DoubleSpend,
+			"fee_too_low":   submitResult.FeeTooLow,
+			"invalid_input": submitResult.InvalidInput,
+			"invalid_output":submitResult.InvalidOutput,
+			"low_mixin":     submitResult.LowMixin,
+			"overspend":     submitResult.Overspend,
+			"too_big":       submitResult.TooBig,
+			"sanity_failed": submitResult.SanityCheckFailed,
+		}).Error("transaction rejected by node")
+		return fmt.Errorf("transaction rejected: %s (status: %s)", submitResult.Reason, submitResult.Status)
+	}
+
+	return nil
+}
+
+func (c *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
+	hash := args.TxHash()
+
+	params := map[string]interface{}{
+		"txs_hashes":     []string{string(hash)},
+		"decode_as_json": true,
+	}
+
+	result, err := c.httpRequest(ctx, "/get_transactions", params)
+	if err != nil {
+		return txinfo.TxInfo{}, fmt.Errorf("failed to fetch transaction: %w", err)
+	}
+
+	var txResult struct {
+		Txs []struct {
+			AsHex          string   `json:"as_hex"`
+			AsJson         string   `json:"as_json"`
+			BlockHeight    uint64   `json:"block_height"`
+			BlockTimestamp uint64   `json:"block_timestamp"`
+			TxHash         string   `json:"tx_hash"`
+			InPool         bool     `json:"in_pool"`
+			OutputIndices  []uint64 `json:"output_indices"`
+		} `json:"txs"`
+		Status   string   `json:"status"`
+		MissedTx []string `json:"missed_tx"`
+	}
+	if err := json.Unmarshal(result, &txResult); err != nil {
+		return txinfo.TxInfo{}, fmt.Errorf("failed to parse transaction data: %w", err)
+	}
+	if txResult.Status != "OK" {
+		return txinfo.TxInfo{}, fmt.Errorf("get_transactions returned status: %s", txResult.Status)
+	}
+	if len(txResult.MissedTx) > 0 {
+		return txinfo.TxInfo{}, fmt.Errorf("transaction not found: %s", hash)
+	}
+	if len(txResult.Txs) == 0 {
+		return txinfo.TxInfo{}, fmt.Errorf("no transaction data returned for: %s", hash)
+	}
+
+	txData := txResult.Txs[0]
+
+	blockCount, err := c.getBlockCount(ctx)
+	if err != nil {
+		return txinfo.TxInfo{}, fmt.Errorf("failed to get block count: %w", err)
+	}
+
+	var confirmations uint64
+	if !txData.InPool {
+		confirmations = blockCount - txData.BlockHeight
+	}
+
+	// Parse fee from tx JSON
+	var txJson struct {
+		RctSignatures struct {
+			TxnFee uint64 `json:"txnFee"`
+		} `json:"rct_signatures"`
+	}
+	if txData.AsJson != "" {
+		if err := json.Unmarshal([]byte(txData.AsJson), &txJson); err != nil {
+			logrus.WithError(err).Warn("failed to parse transaction JSON")
+		}
+	}
+
+	fee := xc.NewAmountBlockchainFromUint64(txJson.RctSignatures.TxnFee)
+
+	// Build TxInfo using library constructors
+	block := txinfo.NewBlock(xc.XMR, txData.BlockHeight, "", time.Unix(int64(txData.BlockTimestamp), 0))
+	info := txinfo.NewTxInfo(block, c.cfg.GetChain(), string(hash), confirmations, nil)
+	info.Fees = []*txinfo.Balance{
+		txinfo.NewBalance(xc.XMR, xc.ContractAddress(xc.XMR), fee, nil),
+	}
+
+	// Decode outputs using the fixed view key (no private spend key needed).
+	// This finds ALL outputs sent to any address sharing our view key,
+	// and recovers the recipient address for each.
+	if txData.AsJson != "" {
+		privView := c.viewKey
+		addrPrefix := crypto.MainnetAddressPrefix
+		if c.cfg != nil && (string(c.cfg.ChainID) == "testnet" || c.cfg.Network == "testnet") {
+			addrPrefix = crypto.TestnetAddressPrefix
+		}
+		outputs := scanTransactionViewKeyOnly(txData.AsJson, privView, addrPrefix)
+		if len(outputs) > 0 {
+			// Native XMR transfer: empty contract = native asset
+			mv := txinfo.NewMovement(xc.XMR, "")
+
+			// From: total spent (sum of outputs + fee), sender hidden by ring sigs
+			var totalOut uint64
+			for _, out := range outputs {
+				totalOut += out.amount
+			}
+			mv.AddSource("", xc.NewAmountBlockchainFromUint64(totalOut+txJson.RctSignatures.TxnFee), nil)
+
+			// To: each decoded output with its recovered address
+			for _, out := range outputs {
+				mv.AddDestination(out.address, xc.NewAmountBlockchainFromUint64(out.amount), nil)
+			}
+
+			info.Movements = append(info.Movements, mv)
+		}
+	}
+
+	return *info, nil
+}
+
+func (c *Client) FetchLegacyTxInfo(ctx context.Context, hash xc.TxHash) (txinfo.LegacyTxInfo, error) {
+	args := txinfo.NewArgs(hash)
+	info, err := c.FetchTxInfo(ctx, args)
+	if err != nil {
+		return txinfo.LegacyTxInfo{}, err
+	}
+	return txinfo.LegacyTxInfo{
+		TxID:          info.Hash,
+		Confirmations: int64(info.Confirmations),
+	}, nil
+}
+
+func (c *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
+	var result json.RawMessage
+	var err error
+
+	height, hasHeight := args.Height()
+	if hasHeight {
+		result, err = c.jsonRPCRequest(ctx, "get_block", map[string]interface{}{
+			"height": height,
+		})
+	} else {
+		result, err = c.jsonRPCRequest(ctx, "get_last_block_header", nil)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch block: %w", err)
+	}
+
+	var blockResult struct {
+		BlockHeader struct {
+			Height    uint64 `json:"height"`
+			Timestamp uint64 `json:"timestamp"`
+			Hash      string `json:"hash"`
+		} `json:"block_header"`
+	}
+	if err := json.Unmarshal(result, &blockResult); err != nil {
+		return nil, fmt.Errorf("failed to parse block: %w", err)
+	}
+
+	header := blockResult.BlockHeader
+	block := txinfo.NewBlock(xc.XMR, header.Height, header.Hash, time.Unix(int64(header.Timestamp), 0))
+
+	return &txinfo.BlockWithTransactions{
+		Block: *block,
+	}, nil
+}
+
+type decodedOutput struct {
+	amount  uint64
+	address xc.Address
+}
+
+// scanTransactionViewKeyOnly decodes output amounts using only the private view key,
+// then matches each output against known spend keys to determine the recipient address.
+// This is how an exchange scans for deposits across all user addresses.
+func scanTransactionViewKeyOnly(txJsonStr string, privateViewKey []byte, addressPrefix byte) []decodedOutput {
+	var txJson moneroTxJson
+	if err := json.Unmarshal([]byte(txJsonStr), &txJson); err != nil {
+		return nil
+	}
+
+	extraBytes := make([]byte, len(txJson.Extra))
+	for i, v := range txJson.Extra {
+		extraBytes[i] = byte(v)
+	}
+	txPubKey, err := crypto.ParseTxPubKey(extraBytes)
+	if err != nil {
+		return nil
+	}
+
+	derivation, err := crypto.GenerateKeyDerivation(txPubKey, privateViewKey)
+	if err != nil {
+		return nil
+	}
+
+	// Compute the public view key from the private view key
+	pubView, _ := crypto.PublicFromPrivate(privateViewKey)
+
+	var results []decodedOutput
+	for outputIdx, vout := range txJson.Vout {
+		outputKey := getOutputKey(vout)
+
+		var encAmount string
+		if outputIdx < len(txJson.RctSignatures.EcdhInfo) {
+			encAmount = txJson.RctSignatures.EcdhInfo[outputIdx].Amount
+		}
+		if encAmount == "" {
+			continue
+		}
+
+		scalar, err := crypto.DerivationToScalar(derivation, uint64(outputIdx))
+		if err != nil {
+			continue
+		}
+
+		amount, err := crypto.DecryptAmount(encAmount, scalar)
+		if err != nil {
+			continue
+		}
+
+		if amount == 0 || amount >= 1000000000000000000 {
+			continue
+		}
+
+		// Derive the expected public spend key: pubSpend = P - H_s(D||idx)*G
+		// If we can recover a valid spend key, we can reconstruct the full address.
+		addr := recoverAddress(outputKey, scalar, pubView, addressPrefix)
+
+		results = append(results, decodedOutput{amount: amount, address: addr})
+	}
+
+	return results
+}
+
+// recoverAddress recovers the recipient's Monero address from an output key.
+// Given output key P and derivation scalar s: pubSpend = P - s*G
+// Then address = base58(prefix || pubSpend || pubView || checksum)
+func recoverAddress(outputKeyHex string, scalar []byte, pubView []byte, prefix byte) xc.Address {
+	outputKeyBytes, err := hex.DecodeString(outputKeyHex)
+	if err != nil || len(outputKeyBytes) != 32 {
+		return ""
+	}
+
+	P, err := edwards25519.NewIdentityPoint().SetBytes(outputKeyBytes)
+	if err != nil {
+		return ""
+	}
+
+	sScalar, err := edwards25519.NewScalar().SetCanonicalBytes(scalar)
+	if err != nil {
+		return ""
+	}
+
+	// pubSpend = P - s*G
+	sG := edwards25519.NewGeneratorPoint().ScalarBaseMult(sScalar)
+	negSG := edwards25519.NewIdentityPoint().Negate(sG)
+	pubSpend := edwards25519.NewIdentityPoint().Add(P, negSG)
+
+	return xc.Address(crypto.GenerateAddressWithPrefix(prefix, pubSpend.Bytes(), pubView))
+}
+
+var _ xclient.Client = &Client{}
