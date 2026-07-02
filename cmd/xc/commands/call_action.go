@@ -191,7 +191,8 @@ func SignerAndAddress(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, s
 		return nil, "", fmt.Errorf("secret reference %s loaded an empty value", secretRef)
 	}
 
-	xcSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
+	chainOpts := ChainAddressOptions(chainConfig)
+	xcSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, chainOpts...)
 	if err != nil {
 		return nil, "", fmt.Errorf("could not import private key %s: %v", secretRef, err)
 	}
@@ -199,7 +200,7 @@ func SignerAndAddress(xcFactory *factory.Factory, chainConfig *xc.ChainConfig, s
 	if err != nil {
 		return nil, "", fmt.Errorf("could not create public key for %s: %v", secretRef, err)
 	}
-	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base())
+	addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), chainOpts...)
 	if err != nil {
 		return nil, "", fmt.Errorf("could not create address builder: %v", err)
 	}
