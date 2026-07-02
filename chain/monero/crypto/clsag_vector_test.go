@@ -100,12 +100,18 @@ func TestCLSAGVector_DerivedOneTimeKey(t *testing.T) {
 func TestCLSAGVector_Phase1KeyImage(t *testing.T) {
 	in := buildCLSAGVectorInputs(t)
 
-	// Phase 1 payload: no Message/RingKeys, only output_key + tx_pub_key + output_index
+	// Phase 1 payload: no ring data, only tx_pub_key + output_index. The signer
+	// derives the output key itself.
 	payload, _ := json.Marshal(MoneroSighash{
-		OutputKey:   in.outputKey,
 		TxPubKey:    in.txPubKeyHex,
 		OutputIndex: in.outputIndex,
 	})
+
+	// Pinned JSON envelope. Cross-implementation signers can decode this
+	// verbatim and confirm they produce the same key image below.
+	const expectedPhase1Payload = `{"tx_pub_key":"a47d1c5386f1e0ad6d1f4e059a58dae483430be3eafce41e879a3b791cac2ea7","output_index":0}`
+	maybePrint(t, "phase1_payload_json", string(payload))
+	require.Equal(t, expectedPhase1Payload, string(payload))
 
 	got, err := SignCLSAGFromPayload(payload, in.privSpend, in.privView)
 	require.NoError(t, err)
@@ -182,23 +188,60 @@ func TestCLSAGVector_Phase2Signature(t *testing.T) {
 	z := edwards25519.NewScalar().Subtract(inMaskScalar, psMaskScalar)
 
 	message := Keccak256([]byte(clsagVectorMessage))
-	rngSeed := hexDec(t, "0000000000000000000000000000000000000000000000000000000000000042")
 
+	// Decode the ring into points.
+	ring := make([]*edwards25519.Point, n)
+	commits := make([]*edwards25519.Point, n)
+	for i := 0; i < n; i++ {
+		rb, _ := hex.DecodeString(ringKeys[i])
+		ring[i], _ = edwards25519.NewIdentityPoint().SetBytes(rb)
+		cb, _ := hex.DecodeString(ringCommits[i])
+		commits[i], _ = edwards25519.NewIdentityPoint().SetBytes(cb)
+	}
+
+	// This vector pins the CLSAG *core* with an explicit deterministic nonce
+	// source (rng seed 00…42), decoupled from the wire payload — exactly what
+	// the Rust cross-check does (s2s-clsag crosschain_vector.rs). The wire no
+	// longer carries a nonce seed, so byte-for-byte cross-implementation
+	// equivalence is anchored here, at the algorithm, not at the transport.
+	rngSeed := hexDec(t, "0000000000000000000000000000000000000000000000000000000000000042")
+	sig, err := CLSAGSign(&CLSAGContext{
+		Message:     message,
+		Ring:        ring,
+		CNonzero:    commits,
+		COffset:     cOffset,
+		SecretIndex: realPos,
+		SecretKey:   in.oneTimePriv,
+		ZKey:        z,
+		Rand:        newDetRNG(rngSeed),
+	})
+	require.NoError(t, err)
+	keyImagePt := ComputeKeyImage(in.oneTimePriv, in.oneTimePub)
+	sigBytes := SerializeCLSAGWithKeyImage(sig, keyImagePt)
+
+	// The production payload path (SignCLSAGFromPayload) carries no output key,
+	// no real index, and no nonce seed: the signer derives all three. Confirm
+	// it locates the real member and produces a verifying signature.
 	payload, _ := json.Marshal(MoneroSighash{
 		Message:         message,
 		RingKeys:        ringKeys,
 		RingCommitments: ringCommits,
 		COffset:         hex.EncodeToString(cOffset.Bytes()),
-		RealPos:         realPos,
 		ZKey:            hex.EncodeToString(z.Bytes()),
-		OutputKey:       in.outputKey,
 		TxPubKey:        in.txPubKeyHex,
 		OutputIndex:     in.outputIndex,
-		RngSeed:         rngSeed,
 	})
+	const expectedPhase2Payload = `{"message":"ouKlvau/O6e8rcp1AO1yhCh0XcwKLkmNB5ZvVXM30yQ=","ring_keys":["858a47a039bc27614b52e438925c92700ede36f55f4f7ea47d62472ee378aa15","a9eb2dc9e77154effe488a3a5a6bbdf4853b20cfa4e2c38ea52e61347a87741a","c5e90980d9d267dd0a96011a47b2d4d83b9da42f853f5f99a269a3c315928585","4174acccd8ab2bdae06bb607169107bdc1f1e8d0a0196f3e943393e4862340a2"],"ring_commitments":["00d116ed79a02d314480172728425f0ca0d8edeb376ce3e6e3d14dda5fc41437","9dd57b89cc3c20113396ff8c9744b5d98147fc3714bb0770fb94830573ab5e4f","1a67772c81b1e443882653f5ac532d2fdc31cf77a13bd059e9eaf5002c0ac20e","e77834ea533d0f7e59e320a70bf618d2f1d11eb04d1857946e9aab6bd59bfa62"],"c_offset":"f77a7cfc32291e7b9d27021997e46cdec9c2690ace19018c526ede2f4de0bd98","z_key":"ecd2f45b19621157d59bf6a1ddf8dd13fffefefefefefefefefefefefefefe0e","tx_pub_key":"a47d1c5386f1e0ad6d1f4e059a58dae483430be3eafce41e879a3b791cac2ea7","output_index":0}`
+	maybePrint(t, "phase2_payload_json", string(payload))
+	require.Equal(t, expectedPhase2Payload, string(payload))
 
-	sigBytes, err := SignCLSAGFromPayload(payload, in.privSpend, in.privView)
+	payloadSig, err := SignCLSAGFromPayload(payload, in.privSpend, in.privView)
 	require.NoError(t, err)
+	require.Len(t, payloadSig, 32+n*32+32+32)
+	pSig, _, err := DeserializeCLSAG(payloadSig, n)
+	require.NoError(t, err)
+	require.True(t, CLSAGVerify(message, ring, commits, cOffset, pSig),
+		"payload-path CLSAG must verify (signer derived output key + real index)")
 
 	// Layout: key_image(32) || s[0..n-1](32 each) || c1(32) || D(32)
 	require.Len(t, sigBytes, 32+n*32+32+32)
@@ -250,18 +293,10 @@ func TestCLSAGVector_Phase2Signature(t *testing.T) {
 	require.Equal(t, expectedSig, hex.EncodeToString(sigBytes),
 		"CLSAG signature must equal pinned vector")
 
-	// And confirm the pinned signature verifies (defense in depth)
-	ring := make([]*edwards25519.Point, n)
-	commits := make([]*edwards25519.Point, n)
-	for i := 0; i < n; i++ {
-		rb, _ := hex.DecodeString(ringKeys[i])
-		ring[i], _ = edwards25519.NewIdentityPoint().SetBytes(rb)
-		cb, _ := hex.DecodeString(ringCommits[i])
-		commits[i], _ = edwards25519.NewIdentityPoint().SetBytes(cb)
-	}
-	sig, _, err := DeserializeCLSAG(sigBytes, n)
+	// And confirm the pinned signature verifies (defense in depth).
+	pinnedSig, _, err := DeserializeCLSAG(sigBytes, n)
 	require.NoError(t, err)
-	require.True(t, CLSAGVerify(message, ring, commits, cOffset, sig),
+	require.True(t, CLSAGVerify(message, ring, commits, cOffset, pinnedSig),
 		"pinned CLSAG vector must verify")
 }
 

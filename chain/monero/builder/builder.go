@@ -270,10 +270,8 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 		clsagContexts = append(clsagContexts, tx.CLSAGInputContext{
 			Ring:        ring,
 			CNonzero:    ringCommitments,
-			RealPos:     realPos,
 			InputMask:   inputMask,
 			PseudoMask:  pseudoMasks[i],
-			OutputKey:   selOut.PublicKey,
 			TxPubKeyHex: selOut.TxPubKey,
 			OutputIndex: selOut.Index,
 		})
@@ -309,8 +307,6 @@ func (b TxBuilder) NewNativeTransfer(args xcbuilder.TransferArgs, input xc.TxInp
 	for i := range moneroTx.CLSAGContexts {
 		moneroTx.CLSAGContexts[i].Message = clsagMessage
 		moneroTx.CLSAGContexts[i].COffset = pseudoOuts[i]
-		// Create per-input RNG seed for deterministic CLSAG nonces
-		moneroTx.CLSAGContexts[i].RngSeed = crypto.Keccak256(append(moneroInput.RngSeed, crypto.VarIntEncode(uint64(i))...))
 	}
 
 	return moneroTx, nil

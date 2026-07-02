@@ -10,10 +10,13 @@ import (
 )
 
 // SignCLSAGFromPayload handles both phases of Monero signing:
-// Phase 1 (no Message/RingKeys): derives one-time key → returns key image (32 bytes)
-// Phase 2 (has Message/RingKeys): produces full CLSAG ring signature
+// Phase 1 (no RingKeys): derives one-time key → returns key image (32 bytes)
+// Phase 2 (has RingKeys): produces full CLSAG ring signature
 //
-// privateViewKey is required (independent of the spend key in this implementation).
+// The signer derives the one-time output key P = H_s(8·v·R‖i)·G + A from its
+// own keys and locates it in the ring; the payload never carries the output key
+// or the real index. privateViewKey is required (independent of the spend key
+// in this implementation).
 func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte) ([]byte, error) {
 	var sh MoneroSighash
 	if err := json.Unmarshal(payload, &sh); err != nil {
@@ -28,7 +31,7 @@ func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte
 	privSpend, _ := edwards25519.NewScalar().SetCanonicalBytes(privSpendReduced)
 	privView := privateViewKey
 
-	// Derive one-time private key
+	// Derive one-time private key and its public key P = H_s(8·v·R‖i)·G + A.
 	txPubKeyBytes, _ := hex.DecodeString(sh.TxPubKey)
 	derivation, err := GenerateKeyDerivation(txPubKeyBytes, privView)
 	if err != nil {
@@ -38,13 +41,6 @@ func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte
 	hsScalar, _ := edwards25519.NewScalar().SetCanonicalBytes(scalar)
 	oneTimePrivKey := edwards25519.NewScalar().Add(hsScalar, privSpend)
 	oneTimePubKey := edwards25519.NewGeneratorPoint().ScalarBaseMult(oneTimePrivKey)
-
-	// Verify against output key
-	outKeyBytes, _ := hex.DecodeString(sh.OutputKey)
-	outKeyPt, _ := edwards25519.NewIdentityPoint().SetBytes(outKeyBytes)
-	if oneTimePubKey.Equal(outKeyPt) != 1 {
-		return nil, fmt.Errorf("derived key does not match output public key")
-	}
 
 	keyImage := ComputeKeyImage(oneTimePrivKey, oneTimePubKey)
 
@@ -60,6 +56,20 @@ func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte
 		ring[i], _ = edwards25519.NewIdentityPoint().SetBytes(b)
 	}
 
+	// Locate our output in the ring (the signer is told the ring, not which
+	// member is real). Absence means the coordinator built a ring around an
+	// output this wallet does not own.
+	realPos := -1
+	for i, member := range ring {
+		if member.Equal(oneTimePubKey) == 1 {
+			realPos = i
+			break
+		}
+	}
+	if realPos < 0 {
+		return nil, fmt.Errorf("derived output key is not present in the ring")
+	}
+
 	cNonzero := make([]*edwards25519.Point, len(sh.RingCommitments))
 	for i, c := range sh.RingCommitments {
 		b, _ := hex.DecodeString(c)
@@ -72,17 +82,18 @@ func SignCLSAGFromPayload(payload []byte, privateSpendKey, privateViewKey []byte
 	zKeyBytes, _ := hex.DecodeString(sh.ZKey)
 	zKey, _ := edwards25519.NewScalar().SetCanonicalBytes(zKeyBytes)
 
-	var clsagRng io.Reader
-	if len(sh.RngSeed) > 0 {
-		clsagRng = newDetRNG(sh.RngSeed)
-	}
+	// Deterministic nonces à la RFC 6979: seeded from the (secret) one-time key
+	// and the message, so signing is reproducible without ever exposing a seed
+	// on the wire. A given (key, message) always yields the same signature;
+	// distinct transactions yield distinct nonces.
+	clsagRng := newDetRNG(Keccak256(append(oneTimePrivKey.Bytes(), sh.Message...)))
 
 	clsag, err := CLSAGSign(&CLSAGContext{
 		Message:     sh.Message,
 		Ring:        ring,
 		CNonzero:    cNonzero,
 		COffset:     cOffset,
-		SecretIndex: sh.RealPos,
+		SecretIndex: realPos,
 		SecretKey:   oneTimePrivKey,
 		ZKey:        zKey,
 		Rand:        clsagRng,
@@ -120,14 +131,11 @@ func (r *detRNG) Read(p []byte) (int, error) {
 // circular import between the crypto and tx packages. Both definitions must
 // be kept in sync.
 type MoneroSighash struct {
-	Message         []byte   `json:"message"`
-	RingKeys        []string `json:"ring_keys"`
-	RingCommitments []string `json:"ring_commitments"`
-	COffset         string   `json:"c_offset"`
-	RealPos         int      `json:"real_pos"`
-	ZKey            string   `json:"z_key"`
-	OutputKey       string   `json:"output_key"`
+	Message         []byte   `json:"message,omitempty"`
+	RingKeys        []string `json:"ring_keys,omitempty"`
+	RingCommitments []string `json:"ring_commitments,omitempty"`
+	COffset         string   `json:"c_offset,omitempty"`
+	ZKey            string   `json:"z_key,omitempty"`
 	TxPubKey        string   `json:"tx_pub_key"`
 	OutputIndex     uint64   `json:"output_index"`
-	RngSeed         []byte   `json:"rng_seed,omitempty"`
 }

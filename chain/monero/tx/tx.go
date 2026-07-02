@@ -51,19 +51,19 @@ type Tx struct {
 	signingPhase int // 0=unsigned, 1=key images set, 2=fully signed
 }
 
-// CLSAGInputContext holds the data the signer needs for one CLSAG ring signature.
+// CLSAGInputContext holds the data the signer needs for one CLSAG ring
+// signature. The real ring position and the output key are intentionally not
+// stored here: the signer derives its one-time output key and locates it in the
+// ring itself, so neither is placed on the wire.
 type CLSAGInputContext struct {
 	Message     []byte                // CLSAG message hash (32 bytes)
 	Ring        []*edwards25519.Point // ring member public keys
 	CNonzero    []*edwards25519.Point // ring member commitments
 	COffset     *edwards25519.Point   // pseudo-output commitment
-	RealPos     int                   // position of real output in ring
 	InputMask   *edwards25519.Scalar  // pre-computed commitment mask
 	PseudoMask  *edwards25519.Scalar  // pseudo-output mask
-	OutputKey   string                // hex, output's one-time public key
 	TxPubKeyHex string                // hex, original tx public key R
 	OutputIndex uint64                // output index in the original tx
-	RngSeed     []byte                // for deterministic CLSAG nonces
 }
 
 func (tx *Tx) Hash() xc.TxHash {
@@ -90,12 +90,12 @@ func (tx *Tx) Sighashes() ([]*xc.SignatureRequest, error) {
 		return []*xc.SignatureRequest{{Payload: tx.PrefixHash()}}, nil
 	}
 
-	// Phase 1: request key images. Payload = JSON with just enough context
-	// for the signer to derive the one-time key and compute the key image.
+	// Phase 1: request key images. Payload = the (R, i) the signer needs to
+	// derive the one-time key and compute the key image; it derives the output
+	// key itself.
 	requests := make([]*xc.SignatureRequest, len(tx.CLSAGContexts))
 	for i, ctx := range tx.CLSAGContexts {
 		sh := &MoneroSighash{
-			OutputKey:   ctx.OutputKey,
 			TxPubKey:    ctx.TxPubKeyHex,
 			OutputIndex: ctx.OutputIndex,
 		}
@@ -174,12 +174,9 @@ func (tx *Tx) AdditionalSighashes() ([]*xc.SignatureRequest, error) {
 			RingKeys:        ringKeys,
 			RingCommitments: ringCmts,
 			COffset:         hex.EncodeToString(ctx.COffset.Bytes()),
-			RealPos:         ctx.RealPos,
 			ZKey:            hex.EncodeToString(zKey.Bytes()),
-			OutputKey:       ctx.OutputKey,
 			TxPubKey:        ctx.TxPubKeyHex,
 			OutputIndex:     ctx.OutputIndex,
-			RngSeed:         ctx.RngSeed,
 		}
 		requests[i] = &xc.SignatureRequest{
 			Payload: EncodeSighash(sh),
