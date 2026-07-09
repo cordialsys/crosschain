@@ -33,7 +33,7 @@ func MarshalTxInput(methodInput xc.TxInput) ([]byte, error) {
 // in the tx-input registry.
 func makeCopy[T any](input T) T {
 	srcVal := reflect.ValueOf(input)
-	if srcVal.Kind() == reflect.Ptr {
+	if srcVal.Kind() == reflect.Pointer {
 		srcVal = srcVal.Elem()
 	}
 

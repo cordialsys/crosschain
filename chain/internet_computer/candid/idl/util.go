@@ -8,7 +8,7 @@ import (
 
 func checkIsPtr(_v any) (reflect.Value, bool) {
 	v := reflect.ValueOf(_v)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return v, false
 	}
 	v = v.Elem()

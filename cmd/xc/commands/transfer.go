@@ -31,6 +31,7 @@ func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
 	var feePayer bool
 	var dryRun bool
+	var offline bool
 	var fromSecretRef string
 	var feePayerSecretRef string
 	var previousAttempts []string
@@ -77,7 +78,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set --decimals if using --contract")
 			}
 			algorithm, _ := cmd.Flags().GetString("algorithm")
-			addressArgs := []xcaddress.AddressOption{}
+			addressArgs := ChainAddressOptions(chainConfig)
 			addressArgs = append(addressArgs, xcaddress.OptionFormat(xc.AddressFormat(addressFormat)))
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))
@@ -122,6 +123,8 @@ func CmdTxTransfer() *cobra.Command {
 				builder.OptionTimestamp(time.Now().Unix()),
 				builder.OptionTransactionAttempts(previousAttempts),
 			}
+			// Bridge chain-config view key (for Monero) to the tx builder.
+			tfOptions = append(tfOptions, ChainBuilderOptions(chainConfig)...)
 
 			mainSigner, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, addressArgs...)
 			if err != nil {
@@ -158,7 +161,7 @@ func CmdTxTransfer() *cobra.Command {
 				if feePayerPrivateKey == "" {
 					return fmt.Errorf("fee-payer secret reference loaded an empty value")
 				}
-				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+				feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey, ChainAddressOptions(chainConfig)...)
 				if err != nil {
 					return fmt.Errorf("could not import fee-payer private key: %v", err)
 				}
@@ -329,7 +332,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not build transfer: %v", err)
 			}
 
-			if dryRun {
+			if dryRun || offline {
 				txBytes, err := tx.Serialize()
 				if err != nil {
 					return fmt.Errorf("could not serialize tx: %v", err)
@@ -396,6 +399,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Dry run the transaction, printing it, but not submitting it.")
+	cmd.Flags().BoolVar(&offline, "offline", false, "Alias for --dry-run.")
 	cmd.Flags().StringSliceVar(&previousAttempts, "previous", []string{}, "List of transaction hashes that have been attempted and may still be in the mempool.")
 	cmd.Flags().Int64Var(&txTime, "tx-time", 0, "Block time of the transaction")
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
@@ -434,44 +438,55 @@ func PrepareTransferForSubmit(b builder.FullTransferBuilder, args builder.Transf
 			WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding signature")
 	}
 
-	// We reconstruct the tx redundantly here to reflect Treasury.
-	// This drops any mutations from tx.SetSignatures() below & tests repeatability.
-	tx, err = b.Transfer(args, input)
-	if err != nil {
-		return nil, fmt.Errorf("could not build transfer for serialization: %v", err)
-	}
+	// Rebuild the tx fresh and re-apply the FULL accumulated signature set on
+	// every round, mirroring how Treasury's engine drives signing: it rebuilds
+	// the crosschain tx from the builder and replays all signatures each round
+	// (see engine x/api/endpoints/transaction/serialize.go). Reusing a single
+	// tx object here — as this code used to, rebuilding only once before the
+	// loop — hides two-phase state-machine bugs (e.g. SetSignatures inferring
+	// the phase from in-memory state) that only surface under reconstruction.
+	//
+	// A round cap turns a non-terminating state machine into a loud failure
+	// instead of an unbounded loop.
+	const maxSighashRounds = 64
+	for round := 0; ; round++ {
+		if round > maxSighashRounds {
+			return nil, fmt.Errorf(
+				"signing did not converge after %d rounds of additional sighashes; "+
+					"the tx state machine may not be terminating under reconstruction",
+				maxSighashRounds)
+		}
 
-	// complete the tx by adding its signature
-	// (no network, no private key needed)
-	err = tx.SetSignatures(signatures...)
-	if err != nil {
-		return nil, fmt.Errorf("could not add signature(s): %v", err)
-	}
+		tx, err = b.Transfer(args, input)
+		if err != nil {
+			return nil, fmt.Errorf("could not rebuild transfer: %v", err)
+		}
+		err = tx.SetSignatures(signatures...)
+		if err != nil {
+			return nil, fmt.Errorf("could not add signature(s): %v", err)
+		}
 
-	if txMoreSigs, ok := tx.(xc.TxAdditionalSighashes); ok {
-		for {
-			additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+		txMoreSigs, ok := tx.(xc.TxAdditionalSighashes)
+		if !ok {
+			break
+		}
+		additionalSighashes, err := txMoreSigs.AdditionalSighashes()
+		if err != nil {
+			return nil, fmt.Errorf("could not get additional sighashes: %v", err)
+		}
+		if len(additionalSighashes) == 0 {
+			break
+		}
+		for _, additionalSighash := range additionalSighashes {
+			log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
+			signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
 			if err != nil {
-				return nil, fmt.Errorf("could not get additional sighashes: %v", err)
+				panic(err)
 			}
-			if len(additionalSighashes) == 0 {
-				break
-			}
-			for _, additionalSighash := range additionalSighashes {
-				log := logrus.WithField("payload", hex.EncodeToString(additionalSighash.Payload))
-				signature, err := signerCollection.Sign(additionalSighash.Signer, additionalSighash.Payload)
-				if err != nil {
-					panic(err)
-				}
-				signatures = append(signatures, signature)
-				log.
-					WithField("address", signature.Address).
-					WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding additional signature")
-			}
-			err = tx.SetSignatures(signatures...)
-			if err != nil {
-				return nil, fmt.Errorf("could not add additional signature(s): %v", err)
-			}
+			signatures = append(signatures, signature)
+			log.
+				WithField("address", signature.Address).
+				WithField("signature", hex.EncodeToString(signature.Signature)).Log(logLevel, "adding additional signature")
 		}
 	}
 

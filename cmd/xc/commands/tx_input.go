@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	xc "github.com/cordialsys/crosschain"
-	xcaddress "github.com/cordialsys/crosschain/address"
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/config"
@@ -70,7 +69,7 @@ func CmdTxInput() *cobra.Command {
 					return fmt.Errorf("could not get private key: %v", err)
 				}
 				if privateKeyInput != "" {
-					signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput)
+					signer, err := xcFactory.NewSigner(chainConfig.Base(), privateKeyInput, ChainAddressOptions(chainConfig)...)
 					if err != nil {
 						return fmt.Errorf("could not import private key: %v", err)
 					}
@@ -88,7 +87,7 @@ func CmdTxInput() *cobra.Command {
 				logrus.WithField("nonce-account", nonceAccount).Info("using durable nonce account")
 				tfOptions = append(tfOptions, builder.OptionNonceAccount(nonceAccount))
 			}
-			addressArgs := []xcaddress.AddressOption{}
+			addressArgs := ChainAddressOptions(chainConfig)
 			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
@@ -106,7 +105,7 @@ func CmdTxInput() *cobra.Command {
 					if feePayerPrivateKey == "" {
 						return fmt.Errorf("fee-payer secret reference loaded an empty value")
 					}
-					feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey)
+					feePayerSigner, err := xcFactory.NewSigner(chainConfig.Base(), feePayerPrivateKey, ChainAddressOptions(chainConfig)...)
 					if err != nil {
 						return fmt.Errorf("could not import fee-payer private key: %v", err)
 					}

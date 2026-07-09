@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"crypto/sha3"
 	xc "github.com/cordialsys/crosschain"
-	"golang.org/x/crypto/sha3"
 )
 
 // AddressBuilder for Template

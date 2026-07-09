@@ -65,7 +65,7 @@ func CmdSign() *cobra.Command {
 				logrus.WithField("payload", hex.EncodeToString(payload)).Info("hashed payload")
 			}
 
-			addressArgs := []xcaddress.AddressOption{}
+			addressArgs := ChainAddressOptions(chainConfig)
 			algorithm, _ := cmd.Flags().GetString("algorithm")
 			if algorithm != "" {
 				addressArgs = append(addressArgs, xcaddress.OptionAlgorithm(xc.SignatureType(algorithm)))

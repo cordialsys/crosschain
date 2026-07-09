@@ -20,6 +20,11 @@ func CmdXc() *cobra.Command {
 		Args:         cobra.ExactArgs(0),
 		SilenceUsage: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			// Pure utilities under `xc tools` that need no chain context.
+			switch cmd.Use {
+			case "gen-view-key":
+				return nil
+			}
 			args, err := setup.RpcArgsFromCmd(cmd)
 			if err != nil {
 				return err
