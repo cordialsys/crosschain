@@ -69,6 +69,10 @@ func (args *TransferArgs) GetNonceAccount() (string, bool) {
 	return args.options.GetNonceAccount()
 }
 
+func (args *TransferArgs) GetViewKey() (string, bool) {
+	return args.options.GetViewKey()
+}
+
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options

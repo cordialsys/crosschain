@@ -504,7 +504,7 @@ func (e *Encoder) writeActionData(actionData ActionData) (err error) {
 
 		var d interface{}
 		d = actionData.Data
-		if reflect.TypeOf(d).Kind() == reflect.Ptr {
+		if reflect.TypeOf(d).Kind() == reflect.Pointer {
 			d = reflect.ValueOf(actionData.Data).Elem().Interface()
 		}
 

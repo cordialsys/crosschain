@@ -177,7 +177,7 @@ func (d *Decoder) Decode(v interface{}, options ...DecodeOption) (err error) {
 		}
 	}
 
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 		newRV := reflect.New(t)
 		rv.Set(newRV)

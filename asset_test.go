@@ -67,6 +67,8 @@ func TestChains(t *testing.T) {
 					// pass
 				case DriverHyperliquid:
 					// pass
+				case DriverMonero:
+					// pass
 				case DriverHedera:
 					hedera.Validate(t, chain)
 				case DriverNear:

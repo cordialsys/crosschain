@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"crypto/sha3"
 	transactionbuilder "github.com/coming-chat/go-aptos/transaction_builder"
 	"github.com/coming-chat/lcs"
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 )
 
 type Tx struct {

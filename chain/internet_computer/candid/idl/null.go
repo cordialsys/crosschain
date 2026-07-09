@@ -34,7 +34,7 @@ func (NullType) String() string {
 
 func (NullType) UnmarshalGo(raw any, _v any) error {
 	v := reflect.ValueOf(_v)
-	if v.Kind() != reflect.Ptr {
+	if v.Kind() != reflect.Pointer {
 		return NewUnmarshalGoError(raw, _v)
 	}
 	if _, ok := raw.(Null); ok || raw == nil {

@@ -1459,7 +1459,7 @@ func (a *BaseVariant) UnmarshalBinaryVariant(decoder *Decoder, def *VariantDefin
 		return fmt.Errorf("no known type for type %d", typeID)
 	}
 
-	if typeGo.Kind() == reflect.Ptr {
+	if typeGo.Kind() == reflect.Pointer {
 		a.Impl = reflect.New(typeGo.Elem()).Interface()
 		if err = decoder.Decode(a.Impl); err != nil {
 			return fmt.Errorf("unable to decode variant type %d: %w", typeID, err)

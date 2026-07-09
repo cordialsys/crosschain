@@ -15,6 +15,8 @@ func CmdTools() *cobra.Command {
 
 	cmd.AddCommand(tools.CmdDebug())
 	cmd.AddCommand(tools.CmdEos())
+	cmd.AddCommand(tools.CmdGenViewKey())
+	cmd.AddCommand(tools.CmdMonero())
 
 	return cmd
 }

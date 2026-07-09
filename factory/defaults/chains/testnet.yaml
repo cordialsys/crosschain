@@ -987,6 +987,19 @@ chains:
     gas_budget_default: "0.1"
     decimals: 18
     fee_limit: "100.0"
+  XMR:
+    chain: XMR
+    support:
+      fee:
+        accurate: false
+    driver: monero
+    chain_name: Monero Testnet
+    decimals: 12
+    fee_limit: "0.01"
+    confirmations_final: 5
+    chain_id: "testnet"
+    # Shared private view key (hex), required to scan deposits across all addresses.
+    # Not committed for testnet; supply via config overlay / env (CROSSCHAIN_CONFIG).
   0G:
     chain: 0G
     support:

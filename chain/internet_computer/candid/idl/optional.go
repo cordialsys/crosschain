@@ -74,7 +74,7 @@ func (o OptionalType) EncodeValue(v any) ([]byte, error) {
 	if v == nil {
 		return []byte{0x00}, nil
 	}
-	if v := reflect.ValueOf(v); v.Kind() == reflect.Ptr {
+	if v := reflect.ValueOf(v); v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return []byte{0x00}, nil
 		}
@@ -97,9 +97,9 @@ func (o OptionalType) UnmarshalGo(raw any, _v any) error {
 		// Optional value is `nil`.
 		return nil
 	}
-	if v := reflect.ValueOf(_v); v.Kind() == reflect.Ptr {
+	if v := reflect.ValueOf(_v); v.Kind() == reflect.Pointer {
 		v := v.Elem() // Dereference the pointer.
-		if k := v.Kind(); k != reflect.Ptr {
+		if k := v.Kind(); k != reflect.Pointer {
 			return NewUnmarshalGoError(raw, _v)
 		}
 		if !v.IsNil() {

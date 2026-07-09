@@ -7,11 +7,13 @@ import (
 type addressOptions struct {
 	algorithm *xc.SignatureType
 	format    *xc.AddressFormat
+	viewKey   *string
 }
 
 type AddressOptions interface {
 	GetAlgorithmType() (xc.SignatureType, bool)
 	GetFormat() (xc.AddressFormat, bool)
+	GetViewKey() (string, bool)
 }
 
 var _ AddressOptions = &addressOptions{}
@@ -30,6 +32,10 @@ func (opts *addressOptions) GetAlgorithmType() (xc.SignatureType, bool) {
 
 func (opts *addressOptions) GetFormat() (xc.AddressFormat, bool) {
 	return get(opts.format)
+}
+
+func (opts *addressOptions) GetViewKey() (string, bool) {
+	return get(opts.viewKey)
 }
 
 type AddressOption func(opts *addressOptions) error
@@ -52,6 +58,17 @@ func OptionFormat(format xc.AddressFormat) AddressOption {
 			return nil
 		}
 
+		return nil
+	}
+}
+
+// OptionViewKey provides a (private) view key for privacy chains like Monero.
+// Required for chains that use view keys to scan for owned outputs.
+func OptionViewKey(viewKey string) AddressOption {
+	return func(opts *addressOptions) error {
+		if viewKey != "" {
+			opts.viewKey = &viewKey
+		}
 		return nil
 	}
 }

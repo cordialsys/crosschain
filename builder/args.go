@@ -36,6 +36,11 @@ type builderOptions struct {
 
 	// On some chains a nonce account may be specified for the transaction (solana)
 	nonceAccount *string
+
+	// Private view key (hex) for privacy chains (Monero).  Used by the tx
+	// builder to derive stealth-address material for the sender's own change
+	// output.  Independent of any spend key.
+	viewKey *string
 }
 
 func newBuilderOptions() builderOptions {
@@ -75,6 +80,7 @@ func (opts *builderOptions) GetTransactionAttempts() []string {
 func (opts *builderOptions) GetNonceAccount() (string, bool) {
 	return get(opts.nonceAccount)
 }
+func (opts *builderOptions) GetViewKey() (string, bool) { return get(opts.viewKey) }
 
 // Other options
 func (opts *builderOptions) GetValidator() (string, bool)      { return get(opts.validator) }
@@ -247,6 +253,19 @@ func OptionStakeAmount(amount xc.AmountBlockchain) BuilderOption {
 func OptionNonceAccount(nonceAccount string) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.nonceAccount = &nonceAccount
+		return nil
+	}
+}
+
+// OptionViewKey sets the sender's private view key (hex, 64 chars) for
+// privacy chains (Monero).  The tx builder uses it to derive the public
+// view key for the sender's own change output; no spend-key access is
+// implied.
+func OptionViewKey(viewKey string) BuilderOption {
+	return func(opts *builderOptions) error {
+		if viewKey != "" {
+			opts.viewKey = &viewKey
+		}
 		return nil
 	}
 }
