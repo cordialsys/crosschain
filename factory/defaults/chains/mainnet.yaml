@@ -1259,6 +1259,31 @@ chains:
         asset_id: "38770"
       indexing_co:
         chain_id: megaeth
+  RhETH:
+    chain: RhETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 4663
+    chain_name: Robinhood Chain
+    chain_gas_multiplier: 2
+    decimals: 18
+    fee_limit: "0.5"
+    confirmations_final: 120
+    native_assets:
+      - asset_id: "RhETH"
+        decimals: 18
+        bridged_asset: "chains/ETH/assets/ETH" # RhETH is settled in ETH
+    explorer_urls:
+      tx: "https://robinhoodchain.blockscout.com/tx/{}"
+      address: "https://robinhoodchain.blockscout.com/address/{}"
+      token: "https://robinhoodchain.blockscout.com/token/{}"
+    external:
+      indexing_co:
+        chain_id: robinhood
   MON:
     chain: MON
     support:

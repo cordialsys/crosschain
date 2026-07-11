@@ -88,6 +88,7 @@ const (
 	NOBLE    = NativeAsset("NOBLE")    // Noble Chain
 	OAS      = NativeAsset("OAS")      // Oasys (not Oasis!)
 	OptETH   = NativeAsset("OptETH")   // Optimism
+	RhETH    = NativeAsset("RhETH")    // Robinhood Chain
 	EmROSE   = NativeAsset("EmROSE")   // Rose (Oasis EVM-compat "Emerald" parachain)
 	SOL      = NativeAsset("SOL")      // Solana
 	SUI      = NativeAsset("SUI")      // SUI
@@ -169,6 +170,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	NEAR,
 	OAS,
 	OptETH,
+	RhETH,
 	EmROSE,
 	SOL,
 	SUI,
@@ -331,7 +333,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX:
+	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX, RhETH:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
