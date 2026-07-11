@@ -256,7 +256,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
-	if hasFeePayer {
+	if hasFeePayer && !client.Asset.ExcludeFeatures {
 		feePayerPub, err := solana.PublicKeyFromBase58(string(feePayer))
 		if err != nil {
 			return nil, fmt.Errorf("invalid fee payer address: %v", err)
