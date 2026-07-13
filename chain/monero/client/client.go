@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -276,8 +277,11 @@ func (c *Client) populateFromLWS(ctx context.Context, input *tx_input.TxInput, f
 	}
 
 	// Set RNG seed
-	rngSeedData := append(privView, crypto.VarIntEncode(input.BlockHeight)...)
-	input.RngSeed = crypto.Keccak256(rngSeedData)
+	input.RngSeed = make([]byte, 32)
+	_, err = rand.Read(input.RngSeed)
+	if err != nil {
+		return fmt.Errorf("failed to generate RNG seed: %w", err)
+	}
 
 	// Monero enforces CRYPTONOTE_DEFAULT_TX_SPENDABLE_AGE = 10: an output must
 	// be at least 10 blocks deep before it can be spent. Selecting an immature
