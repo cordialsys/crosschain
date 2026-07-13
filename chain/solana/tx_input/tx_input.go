@@ -148,6 +148,13 @@ func (input *TxInput) doesTxUseDurableNonce(tx *solana.Transaction, account sola
 	if tx.Message.RecentBlockhash.Equals(nonce) && !nonce.IsZero() {
 		return true
 	}
+	// A zero account means this durable-nonce slot isn't configured.  The zero
+	// pubkey is the System Program (11111111111111111111111111111111), which is
+	// referenced by nearly every transaction, so matching on it would produce a
+	// false positive.
+	if account.IsZero() {
+		return false
+	}
 	usingDurableNonce := false
 	for _, accountKey := range tx.Message.AccountKeys {
 		if account.Equals(accountKey) {
