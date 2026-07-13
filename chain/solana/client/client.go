@@ -289,6 +289,33 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}
 	}
 
+	// Workaround for a durable-nonce bug in already-deployed clients that we
+	// cannot patch remotely (fixed by the guard in doesTxUseDurableNonce, see
+	// https://github.com/cordialsys/crosschain/pull/258):
+	//
+	// When the fee-payer feature is excluded, FeePayerDurableNonceAccount stays
+	// zero, which equals the System Program (11111111111111111111111111111111).
+	// The System Program is referenced by nearly every transaction, so the
+	// deployed doesTxUseDurableNonce/SetCall reports a false "uses our durable
+	// nonce" match, fabricates a durable nonce from the tx blockhash, and
+	// produces phantom conflicts in IndependentOf.
+	//
+	// Mirroring the from-address durable nonce into the fee-payer fields makes
+	// that probe hit a real account instead of the zero pubkey, which dodges the
+	// bug. Because the mirrored values are identical to the from-address nonce,
+	// this is transparent to the deployed builder (self-pay ignores the
+	// fee-payer fields; a separate fee-payer resolves to the same account,
+	// nonce, and authority) and to conflict detection (EffectiveDurableNonceState
+	// is unchanged). Only mirror when a from-address durable nonce is actually
+	// set -- otherwise the account stays zero and the fabricated nonce is
+	// already harmless (MatchDurableNonce short-circuits on a zero account).
+	if client.Asset.ExcludeFeatures && !txInput.DurableNonceAccount.IsZero() {
+		txInput.FeePayerDurableNonceAccount = txInput.DurableNonceAccount
+		txInput.FeePayerDurableNonceAuthority = txInput.DurableNonceAuthority
+		txInput.FeePayerDurableNonce = txInput.DurableNonce
+		txInput.ShouldCreateFeePayerNonce = txInput.ShouldCreateDurableNonce
+	}
+
 	if contract == "" {
 		// native transfer
 		return client.WithTransferSimulation(ctx, args, txInput)

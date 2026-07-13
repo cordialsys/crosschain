@@ -600,6 +600,111 @@ func TestFetchTransferInputRejectsManualNonceAccountWithUnexpectedAuthority(t *t
 	require.ErrorContains(t, err, "does not match from address 4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a or fee payer address 21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
 }
 
+// When ExcludeFeatures is set, the fee-payer durable nonce is intentionally
+// left unset. To dodge a durable-nonce bug in already-deployed clients (see
+// https://github.com/cordialsys/crosschain/pull/258), FetchTransferInput
+// mirrors the from-address durable nonce into the fee-payer fields so the
+// deployed doesTxUseDurableNonce probe hits a real account instead of the
+// zero pubkey (== System Program).
+func TestFetchTransferInputMirrorsDurableNonceWhenFeaturesExcluded(t *testing.T) {
+	// blockhash, rent, native balance (affords rent), missing nonce (=> create), simulate
+	balanceResponse := `{"context":{"slot":83986105},"value":5000000}`
+	simulateResponse := `{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		balanceResponse,
+		solanaMissingNonceAccountResponse,
+		simulateResponse,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	asset.ExcludeFeatures = true
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	fromPub := solana.MustPublicKeyFromBase58(string(from))
+	expectedNonceAccount, err := client.DeriveNonceAccount(fromPub)
+	require.NoError(t, err)
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+		buildertest.OptionFeePayer(feePayer, nil),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+
+	txInput := input.(*TxInput)
+	// From-address durable nonce is set.
+	require.Equal(t, expectedNonceAccount, txInput.DurableNonceAccount)
+	require.Equal(t, fromPub, txInput.DurableNonceAuthority)
+	require.True(t, txInput.ShouldCreateDurableNonce)
+
+	// Fee-payer fields are mirrored from the from-address durable nonce, so the
+	// deployed doesTxUseDurableNonce probe never sees a zero account.
+	require.False(t, txInput.FeePayerDurableNonceAccount.IsZero())
+	require.Equal(t, txInput.DurableNonceAccount, txInput.FeePayerDurableNonceAccount)
+	require.Equal(t, txInput.DurableNonceAuthority, txInput.FeePayerDurableNonceAuthority)
+	require.Equal(t, txInput.DurableNonce, txInput.FeePayerDurableNonce)
+	require.Equal(t, txInput.ShouldCreateDurableNonce, txInput.ShouldCreateFeePayerNonce)
+
+	// Mirroring must leave conflict detection unchanged: the effective state of
+	// the mirrored input must match the same input without the fee-payer fields.
+	notMirrored := *txInput
+	notMirrored.FeePayerDurableNonceAccount = solana.PublicKey{}
+	notMirrored.FeePayerDurableNonceAuthority = solana.PublicKey{}
+	notMirrored.FeePayerDurableNonce = solana.Hash{}
+	notMirrored.ShouldCreateFeePayerNonce = false
+	require.Equal(t,
+		notMirrored.EffectiveDurableNonceState(),
+		txInput.EffectiveDurableNonceState(),
+	)
+}
+
+// Without ExcludeFeatures and without a fee payer, the fee-payer nonce fields
+// stay unset (the mirror is gated behind ExcludeFeatures).
+func TestFetchTransferInputDoesNotMirrorByDefault(t *testing.T) {
+	balanceResponse := `{"context":{"slot":83986105},"value":5000000}`
+	simulateResponse := `{"jsonrpc":"2.0","result":{"value": {"unitsConsumed": 150,"logs": [],"accounts": null},"context": {"slot": 328286226}},"id":1}`
+	server, close := testtypes.MockJSONRPC(t, []string{
+		solanaValidBlockhashResponse,
+		solanaRentExemptionResponse,
+		balanceResponse,
+		solanaMissingNonceAccountResponse,
+		simulateResponse,
+	})
+	defer close()
+
+	asset := xc.NewChainConfig("")
+	asset.URL = server.URL
+	solClient, err := client.NewClient(asset)
+	require.NoError(t, err)
+
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+
+	args := buildertest.MustNewTransferArgs(
+		asset.Base(),
+		from,
+		to,
+		xc.NewAmountBlockchainFromUint64(1),
+	)
+	input, err := solClient.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+
+	txInput := input.(*TxInput)
+	require.False(t, txInput.DurableNonceAccount.IsZero())
+	require.True(t, txInput.FeePayerDurableNonceAccount.IsZero())
+}
+
 func TestSubmitTxSuccess(t *testing.T) {
 	txbin := "01df5ff457c2cdd23242ab26edd0b308d78499f28c6d43e185149cacdb88b35db171f1779e48ce2224cc80b9b9ce46dd80758319068b08eae34b14dc2cd070ab000100010379726da52d99d60b07ead73b2f6f0bf6083cc85c77a94e34d691d78f8bcafec9fc880863219008406235fa4c8fbb2a86d3da7b6762eac39323b2a1d8c404a4140000000000000000000000000000000000000000000000000000000000000000932bbef1569d58f4a116f41028f766439b2ba52c68c3308bbbea2b21e4716f6701020200010c0200000000ca9a3b00000000"
 	bytes, _ := hex.DecodeString(txbin)
