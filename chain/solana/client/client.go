@@ -315,6 +315,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		txInput.FeePayerDurableNonce = txInput.DurableNonce
 		txInput.ShouldCreateFeePayerNonce = txInput.ShouldCreateDurableNonce
 	}
+	if noDurableNonce, ok := args.GetNoCreateDurableNonce(); ok && noDurableNonce {
+		// opt out of creating a durable nonce account
+		txInput.ShouldCreateDurableNonce = false
+		txInput.ShouldCreateFeePayerNonce = false
+	}
 
 	if contract == "" {
 		// native transfer

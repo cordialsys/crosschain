@@ -73,6 +73,10 @@ func (args *TransferArgs) GetViewKey() (string, bool) {
 	return args.options.GetViewKey()
 }
 
+func (args *TransferArgs) GetNoCreateDurableNonce() (bool, bool) {
+	return args.options.GetNoCreateDurableNonce()
+}
+
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
@@ -144,4 +148,8 @@ func (args *TransferArgs) SetFromIdentity(fromIdentity string) {
 
 func (args *TransferArgs) SetToIdentity(toIdentity string) {
 	args.options.SetToIdentity(toIdentity)
+}
+
+func (args *TransferArgs) SetNoDurableNonce(noDurableNonce bool) {
+	args.options.SetNoDurableNonce(noDurableNonce)
 }
