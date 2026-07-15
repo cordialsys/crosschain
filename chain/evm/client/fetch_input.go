@@ -85,13 +85,12 @@ func (client *Client) SimulateGasWithLimit(ctx context.Context, from xc.Address,
 		AuthorizationList: ethTx.SetCodeAuthorizations(),
 	}
 	isSmartContract := len(msg.Data) > 0
-	// we should not include both gas pricing, need to pick one.
-	if client.Asset.GetChain().Driver == xc.DriverEVMLegacy {
-		msg.GasPrice = zero
-	} else {
-		msg.GasFeeCap = zero
-		msg.GasTipCap = zero
-	}
+	// Leave all gas-pricing fields unset for estimation so the node fills in its own
+	// defaults from the current base fee.  We must not send more than one pricing
+	// mechanism (geth rejects "both gasPrice and (maxFeePerGas or maxPriorityFeePerGas)"),
+	// and we must not send an explicit zero maxFeePerGas: stricter/older EVM nodes reject
+	// it with "maxFeePerGas must be non-zero" when maxPriorityFeePerGas is also present.
+	// The gas-limit estimate does not depend on the price, so omitting them is safe.
 	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
 
 	if err != nil && strings.Contains(err.Error(), "gas limit is too high") {
@@ -373,14 +372,9 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args x
 		Data:       data,
 		AccessList: types.AccessList{},
 	}
-	zero := big.NewInt(0)
-	// we should not include both gas pricing, need to pick one.
-	if client.Asset.GetChain().Driver == xc.DriverEVMLegacy {
-		msg.GasPrice = zero
-	} else {
-		msg.GasFeeCap = zero
-		msg.GasTipCap = zero
-	}
+	// Leave all gas-pricing fields unset for estimation so the node fills in its own
+	// defaults; sending an explicit zero maxFeePerGas is rejected by stricter/older EVM
+	// nodes with "maxFeePerGas must be non-zero". See SimulateGasWithLimit for details.
 	gasLimit, err := client.EthClient.EstimateGas(ctx, msg)
 	if err != nil {
 		return nil, err
