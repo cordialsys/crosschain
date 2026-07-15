@@ -41,6 +41,8 @@ type builderOptions struct {
 	// builder to derive stealth-address material for the sender's own change
 	// output.  Independent of any spend key.
 	viewKey *string
+
+	noDurableNonce *bool
 }
 
 func newBuilderOptions() builderOptions {
@@ -99,6 +101,7 @@ func (opts *builderOptions) GetStakeAmount() (xc.AmountBlockchain, bool) {
 	}
 	return amount, opts.stakeAmount != nil
 }
+func (opts *builderOptions) GetNoCreateDurableNonce() (bool, bool) { return get(opts.noDurableNonce) }
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -135,6 +138,10 @@ func (opts *builderOptions) SetFeePayerIdentity(feePayerIdentity string) {
 }
 func (opts *builderOptions) SetNonceAccount(nonceAccount string) {
 	opts.nonceAccount = &nonceAccount
+}
+
+func (opts *builderOptions) SetNoDurableNonce(noDurableNonce bool) {
+	opts.noDurableNonce = &noDurableNonce
 }
 
 type BuilderOption func(opts *builderOptions) error
