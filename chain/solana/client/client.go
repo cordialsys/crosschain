@@ -89,8 +89,12 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, c
 		// use user provided nonce account
 		nonceAccountPub = *nonceAccountMaybe
 	}
-	// account for the durable nonce rent as part of the base fee
-	lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
+	// account for the durable nonce rent as part of the base fee.
+	// The nonce account is exactly nonceAccountDataSize (80) bytes; the builder
+	// funds it with the matching rent-exempt minimum, so we must reserve the same
+	// amount here or an inclusive-fee sweep will strand the difference in the
+	// source account below its own rent-exempt floor (InsufficientFundsForRent).
+	lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, nonceAccountDataSize, rpc.CommitmentFinalized)
 	if err != nil {
 		return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
 	}
@@ -272,7 +276,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		if nonceAccountMaybe != nil && !nonceAccountMaybe.IsZero() {
 			feePayerNonceAccount = *nonceAccountMaybe
 		}
-		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, 165, rpc.CommitmentFinalized)
+		lamports, err := client.SolClient.GetMinimumBalanceForRentExemption(ctx, nonceAccountDataSize, rpc.CommitmentFinalized)
 		if err != nil {
 			return nil, fmt.Errorf("could not get minimum balance for rent exemption: %v", err)
 		}
