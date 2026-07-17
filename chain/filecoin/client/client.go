@@ -293,7 +293,7 @@ func (client *Client) fetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	movement := txinfo.NewMovement(chain, "")
 	amount := xc.NewAmountBlockchainFromStr(msg.Value)
 	movement.AddSource(xc.Address(msg.From), amount, nil)
-	movement.AddDestination(sourceAddress, amount, nil)
+	movement.AddDestination(xc.Address(msg.To), amount, nil)
 	txInfo.AddMovement(movement)
 
 	gasLimit, ok := xc.NewAmountBlockchainFromInt64(int64(msg.GasLimit))
