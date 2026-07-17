@@ -202,6 +202,24 @@ func (client *Client) ConvertEvmHashToCid(txHash xc.TxHash) (xc.TxHash, error) {
 // There is a small penalty for overestimating the gas limit, which is not included in calculations
 // at the moment
 func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
+	info, err := client.fetchTxInfo(ctx, args)
+	if err != nil {
+		// The primary RPC may not retain enough history to resolve an older
+		// transaction (many providers only serve ~24h of state).  If a
+		// `secondary_url` is configured (e.g. an archival endpoint), retry there.
+		secondaryUrl := client.Asset.GetChain().SecondaryURL
+		if secondaryUrl != "" && secondaryUrl != client.Url {
+			client.Logger.WithField("secondary_url", secondaryUrl).WithError(err).
+				Warn("primary tx-info lookup failed, retrying with secondary_url")
+			secondary := *client
+			secondary.Url = secondaryUrl
+			return secondary.fetchTxInfo(ctx, args)
+		}
+	}
+	return info, err
+}
+
+func (client *Client) fetchTxInfo(ctx context.Context, args *txinfo.Args) (txinfo.TxInfo, error) {
 	txHash := args.TxHash()
 	isEvmHash := strings.HasPrefix(string(txHash), "0x")
 	if isEvmHash {
@@ -262,7 +280,7 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 	chain := chainCfg.Chain
 	sHash := string(txHash)
 	blockData := chainGetBlockResponse.Result
-	block := txinfo.NewBlock(chain, blockData.Height, sHash, time.MillisFromInt64(blockData.Timestamp).ToTime())
+	block := txinfo.NewBlock(chain, blockData.Height, sHash, time.MillisFromSeconds(blockData.Timestamp).ToTime())
 	confirmations := chainHeadHeight - block.Height.Uint64()
 	var errorMsg *string
 	if msgState.Receipt.ExitCode != 0 {
@@ -383,7 +401,7 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	if err != nil {
 		return &txinfo.BlockWithTransactions{}, fmt.Errorf("failed to get block: %w", err)
 	}
-	blockTimestamp := time.MillisFromInt64(chainGetBlockResponse.Result.Timestamp)
+	blockTimestamp := time.MillisFromSeconds(chainGetBlockResponse.Result.Timestamp)
 
 	parentHash := chainGetBlockResponse.Result.Parents[0]
 	block := txinfo.NewBlock(client.Asset.GetChain().Chain, height, parentHash.Value, blockTimestamp.ToTime())
@@ -410,6 +428,10 @@ func Post[P any, R any](client *Client, params types.Params[P], response *types.
 		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
+	// Some Filecoin RPC providers (e.g. explorer-hosted archival nodes like filfox)
+	// reject the default Go http client User-Agent with a 403.  Send an identifying
+	// User-Agent so these endpoints are usable, notably as a `secondary_url` backup.
+	request.Header.Set("User-Agent", "cordialsys-crosschain")
 
 	logger.WithField("payload", string(payload)).Debug("sending request")
 	resp, err := client.HttpClient.Do(request)

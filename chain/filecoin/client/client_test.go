@@ -368,7 +368,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  xc.NativeAsset("FIL"),
 					Height: xc.NewAmountBlockchainFromUint64(2440037),
 					Hash:   "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
-					Time:   MustParseTime("1970-01-21T03:28:47.49Z"),
+					Time:   MustParseTime("2025-02-25T23:51:30Z"),
 				},
 				Movements: []*txinfo.Movement{
 					NewMovement(
@@ -466,7 +466,7 @@ func TestFetchTxInfo(t *testing.T) {
 					Chain:  xc.NativeAsset("FIL"),
 					Height: xc.NewAmountBlockchainFromUint64(2440037),
 					Hash:   "bafy2bzacedza344ak7eol4uydlwddlj6igiseftbaomafc3iscsmzoslo65vc",
-					Time:   MustParseTime("1970-01-21T03:28:47.49Z"),
+					Time:   MustParseTime("2025-02-25T23:51:30Z"),
 				},
 				Movements: []*txinfo.Movement{
 					NewMovement(
