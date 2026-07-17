@@ -383,8 +383,8 @@ func TestFetchTxInfo(t *testing.T) {
 						},
 						[]*txinfo.BalanceChange{{
 							Balance:   xc.NewAmountBlockchainFromUint64(100000000000000000),
-							XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
-							AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+							XAddress:  "chains/FIL/addresses/f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy",
+							AddressId: "f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy",
 						}},
 						nil,
 					),
@@ -481,8 +481,8 @@ func TestFetchTxInfo(t *testing.T) {
 						},
 						[]*txinfo.BalanceChange{{
 							Balance:   xc.NewAmountBlockchainFromUint64(100000000000000000),
-							XAddress:  "chains/FIL/addresses/f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
-							AddressId: "f13uhmulxtag3qfohj7h2nmtco7e7u3t3nxjdzi7q",
+							XAddress:  "chains/FIL/addresses/f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy",
+							AddressId: "f1urvqy4hx5idlki6b6f7ab6hzihjdfy47b5cc6dy",
 						}},
 						nil,
 					),
