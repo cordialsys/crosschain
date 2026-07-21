@@ -138,7 +138,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	lastLedgerSequence := ledgerSequencePtr + ledgerOffset
 	txInput.V2LastLedgerSequence = lastLedgerSequence
 
-	if remainder.Cmp(&txInput.ReserveAmount) <= 0 {
+	if remainder.Cmp(&txInput.ReserveAmount) < 0 {
 		// The user is trying to send (almost) their entire balance.  XRP requires
 		// that a base-reserve remain in the account; the only way to release it
 		// is via an AccountDelete transaction.  AccountDelete itself has two
