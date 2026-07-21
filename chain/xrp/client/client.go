@@ -62,7 +62,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// reserve and is also the fee burned by an AccountDelete transaction.
 	// These values change occasionally (e.g. mainnet has reduced its base
 	// reserve several times) so it is unsafe to hardcode them.
-	const xrpDecimals = types.XRP_NATIVE_DECIMALS
+	xrpDecimals := client.Asset.GetChain().GetDecimals()
 	if serverInfo, err := client.getServerInfo(); err == nil {
 		ledger := serverInfo.Result.Info.ValidatedLedger
 		if ledger.ReserveBaseXRP > 0 {
@@ -91,7 +91,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// compatibility with operators that hardcode this value).
 	reserveAmountHuman := client.Asset.GetChain().ChainClientConfig.ReserveAmount
 	if !reserveAmountHuman.IsZero() {
-		reserveAmount := reserveAmountHuman.ToBlockchain(client.Asset.GetChain().GetDecimals())
+		reserveAmount := reserveAmountHuman.ToBlockchain(xrpDecimals)
 		txInput.ReserveAmount = reserveAmount
 	}
 
@@ -139,6 +139,11 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	txInput.V2LastLedgerSequence = lastLedgerSequence
 
 	if remainder.Cmp(&txInput.ReserveAmount) < 0 {
+		if remainder.Cmp(&zero) > 0 {
+			return nil, fmt.Errorf("insufficient balance: %s would remain after transfering %s and the required reserve amount is %s; change amount or send the full balance",
+				remainder.ToHuman(xrpDecimals), tfAmount.ToHuman(xrpDecimals), txInput.ReserveAmount.ToHuman(xrpDecimals),
+			)
+		}
 		// The user is trying to send (almost) their entire balance.  XRP requires
 		// that a base-reserve remain in the account; the only way to release it
 		// is via an AccountDelete transaction.  AccountDelete itself has two
