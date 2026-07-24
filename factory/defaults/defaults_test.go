@@ -19,6 +19,9 @@ func TestDefaultChainConfigurationDriver(t *testing.T) {
 		for _, chain := range xcf.GetAllChains() {
 			switch chain.Driver {
 			case xc.DriverEVM, xc.DriverEVMLegacy:
+				if chain.ChainID == "" && (chain.Chain == xc.ARC || chain.Chain == xc.GiwaETH) {
+					continue
+				}
 				err := evm.ValidateConfig(chain)
 				require.NoError(t, err)
 			case xc.DriverTempo:

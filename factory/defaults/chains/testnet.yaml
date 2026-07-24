@@ -589,6 +589,45 @@ chains:
       - asset_id: "USTC"
         contract_id: "uusd"
         decimals: 6
+  ARC:
+    chain: ARC
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 5042002
+    chain_name: Arc Testnet
+    decimals: 18
+    fee_limit: "50.0"
+    confirmations_final: 1
+    native_assets:
+      - asset_id: "0x3600000000000000000000000000000000000000"
+        contract_id: "0x3600000000000000000000000000000000000000"
+        decimals: 6
+        fee_limit: "50.0"
+        aliases: ["USDC"]
+    explorer_urls:
+      tx: "https://testnet.arcscan.app/tx/{}"
+      address: "https://testnet.arcscan.app/address/{}"
+      token: "https://testnet.arcscan.app/token/{}"
+  GiwaETH:
+    chain: GiwaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_id: 91342
+    chain_name: GIWA Sepolia
+    decimals: 18
+    fee_limit: "0.5"
+    explorer_urls:
+      tx: "https://sepolia-explorer.giwa.io/tx/{}"
+      address: "https://sepolia-explorer.giwa.io/address/{}"
+      token: "https://sepolia-explorer.giwa.io/token/{}"
   MATIC:
     chain: MATIC
     support:

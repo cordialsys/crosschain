@@ -1845,6 +1845,42 @@ chains:
         chain_id: "198"
       indexing_co:
         chain_id: "linea"
+  ARC:
+    chain: ARC
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_name: Arc
+    decimals: 18
+    fee_limit: "50.0"
+    confirmations_final: 60
+    native_assets:
+      - asset_id: "0x3600000000000000000000000000000000000000"
+        contract_id: "0x3600000000000000000000000000000000000000"
+        decimals: 6
+        fee_limit: "50.0"
+        aliases: ["USDC"]
+    external:
+      coin_gecko:
+        asset_id: arc-chain # TODO should update after mainnet is released
+  GiwaETH:
+    chain: GiwaETH
+    support:
+      call: true
+      fee:
+        accurate: true
+        payer: true
+    driver: evm
+    chain_name: Giwa
+    decimals: 18
+    fee_limit: "0.5"
+    confirmations_final: 60
+    external:
+      coin_gecko:
+        asset_id: giwa # TODO should update after mainnet is released
   XPL:
     # TODO: Update chain_id after mainnet is released
     chain: XPL
