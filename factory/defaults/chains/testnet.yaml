@@ -840,6 +840,27 @@ chains:
     decimals: 6
     fee_limit: "10000000000000.0"
     confirmations_final: 5
+    native_assets:
+      - asset_id: "0x20c0000000000000000000000000000000000000"
+        contract_id: "0x20c0000000000000000000000000000000000000"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["pathUSD"]
+      - asset_id: "0x20c0000000000000000000000000000000000001"
+        contract_id: "0x20c0000000000000000000000000000000000001"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["alphaUSD"]
+      - asset_id: "0x20c0000000000000000000000000000000000002"
+        contract_id: "0x20c0000000000000000000000000000000000002"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["betaUSD"]
+      - asset_id: "0x20c0000000000000000000000000000000000003"
+        contract_id: "0x20c0000000000000000000000000000000000003"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["thetaUSD"]
   TRX:
     chain: TRX
     support:

@@ -1581,6 +1581,16 @@ chains:
         fee_limit: "50.0"
         decimals: 6
         aliases: ["USDT0"]
+      - asset_id: "0x20c0000000000000000000000000000000000000"
+        contract_id: "0x20c0000000000000000000000000000000000000"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["pathUSD"]
+      - asset_id: "0x20c000000000000000000000b9537d11c60e8b50"
+        contract_id: "0x20c000000000000000000000b9537d11c60e8b50"
+        fee_limit: "50.0"
+        decimals: 6
+        aliases: ["USDC.e"]
   TIA:
     chain: TIA
     support:
