@@ -38,6 +38,7 @@ const (
 	ADA      = NativeAsset("ADA")      // Cardano
 	AKT      = NativeAsset("AKT")      // Akash
 	APTOS    = NativeAsset("APTOS")    // APTOS
+	ARC      = NativeAsset("ARC")      // Arc
 	ArbETH   = NativeAsset("ArbETH")   // Arbitrum
 	ASTR     = NativeAsset("ASTR")     // Astar
 	ATOM     = NativeAsset("ATOM")     // Cosmos
@@ -72,6 +73,7 @@ const (
 	FTM      = NativeAsset("FTM")      // Fantom
 	FRAX     = NativeAsset("FRAX")     // Frax
 	GUSDT    = NativeAsset("GUSDT")    // Stable
+	GiwaETH  = NativeAsset("GiwaETH")  // GIWA
 	HASH     = NativeAsset("HASH")     // Provenance
 	HBAR     = NativeAsset("HBAR")     // Hedera
 	HyperEVM = NativeAsset("HyperEVM") // HyperEVM (Hyperliquid)
@@ -130,6 +132,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	LTC,
 	ACA,
 	APTOS,
+	ARC,
 	ArbETH,
 	ASTR,
 	ATOM,
@@ -156,6 +159,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	FTM,
 	FRAX,
 	GUSDT,
+	GiwaETH,
 	HBAR,
 	HyperEVM,
 	INJ,
@@ -342,7 +346,7 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case AVAX, BNB, CELO, ETH, ETHW, GUSDT, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX, RhETH:
+	case ARC, AVAX, BNB, CELO, ETH, ETHW, GUSDT, GiwaETH, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX, RhETH:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy
