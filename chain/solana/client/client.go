@@ -138,7 +138,9 @@ const nonceAccountDataSize = 80
 
 // FetchNonceAccount retrieves the current state of a durable nonce account.
 func (client *Client) FetchNonceAccount(ctx context.Context, nonceAccountAddr solana.PublicKey) (*NonceAccountState, error) {
-	info, err := client.SolClient.GetAccountInfo(ctx, nonceAccountAddr)
+	info, err := client.SolClient.GetAccountInfoWithOpts(ctx, nonceAccountAddr, &rpc.GetAccountInfoOpts{
+		Commitment: rpc.CommitmentFinalized,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("could not get nonce account info: %v", err)
 	}
