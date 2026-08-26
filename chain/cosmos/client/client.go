@@ -394,7 +394,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Cosmos tx
-func (client *Client) SubmitTx(ctx context.Context, tx1 xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx1 xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	txBytes, _ := tx1.Serialize()
 
 	_ = client.Asset.GetChain().Limiter.Wait(ctx)

@@ -96,7 +96,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx verifies tx with `on/transactions/preverify` endpoint and then propagates it to the network
 // using `on/transactions/propagate` endpoint.
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	bytes, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)

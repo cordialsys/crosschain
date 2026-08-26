@@ -282,7 +282,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // Broadcast a signed transaction to the chain
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	bytes, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)

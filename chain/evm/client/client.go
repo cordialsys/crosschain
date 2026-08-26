@@ -12,6 +12,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/evm/abi/erc20"
 	"github.com/cordialsys/crosschain/chain/evm/abi/exit_request"
 	"github.com/cordialsys/crosschain/chain/evm/abi/stake_deposit"
@@ -201,7 +202,7 @@ func NewClient(asset *xc.ChainConfig) (*Client, error) {
 }
 
 // SubmitTx submits a EVM tx
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	bz, err := tx.Serialize()
 	if err != nil {
 		return err

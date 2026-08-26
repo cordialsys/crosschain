@@ -11,6 +11,7 @@ import (
 
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/stretchr/testify/require"
 
@@ -195,7 +196,7 @@ func TestSubmitTx(t *testing.T) {
 		MsgTx: wire.NewMsgTx(2),
 	})
 	require.NoError(err)
-	err = client.SubmitTx(context.Background(), tx)
+	err = client.SubmitTx(context.Background(), tx, builder.SubmitArgs{})
 	require.NoError(err)
 }
 

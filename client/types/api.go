@@ -13,6 +13,8 @@ type SubmitTxReq struct {
 	LegacyTxSignatures [][]byte `json:"tx_signatures"`
 	// Mapping for Tx "metadata" embedded JSON
 	BroadcastInput string `json:"input,omitempty"`
+
+	Commitment string `json:"commitment,omitempty"`
 }
 
 var _ xc.Tx = &SubmitTxReq{}

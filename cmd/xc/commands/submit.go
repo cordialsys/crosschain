@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/cordialsys/crosschain/builder"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/spf13/cobra"
@@ -46,7 +47,7 @@ func CmdRpcSubmit() *cobra.Command {
 				return err
 			}
 
-			err = rpcClient.SubmitTx(context.Background(), req)
+			err = rpcClient.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 			if err != nil {
 				return fmt.Errorf("could not submit tx: %v", err)
 			}

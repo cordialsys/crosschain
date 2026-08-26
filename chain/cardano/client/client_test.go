@@ -417,7 +417,7 @@ func TestSubmitTx(t *testing.T) {
 
 			req, err := xctypes.SubmitTxReqFromTx(xc.ADA, tx)
 			require.NoError(t, err)
-			err = client.SubmitTx(context.Background(), req)
+			err = client.SubmitTx(context.Background(), req, xcbuilder.SubmitArgs{})
 			if vector.err {
 				require.Error(t, err)
 				return

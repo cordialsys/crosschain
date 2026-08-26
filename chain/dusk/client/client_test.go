@@ -191,7 +191,7 @@ func TestSubmitTx(t *testing.T) {
 
 			tx, err := xctypes.SubmitTxReqFromTx(xc.DUSK, vector.tx)
 			require.NoError(t, err)
-			err = client.SubmitTx(context.Background(), tx)
+			err = client.SubmitTx(context.Background(), tx, builder.SubmitArgs{})
 			if vector.err != "" {
 				require.ErrorContains(t, err, vector.err)
 				return

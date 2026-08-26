@@ -286,10 +286,13 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits via a Crosschain endpoint
-func (client *Client) SubmitTx(ctx context.Context, req xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, req xctypes.SubmitTxReq, args xcbuilder.SubmitArgs) error {
 	if req.Chain == "" {
 		// chain is required for the endpoint to route the request to the correct chain
 		req.Chain = client.Asset.GetChain().Chain
+	}
+	if args.Commitment != "" {
+		req.Commitment = args.Commitment
 	}
 	res, err := client.legacyApiCall(ctx, "/submit", &req)
 	if err != nil {

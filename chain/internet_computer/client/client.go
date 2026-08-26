@@ -153,7 +153,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a InternetComputerProtocol tx
-func (client *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	serializedSignedTx, err := txI.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize tx: %w", err)

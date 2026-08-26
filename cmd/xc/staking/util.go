@@ -7,6 +7,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	xcclienterrors "github.com/cordialsys/crosschain/client/errors"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
@@ -96,7 +97,7 @@ func SignAndMaybeBroadcast(xcFactory *factory.Factory, chain *xc.ChainConfig, si
 		if err != nil {
 			return "", fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
 		}
-		err = rpcCli.SubmitTx(context.Background(), req)
+		err = rpcCli.SubmitTx(context.Background(), req, xcbuilder.SubmitArgs{})
 		if err != nil && strings.Contains(err.Error(), string(xcclienterrors.FailedPrecondition)) {
 			time.Sleep(3 * time.Second)
 		} else if err != nil {

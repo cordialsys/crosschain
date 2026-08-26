@@ -479,7 +479,7 @@ func (c *Client) isKeyImageSpent(ctx context.Context, keyImages []string) ([]int
 	return resp.SpentStatus, nil
 }
 
-func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
+func (c *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	txData := submitReq.TxData
 	if len(txData) == 0 {
 		return fmt.Errorf("empty transaction data")

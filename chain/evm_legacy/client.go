@@ -136,8 +136,8 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
-	return client.EvmClient.SubmitTx(ctx, txInput)
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq, args xcbuilder.SubmitArgs) error {
+	return client.EvmClient.SubmitTx(ctx, txInput, args)
 }
 
 func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error) {

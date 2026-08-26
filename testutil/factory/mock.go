@@ -47,8 +47,8 @@ func (m *MockedClient) FetchTxInfo(ctx context.Context, txInfoArgs *txinfo.Args)
 }
 
 // SubmitTx submits a tx, mocked
-func (m *MockedClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
-	args := m.Called(ctx, tx)
+func (m *MockedClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, submitArgs xcbuilder.SubmitArgs) error {
+	args := m.Called(ctx, tx, submitArgs)
 	return args.Error(0)
 }
 

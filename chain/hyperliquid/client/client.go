@@ -141,7 +141,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a hyperliquid tx
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	payload, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize transaction: %w", err)

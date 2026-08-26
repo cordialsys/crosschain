@@ -525,7 +525,7 @@ func SubmitTransaction(chain xc.NativeAsset, client xclient.Client, tx xc.Tx, ti
 		}
 
 		// submit the tx, wait a bit, fetch the tx info (network needed)
-		err = client.SubmitTx(context.Background(), req)
+		err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 		if err != nil && strings.Contains(err.Error(), string(xclienterrors.FailedPrecondition)) {
 			time.Sleep(time.Second * 3)
 			continue

@@ -181,7 +181,7 @@ func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.
 }
 
 // SubmitTx submits a Hedera tx
-func (c *Client) SubmitTx(ctx context.Context, tx xclienttypes.SubmitTxReq) error {
+func (c *Client) SubmitTx(ctx context.Context, tx xclienttypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	logger := c.GrpcLogger(ctx)
 	txBytes, err := tx.Serialize()
 	if err != nil {

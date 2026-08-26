@@ -206,7 +206,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Template tx
-func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	serializedTxInputBytes, err := txInput.Serialize()
 	if err != nil {
 		return err

@@ -201,11 +201,11 @@ func TestTransfer(t *testing.T) {
 
 	req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, tx)
 	require.NoError(t, err)
-	err = client.SubmitTx(context.Background(), req)
+	err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 	require.NoError(t, err)
 
 	// submitting again should work or return a detectable error
-	err = client.SubmitTx(context.Background(), req)
+	err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 	if err == nil {
 		// ok
 		fmt.Println("No error on resubmit")
