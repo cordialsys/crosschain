@@ -172,7 +172,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to req: %w", err)
 			}
-			err = rpcCli.SubmitTx(context.Background(), req)
+			err = rpcCli.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}
@@ -313,7 +313,7 @@ func CmdUnstake() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to req: %w", err)
 			}
-			err = rpcCli.SubmitTx(context.Background(), req)
+			err = rpcCli.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}

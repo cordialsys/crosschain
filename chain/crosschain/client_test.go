@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/crosschain/types"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
@@ -153,7 +154,7 @@ func (s *CrosschainTestSuite) TestSubmitTx() {
 		LegacyTxSignatures: [][]byte{{1, 2, 3, 4}},
 		BroadcastInput:     `{"x":"y"}`,
 	}
-	err := client.SubmitTx(s.Ctx, txData)
+	err := client.SubmitTx(s.Ctx, txData, builder.SubmitArgs{})
 	require.NoError(err)
 }
 
@@ -170,7 +171,7 @@ func (s *CrosschainTestSuite) TestSubmitTxError() {
 	txData := xctypes.SubmitTxReq{
 		TxData: []byte("data"),
 	}
-	err := client.SubmitTx(s.Ctx, txData)
+	err := client.SubmitTx(s.Ctx, txData, builder.SubmitArgs{})
 	require.EqualError(err, "InvalidArgument: api-error")
 }
 

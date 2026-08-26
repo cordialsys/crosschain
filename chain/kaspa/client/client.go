@@ -110,7 +110,7 @@ func (c *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.
 	return c.FetchTransferInput(ctx, args)
 }
 
-func (c *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
+func (c *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	serializedSigned, err := txInput.Serialize()
 	if err != nil {
 		return err

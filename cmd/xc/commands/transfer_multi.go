@@ -354,7 +354,7 @@ func CmdTxMultiTransfer() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to convert tx to SubmitTxReq: %w", err)
 			}
-			err = client.SubmitTx(context.Background(), req)
+			err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 			if err != nil {
 				return fmt.Errorf("could not broadcast: %v", err)
 			}

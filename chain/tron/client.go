@@ -307,7 +307,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 // Submission of unstake/stake/withdraw transactions relies on proper handling
 // of "FailedPrecondition" error. It's modeled this way to avoid blocking and match
 // treasury behavior.
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	// TODO: Refactor SubmitTx interface to accept SubmitTxReq instead of tx
 	// This check will always return 'ok == true' at the moment
 	metaBz, ok, err := tx.GetMetadata()

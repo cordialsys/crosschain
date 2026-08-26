@@ -1267,7 +1267,7 @@ func TestSubmitTxRequiresMetadata(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{TxData: tt.payload})
+			err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{TxData: tt.payload}, builder.SubmitArgs{})
 			require.ErrorContains(t, err, "missing Canton tx metadata")
 			require.Nil(t, stub.lastReq)
 		})
@@ -1296,7 +1296,7 @@ func TestSubmitTxUsesMetadataToRouteTransferPayload(t *testing.T) {
 	err = client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
 		TxData:         payload,
 		BroadcastInput: string(metadata),
-	})
+	}, builder.SubmitArgs{})
 	require.NoError(t, err)
 	require.NotNil(t, stub.lastReq)
 	require.Equal(t, "submission-id", stub.lastReq.GetSubmissionId())
@@ -1353,7 +1353,7 @@ func TestSubmitTxLogsPaidTrafficCost(t *testing.T) {
 	err = client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
 		TxData:         payload,
 		BroadcastInput: string(metadata),
-	})
+	}, builder.SubmitArgs{})
 	require.NoError(t, err)
 	require.Contains(t, logs.String(), `"paid_traffic_cost":12345`)
 	require.Contains(t, logs.String(), `"msg":"canton submission completed"`)
@@ -1370,7 +1370,7 @@ func TestSubmitTxUsesMetadataToRouteCreateAccountPayload(t *testing.T) {
 	err := client.SubmitTx(context.Background(), xctypes.SubmitTxReq{
 		TxData:         payload,
 		BroadcastInput: string(metadata),
-	})
+	}, builder.SubmitArgs{})
 	require.ErrorContains(t, err, "create-account transaction is not signed")
 }
 

@@ -528,7 +528,7 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 }
 
 // SubmitTx submits a Sui tx
-func (c *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq) error {
+func (c *Client) SubmitTx(ctx context.Context, txI xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	tx_bz, err := txI.Serialize()
 	if err != nil {
 		return err

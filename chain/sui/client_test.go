@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	. "github.com/cordialsys/crosschain/chain/sui"
 	"github.com/cordialsys/crosschain/chain/sui/generated/bcs"
@@ -893,7 +894,7 @@ func TestTransfers(t *testing.T) {
 
 			req, err := xctypes.SubmitTxReqFromTx(xc.SUI, tx)
 			require.NoError(err)
-			err = client.SubmitTx(context.Background(), req)
+			err = client.SubmitTx(context.Background(), req, xcbuilder.SubmitArgs{})
 			require.NoError(err)
 		})
 	}
@@ -1009,7 +1010,7 @@ func TestSubmit(t *testing.T) {
 			client, err := NewClient(asset)
 			require.NoError(err)
 
-			err = client.SubmitTx(ctx, v.binaryTx)
+			err = client.SubmitTx(ctx, v.binaryTx, xcbuilder.SubmitArgs{})
 			if v.err != nil {
 				require.ErrorContains(err, v.err.Error())
 			} else {

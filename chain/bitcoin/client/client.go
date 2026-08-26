@@ -116,7 +116,7 @@ func NewQuicknodeBlockbookClient(cfgI *xc.ChainConfig) (*BlockbookClient, error)
 	}, nil
 }
 
-func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *BlockbookClient) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	serial, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("bad tx: %v", err)

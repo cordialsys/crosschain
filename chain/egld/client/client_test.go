@@ -288,7 +288,7 @@ func TestSubmitTx(t *testing.T) {
 	require.NoError(err)
 
 	// Submit the transaction
-	err = client.SubmitTx(context.Background(), submitReq)
+	err = client.SubmitTx(context.Background(), submitReq, xcbuilder.SubmitArgs{})
 	require.NoError(err)
 }
 
@@ -334,7 +334,7 @@ func TestSubmitTxError(t *testing.T) {
 	require.NoError(err)
 
 	// Submit should fail with API error
-	err = client.SubmitTx(context.Background(), submitReq)
+	err = client.SubmitTx(context.Background(), submitReq, xcbuilder.SubmitArgs{})
 	require.Error(err)
 	require.Contains(err.Error(), "insufficient funds")
 }

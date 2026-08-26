@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/template/client"
 	"github.com/cordialsys/crosschain/chain/template/tx"
 	xctypes "github.com/cordialsys/crosschain/client/types"
@@ -33,7 +34,7 @@ func TestSubmitTx(t *testing.T) {
 	client, _ := client.NewClient(xc.NewChainConfig(""))
 	tx, err := xctypes.SubmitTxReqFromTx(xc.KAS, &tx.Tx{})
 	require.EqualError(t, err, "failed to serialize tx: not implemented")
-	err = client.SubmitTx(context.Background(), tx)
+	err = client.SubmitTx(context.Background(), tx, builder.SubmitArgs{})
 	require.EqualError(t, err, "not implemented")
 }
 

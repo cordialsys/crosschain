@@ -15,7 +15,7 @@ type Client interface {
 	FetchTransferInput(ctx context.Context, args builder.TransferArgs) (xc.TxInput, error)
 
 	// Broadcast a signed transaction to the chain
-	SubmitTx(ctx context.Context, submitRex types.SubmitTxReq) error
+	SubmitTx(ctx context.Context, submitReq types.SubmitTxReq, args builder.SubmitArgs) error
 
 	// Fetching transaction info - legacy endpoint
 	FetchLegacyTxInfo(ctx context.Context, txHash xc.TxHash) (txinfo.LegacyTxInfo, error)

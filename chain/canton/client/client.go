@@ -710,7 +710,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 
 // SubmitTx accepts a serialized Canton transaction together with metadata that
 // identifies the Canton transaction type to submit.
-func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, submitReq xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	if len(submitReq.TxData) == 0 {
 		return fmt.Errorf("empty transaction data")
 	}

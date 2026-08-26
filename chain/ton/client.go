@@ -316,7 +316,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 }
 
 // SubmitTx submits a Template tx
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	bz, err := tx.Serialize()
 	if err != nil {
 		return err

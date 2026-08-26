@@ -13,7 +13,6 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/xlm"
 	client "github.com/cordialsys/crosschain/chain/xlm/client"
-	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/cordialsys/crosschain/chain/xlm/client/types"
 	"github.com/cordialsys/crosschain/chain/xlm/common"
 	tx "github.com/cordialsys/crosschain/chain/xlm/tx"
@@ -22,6 +21,7 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory/defaults/chains"
+	"github.com/cordialsys/crosschain/pkg/integer"
 	"github.com/stellar/go-stellar-sdk/xdr"
 	"github.com/stretchr/testify/require"
 )
@@ -791,7 +791,7 @@ func TestSubmitTx(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-			_ = client.SubmitTx(context.Background(), req)
+			_ = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 		})
 	}
 }

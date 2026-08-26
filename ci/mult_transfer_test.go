@@ -253,11 +253,11 @@ func TestMultiTransfer(t *testing.T) {
 	// Submit transaction
 	req, err := xctypes.SubmitTxReqFromTx(chainConfig.Chain, tx)
 	require.NoError(t, err)
-	err = client.SubmitTx(context.Background(), req)
+	err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 	require.NoError(t, err)
 
 	// Try submitting again to check for TransactionExists error
-	err = client.SubmitTx(context.Background(), req)
+	err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 	if err == nil {
 		fmt.Println("No error on resubmit")
 	} else {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/filecoin/address"
 	client "github.com/cordialsys/crosschain/chain/filecoin/client"
 	"github.com/cordialsys/crosschain/chain/filecoin/client/types"
@@ -292,7 +293,7 @@ func TestSubmitTx(t *testing.T) {
 			client, _ := client.NewClient(xc.NewChainConfig(xc.FIL, xc.DriverFilecoin).WithUrl(server.URL).WithNet("mainnet"))
 			tx, err := xctypes.SubmitTxReqFromTx(xc.FIL, v.tx)
 			require.NoError(t, err)
-			err = client.SubmitTx(context.Background(), tx)
+			err = client.SubmitTx(context.Background(), tx, builder.SubmitArgs{})
 			if err != nil {
 				require.Error(t, err)
 				require.ErrorContains(t, err, v.err)

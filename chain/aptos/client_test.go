@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/aptos/tx_input"
 	"github.com/cordialsys/crosschain/client"
@@ -181,11 +182,11 @@ func (s *AptosTestSuite) TestSubmitTx() {
 
 	submitReq, err := xctypes.SubmitTxReqFromTx(xc.APTOS, tf)
 	require.NoError(err)
-	err = client.SubmitTx(s.Ctx, submitReq)
+	err = client.SubmitTx(s.Ctx, submitReq, xcbuilder.SubmitArgs{})
 	require.NoError(err)
 
 	// second submit is error
-	err = client.SubmitTx(s.Ctx, submitReq)
+	err = client.SubmitTx(s.Ctx, submitReq, xcbuilder.SubmitArgs{})
 	require.Error(err)
 
 }

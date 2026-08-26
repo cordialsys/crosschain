@@ -172,7 +172,7 @@ func CmdStake() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = client.SubmitTx(context.Background(), req)
+			err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{})
 			if err != nil {
 				return err
 			}

@@ -196,7 +196,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 	return client.FetchTransferInput(ctx, args)
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	txData, err := txInput.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize transaction: %w", err)

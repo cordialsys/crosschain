@@ -255,7 +255,7 @@ func (client *Client) FetchLegacyTxInput(ctx context.Context, from xc.Address, t
 }
 
 // SubmitTx submits a Aptos tx
-func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, tx xctypes.SubmitTxReq, _ xcbuilder.SubmitArgs) error {
 	tx_bz, err := tx.Serialize()
 	if err != nil {
 		return fmt.Errorf("could not serialize tx: %v", err)

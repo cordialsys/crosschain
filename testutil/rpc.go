@@ -89,6 +89,11 @@ func MockJSONRPC(t *testing.T, response interface{}) (mock *MockJSONRPCServer, c
 	return mock, func() { mock.Close() }
 }
 
+// Body returns the body of the most recent JSON-RPC request.
+func (mock *MockJSONRPCServer) Body() []byte {
+	return append([]byte(nil), mock.body...)
+}
+
 // MockHTTPServer is a mocked HTTP server
 type MockHTTPServer struct {
 	*httptest.Server

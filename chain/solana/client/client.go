@@ -472,10 +472,15 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	return txInput, nil
 }
 
-func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq) error {
+func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq, args xcbuilder.SubmitArgs) error {
 	txData, err := txInput.Serialize()
 	if err != nil {
 		return fmt.Errorf("send transaction: encode transaction: %w", err)
+	}
+
+	commitment := rpc.CommitmentFinalized
+	if args.Commitment != "" {
+		commitment = rpc.CommitmentType(args.Commitment)
 	}
 
 	_, err = client.SolClient.SendEncodedTransactionWithOpts(
@@ -483,7 +488,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq)
 		base64.StdEncoding.EncodeToString(txData),
 		rpc.TransactionOpts{
 			SkipPreflight:       false,
-			PreflightCommitment: rpc.CommitmentFinalized,
+			PreflightCommitment: commitment,
 		},
 	)
 	return err

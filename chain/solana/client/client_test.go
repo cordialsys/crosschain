@@ -3,6 +3,7 @@ package client_test
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -723,8 +724,19 @@ func TestSubmitTxSuccess(t *testing.T) {
 		Signatures:         []xc.TxSignature{{1, 2, 3, 4}},
 	})
 	require.NoError(t, err)
-	err = client.SubmitTx(context.Background(), req)
+	err = client.SubmitTx(context.Background(), req, builder.SubmitArgs{Commitment: "confirmed"})
 	require.NoError(t, err)
+
+	var rpcRequest struct {
+		Params []json.RawMessage `json:"params"`
+	}
+	require.NoError(t, json.Unmarshal(server.Body(), &rpcRequest))
+	require.Len(t, rpcRequest.Params, 2)
+	var options struct {
+		PreflightCommitment string `json:"preflightCommitment"`
+	}
+	require.NoError(t, json.Unmarshal(rpcRequest.Params[1], &options))
+	require.Equal(t, "confirmed", options.PreflightCommitment)
 }
 func TestSubmitTxErr(t *testing.T) {
 
@@ -733,7 +745,7 @@ func TestSubmitTxErr(t *testing.T) {
 		SolTx: &solana.Transaction{},
 	})
 	require.NoError(t, err)
-	err = client.SubmitTx(context.Background(), tx)
+	err = client.SubmitTx(context.Background(), tx, builder.SubmitArgs{})
 	require.ErrorContains(t, err, "unsupported protocol scheme")
 }
 
