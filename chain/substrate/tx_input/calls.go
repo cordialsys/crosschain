@@ -15,6 +15,8 @@ var usedSubstrateCalls = []string{
 	"Assets.transfer",
 	"SubtensorModule.add_stake",
 	"SubtensorModule.remove_stake",
+	"SubtensorModule.transfer_stake",
+	"Utility.batch_all",
 	"NominationPools.join",
 	"NominationPools.bond_extra",
 	"NominationPools.unbond",
