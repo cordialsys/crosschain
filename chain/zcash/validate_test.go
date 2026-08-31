@@ -35,6 +35,24 @@ func TestValidateAddress(t *testing.T) {
 			network:   "mainnet",
 			wantError: false,
 		},
+		{
+			name:      "Zcash - valid mainnet script address (t3)",
+			address:   "t3Ns6qDnWJnXnhe5Xnq4WBxMbspVLtQpMtf",
+			network:   "mainnet",
+			wantError: false,
+		},
+		{
+			name:      "Zcash - valid testnet pubkey address (tm)",
+			address:   "tmE1qEWnU9YiukiaYLTheczfRLHHSv5iGHP",
+			network:   "testnet",
+			wantError: false,
+		},
+		{
+			name:      "Zcash - valid testnet script address (t2)",
+			address:   "t2ArHstteBF9AFLfGia4YjaYEzJiWrPX1fu",
+			network:   "testnet",
+			wantError: false,
+		},
 		// Invalid addresses
 		{
 			name:      "Zcash - too short",
@@ -71,6 +89,12 @@ func TestValidateAddress(t *testing.T) {
 			name:      "Zcash - ethereum address",
 			address:   "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb",
 			network:   "mainnet",
+			wantError: true,
+		},
+		{
+			name:      "Zcash - mainnet address on testnet",
+			address:   "t3Ns6qDnWJnXnhe5Xnq4WBxMbspVLtQpMtf",
+			network:   "testnet",
 			wantError: true,
 		},
 	}

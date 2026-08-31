@@ -277,23 +277,31 @@ func (client *Client) GetTx(ctx context.Context, txid string) (types.Transaction
 		}
 
 		// Extract addresses from the scriptPubKey
-		_, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, client.chaincfg)
+		scriptClass, extracted, _, err := txscript.ExtractPkScriptAddrs(scriptPubKey, client.chaincfg)
 		if err != nil {
 			return types.TransactionResponse{}, fmt.Errorf("failed to extract addresses from scriptPubKey: %w", err)
 		}
 		// Convert addresses to strings
 		for _, addr := range extracted {
 			if client.chain.Chain == xc.ZEC {
-				tadr := zecaddress.TransparentAddress{
-					Hash:         [20]byte(addr.ScriptAddress()),
-					NetID:        client.chaincfg.PubKeyHashAddrID,
-					ScriptHashId: client.chaincfg.ScriptHashAddrID,
+				var addressType zecaddress.TransparentAddressType
+				switch scriptClass {
+				case txscript.PubKeyHashTy:
+					addressType = zecaddress.TransparentAddressPubKeyHash
+				case txscript.ScriptHashTy:
+					addressType = zecaddress.TransparentAddressScriptHash
+				default:
+					addresses = append(addresses, addr.String())
+					continue
 				}
-				addresses = append(addresses, tadr.EncodeAddress())
+				taddr, err := zecaddress.NewTransparentAddress(addr.ScriptAddress(), addressType, client.chaincfg)
+				if err != nil {
+					return types.TransactionResponse{}, fmt.Errorf("failed to encode zcash transparent address: %w", err)
+				}
+				addresses = append(addresses, taddr.EncodeAddress())
 			} else {
 				addresses = append(addresses, addr.String())
 			}
-			addresses = append(addresses, addr.String())
 		}
 		amount := vout.Value.ToBlockchain(decimals)
 
