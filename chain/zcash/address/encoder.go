@@ -48,10 +48,9 @@ func (ab AddressBuilder) GetAddressFromPublicKey(publicKeyBytes []byte) (xc.Addr
 	publicKeyBytes = pubkey.SerializeCompressed()
 	hashBytes := [20]byte{}
 	copy(hashBytes[:], btcutil.Hash160(publicKeyBytes))
-	address := TransparentAddress{
-		Hash:         hashBytes,
-		NetID:        ab.params.PubKeyHashAddrID,
-		ScriptHashId: ab.params.ScriptHashAddrID,
+	address, err := NewTransparentAddress(hashBytes[:], TransparentAddressPubKeyHash, ab.params)
+	if err != nil {
+		return "", err
 	}
 
 	return xc.Address(address.EncodeAddress()), nil

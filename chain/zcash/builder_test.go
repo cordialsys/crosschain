@@ -6,6 +6,7 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
 	"github.com/cordialsys/crosschain/chain/zcash"
 	"github.com/stretchr/testify/require"
@@ -62,5 +63,72 @@ func TestTransfer(t *testing.T) {
 		// will have to update if anything changes in ZEC
 		"0400008085202f8901000000000b0930060201000201000100ffffffff0200e1f505000000001976a91442f9c388bff9d1f180388e5f644cc62d3864c06888ac00e1f505000000001976a914f37872277cd9210d5506f372e840c3da3ae11cf988ac00000000000000000000000000000000000000",
 		hex.EncodeToString(serialized),
+	)
+}
+
+func TestTransferToP2SH(t *testing.T) {
+	input := tx_input.NewTxInput()
+	input.UnspentOutputs = []tx_input.Output{
+		{
+			Value: xc.NewAmountBlockchainFromUint64(200000000),
+		},
+	}
+
+	cfg := xc.NewChainConfig(xc.ZEC).WithNet("mainnet")
+	txBuilder, err := zcash.NewTxBuilder(cfg.Base())
+	require.NoError(t, err)
+
+	from := xc.Address("t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS")
+	to := xc.Address("t3Ns6qDnWJnXnhe5Xnq4WBxMbspVLtQpMtf")
+	amount := xc.NewAmountBlockchainFromUint64(100000000)
+	args, err := builder.NewTransferArgs(cfg.Base(), from, to, amount)
+	require.NoError(t, err)
+
+	tx, err := txBuilder.Transfer(args, input)
+	require.NoError(t, err)
+	zcashTx, ok := tx.(*zcash.Tx)
+	require.True(t, ok)
+	require.Len(t, zcashTx.MsgTx.TxOut, 2)
+	require.Equal(t,
+		"a9142f2eddc4f91361f20797e00734662932fb5161c587",
+		hex.EncodeToString(zcashTx.MsgTx.TxOut[0].PkScript),
+	)
+}
+
+func TestMultiTransferToP2SH(t *testing.T) {
+	cfg := xc.NewChainConfig(xc.ZEC).WithNet("mainnet")
+	txBuilder, err := zcash.NewTxBuilder(cfg.Base())
+	require.NoError(t, err)
+
+	from := xc.Address("t1g4xVgMHVsxZWxS6D3SLXNXEAicivXKiAS")
+	to := xc.Address("t3Ns6qDnWJnXnhe5Xnq4WBxMbspVLtQpMtf")
+	amount := xc.NewAmountBlockchainFromUint64(100000000)
+	args, err := builder.NewMultiTransferArgs(
+		cfg.Base(),
+		[]*builder.Sender{buildertest.MustNewSender(from, nil)},
+		[]*builder.Receiver{buildertest.MustNewReceiver(to, amount)},
+	)
+	require.NoError(t, err)
+
+	input := tx_input.NewMultiTransferInput()
+	input.Inputs = []tx_input.TxInput{
+		{
+			Address: from,
+			UnspentOutputs: []tx_input.Output{
+				{
+					Value: xc.NewAmountBlockchainFromUint64(200000000),
+				},
+			},
+		},
+	}
+
+	tx, err := txBuilder.MultiTransfer(*args, input)
+	require.NoError(t, err)
+	zcashTx, ok := tx.(*zcash.Tx)
+	require.True(t, ok)
+	require.Len(t, zcashTx.MsgTx.TxOut, 2)
+	require.Equal(t,
+		"a9142f2eddc4f91361f20797e00734662932fb5161c587",
+		hex.EncodeToString(zcashTx.MsgTx.TxOut[0].PkScript),
 	)
 }

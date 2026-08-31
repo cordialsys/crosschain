@@ -6,7 +6,6 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -202,7 +201,7 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 		if err != nil {
 			return nil, err
 		}
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := txBuilder.AddressDecoder.PayToAddrScript(addr)
 		if err != nil {
 			logrus.WithError(err).WithField("to", recipient.To).Error("trying paytoaddr")
 			return nil, err
