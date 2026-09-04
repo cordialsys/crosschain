@@ -319,8 +319,11 @@ func (client *Client) FetchUnsimulatedInput(ctx context.Context, from xc.Address
 		}
 		nonce, err := instance.GetNonce(&bind.CallOpts{})
 		if err != nil {
-			if strings.Contains(err.Error(), "no contract code at given address") {
-				// The address has not yet installed the smart account contract.
+			if strings.Contains(err.Error(), "no contract code at given address") ||
+				strings.Contains(err.Error(), "abi: attempting to unmarshal an empty string while arguments are expected") {
+				//The address has not yet installed the smart account contract.
+				// Some RPC providers return an empty successful eth_call response in
+				// this case, which the generated binding reports as an ABI error.
 				// This nonce is then 0.
 				nonce = big.NewInt(0)
 			} else {
