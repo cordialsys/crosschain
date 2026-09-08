@@ -39,6 +39,10 @@ var _ xclient.Client = &Client{}
 var _ xclient.StakingClient = &Client{}
 var _ xclient.CallClient = &Client{}
 
+// Base fee per signature in lamports.
+// https://solana.com/docs/core/fees#key-points
+const baseFeeLamports = 5000
+
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -66,10 +70,8 @@ func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, c
 		return nil, fmt.Errorf("error fetching latest blockhash")
 	}
 	txInput.RecentBlockHash = recent.Value.Blockhash
-	// fixed 5000 lamports
-	// https://solana.com/docs/core/fees#key-points
-	txInput.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
-	txInput.FeePayerBaseFee = xc.NewAmountBlockchainFromUint64(5000)
+	txInput.BaseFee = xc.NewAmountBlockchainFromUint64(baseFeeLamports)
+	txInput.FeePayerBaseFee = xc.NewAmountBlockchainFromUint64(baseFeeLamports)
 
 	// Derive and check for a durable nonce account
 	fromPub, err := solana.PublicKeyFromBase58(string(fromAddr))
