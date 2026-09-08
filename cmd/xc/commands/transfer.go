@@ -86,6 +86,13 @@ func CmdTxTransfer() *cobra.Command {
 
 			toWalletAddress := args[0]
 			transferredAmount := args[1]
+			transferredAmountHuman, err := xc.NewAmountHumanReadableFromStr(transferredAmount)
+			if err != nil {
+				return err
+			}
+			if transferredAmountHuman.Decimal().IsNegative() {
+				return fmt.Errorf("transfer amount must not be negative")
+			}
 
 			decimals := chainConfig.GetDecimals()
 			if contract != "" {
@@ -109,10 +116,6 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not load client: %v", err)
 			}
 
-			transferredAmountHuman, err := xc.NewAmountHumanReadableFromStr(transferredAmount)
-			if err != nil {
-				return err
-			}
 			addressBuilder, err := xcFactory.NewAddressBuilder(chainConfig.Base(), addressArgs...)
 			if err != nil {
 				return fmt.Errorf("could not create address builder: %v", err)
@@ -260,6 +263,9 @@ func CmdTxTransfer() *cobra.Command {
 					}
 				}
 				amount := tfArgs.GetAmount()
+				if fee.Cmp(&amount) > 0 {
+					return fmt.Errorf("inclusive fee %s exceeds transfer amount %s", fee.ToHuman(decimals), amount.ToHuman(decimals))
+				}
 				deductedAmount := amount.Sub(&fee)
 				logrus.WithFields(logrus.Fields{
 					"fee":             fee.ToHuman(chainConfig.GetDecimals()),

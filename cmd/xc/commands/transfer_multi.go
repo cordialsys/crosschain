@@ -114,6 +114,9 @@ func CmdTxMultiTransfer() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("invalid amount '%s' at position %d: %v", amountRaw, i, err)
 				}
+				if amountHuman.Decimal().IsNegative() {
+					return fmt.Errorf("transfer amount at position %d must not be negative", i)
+				}
 				amount := amountHuman.ToBlockchain(int32(decimalsForAmount))
 				balances[i] = amount
 			}
