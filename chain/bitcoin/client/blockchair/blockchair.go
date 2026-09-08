@@ -184,8 +184,23 @@ func (client *BlockchairClient) FetchTransferInput(ctx context.Context, args xcb
 	if !client.skipAmountFilter {
 		input.SetAmount(args.GetAmount())
 	}
+	if clientcommon.SupportsLegacyPrevoutVerification(client.Asset.GetChain().Chain) {
+		if err := clientcommon.FetchLegacyPrevouts(ctx, client.Asset.GetChain().Chain, input.UnspentOutputs, client.sourceScript, client.getRawTx); err != nil {
+			return input, err
+		}
+	}
 
 	return input, nil
+}
+
+func (client *BlockchairClient) getRawTx(ctx context.Context, txid string) ([]byte, error) {
+	var data struct {
+		RawTransaction string `json:"raw_transaction"`
+	}
+	if _, err := client.send(ctx, &data, "/raw/transaction", txid); err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(data.RawTransaction)
 }
 
 func (client *BlockchairClient) FetchLegacyTxInput(ctx context.Context, from xc.Address, to xc.Address) (xc.TxInput, error) {
@@ -406,4 +421,12 @@ func (client *BlockchairClient) FetchDecimals(ctx context.Context, contract xc.C
 
 func (client *BlockchairClient) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (*txinfo.BlockWithTransactions, error) {
 	panic("unimplemented")
+}
+
+func (client *BlockchairClient) sourceScript(from xc.Address) ([]byte, error) {
+	addr, err := client.addressDecoder.Decode(from, client.Chaincfg)
+	if err != nil {
+		return nil, err
+	}
+	return client.addressDecoder.PayToAddrScript(addr)
 }

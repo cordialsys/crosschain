@@ -411,6 +411,11 @@ func (client *BlockbookClient) FetchTransferInput(ctx context.Context, args xcbu
 		// filter the UTXO set needed
 		input.SetAmount(args.GetAmount())
 	}
+	if SupportsLegacyPrevoutVerification(client.Asset.GetChain().Chain) {
+		if err := FetchLegacyPrevouts(ctx, client.Asset.GetChain().Chain, input.UnspentOutputs, client.sourceScript, client.bbClient.GetRawTx); err != nil {
+			return input, err
+		}
+	}
 
 	return input, nil
 }
@@ -437,6 +442,11 @@ func (client *BlockbookClient) FetchMultiTransferInput(ctx context.Context, args
 
 	// Sort + Filter the UTXO for the minimum set (+ some ~10 extra) that satisfies the total amount
 	filteredUtxo := tx_input.FilterForMinUtxoSet(allUtxo, totalAmount, 10)
+	if SupportsLegacyPrevoutVerification(client.Asset.GetChain().Chain) {
+		if err := FetchLegacyPrevouts(ctx, client.Asset.GetChain().Chain, filteredUtxo, client.sourceScript, client.bbClient.GetRawTx); err != nil {
+			return multiInput, err
+		}
+	}
 
 	// Group back by address
 	groupedUtxoByAddress := map[xc.Address][]tx_input.Output{}
@@ -571,4 +581,12 @@ func (client *BlockbookClient) FetchBlock(ctx context.Context, args *xclient.Blo
 	}
 	block.TransactionIds = append(block.TransactionIds, blockResponse.GetTxIds()...)
 	return block, nil
+}
+
+func (client *BlockbookClient) sourceScript(from xc.Address) ([]byte, error) {
+	addr, err := client.decoder.Decode(from, client.Chaincfg)
+	if err != nil {
+		return nil, err
+	}
+	return client.decoder.PayToAddrScript(addr)
 }

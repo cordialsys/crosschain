@@ -128,6 +128,11 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 
 // NewNativeTransfer creates a new transfer for a native asset
 func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
+	for _, receiver := range args.Receivers() {
+		if _, set := receiver.GetContract(); set {
+			return nil, fmt.Errorf("token transfers are not supported on %s", txBuilder.Asset.Chain)
+		}
+	}
 	var local_input *tx_input.MultiTransferInput
 	var ok bool
 	if local_input, ok = (input.(*tx_input.MultiTransferInput)); !ok {

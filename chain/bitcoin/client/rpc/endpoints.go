@@ -206,6 +206,14 @@ func (client *Client) GetBlockHeader(ctx context.Context, blockHash string) (typ
 	return result, nil
 }
 
+func (client *Client) GetRawTx(ctx context.Context, txid string) ([]byte, error) {
+	var raw string
+	if err := client.call(ctx, "getrawtransaction", []interface{}{txid, false}, &raw); err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(raw)
+}
+
 func (client *Client) GetRawTransaction(ctx context.Context, txid string) (GetRawTransactionResponse, error) {
 	// Always use verbose = 1 for JSON object response
 	params := []interface{}{txid, 1}

@@ -19,6 +19,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input/txinputtest"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 )
 
@@ -67,9 +68,21 @@ func TestFetchTxInput(t *testing.T) {
 	}
 	for i, v := range testcases {
 		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			script, err := hex.DecodeString("76a914652dac91ff1b130616cb11ce33b0ac2f1b4df89188ac")
+			require.NoError(err)
+			values := make([]uint64, len(v.utxos))
+			for i, value := range v.utxos {
+				values[i] = uint64(value)
+			}
+			outputs, parentRaw := txinputtest.Outputs(t, script, values...)
+			hashBytes := append([]byte(nil), outputs[0].Hash...)
+			for i, j := 0, len(hashBytes)-1; i < j; i, j = i+1, j-1 {
+				hashBytes[i], hashBytes[j] = hashBytes[j], hashBytes[i]
+			}
+			txid := hex.EncodeToString(hashBytes)
 			utxoJsons := []string{}
 			for i, utxo := range v.utxos {
-				s := fmt.Sprintf(`{"block_id":100,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, i+1, utxo)
+				s := fmt.Sprintf(`{"block_id":100,"transaction_hash":"%s","index":%d,"value":%d}`, txid, i+1, utxo)
 				utxoJsons = append(utxoJsons, s)
 			}
 
@@ -81,6 +94,7 @@ func TestFetchTxInput(t *testing.T) {
 				),
 				// fetch blockinfo (for estimate gas)
 				`{"data":{"blocks":2428756,"transactions":65332308,"outputs":173266703,"circulation":2099211173546005,"blocks_24h":125,"transactions_24h":9376,"difficulty":104649090.3851,"volume_24h":9305170450343,"mempool_transactions":91,"mempool_size":25369,"mempool_tps":0.21666666666666667,"mempool_total_fee_usd":0,"best_block_height":2428755,"best_block_hash":"00000000000000171993c83855edbbdb4b596a80d7979b9906199a152c02e602","best_block_time":"2023-04-13 15:55:31","blockchain_size":28727851118,"average_transaction_fee_24h":5919,"inflation_24h":305175750,"median_transaction_fee_24h":208,"cdd_24h":10812.844745459975,"mempool_outputs":308,"largest_transaction_24h":{"hash":"bb7fb631e27a18b8802ead03f3ee14b69ae71edb845697f98e0f072b845b0be4","value_usd":0},"hashrate_24h":"650455020414125","inflation_usd_24h":0,"average_transaction_fee_usd_24h":0,"median_transaction_fee_usd_24h":0,"market_price_usd":0,"market_price_btc":0,"market_price_usd_change_24h_percentage":0,"market_cap_usd":0,"market_dominance_percentage":0,"next_retarget_time_estimate":"2023-04-17 02:55:52","next_difficulty_estimate":107945581,"suggested_transaction_fee_per_byte_sat":1,"hodling_addresses":10010301},"context":{"code":200,"source":"A","state":2428755,"market_price_usd":30467,"cache":{"live":false,"duration":"Ignore","since":"2023-04-13 16:03:49","until":"2023-04-13 16:05:00","time":2.86102294921875e-6},"api":{"version":"2.0.95-ie","last_major_update":"2022-11-07 02:00:00","next_major_update":null,"documentation":"https:\/\/blockchair.com\/api\/docs","notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"},"servers":"API4,TBTC0","time":1.8575801849365234,"render_time":0.007244110107421875,"full_time":0.007246971130371094,"request_cost":1}}`,
+				fmt.Sprintf(`{"data":{"%s":{"raw_transaction":"%s"}},"context":{"code":200}}`, txid, hex.EncodeToString(parentRaw)),
 			}, 200)
 			defer close()
 			_ = os.Setenv("_BLOCK_CHAIR_KEY", "AAA")
@@ -112,7 +126,7 @@ func TestFetchTxInput(t *testing.T) {
 			require.EqualValues(v.expectedTotal, total.Uint64())
 			require.NotZero(btcInput.UnspentOutputs[0].Index)
 			// string should be reversed
-			require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
+			require.EqualValues(hex.EncodeToString(outputs[0].Hash), hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
 			require.LessOrEqual(12.0, btcInput.GasPricePerByteV2.Decimal().InexactFloat64())
 			require.GreaterOrEqual(30.0, btcInput.GasPricePerByteV2.Decimal().InexactFloat64())
 
@@ -128,12 +142,20 @@ func TestFetchTxInput(t *testing.T) {
 }
 func TestFetchTxInputUnconfirmedUtxo(t *testing.T) {
 	require := require.New(t)
+	script, err := hex.DecodeString("76a914652dac91ff1b130616cb11ce33b0ac2f1b4df89188ac")
+	require.NoError(err)
+	outputs, parentRaw := txinputtest.Outputs(t, script, 100*100_000_000, 100_000_000, 100*100_000_000)
+	hashBytes := append([]byte(nil), outputs[0].Hash...)
+	for i, j := 0, len(hashBytes)-1; i < j; i, j = i+1, j-1 {
+		hashBytes[i], hashBytes[j] = hashBytes[j], hashBytes[i]
+	}
+	txid := hex.EncodeToString(hashBytes)
 
-	utxo1 := fmt.Sprintf(`{"block_id":100,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 0, 100*100_000_000)
+	utxo1 := fmt.Sprintf(`{"block_id":100,"transaction_hash":"%s","index":%d,"value":%d}`, txid, 1, 100*100_000_000)
 	// should not include unconfirmed utxo that are relatively "small"
-	utxo2 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 2, 1*100_000_000)
+	utxo2 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"%s","index":%d,"value":%d}`, txid, 2, 1*100_000_000)
 	// this one is unconfirmed but makes up a significant part of the balance, so it should get used.
-	utxo3 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","index":%d,"value":%d}`, 1, 100*100_000_000)
+	utxo3 := fmt.Sprintf(`{"block_id":-1,"transaction_hash":"%s","index":%d,"value":%d}`, txid, 3, 100*100_000_000)
 	utxoJsons := []string{utxo1, utxo2, utxo3}
 
 	server, close := testtypes.MockHTTP(t, []string{
@@ -144,6 +166,7 @@ func TestFetchTxInputUnconfirmedUtxo(t *testing.T) {
 		),
 		// fetch blockinfo (for estimate gas)
 		`{"data":{"blocks":2428756,"transactions":65332308,"outputs":173266703,"circulation":2099211173546005,"blocks_24h":125,"transactions_24h":9376,"difficulty":104649090.3851,"volume_24h":9305170450343,"mempool_transactions":91,"mempool_size":25369,"mempool_tps":0.21666666666666667,"mempool_total_fee_usd":0,"best_block_height":2428755,"best_block_hash":"00000000000000171993c83855edbbdb4b596a80d7979b9906199a152c02e602","best_block_time":"2023-04-13 15:55:31","blockchain_size":28727851118,"average_transaction_fee_24h":5919,"inflation_24h":305175750,"median_transaction_fee_24h":208,"cdd_24h":10812.844745459975,"mempool_outputs":308,"largest_transaction_24h":{"hash":"bb7fb631e27a18b8802ead03f3ee14b69ae71edb845697f98e0f072b845b0be4","value_usd":0},"hashrate_24h":"650455020414125","inflation_usd_24h":0,"average_transaction_fee_usd_24h":0,"median_transaction_fee_usd_24h":0,"market_price_usd":0,"market_price_btc":0,"market_price_usd_change_24h_percentage":0,"market_cap_usd":0,"market_dominance_percentage":0,"next_retarget_time_estimate":"2023-04-17 02:55:52","next_difficulty_estimate":107945581,"suggested_transaction_fee_per_byte_sat":1,"hodling_addresses":10010301},"context":{"code":200,"source":"A","state":2428755,"market_price_usd":30467,"cache":{"live":false,"duration":"Ignore","since":"2023-04-13 16:03:49","until":"2023-04-13 16:05:00","time":2.86102294921875e-6},"api":{"version":"2.0.95-ie","last_major_update":"2022-11-07 02:00:00","next_major_update":null,"documentation":"https:\/\/blockchair.com\/api\/docs","notice":"Please note that on November 7th, 2022 public support for the following blockchains was dropped: EOS, Bitcoin SV"},"servers":"API4,TBTC0","time":1.8575801849365234,"render_time":0.007244110107421875,"full_time":0.007246971130371094,"request_cost":1}}`,
+		fmt.Sprintf(`{"data":{"%s":{"raw_transaction":"%s"}},"context":{"code":200}}`, txid, hex.EncodeToString(parentRaw)),
 	}, 200)
 	defer close()
 	_ = os.Setenv("_BLOCK_CHAIR_KEY", "AAA")

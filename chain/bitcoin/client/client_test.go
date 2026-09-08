@@ -13,6 +13,7 @@ import (
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	"github.com/cordialsys/crosschain/chain/bitcoin"
 	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input"
+	"github.com/cordialsys/crosschain/chain/bitcoin/tx_input/txinputtest"
 	testtypes "github.com/cordialsys/crosschain/testutil"
 	"github.com/stretchr/testify/suite"
 )
@@ -74,9 +75,21 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 		},
 	}
 	for _, v := range testcases {
+		script, err := hex.DecodeString("76a914652dac91ff1b130616cb11ce33b0ac2f1b4df89188ac")
+		require.NoError(err)
+		values := make([]uint64, len(v.utxos))
+		for i, value := range v.utxos {
+			values[i] = uint64(value)
+		}
+		outputs, parentRaw := txinputtest.Outputs(s.T(), script, values...)
+		hashBytes := append([]byte(nil), outputs[0].Hash...)
+		for i, j := 0, len(hashBytes)-1; i < j; i, j = i+1, j-1 {
+			hashBytes[i], hashBytes[j] = hashBytes[j], hashBytes[i]
+		}
+		txid := hex.EncodeToString(hashBytes)
 		utxoJsons := []string{}
 		for i, utxo := range v.utxos {
-			s := fmt.Sprintf(`{"height":100,"confirmations":100,"txid":"c4979460bb03a1877bbf23571c83edbd02cb4da20049916fa6c5fbf77470e027","vout":%d,"value":"%d"}`, i+1, utxo)
+			s := fmt.Sprintf(`{"height":100,"confirmations":100,"txid":"%s","vout":%d,"value":"%d"}`, txid, i+1, utxo)
 			utxoJsons = append(utxoJsons, s)
 		}
 
@@ -85,6 +98,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 			"[" + strings.Join(utxoJsons, ",") + "]",
 			// estimatesmartfee
 			`{"jsonrpc":"2.0","result":{"feerate":0.00004965,"blocks":4},"id":1}`,
+			fmt.Sprintf(`{"jsonrpc":"2.0","result":"%s","id":1}`, hex.EncodeToString(parentRaw)),
 		}, 200)
 		defer close()
 		asset := xc.NewChainConfig("BTC").WithUrl(server.URL).WithNet("testnet").WithProvider(string(bitcoin.JsonRpc))
@@ -111,7 +125,7 @@ func (s *ClientTestSuite) TestFetchTxInput() {
 		require.EqualValues(v.expectedTotal, total.Uint64())
 		require.NotZero(btcInput.UnspentOutputs[0].Index)
 		// string should be reversed
-		require.EqualValues("27e07074f7fbc5a66f914900a24dcb02bded831c5723bf7b87a103bb609497c4", hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
+		require.EqualValues(hex.EncodeToString(outputs[0].Hash), hex.EncodeToString(btcInput.UnspentOutputs[0].Hash))
 		require.LessOrEqual(float64(3), btcInput.GasPricePerByteV2.Decimal().InexactFloat64())
 		require.GreaterOrEqual(float64(15), btcInput.GasPricePerByteV2.Decimal().InexactFloat64())
 

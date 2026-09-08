@@ -83,6 +83,14 @@ func (client *Client) GetTx(ctx context.Context, txHash string) (types.Transacti
 	return data, nil
 }
 
+func (client *Client) GetRawTx(ctx context.Context, txHash string) ([]byte, error) {
+	tx, err := client.GetTx(ctx, txHash)
+	if err != nil {
+		return nil, err
+	}
+	return hex.DecodeString(tx.Hex)
+}
+
 func (client *Client) GetOutput(ctx context.Context, txHash string, vout uint32) (types.Vout, error) {
 	tx, err := client.GetTx(ctx, txHash)
 	if err != nil {
