@@ -22,6 +22,7 @@ type builderOptions struct {
 	decimals *int
 
 	feePayer             *xc.Address
+	feeContract          *xc.ContractAddress
 	inclusiveFeeSpending bool
 	// list of transaction hashes that have been attempted and may still be in the mempool
 	transactionAttempts []string
@@ -68,14 +69,15 @@ func get[T any](arg *T) (T, bool) {
 }
 
 // Transaction options
-func (opts *builderOptions) GetMemo() (string, bool)                 { return get(opts.memo) }
-func (opts *builderOptions) GetTimestamp() (int64, bool)             { return get(opts.timestamp) }
-func (opts *builderOptions) GetPriority() (xc.GasFeePriority, bool)  { return get(opts.gasFeePriority) }
-func (opts *builderOptions) GetPublicKey() ([]byte, bool)            { return get(opts.publicKey) }
-func (opts *builderOptions) GetContract() (xc.ContractAddress, bool) { return get(opts.contract) }
-func (opts *builderOptions) GetDecimals() (int, bool)                { return get(opts.decimals) }
-func (opts *builderOptions) GetFeePayer() (xc.Address, bool)         { return get(opts.feePayer) }
-func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)    { return get(opts.feePayerPublicKey) }
+func (opts *builderOptions) GetMemo() (string, bool)                    { return get(opts.memo) }
+func (opts *builderOptions) GetTimestamp() (int64, bool)                { return get(opts.timestamp) }
+func (opts *builderOptions) GetPriority() (xc.GasFeePriority, bool)     { return get(opts.gasFeePriority) }
+func (opts *builderOptions) GetPublicKey() ([]byte, bool)               { return get(opts.publicKey) }
+func (opts *builderOptions) GetContract() (xc.ContractAddress, bool)    { return get(opts.contract) }
+func (opts *builderOptions) GetDecimals() (int, bool)                   { return get(opts.decimals) }
+func (opts *builderOptions) GetFeePayer() (xc.Address, bool)            { return get(opts.feePayer) }
+func (opts *builderOptions) GetFeeContract() (xc.ContractAddress, bool) { return get(opts.feeContract) }
+func (opts *builderOptions) GetFeePayerPublicKey() ([]byte, bool)       { return get(opts.feePayerPublicKey) }
 func (opts *builderOptions) GetTransactionAttempts() []string {
 	return opts.transactionAttempts
 }
@@ -113,6 +115,10 @@ func (opts *builderOptions) SetDecimals(decimals int) {
 
 func (opts *builderOptions) SetFeePayer(feePayer xc.Address) {
 	opts.feePayer = &feePayer
+}
+
+func (opts *builderOptions) SetFeeContract(feeContract xc.ContractAddress) {
+	opts.feeContract = &feeContract
 }
 
 func (opts *builderOptions) SetFeePayerPublicKey(feePayerPublicKey []byte) {
@@ -209,6 +215,13 @@ func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption
 	return func(opts *builderOptions) error {
 		opts.feePayer = &feePayer
 		opts.feePayerPublicKey = &feePayerPublicKey
+		return nil
+	}
+}
+
+func OptionFeeContract(feeContract xc.ContractAddress) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.feeContract = &feeContract
 		return nil
 	}
 }

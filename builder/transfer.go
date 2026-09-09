@@ -36,6 +36,10 @@ func (args *TransferArgs) GetFeePayer() (xc.Address, bool) {
 	return args.options.GetFeePayer()
 }
 
+func (args *TransferArgs) GetFeeContract() (xc.ContractAddress, bool) {
+	return args.options.GetFeeContract()
+}
+
 func (args *TransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
 }

@@ -30,6 +30,15 @@ type Tx struct {
 var _ xc.Tx = &Tx{}
 var _ xc.TxAdditionalSighashes = &Tx{}
 
+// BuildEthTx builds the underlying Ethereum transaction. It is exposed for
+// EVM-compatible chains which extend the Ethereum transaction envelope.
+func (tx Tx) BuildEthTx() (*types.Transaction, error) {
+	if tx.txInner == nil {
+		return nil, fmt.Errorf("transaction not initialized")
+	}
+	return tx.txInner.BuildEthTx()
+}
+
 func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_input.TxInput, legacy bool) (*Tx, error) {
 	var txInner evmTx
 
