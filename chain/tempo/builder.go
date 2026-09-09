@@ -32,7 +32,20 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	if err != nil {
 		return nil, err
 	}
-	return evmtx.NewTx(txBuilder.Asset, args, evmInput, false)
+	evmTx, err := evmtx.NewTx(txBuilder.Asset, args, evmInput, false)
+	if err != nil {
+		return nil, err
+	}
+
+	feeContract, ok := args.GetFeeContract()
+	if !ok {
+		// When no fee contract is explicitly configured, Tempo selects the
+		// transferred token while fetching the input.
+		if tempoInput, ok := input.(*TxInput); ok {
+			feeContract = tempoInput.FeeContract
+		}
+	}
+	return NewTx(evmTx, feeContract)
 }
 
 func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
