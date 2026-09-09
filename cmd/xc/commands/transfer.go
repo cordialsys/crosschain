@@ -30,6 +30,7 @@ import (
 func CmdTxTransfer() *cobra.Command {
 	var inclusiveFee bool
 	var feePayer bool
+	var feeContract string
 	var dryRun bool
 	var offline bool
 	var fromSecretRef string
@@ -176,6 +177,10 @@ func CmdTxTransfer() *cobra.Command {
 				logrus.WithField("fee-payer", feePayerAddress).Info("using fee-payer")
 				tfOptions = append(tfOptions, builder.OptionFeePayer(feePayerAddress, feePayerPublicKey))
 				signerCollection.AddAuxSigner(feePayerSigner, feePayerAddress)
+			}
+
+			if feeContract != "" {
+				tfOptions = append(tfOptions, builder.OptionFeeContract(xc.ContractAddress(feeContract)))
 			}
 
 			if memo != "" {
@@ -395,6 +400,7 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().String("decimals", "", "Decimals of the token, when using --contract.")
 	cmd.Flags().String("memo", "", "Set a memo for the transfer.")
 	cmd.Flags().BoolVar(&feePayer, "fee-payer", false, "Use another address to pay the fee for the transaction (uses --fee-payer-secret)")
+	cmd.Flags().StringVar(&feeContract, "fee-contract", "", "Contract of the asset to pay fees in")
 	cmd.Flags().String("priority", "", "Apply a priority for the transaction fee ('low', 'market', 'aggressive', 'very-aggressive', or any positive decimal number)")
 	cmd.Flags().Duration("timeout", 1*time.Minute, "Amount of time to wait for transaction to confirm on chain.")
 	cmd.Flags().BoolVar(&inclusiveFee, "inclusive-fee", false, "Include the fee in the transfer amount.")
