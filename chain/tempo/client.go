@@ -42,6 +42,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	}
 
 	if evmInput, ok := input.(*evminput.TxInput); ok {
+		if feeContract, ok := args.GetFeeContract(); ok {
+			return NewTxInputFromEVM(evmInput, feeContract), nil
+		}
 		return NewTxInputFromEVM(evmInput, contract), nil
 	} else {
 		return nil, fmt.Errorf("tempo inner client returned unexpected type: %T", input)
