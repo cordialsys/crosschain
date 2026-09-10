@@ -2,6 +2,7 @@ package tempo
 
 import (
 	"math/big"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
@@ -11,6 +12,8 @@ import (
 type TxInput struct {
 	evminput.TxInput
 	FeeContract xc.ContractAddress `json:"fee_contract,omitempty"`
+	// Native Tempo sponsorship does not consume a fee-payer nonce.
+	NativeFeePayer bool `json:"native_fee_payer,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -44,9 +47,27 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return input.TxInput.SetGasFeePriority(other)
 }
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if input.NativeFeePayer {
+		account, ok := other.(evminput.GetAccountInfo)
+		if !ok {
+			return false
+		}
+		if strings.EqualFold(input.GetFromAddress(), account.GetFromAddress()) && input.Nonce == account.GetNonce() {
+			return false
+		}
+		// An EIP-7702 transaction can consume our sender's nonce as its payer.
+		otherTempo, native := other.(*TxInput)
+		if !(native && otherTempo.NativeFeePayer) && strings.EqualFold(input.GetFromAddress(), account.GetFeePayerAddress()) && input.Nonce == account.GetFeePayerNonce() {
+			return false
+		}
+		return true
+	}
 	return input.TxInput.IndependentOf(other)
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (independent bool) {
+	if input.NativeFeePayer {
+		return other != nil && !input.IndependentOf(other)
+	}
 	return input.TxInput.SafeFromDoubleSend(other)
 }
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
@@ -84,6 +105,9 @@ func (input *TxInput) GetNonce() uint64 {
 }
 
 func (input *TxInput) IsFeeLimitAccurate() bool {
+	if input.NativeFeePayer {
+		return false
+	}
 	return input.TxInput.IsFeeLimitAccurate()
 }
 

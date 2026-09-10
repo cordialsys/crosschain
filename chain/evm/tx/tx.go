@@ -31,6 +31,9 @@ var _ xc.Tx = &Tx{}
 var _ xc.TxAdditionalSighashes = &Tx{}
 
 func NewTx(chain *xc.ChainBaseConfig, args xcbuilder.TransferArgs, input *tx_input.TxInput, legacy bool) (*Tx, error) {
+	if _, ok := args.GetFeeContract(); ok {
+		return nil, fmt.Errorf("fee-contract selection requires the Tempo transaction builder")
+	}
 	var txInner evmTx
 
 	if legacy {
