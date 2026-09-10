@@ -35,6 +35,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if !hasContract || contract == "" {
 		return nil, fmt.Errorf("Tempo only supports token transfers (missing contract sending from %s)", args.GetFrom())
 	}
+	if _, ok := args.GetFeeContract(); ok {
+		return client.fetchFeeTokenTransferInput(ctx, args)
+	}
 
 	input, err := client.Client.FetchTransferInput(ctx, args)
 	if err != nil {

@@ -69,6 +69,9 @@ func NewMultiTransferArgs(chain *xc.ChainBaseConfig, spenders []*Sender, receive
 			return nil, err
 		}
 	}
+	if builderOptions.feeContract != nil {
+		return nil, errors.New("fee-contract selection is not yet supported for multi-transfers")
+	}
 	switch chain.Driver {
 	case xc.DriverBitcoin, xc.DriverBitcoinCash, xc.DriverBitcoinLegacy, xc.DriverCardano, xc.DriverSui:
 		// check for address dups

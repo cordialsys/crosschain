@@ -20,6 +20,23 @@ func TestGetFeeLimitRoundsTempoFeeUpToTokenPrecision(t *testing.T) {
 	require.Equal(t, "7570", feeLimit.String())
 }
 
+func TestNativeFeePayerDoesNotReserveSponsorNonce(t *testing.T) {
+	_, _, a := feeTokenFixture(t)
+	a.NativeFeePayer = true
+	a.FromAddress = testSender
+	a.FeePayerAddress = testFeePayer
+	b := *a
+	b.FromAddress = testRecipient
+	require.True(t, a.IndependentOf(&b))
+	require.True(t, b.IndependentOf(a))
+	require.False(t, a.SafeFromDoubleSend(&b))
+	b.FromAddress = testSender
+	require.False(t, a.IndependentOf(&b))
+	require.True(t, a.SafeFromDoubleSend(&b))
+	b.Nonce++
+	require.True(t, a.IndependentOf(&b))
+}
+
 func TestGetFeeLimitLeavesExactTempoFeeUnchanged(t *testing.T) {
 	input := NewTxInputFromEVM(&evminput.TxInput{
 		GasLimit:  378_500,

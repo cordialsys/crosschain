@@ -36,6 +36,10 @@ func (args *TransferArgs) GetFeePayer() (xc.Address, bool) {
 	return args.options.GetFeePayer()
 }
 
+func (args *TransferArgs) GetFeeContract() (xc.ContractAddress, bool) {
+	return get(args.options.feeContract)
+}
+
 func (args *TransferArgs) GetFeePayerPublicKey() ([]byte, bool) {
 	return args.options.GetFeePayerPublicKey()
 }
@@ -92,6 +96,10 @@ func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, 
 		if err != nil {
 			return args, err
 		}
+	}
+
+	if _, ok := args.GetFeeContract(); ok && chain.Driver != xc.DriverTempo {
+		return args, fmt.Errorf("fee-contract selection is currently supported only for Tempo transfers")
 	}
 
 	switch chain.Driver {

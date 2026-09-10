@@ -22,6 +22,7 @@ type builderOptions struct {
 	decimals *int
 
 	feePayer             *xc.Address
+	feeContract          *xc.ContractAddress
 	inclusiveFeeSpending bool
 	// list of transaction hashes that have been attempted and may still be in the mempool
 	transactionAttempts []string
@@ -209,6 +210,15 @@ func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption
 	return func(opts *builderOptions) error {
 		opts.feePayer = &feePayer
 		opts.feePayerPublicKey = &feePayerPublicKey
+		return nil
+	}
+}
+
+// OptionFeeContract selects the token used to pay fees, independently of the
+// transferred token. Currently supported for single Tempo transfers only.
+func OptionFeeContract(contract xc.ContractAddress) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.feeContract = &contract
 		return nil
 	}
 }

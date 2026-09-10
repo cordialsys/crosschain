@@ -2,6 +2,7 @@ package tempo
 
 import (
 	"fmt"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -28,6 +29,16 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (TxBuilder, error) {
 var _ xcbuilder.FullBuilder = &TxBuilder{}
 
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
+	if feeContract, ok := args.GetFeeContract(); ok {
+		tempoInput, ok := input.(*TxInput)
+		if !ok || tempoInput == nil {
+			return nil, fmt.Errorf("fee-contract selection requires a Tempo transaction input")
+		}
+		if !strings.EqualFold(string(feeContract), string(tempoInput.FeeContract)) {
+			return nil, fmt.Errorf("fee contract differs from the token used for fee estimation")
+		}
+		return newFeeTokenTx(txBuilder.Asset, args, tempoInput)
+	}
 	evmInput, err := evmTransferInput(input)
 	if err != nil {
 		return nil, err
