@@ -260,7 +260,9 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if hasFeePayer {
 		baseNonceAccountMaybe = nil
 	}
-	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, xc.NewAmountBlockchainFromUint64(0), baseNonceAccountMaybe)
+	// Reserve the transfer amount before considering optional nonce creation.
+	// In particular, a native balance sweep must not lock funds in a new nonce account.
+	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, args.GetAmount(), baseNonceAccountMaybe)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +289,10 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		feePayerBalance, err := client.FetchNativeBalance(ctx, feePayer)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch fee-payer native balance: %v", err)
+		}
+		if feePayer == args.GetFrom() && contract == "" {
+			amount := args.GetAmount()
+			feePayerBalance = feePayerBalance.Sub(&amount)
 		}
 		if err := client.FetchFeePayerDurableNonceInput(ctx, txInput, feePayerNonceAccount, fromPub, feePayerPub, feePayerBalance, lamports); err != nil {
 			return nil, fmt.Errorf("could not fetch fee-payer durable nonce: %v", err)

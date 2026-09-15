@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/builder/buildertest"
 	xcsolana "github.com/cordialsys/crosschain/chain/solana"
+	solanabuilder "github.com/cordialsys/crosschain/chain/solana/builder"
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
@@ -140,6 +142,96 @@ func TestFetchDurableNonceInputRentAffordability(t *testing.T) {
 				require.True(t, input.DurableNonceAuthority.IsZero())
 			}
 			require.True(t, input.DurableNonce.IsZero())
+		})
+	}
+}
+
+func TestFetchTransferInputNonceCreationAfterTransfer(t *testing.T) {
+	const balance = uint64(5_000_000_000)
+	const rent = uint64(1_447_680)
+	from := xc.Address("4ixwJt7DDGUV3xxi3mvZuEjLn4kDC39ogknnHQ4Crv5a")
+	to := xc.Address("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb")
+	fromPub := solana.MustPublicKeyFromBase58(string(from))
+	nonce := solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK")
+	nonceData := make([]byte, 80)
+	nonceData[0], nonceData[4] = 1, 1
+	copy(nonceData[8:40], fromPub[:])
+	copy(nonceData[40:72], nonce[:])
+
+	for _, tt := range []struct {
+		name            string
+		amount          uint64
+		inclusiveFee    bool
+		existingNonce   bool
+		explicitPayer   bool
+		excludeFeatures bool
+		wantCreate      bool
+	}{
+		{name: "full_balance", amount: balance},
+		{name: "full_balance_including_fee", amount: balance, inclusiveFee: true},
+		{name: "full_balance_less_network_fee", amount: balance - 5000},
+		{name: "insufficient_remainder_for_rent", amount: balance - rent + 1},
+		{name: "partial_transfer", amount: balance / 2, wantCreate: true},
+		{name: "existing_nonce_on_sweep", amount: balance - 5000, existingNonce: true},
+		{name: "explicit_self_payer_on_sweep", amount: balance - 5000, explicitPayer: true},
+		{name: "excluded_features_on_sweep", amount: balance, excludeFeatures: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			nonceResponse := solanaMissingNonceAccountResponse
+			if tt.existingNonce {
+				nonceResponse = fmt.Sprintf(`{"value":{"owner":"11111111111111111111111111111111","lamports":%d,"data":["%s","base64"]}}`, rent, base64.StdEncoding.EncodeToString(nonceData))
+			}
+			responses := []string{
+				solanaValidBlockhashResponse,
+				fmt.Sprint(rent),
+				fmt.Sprintf(`{"value":%d}`, balance),
+				nonceResponse,
+			}
+			if tt.explicitPayer {
+				responses = append(responses, fmt.Sprint(rent), fmt.Sprintf(`{"value":%d}`, balance), nonceResponse)
+			}
+			responses = append(responses, `{"value":{"err":null,"unitsConsumed":150}}`)
+			server, close := testtypes.MockJSONRPC(t, responses)
+			defer close()
+			asset := xc.NewChainConfig(xc.SOL).WithUrl(server.URL)
+			asset.ExcludeFeatures = tt.excludeFeatures
+			solClient, err := client.NewClient(asset)
+			require.NoError(t, err)
+			args := buildertest.MustNewTransferArgs(asset.Base(), from, to, xc.NewAmountBlockchainFromUint64(tt.amount))
+			args.SetInclusiveFeeSpending(tt.inclusiveFee)
+			if tt.explicitPayer {
+				args.SetFeePayer(from)
+			}
+			input, err := solClient.FetchTransferInput(context.Background(), args)
+			require.NoError(t, err)
+			txInput := input.(*TxInput)
+			require.Equal(t, tt.wantCreate, txInput.ShouldCreateDurableNonce)
+			require.False(t, txInput.ShouldCreateFeePayerNonce)
+			wantFee := uint64(5000)
+			if tt.wantCreate {
+				wantFee += rent
+			}
+			fee, _ := input.GetFeeLimit()
+			require.Equal(t, wantFee, fee.Uint64())
+			if tt.existingNonce {
+				require.True(t, txInput.HasFromAddressDurableNonce())
+				require.Equal(t, nonce, txInput.DurableNonce)
+			} else if !tt.wantCreate {
+				require.True(t, txInput.DurableNonceAccount.IsZero())
+				require.True(t, txInput.FeePayerDurableNonceAccount.IsZero())
+			}
+			txBuilder, err := solanabuilder.NewTxBuilder(asset.Base())
+			require.NoError(t, err)
+			built, err := txBuilder.Transfer(args, input)
+			require.NoError(t, err)
+			solTx := built.(*tx.Tx).SolTx
+			wantInstructions := 1
+			if tt.wantCreate {
+				wantInstructions += 2
+			} else if tt.existingNonce {
+				wantInstructions++
+			}
+			require.Len(t, solTx.Message.Instructions, wantInstructions)
 		})
 	}
 }
