@@ -924,9 +924,10 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 			return nil, err
 		}
 	}
-	maxVersion := uint64(0)
+	// Only transaction IDs are needed. Requesting signatures avoids decoding
+	// transaction messages and supports blocks containing newer transaction versions.
 	solBlock, err := client.SolClient.GetBlockWithOpts(ctx, height, &rpc.GetBlockOpts{
-		MaxSupportedTransactionVersion: &maxVersion,
+		TransactionDetails: rpc.TransactionDetailsSignatures,
 	})
 	if err != nil {
 		return nil, err
@@ -939,13 +940,8 @@ func (client *Client) FetchBlock(ctx context.Context, args *xclient.BlockArgs) (
 	block := &txinfo.BlockWithTransactions{
 		Block: *txinfo.NewBlock(client.Asset.GetChain().Chain, height, solBlock.Blockhash.String(), blockTime),
 	}
-	for _, tx := range solBlock.Transactions {
-		parsed, err := tx.GetTransaction()
-		// Should we just skip it?
-		if err != nil {
-			return nil, fmt.Errorf("could not parsed tx in block: %v", err)
-		}
-		block.TransactionIds = append(block.TransactionIds, parsed.Signatures[0].String())
+	for _, signature := range solBlock.Signatures {
+		block.TransactionIds = append(block.TransactionIds, signature.String())
 	}
 	return block, nil
 
