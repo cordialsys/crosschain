@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
@@ -15,6 +17,7 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	testtypes "github.com/cordialsys/crosschain/testutil"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc/codes"
 )
@@ -66,6 +69,53 @@ func (s *CrosschainTestSuite) TestFetchTxInput() {
 	require.NoError(err)
 	require.IsType(txInput, input)
 	require.Equal(txInput, input)
+}
+
+func TestFetchTransferInputFeeContract(t *testing.T) {
+	const contract = xc.ContractAddress("0x20c0000000000000000000000000000000000001")
+	const feeContract = xc.ContractAddress("0x20c0000000000000000000000000000000000000")
+	for _, explicit := range []bool{false, true} {
+		t.Run(fmt.Sprintf("explicit=%t", explicit), func(t *testing.T) {
+			requests := make(chan map[string]json.RawMessage, 1)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var request map[string]json.RawMessage
+				if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+					t.Error(err)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				requests <- request
+				input, err := json.Marshal(evminput.NewTxInput())
+				if err != nil {
+					t.Error(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if err := json.NewEncoder(w).Encode(types.LegacyTxInputRes{NewTxInput: input}); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+			chain := xc.NewChainConfig(xc.TEMPO)
+			client, err := NewClient(chain, server.URL, "", "", 0)
+			require.NoError(t, err)
+			opts := []builder.BuilderOption{builder.OptionContractAddress(contract)}
+			if explicit {
+				opts = append(opts, builder.OptionFeeContract(feeContract))
+			}
+			args, err := builder.NewTransferArgs(chain.Base(), "from", "to", xc.NewAmountBlockchainFromUint64(1), opts...)
+			require.NoError(t, err)
+			_, err = client.FetchTransferInput(context.Background(), args)
+			require.NoError(t, err)
+			request := <-requests
+			require.JSONEq(t, fmt.Sprintf("%q", contract), string(request["contract"]))
+			if explicit {
+				require.JSONEq(t, fmt.Sprintf("%q", feeContract), string(request["fee_contract"]))
+			} else {
+				require.NotContains(t, request, "fee_contract")
+			}
+		})
+	}
 }
 
 func (s *CrosschainTestSuite) TestFetchTxInputError() {
