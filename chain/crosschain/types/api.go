@@ -76,8 +76,9 @@ type TransferInputReq struct {
 	To      string `json:"to"`
 	Balance string `json:"balance"`
 
-	FeePayer  *FeePayerInfo `json:"fee_payer,omitempty"`
-	PublicKey string        `json:"public_key,omitempty"`
+	FeePayer    *FeePayerInfo `json:"fee_payer,omitempty"`
+	FeeContract string        `json:"fee_contract,omitempty"`
+	PublicKey   string        `json:"public_key,omitempty"`
 
 	Extra TransferInputReqExtra `json:"extra,omitempty"`
 }
