@@ -346,7 +346,9 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
-	case ARC, AVAX, BNB, CELO, ETH, ETHW, GUSDT, GiwaETH, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, TEMPO, FRAX, RhETH:
+	case TEMPO:
+		return DriverTempo
+	case ARC, AVAX, BNB, CELO, ETH, ETHW, GUSDT, GiwaETH, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, FRAX, RhETH:
 		return DriverEVM
 	case FTM, ETC, EmROSE, AurETH, ACA, KLAY, OAS, CHZ, XDC, CHZ2:
 		return DriverEVMLegacy

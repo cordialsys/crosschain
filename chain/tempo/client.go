@@ -3,12 +3,15 @@ package tempo
 import (
 	"context"
 	"fmt"
+	"math"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	evmclient "github.com/cordialsys/crosschain/chain/evm/client"
+	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // Client wraps the EVM client and enforces contract requirements for all operations.
@@ -36,19 +39,56 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("Tempo only supports token transfers (missing contract sending from %s)", args.GetFrom())
 	}
 
-	input, err := client.Client.FetchTransferInput(ctx, args)
+	if err := validateTransfer(args); err != nil {
+		return nil, err
+	}
+	// Native Tempo sponsorship does not use a sponsor or smart-account nonce.
+	input, err := client.FetchUnsimulatedInput(ctx, args.GetFrom(), "", args.GetTransactionAttempts())
 	if err != nil {
 		return nil, err
 	}
-
-	if evmInput, ok := input.(*evminput.TxInput); ok {
-		if feeContract, ok := args.GetFeeContract(); ok {
-			return NewTxInputFromEVM(evmInput, feeContract), nil
-		}
-		return NewTxInputFromEVM(evmInput, contract), nil
-	} else {
-		return nil, fmt.Errorf("tempo inner client returned unexpected type: %T", input)
+	feeContract, ok := args.GetFeeContract()
+	if !ok {
+		feeContract = contract
 	}
+	result := NewTxInputFromEVM(input, feeContract)
+	if payer, ok := args.GetFeePayer(); ok {
+		result.FeePayerAddress, result.NativeFeePayer = payer, true
+		// Until sponsored simulation is supported, report an unestimated budget.
+		// Estimating a sender-paid call can fail for a sender with no fee balance.
+		result.GasLimit = client.DefaultGasLimit(true)
+		if configured := client.Asset.GetChain().GasLimitDefault; configured > 0 {
+			result.GasLimit = uint64(configured)
+		}
+		return result, nil
+	}
+	to, value, data, err := evmtx.EvmDestinationAndAmountAndData(args.GetTo(), args.GetAmount(), &args)
+	if err != nil {
+		return nil, err
+	}
+	// geth's CallMsg cannot express Tempo's envelope or fee-token selection.
+	request := map[string]any{
+		"type":     "0x76",
+		"from":     args.GetFrom(),
+		"chainId":  hexutil.EncodeBig(input.ChainId.Int()),
+		"nonce":    hexutil.Uint64(input.Nonce),
+		"nonceKey": "0x0",
+		"feeToken": feeContract,
+		"calls": []any{map[string]any{
+			"to":    to.Hex(),
+			"value": hexutil.EncodeBig(value),
+			"input": hexutil.Bytes(data)},
+		},
+	}
+	var gas hexutil.Uint64
+	if err := client.EthClient.Client().CallContext(ctx, &gas, "eth_estimateGas", request); err != nil {
+		return nil, fmt.Errorf("could not estimate Tempo transaction: %w", err)
+	}
+	if gas == 0 || uint64(gas) > math.MaxUint64-1000 {
+		return nil, fmt.Errorf("invalid Tempo gas estimate: %d", gas)
+	}
+	result.GasLimit = uint64(gas) + 1000 // same token-transfer buffer as EVM
+	return result, nil
 }
 
 func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilder.MultiTransferArgs) (xc.MultiTransferInput, error) {

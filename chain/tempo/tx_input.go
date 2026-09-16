@@ -2,6 +2,7 @@ package tempo
 
 import (
 	"math/big"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
@@ -11,6 +12,8 @@ import (
 type TxInput struct {
 	evminput.TxInput
 	FeeContract xc.ContractAddress `json:"fee_contract,omitempty"`
+	// Native sponsorship does not consume FeePayerNonce. Older EIP-7702 inputs do.
+	NativeFeePayer bool `json:"native_fee_payer,omitempty"`
 }
 
 var _ xc.TxInput = &TxInput{}
@@ -44,11 +47,48 @@ func (input *TxInput) SetGasFeePriority(other xc.GasFeePriority) error {
 	return input.TxInput.SetGasFeePriority(other)
 }
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	return input.TxInput.IndependentOf(other)
+	known, conflict := input.nonceConflict(other)
+	return known && !conflict
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (independent bool) {
-	return input.TxInput.SafeFromDoubleSend(other)
+	known, conflict := input.nonceConflict(other)
+	return known && conflict
 }
+
+// This method is promoted by Tempo call and multi-transfer input wrappers.
+func (input *TxInput) nativeFeePayer() bool { return input.NativeFeePayer }
+
+type accountNonce struct {
+	address string
+	nonce   uint64
+}
+
+func consumedNonces(input evminput.GetAccountInfo) []accountNonce {
+	nonces := []accountNonce{{input.GetFromAddress(), input.GetNonce()}}
+	native, ok := input.(interface{ nativeFeePayer() bool })
+	if input.GetFeePayerAddress() != "" && !(ok && native.nativeFeePayer()) {
+		nonces = append(nonces, accountNonce{input.GetFeePayerAddress(), input.GetFeePayerNonce()})
+	}
+	return nonces
+}
+
+func (input *TxInput) nonceConflict(other xc.TxInput) (known, conflict bool) {
+	account, ok := other.(evminput.GetAccountInfo)
+	if !ok || input.GetFromAddress() == "" || account.GetFromAddress() == "" {
+		return false, false
+	}
+	// Compare both sets symmetrically, including the EIP-7702 payer nonce when
+	// present. A shared native sponsor does not make transfers conflict.
+	for _, a := range consumedNonces(input) {
+		for _, b := range consumedNonces(account) {
+			if a.nonce == b.nonce && strings.EqualFold(a.address, b.address) {
+				return true, true
+			}
+		}
+	}
+	return true, false
+}
+
 func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	// Tempo reports fee pricing with extra precision, while fee limits are
 	// compared in the TIP-20 contract precision. Round up so inclusive-fee
@@ -84,7 +124,7 @@ func (input *TxInput) GetNonce() uint64 {
 }
 
 func (input *TxInput) IsFeeLimitAccurate() bool {
-	return input.TxInput.IsFeeLimitAccurate()
+	return !input.NativeFeePayer && input.TxInput.IsFeeLimitAccurate()
 }
 
 func init() {
