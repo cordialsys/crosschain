@@ -2,12 +2,21 @@ package txinfo
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTempoTransactionNameNormalization(t *testing.T) {
+	const hash = "a0766c5c99739bcd6e41d3e42500400e6a1688c1c5cd0fff775f5e4c4137b071"
+	want := TransactionName("chains/TEMPO/transactions/0x" + hash)
+	for _, input := range []string{hash, "0x" + hash, strings.ToUpper(hash), "0x" + strings.ToUpper(hash)} {
+		require.Equal(t, want, NewTransactionName(xc.TEMPO, input))
+	}
+}
 
 func TestTxInfoFees(t *testing.T) {
 

@@ -356,6 +356,11 @@ func TestNormalizeAddress(t *testing.T) {
 			inp:   "A1QNoLe4UHyVg7v9EPWLMoMP2XRqPytg7DXjSqJhSJd635qPGsW9yE2aRsnw212iFtBeYrzfn6bGMYNXhDvcwDXY8uV3Sf2",
 			out:   "A1QNoLe4UHyVg7v9EPWLMoMP2XRqPytg7DXjSqJhSJd635qPGsW9yE2aRsnw212iFtBeYrzfn6bGMYNXhDvcwDXY8uV3Sf2",
 		},
+		{
+			chain: xc.TEMPO,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
 	}
 
 	// test that we have a test vector for each chain

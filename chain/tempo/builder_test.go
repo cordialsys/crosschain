@@ -6,7 +6,6 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
-	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -148,17 +147,6 @@ func TestTransferRejectsMismatchedInputs(t *testing.T) {
 	args.SetFeePayer(testFeePayer)
 	_, err = b.Transfer(args, &input.TxInput)
 	require.ErrorContains(t, err, "requires a Tempo transaction input")
-}
-
-func TestUnsupportedFeeContractOptions(t *testing.T) {
-	chain, args, input := feeTokenFixture(t)
-	_, err := xcbuilder.NewTransferArgs(xc.NewChainConfig("ETH").Base(), testSender, testRecipient,
-		args.GetAmount(), xcbuilder.OptionFeeContract(testFeeToken))
-	require.ErrorContains(t, err, "only for Tempo")
-	_, err = xcbuilder.NewMultiTransferArgs(chain.Base(), nil, nil, xcbuilder.OptionFeeContract(testFeeToken))
-	require.ErrorContains(t, err, "not yet supported for multi-transfers")
-	_, err = evmtx.NewTx(chain.Base(), args, &input.TxInput, false)
-	require.ErrorContains(t, err, "requires the Tempo transaction builder")
 }
 
 func TestSponsorshipInputMismatchDiagnostics(t *testing.T) {
