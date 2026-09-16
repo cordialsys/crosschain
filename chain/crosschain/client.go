@@ -189,6 +189,7 @@ func (client *Client) ApiCallWithUrl(ctx context.Context, method string, url str
 // FetchLegacyTxInput returns tx input from a Crosschain endpoint
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
+	feeContract, _ := args.GetFeeContract()
 	decimalsStr := ""
 	if decimals, ok := args.GetDecimals(); ok {
 		decimalsStr = strconv.FormatInt(int64(decimals), 10)
@@ -202,14 +203,15 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	nonceAccountMaybe, _ := args.GetNonceAccount()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
-		Chain:     client.Asset.GetChain().Chain,
-		Contract:  string(contract),
-		Balance:   args.GetAmount().String(),
-		Decimals:  decimalsStr,
-		PublicKey: hex.EncodeToString(publicKeyMaybe),
-		From:      string(args.GetFrom()),
-		To:        string(args.GetTo()),
-		FeePayer:  types.NewFeePayerInfoOrNil(&args),
+		Chain:       client.Asset.GetChain().Chain,
+		Contract:    string(contract),
+		Balance:     args.GetAmount().String(),
+		Decimals:    decimalsStr,
+		PublicKey:   hex.EncodeToString(publicKeyMaybe),
+		From:        string(args.GetFrom()),
+		To:          string(args.GetTo()),
+		FeePayer:    types.NewFeePayerInfoOrNil(&args),
+		FeeContract: string(feeContract),
 		Extra: types.TransferInputReqExtra{
 			FromIdentity:        fromIdentityMaybe,
 			FeePayerIdentity:    feePayerIdentityMaybe,
