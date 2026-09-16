@@ -1,10 +1,12 @@
 package tempo
 
 import (
+	"fmt"
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	evminput "github.com/cordialsys/crosschain/chain/evm/tx_input"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -82,4 +84,95 @@ func TestTransferEncodesFeeContractFromPersistedInput(t *testing.T) {
 	var encodedFeeContract []byte
 	require.NoError(t, rlp.DecodeBytes(fields[10], &encodedFeeContract))
 	require.Equal(t, common.HexToAddress(string(feeContract)).Bytes(), encodedFeeContract)
+}
+
+func TestNativeSponsorshipWithoutExplicitFeeContract(t *testing.T) {
+	chain, _, input := feeTokenFixture(t)
+	args, err := xcbuilder.NewTransferArgs(chain.Base(), testSender, testRecipient,
+		xc.NewAmountBlockchainFromUint64(1_000_000),
+		xcbuilder.OptionContractAddress(testTransferToken), xcbuilder.OptionFeePayer(testFeePayer, nil))
+	require.NoError(t, err)
+	input.NativeFeePayer, input.FeePayerAddress = true, testFeePayer
+	built, err := buildTempoTransfer(chain, args, input)
+	require.NoError(t, err)
+	tx := built.(*Tx)
+	require.Equal(t, testFeePayer, tx.feePayer)
+	require.Equal(t, common.HexToAddress(string(testFeeToken)).Bytes(), tx.envelope.FeeToken)
+	requests, err := tx.Sighashes()
+	require.NoError(t, err)
+	require.Equal(t, testSender, requests[0].Signer)
+	require.Equal(t, "a856890727345b3cd0e2b589cd93aaacc6902c93afb0ea856fd72b29880181b3", fmt.Sprintf("%x", requests[0].Payload))
+}
+
+func TestTransferRejectsMismatchedInputs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		mutate  func(*xcbuilder.TransferArgs, *TxInput)
+		message string
+	}{
+		{"fee currency", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FeeContract = testTransferToken }, "fee contract differs"},
+		{"sender", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FromAddress = testRecipient }, "sender differs"},
+		{"missing sponsorship", func(a *xcbuilder.TransferArgs, _ *TxInput) { a.SetFeePayer(testFeePayer) }, "native sponsorship input"},
+		{"unexpected sponsorship", func(_ *xcbuilder.TransferArgs, in *TxInput) {
+			in.NativeFeePayer = true
+			in.FeePayerAddress = testFeePayer
+		}, "native sponsorship input"},
+		{"payer mismatch", func(a *xcbuilder.TransferArgs, in *TxInput) {
+			a.SetFeePayer(testFeePayer)
+			in.NativeFeePayer = true
+			in.FeePayerAddress = testRecipient
+		}, "native sponsorship input"},
+		{"payer nonce", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FeePayerNonce = 1 }, "native sponsorship input"},
+		{"smart account nonce", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.BasicSmartAccountNonce = 1 }, "native sponsorship input"},
+		{"zero gas", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.GasLimit = 0 }, "gas limit"},
+		{"gas caps", func(_ *xcbuilder.TransferArgs, in *TxInput) {
+			in.GasTipCap = xc.NewAmountBlockchainFromUint64(30_000_000_000)
+		}, "gas caps"},
+		{"chain ID", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.ChainId = xc.NewAmountBlockchainFromUint64(0) }, "chain ID"},
+		{"payer address", func(a *xcbuilder.TransferArgs, _ *TxInput) { a.SetFeePayer("bad") }, "fee-payer address"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			chain, args, input := feeTokenFixture(t)
+			tc.mutate(&args, input)
+			_, err := buildTempoTransfer(chain, args, input)
+			require.ErrorContains(t, err, tc.message)
+		})
+	}
+	chain, args, input := feeTokenFixture(t)
+	b, err := NewTxBuilder(chain.Base())
+	require.NoError(t, err)
+	for _, in := range []xc.TxInput{nil, (*TxInput)(nil), (*evminput.TxInput)(nil)} {
+		_, err := b.Transfer(args, in)
+		require.Error(t, err)
+	}
+	args.SetFeePayer(testFeePayer)
+	_, err = b.Transfer(args, &input.TxInput)
+	require.ErrorContains(t, err, "requires a Tempo transaction input")
+}
+
+func TestUnsupportedFeeContractOptions(t *testing.T) {
+	chain, args, input := feeTokenFixture(t)
+	_, err := xcbuilder.NewTransferArgs(xc.NewChainConfig("ETH").Base(), testSender, testRecipient,
+		args.GetAmount(), xcbuilder.OptionFeeContract(testFeeToken))
+	require.ErrorContains(t, err, "only for Tempo")
+	_, err = xcbuilder.NewMultiTransferArgs(chain.Base(), nil, nil, xcbuilder.OptionFeeContract(testFeeToken))
+	require.ErrorContains(t, err, "not yet supported for multi-transfers")
+	_, err = evmtx.NewTx(chain.Base(), args, &input.TxInput, false)
+	require.ErrorContains(t, err, "requires the Tempo transaction builder")
+}
+
+func TestSponsorshipInputMismatchDiagnostics(t *testing.T) {
+	chain, args, input := feeTokenFixture(t)
+	args.SetFeePayer(testFeePayer)
+	// An input produced by the older EIP-7702 path has a payer and a payer
+	// nonce, but no native sponsorship marker. Do not silently reinterpret it.
+	input.FeePayerAddress = testFeePayer
+	input.FeePayerNonce = 12
+	input.BasicSmartAccountNonce = 3
+	_, err := buildTempoTransfer(chain, args, input)
+	require.ErrorContains(t, err, fmt.Sprintf("requested payer=%q", testFeePayer))
+	require.ErrorContains(t, err, fmt.Sprintf("input payer=%q", testFeePayer))
+	require.ErrorContains(t, err, "native_fee_payer=false (expected true)")
+	require.ErrorContains(t, err, "fee_payer_nonce=12")
+	require.ErrorContains(t, err, "basic_smart_account_nonce=3")
 }

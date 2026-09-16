@@ -219,6 +219,8 @@ func OptionFeePayer(feePayer xc.Address, feePayerPublicKey []byte) BuilderOption
 	}
 }
 
+// OptionFeeContract selects the fee token independently of the transferred token.
+// Currently supported for single Tempo transfers only.
 func OptionFeeContract(feeContract xc.ContractAddress) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.feeContract = &feeContract

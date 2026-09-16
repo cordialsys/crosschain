@@ -55,3 +55,44 @@ func TestGetFeeLimitLeavesExactTempoFeeUnchanged(t *testing.T) {
 
 	require.Equal(t, "7570", feeLimit.String())
 }
+
+func TestTempoNonceConflicts(t *testing.T) {
+	native := func(from xc.Address, nonce uint64) *TxInput {
+		in := NewTxInput()
+		in.FromAddress, in.Nonce = from, nonce
+		in.NativeFeePayer, in.FeePayerAddress = true, testFeePayer
+		return in
+	}
+	ordinary := native(testRecipient, 7)
+	ordinary.NativeFeePayer, ordinary.FeePayerAddress = false, ""
+	legacy := &MultiTransferInput{TxInput: *native(testRecipient, 8)}
+	legacy.NativeFeePayer = false
+	legacy.FeePayerAddress, legacy.FeePayerNonce = testSender, 7
+	unrelatedLegacy := &MultiTransferInput{TxInput: *native(testRecipient, 8)}
+	unrelatedLegacy.NativeFeePayer = false
+	unrelatedLegacy.FeePayerAddress, unrelatedLegacy.FeePayerNonce = testFeePayer, 0
+	for _, tc := range []struct {
+		name        string
+		other       xc.TxInput
+		independent bool
+	}{
+		{"shared sponsor", native(testRecipient, 7), true},
+		{"same sender and nonce", native(testSender, 7), false},
+		{"different nonce", native(testSender, 8), true},
+		{"ordinary different sender same nonce", ordinary, true},
+		{"EIP7702 payer consumes sender nonce", legacy, false},
+		{"EIP7702 consumes native sponsor nonce", unrelatedLegacy, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			a := native(testSender, 7)
+			require.Equal(t, tc.independent, a.IndependentOf(tc.other))
+			require.Equal(t, tc.independent, tc.other.IndependentOf(a))
+			require.Equal(t, !tc.independent, a.SafeFromDoubleSend(tc.other))
+			require.Equal(t, !tc.independent, tc.other.SafeFromDoubleSend(a))
+		})
+	}
+	a := native(testSender, 7)
+	require.False(t, a.IndependentOf(nil))
+	require.False(t, a.SafeFromDoubleSend(nil))
+	require.False(t, a.SafeFromDoubleSend(NewTxInput()))
+}
