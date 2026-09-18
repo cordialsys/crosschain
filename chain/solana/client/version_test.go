@@ -85,7 +85,7 @@ func TestV1TransferClient(t *testing.T) {
 			cfg.URL = server.URL
 			c, err := client.NewClient(cfg)
 			require.NoError(t, err)
-			args, err := xcbuilder.NewTransferArgs(cfg.Base(), xc.Address(sender.PublicKey().String()), xc.Address(recipient.String()), xc.NewAmountBlockchainFromUint64(10000), xcbuilder.OptionTransactionVersion("v1"))
+			args, err := xcbuilder.NewTransferArgs(cfg.Base(), xc.Address(sender.PublicKey().String()), xc.Address(recipient.String()), xc.NewAmountBlockchainFromUint64(10000))
 			require.NoError(t, err)
 			input, err := c.FetchTransferInput(context.Background(), args)
 			if simulationFails {
@@ -95,6 +95,7 @@ func TestV1TransferClient(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.True(t, simulated)
+			require.Equal(t, tx_input.TransactionVersionV1, input.(*tx_input.TxInput).TransactionVersion)
 			require.Equal(t, uint32(24002), input.(*tx_input.TxInput).ComputeUnitLimit)
 			require.Equal(t, uint32(65536), input.(*tx_input.TxInput).LoadedAccountsDataSizeLimit)
 			b, err := solanabuilder.NewTxBuilder(cfg.Base())

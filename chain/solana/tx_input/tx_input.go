@@ -338,9 +338,11 @@ func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 }
 
-// NewTxInput returns a new Solana TxInput
+// NewTxInput returns a new V1 Solana TxInput. The zero value remains legacy
+// so deserializing older inputs without transaction_version preserves their format.
 func NewTxInput() *TxInput {
 	return &TxInput{
-		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverSolana),
+		TxInputEnvelope:    *xc.NewTxInputEnvelope(xc.DriverSolana),
+		TransactionVersion: TransactionVersionV1,
 	}
 }

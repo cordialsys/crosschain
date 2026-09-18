@@ -39,7 +39,6 @@ func CmdTxTransfer() *cobra.Command {
 	var addressFormat string
 	var nonDeterministic bool
 	var transferInputFile string
-	var transactionVersion string
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -123,9 +122,6 @@ func CmdTxTransfer() *cobra.Command {
 			tfOptions := []builder.BuilderOption{
 				builder.OptionTimestamp(time.Now().Unix()),
 				builder.OptionTransactionAttempts(previousAttempts),
-			}
-			if transactionVersion != "" {
-				tfOptions = append(tfOptions, builder.OptionTransactionVersion(transactionVersion))
 			}
 			// Bridge chain-config view key (for Monero) to the tx builder.
 			tfOptions = append(tfOptions, ChainBuilderOptions(chainConfig)...)
@@ -409,7 +405,6 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
 	cmd.Flags().BoolVar(&nonDeterministic, "non-deterministic", false, "Skip implementation checks for determinism (only important in for consensus sensitive contexts)")
 	cmd.Flags().StringVar(&transferInputFile, "input", "", "File containing the transfer input.  If used, will skip fetching the input from the RPC.")
-	cmd.Flags().StringVar(&transactionVersion, "transaction-version", "", "Solana transaction format: legacy (default), v0, or v1")
 	return cmd
 }
 

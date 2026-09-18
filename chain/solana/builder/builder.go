@@ -51,20 +51,6 @@ func NewTxBuilder(asset *xc.ChainBaseConfig) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	if version, ok := args.GetTransactionVersion(); ok {
-		solanaInput, valid := input.(*TxInput)
-		if !valid {
-			return nil, fmt.Errorf("invalid Solana transfer input: %T", input)
-		}
-		selected := solanaInput.TransactionVersion
-		if selected == "" {
-			selected = tx_input.TransactionVersionLegacy
-		}
-		if version != selected {
-			return nil, fmt.Errorf("requested transaction version %s does not match input version %s; fetch input with the same version", version, selected)
-		}
-	}
-
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
 		feePayer = args.GetFrom()

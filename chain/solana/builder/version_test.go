@@ -37,11 +37,7 @@ func TestTransferVersions(t *testing.T) {
 			input.LoadedAccountsDataSizeLimit = 65_536
 			input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(250_000)
 			input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
-			var options []xcbuilder.BuilderOption
-			if version != "" {
-				options = append(options, xcbuilder.OptionTransactionVersion(version))
-			}
-			args, err := xcbuilder.NewTransferArgs(cfg, xc.Address(key.PublicKey().String()), xc.Address(recipient.String()), xc.NewAmountBlockchainFromUint64(10_000_000), options...)
+			args, err := xcbuilder.NewTransferArgs(cfg, xc.Address(key.PublicKey().String()), xc.Address(recipient.String()), xc.NewAmountBlockchainFromUint64(10_000_000))
 			require.NoError(t, err)
 			built, err := b.Transfer(args, input)
 			require.NoError(t, err)
@@ -107,18 +103,6 @@ func TestV1CallRoundTrip(t *testing.T) {
 	require.Equal(t, solTx.Message.TransactionConfig, resigned.Message.TransactionConfig)
 }
 
-func TestRejectVersionMismatch(t *testing.T) {
-	cfg := xc.NewChainConfig(xc.SOL).Base()
-	_, err := xcbuilder.NewTransferArgs(cfg, "", "", xc.AmountBlockchain{}, xcbuilder.OptionTransactionVersion("v2"))
-	require.ErrorContains(t, err, "unsupported Solana transaction version")
-	args, err := xcbuilder.NewTransferArgs(cfg, "", "", xc.AmountBlockchain{}, xcbuilder.OptionTransactionVersion("v1"))
-	require.NoError(t, err)
-	b, err := builder.NewTxBuilder(cfg)
-	require.NoError(t, err)
-	_, err = b.Transfer(args, tx_input.NewTxInput())
-	require.ErrorContains(t, err, "does not match input version")
-}
-
 func TestV1FeePayerNonceAndTokenTransfers(t *testing.T) {
 	cfg := xc.NewChainConfig(xc.SOL).Base()
 	b, err := builder.NewTxBuilder(cfg)
@@ -126,7 +110,6 @@ func TestV1FeePayerNonceAndTokenTransfers(t *testing.T) {
 	sender, payer, recipient := solana.NewWallet(), solana.NewWallet(), solana.NewWallet()
 	for _, tokenTransfer := range []bool{false, true} {
 		input := tx_input.NewTxInput()
-		input.TransactionVersion = "v1"
 		input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
 		input.SignatureCount = 2
 		input.ComputeUnitLimit = 100_000
@@ -135,7 +118,6 @@ func TestV1FeePayerNonceAndTokenTransfers(t *testing.T) {
 		input.DurableNonceAccount = solana.PublicKey{8}
 		input.DurableNonceAuthority = sender.PublicKey()
 		options := []xcbuilder.BuilderOption{
-			xcbuilder.OptionTransactionVersion("v1"),
 			xcbuilder.OptionFeePayer(xc.Address(payer.PublicKey().String()), payer.PublicKey().Bytes()),
 			xcbuilder.OptionMemo("v1 regression"),
 		}
