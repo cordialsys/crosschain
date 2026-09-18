@@ -118,7 +118,8 @@ func TestCallSharedConfig(t *testing.T) {
 	fee, _ = restored.GetFeeLimit()
 	require.Equal(t, uint64(10017), fee.Uint64())
 	legacy := &solana.Transaction{}
-	legacy.Message.SetVersion(solana.MessageVersionLegacy)
+	_, err = legacy.Message.SetVersion(solana.MessageVersionLegacy)
+	require.NoError(t, err)
 	legacy.Message.Header.NumRequiredSignatures = 1
 	restored.SetFeeConfig(legacy)
 	require.Nil(t, restored.TransactionConfig)
