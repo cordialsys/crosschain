@@ -26,7 +26,7 @@ func (tx *Tx) SetExtraFeePayerSigner(extraFeePayer xc.Address) {
 
 // Hash returns the tx hash or id, for Solana it's signature
 func (tx Tx) Hash() xc.TxHash {
-	if tx.SolTx != nil && len(tx.SolTx.Signatures) > 0 {
+	if tx.SolTx != nil && len(tx.SolTx.Signatures) > 0 && tx.SolTx.Signatures[0] != (solana.Signature{}) {
 		sig := tx.SolTx.Signatures[0]
 		return xc.TxHash(sig.String())
 	}

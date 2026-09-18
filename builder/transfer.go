@@ -77,6 +77,10 @@ func (args *TransferArgs) GetNoCreateDurableNonce() (bool, bool) {
 	return args.options.GetNoCreateDurableNonce()
 }
 
+func (args *TransferArgs) GetTransactionVersion() (string, bool) {
+	return get(args.options.transactionVersion)
+}
+
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
@@ -94,6 +98,16 @@ func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, 
 		}
 	}
 
+	if version, ok := args.GetTransactionVersion(); ok {
+		if chain.Driver != xc.DriverSolana {
+			return args, fmt.Errorf("transaction version selection is not supported by %s", chain.Driver)
+		}
+		switch version {
+		case "legacy", "v0", "v1":
+		default:
+			return args, fmt.Errorf("unsupported Solana transaction version %q (expected legacy, v0, or v1)", version)
+		}
+	}
 	switch chain.Driver {
 	case xc.DriverInternetComputerProtocol:
 		fromFormat, fromOk := icpaddress.GetAddressType(from)

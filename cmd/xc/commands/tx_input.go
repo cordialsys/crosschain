@@ -29,6 +29,7 @@ func CmdTxInput() *cobra.Command {
 	var feePayer bool
 	var feePayerAddress string
 	var format string
+	var transactionVersion string
 	cmd := &cobra.Command{
 		Use:     "tx-input [address]",
 		Aliases: []string{"input", "transfer-input"},
@@ -53,6 +54,9 @@ func CmdTxInput() *cobra.Command {
 			}
 
 			tfOptions := []builder.BuilderOption{}
+			if transactionVersion != "" {
+				tfOptions = append(tfOptions, builder.OptionTransactionVersion(transactionVersion))
+			}
 			if contract != "" {
 				tfOptions = append(tfOptions, builder.OptionContractAddress(xc.ContractAddress(contract)))
 				tfOptions = append(tfOptions, builder.OptionContractDecimals(decimals))
@@ -181,5 +185,6 @@ func CmdTxInput() *cobra.Command {
 	cmd.Flags().StringVar(&feePayerSecretRef, "fee-payer-secret", "env:"+signer.EnvPrivateKeyFeePayer, "Secret reference for the fee-payer address private key")
 	cmd.Flags().StringVar(&feePayerAddress, "fee-payer-address", "", "Use address value as fee-payer")
 	cmd.Flags().StringVar(&format, "format", "", "Optional address format for chains that use multiple address formats")
+	cmd.Flags().StringVar(&transactionVersion, "transaction-version", "", "Solana transaction format: legacy (default), v0, or v1")
 	return cmd
 }

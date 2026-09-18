@@ -30,6 +30,7 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args b
 			return nil, err
 		}
 		if usesDurableNonce {
+			input.SetFeeConfig(solCall.SolTx)
 			return input, nil
 		}
 	}
@@ -39,7 +40,11 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args b
 	if err != nil {
 		return nil, err
 	}
-	return &tx_input.CallInput{TxInput: *txInput}, nil
+	input := &tx_input.CallInput{TxInput: *txInput}
+	if solCall, ok := call.(*solanacall.TxCall); ok {
+		input.SetFeeConfig(solCall.SolTx)
+	}
+	return input, nil
 }
 
 // A supplied nonce transaction may have an external authority. Validate the

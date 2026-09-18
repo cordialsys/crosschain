@@ -32,16 +32,10 @@ func sendToAuxAccount(mint string, from string, to string, amount uint64, seed s
 		return err
 	}
 
-	out, err := solClient.GetFees(context.Background(), rpc.CommitmentFinalized)
-	if err != nil {
-		return err
-	}
-	feeLamports := out.Value.FeeCalculator.LamportsPerSignature
 	rentFree, err := solClient.GetMinimumBalanceForRentExemption(context.Background(), 165, rpc.CommitmentFinalized)
 	if err != nil {
 		return err
 	}
-	fmt.Println("fees ", feeLamports, rentFree)
 
 	fromOwner, err := solana.PublicKeyFromBase58(string(fromOwnerAddress))
 	if err != nil {
@@ -120,7 +114,7 @@ func sendToAuxAccount(mint string, from string, to string, amount uint64, seed s
 		initTokenAccount.Build(),
 		transferToken.Build(),
 	}
-	recentHash, err := solClient.GetRecentBlockhash(context.Background(), rpc.CommitmentFinalized)
+	recentHash, err := solClient.GetLatestBlockhash(context.Background(), rpc.CommitmentFinalized)
 	if err != nil {
 		return err
 	}
@@ -136,6 +130,14 @@ func sendToAuxAccount(mint string, from string, to string, amount uint64, seed s
 	if err != nil {
 		return err
 	}
+	fee, err := solClient.GetFeeForMessage(context.Background(), base64.StdEncoding.EncodeToString(toSign), rpc.CommitmentFinalized)
+	if err != nil {
+		return err
+	}
+	if fee == nil || fee.Value == nil {
+		return fmt.Errorf("could not estimate transaction fee")
+	}
+	fmt.Println("fees ", *fee.Value, rentFree)
 	sig, err := signer.PrivateKey.Sign(toSign)
 	if err != nil {
 		return err

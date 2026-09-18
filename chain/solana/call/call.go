@@ -158,7 +158,7 @@ func (c *TxCall) SetInput(input xc.CallTxInput) error {
 }
 
 func (c *TxCall) Hash() xc.TxHash {
-	if len(c.SolTx.Signatures) == 0 {
+	if len(c.SolTx.Signatures) == 0 || c.SolTx.Signatures[0] == (solana.Signature{}) {
 		return ""
 	}
 	return xc.TxHash(c.SolTx.Signatures[0].String())

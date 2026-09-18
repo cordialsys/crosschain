@@ -74,7 +74,7 @@ func TestFindAssociatedTokenAddress(t *testing.T) {
 	require.Equal(t, "5LJSMaVdHFzaDG6wPtRSL1RULtKWgrRubXcbeARsLLru", ata)
 
 	ata, err = types.FindAssociatedTokenAddress("", "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", solana.TokenProgramID)
-	require.ErrorContains(t, err, "zero length string")
+	require.ErrorContains(t, err, "invalid length")
 	require.Equal(t, "", ata)
 
 	ata, err = types.FindAssociatedTokenAddress("Hzn3n914JaSpnxo5mBbmuCDmGL6mxWN9Ac2HzEXFSGtb", "xxx", solana.TokenProgramID)
@@ -429,7 +429,7 @@ func TestFetchTxInput(t *testing.T) {
 			blockHash:       "",
 			toIsATA:         false,
 			shouldCreateATA: false,
-			err:             "rpc.GetLatestBlockhashResult",
+			err:             "invalid hash",
 		},
 		{
 			asset:    xc.NewChainConfig(""),
@@ -448,7 +448,7 @@ func TestFetchTxInput(t *testing.T) {
 			blockHash:       "DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK",
 			toIsATA:         false,
 			shouldCreateATA: true,
-			err:             "decode: invalid base58 digit",
+			err:             "invalid base58 character",
 		},
 		{
 			asset:           xc.NewChainConfig(""),
@@ -1274,13 +1274,13 @@ func TestFetchTxInfo(t *testing.T) {
 			"",
 			"",
 			txinfo.LegacyTxInfo{},
-			"zero length string",
+			"invalid encoded length",
 		},
 		{
 			"invalid-sig",
 			"",
 			txinfo.LegacyTxInfo{},
-			"invalid base58 digit",
+			"invalid base58 character",
 		},
 		{
 			// 1 SOL
