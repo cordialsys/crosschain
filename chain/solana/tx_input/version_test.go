@@ -69,3 +69,65 @@ func TestSerializedInputVersions(t *testing.T) {
 		})
 	}
 }
+
+func TestExplicitV1Config(t *testing.T) {
+	input := tx_input.NewTxInput()
+	config := solana.TransactionConfig{}.WithComputeUnitLimit(2000).WithPriorityFee(17)
+	input.TransactionConfig = &config
+	input.SignatureCount = 2
+	input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
+	// Explicit budgets take precedence over the derived transfer estimates.
+	input.ComputeUnitLimit = 9999
+	input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(1_000_000)
+	actual, err := input.V1Config()
+	require.NoError(t, err)
+	require.Equal(t, config, actual)
+	require.Nil(t, actual.LoadedAccountsDataSizeLimit)
+	require.Equal(t, uint32(2000), input.V1ComputeUnitLimit())
+	fee, _ := input.GetFeeLimit()
+	require.Equal(t, uint64(10017), fee.Uint64())
+	wire, err := drivers.MarshalTxInput(input)
+	require.NoError(t, err)
+	restored, err := drivers.UnmarshalTxInput(wire)
+	require.NoError(t, err)
+	actual, err = restored.(*tx_input.TxInput).V1Config()
+	require.NoError(t, err)
+	require.Equal(t, config, actual)
+	fee, _ = restored.GetFeeLimit()
+	require.Equal(t, uint64(10017), fee.Uint64())
+
+	// Omitted priority fees in explicit configs mean zero, not the RPC price.
+	input.TransactionConfig = &solana.TransactionConfig{}
+	priorityFee := input.V1PriorityFee()
+	require.True(t, priorityFee.IsZero())
+	require.Equal(t, tx_input.MaxComputeUnitLimit, input.V1ComputeUnitLimit())
+	invalid := solana.TransactionConfig{}.WithComputeUnitLimit(tx_input.MaxComputeUnitLimit + 1)
+	input.TransactionConfig = &invalid
+	_, err = input.V1Config()
+	require.Error(t, err)
+}
+
+func TestCallSharedConfig(t *testing.T) {
+	var input tx_input.CallInput
+	require.NoError(t, json.Unmarshal([]byte(`{"transaction_version":"v1","signature_count":2}`), &input))
+	config := solana.TransactionConfig{}.WithPriorityFee(17)
+	input.TxInput.TransactionConfig = &config
+	input.BaseFee = xc.NewAmountBlockchainFromUint64(2_000_000) // unused nonce rent
+	require.Equal(t, uint8(2), input.TxInput.SignatureCount)
+	fee, _ := input.GetFeeLimit()
+	require.Equal(t, uint64(10017), fee.Uint64())
+	encoded, err := json.Marshal(input)
+	require.NoError(t, err)
+	var restored tx_input.CallInput
+	require.NoError(t, json.Unmarshal(encoded, &restored))
+	require.Equal(t, input, restored)
+	fee, _ = restored.GetFeeLimit()
+	require.Equal(t, uint64(10017), fee.Uint64())
+	legacy := &solana.Transaction{}
+	legacy.Message.SetVersion(solana.MessageVersionLegacy)
+	legacy.Message.Header.NumRequiredSignatures = 1
+	restored.SetFeeConfig(legacy)
+	require.Nil(t, restored.TransactionConfig)
+	require.Equal(t, uint8(1), restored.SignatureCount)
+	require.Equal(t, tx_input.TransactionVersionLegacy, restored.TransactionVersion)
+}
