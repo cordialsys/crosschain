@@ -54,7 +54,7 @@ func TestFetchBlockSignatures(t *testing.T) {
 					// Model a block containing a version-1 transaction: full transaction
 					// requests fail, while signatures do not require version support.
 					if opts["transactionDetails"] != "signatures" {
-						json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "error": map[string]any{"code": -32015, "message": "Transaction version (1) is not supported by the requesting client"}})
+						require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "error": map[string]any{"code": -32015, "message": "Transaction version (1) is not supported by the requesting client"}}))
 						return
 					}
 					result = map[string]any{"blockhash": solana.Hash{2}.String(), "parentSlot": 122, "blockTime": 1700000000, "signatures": []string{signature}}
@@ -64,7 +64,7 @@ func TestFetchBlockSignatures(t *testing.T) {
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": result})
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": result}))
 			}))
 			defer server.Close()
 			c := &client.Client{SolClient: rpc.New(server.URL), Asset: xc.NewChainConfig(xc.SOL)}
