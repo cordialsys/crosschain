@@ -14,15 +14,12 @@ func init() {
 
 type CallInput struct {
 	TxInput
-	// Prebuilt v1 calls already carry an absolute fee and must not be repriced.
-	TransactionConfig     *solana.TransactionConfig `json:"transaction_config,omitempty"`
-	NumRequiredSignatures uint8                     `json:"num_required_signatures,omitempty"`
 }
 
 // SetFeeConfig preserves the absolute inline budget of a prebuilt transaction.
 func (input *CallInput) SetFeeConfig(solTx *solana.Transaction) {
 	input.TransactionConfig = nil
-	input.NumRequiredSignatures = solTx.Message.Header.NumRequiredSignatures
+	input.SignatureCount = solTx.Message.Header.NumRequiredSignatures
 	switch solTx.Message.GetVersion() {
 	case solana.MessageVersionV1:
 		config := solTx.Message.TransactionConfig
@@ -39,13 +36,10 @@ func (input *CallInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) 
 	if input.TransactionConfig == nil {
 		return input.TxInput.GetFeeLimit()
 	}
-	fee := xc.NewAmountBlockchainFromUint64(0)
-	if input.TransactionConfig.PriorityFee != nil {
-		fee = xc.NewAmountBlockchainFromUint64(*input.TransactionConfig.PriorityFee)
-	}
+	fee := input.V1PriorityFee()
 	// FetchBaseInput may reserve rent for a nonce account that this prebuilt
 	// call never creates. Only its actual signatures contribute to the base fee.
-	baseFee := xc.NewAmountBlockchainFromUint64(uint64(input.NumRequiredSignatures) * LamportsPerSignature)
+	baseFee := xc.NewAmountBlockchainFromUint64(uint64(input.SignatureCount) * LamportsPerSignature)
 	return fee.Add(&baseFee), ""
 }
 

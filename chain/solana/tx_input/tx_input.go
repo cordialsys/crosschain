@@ -14,6 +14,9 @@ type TxInput struct {
 	xc.TxInputEnvelope
 	// Empty preserves the legacy format used by older inputs.
 	TransactionVersion string `json:"transaction_version,omitempty"`
+	// An explicit V1 budget, such as one supplied by a prebuilt call. When nil,
+	// V1Config derives the budget from the resource limits and RPC fee price below.
+	TransactionConfig *solana.TransactionConfig `json:"transaction_config,omitempty"`
 	// Populated from the compiled message for v1 fee estimates; zero means one.
 	SignatureCount uint8 `json:"signature_count,omitempty"`
 	// V1 resource limits. Zero selects the runtime maximum before simulation.

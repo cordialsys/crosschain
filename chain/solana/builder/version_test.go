@@ -37,6 +37,15 @@ func TestTransferVersions(t *testing.T) {
 			input.LoadedAccountsDataSizeLimit = 65_536
 			input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(250_000)
 			input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
+			if version == "v1" {
+				config, err := input.V1Config()
+				require.NoError(t, err)
+				input.TransactionConfig = &config
+				// The builder must use the shared explicit config, not stale
+				// derived fields. The signed Kit fixture below stays identical.
+				input.ComputeUnitLimit = 1
+				input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(1)
+			}
 			args, err := xcbuilder.NewTransferArgs(cfg, xc.Address(key.PublicKey().String()), xc.Address(recipient.String()), xc.NewAmountBlockchainFromUint64(10_000_000))
 			require.NoError(t, err)
 			built, err := b.Transfer(args, input)

@@ -31,16 +31,29 @@ func (input *TxInput) MessageVersion() (solana.MessageVersion, error) {
 }
 
 func (input *TxInput) V1ComputeUnitLimit() uint32 {
+	if input.TransactionConfig != nil {
+		if input.TransactionConfig.ComputeUnitLimit != nil {
+			return *input.TransactionConfig.ComputeUnitLimit
+		}
+		return MaxComputeUnitLimit
+	}
 	if input.ComputeUnitLimit == 0 {
 		return MaxComputeUnitLimit
 	}
 	return input.ComputeUnitLimit
 }
 
-// V1PriorityFee converts the existing RPC price (micro-lamports/CU) to a total
+// V1PriorityFee uses an explicit config's absolute fee when present.
+// Otherwise it converts the existing RPC price (micro-lamports/CU) to a total
 // lamport fee, rounding up. Keep the price in TxInput so priority multipliers
 // and existing fee estimation APIs retain their units.
 func (input *TxInput) V1PriorityFee() xc.AmountBlockchain {
+	if input.TransactionConfig != nil {
+		if input.TransactionConfig.PriorityFee != nil {
+			return xc.NewAmountBlockchainFromUint64(*input.TransactionConfig.PriorityFee)
+		}
+		return xc.NewAmountBlockchainFromUint64(0)
+	}
 	fee := new(big.Int).Mul(input.PrioritizationFee.Int(), new(big.Int).SetUint64(uint64(input.V1ComputeUnitLimit())))
 	fee.Add(fee, big.NewInt(999_999))
 	fee.Div(fee, big.NewInt(1_000_000))
@@ -48,6 +61,14 @@ func (input *TxInput) V1PriorityFee() xc.AmountBlockchain {
 }
 
 func (input *TxInput) V1Config() (solana.TransactionConfig, error) {
+	if input.TransactionConfig != nil {
+		config := *input.TransactionConfig
+		if config.ComputeUnitLimit != nil && *config.ComputeUnitLimit > MaxComputeUnitLimit ||
+			config.LoadedAccountsDataSizeLimit != nil && *config.LoadedAccountsDataSizeLimit > MaxLoadedAccountsDataSizeLimit {
+			return solana.TransactionConfig{}, fmt.Errorf("Solana v1 resource limits exceed runtime maximum")
+		}
+		return config, nil
+	}
 	units := input.V1ComputeUnitLimit()
 	dataSize := input.LoadedAccountsDataSizeLimit
 	if dataSize == 0 {
