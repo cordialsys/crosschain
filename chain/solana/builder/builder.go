@@ -9,12 +9,12 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/chain/solana/types"
-	"github.com/gagliardetto/solana-go"
-	ata "github.com/gagliardetto/solana-go/programs/associated-token-account"
-	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
-	"github.com/gagliardetto/solana-go/programs/memo"
-	"github.com/gagliardetto/solana-go/programs/system"
-	"github.com/gagliardetto/solana-go/programs/token"
+	"github.com/solana-foundation/solana-go/v2"
+	ata "github.com/solana-foundation/solana-go/v2/programs/associated-token-account"
+	compute_budget "github.com/solana-foundation/solana-go/v2/programs/compute-budget"
+	"github.com/solana-foundation/solana-go/v2/programs/memo"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
 )
 
 // TxBuilder for Solana

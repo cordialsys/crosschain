@@ -11,7 +11,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	testtypes "github.com/cordialsys/crosschain/testutil"
-	"github.com/gagliardetto/solana-go"
+	"github.com/solana-foundation/solana-go/v2"
 	"github.com/stretchr/testify/require"
 )
 

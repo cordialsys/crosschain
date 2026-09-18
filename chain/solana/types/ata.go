@@ -1,6 +1,6 @@
 package types
 
-import "github.com/gagliardetto/solana-go"
+import "github.com/solana-foundation/solana-go/v2"
 
 // FindAssociatedTokenAddress returns the associated token account (ATA) for a given account and token
 func FindAssociatedTokenAddress(addr string, contract string, tokenProgram solana.PublicKey) (string, error) {

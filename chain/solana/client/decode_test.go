@@ -6,8 +6,8 @@ import (
 
 	client "github.com/cordialsys/crosschain/chain/solana/client"
 	soltx "github.com/cordialsys/crosschain/chain/solana/tx"
-	"github.com/gagliardetto/solana-go"
-	associatedtokenaccount "github.com/gagliardetto/solana-go/programs/associated-token-account"
+	"github.com/solana-foundation/solana-go/v2"
+	associatedtokenaccount "github.com/solana-foundation/solana-go/v2/programs/associated-token-account"
 	"github.com/stretchr/testify/require"
 )
 

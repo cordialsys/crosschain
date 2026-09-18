@@ -10,7 +10,7 @@ import (
 	"github.com/cordialsys/crosschain/call"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/pkg/hex"
-	"github.com/gagliardetto/solana-go"
+	"github.com/solana-foundation/solana-go/v2"
 )
 
 // Internal type

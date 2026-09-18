@@ -6,8 +6,8 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 // Tx for Solana, encapsulating a solana.Transaction and other info

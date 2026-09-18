@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	ag_binary "github.com/gagliardetto/binary"
-	ag_solanago "github.com/gagliardetto/solana-go"
+	ag_solanago "github.com/solana-foundation/solana-go/v2"
 )
 
 // Instruction discriminator values (uint32 little-endian)

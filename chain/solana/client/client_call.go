@@ -9,8 +9,8 @@ import (
 	"github.com/cordialsys/crosschain/builder"
 	solanacall "github.com/cordialsys/crosschain/chain/solana/call"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/system"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
 )
 
 func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args builder.CallArgs) (xc.CallTxInput, error) {

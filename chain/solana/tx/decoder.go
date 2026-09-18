@@ -6,14 +6,14 @@ import (
 
 	"github.com/cordialsys/crosschain/chain/solana/tx/instructions/transferfee"
 	bin "github.com/gagliardetto/binary"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/memo"
-	"github.com/gagliardetto/solana-go/programs/stake"
-	"github.com/gagliardetto/solana-go/programs/system"
-	"github.com/gagliardetto/solana-go/programs/token"
-	"github.com/gagliardetto/solana-go/programs/vote"
-	"github.com/gagliardetto/solana-go/rpc"
 	"github.com/sirupsen/logrus"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/memo"
+	"github.com/solana-foundation/solana-go/v2/programs/stake"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
+	"github.com/solana-foundation/solana-go/v2/programs/vote"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 
 	systemext "github.com/cordialsys/crosschain/chain/solana/tx/instructions/system"
 )

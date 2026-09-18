@@ -7,10 +7,10 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	buildererrors "github.com/cordialsys/crosschain/builder/errors"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
-	"github.com/gagliardetto/solana-go"
-	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
-	"github.com/gagliardetto/solana-go/programs/stake"
-	"github.com/gagliardetto/solana-go/programs/system"
+	"github.com/solana-foundation/solana-go/v2"
+	compute_budget "github.com/solana-foundation/solana-go/v2/programs/compute-budget"
+	"github.com/solana-foundation/solana-go/v2/programs/stake"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
 )
 
 const RentExemptLamportsThreshold = 3000000
