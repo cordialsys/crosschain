@@ -13,7 +13,6 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
 	xc "github.com/cordialsys/crosschain"
-	bin "github.com/gagliardetto/binary"
 	lookup "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/sirupsen/logrus"
 
@@ -41,7 +40,7 @@ var _ xclient.CallClient = &Client{}
 
 // Base fee per signature in lamports.
 // https://solana.com/docs/core/fees#key-points
-const baseFeeLamports = 5000
+const baseFeeLamports = tx_input.LamportsPerSignature
 
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
@@ -266,6 +265,10 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if err != nil {
 		return nil, err
 	}
+	txInput.TransactionVersion, _ = args.GetTransactionVersion()
+	if _, err := txInput.MessageVersion(); err != nil {
+		return nil, err
+	}
 	if hasFeePayer && !client.Asset.ExcludeFeatures {
 		feePayerPub, err := solana.PublicKeyFromBase58(string(feePayer))
 		if err != nil {
@@ -455,13 +458,9 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
 	}
 	tx := txI.(*tx.Tx)
-	tx.SolTx.Signatures = []solana.Signature{
-		// one signature for solana transfers (note: staking txs use multiple)
-		{},
-	}
-	if _, ok := args.GetFeePayer(); ok {
-		// add another for the fee payer
-		tx.SolTx.Signatures = append(tx.SolTx.Signatures, solana.Signature{})
+	tx.SolTx.Signatures = make([]solana.Signature, tx.SolTx.Message.Header.NumRequiredSignatures)
+	if txInput.TransactionVersion == tx_input.TransactionVersionV1 {
+		txInput.SignatureCount = tx.SolTx.Message.Header.NumRequiredSignatures
 	}
 
 	sim, err := client.SolClient.SimulateTransactionWithOpts(ctx, tx.SolTx, &rpc.SimulateTransactionOpts{
@@ -471,6 +470,30 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	// sim, err := client.SolClient.SimulateTransaction(ctx, tx.SolTx)
 	if err != nil {
 		return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
+	}
+	if txInput.TransactionVersion == tx_input.TransactionVersionV1 {
+		if sim == nil || sim.Value == nil {
+			return nil, fmt.Errorf("empty Solana v1 simulation response")
+		}
+		if sim.Value.Err != nil {
+			return nil, fmt.Errorf("Solana v1 simulation failed: %v (logs: %v)", sim.Value.Err, sim.Value.Logs)
+		}
+		// Add 20% CU headroom and round loaded data up to a 32 KiB page.
+		// Missing measurements retain the explicit runtime maxima.
+		if sim.Value.UnitsConsumed != nil {
+			units := *sim.Value.UnitsConsumed
+			if units > uint64(tx_input.MaxComputeUnitLimit) {
+				return nil, fmt.Errorf("Solana simulation compute usage exceeds runtime maximum")
+			}
+			txInput.ComputeUnitLimit = uint32(min(uint64(tx_input.MaxComputeUnitLimit), max(uint64(1000), (units*120+99)/100)))
+		}
+		if sim.Value.LoadedAccountsDataSize != nil {
+			size := uint64(*sim.Value.LoadedAccountsDataSize)
+			if size > uint64(tx_input.MaxLoadedAccountsDataSizeLimit) {
+				return nil, fmt.Errorf("Solana simulation loaded data exceeds runtime maximum")
+			}
+			txInput.LoadedAccountsDataSizeLimit = uint32(max(uint64(32768), (size+32767)/32768*32768))
+		}
 	}
 	// simBz, _ := json.MarshalIndent(sim, "", "  ")
 	// fmt.Println(string(simBz))
@@ -592,8 +615,7 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 	if err != nil {
 		return result, err
 	}
-	// confusingly, '0' is the latest version, which comes after 'legacy' (no version).
-	maxVersion := uint64(0)
+	maxVersion := uint64(1)
 	res, err := client.SolClient.GetTransaction(
 		ctx,
 		txSig,
@@ -610,11 +632,11 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 		}
 		return result, err
 	}
-	if res == nil || res.Transaction == nil {
+	if res == nil || res.Transaction == nil || res.Meta == nil {
 		return result, fmt.Errorf("invalid transaction in response")
 	}
 
-	solTx, err := solana.TransactionFromDecoder(bin.NewBinDecoder(res.Transaction.GetBinary()))
+	solTx, err := solana.TransactionFromBytes(res.Transaction.GetBinary())
 	if err != nil {
 		return result, fmt.Errorf("error decoding transaction: %w", err)
 	}

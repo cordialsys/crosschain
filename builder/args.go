@@ -42,7 +42,8 @@ type builderOptions struct {
 	// output.  Independent of any spend key.
 	viewKey *string
 
-	noDurableNonce *bool
+	noDurableNonce     *bool
+	transactionVersion *string
 }
 
 func newBuilderOptions() builderOptions {
@@ -145,6 +146,15 @@ func (opts *builderOptions) SetNoDurableNonce(noDurableNonce bool) {
 }
 
 type BuilderOption func(opts *builderOptions) error
+
+// OptionTransactionVersion selects the wire format on chains supporting multiple formats.
+// Solana accepts "legacy", "v0", and "v1". Omitting it preserves the chain default.
+func OptionTransactionVersion(version string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.transactionVersion = &version
+		return nil
+	}
+}
 
 func OptionMemo(memo string) BuilderOption {
 	return func(opts *builderOptions) error {

@@ -12,11 +12,18 @@ import (
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
-	RecentBlockHash     solana.Hash      `json:"recent_block_hash,omitempty"`
-	ToIsATA             bool             `json:"to_is_ata,omitempty"`
-	TokenProgram        solana.PublicKey `json:"token_program"`
-	ShouldCreateATA     bool             `json:"should_create_ata,omitempty"`
-	SourceTokenAccounts []*TokenAccount  `json:"source_token_accounts,omitempty"`
+	// Empty preserves the legacy format used by older inputs.
+	TransactionVersion string `json:"transaction_version,omitempty"`
+	// Populated from the compiled message for v1 fee estimates; zero means one.
+	SignatureCount uint8 `json:"signature_count,omitempty"`
+	// V1 resource limits. Zero selects the runtime maximum before simulation.
+	ComputeUnitLimit            uint32           `json:"compute_unit_limit,omitempty"`
+	LoadedAccountsDataSizeLimit uint32           `json:"loaded_accounts_data_size_limit,omitempty"`
+	RecentBlockHash             solana.Hash      `json:"recent_block_hash,omitempty"`
+	ToIsATA                     bool             `json:"to_is_ata,omitempty"`
+	TokenProgram                solana.PublicKey `json:"token_program"`
+	ShouldCreateATA             bool             `json:"should_create_ata,omitempty"`
+	SourceTokenAccounts         []*TokenAccount  `json:"source_token_accounts,omitempty"`
 	// This is in "microlamports"
 	// https://solana.com/docs/core/fees#compute-units-and-limits
 	PrioritizationFee xc.AmountBlockchain `json:"prioritization_fee,omitempty"`
@@ -206,6 +213,9 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	maxSpendMicroLamports := gasLimit.Mul(&input.PrioritizationFee)
 	tenPow6 := xc.NewAmountBlockchainFromUint64(1_000_000)
 	maxSpend := maxSpendMicroLamports.Div(&tenPow6)
+	if input.TransactionVersion == TransactionVersionV1 {
+		maxSpend = input.V1PriorityFee()
+	}
 
 	// calculate the base fee (# of signatures * base fee)
 	feePerSignature := input.BaseFee
@@ -215,6 +225,11 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	}
 	numSignatures := xc.NewAmountBlockchainFromUint64(1)
 	totalBaseFee := feePerSignature.Mul(&numSignatures)
+	if input.TransactionVersion == TransactionVersionV1 && input.SignatureCount > 1 {
+		// BaseFee already includes any nonce rent; charge that only once.
+		additional := xc.NewAmountBlockchainFromUint64(uint64(input.SignatureCount-1) * LamportsPerSignature)
+		totalBaseFee = totalBaseFee.Add(&additional)
+	}
 
 	// prioritization + base fees
 	maxSpend = maxSpend.Add(&totalBaseFee)

@@ -109,8 +109,8 @@ func TestNewTokenTransfer(t *testing.T) {
 	solTx := tx.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 1, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
-	require.Equal(t, ataTo, solTx.Message.AccountKeys[2])                       // destination
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex]) // token tx
+	require.Equal(t, ataTo, solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[2]])                    // destination
 
 	// transfer to non-existing ATA: create
 	input = &TxInput{ShouldCreateATA: true}
@@ -120,9 +120,9 @@ func TestNewTokenTransfer(t *testing.T) {
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 2, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x7), solTx.Message.Instructions[0].ProgramIDIndex)
-	require.Equal(t, uint16(0x8), solTx.Message.Instructions[1].ProgramIDIndex)
-	require.Equal(t, ataTo, solTx.Message.AccountKeys[1])
+	require.Equal(t, solana.SPLAssociatedTokenAccountProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex])
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[1].ProgramIDIndex])
+	require.Equal(t, ataTo, solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[1]])
 
 	// transfer to non-existing ATA & fee payer used: create using fee payer money
 	feePayer := xc.Address("21yrAb33AQtNB43XWm2X9uKMXnTq8u9Wpzxzn8ZHEZBu")
@@ -135,11 +135,11 @@ func TestNewTokenTransfer(t *testing.T) {
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 2, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x8), solTx.Message.Instructions[0].ProgramIDIndex)
-	require.Equal(t, uint16(0x9), solTx.Message.Instructions[1].ProgramIDIndex)
+	require.Equal(t, solana.SPLAssociatedTokenAccountProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex])
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[1].ProgramIDIndex])
 	// The create-ATA instruction should reference the fee payer as the account creator
 	require.Equal(t, uint16(0), solTx.Message.Instructions[0].Accounts[0])
-	require.Equal(t, ataTo.String(), solTx.Message.AccountKeys[2].String())
+	require.Equal(t, ataTo.String(), solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[1]].String())
 	// The fee payer should be the fee-payer address.
 	require.EqualValues(t, feePayer, solTx.Message.AccountKeys[0].String())
 
@@ -158,8 +158,8 @@ func TestNewTokenTransfer(t *testing.T) {
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 1, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
-	require.Equal(t, ataTo, solTx.Message.AccountKeys[2])                       // destination
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex]) // token tx
+	require.Equal(t, ataTo, solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[2]])                    // destination
 
 	// invalid: direct to ATA, but ToIsATA: false
 	args = buildertest.MustNewTransferArgs(
@@ -176,8 +176,8 @@ func TestNewTokenTransfer(t *testing.T) {
 	solTx = tx.(*Tx).SolTx
 	require.Equal(t, 0, len(solTx.Signatures))
 	require.Equal(t, 1, len(solTx.Message.Instructions))
-	require.Equal(t, uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
-	require.NotEqual(t, ataTo, solTx.Message.AccountKeys[2])                    // destination
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex]) // token tx
+	require.NotEqual(t, ataTo, solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[2]])                 // destination
 }
 
 func validateTransferChecked(tx *solana.Transaction, instr *solana.CompiledInstruction) (*token.TransferChecked, error) {
@@ -253,8 +253,8 @@ func TestNewMultiTokenTransfer(t *testing.T) {
 	_, err = validateTransferChecked(solTx, &solTx.Message.Instructions[0])
 	require.NoError(t, err)
 
-	require.Equal(t, uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
-	require.Equal(t, ataTo, solTx.Message.AccountKeys[2])                       // destination
+	require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex]) // token tx
+	require.Equal(t, ataTo, solTx.Message.AccountKeys[solTx.Message.Instructions[0].Accounts[2]])                    // destination
 	require.Equal(t, 3, len(solTx.Message.Instructions))
 	// exactAmount should have 3 instructions, 100 amount each
 	require.EqualValues(t, 100, getTokenTransferAmount(solTx, &solTx.Message.Instructions[0]))
@@ -524,7 +524,7 @@ func TestNewTransferAsToken(t *testing.T) {
 		solTx := tx.(*Tx).SolTx
 		require.Equal(t, 0, len(solTx.Signatures))
 		require.Equal(t, 1, len(solTx.Message.Instructions))
-		require.Equal(t, uint16(0x4), solTx.Message.Instructions[0].ProgramIDIndex) // token tx
+		require.Equal(t, solana.TokenProgramID, solTx.Message.AccountKeys[solTx.Message.Instructions[0].ProgramIDIndex]) // token tx
 		tokenTf, err := validateTransferChecked(solTx, &solTx.Message.Instructions[0])
 		require.NoError(t, err)
 		require.Equal(t, v.expectedSourceAccount, tokenTf.Accounts[0].PublicKey.String())
