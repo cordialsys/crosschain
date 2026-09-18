@@ -95,7 +95,7 @@ func TestV1TransferClient(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.True(t, simulated)
-			require.Equal(t, tx_input.TransactionVersionV1, input.(*tx_input.TxInput).TransactionVersion)
+			require.True(t, input.(*tx_input.TxInput).SupportsV1)
 			require.Equal(t, uint32(24002), input.(*tx_input.TxInput).ComputeUnitLimit)
 			require.Equal(t, uint32(65536), input.(*tx_input.TxInput).LoadedAccountsDataSizeLimit)
 			b, err := solanabuilder.NewTxBuilder(cfg.Base())

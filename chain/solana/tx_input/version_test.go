@@ -13,7 +13,7 @@ import (
 
 func TestV1FeesAndLimits(t *testing.T) {
 	input := tx_input.NewTxInput()
-	require.Equal(t, tx_input.TransactionVersionV1, input.TransactionVersion)
+	require.True(t, input.SupportsV1)
 	input.ComputeUnitLimit = 1001
 	input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(1000)
 	input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
@@ -40,14 +40,10 @@ func TestV1FeesAndLimits(t *testing.T) {
 	input.PrioritizationFee = xc.NewAmountBlockchainFromStr("-1")
 	_, err = input.V1Config()
 	require.Error(t, err)
-	input.TransactionVersion = "v2"
-	_, err = input.MessageVersion()
-	require.Error(t, err)
 	var old tx_input.TxInput
 	require.NoError(t, json.Unmarshal([]byte(`{}`), &old))
-	version, err := old.MessageVersion()
-	require.NoError(t, err)
-	require.Equal(t, solana.MessageVersionLegacy, version)
+	version := old.MessageVersion()
+	require.Equal(t, solana.MessageVersionV0, version)
 }
 
 func TestSerializedInputVersions(t *testing.T) {
@@ -55,16 +51,14 @@ func TestSerializedInputVersions(t *testing.T) {
 		payload string
 		version solana.MessageVersion
 	}{
-		{`{"type":"solana"}`, solana.MessageVersionLegacy},
-		{`{"type":"solana","transaction_version":"legacy"}`, solana.MessageVersionLegacy},
-		{`{"type":"solana","transaction_version":"v0"}`, solana.MessageVersionV0},
-		{`{"type":"solana","transaction_version":"v1"}`, solana.MessageVersionV1},
+		{`{"type":"solana"}`, solana.MessageVersionV0},
+		{`{"type":"solana","supports_v1":false}`, solana.MessageVersionV0},
+		{`{"type":"solana","supports_v1":true}`, solana.MessageVersionV1},
 	} {
 		t.Run(tc.payload, func(t *testing.T) {
 			input, err := drivers.UnmarshalTxInput([]byte(tc.payload))
 			require.NoError(t, err)
-			version, err := input.(*tx_input.TxInput).MessageVersion()
-			require.NoError(t, err)
+			version := input.(*tx_input.TxInput).MessageVersion()
 			require.Equal(t, tc.version, version)
 		})
 	}
@@ -109,7 +103,7 @@ func TestExplicitV1Config(t *testing.T) {
 
 func TestCallSharedConfig(t *testing.T) {
 	var input tx_input.CallInput
-	require.NoError(t, json.Unmarshal([]byte(`{"transaction_version":"v1","signature_count":2}`), &input))
+	require.NoError(t, json.Unmarshal([]byte(`{"supports_v1":true,"signature_count":2}`), &input))
 	config := solana.TransactionConfig{}.WithPriorityFee(17)
 	input.TxInput.TransactionConfig = &config
 	input.BaseFee = xc.NewAmountBlockchainFromUint64(2_000_000) // unused nonce rent
@@ -129,5 +123,5 @@ func TestCallSharedConfig(t *testing.T) {
 	restored.SetFeeConfig(legacy)
 	require.Nil(t, restored.TransactionConfig)
 	require.Equal(t, uint8(1), restored.SignatureCount)
-	require.Equal(t, tx_input.TransactionVersionLegacy, restored.TransactionVersion)
+	require.False(t, restored.SupportsV1)
 }

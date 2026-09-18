@@ -32,7 +32,7 @@ func TestTransferVersions(t *testing.T) {
 	for _, version := range []string{"", "legacy", "v0", "v1"} {
 		t.Run(version, func(t *testing.T) {
 			input := tx_input.NewTxInput()
-			input.TransactionVersion = version
+			input.SupportsV1 = version == "v1"
 			input.ComputeUnitLimit = 20_000
 			input.LoadedAccountsDataSizeLimit = 65_536
 			input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(250_000)
@@ -60,8 +60,7 @@ func TestTransferVersions(t *testing.T) {
 			decoded, err := solana.TransactionFromBytes(wire)
 			require.NoError(t, err)
 			require.NoError(t, decoded.VerifySignatures())
-			wantVersion, err := input.MessageVersion()
-			require.NoError(t, err)
+			wantVersion := input.MessageVersion()
 			require.Equal(t, wantVersion, decoded.Message.GetVersion())
 			transfers := tx.NewDecoderFromNativeTx(decoded, &rpc.TransactionMeta{}).GetSystemTransfers()
 			require.Len(t, transfers, 1)
@@ -110,6 +109,37 @@ func TestV1CallRoundTrip(t *testing.T) {
 	require.NoError(t, resigned.VerifySignatures())
 	require.Equal(t, solana.Hash{9}, resigned.Message.RecentBlockhash)
 	require.Equal(t, solTx.Message.TransactionConfig, resigned.Message.TransactionConfig)
+}
+
+func TestV0CallPreservesVersion(t *testing.T) {
+	wire, err := base64.StdEncoding.DecodeString(kitV1Transfer)
+	require.NoError(t, err)
+	native, err := solana.TransactionFromBytes(wire)
+	require.NoError(t, err)
+	native.Message.TransactionConfig = solana.TransactionConfig{}
+	_, err = native.Message.SetVersion(solana.MessageVersionV0)
+	require.NoError(t, err)
+	wire, err = native.MarshalBinary()
+	require.NoError(t, err)
+	raw, err := json.Marshal(call.Call{Transaction: wire})
+	require.NoError(t, err)
+	c, err := call.NewCall(xc.NewChainConfig(xc.SOL).Base(), xccall.SolanaSignTransaction, raw,
+		[]xc.Address{xc.Address(native.Message.AccountKeys[0].String())})
+	require.NoError(t, err)
+	input := &tx_input.CallInput{TxInput: *tx_input.NewTxInput()}
+	payload, ok := c.GetPayload()
+	require.True(t, ok)
+	require.NoError(t, input.SetCall(payload))
+	require.False(t, input.SupportsV1)
+	require.Nil(t, input.TransactionConfig)
+	input.RecentBlockHash = solana.Hash{9}
+	require.NoError(t, c.SetInput(input))
+	encoded, err := c.Serialize()
+	require.NoError(t, err)
+	decoded, err := solana.TransactionFromBytes(encoded)
+	require.NoError(t, err)
+	require.Equal(t, solana.MessageVersionV0, decoded.Message.GetVersion())
+	require.Equal(t, input.RecentBlockHash, decoded.Message.RecentBlockhash)
 }
 
 func TestV1FeePayerNonceAndTokenTransfers(t *testing.T) {

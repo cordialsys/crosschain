@@ -20,15 +20,10 @@ type CallInput struct {
 func (input *CallInput) SetFeeConfig(solTx *solana.Transaction) {
 	input.TransactionConfig = nil
 	input.SignatureCount = solTx.Message.Header.NumRequiredSignatures
-	switch solTx.Message.GetVersion() {
-	case solana.MessageVersionV1:
+	input.SupportsV1 = solTx.Message.GetVersion() == solana.MessageVersionV1
+	if input.SupportsV1 {
 		config := solTx.Message.TransactionConfig
 		input.TransactionConfig = &config
-		input.TransactionVersion = TransactionVersionV1
-	case solana.MessageVersionV0:
-		input.TransactionVersion = TransactionVersionV0
-	default:
-		input.TransactionVersion = TransactionVersionLegacy
 	}
 }
 
