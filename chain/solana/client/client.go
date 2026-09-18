@@ -455,7 +455,7 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	}
 	tx := txI.(*tx.Tx)
 	tx.SolTx.Signatures = make([]solana.Signature, tx.SolTx.Message.Header.NumRequiredSignatures)
-	if txInput.TransactionVersion == tx_input.TransactionVersionV1 {
+	if txInput.SupportsV1 {
 		txInput.SignatureCount = tx.SolTx.Message.Header.NumRequiredSignatures
 	}
 
@@ -467,7 +467,7 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	if err != nil {
 		return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
 	}
-	if txInput.TransactionVersion == tx_input.TransactionVersionV1 {
+	if txInput.SupportsV1 {
 		if sim == nil || sim.Value == nil {
 			return nil, fmt.Errorf("empty Solana v1 simulation response")
 		}

@@ -10,24 +10,15 @@ import (
 
 const (
 	LamportsPerSignature           uint64 = 5000
-	TransactionVersionLegacy              = "legacy"
-	TransactionVersionV0                  = "v0"
-	TransactionVersionV1                  = "v1"
 	MaxComputeUnitLimit            uint32 = 1_400_000
 	MaxLoadedAccountsDataSizeLimit uint32 = 64 * 1024 * 1024
 )
 
-func (input *TxInput) MessageVersion() (solana.MessageVersion, error) {
-	switch input.TransactionVersion {
-	case "", TransactionVersionLegacy:
-		return solana.MessageVersionLegacy, nil
-	case TransactionVersionV0:
-		return solana.MessageVersionV0, nil
-	case TransactionVersionV1:
-		return solana.MessageVersionV1, nil
-	default:
-		return 0, fmt.Errorf("unsupported Solana transaction version %q", input.TransactionVersion)
+func (input *TxInput) MessageVersion() solana.MessageVersion {
+	if input.SupportsV1 {
+		return solana.MessageVersionV1
 	}
+	return solana.MessageVersionV0
 }
 
 func (input *TxInput) V1ComputeUnitLimit() uint32 {

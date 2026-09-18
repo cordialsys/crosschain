@@ -12,8 +12,8 @@ import (
 // TxInput for Solana
 type TxInput struct {
 	xc.TxInputEnvelope
-	// Empty preserves the legacy format used by older inputs.
-	TransactionVersion string `json:"transaction_version,omitempty"`
+	// Missing or false uses v0, including inputs from older deployments.
+	SupportsV1 bool `json:"supports_v1,omitempty"`
 	// An explicit V1 budget, such as one supplied by a prebuilt call. When nil,
 	// V1Config derives the budget from the resource limits and RPC fee price below.
 	TransactionConfig *solana.TransactionConfig `json:"transaction_config,omitempty"`
@@ -216,7 +216,7 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	maxSpendMicroLamports := gasLimit.Mul(&input.PrioritizationFee)
 	tenPow6 := xc.NewAmountBlockchainFromUint64(1_000_000)
 	maxSpend := maxSpendMicroLamports.Div(&tenPow6)
-	if input.TransactionVersion == TransactionVersionV1 {
+	if input.SupportsV1 {
 		maxSpend = input.V1PriorityFee()
 	}
 
@@ -228,7 +228,7 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	}
 	numSignatures := xc.NewAmountBlockchainFromUint64(1)
 	totalBaseFee := feePerSignature.Mul(&numSignatures)
-	if input.TransactionVersion == TransactionVersionV1 && input.SignatureCount > 1 {
+	if input.SupportsV1 && input.SignatureCount > 1 {
 		// BaseFee already includes any nonce rent; charge that only once.
 		additional := xc.NewAmountBlockchainFromUint64(uint64(input.SignatureCount-1) * LamportsPerSignature)
 		totalBaseFee = totalBaseFee.Add(&additional)
@@ -341,11 +341,11 @@ func (input *TxInput) SetUnix(unix int64) {
 	input.Timestamp = unix
 }
 
-// NewTxInput returns a new V1 Solana TxInput. The zero value remains legacy
-// so deserializing older inputs without transaction_version preserves their format.
+// NewTxInput returns a new V1 Solana TxInput. The zero value uses v0,
+// so older inputs without supports_v1 use the v0 fallback.
 func NewTxInput() *TxInput {
 	return &TxInput{
-		TxInputEnvelope:    *xc.NewTxInputEnvelope(xc.DriverSolana),
-		TransactionVersion: TransactionVersionV1,
+		TxInputEnvelope: *xc.NewTxInputEnvelope(xc.DriverSolana),
+		SupportsV1:      true,
 	}
 }

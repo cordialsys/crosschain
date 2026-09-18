@@ -50,12 +50,12 @@ func TestFetchStakingInput(t *testing.T) {
 			validator: "3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H",
 			expected: &tx_input.StakingInput{
 				TxInput: tx_input.TxInput{
-					TransactionVersion: tx_input.TransactionVersionV1,
-					TxInputEnvelope:    xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:    solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:  xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:            xc.NewAmountBlockchainFromUint64(5000),
-					FeePayerBaseFee:    xc.NewAmountBlockchainFromUint64(5000),
+					SupportsV1:        true,
+					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
+					FeePayerBaseFee:   xc.NewAmountBlockchainFromUint64(5000),
 				},
 				ValidatorVoteAccount: solana.MustPublicKeyFromBase58("3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"),
 			},
@@ -71,12 +71,12 @@ func TestFetchStakingInput(t *testing.T) {
 			validator: "EqgfgrWR3D1As2aS7tYjoHfNxgxcfNYvdUL5zCsXFXBt",
 			expected: &tx_input.StakingInput{
 				TxInput: tx_input.TxInput{
-					TransactionVersion: tx_input.TransactionVersionV1,
-					TxInputEnvelope:    xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:    solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:  xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:            xc.NewAmountBlockchainFromUint64(5000),
-					FeePayerBaseFee:    xc.NewAmountBlockchainFromUint64(5000),
+					SupportsV1:        true,
+					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
+					FeePayerBaseFee:   xc.NewAmountBlockchainFromUint64(5000),
 				},
 				ValidatorVoteAccount: solana.MustPublicKeyFromBase58("3m8Ct5n9feJFEuuXFb67oqt9XEJeBYkGyEdQRX33QQ5H"),
 			},
@@ -176,12 +176,12 @@ func TestFetchUnstakingInput(t *testing.T) {
 			validator: "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp",
 			expected: &tx_input.UnstakingInput{
 				TxInput: tx_input.TxInput{
-					TransactionVersion: tx_input.TransactionVersionV1,
-					TxInputEnvelope:    xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:    solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:  xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:            xc.NewAmountBlockchainFromUint64(5000),
-					FeePayerBaseFee:    xc.NewAmountBlockchainFromUint64(5000),
+					SupportsV1:        true,
+					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
+					FeePayerBaseFee:   xc.NewAmountBlockchainFromUint64(5000),
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{
@@ -277,12 +277,12 @@ func TestFetchWithdrawInput(t *testing.T) {
 			validator: "J2nUHEAgZFRyuJbFjdqPrAa9gyWDuc7hErtDQHPhsYRp",
 			expected: &tx_input.WithdrawInput{
 				TxInput: tx_input.TxInput{
-					TransactionVersion: tx_input.TransactionVersionV1,
-					TxInputEnvelope:    xc.TxInputEnvelope{Type: xc.DriverSolana},
-					RecentBlockHash:    solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
-					PrioritizationFee:  xc.NewAmountBlockchainFromUint64(100000),
-					BaseFee:            xc.NewAmountBlockchainFromUint64(5000),
-					FeePayerBaseFee:    xc.NewAmountBlockchainFromUint64(5000),
+					SupportsV1:        true,
+					TxInputEnvelope:   xc.TxInputEnvelope{Type: xc.DriverSolana},
+					RecentBlockHash:   solana.MustHashFromBase58("DvLEyV2GHk86K5GojpqnRsvhfMF5kdZomKMnhVpvHyqK"),
+					PrioritizationFee: xc.NewAmountBlockchainFromUint64(100000),
+					BaseFee:           xc.NewAmountBlockchainFromUint64(5000),
+					FeePayerBaseFee:   xc.NewAmountBlockchainFromUint64(5000),
 				},
 				EligibleStakes: []*tx_input.ExistingStake{
 					{

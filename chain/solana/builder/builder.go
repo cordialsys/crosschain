@@ -91,7 +91,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(feePayer xc.Address, args xcbuilder
 		).Build(),
 	}
 	priorityFee := input.GetPrioritizationFee()
-	if priorityFee > 0 && input.TransactionVersion != tx_input.TransactionVersionV1 {
+	if priorityFee > 0 && !input.SupportsV1 {
 		instructions = append(instructions,
 			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),
 		)
@@ -231,7 +231,7 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, args xcbuilder.
 
 	// add priority fee last
 	priorityFee := txInput.GetPrioritizationFee()
-	if priorityFee > 0 && txInput.TransactionVersion != tx_input.TransactionVersionV1 {
+	if priorityFee > 0 && !txInput.SupportsV1 {
 		instructions = append(instructions,
 			compute_budget.NewSetComputeUnitPriceInstruction(priorityFee).Build(),
 		)
@@ -300,10 +300,7 @@ func (txBuilder TxBuilder) buildSolanaTx(feePayer xc.Address, from xc.Address, i
 		blockhash = nonceValue
 	}
 
-	version, err := txInput.MessageVersion()
-	if err != nil {
-		return nil, err
-	}
+	version := txInput.MessageVersion()
 	options := []solana.TransactionOption{solana.TransactionPayer(accountFeePayer), solana.TransactionMessageVersion(version)}
 	if version == solana.MessageVersionV1 {
 		config, err := txInput.V1Config()
