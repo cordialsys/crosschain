@@ -602,6 +602,8 @@ chains:
     decimals: 18
     fee_limit: "50.0"
     confirmations_final: 1
+    # indicate that this token is fungible with 'ether'
+    chain_coin: "0x3600000000000000000000000000000000000000"
     native_assets:
       - asset_id: "0x3600000000000000000000000000000000000000"
         contract_id: "0x3600000000000000000000000000000000000000"
