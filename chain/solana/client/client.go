@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -26,6 +27,7 @@ import (
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/solana-foundation/solana-go/v2"
 	"github.com/solana-foundation/solana-go/v2/rpc"
+	"github.com/solana-foundation/solana-go/v2/rpc/jsonrpc"
 )
 
 // Client for Solana
@@ -463,8 +465,18 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 		SigVerify: false,
 	})
 
-	// sim, err := client.SolClient.SimulateTransaction(ctx, tx.SolTx)
 	if err != nil {
+		// Older validators cannot decode the v1 wire format. Rebuild and
+		// simulate v0 once, preserving explicitly requested v1 configuration.
+		var rpcErr *jsonrpc.RPCError
+		if txInput.SupportsV1 && txInput.TransactionConfig == nil &&
+			stderrors.As(err, &rpcErr) && rpcErr.Code == -32602 &&
+			strings.Contains(rpcErr.Message, "failed to deserialize solana_sdk::transaction::versioned::VersionedTransaction") {
+			fallback := *txInput
+			fallback.SupportsV1 = false
+			fallback.SignatureCount = 0
+			return client.WithTransferSimulation(ctx, args, &fallback)
+		}
 		return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
 	}
 	if txInput.SupportsV1 {
