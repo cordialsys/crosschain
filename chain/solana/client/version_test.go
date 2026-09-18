@@ -16,8 +16,93 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTransferSimulationVersionFallback(t *testing.T) {
+	const decodeError = "failed to deserialize solana_sdk::transaction::versioned::VersionedTransaction: io error: failed to fill whole buffer"
+	for _, tc := range []struct {
+		name           string
+		message        string
+		explicitConfig bool
+		failV0         bool
+		wantCalls      int
+		wantError      bool
+	}{
+		{name: "older validator", message: decodeError, wantCalls: 2},
+		{name: "unrelated invalid params", message: "Invalid param: invalid encoding", wantCalls: 1, wantError: true},
+		{name: "explicit v1 config", message: decodeError, explicitConfig: true, wantCalls: 1, wantError: true},
+		{name: "v0 also rejected", message: decodeError, failV0: true, wantCalls: 2, wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var request struct {
+					ID     json.RawMessage   `json:"id"`
+					Method string            `json:"method"`
+					Params []json.RawMessage `json:"params"`
+				}
+				if !assert.NoError(t, json.NewDecoder(r.Body).Decode(&request)) {
+					return
+				}
+				assert.Equal(t, "simulateTransaction", request.Method)
+				if !assert.NotEmpty(t, request.Params) {
+					return
+				}
+				var encoded string
+				if !assert.NoError(t, json.Unmarshal(request.Params[0], &encoded)) {
+					return
+				}
+				wire, err := base64.StdEncoding.DecodeString(encoded)
+				if !assert.NoError(t, err) {
+					return
+				}
+				transaction, err := solana.TransactionFromBytes(wire)
+				if !assert.NoError(t, err) {
+					return
+				}
+				calls++
+				version := solana.MessageVersionV1
+				if calls > 1 {
+					version = solana.MessageVersionV0
+				}
+				assert.Equal(t, version, transaction.Message.GetVersion())
+				response := map[string]any{"jsonrpc": "2.0", "id": request.ID}
+				if calls == 1 || tc.failV0 {
+					response["error"] = map[string]any{"code": -32602, "message": tc.message}
+				} else {
+					response["result"] = map[string]any{"value": map[string]any{"err": nil, "unitsConsumed": 20001}}
+				}
+				assert.NoError(t, json.NewEncoder(w).Encode(response))
+			}))
+			defer server.Close()
+			cfg := xc.NewChainConfig(xc.SOL)
+			c := &client.Client{SolClient: rpc.New(server.URL), Asset: cfg}
+			args, err := xcbuilder.NewTransferArgs(cfg.Base(), xc.Address(solana.NewWallet().PublicKey().String()), xc.Address(solana.NewWallet().PublicKey().String()), xc.NewAmountBlockchainFromUint64(10000))
+			require.NoError(t, err)
+			input := tx_input.NewTxInput()
+			if tc.explicitConfig {
+				input.TransactionConfig = &solana.TransactionConfig{}
+			}
+			result, err := c.WithTransferSimulation(context.Background(), args, input)
+			require.Equal(t, tc.wantCalls, calls)
+			if tc.wantError {
+				require.ErrorContains(t, err, tc.message)
+				return
+			}
+			require.NoError(t, err)
+			require.False(t, result.(*tx_input.TxInput).SupportsV1)
+			require.Equal(t, uint64(20001), result.(*tx_input.TxInput).UnitsConsumed)
+			b, err := solanabuilder.NewTxBuilder(cfg.Base())
+			require.NoError(t, err)
+			built, err := b.Transfer(args, result)
+			require.NoError(t, err)
+			require.Equal(t, solana.MessageVersionV0, built.(*tx.Tx).SolTx.Message.GetVersion())
+		})
+	}
+}
 
 func TestV1TransferClient(t *testing.T) {
 	for _, simulationFails := range []bool{false, true} {
