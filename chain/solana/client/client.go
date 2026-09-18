@@ -242,7 +242,7 @@ func (client *Client) fetchDurableNonce(ctx context.Context, nonceAccount solana
 	return result, nil
 }
 
-// FetchLegacyTxInput returns tx input for a Solana tx, namely a RecentBlockHash
+// FetchTransferInput returns inputs for a new V1 Solana transfer.
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	contract, _ := args.GetContract()
 	var nonceAccountMaybe *solana.PublicKey
@@ -263,10 +263,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	// In particular, a native balance sweep must not lock funds in a new nonce account.
 	txInput, err := client.FetchBaseInput(ctx, args.GetFrom(), contract, args.GetAmount(), baseNonceAccountMaybe)
 	if err != nil {
-		return nil, err
-	}
-	txInput.TransactionVersion, _ = args.GetTransactionVersion()
-	if _, err := txInput.MessageVersion(); err != nil {
 		return nil, err
 	}
 	if hasFeePayer && !client.Asset.ExcludeFeatures {

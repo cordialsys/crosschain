@@ -6,13 +6,14 @@ import (
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
+	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/solana-foundation/solana-go/v2"
 	"github.com/stretchr/testify/require"
 )
 
 func TestV1FeesAndLimits(t *testing.T) {
 	input := tx_input.NewTxInput()
-	input.TransactionVersion = "v1"
+	require.Equal(t, tx_input.TransactionVersionV1, input.TransactionVersion)
 	input.ComputeUnitLimit = 1001
 	input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(1000)
 	input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
@@ -47,4 +48,24 @@ func TestV1FeesAndLimits(t *testing.T) {
 	version, err := old.MessageVersion()
 	require.NoError(t, err)
 	require.Equal(t, solana.MessageVersionLegacy, version)
+}
+
+func TestSerializedInputVersions(t *testing.T) {
+	for _, tc := range []struct {
+		payload string
+		version solana.MessageVersion
+	}{
+		{`{"type":"solana"}`, solana.MessageVersionLegacy},
+		{`{"type":"solana","transaction_version":"legacy"}`, solana.MessageVersionLegacy},
+		{`{"type":"solana","transaction_version":"v0"}`, solana.MessageVersionV0},
+		{`{"type":"solana","transaction_version":"v1"}`, solana.MessageVersionV1},
+	} {
+		t.Run(tc.payload, func(t *testing.T) {
+			input, err := drivers.UnmarshalTxInput([]byte(tc.payload))
+			require.NoError(t, err)
+			version, err := input.(*tx_input.TxInput).MessageVersion()
+			require.NoError(t, err)
+			require.Equal(t, tc.version, version)
+		})
+	}
 }
