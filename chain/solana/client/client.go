@@ -13,8 +13,8 @@ import (
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
 
 	xc "github.com/cordialsys/crosschain"
-	lookup "github.com/gagliardetto/solana-go/programs/address-lookup-table"
 	"github.com/sirupsen/logrus"
+	lookup "github.com/solana-foundation/solana-go/v2/programs/address-lookup-table"
 
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/solana/builder"
@@ -24,8 +24,8 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	xclient "github.com/cordialsys/crosschain/client"
 	xctypes "github.com/cordialsys/crosschain/client/types"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 // Client for Solana
@@ -526,7 +526,7 @@ func (client *Client) SubmitTx(ctx context.Context, txInput xctypes.SubmitTxReq,
 }
 
 // Taken from solana-go README.md example
-// https://github.com/gagliardetto/solana-go?tab=readme-ov-file#address-lookup-tables
+// https://github.com/solana-foundation/solana-go/tree/v2.1.0#address-lookup-tables
 func processTransactionWithAddressLookups(ctx context.Context, txx *solana.Transaction, rpcClient *rpc.Client) error {
 	if !txx.Message.IsVersioned() {
 		return nil

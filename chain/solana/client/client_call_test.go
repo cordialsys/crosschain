@@ -15,9 +15,9 @@ import (
 	"github.com/cordialsys/crosschain/chain/solana/client"
 	"github.com/cordialsys/crosschain/chain/solana/tx_input"
 	"github.com/cordialsys/crosschain/testutil"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/memo"
-	"github.com/gagliardetto/solana-go/programs/system"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/memo"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
 	"github.com/stretchr/testify/require"
 )
 

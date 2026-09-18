@@ -8,10 +8,10 @@ import (
 	soltx "github.com/cordialsys/crosschain/chain/solana/tx"
 	"github.com/cordialsys/crosschain/chain/solana/types"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
-	"github.com/gagliardetto/solana-go"
-	associatedtokenaccount "github.com/gagliardetto/solana-go/programs/associated-token-account"
-	"github.com/gagliardetto/solana-go/programs/token"
-	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/solana-foundation/solana-go/v2"
+	associatedtokenaccount "github.com/solana-foundation/solana-go/v2/programs/associated-token-account"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 type SolanaTokenAccount struct {

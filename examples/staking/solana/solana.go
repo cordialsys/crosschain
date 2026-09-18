@@ -24,11 +24,11 @@ import (
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/cmd/xc/setup"
 	"github.com/cordialsys/crosschain/factory/signer"
-	"github.com/gagliardetto/solana-go"
-	compute_budget "github.com/gagliardetto/solana-go/programs/compute-budget"
-	"github.com/gagliardetto/solana-go/programs/stake"
-	"github.com/gagliardetto/solana-go/programs/system"
 	"github.com/sirupsen/logrus"
+	"github.com/solana-foundation/solana-go/v2"
+	compute_budget "github.com/solana-foundation/solana-go/v2/programs/compute-budget"
+	"github.com/solana-foundation/solana-go/v2/programs/stake"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
 	"github.com/spf13/cobra"
 )
 

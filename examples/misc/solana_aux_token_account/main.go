@@ -10,10 +10,10 @@ import (
 	"strconv"
 
 	"github.com/cordialsys/crosschain/factory/signer"
-	"github.com/gagliardetto/solana-go"
-	"github.com/gagliardetto/solana-go/programs/system"
-	"github.com/gagliardetto/solana-go/programs/token"
-	"github.com/gagliardetto/solana-go/rpc"
+	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
+	"github.com/solana-foundation/solana-go/v2/programs/token"
+	"github.com/solana-foundation/solana-go/v2/rpc"
 )
 
 func sendToAuxAccount(mint string, from string, to string, amount uint64, seed string) error {

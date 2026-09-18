@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/cordialsys/crosschain/chain/solana/tx/instructions/transferfee"
-	"github.com/gagliardetto/solana-go"
+	"github.com/solana-foundation/solana-go/v2"
 	"github.com/stretchr/testify/require"
 )
 
