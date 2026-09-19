@@ -114,7 +114,7 @@ func Normalize(address string, nativeAsset xc.NativeAsset) string {
 		// nothing to do, base58
 	case xc.DriverEOS:
 		// nothing to do, base58
-	case xc.DriverEVM, xc.DriverEVMLegacy:
+	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverTempo:
 		prefix := "0x"
 		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix
@@ -211,7 +211,7 @@ func TransactionHash(hash string, nativeAsset xc.NativeAsset) string {
 
 	switch driver := xc.NativeAsset(nativeAsset).Driver(); driver {
 	// evm and substrate share same hash format
-	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverSubstrate:
+	case xc.DriverEVM, xc.DriverEVMLegacy, xc.DriverTempo, xc.DriverSubstrate:
 		prefix := "0x"
 		if nativeAsset == xc.XDC {
 			// XDC chain uses a different prefix
