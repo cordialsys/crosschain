@@ -13,6 +13,7 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types/codec"
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
+	"github.com/cordialsys/crosschain/chain/substrate"
 	"github.com/cordialsys/crosschain/chain/substrate/address"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api"
 	"github.com/cordialsys/crosschain/chain/substrate/client/api/graphql"
@@ -162,6 +163,19 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		}).Warn("could not estimate gas fee")
 	}
 	txInput.Tip = amt
+
+	// For TAO alpha token transfers, populate the sender's alpha positions on the target subnet
+	if contract, ok := args.GetContract(); ok && client.Asset.GetChain().Chain == xc.TAO {
+		netuid, err := substrate.ParseAlphaContract(contract)
+		if err != nil {
+			return &tx_input.TxInput{}, err
+		}
+		positions, err := client.fetchAlphaPositions(args.GetFrom(), netuid)
+		if err != nil {
+			return &tx_input.TxInput{}, err
+		}
+		txInput.AlphaPositions = positions
+	}
 
 	return txInput, nil
 }
@@ -477,9 +491,11 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	contract, _ := args.Contract()
 	if contract == "" {
 		return client.FetchNativeBalance(ctx, args.Address())
-	} else {
-		return xc.AmountBlockchain{}, fmt.Errorf("token balance is not supported for substrate: %v", contract)
 	}
+	if client.Asset.GetChain().Chain == xc.TAO {
+		return client.FetchAlphaBalance(ctx, args.Address(), contract)
+	}
+	return xc.AmountBlockchain{}, fmt.Errorf("token balance is not supported for substrate: %v", contract)
 }
 
 // EstimateTip looks at the latest extrinsics to try to calculate an average tip paid
