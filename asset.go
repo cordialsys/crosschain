@@ -707,6 +707,9 @@ type ChainSupport struct {
 }
 
 type ChainBaseConfig struct {
+	// Disable Solana V1 transactions on validators that only support V0 and legacy.
+	SolanaDisableV1 bool `yaml:"solana_disable_v1,omitempty"`
+
 	// The crosschain symbol of the chain
 	Chain NativeAsset `yaml:"chain,omitempty"`
 	// The driver to use for the chain

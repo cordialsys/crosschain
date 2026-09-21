@@ -603,6 +603,7 @@ chains:
         asset_id: elrond-erd-2
   ES:
     chain: ES
+    solana_disable_v1: true
     support:
       memo: string
       staking: [stake, unstake, withdraw]
@@ -1806,6 +1807,7 @@ chains:
         asset_id: "21259"
   FOGO:
     chain: FOGO
+    solana_disable_v1: true
     support:
       memo: string
       staking: [stake, unstake, withdraw]

@@ -61,6 +61,7 @@ func DeriveNonceAccount(from solana.PublicKey) (solana.PublicKey, error) {
 
 func (client *Client) FetchBaseInput(ctx context.Context, fromAddr xc.Address, contractMaybe xc.ContractAddress, amountMaybe xc.AmountBlockchain, nonceAccountMaybe *solana.PublicKey) (*tx_input.TxInput, error) {
 	txInput := tx_input.NewTxInput()
+	txInput.SupportsV1 = !client.Asset.GetChain().SolanaDisableV1
 
 	// get recent block hash (always needed as fallback and for nonce account creation)
 	recent, err := client.SolClient.GetLatestBlockhash(ctx, rpc.CommitmentFinalized)
@@ -624,6 +625,9 @@ func (client *Client) fetchLegacyTxInfoFromRPC(ctx context.Context, txHash xc.Tx
 		return result, err
 	}
 	maxVersion := uint64(1)
+	if client.Asset.GetChain().SolanaDisableV1 {
+		maxVersion = 0
+	}
 	res, err := client.SolClient.GetTransaction(
 		ctx,
 		txSig,

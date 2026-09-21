@@ -25,6 +25,9 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args b
 	}
 
 	if solCall, ok := call.(*solanacall.TxCall); ok {
+		if client.Asset.GetChain().SolanaDisableV1 && solCall.SolTx.Message.GetVersion() == solana.MessageVersionV1 {
+			return nil, fmt.Errorf("Solana V1 transactions are disabled for %s", client.Asset.GetChain().Chain)
+		}
 		input, usesDurableNonce, err := client.fetchCallDurableNonceInput(ctx, solCall.SolTx, nonceAccountMaybe)
 		if err != nil {
 			return nil, err
