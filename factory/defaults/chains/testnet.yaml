@@ -782,6 +782,7 @@ chains:
     chain_gas_multiplier: 1.5
   ES:
     chain: ES
+    solana_disable_v1: true
     support:
       memo: string
       staking: [stake, unstake, withdraw]
@@ -1025,6 +1026,7 @@ chains:
         fee_limit: "200.0"
   FOGO:
     chain: FOGO
+    solana_disable_v1: true
     support:
       memo: string
       staking: [stake, unstake, withdraw]
