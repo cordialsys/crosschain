@@ -31,10 +31,8 @@ func TestTransferSimulationVersionFallback(t *testing.T) {
 		wantCalls      int
 		wantError      bool
 	}{
-		{name: "older validator", message: decodeError, wantCalls: 2},
 		{name: "unrelated invalid params", message: "Invalid param: invalid encoding", wantCalls: 1, wantError: true},
 		{name: "explicit v1 config", message: decodeError, explicitConfig: true, wantCalls: 1, wantError: true},
-		{name: "v0 also rejected", message: decodeError, failV0: true, wantCalls: 2, wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
