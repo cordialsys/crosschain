@@ -3,7 +3,7 @@ WORKDIR /root
 
 # install solana CLI build dependencies
 RUN apt update
-ENV PACKAGES perl libsystemd-dev g++ libclang-dev bzip2 bzip2 curl unzip wget pkg-config libudev-dev make
+ENV PACKAGES perl libsystemd-dev g++ clang libclang-dev bzip2 curl unzip wget pkg-config libudev-dev libssl-dev make cmake git
 
 RUN apt install -y $PACKAGES
 
@@ -14,14 +14,14 @@ RUN curl -fsSLO https://github.com/protocolbuffers/protobuf/releases/download/v2
 RUN unzip protoc-*.zip
 RUN mv ./bin/protoc /usr/bin/
 
-# download + compile solana release
-ENV SOLANA_VERSION 1.17.34
-RUN wget https://github.com/solana-labs/solana/archive/refs/tags/v$SOLANA_VERSION.tar.gz
+# download + compile the maintained Solana (Agave) release
+ENV SOLANA_VERSION 4.3.0
+RUN wget https://github.com/anza-xyz/agave/archive/refs/tags/v$SOLANA_VERSION.tar.gz
 RUN tar xvf v$SOLANA_VERSION.tar.gz
 RUN mkdir -p /solana
 
 # this takes a while, and unfortunately the cache mounts seem to break the binaries in multi-arch build
-RUN cd solana-$SOLANA_VERSION && ./scripts/cargo-install-all.sh . && cp -r bin/* /solana
+RUN cd agave-$SOLANA_VERSION && ./scripts/cargo-install-all.sh --no-build-platform-tools . && cp -r bin/* /solana
 
 # setup faucet with binaries
 FROM debian:bookworm-slim
