@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	xc "github.com/cordialsys/crosschain"
+	xcbuilder "github.com/cordialsys/crosschain/builder"
 	evmtx "github.com/cordialsys/crosschain/chain/evm/tx"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -28,19 +29,7 @@ type Tx struct {
 var _ xc.Tx = &Tx{}
 var _ xc.TxAdditionalSighashes = &Tx{}
 
-// NewTx snapshots an EVM transaction into an unsigned, sender-paid Tempo envelope.
-func NewTx(evmTx *evmtx.Tx, feeContract xc.ContractAddress) (*Tx, error) {
-	if evmTx == nil {
-		return nil, fmt.Errorf("EVM transaction is nil")
-	}
-	ethTx, err := evmTx.BuildEthTx()
-	if err != nil {
-		return nil, fmt.Errorf("building EVM transaction: %w", err)
-	}
-	return newTempoTx(ethTx, feeContract)
-}
-
-func newTempoTx(ethTx *types.Transaction, feeContract xc.ContractAddress) (*Tx, error) {
+func newTempoTx(args xcbuilder.TransferArgs, ethTx *types.Transaction, feeContract xc.ContractAddress) (*Tx, error) {
 	if ethTx.Type() != types.DynamicFeeTxType {
 		return nil, fmt.Errorf("unsupported EVM transaction type %d for Tempo", ethTx.Type())
 	}
@@ -57,22 +46,26 @@ func newTempoTx(ethTx *types.Transaction, feeContract xc.ContractAddress) (*Tx, 
 	if feeContract != "" && (!common.IsHexAddress(string(feeContract)) || common.HexToAddress(string(feeContract)) == (common.Address{})) {
 		return nil, fmt.Errorf("invalid Tempo fee contract %q", feeContract)
 	}
-	return &Tx{envelope: tempoEnvelope{
-		ChainID:   ethTx.ChainId(),
-		GasTipCap: tip,
-		GasFeeCap: fee,
-		Gas:       ethTx.Gas(),
-		Calls: []tempoCall{{
-			To:    ethTx.To(),
-			Value: ethTx.Value(),
-			Data:  ethTx.Data(),
-		}},
-		AccessList:        ethTx.AccessList(),
-		Nonce:             ethTx.Nonce(),
-		FeeToken:          feeContractBytes(feeContract),
-		FeePayer:          []byte{},
-		AuthorizationList: []any{},
-	}}, nil
+	feePayer, _ := args.GetFeePayer()
+	return &Tx{
+		sender:   args.GetFrom(),
+		feePayer: feePayer,
+		envelope: tempoEnvelope{
+			ChainID:   ethTx.ChainId(),
+			GasTipCap: tip,
+			GasFeeCap: fee,
+			Gas:       ethTx.Gas(),
+			Calls: []tempoCall{{
+				To:    ethTx.To(),
+				Value: ethTx.Value(),
+				Data:  ethTx.Data(),
+			}},
+			AccessList:        ethTx.AccessList(),
+			Nonce:             ethTx.Nonce(),
+			FeeToken:          feeContractBytes(feeContract),
+			FeePayer:          []byte{},
+			AuthorizationList: []any{},
+		}}, nil
 }
 
 func (tx Tx) Hash() xc.TxHash {
