@@ -61,12 +61,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	if err != nil {
 		return nil, err
 	}
-	tx, err := newTempoTx(ethTx, feeContract)
-	if err != nil {
-		return nil, err
-	}
-	tx.sender, tx.feePayer = args.GetFrom(), feePayer
-	return tx, nil
+	return newTempoTx(args, ethTx, feeContract)
 }
 
 func validateTransfer(args xcbuilder.TransferArgs) error {
