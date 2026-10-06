@@ -357,6 +357,11 @@ func TestNormalizeAddress(t *testing.T) {
 			out:   "A1QNoLe4UHyVg7v9EPWLMoMP2XRqPytg7DXjSqJhSJd635qPGsW9yE2aRsnw212iFtBeYrzfn6bGMYNXhDvcwDXY8uV3Sf2",
 		},
 		{
+			chain: xc.VET,
+			inp:   "0x0ECE",
+			out:   "0x0ece",
+		},
+		{
 			chain: xc.TEMPO,
 			inp:   "0x0ECE",
 			out:   "0x0ece",

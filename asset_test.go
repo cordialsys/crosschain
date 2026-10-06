@@ -45,6 +45,9 @@ func TestChains(t *testing.T) {
 					eos.Validate(t, chain)
 				case DriverEGLD:
 					egld.Validate(t, chain)
+				case DriverVeChain:
+					require.Equal(t, int32(18), chain.Decimals)
+					require.Len(t, string(chain.ChainID), 66)
 				case DriverTron:
 					// pass
 				case DriverTon:

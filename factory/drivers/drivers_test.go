@@ -106,6 +106,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 			CatalystPassword:      "raw:catalyst:test-secret",
 		}
 	}
+	if driver == xc.DriverVeChain {
+		fakeAsset.URL = "https://mainnet.vechain.org"
+	}
 	if driver == xc.DriverMonero {
 		// Monero requires a private view key and an indexer URL for the
 		// client, plus a view key for the address builder / signer.  Dev-only

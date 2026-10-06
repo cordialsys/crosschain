@@ -1938,3 +1938,26 @@ chains:
         asset_id: "1437"
       coin_gecko:
         asset_id: zcash
+
+  VET:
+    chain: VET
+    driver: vechain
+    chain_name: VeChain
+    # Thor identifies the network by its genesis block ID.
+    chain_id: "0x00000000851caf3cfdb6e899cf5958bfb1ac3413d346d43539627e6be7ec1b4a"
+    url: "https://mainnet.vechain.org"
+    decimals: 18
+    chain_coin_hd_path: 818
+    confirmations_final: 12
+    support:
+      fee:
+        accurate: false
+    native_assets:
+      - asset_id: "0x0000000000000000000000000000456e65726779"
+        contract_id: "0x0000000000000000000000000000456e65726779"
+        decimals: 18
+        aliases: ["VTHO"]
+        fee_limit: "100.0"
+    external:
+      coin_gecko:
+        asset_id: vechain
