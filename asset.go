@@ -102,6 +102,7 @@ const (
 	SUI      = NativeAsset("SUI")      // SUI
 	XPLA     = NativeAsset("XPLA")     // XPLA
 	TAO      = NativeAsset("TAO")      // Bittensor
+	VET      = NativeAsset("VET")      // VeChain
 	TEMPO    = NativeAsset("TEMPO")    // Tempo
 	TIA      = NativeAsset("TIA")      // celestia
 	TON      = NativeAsset("TON")      // TON
@@ -187,6 +188,7 @@ var NativeAssetList []NativeAsset = []NativeAsset{
 	SUI,
 	XPLA,
 	TAO,
+	VET,
 	TEMPO,
 	TIA,
 	TON,
@@ -232,6 +234,7 @@ const (
 	DriverSubstrate                = Driver("substrate")
 	DriverSolana                   = Driver("solana")
 	DriverSui                      = Driver("sui")
+	DriverVeChain                  = Driver("vechain")
 	DriverTempo                    = Driver("tempo")
 	DriverTron                     = Driver("tron")
 	DriverTon                      = Driver("ton")
@@ -263,6 +266,7 @@ var SupportedDrivers = []Driver{
 	DriverSubstrate,
 	DriverSolana,
 	DriverSui,
+	DriverVeChain,
 	DriverTempo,
 	DriverTron,
 	DriverTon,
@@ -346,6 +350,8 @@ func (native NativeAsset) Driver() Driver {
 		return DriverBitcoinLegacy
 	case ZEC, FLUX:
 		return DriverZcash
+	case VET:
+		return DriverVeChain
 	case TEMPO:
 		return DriverTempo
 	case ARC, AVAX, BNB, CELO, ETH, ETHW, GUSDT, GiwaETH, MATIC, OptETH, ArbETH, BERA, BASE, SeiEVM, MegaETH, MON, HyperEVM, LinETH, XPL, ZeroG, FRAX, RhETH:
@@ -406,7 +412,7 @@ func (driver Driver) SignatureAlgorithms() []SignatureType {
 		return []SignatureType{K256Sha256, Schnorr}
 	case DriverBitcoinCash, DriverBitcoinLegacy, DriverCosmos, DriverXrp, DriverFilecoin, DriverEOS, DriverZcash:
 		return []SignatureType{K256Sha256}
-	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo:
+	case DriverEVM, DriverEVMLegacy, DriverCosmosEvmos, DriverTron, DriverHyperliquid, DriverHedera, DriverTempo, DriverVeChain:
 		return []SignatureType{K256Keccak}
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverXlm, DriverCardano, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton:
 		return []SignatureType{Ed255}
@@ -432,7 +438,7 @@ func (driver Driver) PublicKeyFormat() PublicKeyFormat {
 		return Compressed
 	case DriverCosmos, DriverCosmosEvmos, DriverXrp, DriverXlm:
 		return Compressed
-	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo:
+	case DriverEVM, DriverEVMLegacy, DriverTron, DriverFilecoin, DriverHyperliquid, DriverHedera, DriverTempo, DriverVeChain:
 		return Uncompressed
 	case DriverAptos, DriverSolana, DriverSui, DriverTon, DriverSubstrate, DriverDusk,
 		DriverKaspa, DriverInternetComputerProtocol, DriverNear, DriverEGLD, DriverCanton, DriverMonero:

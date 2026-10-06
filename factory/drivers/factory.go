@@ -89,6 +89,7 @@ import (
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
 	"github.com/cordialsys/crosschain/chain/tron"
+	"github.com/cordialsys/crosschain/chain/vechain"
 	xlm "github.com/cordialsys/crosschain/chain/xlm"
 	xlmaddress "github.com/cordialsys/crosschain/chain/xlm/address"
 	xlmbuilder "github.com/cordialsys/crosschain/chain/xlm/builder"
@@ -122,6 +123,8 @@ func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 		return aptos.NewClient(cfg)
 	case xc.DriverSui:
 		return sui.NewClient(cfg)
+	case xc.DriverVeChain:
+		return vechain.NewClient(cfg)
 	case xc.DriverTempo:
 		return tempo.NewClient(cfg)
 	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
@@ -224,6 +227,8 @@ func NewTxBuilder(cfg *xc.ChainBaseConfig) (xcbuilder.FullTransferBuilder, error
 		return aptos.NewTxBuilder(cfg)
 	case xc.DriverSui:
 		return sui.NewTxBuilder(cfg)
+	case xc.DriverVeChain:
+		return vechain.NewTxBuilder(cfg)
 	case xc.DriverTempo:
 		return tempo.NewTxBuilder(cfg)
 	case xc.DriverBitcoin, xc.DriverBitcoinLegacy:
@@ -296,6 +301,8 @@ func NewAddressBuilder(cfg *xc.ChainBaseConfig, options ...xcaddress.AddressOpti
 		return bitcoin_cash.NewAddressBuilder(cfg)
 	case xc.DriverSui:
 		return sui.NewAddressBuilder(cfg)
+	case xc.DriverVeChain:
+		return evmaddress.NewAddressBuilder(cfg)
 	case xc.DriverTempo:
 		return tempo.NewAddressBuilder(cfg)
 	case xc.DriverSubstrate:
@@ -363,6 +370,8 @@ func CheckError(driver xc.Driver, err error) errors.Status {
 		return bitcoin_cash.CheckError(err)
 	case xc.DriverSui:
 		return sui.CheckError(err)
+	case xc.DriverVeChain:
+		return vechain.CheckError(err)
 	case xc.DriverTempo:
 		return tempo.CheckError(err)
 	case xc.DriverSubstrate:
@@ -430,6 +439,8 @@ func ValidateAddress(cfg *xc.ChainBaseConfig, addr xc.Address) error {
 		return bitcoin_cash.ValidateAddress(cfg, addr)
 	case xc.DriverSui:
 		return sui.ValidateAddress(cfg, addr)
+	case xc.DriverVeChain:
+		return evm.ValidateAddress(cfg, addr)
 	case xc.DriverTempo:
 		return tempo.ValidateAddress(cfg, addr)
 	case xc.DriverSubstrate:
