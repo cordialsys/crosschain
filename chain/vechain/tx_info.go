@@ -94,7 +94,8 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, hash xc.TxHash) (tx
 			to, e2 := hexutil.Decode(event.Topics[2])
 			data, e3 := hexutil.Decode(event.Data)
 			if e1 != nil || e2 != nil || e3 != nil || len(from) != 32 || len(to) != 32 || len(data) != 32 {
-				return info, fmt.Errorf("invalid Thor token transfer event")
+				// A matching topic alone does not guarantee an ERC-20 event.
+				continue
 			}
 			amount := xc.AmountBlockchain(*new(big.Int).SetBytes(data))
 			appendMovement(xc.Address(hexutil.Encode(from[12:])), xc.Address(hexutil.Encode(to[12:])), amount, event.Address, txinfo.NewEvent(strconv.Itoa(i)+"/event/"+strconv.Itoa(j), txinfo.MovementVariantToken))

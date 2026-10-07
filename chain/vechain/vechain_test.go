@@ -279,3 +279,50 @@ func TestReadOperations(t *testing.T) {
 	_, err = client.FetchLegacyTxInfo(ctx, xc.TxHash(genesisID))
 	require.ErrorContains(t, err, string(clienterrors.TransactionNotFound))
 }
+
+func TestFetchTxInfoSkipsMalformedTransferEvents(t *testing.T) {
+	const transferTopic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+	const addressTopic = "0x0000000000000000000000007567d83b7b8d80addcb281a71d54fc7b3364ffed"
+	const amountData = "0x000000000000000000000000000000000000000000000000000000000000002a"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch req.URL.Path {
+		case "/blocks/best":
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"number": 10, "id": headID}))
+		case "/transactions/" + genesisID + "/receipt":
+			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+				"gasPayer": recipient, "paid": "0x64", "reverted": false,
+				"meta": map[string]any{"txOrigin": recipient, "blockNumber": 9, "blockID": headID},
+				"outputs": []any{map[string]any{
+					"transfers": []any{map[string]any{"sender": recipient, "recipient": recipient, "amount": "0x2a"}},
+					"events": []any{
+						map[string]any{"address": VTHOContract, "topics": []string{transferTopic, addressTopic, addressTopic}, "data": "0x"},
+						map[string]any{"address": VTHOContract, "topics": []string{transferTopic, addressTopic, addressTopic}, "data": amountData},
+						map[string]any{"address": VTHOContract, "topics": []string{transferTopic, "0x01", addressTopic}, "data": amountData},
+						map[string]any{"address": VTHOContract, "topics": []string{transferTopic, addressTopic, addressTopic}, "data": "0xzz"},
+					},
+				}},
+			}))
+		default:
+			t.Errorf("unexpected request: %s", req.URL)
+			http.NotFound(w, req)
+		}
+	}))
+	defer server.Close()
+	client, err := NewClient(xc.NewChainConfig(xc.VET).WithUrl(server.URL))
+	require.NoError(t, err)
+	ctx := context.Background()
+	info, err := client.FetchLegacyTxInfo(ctx, xc.TxHash(genesisID))
+	require.NoError(t, err)
+	require.Len(t, info.Sources, 2)
+	require.Len(t, info.Destinations, 2)
+	require.Empty(t, info.Destinations[0].ContractAddress)
+	require.Equal(t, "42", info.Destinations[0].Amount.String())
+	require.Equal(t, VTHOContract, info.Destinations[1].ContractAddress)
+	require.Equal(t, "42", info.Destinations[1].Amount.String())
+	require.Equal(t, "0/event/1", info.Destinations[1].Event.Id)
+	require.Equal(t, VTHOContract, info.FeeContract)
+	require.Equal(t, "100", info.Fee.String())
+	_, err = client.FetchTxInfo(ctx, txinfo.NewArgs(xc.TxHash(genesisID)))
+	require.NoError(t, err)
+}
