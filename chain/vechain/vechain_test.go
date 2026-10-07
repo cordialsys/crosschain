@@ -177,7 +177,7 @@ func TestTransferValidation(t *testing.T) {
 	}{
 		{"wrong network", func(i *TxInput) { i.ChainTag = 0x27 }},
 		{"expired", func(i *TxInput) { i.Expiration = 0 }},
-		{"low gas", func(i *TxInput) { i.GasLimit = 1 }},
+		{"zero gas", func(i *TxInput) { i.GasLimit = 0 }},
 		{"zero fee cap", func(i *TxInput) { i.GasFeeCap = xc.NewAmountBlockchainFromUint64(0) }},
 		{"tip above fee cap", func(i *TxInput) { i.GasTipCap = xc.NewAmountBlockchainFromUint64(101) }},
 		{"wrong sender", func(i *TxInput) { i.FromAddress = recipient }},
@@ -195,6 +195,43 @@ func TestTransferValidation(t *testing.T) {
 	args.SetFeePayer(recipient)
 	_, err = txBuilder.Transfer(args, input)
 	require.ErrorContains(t, err, "fee delegation")
+}
+
+func TestTransferUsesClientGasLimit(t *testing.T) {
+	cfg := xc.NewChainConfig(xc.VET).WithChainID(genesisID)
+	txBuilder, err := NewTxBuilder(cfg.Base())
+	require.NoError(t, err)
+	for _, token := range []bool{false, true} {
+		// Include a limit below today's intrinsic gas to verify that the offline
+		// builder does not impose its own gas schedule on client-provided inputs.
+		for _, gasLimit := range []uint64{20_000, 75_000} {
+			t.Run(fmt.Sprintf("token=%t/gas=%d", token, gasLimit), func(t *testing.T) {
+				args := transferArgs(t, cfg)
+				if token {
+					args.SetContract(VTHOContract)
+				}
+				input := NewTxInput()
+				input.ChainTag, input.GasLimit = 0x4a, gasLimit
+				input.GasFeeCap = xc.NewAmountBlockchainFromUint64(100)
+				// Exercise the existing gas_limit JSON field used between the
+				// network client and offline builder.
+				encoded, err := json.Marshal(input)
+				require.NoError(t, err)
+				decoded := NewTxInput()
+				require.NoError(t, json.Unmarshal(encoded, decoded))
+				tx, err := txBuilder.Transfer(args, decoded)
+				require.NoError(t, err)
+				raw, err := tx.Serialize()
+				require.NoError(t, err)
+				var env envelope
+				require.NoError(t, rlp.DecodeBytes(raw[1:], &env))
+				require.Equal(t, gasLimit, env.Gas)
+				fee, contract := decoded.GetFeeLimit()
+				require.Equal(t, gasLimit*100, fee.Uint64())
+				require.Equal(t, VTHOContract, contract)
+			})
+		}
+	}
 }
 
 func TestNetworkMismatchAndRPCFailures(t *testing.T) {
