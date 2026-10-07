@@ -10,6 +10,8 @@ import (
 const VTHOContract xc.ContractAddress = "0x0000000000000000000000000000456e65726779"
 
 type TxInput struct {
+	// Reuse the EVM gas_limit field for the complete client-estimated gas budget.
+	// Callers may override it before building; the builder uses it unchanged.
 	evminput.TxInput
 	ChainTag   byte   `json:"chain_tag"`
 	BlockRef   uint64 `json:"block_ref"`

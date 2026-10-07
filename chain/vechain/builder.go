@@ -62,7 +62,7 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, raw xc.TxInput) (
 	if input.FromAddress != "" && !strings.EqualFold(string(input.FromAddress), string(args.GetFrom())) {
 		return nil, fmt.Errorf("VeChain sender differs from transaction input")
 	}
-	if input.Expiration == 0 || input.GasLimit < intrinsicGas(c) {
+	if input.Expiration == 0 || input.GasLimit == 0 {
 		return nil, fmt.Errorf("invalid VeChain expiration or gas limit")
 	}
 	if input.GasFeeCap.Int().Sign() <= 0 || input.GasTipCap.Int().Sign() < 0 || input.GasTipCap.Cmp(&input.GasFeeCap) > 0 {
@@ -73,17 +73,4 @@ func (builder TxBuilder) Transfer(args xcbuilder.TransferArgs, raw xc.TxInput) (
 		Clauses: []clause{c}, GasTipCap: input.GasTipCap.Int(), GasFeeCap: input.GasFeeCap.Int(),
 		Gas: input.GasLimit, Nonce: input.Nonce,
 	}}, nil
-}
-
-// Thor charges 5,000 gas per transaction and 16,000 per non-creation clause.
-func intrinsicGas(c clause) uint64 {
-	gas := uint64(21_000)
-	for _, b := range c.Data {
-		if b == 0 {
-			gas += 4
-		} else {
-			gas += 68
-		}
-	}
-	return gas
 }

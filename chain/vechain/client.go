@@ -116,6 +116,21 @@ func (client *Client) simulate(ctx context.Context, c clause, caller xc.Address,
 	return results[0], nil
 }
 
+// Intrinsic gas is part of client estimation, so the gas schedule can be
+// updated without changing the offline builder. Thor simulation reports only
+// execution gas; add 5,000 per transaction and 16,000 per non-creation clause.
+func intrinsicGas(c clause) uint64 {
+	gas := uint64(21_000)
+	for _, b := range c.Data {
+		if b == 0 {
+			gas += 4
+		} else {
+			gas += 68
+		}
+	}
+	return gas
+}
+
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	c, err := transferClause(client.Asset.Base(), args)
 	if err != nil {
