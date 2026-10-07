@@ -1947,7 +1947,6 @@ chains:
     chain_id: "0x00000000851caf3cfdb6e899cf5958bfb1ac3413d346d43539627e6be7ec1b4a"
     url: "https://mainnet.vechain.org"
     decimals: 18
-    chain_coin_hd_path: 818
     confirmations_final: 12
     support:
       fee:

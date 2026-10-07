@@ -40,8 +40,8 @@ const (
 	MethodUserDetails                 = "userDetails"
 	MethodUserNonFundingLedgerUpdates = "userNonFundingLedgerUpdates"
 	ResponseTypeError                 = "error"
-	UsdcDecimals                      = 8
-	UsdcPerps                         = "USDCPerps"
+	UsdcDecimals                      = tx_input.UsdcDecimals
+	UsdcPerps                         = tx_input.UsdcPerps
 	UsdcAsset                         = "chains/HYPE/assets/" + UsdcPerps
 )
 
@@ -106,8 +106,13 @@ func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	txInput := tx_input.NewTxInput()
 	txInput.TransactionTime = time.Now()
+	txInput.HyperliquidChain = client.HyperliquidChain
 
 	contract, _ := args.GetContract()
+	if tx_input.IsPerpsContract(contract) {
+		txInput.DecimalsOld = UsdcDecimals
+		return txInput, nil
+	}
 	tokensMetadata, err := client.fetchTokensMetadata(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch tokens metadata: %w", err)
@@ -127,7 +132,6 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		return nil, fmt.Errorf("failed to fetch decimals: %w", err)
 	}
 	txInput.DecimalsOld = int32(decimals)
-	txInput.HyperliquidChain = client.HyperliquidChain
 
 	return txInput, nil
 }
@@ -432,19 +436,16 @@ func (client *Client) fetchPerpsBalance(ctx context.Context, address xc.Address)
 
 func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArgs) (xc.AmountBlockchain, error) {
 	address := args.Address()
-	contract, ok := args.Contract()
-	// Fetch spot balance if token address was explicitely passed
-	if ok {
-		return client.fetchSpotBalance(ctx, address, contract)
-	} else { //
-		// Fetch perps balance otherwise
+	contract, _ := args.Contract()
+	if tx_input.IsPerpsContract(contract) {
 		return client.fetchPerpsBalance(ctx, address)
 	}
+	return client.fetchSpotBalance(ctx, address, contract)
 }
 
 func (client *Client) FetchDecimals(ctx context.Context, contract xc.ContractAddress) (int, error) {
 	// Empty contracts are populated with NativeAsset by default in some cases
-	if contract == "" || contract == Hype {
+	if tx_input.IsPerpsContract(contract) || contract == Hype {
 		return UsdcDecimals, nil
 	}
 

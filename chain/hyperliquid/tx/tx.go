@@ -43,8 +43,8 @@ var _ xc.Tx = &Tx{}
 func NewTx(args xcbuilder.TransferArgs, input tx_input.TxInput, decimals int) Tx {
 
 	var tokenLabel tx_input.TokenLabel
-	contract, ok := args.GetContract()
-	if ok {
+	contract, _ := args.GetContract()
+	if !tx_input.IsPerpsContract(contract) {
 		tokenLabel = tx_input.NewTokenLabel(input.Symbol, contract)
 	}
 

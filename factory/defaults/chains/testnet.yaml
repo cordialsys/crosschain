@@ -1103,7 +1103,6 @@ chains:
     chain_id: "0x000000000b2bce3c70bc649a02749e8687721b09ed2e15997f466536b20bb127"
     url: "https://testnet.vechain.org"
     decimals: 18
-    chain_coin_hd_path: 818
     confirmations_final: 12
     support:
       fee:
