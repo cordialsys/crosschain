@@ -201,6 +201,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	fromIdentityMaybe, _ := args.GetFromIdentity()
 	feePayerIdentityMaybe, _ := args.GetFeePayerIdentity()
 	nonceAccountMaybe, _ := args.GetNonceAccount()
+	versionMaybe, _ := args.GetVersion()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
 		Chain:       client.Asset.GetChain().Chain,
@@ -220,6 +221,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			Priority:            string(priorityMaybe),
 			NonceAccount:        nonceAccountMaybe,
 		},
+		Version: versionMaybe,
 	})
 	if err != nil {
 		return nil, err
@@ -239,7 +241,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	senders := []*types.Sender{}
 	receivers := []*types.Receiver{}
 	nonceAccountMaybe, _ := args.GetNonceAccount()
-
+	versionMaybe, _ := args.GetVersion()
 	for _, sender := range args.Spenders() {
 		fromIdentityMaybe, _ := sender.GetFromIdentity()
 		senders = append(senders, &types.Sender{
@@ -271,6 +273,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 			TransactionAttempts: args.GetTransactionAttempts(),
 			NonceAccount:        nonceAccountMaybe,
 		},
+		Version: versionMaybe,
 	})
 	if err != nil {
 		return nil, err
@@ -395,11 +398,13 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args x
 		chain,
 	)
 	nonceAccount, _ := args.GetNonceAccount()
+	versionMaybe, _ := args.GetVersion()
 	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, &types.CallInputReq{
 		Method:       call.GetMethod(),
 		Request:      call.GetMsg(),
 		Addresses:    call.SigningAddresses(),
 		NonceAccount: nonceAccount,
+		Version:      versionMaybe,
 	})
 	if err != nil {
 		return nil, err

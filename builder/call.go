@@ -42,3 +42,11 @@ func NewCallArgs(chain *xc.ChainBaseConfig, options ...BuilderOption) (CallArgs,
 func (args *CallArgs) GetNonceAccount() (string, bool) {
 	return args.options.GetNonceAccount()
 }
+
+func (args *CallArgs) GetVersion() (string, bool) {
+	return args.options.GetVersion()
+}
+
+func (args *CallArgs) IsVersionAtLeast(version string) bool {
+	return args.options.IsVersionAtLeast(version)
+}

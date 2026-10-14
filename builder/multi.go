@@ -190,6 +190,14 @@ func (args *MultiTransferArgs) GetNonceAccount() (string, bool) {
 	return args.options.GetNonceAccount()
 }
 
+func (args *MultiTransferArgs) GetVersion() (string, bool) {
+	return args.options.GetVersion()
+}
+
+func (args *MultiTransferArgs) IsVersionAtLeast(version string) bool {
+	return args.options.IsVersionAtLeast(version)
+}
+
 func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {
 	transfers := make([]*TransferArgs, len(args.spenders))
 	if len(args.spenders) != len(args.receivers) {
