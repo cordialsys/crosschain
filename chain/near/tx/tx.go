@@ -16,14 +16,15 @@ import (
 )
 
 const (
-	ActionFunctionCall   = 2
-	ActionTypeTransfer   = 3
-	BlockHashLen         = 32
-	KeyAmount            = "amount"
-	KeyReceiverId        = "receiver_id"
-	MethodNameFtTransfer = "ft_transfer"
-	PublicKeyLen         = 32
-	SignatureLen         = 64
+	ActionFunctionCall       = 2
+	ActionTypeTransfer       = 3
+	BlockHashLen             = 32
+	KeyAmount                = "amount"
+	KeyReceiverId            = "receiver_id"
+	MethodNameFtTransfer     = "ft_transfer"
+	MethodNameStorageDeposit = "storage_deposit"
+	PublicKeyLen             = 32
+	SignatureLen             = 64
 )
 
 type Tx[T any] struct {
@@ -51,7 +52,9 @@ type FunctionCallAction struct {
 	Deposit    [16]byte
 }
 
-func NewFunctionCallAction(contract string, receiver string, amount xc.AmountBlockchain, deposit xc.AmountBlockchain) (FunctionCallAction, error) {
+// NewFunctionCallAction builds ft_transfer, which always requires exactly 1 yoctoNEAR.
+// The unused arguments are retained for compatibility with existing callers.
+func NewFunctionCallAction(_ string, receiver string, amount xc.AmountBlockchain, _ xc.AmountBlockchain) (FunctionCallAction, error) {
 	args, err := json.Marshal(map[string]any{
 		KeyReceiverId: receiver,
 		KeyAmount:     amount.ToHuman(0).String(),
@@ -60,8 +63,22 @@ func NewFunctionCallAction(contract string, receiver string, amount xc.AmountBlo
 		return FunctionCallAction{}, fmt.Errorf("failed to marshal function call args: %w", err)
 	}
 
-	d := xc.NewAmountBlockchainFromUint64(1)
-	depositUint128, err := Uint128FromAmountBlockchain(d)
+	return newFunctionCallAction(MethodNameFtTransfer, args, xc.NewAmountBlockchainFromUint64(1))
+}
+
+func NewStorageDepositAction(receiver string, deposit xc.AmountBlockchain) (FunctionCallAction, error) {
+	args, err := json.Marshal(map[string]any{
+		"account_id":        receiver,
+		"registration_only": true,
+	})
+	if err != nil {
+		return FunctionCallAction{}, fmt.Errorf("failed to marshal storage deposit args: %w", err)
+	}
+	return newFunctionCallAction(MethodNameStorageDeposit, args, deposit)
+}
+
+func newFunctionCallAction(method string, args []byte, deposit xc.AmountBlockchain) (FunctionCallAction, error) {
+	depositUint128, err := Uint128FromAmountBlockchain(deposit)
 	if err != nil {
 		return FunctionCallAction{}, fmt.Errorf("failed to convert deposit amount to uint128: %w", err)
 	}
@@ -77,10 +94,33 @@ func NewFunctionCallAction(contract string, receiver string, amount xc.AmountBlo
 	copy(depositAmountBytes[:], depositAmountBz)
 	return FunctionCallAction{
 		Type:       ActionFunctionCall,
-		MethodName: MethodNameFtTransfer,
+		MethodName: method,
 		Args:       args,
 		Deposit:    depositAmountBytes,
 	}, nil
+}
+
+// NewTokenActions is shared by transaction construction and fee estimation so
+// both account for the same arguments and ordered actions on the token contract.
+func NewTokenActions(input *tx_input.TxInput, args xcbuilder.TransferArgs) ([]FunctionCallAction, error) {
+	if _, ok := args.GetContract(); !ok {
+		return nil, fmt.Errorf("contract is required for token transfers")
+	}
+	actions := make([]FunctionCallAction, 0, 2)
+	if input.StorageDeposit != nil {
+		registration, err := NewStorageDepositAction(string(args.GetTo()), *input.StorageDeposit)
+		if err != nil {
+			return nil, err
+		}
+		registration.Gas = input.StorageGasCost.Uint64()
+		actions = append(actions, registration)
+	}
+	transfer, err := NewFunctionCallAction("", string(args.GetTo()), args.GetAmount(), xc.AmountBlockchain{})
+	if err != nil {
+		return nil, err
+	}
+	transfer.Gas = input.GasCost.Uint64()
+	return append(actions, transfer), nil
 }
 
 // PublicKey represents a NEAR public key
@@ -171,17 +211,14 @@ func NewNativeTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[Tran
 
 func NewTokenTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[FunctionCallAction], error) {
 	from := args.GetFrom()
-	to := args.GetTo()
-	amount := args.GetAmount()
 	contract, ok := args.GetContract()
 	if !ok {
 		return nil, fmt.Errorf("contract is required for token transfers")
 	}
-	tokenTransfer, err := NewFunctionCallAction(string(contract), string(to), amount, input.RequiredDepopsit)
+	actions, err := NewTokenActions(input, args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create funcion call action: %w", err)
+		return nil, fmt.Errorf("failed to create token actions: %w", err)
 	}
-	tokenTransfer.Gas = input.GasCost.Uint64()
 
 	publicKey, ok := args.GetPublicKey()
 	if !ok {
@@ -206,9 +243,7 @@ func NewTokenTx(input *tx_input.TxInput, args xcbuilder.TransferArgs) (*Tx[Funct
 			Nonce:      input.Nonce,
 			ReceiverID: string(contract),
 			BlockHash:  blockHash,
-			Actions: []FunctionCallAction{
-				tokenTransfer,
-			},
+			Actions:    actions,
 		},
 	}, nil
 }
