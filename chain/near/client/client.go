@@ -18,6 +18,7 @@ import (
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	types "github.com/cordialsys/crosschain/chain/near/client/types"
 	nearerrors "github.com/cordialsys/crosschain/chain/near/errors"
+	"github.com/cordialsys/crosschain/chain/near/tx"
 	"github.com/cordialsys/crosschain/chain/near/tx_input"
 	xclient "github.com/cordialsys/crosschain/client"
 	txinfo "github.com/cordialsys/crosschain/client/tx_info"
@@ -86,7 +87,7 @@ type GasDetails struct {
 	GasCost       xc.AmountBlockchain
 }
 
-func (client *Client) fetchTxCost(ctx context.Context, isToken bool) (GasDetails, error) {
+func (client *Client) fetchTxCost(ctx context.Context, args xcbuilder.TransferArgs, input *tx_input.TxInput) (GasDetails, error) {
 	protocolConfigParams := types.ProtocolConfigParams{}
 	protocolConfig, err := GetRpc[types.ProtocolConfig](ctx, client, MethodProtocolConfig, protocolConfigParams)
 	if err != nil {
@@ -98,23 +99,61 @@ func (client *Client) fetchTxCost(ctx context.Context, isToken bool) (GasDetails
 	if err != nil {
 		return GasDetails{}, fmt.Errorf("failed to fetch gas price: %w", err)
 	}
-	xcGasPrice := xc.NewAmountBlockchainFromStr(gasPrice.GasPrice)
+	xcGasPrice, err := types.ParseU128(gasPrice.GasPrice)
+	if err != nil || xcGasPrice.IsZero() {
+		return GasDetails{}, fmt.Errorf("invalid gas price: %q", gasPrice.GasPrice)
+	}
 
 	var gasCost uint64
+	_, isToken := args.GetContract()
 	if isToken {
-		gasCost = protocolConfig.RuntimeConfig.TransactionCosts.ActionCreationConfig.FunctionCallCost.Execution
+		// RPC admission can reserve prepaid gas using the protocol floor even
+		// when gas_price reports a lower execution price. Budget the larger price.
+		if protocolConfig.MinGasPrice != "" {
+			floor, err := types.ParseU128(protocolConfig.MinGasPrice)
+			if err != nil {
+				return GasDetails{}, fmt.Errorf("invalid minimum gas price: %w", err)
+			}
+			if floor.Cmp(&xcGasPrice) > 0 {
+				xcGasPrice = floor
+			}
+		}
+		actions, err := tx.NewTokenActions(input, args)
+		if err != nil {
+			return GasDetails{}, err
+		}
+		costs := protocolConfig.RuntimeConfig.TransactionCosts
+		// Budget both sending and executing the receipt/actions, plus the entire
+		// prepaid execution gas for each function call. Use the larger send fee
+		// regardless of whether the signer is also the token contract.
+		cost := func(fee types.GasCost) uint64 {
+			return fee.Execution + max(fee.SendSir, fee.SendNotSir)
+		}
+		gasCost = cost(costs.ActionReceiptCreationConfig)
+		for _, action := range actions {
+			gasCost += action.Gas + cost(costs.ActionCreationConfig.FunctionCallCost)
+			gasCost += uint64(len(action.MethodName)+len(action.Args)) * cost(costs.ActionCreationConfig.FunctionCallCostPerByte)
+		}
 	} else {
 		gasCost = protocolConfig.RuntimeConfig.TransactionCosts.ActionCreationConfig.TransferCost.Execution
+		gasCost += protocolConfig.RuntimeConfig.TransactionCosts.ActionReceiptCreationConfig.Execution
 	}
-	gasCost += protocolConfig.RuntimeConfig.TransactionCosts.ActionReceiptCreationConfig.Execution
 
 	multiplier := client.Asset.GetChain().ChainGasMultiplier
 	if multiplier < 0.01 {
 		multiplier = DefaultGasMultiplier
 	}
+	if isToken {
+		// The funding limit must cover all prepaid gas even with a discount configured.
+		multiplier = max(1, multiplier)
+	}
 	xcGasCost := xc.NewAmountBlockchainFromUint64(gasCost)
 	xcGasCost = xc.MultiplyByFloat(xcGasCost, multiplier)
 	fee := xcGasCost.Mul(&xcGasPrice)
+	if isToken {
+		// The multiplier reserves a fee margin; it is not a per-action gas limit.
+		xcGasCost = input.GasCost
+	}
 
 	return GasDetails{
 		FeeEstimation: fee,
@@ -156,7 +195,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	if isToken {
 		storageBalanceParams, err := types.NewStorageBalanceOfParams(
 			string(contract),
-			string(args.GetFrom()),
+			string(args.GetTo()),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create storage_balance_of params: %w", err)
@@ -167,13 +206,13 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			return nil, fmt.Errorf("failed to fetch storage balance: %w", err)
 		}
 
-		storageBalance, err := storageBalanceResult.GetStorageBalance()
+		storageBalance, err := storageBalanceResult.GetStorageBalanceDetails()
 		if err != nil {
-			return nil, fmt.Errorf("failed to unrmarshal storage balance: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal storage balance: %w", err)
 		}
 
-		if storageBalance.IsZero() {
-			storageBoundsParams, err := types.NewStorageBalanceBoundsParams(string(contract), string(args.GetFrom()))
+		if storageBalance == nil {
+			storageBoundsParams, err := types.NewStorageBalanceBoundsParams(string(contract))
 			if err != nil {
 				return nil, fmt.Errorf("failed to create storage balance bounds params: %w", err)
 			}
@@ -183,14 +222,20 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			}
 			balanceBounds, err := storageBoundsResult.GetStorageBalanceBounds()
 			if err != nil {
-				return nil, fmt.Errorf("failed to unrmarshal storage balance bounds: %w", err)
+				return nil, fmt.Errorf("failed to unmarshal storage balance bounds: %w", err)
 			}
 
-			minDepositAmount := xc.NewAmountBlockchainFromStr(balanceBounds.Min)
-			txInput.RequiredDepopsit = minDepositAmount
+			minDepositAmount, err := types.ParseU128(balanceBounds.Min)
+			if err != nil {
+				return nil, fmt.Errorf("invalid storage deposit: %w", err)
+			}
+			txInput.StorageDeposit = &minDepositAmount
+			txInput.StorageGasCost = xc.NewAmountBlockchainFromUint64(tx_input.DefaultFunctionCallGas)
 		}
+		txInput.GasCost = xc.NewAmountBlockchainFromUint64(tx_input.DefaultFunctionCallGas)
+		txInput.TransferDeposit = xc.NewAmountBlockchainFromUint64(1)
 	}
-	gasDetails, err := client.fetchTxCost(ctx, isToken)
+	gasDetails, err := client.fetchTxCost(ctx, args, txInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch tx cost: %w", err)
 	}
@@ -270,11 +315,14 @@ func (client *Client) processTransferAction(transfer types.TransferAction, from 
 		return txinfo.Movement{}, nil, false
 	}
 	movement := txinfo.NewMovement(client.Asset.GetChain().Chain, "")
-	hrAmount, err := xc.NewAmountHumanReadableFromStr(transfer.Deposit)
+	// Receipt deposits are already denominated in yoctoNEAR.
+	xcAmount, err := types.ParseU128(transfer.Deposit)
 	if err != nil {
 		return txinfo.Movement{}, fmt.Errorf("failed to decode transfer amount: %w", err), false
 	}
-	xcAmount := hrAmount.ToBlockchain(client.Asset.GetDecimals())
+	if xcAmount.IsZero() {
+		return txinfo.Movement{}, nil, false
+	}
 	movement.AddSource(xc.Address(from), xcAmount, nil)
 	movement.AddDestination(xc.Address(to), xcAmount, nil)
 
@@ -374,6 +422,19 @@ func (client *Client) FetchTxInfo(ctx context.Context, args *txinfo.Args) (txinf
 				}
 
 			} else if action.FunctionCall != nil {
+				// Attached NEAR is transferred to the contract independently of any
+				// token movement. Contract-issued refunds are separate Transfer receipts.
+				if action.FunctionCall.Deposit != "" {
+					deposit, err, ok := client.processTransferAction(types.TransferAction{
+						Deposit: action.FunctionCall.Deposit,
+					}, from, to, eventId)
+					if err != nil {
+						return txinfo.TxInfo{}, fmt.Errorf("failed to process function call deposit: %w", err)
+					}
+					if ok {
+						txInfo.AddMovement(&deposit)
+					}
+				}
 				movement, err, ok := client.parseTokenTransferIntent(action.FunctionCall, from, to, eventId)
 				if err != nil {
 					return txinfo.TxInfo{}, fmt.Errorf("failed to parse token transfer: %w", err)
@@ -399,7 +460,10 @@ func (client *Client) FetchBalance(ctx context.Context, args *xclient.BalanceArg
 	if !ok {
 		params := types.NewViewAccountParams(string(args.Address()))
 		account, err := GetRpc[types.Account](ctx, client, MethodQuery, params)
-		return xc.NewAmountBlockchainFromStr(account.Amount), err
+		if err != nil {
+			return xc.AmountBlockchain{}, fmt.Errorf("failed to fetch account balance: %w", err)
+		}
+		return xc.NewAmountBlockchainFromStr(account.Amount), nil
 	} else {
 		params, err := types.NewFtBalanceOfParams(string(args.Address()), string(contract))
 		if err != nil {

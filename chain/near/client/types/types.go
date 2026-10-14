@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strconv"
 
 	xc "github.com/cordialsys/crosschain"
@@ -40,9 +41,13 @@ type Response[T any] struct {
 type Error struct {
 	Name  string
 	Cause any
+	Data  any `json:"data"`
 }
 
 func (e Error) Error() string {
+	if e.Data != nil {
+		return fmt.Sprintf("%s: %+v (data: %+v)", e.Name, e.Cause, e.Data)
+	}
 	return fmt.Sprintf("%s: %+v", e.Name, e.Cause)
 }
 
@@ -469,7 +474,7 @@ func NewStorageBalanceOfParams(contract string, account_id string) (StorageBalan
 			RequestType: RequestTypeCallFunction,
 			Finality:    FinalityFinal,
 			AccountId:   contract,
-			MethodName:  MethodNameFtBalanceOf,
+			MethodName:  MethodNameStorageBalanceOf,
 			ArgsBase64:  base64.StdEncoding.EncodeToString(args),
 		},
 	}, nil
@@ -483,21 +488,51 @@ type StorageBalanceResult struct {
 	Result []byte `json:"result"`
 }
 
+// GetStorageBalance returns the withdrawable amount, which does not indicate
+// whether an account is registered. Use GetStorageBalanceDetails for registration.
 func (s StorageBalanceResult) GetStorageBalance() (xc.AmountBlockchain, error) {
-	if s.Result == nil {
-		return xc.NewAmountBlockchainFromUint64(0), nil
+	balance, err := s.GetStorageBalanceDetails()
+	if err != nil || balance == nil {
+		return xc.AmountBlockchain{}, err
 	}
+	return ParseU128(balance.Available)
+}
 
-	// Some contracts return StorageBalance struct, and some *string
-	var sb StorageBalance
-	err := json.Unmarshal(s.Result, &sb)
-	if err != nil {
-		var balance string
-		err := json.Unmarshal(s.Result, &balance)
-		return xc.NewAmountBlockchainFromStr(balance), err
+func (s StorageBalanceResult) GetStorageBalanceDetails() (*StorageBalance, error) {
+	// Only JSON null means unregistered. An empty/malformed RPC response is an error.
+	var sb *StorageBalance
+	if err := json.Unmarshal(s.Result, &sb); err != nil {
+		return nil, err
 	}
+	if sb != nil {
+		total, err := ParseU128(sb.Total)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage total: %w", err)
+		}
+		available, err := ParseU128(sb.Available)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage available: %w", err)
+		}
+		if available.Cmp(&total) > 0 {
+			return nil, fmt.Errorf("storage available exceeds total")
+		}
+	}
+	return sb, nil
+}
 
-	return xc.NewAmountBlockchainFromStr(sb.Available), nil
+// ParseU128 parses the decimal string amounts used by NEAR contracts without
+// silently treating invalid values as zero.
+func ParseU128(value string) (xc.AmountBlockchain, error) {
+	for _, c := range value {
+		if c < '0' || c > '9' {
+			return xc.AmountBlockchain{}, fmt.Errorf("invalid U128 amount %q", value)
+		}
+	}
+	n, ok := new(big.Int).SetString(value, 10)
+	if !ok || n.BitLen() > 128 {
+		return xc.AmountBlockchain{}, fmt.Errorf("invalid U128 amount %q", value)
+	}
+	return xc.AmountBlockchain(*n), nil
 }
 
 type StorageBalance struct {
@@ -509,22 +544,14 @@ type StorageBalanceBoundsParams struct {
 	callFunctionParams
 }
 
-func NewStorageBalanceBoundsParams(contract string, acc string) (StorageBalanceBoundsParams, error) {
-	type args struct {
-		AccountId string `json:"account_id"`
-	}
-	a, err := json.Marshal(args{AccountId: acc})
-	if err != nil {
-		return StorageBalanceBoundsParams{}, err
-	}
-
+func NewStorageBalanceBoundsParams(contract string, _ ...string) (StorageBalanceBoundsParams, error) {
 	return StorageBalanceBoundsParams{
 		callFunctionParams: callFunctionParams{
 			RequestType: RequestTypeCallFunction,
 			Finality:    FinalityFinal,
 			AccountId:   contract,
 			MethodName:  MethodNameStorageBalanceBounds,
-			ArgsBase64:  base64.StdEncoding.EncodeToString(a),
+			ArgsBase64:  base64.StdEncoding.EncodeToString([]byte("{}")),
 		},
 	}, nil
 }
@@ -534,13 +561,28 @@ func (s StorageBalanceBoundsParams) ToParams() (any, error) {
 }
 
 type StorageBalanceBoundsResult struct {
-	Result []byte
+	Result []byte `json:"result"`
 }
 
 func (s StorageBalanceBoundsResult) GetStorageBalanceBounds() (StorageBalanceBounds, error) {
 	var sbb StorageBalanceBounds
-	err := json.Unmarshal(s.Result, &sbb)
-	return sbb, err
+	if err := json.Unmarshal(s.Result, &sbb); err != nil {
+		return sbb, err
+	}
+	min, err := ParseU128(sbb.Min)
+	if err != nil {
+		return sbb, fmt.Errorf("invalid minimum storage balance: %w", err)
+	}
+	if sbb.Max != "" {
+		max, err := ParseU128(sbb.Max)
+		if err != nil {
+			return sbb, fmt.Errorf("invalid maximum storage balance: %w", err)
+		}
+		if max.Cmp(&min) < 0 {
+			return sbb, fmt.Errorf("maximum storage balance is below minimum")
+		}
+	}
+	return sbb, nil
 }
 
 type StorageBalanceBounds struct {
@@ -564,8 +606,9 @@ type GasCost struct {
 }
 
 type ActionCreationConfig struct {
-	TransferCost     GasCost `json:"transfer_cost"`
-	FunctionCallCost GasCost `json:"function_call_cost"`
+	TransferCost            GasCost `json:"transfer_cost"`
+	FunctionCallCost        GasCost `json:"function_call_cost"`
+	FunctionCallCostPerByte GasCost `json:"function_call_cost_per_byte"`
 }
 
 type TransactionCosts struct {
@@ -579,6 +622,7 @@ type RuntimeConfig struct {
 
 type ProtocolConfig struct {
 	RuntimeConfig RuntimeConfig `json:"runtime_config"`
+	MinGasPrice   string        `json:"min_gas_price"`
 }
 
 type GasPriceParams struct{}
