@@ -1,7 +1,10 @@
 package builder
 
 import (
+	"strings"
+
 	xc "github.com/cordialsys/crosschain"
+	"golang.org/x/mod/semver"
 )
 
 // All possible builder arguments go in here, privately available.
@@ -44,6 +47,8 @@ type builderOptions struct {
 	viewKey *string
 
 	noDurableNonce *bool
+
+	version *string
 }
 
 func newBuilderOptions() builderOptions {
@@ -104,6 +109,16 @@ func (opts *builderOptions) GetStakeAmount() (xc.AmountBlockchain, bool) {
 	return amount, opts.stakeAmount != nil
 }
 func (opts *builderOptions) GetNoCreateDurableNonce() (bool, bool) { return get(opts.noDurableNonce) }
+func (opts *builderOptions) GetVersion() (string, bool)            { return get(opts.version) }
+
+func (opts *builderOptions) IsVersionAtLeast(version string) bool {
+	if opts.version == nil || *opts.version == "" {
+		return false
+	}
+	reportedVersion := strings.TrimPrefix(*opts.version, "v")
+	version = strings.TrimPrefix(version, "v")
+	return semver.Compare("v"+reportedVersion, "v"+version) >= 0
+}
 
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
@@ -148,6 +163,10 @@ func (opts *builderOptions) SetNonceAccount(nonceAccount string) {
 
 func (opts *builderOptions) SetNoDurableNonce(noDurableNonce bool) {
 	opts.noDurableNonce = &noDurableNonce
+}
+
+func (opts *builderOptions) SetVersion(version string) {
+	opts.version = &version
 }
 
 type BuilderOption func(opts *builderOptions) error
@@ -288,6 +307,13 @@ func OptionViewKey(viewKey string) BuilderOption {
 		if viewKey != "" {
 			opts.viewKey = &viewKey
 		}
+		return nil
+	}
+}
+
+func OptionVersion(version string) BuilderOption {
+	return func(opts *builderOptions) error {
+		opts.version = &version
 		return nil
 	}
 }

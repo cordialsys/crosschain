@@ -81,6 +81,14 @@ func (args *TransferArgs) GetNoCreateDurableNonce() (bool, bool) {
 	return args.options.GetNoCreateDurableNonce()
 }
 
+func (args *TransferArgs) GetVersion() (string, bool) {
+	return args.options.GetVersion()
+}
+
+func (args *TransferArgs) IsVersionAtLeast(version string) bool {
+	return args.options.IsVersionAtLeast(version)
+}
+
 func NewTransferArgs(chain *xc.ChainBaseConfig, from xc.Address, to xc.Address, amount xc.AmountBlockchain, options ...BuilderOption) (TransferArgs, error) {
 	builderOptions := newBuilderOptions()
 	appliedOptions := options
@@ -132,6 +140,10 @@ func (args *TransferArgs) SetPublicKey(publicKey []byte) {
 
 func (args *TransferArgs) SetFeePayer(feePayer xc.Address) {
 	args.options.SetFeePayer(feePayer)
+}
+
+func (args *TransferArgs) SetVersion(version string) {
+	args.options.SetVersion(version)
 }
 
 func (args *TransferArgs) SetFeePayerPublicKey(feePayerPublicKey []byte) {

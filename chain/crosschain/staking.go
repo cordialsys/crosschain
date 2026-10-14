@@ -71,6 +71,7 @@ func (client *Client) FetchStakingInput(ctx context.Context, args xcbuilder.Stak
 	req.Account, _ = args.GetStakeAccount()
 	req.FromPublicKey, _ = args.GetPublicKey()
 	req.Memo, _ = args.GetMemo()
+	req.Version, _ = args.GetVersion()
 
 	apiURL := fmt.Sprintf("%s/v1/chains/%s/stakes", client.URL, chain)
 	res, err := client.ApiCallWithUrl(ctx, "POST", apiURL, req)

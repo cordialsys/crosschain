@@ -38,17 +38,13 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 		return nil, err
 	}
 	feeContract, explicit := args.GetFeeContract()
-	feePayer, sponsored := args.GetFeePayer()
+	_, sponsored := args.GetFeePayer()
 	if tempoInput, ok := input.(*TxInput); ok {
 		if explicit && !strings.EqualFold(string(feeContract), string(tempoInput.FeeContract)) {
 			return nil, fmt.Errorf("fee contract differs from the token used for fee estimation")
 		}
 		if !explicit {
 			feeContract = tempoInput.FeeContract
-		}
-		if tempoInput.NativeFeePayer != sponsored || !strings.EqualFold(string(tempoInput.FeePayerAddress), string(feePayer)) || tempoInput.FeePayerNonce != 0 || tempoInput.BasicSmartAccountNonce != 0 {
-			return nil, fmt.Errorf("Tempo fee payer differs from native sponsorship input: requested payer=%q, input payer=%q, native_fee_payer=%t (expected %t), fee_payer_nonce=%d, basic_smart_account_nonce=%d; fetch fresh input with the same Tempo client version and fee-payer arguments",
-				feePayer, tempoInput.FeePayerAddress, tempoInput.NativeFeePayer, sponsored, tempoInput.FeePayerNonce, tempoInput.BasicSmartAccountNonce)
 		}
 	} else if sponsored || evmInput.FeePayerAddress != "" {
 		return nil, fmt.Errorf("native sponsorship requires a Tempo transaction input")
