@@ -44,6 +44,14 @@ func (args *StakeArgs) GetNonceAccount() (string, bool) {
 	return args.options.GetNonceAccount()
 }
 
+func (args *StakeArgs) GetVersion() (string, bool) {
+	return args.options.GetVersion()
+}
+
+func (args *StakeArgs) IsVersionAtLeast(version string) bool {
+	return args.options.IsVersionAtLeast(version)
+}
+
 func NewStakeArgs(chain xc.NativeAsset, from xc.Address, options ...BuilderOption) (StakeArgs, error) {
 	builderOptions := builderOptions{}
 	args := StakeArgs{

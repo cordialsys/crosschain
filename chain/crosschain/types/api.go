@@ -81,6 +81,8 @@ type TransferInputReq struct {
 	PublicKey   string        `json:"public_key,omitempty"`
 
 	Extra TransferInputReqExtra `json:"extra,omitempty"`
+
+	Version string `json:"version,omitempty"`
 }
 
 type FeePayerInfo struct {
@@ -142,7 +144,8 @@ type MultiTransferInputReq struct {
 	Receivers []*Receiver    `json:"receivers"`
 	FeePayer  *FeePayerInfo  `json:"fee_payer,omitempty"`
 
-	Extra MultiTransferInputReqExtra `json:"extra,omitempty"`
+	Extra   MultiTransferInputReqExtra `json:"extra,omitempty"`
+	Version string                     `json:"version,omitempty"`
 }
 
 type StakingInputReqExtra struct {
@@ -163,6 +166,7 @@ type StakingInputReq struct {
 	FeePayer      *FeePayerInfo        `json:"fee_payer,omitempty"`
 	Extra         StakingInputReqExtra `json:"extra,omitempty"`
 	Memo          string               `json:"memo,omitempty"`
+	Version       string               `json:"version,omitempty"`
 }
 
 type CreateAccountInputReq struct {
@@ -301,4 +305,5 @@ type CallInputReq struct {
 	Addresses []xc.Address    `json:"addresses"`
 
 	NonceAccount string `json:"nonce_account,omitempty"`
+	Version      string `json:"version,omitempty"`
 }

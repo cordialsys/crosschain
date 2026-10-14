@@ -73,6 +73,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stellar/go-stellar-sdk v0.4.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
+	golang.org/x/mod v0.38.0
 	golang.org/x/time v0.14.0
 )
 
