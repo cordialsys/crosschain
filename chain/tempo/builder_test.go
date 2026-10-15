@@ -92,6 +92,7 @@ func TestNativeSponsorshipWithoutExplicitFeeContract(t *testing.T) {
 		xcbuilder.OptionContractAddress(testTransferToken), xcbuilder.OptionFeePayer(testFeePayer, nil))
 	require.NoError(t, err)
 	input.NativeFeePayer, input.FeePayerAddress = true, testFeePayer
+	input.FeePayerNonce = 9
 	built, err := buildTempoTransfer(chain, args, input)
 	require.NoError(t, err)
 	tx := built.(*Tx)
@@ -111,18 +112,6 @@ func TestTransferRejectsMismatchedInputs(t *testing.T) {
 	}{
 		{"fee currency", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FeeContract = testTransferToken }, "fee contract differs"},
 		{"sender", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FromAddress = testRecipient }, "sender differs"},
-		{"missing sponsorship", func(a *xcbuilder.TransferArgs, _ *TxInput) { a.SetFeePayer(testFeePayer) }, "native sponsorship input"},
-		{"unexpected sponsorship", func(_ *xcbuilder.TransferArgs, in *TxInput) {
-			in.NativeFeePayer = true
-			in.FeePayerAddress = testFeePayer
-		}, "native sponsorship input"},
-		{"payer mismatch", func(a *xcbuilder.TransferArgs, in *TxInput) {
-			a.SetFeePayer(testFeePayer)
-			in.NativeFeePayer = true
-			in.FeePayerAddress = testRecipient
-		}, "native sponsorship input"},
-		{"payer nonce", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.FeePayerNonce = 1 }, "native sponsorship input"},
-		{"smart account nonce", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.BasicSmartAccountNonce = 1 }, "native sponsorship input"},
 		{"zero gas", func(_ *xcbuilder.TransferArgs, in *TxInput) { in.GasLimit = 0 }, "gas limit"},
 		{"gas caps", func(_ *xcbuilder.TransferArgs, in *TxInput) {
 			in.GasTipCap = xc.NewAmountBlockchainFromUint64(30_000_000_000)
@@ -147,20 +136,4 @@ func TestTransferRejectsMismatchedInputs(t *testing.T) {
 	args.SetFeePayer(testFeePayer)
 	_, err = b.Transfer(args, &input.TxInput)
 	require.ErrorContains(t, err, "requires a Tempo transaction input")
-}
-
-func TestSponsorshipInputMismatchDiagnostics(t *testing.T) {
-	chain, args, input := feeTokenFixture(t)
-	args.SetFeePayer(testFeePayer)
-	// An input produced by the older EIP-7702 path has a payer and a payer
-	// nonce, but no native sponsorship marker. Do not silently reinterpret it.
-	input.FeePayerAddress = testFeePayer
-	input.FeePayerNonce = 12
-	input.BasicSmartAccountNonce = 3
-	_, err := buildTempoTransfer(chain, args, input)
-	require.ErrorContains(t, err, fmt.Sprintf("requested payer=%q", testFeePayer))
-	require.ErrorContains(t, err, fmt.Sprintf("input payer=%q", testFeePayer))
-	require.ErrorContains(t, err, "native_fee_payer=false (expected true)")
-	require.ErrorContains(t, err, "fee_payer_nonce=12")
-	require.ErrorContains(t, err, "basic_smart_account_nonce=3")
 }

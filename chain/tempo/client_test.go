@@ -36,10 +36,14 @@ func TestFetchFeeTokenTransferInput(t *testing.T) {
 			if err := json.Unmarshal(request.Params[0], &account); err != nil {
 				t.Error(err)
 			}
-			if !strings.EqualFold(account, string(testSender)) {
+			switch {
+			case strings.EqualFold(account, string(testSender)):
+				result = "0x7"
+			case strings.EqualFold(account, string(testFeePayer)):
+				result = "0x9"
+			default:
 				t.Errorf("unexpected nonce lookup for %s", account)
 			}
-			result = "0x7"
 		case "eth_chainId":
 			result = "0xa5bf"
 		case "eth_getBlockByNumber":
@@ -97,15 +101,17 @@ func TestFetchFeeTokenTransferInput(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &Tx{}, tx)
 
-	// Sponsored transfers use only the sender nonce and a configured gas budget.
+	// Sponsored transfers report both account nonces and use a configured gas budget.
 	args.SetFeePayer(testFeePayer)
+	args.SetVersion("v26.17.32")
 	chain.GasLimitDefault = 750_000
 	sponsored, err := client.FetchTransferInput(context.Background(), args)
 	require.NoError(t, err)
 	require.Len(t, estimates, 0, "do not simulate sponsorship as a sender-paid transaction")
 	require.Equal(t, testFeePayer, sponsored.(*TxInput).FeePayerAddress)
 	require.True(t, sponsored.(*TxInput).NativeFeePayer)
-	require.Zero(t, sponsored.(*TxInput).FeePayerNonce)
+	require.EqualValues(t, 7, sponsored.(*TxInput).Nonce)
+	require.EqualValues(t, 9, sponsored.(*TxInput).FeePayerNonce)
 	require.Equal(t, uint64(750_000), sponsored.(*TxInput).GasLimit)
 	require.False(t, sponsored.IsFeeLimitAccurate())
 	fee, contract = sponsored.GetFeeLimit()
@@ -114,10 +120,11 @@ func TestFetchFeeTokenTransferInput(t *testing.T) {
 	encoded, err = json.Marshal(sponsored)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(encoded, &offline))
+	require.EqualValues(t, 9, offline.FeePayerNonce)
 	_, err = b.Transfer(args, &offline)
 	require.NoError(t, err)
 	plainArgs, err := xcbuilder.NewTransferArgs(chain.Base(), testSender, testRecipient,
-		args.GetAmount(), xcbuilder.OptionContractAddress(testTransferToken))
+		args.GetAmount(), xcbuilder.OptionContractAddress(testTransferToken), xcbuilder.OptionVersion("v26.17.32"))
 	require.NoError(t, err)
 	plain, err := client.FetchTransferInput(context.Background(), plainArgs)
 	require.NoError(t, err)
@@ -128,6 +135,7 @@ func TestFetchFeeTokenTransferInput(t *testing.T) {
 	sponsoredDefault, err := client.FetchTransferInput(context.Background(), plainArgs)
 	require.NoError(t, err)
 	require.Equal(t, testTransferToken, sponsoredDefault.(*TxInput).FeeContract)
+	require.EqualValues(t, 9, sponsoredDefault.(*TxInput).FeePayerNonce)
 	require.Len(t, estimates, 0)
 	_, err = b.Transfer(plainArgs, sponsoredDefault)
 	require.NoError(t, err)

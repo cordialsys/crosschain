@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -60,6 +61,24 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 		if configured := client.Asset.GetChain().GasLimitDefault; configured > 0 {
 			result.GasLimit = uint64(configured)
 		}
+
+		if !args.IsVersionAtLeast("v26.17.32") && client.Asset.GetChain().StaggeredTempoNativeSponsorship {
+			// TODO: remove this once we have a proper treasury-version gate
+			if rand.Intn(100) < 25 {
+				feePayerNonce, err := client.GetNonce(ctx, payer)
+				if err != nil {
+					return result, err
+				}
+				result.FeePayerNonce = feePayerNonce
+			}
+		} else {
+			feePayerNonce, err := client.GetNonce(ctx, payer)
+			if err != nil {
+				return result, err
+			}
+			result.FeePayerNonce = feePayerNonce
+		}
+
 		return result, nil
 	}
 	to, value, data, err := evmtx.EvmDestinationAndAmountAndData(args.GetTo(), args.GetAmount(), &args)

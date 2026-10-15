@@ -888,7 +888,8 @@ type ChainClientConfig struct {
 	// If true, the client will only use confirmed UTXOs for unspent output queries.
 	ConfirmedUtxo bool `yaml:"confirmed_utxo,omitempty"`
 	// Exclude recently released feature(s) from the client.
-	ExcludeFeatures bool `yaml:"exclude_features,omitempty"`
+	ExcludeFeatures                 bool `yaml:"exclude_features,omitempty"`
+	StaggeredTempoNativeSponsorship bool `yaml:"staggered_tempo_native_sponsorship,omitempty"`
 }
 
 func (chain *ChainClientConfig) NewClientLimiter() *rate.Limiter {
