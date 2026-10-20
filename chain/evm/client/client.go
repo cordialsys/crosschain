@@ -363,6 +363,14 @@ func (client *Client) FetchLegacyTxInfo(ctx context.Context, txHashStr xc.TxHash
 		}
 	}
 	result.Fee = tx.Fee(trans.MaxPriorityFeePerGas, trans.GasPrice, baseFee, gasUsed)
+	if receipt.EffectiveGasPrice != nil && receipt.EffectiveGasPrice.Sign() > 0 {
+		// The receipt reports the price per gas that was actually charged. A transaction's
+		// gasPrice is only what it offered: on Arbitrum-based chains a legacy transaction
+		// is charged the base fee, however much higher its gasPrice is.
+		effectiveGasPrice := xc.AmountBlockchain(*receipt.EffectiveGasPrice)
+		gasUsedAmount := xc.NewAmountBlockchainFromUint64(gasUsed)
+		result.Fee = gasUsedAmount.Mul(&effectiveGasPrice)
+	}
 	result.FeePayer = xc.Address(trans.From)
 	if nativeAsset.Driver == xc.DriverTempo {
 		if feePayment, ok := parseTempoFeePayment(receipt); ok {
