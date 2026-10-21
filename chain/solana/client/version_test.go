@@ -18,10 +18,115 @@ import (
 	xctypes "github.com/cordialsys/crosschain/client/types"
 	"github.com/cordialsys/crosschain/factory"
 	"github.com/solana-foundation/solana-go/v2"
+	"github.com/solana-foundation/solana-go/v2/programs/system"
 	"github.com/solana-foundation/solana-go/v2/rpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTransferSimulationBeforeFeeDeduction(t *testing.T) {
+	const balance = uint64(44_041_398)
+	for _, tc := range []struct {
+		name          string
+		amount        uint64
+		priorityFee   uint64
+		explicitPayer bool
+		separatePayer bool
+		failAlways    bool
+		wantCalls     int
+		wantError     bool
+	}{
+		{name: "full balance before fee deduction", amount: balance, wantCalls: 2},
+		{name: "explicit self payer", amount: balance, explicitPayer: true, wantCalls: 2},
+		{name: "priority fee", amount: balance, priorityFee: 1000, wantCalls: 2},
+		{name: "already deducted", amount: balance - 5000, wantCalls: 1},
+		{name: "separate payer", amount: balance, separatePayer: true, wantCalls: 1},
+		{name: "separate payer failure", amount: balance, separatePayer: true, failAlways: true, wantCalls: 1, wantError: true},
+		{name: "shortfall exceeds fee", amount: balance + 1, wantCalls: 2, wantError: true},
+		{name: "unrelated instruction error", amount: balance, failAlways: true, wantCalls: 2, wantError: true},
+		{name: "amount below fee", amount: 4999, failAlways: true, wantCalls: 1, wantError: true},
+		{name: "amount equals fee", amount: 5000, failAlways: true, wantCalls: 1, wantError: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := xc.NewChainConfig(xc.SOL)
+			from := xc.Address(solana.NewWallet().PublicKey().String())
+			to := xc.Address(solana.NewWallet().PublicKey().String())
+			args, err := xcbuilder.NewTransferArgs(cfg.Base(), from, to, xc.NewAmountBlockchainFromUint64(tc.amount))
+			require.NoError(t, err)
+			if tc.explicitPayer {
+				args.SetFeePayer(from)
+			} else if tc.separatePayer {
+				args.SetFeePayer(xc.Address(solana.NewWallet().PublicKey().String()))
+			}
+			// The inclusive flag is intentionally unset: callers such as xc set
+			// it only after input preparation and fee deduction.
+			input := tx_input.NewTxInput()
+			input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
+			input.TransactionConfig = &solana.TransactionConfig{PriorityFee: &tc.priorityFee}
+			var amounts []uint64
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var request struct {
+					ID     json.RawMessage   `json:"id"`
+					Method string            `json:"method"`
+					Params []json.RawMessage `json:"params"`
+				}
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+				require.Equal(t, "simulateTransaction", request.Method)
+				var encoded string
+				require.NoError(t, json.Unmarshal(request.Params[0], &encoded))
+				wire, err := base64.StdEncoding.DecodeString(encoded)
+				require.NoError(t, err)
+				transaction, err := solana.TransactionFromBytes(wire)
+				require.NoError(t, err)
+				instruction := transaction.Message.Instructions[0]
+				accounts, err := instruction.ResolveInstructionAccounts(&transaction.Message)
+				require.NoError(t, err)
+				decoded, err := system.DecodeInstruction(accounts, instruction.Data)
+				require.NoError(t, err)
+				amount := *decoded.Impl.(*system.Transfer).Lamports
+				amounts = append(amounts, amount)
+				available := balance
+				if !tc.separatePayer {
+					available -= 5000 + tc.priorityFee
+				}
+				var simulationError any
+				units := uint64(20_001)
+				if tc.failAlways || amount > available {
+					code := 1
+					if tc.failAlways {
+						code = 2
+					}
+					simulationError = map[string]any{"InstructionError": []any{0, map[string]any{"Custom": code}}}
+					units = 150 // A failed transfer must not determine the budget.
+				}
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+					"jsonrpc": "2.0", "id": request.ID,
+					"result": map[string]any{"value": map[string]any{
+						"err": simulationError, "unitsConsumed": units, "loadedAccountsDataSize": 32_769,
+					}},
+				}))
+			}))
+			defer server.Close()
+			c := &client.Client{SolClient: rpc.New(server.URL), Asset: cfg}
+			result, err := c.WithTransferSimulation(context.Background(), args, input)
+			require.Len(t, amounts, tc.wantCalls)
+			require.Equal(t, tc.amount, amounts[0])
+			require.Equal(t, tc.amount, args.GetAmount().Uint64())
+			if tc.wantCalls == 2 {
+				require.Equal(t, tc.amount-5000-tc.priorityFee, amounts[1])
+			}
+			if tc.wantError {
+				require.ErrorContains(t, err, "Solana v1 simulation failed")
+				require.Zero(t, input.UnitsConsumed)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, uint64(20_001), result.(*tx_input.TxInput).UnitsConsumed)
+			require.Equal(t, uint32(24_002), result.(*tx_input.TxInput).ComputeUnitLimit)
+			require.Equal(t, uint32(65_536), result.(*tx_input.TxInput).LoadedAccountsDataSizeLimit)
+		})
+	}
+}
 
 func TestTransferSimulationVersionFallback(t *testing.T) {
 	const decodeError = "failed to deserialize solana_sdk::transaction::versioned::VersionedTransaction: io error: failed to fill whole buffer"
