@@ -450,22 +450,41 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 	if err != nil {
 		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
 	}
-	txI, err := builder.Transfer(args, txInput)
-	if err != nil {
-		return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
-	}
-	tx := txI.(*tx.Tx)
-	tx.SolTx.Signatures = make([]solana.Signature, tx.SolTx.Message.Header.NumRequiredSignatures)
-	if txInput.SupportsV1 {
-		txInput.SignatureCount = tx.SolTx.Message.Header.NumRequiredSignatures
-	}
+	var sim *rpc.SimulateTransactionResponse
+	for attempt := 0; attempt < 2; attempt++ {
+		txI, err := builder.Transfer(args, txInput)
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not create tx builder: %v", err)
+		}
+		tx := txI.(*tx.Tx)
+		tx.SolTx.Signatures = make([]solana.Signature, tx.SolTx.Message.Header.NumRequiredSignatures)
+		if txInput.SupportsV1 {
+			txInput.SignatureCount = tx.SolTx.Message.Header.NumRequiredSignatures
+		}
 
-	sim, err := client.SolClient.SimulateTransactionWithOpts(ctx, tx.SolTx, &rpc.SimulateTransactionOpts{
-		SigVerify: false,
-	})
-
-	if err != nil {
-		return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
+		sim, err = client.SolClient.SimulateTransactionWithOpts(ctx, tx.SolTx, &rpc.SimulateTransactionOpts{
+			SigVerify: false,
+		})
+		if err != nil {
+			return &tx_input.TxInput{}, fmt.Errorf("could not simulate tx: %v", err)
+		}
+		if attempt > 0 || !txInput.SupportsV1 || sim == nil || sim.Value == nil || sim.Value.Err == nil {
+			break
+		}
+		_, isToken := args.GetContract()
+		feePayer, hasFeePayer := args.GetFeePayer()
+		if isToken || (hasFeePayer && feePayer != args.GetFrom()) {
+			break
+		}
+		// Callers may deduct inclusive fees only after fetching input. Retry
+		// estimation with room for the fee, without changing the caller's amount
+		// or relying on resource measurements from a failed simulation.
+		fee, _ := txInput.GetFeeLimit()
+		amount := args.GetAmount()
+		if fee.IsZero() || amount.Cmp(&fee) <= 0 {
+			break
+		}
+		args.SetAmount(amount.Sub(&fee))
 	}
 	if txInput.SupportsV1 {
 		if sim == nil || sim.Value == nil {

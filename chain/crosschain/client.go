@@ -202,17 +202,19 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	feePayerIdentityMaybe, _ := args.GetFeePayerIdentity()
 	nonceAccountMaybe, _ := args.GetNonceAccount()
 	versionMaybe, _ := args.GetVersion()
+	feeInclusiveMaybe := args.InclusiveFeeSpendingEnabled()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
-		Chain:       client.Asset.GetChain().Chain,
-		Contract:    string(contract),
-		Balance:     args.GetAmount().String(),
-		Decimals:    decimalsStr,
-		PublicKey:   hex.EncodeToString(publicKeyMaybe),
-		From:        string(args.GetFrom()),
-		To:          string(args.GetTo()),
-		FeePayer:    types.NewFeePayerInfoOrNil(&args),
-		FeeContract: string(feeContract),
+		Chain:        client.Asset.GetChain().Chain,
+		Contract:     string(contract),
+		Balance:      args.GetAmount().String(),
+		Decimals:     decimalsStr,
+		PublicKey:    hex.EncodeToString(publicKeyMaybe),
+		From:         string(args.GetFrom()),
+		To:           string(args.GetTo()),
+		FeePayer:     types.NewFeePayerInfoOrNil(&args),
+		FeeContract:  string(feeContract),
+		FeeInclusive: feeInclusiveMaybe,
 		Extra: types.TransferInputReqExtra{
 			FromIdentity:        fromIdentityMaybe,
 			FeePayerIdentity:    feePayerIdentityMaybe,
