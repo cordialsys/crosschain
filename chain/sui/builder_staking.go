@@ -71,22 +71,28 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer,
 		args.GetFrom(),
 		stakeInput.TxInput,
+		amount,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare split and merge commands: %w", err)
 	}
 
-	// save split result for later use in MoveCall command
-	cointSplitResult := ArgumentResult(uint16(len(commands)))
-	// now let's spend the primary coin by splitting `amt` from it
-	commands = append(commands, &bcs.Command__SplitCoins{
-		Field0: primaryCoinInput,
-		Field1: []bcs.Argument{
-			// the last input has the amount
-			ArgumentInput(uint16(len(cmd_inputs))),
-		},
-	})
-	cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+	cointSplitResult := primaryCoinInput
+	_, freshWithdrawal := primaryCoinInput.(*bcs.Argument__Result)
+	if stakeInput.AddressBalance == nil || !freshWithdrawal {
+		// save split result for later use in MoveCall command
+		cointSplitResult = ArgumentResult(uint16(len(commands)))
+		// now let's spend the primary coin by splitting `amt` from it
+		commands = append(commands, &bcs.Command__SplitCoins{
+			Field0: primaryCoinInput,
+			Field1: []bcs.Argument{
+				// the last input has the amount
+				ArgumentInput(uint16(len(cmd_inputs))),
+			},
+		})
+		cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+
+	}
 
 	// add system state input
 	systemStateArg := ArgumentInput(uint16(len(cmd_inputs)))
@@ -123,6 +129,9 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
 	}
+	if stakeInput.AddressBalance != nil && feePayer != args.GetFrom() {
+		xcTx.extraFeePayer = feePayer
+	}
 	return xcTx, nil
 }
 
@@ -148,10 +157,14 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		return nil, errors.New("sui transactions require pubkey")
 	}
 
+	baseAmount := amount
+	if unstakeInput.AddressBalance != nil {
+		baseAmount = xc.NewAmountBlockchainFromUint64(0)
+	}
 	txBase, err := txBuilder.newTransactionBase(
 		feePayer,
 		args.GetFrom(),
-		amount,
+		baseAmount,
 		&unstakeInput.TxInput,
 	)
 	if err != nil {
@@ -283,6 +296,9 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	xcTx := &Tx{
 		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
+	}
+	if unstakeInput.AddressBalance != nil && feePayer != args.GetFrom() {
+		xcTx.extraFeePayer = feePayer
 	}
 	return xcTx, nil
 }

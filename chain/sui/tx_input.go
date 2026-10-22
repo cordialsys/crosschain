@@ -3,6 +3,7 @@ package sui
 import (
 	"bytes"
 	"sort"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/factory/drivers/registry"
@@ -20,9 +21,27 @@ type TxInput struct {
 	GasCoinOwner xc.Address `json:"gas_coin_owner,omitempty"`
 	// All objects (native or token)
 	Coins []*types.Coin `json:"coins,omitempty"`
+	// Optional address-balance funding. Omitted inputs use the legacy builder.
+	AddressBalance *AddressBalanceInput `json:"address_balance,omitempty"`
 	// current epoch
 	CurrentEpoch uint64 `json:"current_epoch,omitempty"`
 }
+
+// AddressBalanceInput adds funding sources without changing legacy coin fields.
+// Balances are decimal strings on the wire to preserve uint64 precision.
+type AddressBalanceInput struct {
+	Sender     xc.Address `json:"sender"`
+	CoinType   string     `json:"coin_type"`
+	Balance    uint64     `json:"balance,string"`
+	GasBalance uint64     `json:"gas_balance,string"`
+	// Includes GasCoin and any additional SUI coins owned by GasCoinOwner.
+	GasCoins []*types.Coin `json:"gas_coins,omitempty"`
+	ChainID  string        `json:"chain_id"`
+	// Generated once when fetching inputs; offline rebuilds keep the same nonce.
+	Nonce uint32 `json:"nonce"`
+}
+
+func (input *TxInput) GetAddressBalanceInput() *AddressBalanceInput { return input.AddressBalance }
 
 type CoinGetter interface {
 	GetCoins() []*types.Coin
@@ -72,6 +91,12 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
+	if input.AddressBalance != nil || hasAddressBalance(other) {
+		if previous, ok := other.(CoinGetter); ok {
+			return input.CurrentEpoch > previous.GetCurrentEpoch()
+		}
+		return false
+	}
 	if suiOther, ok := other.(*TxInput); ok {
 		// if epoch changed, means independence as one txInput expired
 		if suiOther.CurrentEpoch != input.CurrentEpoch {
@@ -116,6 +141,15 @@ func (input *TxInput) coinsDisjoint(other CoinGetter) (disjoint bool) {
 	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	// Address-balance nonces distinguish transaction digests, not conflicting
+	// spends. Changing the amount or recipient can execute again with this nonce.
+	if input.AddressBalance != nil || hasAddressBalance(other) {
+		if previous, ok := other.(CoinGetter); ok {
+			return input.CurrentEpoch > previous.GetCurrentEpoch()
+		}
+		return false
+	}
+
 	if _, ok := other.(CoinGetter); !ok {
 		return false
 	}
@@ -149,6 +183,15 @@ func (input *TxInput) ExcludeGasCoin() {
 }
 
 func (input *TxInput) TotalBalance() xc.AmountBlockchain {
+	if a := input.AddressBalance; a != nil {
+		total := xc.NewAmountBlockchainFromUint64(a.Balance)
+		for _, coin := range input.addressTransferCoins() {
+			v := xc.NewAmountBlockchainFromUint64(coin.Balance.Uint64())
+			total = total.Add(&v)
+		}
+		return total
+	}
+
 	amount := xc.NewAmountBlockchainFromUint64(0)
 	coinType := ""
 	for _, coin := range input.Coins {
@@ -170,6 +213,10 @@ func (input *TxInput) SortCoins() {
 }
 
 func (input *TxInput) IsNativeTransfer() bool {
+	if input.AddressBalance != nil {
+		parts := strings.Split(NormalizeCoinContract(input.AddressBalance.CoinType), "::")
+		return len(parts) == 3 && strings.TrimLeft(strings.TrimPrefix(parts[0], "0x"), "0") == "2" && parts[1] == "sui" && parts[2] == "SUI"
+	}
 	if len(input.Coins) > 0 && input.Coins[0].CoinType != input.GasCoin.CoinType {
 		return false
 	}
@@ -182,4 +229,11 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverSui,
 		},
 	}
+}
+
+func hasAddressBalance(input xc.TxInput) bool {
+	if v, ok := input.(interface{ GetAddressBalanceInput() *AddressBalanceInput }); ok {
+		return v.GetAddressBalanceInput() != nil
+	}
+	return false
 }
