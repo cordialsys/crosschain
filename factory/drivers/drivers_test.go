@@ -106,6 +106,9 @@ func createChainFor(driver xc.Driver) *xc.ChainConfig {
 			CatalystPassword:      "raw:catalyst:test-secret",
 		}
 	}
+	if driver == xc.DriverSui {
+		fakeAsset.URL = "https://fullnode.mainnet.sui.io:443"
+	}
 	if driver == xc.DriverVeChain {
 		fakeAsset.URL = "https://mainnet.vechain.org"
 	}
