@@ -30,8 +30,11 @@ func NewTxBuilder(cfgI *xc.ChainBaseConfig) (TxBuilder, error) {
 
 // NewTransfer creates a new transfer for an Asset, either native or token
 func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInput) (xc.Tx, error) {
-	if _, ok := args.GetContract(); ok {
-		return nil, fmt.Errorf("token transfers not supported on substrate")
+	if contract, ok := args.GetContract(); ok {
+		if txBuilder.Asset.Chain == xc.TAO {
+			return NewTaoAlphaBuilder(&txBuilder).TransferStake(args, input)
+		}
+		return nil, fmt.Errorf("token transfers not supported on substrate: %s", contract)
 	}
 	txInput := input.(*tx_input.TxInput)
 

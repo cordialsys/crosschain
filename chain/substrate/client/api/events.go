@@ -97,6 +97,33 @@ var SupportedEvents = []EventDescriptor{
 	},
 }
 
+var SupportedAlphaEvents = []EventDescriptor{
+	{
+		Module: "SubtensorModule",
+		Event:  "StakeTransferred",
+		Attributes: []*EventAttributeDescriptor{
+			{
+				Name:  "from",
+				Index: 0,
+				Bind:  BindFrom,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "to",
+				Index: 1,
+				Bind:  BindTo,
+				Type:  EventAddress,
+			},
+			{
+				Name:  "amount",
+				Index: 4,
+				Bind:  BindAmount,
+				Type:  EventInteger,
+			},
+		},
+	},
+}
+
 var SupportedStakingEvents = []EventDescriptor{
 	{
 		Module: "SubtensorModule",
@@ -205,6 +232,9 @@ func eventHandle(module, event string) eventHandleS {
 }
 func init() {
 	for _, ev := range SupportedEvents {
+		supportedEventMap[eventHandle(ev.Module, ev.Event)] = ev
+	}
+	for _, ev := range SupportedAlphaEvents {
 		supportedEventMap[eventHandle(ev.Module, ev.Event)] = ev
 	}
 	for _, ev := range SupportedStakingEvents {
