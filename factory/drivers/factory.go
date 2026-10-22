@@ -85,6 +85,7 @@ import (
 	substratebuilder "github.com/cordialsys/crosschain/chain/substrate/builder"
 	substrateclient "github.com/cordialsys/crosschain/chain/substrate/client"
 	"github.com/cordialsys/crosschain/chain/sui"
+	suiclient "github.com/cordialsys/crosschain/chain/sui/client"
 	"github.com/cordialsys/crosschain/chain/tempo"
 	"github.com/cordialsys/crosschain/chain/ton"
 	tonaddress "github.com/cordialsys/crosschain/chain/ton/address"
@@ -122,7 +123,7 @@ func NewClient(cfg *xc.ChainConfig, driver xc.Driver) (xclient.Client, error) {
 	case xc.DriverAptos:
 		return aptos.NewClient(cfg)
 	case xc.DriverSui:
-		return sui.NewClient(cfg)
+		return suiclient.NewClient(cfg)
 	case xc.DriverVeChain:
 		return vechain.NewClient(cfg)
 	case xc.DriverTempo:
@@ -202,7 +203,7 @@ func NewStakingClient(servicesConfig *services.ServicesConfig, cfg *xc.ChainConf
 	case xc.DriverEOS:
 		return eosclient.NewClient(cfg)
 	case xc.DriverSui:
-		return sui.NewClient(cfg)
+		return suiclient.NewClient(cfg)
 	case xc.DriverTron:
 		return tron.NewClient(cfg)
 	}
