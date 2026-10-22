@@ -2,7 +2,11 @@ package client
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
+	pb "github.com/cordialsys/crosschain/chain/sui/client/rpc"
+	"google.golang.org/protobuf/proto"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -22,6 +26,26 @@ func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Ad
 	contract = sui.NormalizeCoinContract(contract)
 
 	input := sui.NewTxInput()
+	if feePayer == from {
+		feePayer = ""
+	}
+	gasOwner := from
+	if feePayer != "" {
+		gasOwner = feePayer
+	}
+	input.GasCoinOwner = gasOwner
+	addressBalance, err := c.addressBalance(ctx, from, contract)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get address balance: %w", err)
+	}
+	gasBalance := addressBalance
+	if gasOwner != from || !sameCoin(contract, native) {
+		gasBalance, err = c.addressBalance(ctx, gasOwner, native)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get gas address balance: %w", err)
+		}
+	}
+
 	suiCoins, err := c.GetAllCoinsFor(ctx, from, native)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get coins: %w", err)
@@ -33,24 +57,45 @@ func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Ad
 		input.GasCoinOwner = from
 	}
 
+	gasCoins := suiCoins
 	if feePayer != "" {
 		input.GasCoin = types.Coin{}
 		sponsorSuiCoins, err := c.GetAllCoinsFor(ctx, feePayer, native)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get fee payer coins: %w", err)
 		}
+		gasCoins = sponsorSuiCoins
 		// use gas coin from sponsor if available
 		sui.SortCoins(sponsorSuiCoins)
 		if len(sponsorSuiCoins) > 0 {
 			input.GasCoin = *sponsorSuiCoins[0]
 			input.GasCoinOwner = feePayer
-		} else {
-			return nil, fmt.Errorf("SUI fee payer %s has no SUI coins", feePayer)
 		}
 	}
 
-	if len(input.GasCoin.Digest) == 0 {
-		return nil, fmt.Errorf("no SUI coin objects available for gas; address balances must be withdrawn into coin objects before using the existing Sui builders")
+	input.GasCoinOwner = gasOwner
+	if len(input.GasCoin.Digest) == 0 && gasBalance == 0 {
+		return nil, fmt.Errorf("no SUI coin objects or address balance available for gas")
+	}
+	if addressBalance > 0 || gasBalance > 0 {
+		info, err := c.Ledger.GetServiceInfo(ctx, &pb.GetServiceInfoRequest{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get chain ID: %w", err)
+		}
+		if info.GetChainId() == "" {
+			return nil, fmt.Errorf("Sui returned no chain ID")
+		}
+		var nonce [4]byte
+		if _, err = rand.Read(nonce[:]); err != nil {
+			return nil, err
+		}
+		if sameCoin(contract, native) {
+			contract = sui.NativeCoin
+		}
+		if len(gasCoins) > sui.MaxCoinObjects {
+			gasCoins = gasCoins[:sui.MaxCoinObjects]
+		}
+		input.AddressBalance = &sui.AddressBalanceInput{Sender: from, CoinType: contract, Balance: addressBalance, GasBalance: gasBalance, GasCoins: append([]*types.Coin(nil), gasCoins...), ChainID: info.GetChainId(), Nonce: binary.LittleEndian.Uint32(nonce[:])}
 	}
 
 	transferCoins := suiCoins
@@ -129,9 +174,34 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if err != nil {
 		return nil, fmt.Errorf("failed to get transaction gas fee: %w", err)
 	}
+	if !ok && input.AddressBalance != nil {
+		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
+	}
 	if ok {
 		input.GasBudget = gasFee
+		if input.AddressBalance != nil {
+			_, err = builder.Transfer(args, input)
+			if err != nil {
+				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
+			}
+			if input.GasBudget < gasFee {
+				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, input.GasBudget)
+			}
+		}
 	}
 
 	return input, nil
+}
+
+// An absent address_balance is zero on older coin-only networks. A missing
+// balance object is a malformed response, not an empty account.
+func (c *Client) addressBalance(ctx context.Context, owner xc.Address, coin string) (uint64, error) {
+	response, err := c.State.GetBalance(ctx, &pb.GetBalanceRequest{Owner: proto.String(string(owner)), CoinType: proto.String(coin)})
+	if err != nil {
+		return 0, err
+	}
+	if response.GetBalance() == nil {
+		return 0, fmt.Errorf("Sui returned no balance")
+	}
+	return response.GetBalance().GetAddressBalance(), nil
 }

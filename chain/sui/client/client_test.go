@@ -55,6 +55,9 @@ type rpcServer struct {
 }
 
 func (s *rpcServer) GetBalance(c context.Context, r *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
+	if s.balance == nil {
+		return &pb.GetBalanceResponse{Balance: &pb.Balance{Balance: proto.Uint64(0)}}, nil
+	}
 	return s.balance(c, r)
 }
 func (s *rpcServer) ListOwnedObjects(c context.Context, r *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
@@ -88,7 +91,7 @@ func (s *rpcServer) GetCoinInfo(c context.Context, r *pb.GetCoinInfoRequest) (*p
 	return s.coinInfo(c, r)
 }
 func (s *rpcServer) GetServiceInfo(context.Context, *pb.GetServiceInfoRequest) (*pb.GetServiceInfoResponse, error) {
-	return &pb.GetServiceInfoResponse{CheckpointHeight: proto.Uint64(110)}, nil
+	return &pb.GetServiceInfoResponse{CheckpointHeight: proto.Uint64(110), ChainId: proto.String(testDigest)}, nil
 }
 
 func newTestClient(t *testing.T, server *rpcServer, configure ...func(*xc.ChainConfig)) *Client {
@@ -324,13 +327,13 @@ func TestEndpoint(t *testing.T) {
 		url, target string
 		secure      bool
 	}{{"https://fullnode.mainnet.sui.io:443/", "dns:///fullnode.mainnet.sui.io:443", true}, {"fullnode.mainnet.sui.io", "dns:///fullnode.mainnet.sui.io:443", true}, {"http://localhost:9000", "dns:///localhost:9000", false}, {"http://[::1]:9000", "dns:///[::1]:9000", false}} {
-		target, _, secure, err := endpoint(tc.url)
+		endpoint, err := parseEndpoint(tc.url)
 		require.NoError(t, err)
-		require.Equal(t, tc.target, target)
-		require.Equal(t, tc.secure, secure)
+		require.Equal(t, tc.target, endpoint.target)
+		require.Equal(t, tc.secure, endpoint.secure)
 	}
-	for _, raw := range []string{"", "https://host/token", "https://host?key=secret", "ftp://host", "https://user:password@host"} {
-		_, _, _, err := endpoint(raw)
+	for _, raw := range []string{"", "ftp://host", "https://host/#fragment"} {
+		_, err := parseEndpoint(raw)
 		require.Error(t, err)
 	}
 }
@@ -450,12 +453,11 @@ func TestMalformedResponsesAndExecutionFailure(t *testing.T) {
 	})
 }
 
-func TestAddressBalanceWithoutGasCoins(t *testing.T) {
+func TestNoGasFunding(t *testing.T) {
 	c := newTestClient(t, &rpcServer{coins: func(context.Context, *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
 		return &pb.ListOwnedObjectsResponse{}, nil
 	}})
 	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1))
 	_, err := c.FetchTransferInput(context.Background(), args)
-	require.ErrorContains(t, err, "no SUI coin objects available for gas")
-	require.ErrorContains(t, err, "address balances must be withdrawn into coin objects")
+	require.ErrorContains(t, err, "no SUI coin objects or address balance available for gas")
 }

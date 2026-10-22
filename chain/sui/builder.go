@@ -65,6 +65,10 @@ func (txBuilder TxBuilder) newTransactionBase(feePayer xc.Address, from xc.Addre
 		return transactionBase{}, errors.New("xc.TxInput is not from a sui chain")
 	}
 
+	if local_input.AddressBalance != nil {
+		return txBuilder.newAddressTransactionBase(feePayer, from, amount, local_input)
+	}
+
 	fromData, err := HexToAddress(string(from))
 	if err != nil {
 		return transactionBase{}, fmt.Errorf("could not decode from address: %w", err)
@@ -154,8 +158,11 @@ func (txBuilder TxBuilder) newTransactionBase(feePayer xc.Address, from xc.Addre
 // 2. Merge coins if necessary
 // 3. Set the primary coin when only one coin is provided
 // Required for staking and transfer operations
-func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, from xc.Address, input TxInput) (bcs.Argument, []bcs.Command, []bcs.CallArg, error) {
+func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, from xc.Address, input TxInput, amount xc.AmountBlockchain) (bcs.Argument, []bcs.Command, []bcs.CallArg, error) {
 
+	if input.AddressBalance != nil {
+		return txBuilder.prepareAddressBalanceCommands(feePayer, from, input, amount)
+	}
 	cmd_inputs := []bcs.CallArg{}
 	commands := []bcs.Command{}
 	var gasRemainderResult bcs.Argument
@@ -253,26 +260,34 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 		return nil, fmt.Errorf("failed to build transfer base: %w", err)
 	}
 
-	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer, from, *local_input)
+	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer, from, *local_input, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gas split and merge commands: %w", err)
 	}
 
-	// spend the primary coin by splitting `amt` from it
-	commands = append(commands, &bcs.Command__SplitCoins{
-		Field0: primaryCoinInput,
-		Field1: []bcs.Argument{
-			// the last input has the amount
-			ArgumentInput(uint16(len(cmd_inputs))),
-		},
-	})
-	cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+	// A freshly redeemed withdrawal is already exactly the requested amount.
+	// Consume it directly: splitting would leave an unused (even if zero) Coin.
+	transferCoin := primaryCoinInput
+	_, freshWithdrawal := primaryCoinInput.(*bcs.Argument__Result)
+	if local_input.AddressBalance == nil || !freshWithdrawal {
+		// spend the primary coin by splitting `amt` from it
+		commands = append(commands, &bcs.Command__SplitCoins{
+			Field0: primaryCoinInput,
+			Field1: []bcs.Argument{
+				// the last input has the amount
+				ArgumentInput(uint16(len(cmd_inputs))),
+			},
+		})
+		cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+
+		transferCoin = ArgumentResult(uint16(len(commands) - 1))
+	}
 
 	// send the newly split object
 	commands = append(commands, &bcs.Command__TransferObjects{
 		Field0: []bcs.Argument{
-			// last cmd result has the coin to send
-			ArgumentResult(uint16(len(commands) - 1)),
+			// Either the exact withdrawal or the split coin.
+			transferCoin,
 		},
 		Field1: ArgumentInput(uint16(len(cmd_inputs))),
 	})

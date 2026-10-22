@@ -72,8 +72,20 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get staking transaction gas fee: %w", err)
 	}
+	if !ok && stakingInput.AddressBalance != nil {
+		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
+	}
 	if ok {
 		stakingInput.GasBudget = gasFee
+		if stakingInput.AddressBalance != nil {
+			_, err = builder.Stake(args, stakingInput)
+			if err != nil {
+				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
+			}
+			if stakingInput.GasBudget < gasFee {
+				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, stakingInput.GasBudget)
+			}
+		}
 	}
 
 	return stakingInput, nil
@@ -226,8 +238,20 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unstaking transaction gas fee: %w", err)
 	}
+	if !ok && unstakingInput.AddressBalance != nil {
+		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
+	}
 	if ok {
 		unstakingInput.GasBudget = gasFee
+		if unstakingInput.AddressBalance != nil {
+			_, err = builder.Unstake(args, unstakingInput)
+			if err != nil {
+				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
+			}
+			if unstakingInput.GasBudget < gasFee {
+				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, unstakingInput.GasBudget)
+			}
+		}
 	}
 	return unstakingInput, nil
 }
