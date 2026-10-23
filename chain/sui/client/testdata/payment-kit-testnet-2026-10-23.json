@@ -1,0 +1,1050 @@
+{
+  "date": "2026-10-23",
+  "network": "testnet",
+  "genesis_digest": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+  "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+  "payment_kit": {
+    "package": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+    "registry": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+    "initial_shared_version": 372797007,
+    "retention_epochs": 30
+  },
+  "summary": {
+    "successful_transactions": 36,
+    "payment_kit_duplicate_rejections": 1,
+    "out_of_gas_test_probe": 1,
+    "funding_change_estimation_failures_before_fix": 3,
+    "parallel_unique_ids_in_one_checkpoint": 7,
+    "identical_signed_resubmissions_without_duplicate_debit": 2,
+    "cli_unique_id_parallel_processes": 3,
+    "cli_coin_conflict_waited_refetched_then_succeeded": true,
+    "cli_same_id_conflict_timeout_seconds": 7,
+    "net_gas_mist": 180052297,
+    "temporary_accounts_recovered": true
+  },
+  "native_funding_and_concurrency": [
+    {
+      "Name": "setup-native-profiles",
+      "Hash": "HdWtpCmLmHqjxDRaL9ToRNHhXXn8fKtVTBczThYSNUh2",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5940000,
+      "AddressGas": true,
+      "Withdrawals": [
+        1780000000
+      ],
+      "Checkpoint": 398406412
+    },
+    {
+      "Name": "native-address-only",
+      "Hash": "2qHZfbrtXq55keLnoCPYo14DsftqjWejGrRuE2vYots3",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        10000000
+      ],
+      "Checkpoint": 398406418
+    },
+    {
+      "Name": "native-coin-only",
+      "Hash": "5ABYaBUYQpNsdh1XafAUDn2mr7CUH8h72AdCq3MPX1uX",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": false,
+      "Withdrawals": null,
+      "Checkpoint": 398406428
+    },
+    {
+      "Name": "native-mixed-address-gas",
+      "Hash": "8dvBH67bi1LQiMS61NCSymXyYTojdaNwfdbxcNKda8Bz",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": true,
+      "Withdrawals": [
+        170000000
+      ],
+      "Checkpoint": 398406437
+    },
+    {
+      "Name": "native-mixed-coin-gas",
+      "Hash": "CRV111ybbTS8ognbdoVtUcbCavZjVvK4DWRPLYJu2ta4",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": false,
+      "Withdrawals": [
+        10142264
+      ],
+      "Checkpoint": 398406446
+    },
+    {
+      "Name": "native-sponsored-address-address",
+      "Hash": "7YJoqzCfZuSrfQ5YMBfbrFm5uZNUoAUQDkVtAvCEBT86",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        10000000
+      ],
+      "Checkpoint": 398406455
+    },
+    {
+      "Name": "native-sponsored-address-coins",
+      "Hash": "3zihE3xBCnNfBfLnJ5qwQviLDC5dogrYvo1AMmxiwoKq",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": false,
+      "Withdrawals": [
+        10000000
+      ],
+      "Checkpoint": 398406465
+    },
+    {
+      "Name": "native-sponsored-coins-address",
+      "Hash": "328uNJhWVniY5KA513DyYhTJixQKnhYdGX866RN1qyey",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406473
+    },
+    {
+      "Name": "native-sponsored-coins-coins",
+      "Hash": "HswduqgeFxwNV3UgyR3gRo26FBVtvkjpp4U2LT2DZaJ9",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142363,
+      "AddressGas": false,
+      "Withdrawals": null,
+      "Checkpoint": 398406482
+    },
+    {
+      "Name": "native-sponsored-mixed-address",
+      "Hash": "BYLFPka3UG3gcjNcfqF3q51TibSMqbCT3yvNM1LKJ95N",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        3000000
+      ],
+      "Checkpoint": 398406490
+    },
+    {
+      "Name": "native-sponsored-mixed-coins",
+      "Hash": "EUPZ9GksPdYZZnFeJGXhbJmsEuPsrN15oyWUj3YZjE54",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142363,
+      "AddressGas": false,
+      "Withdrawals": [
+        1000000
+      ],
+      "Checkpoint": 398406499
+    },
+    {
+      "Name": "native-one-mist",
+      "Hash": "3Es9xzKY2YbLoByuR8qzqVoRVo5jYLVHqfBJzDCye1ed",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        1
+      ],
+      "Checkpoint": 398406507
+    },
+    {
+      "Name": "parallel-0",
+      "Hash": "43zcq6JiU3BbQFBi2fQwcbQfwsMFDwpZwyQtDKUJkq9H",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-1",
+      "Hash": "HCZYrFr5d9o5aY1ukj6S82eTWW4n2pPfTEQp8cddgFYx",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-2",
+      "Hash": "9YPs1kxN4paqHhPaNY1DmAmiqq71WiTd7zLNzC9ET61h",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-3",
+      "Hash": "2YnZJMySDNPZPx8JYSRKkKtfVg3ZrK2kr4Au7xs8uCCW",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-4",
+      "Hash": "3b3Pr73edpARgsWcDjPmmbFY8QUUHCTEMTQY7ofebyes",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-5",
+      "Hash": "5gZMP6mCQfGkzzmTKUppAP6thBkuZw2bMKiBFAPuPBzB",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-6",
+      "Hash": "4SKGfcakgAepKgoMsQTZRkAdNavkYj1Pz2FFwwePkBLx",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "parallel-7",
+      "Hash": "6icYa21Y49p4Nx2ZH3Ex3E5kHFQfTbutg6SKa3uWZwWe",
+      "State": "test-insufficient-gas",
+      "Error": "success:false error:{description:\"InsufficientGas\" kind:INSUFFICIENT_GAS}",
+      "Gas": 1001166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406527
+    },
+    {
+      "Name": "duplicate-rebuilt",
+      "Hash": "21QK8PbC6qg8x5mGUbC4g73HBEX3abtfUaD7z6PJNZp6",
+      "State": "duplicate-rejected-on-chain",
+      "Error": "success:false error:{description:\"MoveAbort(MoveLocation { module: ModuleId { address: 7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497, name: Identifier(\\\"payment_kit\\\") }, function: 16, instruction: 15, function_name: Some(\\\"write_payment_record\\\") }, 13835059854873460737) in command 1\" command:1 kind:MOVE_ABORT abort:{abort_code:13835059854873460737 location:{package:\"0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497\" module:\"payment_kit\" function:16 instruction:15 function_name:\"write_payment_record\"} clever_error:{error_code:0 line_number:419 constant_name:\"EPaymentAlreadyExists\" rendered:\"Duplicate payment detected\"}}}",
+      "Gas": 1000166,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406900
+    },
+    {
+      "Name": "return-sui-address",
+      "Hash": "9kA8SHJ9YdWUHoyKpvKj5W56GGEBpVMBJPiyYFfSdR1E",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        259715667
+      ],
+      "Checkpoint": 398406907
+    },
+    {
+      "Name": "return-sui-coins",
+      "Hash": "d2TmsGBy24t4ZJTZbJNQinKFwF4GSXZjEAozG8U7zoJ",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406916
+    },
+    {
+      "Name": "return-sui-mixed-address",
+      "Hash": "FbpdivBhQ9yGnq6QaHhQot1Nc2JaQ2AZuLXh6qV2ewir",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        20857736
+      ],
+      "Checkpoint": 398406924
+    },
+    {
+      "Name": "return-sui-mixed-coins",
+      "Hash": "Dhz4QE9j6PJRjijcJEA48YZyocoxQRLG1DniJqYEvDoS",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        29857736
+      ],
+      "Checkpoint": 398406931
+    },
+    {
+      "Name": "return-sui-recipient",
+      "Hash": "BkLFYwiT8wYh2cBPufpyJ4oUcymcfU1dcDhJ61zH9TRG",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": -4736748,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406941
+    },
+    {
+      "Name": "return-sui-sponsor-address",
+      "Hash": "HMY9MEtpHxCSWzo75r6MqNcqDs8szDWgWWNFreCSueGF",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        184573404
+      ],
+      "Checkpoint": 398406952
+    },
+    {
+      "Name": "return-sui-sponsor-coins",
+      "Hash": "GXN92DKdBcxoCBiJE7r9VG5qdsZJXfVxszik9jwVuiWk",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406962
+    },
+    {
+      "Name": "return-sui-token-address-gas",
+      "Hash": "21P8rwpBGAXtwiJMuwt6ZERd2imykhLgXawc41qMjKYK",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142166,
+      "AddressGas": true,
+      "Withdrawals": [
+        150000000
+      ],
+      "Checkpoint": 398406970
+    },
+    {
+      "Name": "return-sui-token-coin-gas",
+      "Hash": "5p2dqGtpqDLHjtZ5e921LSW8nkJFcoVZEu9QgZaeNNEv",
+      "State": "succeeded",
+      "Error": "",
+      "Gas": 5142264,
+      "AddressGas": true,
+      "Withdrawals": null,
+      "Checkpoint": 398406979
+    }
+  ],
+  "cli_transactions": [
+    {
+      "checkpoint": 398408127,
+      "error": "",
+      "gas_mist": 5142264,
+      "hash": "AHq9iaLbpk5abqaaLxiVXkML9HVzBSrhazfSnJtcbJ4W",
+      "success": true,
+      "transfer_id": "payment-kit-cli-queue-20261023-0",
+      "input": {
+        "current_epoch": 1261,
+        "gas_budget": 5142264,
+        "gas_coin": {
+          "balance": "44845637",
+          "coinObjectId": "0xe5a19fde9b70fbde8619ed0b1e1d1f8c2483131d41f2c0dca2d4a9be668de6ca",
+          "coinType": "0x2::sui::SUI",
+          "digest": "GNsuumxTqmpBmAHCvRe8Yy7wUzeDfmi1HpCVH4sLx3WH",
+          "previousTransaction": "8v1Skj648hggZLM3UvmH3yH3MKDxiXcV4QoXL4Qg46d2",
+          "version": "1064154337"
+        },
+        "gas_coin_owner": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d"
+        },
+        "transaction_id": "payment-kit-cli-queue-20261023-0",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398408112,
+      "error": "",
+      "gas_mist": 4154363,
+      "hash": "8v1Skj648hggZLM3UvmH3yH3MKDxiXcV4QoXL4Qg46d2",
+      "success": true,
+      "transfer_id": "payment-kit-cli-queue-20261023-1",
+      "input": {
+        "address_balance": {
+          "balance": "0",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "0",
+          "gas_coins": [
+            {
+              "balance": "50000000",
+              "coinObjectId": "0xc7df690c8cfdf58624b38693a997e50c2d1152054aca2ee3561df8000cacfe69",
+              "coinType": "0x2::sui::SUI",
+              "digest": "FKDMLR8xXtQRdjkSyR2eUz2BCJUPhkSo7F6nW5VAsnbg",
+              "previousTransaction": "F2Eq6zs2P29s5YnkX5es1X7vhu3mFKBSb7RF5JbJotDb",
+              "version": "1064154302"
+            },
+            {
+              "balance": "0",
+              "coinObjectId": "0xe5a19fde9b70fbde8619ed0b1e1d1f8c2483131d41f2c0dca2d4a9be668de6ca",
+              "coinType": "0x2::sui::SUI",
+              "digest": "DxV7mXQe93Xwi6oWuPFK6TX1dVRvtEpqj2wtTjb4dt6R",
+              "previousTransaction": "d2TmsGBy24t4ZJTZbJNQinKFwF4GSXZjEAozG8U7zoJ",
+              "version": "1064150500"
+            }
+          ],
+          "nonce": 48471839,
+          "sender": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d"
+        },
+        "coins": [
+          {
+            "balance": "0",
+            "coinObjectId": "0xe5a19fde9b70fbde8619ed0b1e1d1f8c2483131d41f2c0dca2d4a9be668de6ca",
+            "coinType": "0x2::sui::SUI",
+            "digest": "DxV7mXQe93Xwi6oWuPFK6TX1dVRvtEpqj2wtTjb4dt6R",
+            "previousTransaction": "d2TmsGBy24t4ZJTZbJNQinKFwF4GSXZjEAozG8U7zoJ",
+            "version": "1064150500"
+          }
+        ],
+        "current_epoch": 1261,
+        "gas_budget": 4154363,
+        "gas_coin": {
+          "balance": "50000000",
+          "coinObjectId": "0xc7df690c8cfdf58624b38693a997e50c2d1152054aca2ee3561df8000cacfe69",
+          "coinType": "0x2::sui::SUI",
+          "digest": "FKDMLR8xXtQRdjkSyR2eUz2BCJUPhkSo7F6nW5VAsnbg",
+          "previousTransaction": "F2Eq6zs2P29s5YnkX5es1X7vhu3mFKBSb7RF5JbJotDb",
+          "version": "1064154302"
+        },
+        "gas_coin_owner": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d"
+        },
+        "transaction_id": "payment-kit-cli-queue-20261023-1",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398408141,
+      "error": "",
+      "gas_mist": 5142264,
+      "hash": "EtAPJiqKpAgnKEeocRus1SkCuBzqvVnG8GadbYWWrf7o",
+      "success": true,
+      "transfer_id": "payment-kit-cli-recover-queue-20261023",
+      "input": {
+        "address_balance": {
+          "balance": "0",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4049951304",
+          "gas_coins": [
+            {
+              "balance": "479000001",
+              "coinObjectId": "0x5c9faf0ef0e4d83c6fc8d36d3e348b2e23628a4def7ba545cbfa40494f9b9609",
+              "coinType": "0x2::sui::SUI",
+              "digest": "BqKB14S6KHPUnZX3Gu4jR7oKFt4gWAB5eVcQXkygeQC",
+              "previousTransaction": "BkLFYwiT8wYh2cBPufpyJ4oUcymcfU1dcDhJ61zH9TRG",
+              "version": "1064150581"
+            },
+            {
+              "balance": "264857736",
+              "coinObjectId": "0x7e01330ddc81d557bb98d9911d79414f68ad239d2f165114b68a60bb5bef8026",
+              "coinType": "0x2::sui::SUI",
+              "digest": "HKsaKgqJsXsyo8DiSVcQ7VbZDbnjDbhhgtTbMDAGJ9RC",
+              "previousTransaction": "d2TmsGBy24t4ZJTZbJNQinKFwF4GSXZjEAozG8U7zoJ",
+              "version": "1064150500"
+            },
+            {
+              "balance": "259715667",
+              "coinObjectId": "0xbf47f81b50e095fcb2812fb7a22d3f1c02f679c865783abe52f949c251af0bb6",
+              "coinType": "0x2::sui::SUI",
+              "digest": "BDNg6Gn9PzQLM5XvjAJZ8ffCwxQsKK2LnEFMaNT7b14D",
+              "previousTransaction": "9kA8SHJ9YdWUHoyKpvKj5W56GGEBpVMBJPiyYFfSdR1E",
+              "version": "1064150469"
+            },
+            {
+              "balance": "184573404",
+              "coinObjectId": "0x5ebedf013bf5d121bdf640a42d1812e71f1787377accc9d62f70a8e9412531db",
+              "coinType": "0x2::sui::SUI",
+              "digest": "7n1gMzvW14r3B438XRYcv5xGreaMLDPNh1LmBZ6dEzJz",
+              "previousTransaction": "HMY9MEtpHxCSWzo75r6MqNcqDs8szDWgWWNFreCSueGF",
+              "version": "1064150616"
+            },
+            {
+              "balance": "184573010",
+              "coinObjectId": "0xd02727dd6f11131300282dbba5025a64092efa6565087d432eeb395d41de6afe",
+              "coinType": "0x2::sui::SUI",
+              "digest": "GNusKsXwxrHaEk1YcYg4oEqSTkarwKJJZaGJi3ef6AMv",
+              "previousTransaction": "GXN92DKdBcxoCBiJE7r9VG5qdsZJXfVxszik9jwVuiWk",
+              "version": "1064150648"
+            },
+            {
+              "balance": "150000000",
+              "coinObjectId": "0xd4aaa44291ea8615663e3e94ad0aea77f4be3db77b94548a64edf7612ce8fc9b",
+              "coinType": "0x2::sui::SUI",
+              "digest": "H8cFPff5A9LuvKiQme1rqWwta1QBddHvFsV8igujZVD5",
+              "previousTransaction": "21P8rwpBGAXtwiJMuwt6ZERd2imykhLgXawc41qMjKYK",
+              "version": "1064150673"
+            },
+            {
+              "balance": "150000000",
+              "coinObjectId": "0xfee7a460e74f1856e1b5d3705c66b590735545951d1d88093d2010cc58a0c45b",
+              "coinType": "0x2::sui::SUI",
+              "digest": "6JQdjMQhtRK8SMPKC682r8j3PbFbQCbfgjJnFEHZP8Kv",
+              "previousTransaction": "5p2dqGtpqDLHjtZ5e921LSW8nkJFcoVZEu9QgZaeNNEv",
+              "version": "1064150705"
+            },
+            {
+              "balance": "29857736",
+              "coinObjectId": "0x913d884001b50f4abd579fa1ef421813e3523cfda2044b37a151c27643554348",
+              "coinType": "0x2::sui::SUI",
+              "digest": "BbfiaTXejW4NHNJKhqP755qNYNGRdAR8fWYNnQvAc7dA",
+              "previousTransaction": "Dhz4QE9j6PJRjijcJEA48YZyocoxQRLG1DniJqYEvDoS",
+              "version": "1064150549"
+            },
+            {
+              "balance": "20857736",
+              "coinObjectId": "0x383e938c99e94b2319b566e1191511fac64eac4c6a0c30401fa72e303a2113e6",
+              "coinType": "0x2::sui::SUI",
+              "digest": "AqoXnudq3GRjXFWNJKgpngcAC6oLzKusmmWwMVwfgiti",
+              "previousTransaction": "FbpdivBhQ9yGnq6QaHhQot1Nc2JaQ2AZuLXh6qV2ewir",
+              "version": "1064150527"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x0e8e534b8955732ad765d780d17b1d4dcdbac26221d6a751affaba472b2ab9df",
+              "coinType": "0x2::sui::SUI",
+              "digest": "kP43jpUtUjWE3DfYuUMPjw5C33Bu3T1Hw3DyV1TQADf",
+              "previousTransaction": "3b3Pr73edpARgsWcDjPmmbFY8QUUHCTEMTQY7ofebyes",
+              "version": "1064149194"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x1050c2e12c24a28217bd138e5cc8b8c31a59dbea4ad0ccf5f8e58660ed5879f6",
+              "coinType": "0x2::sui::SUI",
+              "digest": "9sYSXFJdwojSGiDepNX8GCY97L2uCATuM74Re3De8QxY",
+              "previousTransaction": "2XQninP6XWMciBWKAm7PPRvrddbtvpMEsVdY9GopZGw9",
+              "version": "1064154264"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x20bcc049707464cea947abf907ac3baee81bd71450df4b3eb3ff6d372e715ea6",
+              "coinType": "0x2::sui::SUI",
+              "digest": "F72M4eV4K1n7AGwqtgcYLnP72Xp4UPCjZ7h5rMU3R8vd",
+              "previousTransaction": "43zcq6JiU3BbQFBi2fQwcbQfwsMFDwpZwyQtDKUJkq9H",
+              "version": "1064149190"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x369ec6ecab78f6c9f4cf4b3e0d9d10a4040b8a2e67d74703530e0054942149a2",
+              "coinType": "0x2::sui::SUI",
+              "digest": "CTZQAR13GSSs1Ke7g6fNaUy61Z98SYjHbWD7hHcLL6ju",
+              "previousTransaction": "4SKGfcakgAepKgoMsQTZRkAdNavkYj1Pz2FFwwePkBLx",
+              "version": "1064149189"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x3b13b21809eb42f8190c19b7d34de34b1ea0c7565572225d770b966a76280aba",
+              "coinType": "0x2::sui::SUI",
+              "digest": "HGgidNY3JT1MqMPEapSyCHu3C48J6WZDfQcaBsAgE1LF",
+              "previousTransaction": "2YnZJMySDNPZPx8JYSRKkKtfVg3ZrK2kr4Au7xs8uCCW",
+              "version": "1064149192"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x44d375dded9257a50cd85aba4409d307eb1d40060fd7c7d5e763f08df380a8a6",
+              "coinType": "0x2::sui::SUI",
+              "digest": "FjdkzXaMGVnH6XJ1ghAYB6wWjL1cU9DL4AQ7YnaDyCCq",
+              "previousTransaction": "5gZMP6mCQfGkzzmTKUppAP6thBkuZw2bMKiBFAPuPBzB",
+              "version": "1064149191"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x46d615e40cd38a58570eafe6ea2218eb4b67eac45fe87614085cd441b9c7c710",
+              "coinType": "0x2::sui::SUI",
+              "digest": "Gmxn11kzxtkjPDg3Cjidw8ubBdh1FH1bKkATJkaUqHeE",
+              "previousTransaction": "9YPs1kxN4paqHhPaNY1DmAmiqq71WiTd7zLNzC9ET61h",
+              "version": "1064149193"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x533701022a4f35bcf7ed78171aa76f0e4825e3a2753f11677efea0bfa097e457",
+              "coinType": "0x2::sui::SUI",
+              "digest": "6Kr8dAd7nme96Av3gPZwNCRjkFzztANBeV2JPKHzCYjq",
+              "previousTransaction": "4SLr8Q8YSwvt78Y4Yf9FZtnzA6PptGTAhFbjWRXRe1vX",
+              "version": "1064147154"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0x8b8d2fc7f11f036f67453f3f0cbf5b694f1eb675025905611e4dcbdb0f13b3d5",
+              "coinType": "0x2::sui::SUI",
+              "digest": "AmsqT6pvhevP3rz2KQCH4MygT4uSH7sW3ibf21y26aKd",
+              "previousTransaction": "HCZYrFr5d9o5aY1ukj6S82eTWW4n2pPfTEQp8cddgFYx",
+              "version": "1064149195"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0xa50749a6140f54fb165b5a512f8ed5efcc4caf4f782de82a7eeee4ea5baaee0b",
+              "coinType": "0x2::sui::SUI",
+              "digest": "8ug1i4wy8noPQTzWMuMdhZCzY36PPX6R8wk8JKkgjNhT",
+              "previousTransaction": "AHq9iaLbpk5abqaaLxiVXkML9HVzBSrhazfSnJtcbJ4W",
+              "version": "1064154387"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0xa7f83e4bde1e74e495c5293f12f220e78fb9f75f0c53c4923574efe48fa8302e",
+              "coinType": "0x2::sui::SUI",
+              "digest": "8i9211okCEVDUduvpv5dj8iMwtbkg2cAFsAzUYTrXxi2",
+              "previousTransaction": "8v1Skj648hggZLM3UvmH3yH3MKDxiXcV4QoXL4Qg46d2",
+              "version": "1064154337"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0xd49072b4ed868c89d3a94a45a91cfe74eb144fe3f59fa744f75f93966b9b55b5",
+              "coinType": "0x2::sui::SUI",
+              "digest": "6na2i711yzpB8bdhq8J2RZyiEfdVpZWxoWPtzRumS7ek",
+              "previousTransaction": "76DYiokeUyBooQKLbuhd6RmU4kDZLnBqVcyFK4Zn7eNy",
+              "version": "1064154262"
+            },
+            {
+              "balance": "1000000",
+              "coinObjectId": "0xe533fef915d311759a4e75abf4642fe39e1d95934520b65ba36429e366a3c839",
+              "coinType": "0x2::sui::SUI",
+              "digest": "JAdx5NSNAPNuh5gGC9w6SeAAeT9eiQ8iFH2dwMdiwwwD",
+              "previousTransaction": "6dry8Tdx5EhbRaEowzecNn6dVqpz9xJJ493c5SZTi91F",
+              "version": "1064154263"
+            }
+          ],
+          "nonce": 1783356983,
+          "sender": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d"
+        },
+        "coins": [
+          {
+            "balance": "38703373",
+            "coinObjectId": "0xe5a19fde9b70fbde8619ed0b1e1d1f8c2483131d41f2c0dca2d4a9be668de6ca",
+            "coinType": "0x2::sui::SUI",
+            "digest": "CY6HTA7dm5N7WpWeyKjWGvrgjULELvju8KwvheB7pw2Y",
+            "previousTransaction": "AHq9iaLbpk5abqaaLxiVXkML9HVzBSrhazfSnJtcbJ4W",
+            "version": "1064154387"
+          }
+        ],
+        "current_epoch": 1261,
+        "gas_budget": 5142264,
+        "gas_coin": {
+          "balance": "479000001",
+          "coinObjectId": "0x5c9faf0ef0e4d83c6fc8d36d3e348b2e23628a4def7ba545cbfa40494f9b9609",
+          "coinType": "0x2::sui::SUI",
+          "digest": "BqKB14S6KHPUnZX3Gu4jR7oKFt4gWAB5eVcQXkygeQC",
+          "previousTransaction": "BkLFYwiT8wYh2cBPufpyJ4oUcymcfU1dcDhJ61zH9TRG",
+          "version": "1064150581"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x49395121ba7376c81b6eac580d88af1dbb5750013b0a1c278b232ea3fc8a092d"
+        },
+        "transaction_id": "payment-kit-cli-recover-queue-20261023",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398407331,
+      "error": "InsufficientGas",
+      "gas_mist": 1000166,
+      "hash": "HhHF8V42DdScxgCo5kxuCpCKHVCAYkBghGCyEZhYU9U1",
+      "success": false,
+      "transfer_id": "payment-kit-cli-parallel-20261023-0",
+      "input": {
+        "address_balance": {
+          "balance": "2126520466",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "2126520466",
+          "nonce": 3754158596,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 2000000,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-parallel-20261023-0",
+        "type": "sui"
+      },
+      "purpose": "exposed funding-change gas estimate; fixed and covered by regression test"
+    },
+    {
+      "checkpoint": 398405892,
+      "error": "",
+      "gas_mist": 5142166,
+      "hash": "4SLr8Q8YSwvt78Y4Yf9FZtnzA6PptGTAhFbjWRXRe1vX",
+      "success": true,
+      "transfer_id": "payment-kit-cli-20261023-1",
+      "input": {
+        "address_balance": {
+          "balance": "4000000000",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4000000000",
+          "nonce": 2677283025,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 5142166,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-20261023-1",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398408090,
+      "error": "",
+      "gas_mist": 5142166,
+      "hash": "2XQninP6XWMciBWKAm7PPRvrddbtvpMEsVdY9GopZGw9",
+      "success": true,
+      "transfer_id": "payment-kit-cli-parallel-fixed-20261023-1",
+      "input": {
+        "address_balance": {
+          "balance": "4123519968",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4123519968",
+          "nonce": 1224568611,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 5142166,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-parallel-fixed-20261023-1",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398408089,
+      "error": "",
+      "gas_mist": 5142166,
+      "hash": "76DYiokeUyBooQKLbuhd6RmU4kDZLnBqVcyFK4Zn7eNy",
+      "success": true,
+      "transfer_id": "781add15-10b4-4cd8-aca0-b2e4627bd29e",
+      "input": {
+        "address_balance": {
+          "balance": "4123519968",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4123519968",
+          "nonce": 660456734,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 5142166,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "781add15-10b4-4cd8-aca0-b2e4627bd29e",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398408089,
+      "error": "",
+      "gas_mist": 5142166,
+      "hash": "6dry8Tdx5EhbRaEowzecNn6dVqpz9xJJ493c5SZTi91F",
+      "success": true,
+      "transfer_id": "payment-kit-cli-parallel-fixed-20261023-0",
+      "input": {
+        "address_balance": {
+          "balance": "4123519968",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4123519968",
+          "nonce": 3316004783,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 5142166,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-parallel-fixed-20261023-0",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398407331,
+      "error": "InsufficientGas",
+      "gas_mist": 1000166,
+      "hash": "EZQMQYMCgb9scKUTJJG5VQ8SsuEgoW1CV6rx5TGDV9WF",
+      "success": false,
+      "transfer_id": "9a472a44-1745-450a-90a2-76f79cff95fc",
+      "input": {
+        "address_balance": {
+          "balance": "2126520466",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "2126520466",
+          "nonce": 3758343338,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 2000000,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "9a472a44-1745-450a-90a2-76f79cff95fc",
+        "type": "sui"
+      },
+      "purpose": "exposed funding-change gas estimate; fixed and covered by regression test"
+    },
+    {
+      "checkpoint": 398408101,
+      "error": "",
+      "gas_mist": 5142166,
+      "hash": "F2Eq6zs2P29s5YnkX5es1X7vhu3mFKBSb7RF5JbJotDb",
+      "success": true,
+      "transfer_id": "payment-kit-cli-fund-queue-20261023",
+      "input": {
+        "address_balance": {
+          "balance": "4105093470",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "4105093470",
+          "nonce": 666894884,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 5142166,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-fund-queue-20261023",
+        "type": "sui"
+      },
+      "purpose": "regression-fixed"
+    },
+    {
+      "checkpoint": 398407331,
+      "error": "InsufficientGas",
+      "gas_mist": 1000166,
+      "hash": "2nRz6efa31bcU9aLVyQso4byhBDfHCGpWYZttnBFYaQK",
+      "success": false,
+      "transfer_id": "payment-kit-cli-parallel-20261023-1",
+      "input": {
+        "address_balance": {
+          "balance": "2126520466",
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "gas_balance": "2126520466",
+          "nonce": 2033299019,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "current_epoch": 1261,
+        "gas_budget": 2000000,
+        "gas_coin": {
+          "balance": "0",
+          "coinObjectId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "coinType": "",
+          "digest": "",
+          "previousTransaction": "",
+          "version": "0"
+        },
+        "gas_coin_owner": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+        "gas_price": 1000,
+        "payment_kit": {
+          "chain_id": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+          "coin_type": "0x2::sui::SUI",
+          "initial_shared_version": "372797007",
+          "package_id": "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497",
+          "registry_id": "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8",
+          "retention_epochs": 30,
+          "sender": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320"
+        },
+        "transaction_id": "payment-kit-cli-parallel-20261023-1",
+        "type": "sui"
+      },
+      "purpose": "exposed funding-change gas estimate; fixed and covered by regression test"
+    }
+  ],
+  "cli_coin_queue_logs": {
+    "0": [
+      "transfer history: id=\"payment-kit-cli-queue-20261023-0\" checked=1 conflicts=1 skipped=0",
+      "transfer history: id=\"payment-kit-cli-queue-20261023-0\" checked=1 conflicts=0 skipped=0"
+    ],
+    "1": [
+      "transfer history: id=\"payment-kit-cli-queue-20261023-1\" checked=0 conflicts=0 skipped=0"
+    ]
+  },
+  "validation": [
+    "go test -mod=readonly -tags not_ci ./... passed",
+    "go test -mod=readonly -race ./chain/sui/... ./cmd/xc/commands ./builder/... ./factory/drivers/... passed",
+    "CGO_ENABLED=0 go build -mod=readonly ./... passed",
+    "24 native/token/sponsor/funding combinations exercised in client unit tests",
+    "Mainnet default registry read-only verification: package 0xbc126f1535fba7d641cb9150ad9eae93b104972586ba20f3c60bfe0e53b69bc6, registry 0x0481b22fd3c73f3176db4c20419e1d09c6a3074aeed65acdc776f7359285ffd2, shared version 640330697, retention 30 epochs",
+    "Devnet deployment override and unknown-network rejection covered by unit tests; no devnet package was published"
+  ],
+  "limitations": [
+    "Live transfers used native SUI on testnet. Token Payment Kit construction and funding were tested locally.",
+    "Mainnet verification was read-only. No mainnet transfers were submitted.",
+    "The default registry retention is bounded; IDs must describe immutable sender/recipient/amount/asset transfers.",
+    "Distinct IDs still wait on overlapping owned coin objects. Address-only payments avoid those dependencies."
+  ]
+}

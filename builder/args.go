@@ -10,6 +10,7 @@ import (
 // All possible builder arguments go in here, privately available.
 // Then the public BuilderArgs can typecast and select which arguments are needed.
 type builderOptions struct {
+	transactionID  *string
 	memo           *string
 	timestamp      *int64
 	gasFeePriority *xc.GasFeePriority
@@ -171,6 +172,12 @@ func (opts *builderOptions) SetVersion(version string) {
 
 type BuilderOption func(opts *builderOptions) error
 
+// OptionTransactionID identifies one immutable logical transfer across attempts.
+// Applications should also apply it to TxInputWithTransactionID before checking conflicts.
+func OptionTransactionID(id string) BuilderOption {
+	return func(opts *builderOptions) error { opts.transactionID = &id; return nil }
+}
+
 func OptionMemo(memo string) BuilderOption {
 	return func(opts *builderOptions) error {
 		opts.memo = &memo
@@ -323,7 +330,7 @@ func OptionVersion(version string) BuilderOption {
 // However, wasn't very clear or easy to use.  This function bridges the gap, to allow
 // callers to use a more natural interface with options.  Chain transaction builders can
 // call this to safely set provided options on the old transaction input setters.
-func WithTxInputOptions(txInput xc.TxInput, timeStamp int64, priorityMaybe xc.GasFeePriority) (xc.TxInput, error) {
+func WithTxInputOptions(txInput xc.TxInput, timeStamp int64, priorityMaybe xc.GasFeePriority, transactionIDMaybe string) (xc.TxInput, error) {
 	if priorityMaybe != "" {
 		err := txInput.SetGasFeePriority(priorityMaybe)
 		if err != nil {
@@ -332,6 +339,11 @@ func WithTxInputOptions(txInput xc.TxInput, timeStamp int64, priorityMaybe xc.Ga
 	}
 	if withUnix, ok := txInput.(xc.TxInputWithUnix); ok {
 		withUnix.SetUnix(timeStamp)
+	}
+	if transactionIDMaybe != "" {
+		if withID, ok := txInput.(xc.TxInputWithTransactionID); ok {
+			withID.SetTransactionID(transactionIDMaybe)
+		}
 	}
 	return txInput, nil
 }

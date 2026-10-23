@@ -15,6 +15,14 @@ type TxInput interface {
 	TxInputGetMaxPossibleFee
 }
 
+// TxInputWithTransactionID accepts a trusted application identifier for a logical
+// transfer. Keep it stable across retries, and never reuse it for a different
+// amount, recipient, or asset. Clients must not populate it from RPC data.
+// Support and on-chain retention guarantees depend on the driver.
+type TxInputWithTransactionID interface {
+	SetTransactionID(id string)
+}
+
 // For chains/transactions that can benefit from knowing the timestamp
 type TxInputWithUnix interface {
 	SetUnix(int64)

@@ -23,6 +23,9 @@ type TxInput struct {
 	Coins []*types.Coin `json:"coins,omitempty"`
 	// Optional address-balance funding. Omitted inputs use the legacy builder.
 	AddressBalance *AddressBalanceInput `json:"address_balance,omitempty"`
+	// Application-supplied identifier; clients leave this unset.
+	TransactionID string           `json:"transaction_id,omitempty"`
+	PaymentKit    *PaymentKitInput `json:"payment_kit,omitempty"`
 	// current epoch
 	CurrentEpoch uint64 `json:"current_epoch,omitempty"`
 }
@@ -50,6 +53,10 @@ type CoinGetter interface {
 }
 
 var _ xc.TxInput = &TxInput{}
+var _ xc.TxInputWithTransactionID = &TxInput{}
+
+func (input *TxInput) SetTransactionID(id string) { input.TransactionID = id }
+
 var _ CoinGetter = &TxInput{}
 
 func init() {
@@ -91,11 +98,23 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 }
 
 func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if input.AddressBalance != nil || hasAddressBalance(other) {
-		if previous, ok := other.(CoinGetter); ok {
-			return input.CurrentEpoch > previous.GetCurrentEpoch()
+	if input.paymentProtected() {
+		if previous, ok := other.(*TxInput); ok && previous.paymentProtected() {
+			if input.PaymentKit.ChainID != previous.PaymentKit.ChainID {
+				return false
+			}
+			// A logical ID remains a conflict even after record expiry.
+			if input.TransactionID == previous.TransactionID {
+				return false
+			}
+			return input.CurrentEpoch > previous.CurrentEpoch || paymentCoinsDisjoint(input, previous)
 		}
-		return false
+	}
+
+	if input.AddressBalance != nil || hasAddressBalance(other) {
+		// we should be always using payment-kit, so this is a conservative fallback:
+		// assume it's always independent (not safe for retry)
+		return true
 	}
 	if suiOther, ok := other.(*TxInput); ok {
 		// if epoch changed, means independence as one txInput expired
@@ -141,6 +160,20 @@ func (input *TxInput) coinsDisjoint(other CoinGetter) (disjoint bool) {
 	return true
 }
 func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
+	if input.paymentProtected() {
+		if previous, ok := other.(*TxInput); ok && previous.paymentProtected() {
+			a, b := input.PaymentKit, previous.PaymentKit
+			// The caller promises that an ID names an immutable transfer. Records
+			// are deletable after the registry's retention period, including records
+			// from already executed attempts. Expiration alone cannot undo a payment.
+			return input.TransactionID == previous.TransactionID &&
+				a.ChainID == b.ChainID && a.PackageID == b.PackageID && a.RegistryID == b.RegistryID &&
+				a.Sender == b.Sender && a.CoinType == b.CoinType && input.CurrentEpoch >= previous.CurrentEpoch &&
+				input.CurrentEpoch-previous.CurrentEpoch < min(a.RetentionEpochs, b.RetentionEpochs)
+		}
+		return false
+	}
+
 	// Address-balance nonces distinguish transaction digests, not conflicting
 	// spends. Changing the amount or recipient can execute again with this nonce.
 	if input.AddressBalance != nil || hasAddressBalance(other) {

@@ -1,8 +1,10 @@
 package sui
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -37,6 +39,86 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	fromPubKey, ok := args.GetPublicKey()
 	if !ok {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
+	}
+	local, ok := input.(*TxInput)
+	if !ok {
+		return nil, errors.New("xc.TxInput is not from a sui chain")
+	}
+	original := local
+	defer func() { original.GasBudget = local.GasBudget }()
+	if id, ok := args.GetTransactionID(); ok {
+		if id == "" {
+			return nil, fmt.Errorf("transaction ID must not be empty")
+		}
+		if local.TransactionID != "" && local.TransactionID != id {
+			return nil, fmt.Errorf("transaction ID does not match TxInput")
+		}
+		// The argument is trusted application data, like the optional input setter.
+		copyInput := *local
+		copyInput.Coins = slices.Clone(local.Coins)
+		copyInput.TransactionID = id
+		local = &copyInput
+		input = local
+	}
+	requested, _ := args.GetContract()
+	expected := string(requested)
+	if expected == "" {
+		expected = NativeCoin
+	}
+	expectedTag, err := parseCoinType(NormalizeCoinContract(expected))
+	if err != nil {
+		return nil, fmt.Errorf("invalid transfer coin type: %w", err)
+	}
+	expectedBytes, err := expectedTag.BcsSerialize()
+	if err != nil {
+		return nil, err
+	}
+	checkType := func(actual string) error {
+		tag, err := parseCoinType(NormalizeCoinContract(actual))
+		if err != nil {
+			return err
+		}
+		encoded, err := tag.BcsSerialize()
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(expectedBytes, encoded) {
+			return fmt.Errorf("transaction input coin type does not match requested transfer asset")
+		}
+		return nil
+	}
+	if local.AddressBalance != nil {
+		if err := checkType(local.AddressBalance.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	if local.paymentProtected() {
+		if err := checkType(local.PaymentKit.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	transferCoins := 0
+	for _, coin := range local.Coins {
+		if coin == nil {
+			return nil, fmt.Errorf("nil transfer coin")
+		}
+		// Legacy inputs may also include GasCoin in Coins; newTransactionBase
+		// removes that entry before building transfer commands.
+		if local.AddressBalance == nil && coin.CoinObjectId.String() == local.GasCoin.CoinObjectId.String() {
+			continue
+		}
+		transferCoins++
+		if err := checkType(coin.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	if local.AddressBalance == nil && transferCoins == 0 {
+		// With no transfer coins the legacy builder uses GasCoin. Never allow a
+		// missing token balance to turn a token request into a native SUI transfer.
+		// Gas objects are intrinsically SUI; older inputs may omit CoinType.
+		if err := checkType(NativeCoin); err != nil {
+			return nil, fmt.Errorf("no coins available for requested transfer asset: %w", err)
+		}
 	}
 	return txBuilder.NewTransfer(feePayer, fromPubKey, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
@@ -241,6 +323,9 @@ func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, 
 
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	if amount.Sign() < 0 || amount.Int().BitLen() > 64 {
+		return nil, fmt.Errorf("Sui transfer amount must fit uint64")
+	}
 	var local_input *TxInput
 	var ok bool
 	if local_input, ok = input.(*TxInput); !ok {
@@ -283,20 +368,28 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 		transferCoin = ArgumentResult(uint16(len(commands) - 1))
 	}
 
-	// send the newly split object
-	commands = append(commands, &bcs.Command__TransferObjects{
-		Field0: []bcs.Argument{
-			// Either the exact withdrawal or the split coin.
-			transferCoin,
-		},
-		Field1: ArgumentInput(uint16(len(cmd_inputs))),
-	})
+	if local_input.TransactionID != "" {
+		cmd_inputs, commands, err = local_input.appendPayment(from, to, amount.Uint64(), transferCoin, cmd_inputs, commands)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// send the newly split object
+		commands = append(commands, &bcs.Command__TransferObjects{
+			Field0: []bcs.Argument{
+				// Either the exact withdrawal or the split coin.
+				transferCoin,
+			},
+			Field1: ArgumentInput(uint16(len(cmd_inputs))),
+		})
 
-	toPure, err := HexToPure(string(to))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode 'to': %w", err)
+		toPure, err := HexToPure(string(to))
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode 'to': %w", err)
+		}
+		cmd_inputs = append(cmd_inputs, toPure)
+
 	}
-	cmd_inputs = append(cmd_inputs, toPure)
 
 	xcTx := &Tx{
 		Tx:         txBase.Build(cmd_inputs, commands),
