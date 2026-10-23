@@ -81,28 +81,6 @@ func PaymentKitRegistryID(namespace string) (string, error) {
 	return fmt.Sprintf("0x%x", sum), nil
 }
 
-func paymentCoins(input *TxInput) []*types.Coin {
-	coins := append([]*types.Coin(nil), input.Coins...)
-	coins = append(coins, &input.GasCoin)
-	if input.AddressBalance != nil {
-		coins = append(coins, input.AddressBalance.GasCoins...)
-	}
-	return coins
-}
-func paymentCoinsDisjoint(a, b *TxInput) bool {
-	for _, left := range paymentCoins(a) {
-		if left == nil || len(left.Digest) == 0 {
-			continue
-		}
-		for _, right := range paymentCoins(b) {
-			if right != nil && len(right.Digest) != 0 && CoinEqual(left, right) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // PreferAddressBalance avoids owned-object dependencies when address funds alone
 // cover the transfer and its gas. Otherwise the existing mixed-funding plan applies.
 func (input *TxInput) PreferAddressBalance(amount xc.AmountBlockchain) bool {

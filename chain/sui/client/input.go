@@ -150,6 +150,7 @@ func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Ad
 
 func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
 	amount := args.GetAmount()
+	_, hasID := args.GetTransactionID()
 	if id, ok := args.GetTransactionID(); ok && id == "" {
 		return nil, fmt.Errorf("transaction ID must not be empty")
 	}
@@ -172,11 +173,14 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if isNative {
 		coinType = sui.NativeCoin
 	}
-	input.PaymentKit, err = c.fetchPaymentKit(ctx, args.GetFrom(), coinType)
+	input.PaymentKit, err = c.fetchPaymentKit(ctx, args.GetFrom(), coinType, hasID)
 	if err != nil {
 		return nil, err
 	}
-	input.PreferAddressBalance(amount)
+	// Without an explicit ID keep the coins available for the unprotected build.
+	if hasID {
+		input.PreferAddressBalance(amount)
+	}
 	if _, ok := args.GetPublicKey(); !ok {
 		args.SetPublicKey(make([]byte, 32))
 	}
@@ -215,7 +219,7 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 			address := *input.AddressBalance
 			candidate.AddressBalance = &address
 		}
-		if candidate.PreferAddressBalance(amount) {
+		if hasID && candidate.PreferAddressBalance(amount) {
 			candidate.GasBudget = initialBudget
 			tx, err = builder.Transfer(simulationArgs, &candidate)
 			if err != nil {
@@ -241,6 +245,27 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, input.GasBudget)
 			}
 		}
+	}
+	if !hasID && input.PaymentKit != nil {
+		// The application may either set an ID after fetching or build directly
+		// without one. Retain the coins and budget for both funding paths: using
+		// coin gas can cost more than the simulated address-funded payment.
+		coinInput := *input
+		coinInput.GasBudget = initialBudget
+		coinTx, buildErr := builder.Transfer(args, &coinInput)
+		if buildErr == nil {
+			coinFee, _, err := c.simulateTransactionGasFee(ctx, coinTx, isNative)
+			if err != nil {
+				return nil, fmt.Errorf("estimate coin-funded transfer without ID: %w", err)
+			}
+			if coinInput.GasBudget < coinFee {
+				return nil, fmt.Errorf("insufficient coin gas without a transaction ID: need %d, have %d", coinFee, coinInput.GasBudget)
+			}
+			input.GasBudgetUpperBound = input.GasBudget != coinFee
+			input.GasBudget = max(input.GasBudget, coinFee)
+		}
+		// An address-only input is still useful to applications that apply the
+		// trusted ID setter. A build without that ID will reject its lack of coins.
 	}
 
 	return input, nil

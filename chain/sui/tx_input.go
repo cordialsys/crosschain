@@ -16,6 +16,9 @@ type TxInput struct {
 	xc.TxInputEnvelope
 	GasBudget uint64 `json:"gas_budget,omitempty"`
 	GasPrice  uint64 `json:"gas_price,omitempty"`
+	// True when fetching without an ID reserved different fees for two possible
+	// funding paths. Such a budget is a ceiling, not an exact send-max deduction.
+	GasBudgetUpperBound bool `json:"gas_budget_upper_bound,omitempty"`
 	// Native Sui object that we can use to pay gas with
 	GasCoin      types.Coin `json:"gas_coin,omitempty"`
 	GasCoinOwner xc.Address `json:"gas_coin_owner,omitempty"`
@@ -97,38 +100,11 @@ func (input *TxInput) GetFeeLimit() (xc.AmountBlockchain, xc.ContractAddress) {
 	return maxBudget, ""
 }
 
-func (input *TxInput) IndependentOf(other xc.TxInput) (independent bool) {
-	if input.paymentProtected() {
-		if previous, ok := other.(*TxInput); ok && previous.paymentProtected() {
-			if input.PaymentKit.ChainID != previous.PaymentKit.ChainID {
-				return false
-			}
-			// A logical ID remains a conflict even after record expiry.
-			if input.TransactionID == previous.TransactionID {
-				return false
-			}
-			return input.CurrentEpoch > previous.CurrentEpoch || paymentCoinsDisjoint(input, previous)
-		}
-	}
-
-	if input.AddressBalance != nil || hasAddressBalance(other) {
-		// we should be always using payment-kit, so this is a conservative fallback:
-		// assume it's always independent (not safe for retry)
-		return true
-	}
-	if suiOther, ok := other.(*TxInput); ok {
-		// if epoch changed, means independence as one txInput expired
-		if suiOther.CurrentEpoch != input.CurrentEpoch {
-			return true
-		}
-		if input.coinsDisjoint(suiOther) {
-			return true
-		}
-	}
-	return
+func (input *TxInput) IndependentOf(other xc.TxInput) bool {
+	return inputsIndependent(input, other)
 }
 func (input *TxInput) IsFeeLimitAccurate() bool {
-	return true
+	return !input.GasBudgetUpperBound
 }
 func CoinEqual(coin1 *types.Coin, coin2 *types.Coin) bool {
 	return bytes.Equal(coin1.CoinObjectId.Data(), (coin2.CoinObjectId.Data())) &&
@@ -136,67 +112,8 @@ func CoinEqual(coin1 *types.Coin, coin2 *types.Coin) bool {
 		bytes.Equal(coin1.Digest.Data(), coin2.Digest.Data())
 }
 
-func (input *TxInput) coinsDisjoint(other CoinGetter) (disjoint bool) {
-	if CoinEqual(&input.GasCoin, other.GetGasCoin()) {
-		return false
-	}
-
-	for _, coinOther := range other.GetCoins() {
-		for _, coinInput := range input.Coins {
-			// sui object id's are globally unique.
-			if CoinEqual(coinOther, coinInput) {
-				// not disjoint
-				return false
-			}
-			// double check against the gas coin
-			if CoinEqual(coinOther, &input.GasCoin) {
-				return false
-			}
-			if CoinEqual(coinInput, other.GetGasCoin()) {
-				return false
-			}
-		}
-	}
-	return true
-}
-func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) (safe bool) {
-	if input.paymentProtected() {
-		if previous, ok := other.(*TxInput); ok && previous.paymentProtected() {
-			a, b := input.PaymentKit, previous.PaymentKit
-			// The caller promises that an ID names an immutable transfer. Records
-			// are deletable after the registry's retention period, including records
-			// from already executed attempts. Expiration alone cannot undo a payment.
-			return input.TransactionID == previous.TransactionID &&
-				a.ChainID == b.ChainID && a.PackageID == b.PackageID && a.RegistryID == b.RegistryID &&
-				a.Sender == b.Sender && a.CoinType == b.CoinType && input.CurrentEpoch >= previous.CurrentEpoch &&
-				input.CurrentEpoch-previous.CurrentEpoch < min(a.RetentionEpochs, b.RetentionEpochs)
-		}
-		return false
-	}
-
-	// Address-balance nonces distinguish transaction digests, not conflicting
-	// spends. Changing the amount or recipient can execute again with this nonce.
-	if input.AddressBalance != nil || hasAddressBalance(other) {
-		if previous, ok := other.(CoinGetter); ok {
-			return input.CurrentEpoch > previous.GetCurrentEpoch()
-		}
-		return false
-	}
-
-	if _, ok := other.(CoinGetter); !ok {
-		return false
-	}
-	// all same sequence means no double send
-	if suiOther, ok := other.(CoinGetter); ok {
-		if input.coinsDisjoint(suiOther) && input.CurrentEpoch == suiOther.GetCurrentEpoch() {
-			return false
-		}
-	} else {
-		// can't tell, default false
-		return false
-	}
-	// all either disjoint or different epoches - we're safe
-	return true
+func (input *TxInput) SafeFromDoubleSend(other xc.TxInput) bool {
+	return inputsSafeFromDoubleSend(input, other)
 }
 
 func SortCoins(coins []*types.Coin) {
@@ -262,11 +179,4 @@ func NewTxInput() *TxInput {
 			Type: xc.DriverSui,
 		},
 	}
-}
-
-func hasAddressBalance(input xc.TxInput) bool {
-	if v, ok := input.(interface{ GetAddressBalanceInput() *AddressBalanceInput }); ok {
-		return v.GetAddressBalanceInput() != nil
-	}
-	return false
 }

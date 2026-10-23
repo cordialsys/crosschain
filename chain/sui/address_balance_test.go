@@ -28,7 +28,7 @@ func TestAddressBalanceInputPrecisionAndRetrySafety(t *testing.T) {
 	require.False(t, legacy.SafeFromDoubleSend(input))
 	require.False(t, input.SafeFromDoubleSend(legacy))
 	input.CurrentEpoch++
-	require.True(t, input.SafeFromDoubleSend(&decoded))
+	require.False(t, input.SafeFromDoubleSend(&decoded))
 	require.True(t, input.IndependentOf(&decoded))
 	require.False(t, decoded.SafeFromDoubleSend(input))
 	require.Equal(t, "18446744073709551615", input.TotalBalance().String())
@@ -57,7 +57,7 @@ func TestCoinTypeParsing(t *testing.T) {
 
 func TestInvalidAddressFunding(t *testing.T) {
 	from := xc.Address("0x" + strings.Repeat("11", 32))
-	input := NewTxInput()
+	input := protectedInput("42")
 	input.GasCoinOwner = from
 	input.GasBudget = 1
 	input.AddressBalance = &AddressBalanceInput{Sender: from, CoinType: NativeCoin, Balance: 100, GasBalance: 100, ChainID: "invalid"}

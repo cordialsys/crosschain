@@ -30,7 +30,7 @@ func paymentKitDeployment(chainID string) *xc.SuiPaymentKitConfig {
 	}
 }
 
-func (c *Client) fetchPaymentKit(ctx context.Context, from xc.Address, coin string) (*sui.PaymentKitInput, error) {
+func (c *Client) fetchPaymentKit(ctx context.Context, from xc.Address, coin string, required bool) (*sui.PaymentKitInput, error) {
 	info, err := c.Ledger.GetServiceInfo(ctx, &pb.GetServiceInfoRequest{})
 	if err != nil {
 		return nil, err
@@ -40,6 +40,9 @@ func (c *Client) fetchPaymentKit(ctx context.Context, from xc.Address, coin stri
 		deployment = paymentKitDeployment(info.GetChainId())
 	}
 	if deployment == nil {
+		if !required {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("no Payment Kit deployment for this Sui network; configure sui_payment_kit.package_id and registry_id (devnet has no upstream default)")
 	}
 	if raw, err := sui.DecodeHex(deployment.PackageID); err != nil || len(raw) != 32 {

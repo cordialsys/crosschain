@@ -334,6 +334,12 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 	if len(fromPubKey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
 	}
+	if !local_input.paymentProtected() && local_input.AddressBalance != nil {
+		original := local_input
+		local_input = local_input.coinOnlyFunding()
+		input = local_input
+		defer func() { original.GasBudget = local_input.GasBudget }()
+	}
 
 	txBase, err := txBuilder.newTransactionBase(
 		feePayer,

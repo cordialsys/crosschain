@@ -12,6 +12,20 @@ import (
 	"github.com/cordialsys/go-sui-sdk/v2/types"
 )
 
+// coinOnlyFunding preserves coin smashing, but excludes both the sender's and
+// sponsor's address funds. Work on a copy: applications may later set a trusted
+// transaction ID on the original input and build a protected transfer.
+func (input *TxInput) coinOnlyFunding() *TxInput {
+	copyInput := *input
+	copyInput.Coins = append([]*types.Coin(nil), input.Coins...)
+	if input.AddressBalance != nil {
+		balance := *input.AddressBalance
+		balance.Balance, balance.GasBalance = 0, 0
+		copyInput.AddressBalance = &balance
+	}
+	return &copyInput
+}
+
 // addressTransferCoins includes the sender's gas coin when it is spendable SUI.
 func (input *TxInput) addressTransferCoins() []*types.Coin {
 	coins := append([]*types.Coin(nil), input.Coins...)
