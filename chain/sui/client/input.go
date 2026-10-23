@@ -5,13 +5,15 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	pb "github.com/cordialsys/crosschain/chain/sui/client/rpc"
-	"google.golang.org/protobuf/proto"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/crosschain/chain/sui"
+	pb "github.com/cordialsys/crosschain/chain/sui/client/rpc"
 	"github.com/cordialsys/go-sui-sdk/v2/types"
+	"github.com/google/uuid"
+	"google.golang.org/protobuf/proto"
 )
 
 // Inputs deliberately retain sui.TxInput and its legacy coin JSON encoding.
@@ -77,7 +79,9 @@ func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Ad
 	if len(input.GasCoin.Digest) == 0 && gasBalance == 0 {
 		return nil, fmt.Errorf("no SUI coin objects or address balance available for gas")
 	}
-	if addressBalance > 0 || gasBalance > 0 {
+	// Multiple small gas coins must be smashed before execution, even when
+	// there is no address balance. The legacy builder only uses one gas coin.
+	if addressBalance > 0 || gasBalance > 0 || len(gasCoins) > 1 {
 		info, err := c.Ledger.GetServiceInfo(ctx, &pb.GetServiceInfoRequest{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get chain ID: %w", err)
@@ -145,6 +149,14 @@ func (c *Client) fetchBaseInput(ctx context.Context, contract string, from xc.Ad
 }
 
 func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.TransferArgs) (xc.TxInput, error) {
+	amount := args.GetAmount()
+	if id, ok := args.GetTransactionID(); ok && id == "" {
+		return nil, fmt.Errorf("transaction ID must not be empty")
+	}
+	if amount.Sign() < 0 || amount.Int().BitLen() > 64 {
+		return nil, fmt.Errorf("Sui transfer amount must fit uint64")
+	}
+
 	native := xc.ContractAddress(c.Asset.GetChain().ChainCoin)
 	if native == "" {
 		native = sui.NativeCoin
@@ -156,6 +168,15 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	if err != nil {
 		return input, fmt.Errorf("failed to fetch base input: %w", err)
 	}
+	coinType := string(contract)
+	if isNative {
+		coinType = sui.NativeCoin
+	}
+	input.PaymentKit, err = c.fetchPaymentKit(ctx, args.GetFrom(), coinType)
+	if err != nil {
+		return nil, err
+	}
+	input.PreferAddressBalance(amount)
 	if _, ok := args.GetPublicKey(); !ok {
 		args.SetPublicKey(make([]byte, 32))
 	}
@@ -165,7 +186,15 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		return input, fmt.Errorf("could not create tx builder: %w", err)
 	}
 
-	tx, err := builder.Transfer(args, input)
+	// Estimate the registry write with a fresh throwaway ID. Using the real
+	// ID here would make a previously executed payment fail before applications
+	// can apply their ID and check history. This ID never leaves the simulation.
+	simulationArgs := args
+	if input.PaymentKit != nil {
+		simulationArgs.SetTransactionID(uuid.NewString())
+	}
+	initialBudget := input.GasBudget
+	tx, err := builder.Transfer(simulationArgs, input)
 	if err != nil {
 		return input, fmt.Errorf("could not build tx: %w", err)
 	}
@@ -179,8 +208,32 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 	}
 	if ok {
 		input.GasBudget = gasFee
+		// Try an address-only plan on a copy: its larger storage charge may
+		// exceed a small address balance even though coin funding is affordable.
+		candidate := *input
 		if input.AddressBalance != nil {
-			_, err = builder.Transfer(args, input)
+			address := *input.AddressBalance
+			candidate.AddressBalance = &address
+		}
+		if candidate.PreferAddressBalance(amount) {
+			candidate.GasBudget = initialBudget
+			tx, err = builder.Transfer(simulationArgs, &candidate)
+			if err != nil {
+				return nil, fmt.Errorf("build address-funded payment: %w", err)
+			}
+			candidateFee, candidateOK, candidateErr := c.simulateTransactionGasFee(ctx, tx, isNative)
+			if candidateErr != nil && !strings.Contains(candidateErr.Error(), "InsufficientGas") {
+				return nil, fmt.Errorf("estimate address-funded payment: %w", candidateErr)
+			}
+			// If this alternative cannot afford its own fee, retain the coin plan
+			// that was successfully simulated above.
+			if candidateErr == nil && candidateOK && candidate.GasBudget >= candidateFee {
+				candidate.GasBudget = candidateFee
+				input, gasFee = &candidate, candidateFee
+			}
+		}
+		if input.AddressBalance != nil {
+			_, err = builder.Transfer(simulationArgs, input)
 			if err != nil {
 				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
 			}

@@ -41,23 +41,28 @@ defer c.Close()
 
 The client returns `sui.TxInput`, `sui.StakingInput` and `sui.UnstakingInput`.
 Existing fields and SDK coin JSON encodings are unchanged. Inputs without the
-optional `address_balance` field retain the original builder behavior and wire
-encoding. Updated builders also accept the new field; older builders can still
+optional `address_balance` field retain the original wire encoding for valid
+coin-based transfers. Updated builders also accept the new field; older builders can still
 handle coin-only inputs, but cannot spend address balances.
 
 Transfers and staking automatically combine selected coin objects and address
 balances. The builder withdraws only the shortfall through `coin::redeem_funds`
-inside the same transaction. Native coins can be smashed for gas; token coins
+inside the same transaction. The optional funding data also supports smashing
+multiple gas coins when their individual balances are too small. Native coins
+can be smashed for gas; token coins
 are merged for spending. Gas comes from the payer's coin objects or SUI address
 balance, including sponsored transactions. Sui requires the gas budget to fit
 entirely in one of those sources. Input preparation reserves gas before spending
-and rejects insufficient funding. Coin selection is bounded to 50 per list.
+and rejects failed simulations or insufficient funding. Gas estimates reserve
+at least the computation charge, even when storage rebates exceed the total
+fee. Transfer inputs are checked against the requested asset so an empty token
+balance cannot fall back to spending SUI. Coin selection is bounded to 50 per list.
 
 Address-balance gas uses an empty gas-payment list and `ValidDuring` expiration
 restricted to the fetched epoch. Chain ID and a random nonce are fetched once
 and retained in the input, so offline rebuilds are deterministic. New balance
 amounts are decimal strings in JSON. The nonce distinguishes transactions; it
-is not an exclusive account sequence. Retry-safety checks conservatively reject
+is not an exclusive account sequence. Without a Transfer ID, retry-safety checks conservatively reject
 re-signing with address-balance inputs in the same epoch. Resubmitting the exact
 same signed bytes remains safe. After expiration, fresh inputs can be fetched.
 
@@ -82,3 +87,110 @@ python3 chain/sui/client/rpc/generate.py /path/to/sui-apis
 ```
 
 Run the client and legacy builder tests with `go test -mod=readonly ./chain/sui/...`.
+
+The [2026-10-22 devnet review report](testdata/devnet-review-2026-10-22.json)
+records 33 successful transfer cases, 12 expected rejections, and four identical
+signed resubmissions without duplicate debits. Coverage includes native and
+token transfers, both balance sources, both sponsor types, full-balance sends,
+one-unit sends, fragmented gas coins, the 50-coin selection limit, stale inputs,
+and missing sponsor signatures. Temporary account balances were returned to
+the original account and reconciled against actual gas costs.
+
+
+## Transfer IDs and Payment Kit
+
+`builder.OptionTransactionID(id)` and the optional
+`xc.TxInputWithTransactionID.SetTransactionID(id)` enable
+[Mysten's Payment Kit](https://github.com/MystenLabs/sui-payment-kit) for transfers.
+An ID identifies **one immutable transfer**, including sender, recipient, amount,
+and coin type. Reuse it when rebuilding that transfer; assign a new ID to each
+new payment. Arbitrary strings (including Unicode) are hashed with the sender
+address into a fixed 32-character nonce. Other applications must use the same
+mapping if they want to share this deduplication namespace.
+
+```go
+args, err := builder.NewTransferArgs(cfg.Base(), from, to, amount,
+    builder.OptionPublicKey(publicKey),
+    builder.OptionTransactionID(transferID))
+if err != nil { return err }
+input, err := c.FetchTransferInput(ctx, args)
+if err != nil { return err }
+if setter, ok := input.(xc.TxInputWithTransactionID); ok {
+    setter.SetTransactionID(transferID) // trusted application data, before conflict checks
+}
+// Check input.IndependentOf(previousInput), then build and sign normally.
+```
+
+The client fetches deployment metadata and estimates the registry write with a
+throwaway simulation ID. It leaves `TransactionID` empty. On supported networks,
+applications may also fetch without the option and apply just the input setter.
+The builder accepts either trusted source and rejects mismatching IDs. Without
+an ID, builders retain the ordinary transfer path. All old `TxInput` fields and
+staking behavior are unchanged; old software cannot enforce Payment Kit IDs.
+
+Mainnet and testnet use the
+[upstream deployments](https://github.com/MystenLabs/ts-sdks/blob/main/packages/payment-kit/src/constants.ts),
+selected by the node's genesis digest. The default registry is derived from the
+published namespace; it requires no per-address setup. Devnet/custom networks
+require a deployed package and shared registry:
+
+```yaml
+sui_payment_kit:
+  package_id: "0x..."
+  registry_id: "0x..."
+```
+
+The client validates the shared registry, version, and supported configuration.
+It requires a registry that sends payment directly to the recipient, and reads
+its current retention setting. Devnet resets can invalidate custom deployments.
+The CLI accepts the same overrides with `--sui-payment-kit-package` and
+`--sui-payment-kit-registry`.
+
+`IndependentOf` rejects the same logical ID, even across epochs. Different IDs
+are independent when their owned coin references do not overlap (or the older
+input expired). When address funds cover the amount and gas, the client selects
+those funds to avoid owned-coin dependencies. It re-estimates gas after changing
+funding sources, retaining the coin plan if address funds cannot cover the new
+fee. Mixed/coin-only funding still
+requires current object versions; shared registry access is ordered by Sui and
+does not require fetching a new registry version after every payment.
+
+`SafeFromDoubleSend` uses the ID, sender, deployment, coin type, and record
+retention window. Payment Kit's key also includes amount and recipient, so
+**never change those while reusing an ID**. Its default retention is 30 epochs;
+records can be deleted afterward. Crosschain rejects retry safety once that
+window is reached, even if the ID is unchanged. This assumes a trusted registry
+administrator, who can change retention. These are bounded deduplication
+semantics, not a permanent account nonce.
+
+## CLI transfer history
+
+`xc transfer` creates a random UUID by default, or accepts a stable `--id`:
+
+```sh
+xc --chain SUI --rpc https://fullnode.testnet.sui.io:443 transfer ADDRESS 0.01 --id 42
+```
+
+The CLI caches transfer intent and `TxInput` under the user's cache directory
+(`xc/transfers`), grouped by chain/network/RPC and sender. Use `--history-dir` or
+`XC_TRANSFER_HISTORY_DIR` to select a directory. This feature works for all
+chains: it checks each previous input using the driver's `IndependentOf` and
+also rejects reused IDs. Each check prints one concise line. On conflict it
+waits three seconds, fetches fresh input, reapplies trusted options, and checks
+again, for up to 30 minutes (`--conflict-timeout` can shorten this).
+
+Concurrent local processes reserve an input under a directory lock before
+signing, and save the final input and hash before broadcast. Ambiguous broadcast
+failures keep the record; pre-broadcast build failures remove the reservation.
+Dry runs do not check or write history. `--input` conflicts fail because that
+option promises not to fetch from RPC. History is a best-effort debugging aid:
+unreadable records are reported as skipped, cache failures warn and proceed,
+and switching RPC URLs or deleting the cache loses local deduplication. A stale
+`.lock` left by a crashed process can be removed after that process is stopped.
+
+The [2026-10-23 Payment Kit testnet report](testdata/payment-kit-testnet-2026-10-23.json)
+includes transaction hashes, gas costs, cached inputs, and live queuing logs.
+It records seven distinct IDs in one checkpoint, an on-chain duplicate rejection,
+parallel CLI processes, and a coin conflict resolved by refetching. All temporary
+account funds were recovered. It also records the failed probes that exposed the
+funding-change estimation bug, which is covered by regression tests.

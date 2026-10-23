@@ -190,3 +190,114 @@ func TestStakeWithAddressBalance(t *testing.T) {
 		})
 	}
 }
+
+func TestEmptyTokenBalanceCannotSpendSUI(t *testing.T) {
+	server := transferServer(t)
+	original := server.coins
+	server.coins = func(ctx context.Context, r *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
+		if strings.Contains(r.GetObjectType(), testToken) {
+			return &pb.ListOwnedObjectsResponse{}, nil
+		}
+		return original(ctx, r)
+	}
+	c := newTestClient(t, server)
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1), builder.OptionContractAddress(testToken))
+	_, err := c.FetchTransferInput(context.Background(), args)
+	require.Error(t, err)
+	// Even legacy inputs sent directly to the builder must reject this request.
+	native, err := c.fetchBaseInput(context.Background(), sui.NativeCoin, sender, "")
+	require.NoError(t, err)
+	native.AddressBalance = nil
+	native.Coins = nil
+	args.SetPublicKey(make([]byte, 32))
+	b, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	_, err = b.Transfer(args, native)
+	require.ErrorContains(t, err, "no coins available for requested transfer asset")
+	native.Coins = append(native.Coins, &native.GasCoin)
+	_, err = b.Transfer(args, native)
+	require.ErrorContains(t, err, "no coins available for requested transfer asset")
+	native.Coins = nil
+
+	// Older valid native inputs can omit the gas coin's redundant type label.
+	native.GasCoin.CoinType = ""
+	nativeArgs := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1), builder.OptionPublicKey(make([]byte, 32)))
+	_, err = b.Transfer(nativeArgs, native)
+	require.NoError(t, err)
+
+}
+
+func TestFragmentedGasCoins(t *testing.T) {
+	server := transferServer(t)
+	server.coins = func(context.Context, *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
+		objects := make([]*pb.Object, 10)
+		for i := range objects {
+			objects[i] = coinObject(i+1, 1_000_000)
+		}
+		return &pb.ListOwnedObjectsResponse{Objects: objects}, nil
+	}
+	server.simulate = func(_ context.Context, r *pb.SimulateTransactionRequest) (*pb.SimulateTransactionResponse, error) {
+		tx, err := bcs.BcsDeserializeTransactionData(r.Transaction.Bcs.Value)
+		require.NoError(t, err)
+		data := tx.(*bcs.TransactionData__V1).Value
+		require.Len(t, data.GasData.Payment, 10)
+		require.GreaterOrEqual(t, data.GasData.Budget, uint64(2_000_000))
+		return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: successfulEffects()}}, nil
+	}
+	c := newTestClient(t, server)
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1_000_000))
+	input, err := c.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+	require.Equal(t, uint64(4_000_000), input.(*sui.TxInput).GasBudget)
+	require.Equal(t, uint64(10_000_000), input.(*sui.TxInput).TotalBalance().Uint64())
+}
+
+func TestTransferAssetAndAmountValidation(t *testing.T) {
+	c := newTestClient(t, transferServer(t))
+	for _, value := range []string{"-1", "18446744073709551616"} {
+		args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromStr(value))
+		_, err := c.FetchTransferInput(context.Background(), args)
+		require.ErrorContains(t, err, "uint64")
+	}
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(100), builder.OptionPublicKey(make([]byte, 32)), builder.OptionContractAddress(testToken))
+	input, err := c.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+	native := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(100), builder.OptionPublicKey(make([]byte, 32)))
+	b, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	_, err = b.Transfer(native, input)
+	require.ErrorContains(t, err, "coin type does not match")
+	// Preserve old inputs that redundantly include GasCoin in the Coins list.
+	local := input.(*sui.TxInput)
+	local.AddressBalance = nil
+	baseline, err := b.Transfer(args, local)
+	require.NoError(t, err)
+	baselineWire, err := baseline.Serialize()
+	require.NoError(t, err)
+	local.Coins = append(local.Coins, &local.GasCoin)
+	redundant, err := b.Transfer(args, local)
+	require.NoError(t, err)
+	redundantWire, err := redundant.Serialize()
+	require.NoError(t, err)
+	require.Equal(t, baselineWire, redundantWire)
+
+}
+
+func TestRejectedCoinOnlySimulationDoesNotReturnInput(t *testing.T) {
+	server := transferServer(t)
+	server.coins = func(context.Context, *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
+		return &pb.ListOwnedObjectsResponse{Objects: []*pb.Object{coinObject(1, 100_000_000)}}, nil
+	}
+	server.simulate = func(context.Context, *pb.SimulateTransactionRequest) (*pb.SimulateTransactionResponse, error) {
+		return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false), Error: &pb.ExecutionError{Description: proto.String("insufficient coin balance")}}}}}, nil
+	}
+	c := newTestClient(t, server)
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1_000_000))
+	input, err := c.FetchTransferInput(context.Background(), args)
+	require.Nil(t, input)
+	require.ErrorContains(t, err, "Sui simulation failed: insufficient coin balance")
+	b, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	_, err = b.NewTransfer(sender, make([]byte, 32), sender, recipient, xc.NewAmountBlockchainFromStr("18446744073709551616"), sui.NewTxInput())
+	require.ErrorContains(t, err, "uint64")
+}

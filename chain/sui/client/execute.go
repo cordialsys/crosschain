@@ -30,10 +30,9 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 	if effects.GetStatus() == nil || effects.Status.Success == nil {
 		return 0, false, fmt.Errorf("Sui simulation returned no execution status")
 	}
-	// Match the existing client's behavior: a failed simulation leaves the
-	// conservative input budget intact (e.g. while estimating an unfunded tx).
+	// Never return signable input for a transaction the node has rejected.
 	if !effects.Status.GetSuccess() {
-		return 0, false, nil
+		return 0, false, fmt.Errorf("Sui simulation failed: %s", executionError(effects.Status))
 	}
 	gas := effects.GetGasUsed()
 	if gas == nil || gas.ComputationCost == nil || gas.StorageCost == nil || gas.StorageRebate == nil {
@@ -47,6 +46,11 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 		fee = 0
 	} else {
 		fee -= gas.GetStorageRebate()
+	}
+	// Storage rebates cannot fund computation before execution finishes.
+	// Reserve at least the computation charge even when net storage is negative.
+	if fee < gas.GetComputationCost() {
+		fee = gas.GetComputationCost()
 	}
 	minimum := c.Asset.GasBudgetMinimum.ToBlockchain(c.Asset.Decimals).Uint64()
 	if minimum == 0 {

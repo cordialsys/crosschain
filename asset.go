@@ -714,7 +714,16 @@ type ChainSupport struct {
 	Legacy *bool `yaml:"legacy,omitempty"`
 }
 
+// SuiPaymentKitConfig selects a deployed Payment Kit package and shared registry.
+// Mainnet and testnet use upstream defaults; devnet needs an explicit deployment.
+type SuiPaymentKitConfig struct {
+	PackageID  string `yaml:"package_id" json:"package_id"`
+	RegistryID string `yaml:"registry_id" json:"registry_id"`
+}
+
 type ChainBaseConfig struct {
+	SuiPaymentKit *SuiPaymentKitConfig `yaml:"sui_payment_kit,omitempty" json:"sui_payment_kit,omitempty"`
+
 	// Disable Solana V1 transactions on validators that only support V0 and legacy.
 	SolanaDisableV1 bool `yaml:"solana_disable_v1,omitempty"`
 

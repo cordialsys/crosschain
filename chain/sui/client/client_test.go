@@ -379,7 +379,8 @@ func TestGasSimulationAndFallback(t *testing.T) {
 	}{
 		{"normal", successfulEffects(), 4_000_000, true, false},
 		{"rebate_exceeds_cost", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(1), StorageCost: proto.Uint64(2), StorageRebate: proto.Uint64(10)}}, 2_000_000, true, false},
-		{"failed_execution", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false)}}, 0, false, false},
+		{"failed_execution", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false)}}, 0, false, true},
+		{"large_rebate_cannot_fund_computation", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(10_000_000), StorageCost: proto.Uint64(1_000_000), StorageRebate: proto.Uint64(20_000_000)}}, 10_000_000, true, false},
 		{"missing_effects", nil, 0, false, true},
 		{"missing_gas", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}}, 0, false, true},
 	} {
