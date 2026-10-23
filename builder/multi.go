@@ -198,6 +198,10 @@ func (args *MultiTransferArgs) IsVersionAtLeast(version string) bool {
 	return args.options.IsVersionAtLeast(version)
 }
 
+func (args *MultiTransferArgs) GetTransactionID() (string, bool) {
+	return args.options.GetTransactionID()
+}
+
 func (args *MultiTransferArgs) AsUtxoTransfers() ([]*TransferArgs, error) {
 	transfers := make([]*TransferArgs, len(args.spenders))
 	if len(args.spenders) != len(args.receivers) {

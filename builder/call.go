@@ -50,3 +50,7 @@ func (args *CallArgs) GetVersion() (string, bool) {
 func (args *CallArgs) IsVersionAtLeast(version string) bool {
 	return args.options.IsVersionAtLeast(version)
 }
+
+func (args *CallArgs) GetTransactionID() (string, bool) {
+	return args.options.GetTransactionID()
+}

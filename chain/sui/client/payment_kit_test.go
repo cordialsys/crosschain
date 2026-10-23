@@ -19,13 +19,44 @@ import (
 )
 
 func testKit(t *testing.T, server *rpcServer) func(*xc.ChainConfig) {
-	d := paymentKitDeployment(testnetChainID)
+	d := sui.DefaultPaymentKitConfig(sui.TestnetChainID)
 	server.object = func(_ context.Context, r *pb.GetObjectRequest) (*pb.GetObjectResponse, error) {
 		require.Equal(t, d.RegistryID, r.GetObjectId())
 		return &pb.GetObjectResponse{Object: &pb.Object{ObjectId: proto.String(d.RegistryID), ObjectType: proto.String(d.PackageID + "::payment_kit::PaymentRegistry"), Owner: &pb.Owner{Kind: pb.Owner_SHARED.Enum(), Version: proto.Uint64(123)}, Contents: &pb.Bcs{Value: make([]byte, 67)}}}, nil
 	}
 	return func(c *xc.ChainConfig) { c.SuiPaymentKit = d }
 }
+func TestBuilderRejectsUntrustedPaymentKitDeployment(t *testing.T) {
+	server := transferServer(t)
+	c := newTestClient(t, server, testKit(t, server))
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1), builder.OptionPublicKey(make([]byte, 32)), builder.OptionTransactionID("trusted-id"))
+	fetched, err := c.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+	tb, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	for _, field := range []string{"package", "registry", "chain"} {
+		t.Run(field, func(t *testing.T) {
+			input := fetched.(*sui.TxInput).Clone()
+			switch field {
+			case "package":
+				input.PaymentKit.PackageID = "0x" + strings.Repeat("44", 32)
+			case "registry":
+				input.PaymentKit.RegistryID = "0x" + strings.Repeat("55", 32)
+			case "chain":
+				input.PaymentKit.ChainID = "other"
+			}
+			_, err := tb.Transfer(args, input)
+			require.Error(t, err)
+			// The legacy constructor must enforce the same trust boundary.
+			input.SetTransactionID("trusted-id")
+			_, err = tb.NewTransfer(sender, make([]byte, 32), sender, recipient, args.GetAmount(), input)
+			require.Error(t, err)
+		})
+	}
+	_, err = tb.Transfer(args, fetched)
+	require.NoError(t, err, "clones must not mutate the original metadata")
+}
+
 func TestPaymentKitFundingMatrix(t *testing.T) {
 	for _, token := range []bool{false, true} {
 		for _, sponsored := range []bool{false, true} {
@@ -143,7 +174,7 @@ func TestRegistryRetention(t *testing.T) {
 		_, err := registryRetention(raw)
 		require.Error(t, err)
 	}
-	require.Nil(t, paymentKitDeployment("devnet-reset"))
+	require.Nil(t, sui.DefaultPaymentKitConfig("devnet-reset"))
 }
 
 func TestPaymentKitApplicationSetterAndUnsupportedNetwork(t *testing.T) {
@@ -286,7 +317,7 @@ func TestPaymentKitKeepsCoinsWhenAddressCannotCoverNewFee(t *testing.T) {
 			fee = 6_000_000
 		}
 		if tx.GasData.Budget < fee {
-			return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false), Error: &pb.ExecutionError{Description: proto.String("InsufficientGas")}}}}}, nil
+			return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false), Error: &pb.ExecutionError{Kind: pb.ExecutionError_INSUFFICIENT_GAS.Enum()}}}}}, nil
 		}
 		effects := successfulEffects()
 		effects.GasUsed = &pb.GasCostSummary{ComputationCost: proto.Uint64(fee), StorageCost: proto.Uint64(0), StorageRebate: proto.Uint64(0)}

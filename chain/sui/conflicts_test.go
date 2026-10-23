@@ -34,6 +34,12 @@ func conflictInput(t *testing.T, id string) *TxInput {
 	return input
 }
 
+func conflictBuilderConfig() *xc.ChainBaseConfig {
+	cfg := xc.NewChainConfig(xc.SUI).Base()
+	cfg.SuiPaymentKit = &xc.SuiPaymentKitConfig{PackageID: "0x" + strings.Repeat("44", 32), RegistryID: "0x" + strings.Repeat("55", 32)}
+	return cfg
+}
+
 func transactionResources(tx *Tx) map[ownedResource]struct{} {
 	refs := map[ownedResource]struct{}{}
 	add := func(id bcs.ObjectID, version bcs.SequenceNumber, digest bcs.ObjectDigest) {
@@ -66,7 +72,7 @@ func TestConflictProofMatchesBuiltTransfers(t *testing.T) {
 					if sponsored {
 						input.GasCoinOwner = xc.Address("0x" + strings.Repeat("33", 32))
 					}
-					b, err := NewTxBuilder(xc.NewChainConfig(xc.SUI).Base())
+					b, err := NewTxBuilder(conflictBuilderConfig())
 					require.NoError(t, err)
 					tx, err := b.NewTransfer(input.GasCoinOwner, make([]byte, 32), input.AddressBalance.Sender, input.AddressBalance.Sender, xc.NewAmountBlockchainFromUint64(10), input)
 					require.NoError(t, err)
@@ -155,7 +161,7 @@ func TestStakingConflictResources(t *testing.T) {
 }
 
 func TestAddressFundingRequiresProtectedTransfer(t *testing.T) {
-	b, err := NewTxBuilder(xc.NewChainConfig(xc.SUI).Base())
+	b, err := NewTxBuilder(conflictBuilderConfig())
 	require.NoError(t, err)
 	input := conflictInput(t, "")
 	_, err = b.NewTransfer(input.GasCoinOwner, make([]byte, 32), input.AddressBalance.Sender, input.AddressBalance.Sender, xc.NewAmountBlockchainFromUint64(10), input)

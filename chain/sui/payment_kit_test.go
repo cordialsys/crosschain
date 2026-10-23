@@ -6,9 +6,20 @@ import (
 	"testing"
 
 	xc "github.com/cordialsys/crosschain"
+	"github.com/cordialsys/crosschain/builder"
 	"github.com/cordialsys/go-sui-sdk/v2/types"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTransactionIDOption(t *testing.T) {
+	input := NewTxInput()
+	_, err := builder.WithTxInputOptions(input, 0, "", "")
+	require.NoError(t, err)
+	require.Empty(t, input.TransactionID)
+	_, err = builder.WithTxInputOptions(input, 0, "", "transfer-id")
+	require.NoError(t, err)
+	require.Equal(t, "transfer-id", input.TransactionID)
+}
 
 func protectedInput(id string) *TxInput {
 	in := NewTxInput()

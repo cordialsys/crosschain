@@ -203,6 +203,7 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 	nonceAccountMaybe, _ := args.GetNonceAccount()
 	versionMaybe, _ := args.GetVersion()
 	feeInclusiveMaybe := args.InclusiveFeeSpendingEnabled()
+	transactionIDMaybe, _ := args.GetTransactionID()
 
 	res, err := client.legacyApiCall(ctx, "/input", &types.TransferInputReq{
 		Chain:        client.Asset.GetChain().Chain,
@@ -223,7 +224,8 @@ func (client *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Tra
 			Priority:            string(priorityMaybe),
 			NonceAccount:        nonceAccountMaybe,
 		},
-		Version: versionMaybe,
+		Version:       versionMaybe,
+		TransactionID: transactionIDMaybe,
 	})
 	if err != nil {
 		return nil, err
@@ -244,6 +246,7 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 	receivers := []*types.Receiver{}
 	nonceAccountMaybe, _ := args.GetNonceAccount()
 	versionMaybe, _ := args.GetVersion()
+	transactionIDMaybe, _ := args.GetTransactionID()
 	for _, sender := range args.Spenders() {
 		fromIdentityMaybe, _ := sender.GetFromIdentity()
 		senders = append(senders, &types.Sender{
@@ -275,7 +278,8 @@ func (client *Client) FetchMultiTransferInput(ctx context.Context, args xcbuilde
 			TransactionAttempts: args.GetTransactionAttempts(),
 			NonceAccount:        nonceAccountMaybe,
 		},
-		Version: versionMaybe,
+		Version:       versionMaybe,
+		TransactionID: transactionIDMaybe,
 	})
 	if err != nil {
 		return nil, err
@@ -401,12 +405,14 @@ func (client *Client) FetchCallInput(ctx context.Context, call xc.TxCall, args x
 	)
 	nonceAccount, _ := args.GetNonceAccount()
 	versionMaybe, _ := args.GetVersion()
+	transactionIDMaybe, _ := args.GetTransactionID()
 	responseBody, err := client.ApiCallWithUrl(ctx, "POST", apiURL, &types.CallInputReq{
-		Method:       call.GetMethod(),
-		Request:      call.GetMsg(),
-		Addresses:    call.SigningAddresses(),
-		NonceAccount: nonceAccount,
-		Version:      versionMaybe,
+		Method:        call.GetMethod(),
+		Request:       call.GetMsg(),
+		Addresses:     call.SigningAddresses(),
+		NonceAccount:  nonceAccount,
+		Version:       versionMaybe,
+		TransactionID: transactionIDMaybe,
 	})
 	if err != nil {
 		return nil, err

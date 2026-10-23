@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
-	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -198,63 +198,35 @@ func (c *Client) FetchTransferInput(ctx context.Context, args xcbuilder.Transfer
 		simulationArgs.SetTransactionID(uuid.NewString())
 	}
 	initialBudget := input.GasBudget
-	tx, err := builder.Transfer(simulationArgs, input)
+	err = c.estimateAndValidate(ctx, input, isNative, func() (xc.Tx, error) { return builder.Transfer(simulationArgs, input) })
 	if err != nil {
-		return input, fmt.Errorf("could not build tx: %w", err)
+		return nil, err
 	}
 
-	gasFee, ok, err := c.simulateTransactionGasFee(ctx, tx, isNative)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get transaction gas fee: %w", err)
-	}
-	if !ok && input.AddressBalance != nil {
-		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
-	}
-	if ok {
-		input.GasBudget = gasFee
-		// Try an address-only plan on a copy: its larger storage charge may
-		// exceed a small address balance even though coin funding is affordable.
-		candidate := *input
-		if input.AddressBalance != nil {
-			address := *input.AddressBalance
-			candidate.AddressBalance = &address
+	// Try an address-only plan on a copy: its larger storage charge may
+	// exceed a small address balance even though coin funding is affordable.
+	candidate := input.Clone()
+	if hasID && candidate.PreferAddressBalance(amount) {
+		candidate.GasBudget = initialBudget
+		candidateErr := c.estimateAndValidate(ctx, candidate, isNative, func() (xc.Tx, error) { return builder.Transfer(simulationArgs, candidate) })
+		if candidateErr != nil && !errors.Is(candidateErr, errInsufficientGas) {
+			return nil, fmt.Errorf("estimate address-funded payment: %w", candidateErr)
 		}
-		if hasID && candidate.PreferAddressBalance(amount) {
-			candidate.GasBudget = initialBudget
-			tx, err = builder.Transfer(simulationArgs, &candidate)
-			if err != nil {
-				return nil, fmt.Errorf("build address-funded payment: %w", err)
-			}
-			candidateFee, candidateOK, candidateErr := c.simulateTransactionGasFee(ctx, tx, isNative)
-			if candidateErr != nil && !strings.Contains(candidateErr.Error(), "InsufficientGas") {
-				return nil, fmt.Errorf("estimate address-funded payment: %w", candidateErr)
-			}
-			// If this alternative cannot afford its own fee, retain the coin plan
-			// that was successfully simulated above.
-			if candidateErr == nil && candidateOK && candidate.GasBudget >= candidateFee {
-				candidate.GasBudget = candidateFee
-				input, gasFee = &candidate, candidateFee
-			}
-		}
-		if input.AddressBalance != nil {
-			_, err = builder.Transfer(simulationArgs, input)
-			if err != nil {
-				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
-			}
-			if input.GasBudget < gasFee {
-				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, input.GasBudget)
-			}
+		// Keep the already validated coin plan if address funds cannot cover gas.
+		if candidateErr == nil {
+			input = candidate
 		}
 	}
+
 	if !hasID && input.PaymentKit != nil {
 		// The application may either set an ID after fetching or build directly
 		// without one. Retain the coins and budget for both funding paths: using
 		// coin gas can cost more than the simulated address-funded payment.
-		coinInput := *input
+		coinInput := input.Clone()
 		coinInput.GasBudget = initialBudget
-		coinTx, buildErr := builder.Transfer(args, &coinInput)
+		coinTx, buildErr := builder.Transfer(args, coinInput)
 		if buildErr == nil {
-			coinFee, _, err := c.simulateTransactionGasFee(ctx, coinTx, isNative)
+			coinFee, err := c.simulateTransactionGasFee(ctx, coinTx, isNative)
 			if err != nil {
 				return nil, fmt.Errorf("estimate coin-funded transfer without ID: %w", err)
 			}

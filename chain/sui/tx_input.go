@@ -2,6 +2,7 @@ package sui
 
 import (
 	"bytes"
+	"slices"
 	"sort"
 	"strings"
 
@@ -59,6 +60,23 @@ var _ xc.TxInput = &TxInput{}
 var _ xc.TxInputWithTransactionID = &TxInput{}
 
 func (input *TxInput) SetTransactionID(id string) { input.TransactionID = id }
+
+// Clone copies mutable funding metadata so planning/building never changes
+// another candidate's slice or balances. Individual coin records are read-only.
+func (input *TxInput) Clone() *TxInput {
+	copyInput := *input
+	copyInput.Coins = slices.Clone(input.Coins)
+	if input.AddressBalance != nil {
+		balance := *input.AddressBalance
+		balance.GasCoins = slices.Clone(balance.GasCoins)
+		copyInput.AddressBalance = &balance
+	}
+	if input.PaymentKit != nil {
+		kit := *input.PaymentKit
+		copyInput.PaymentKit = &kit
+	}
+	return &copyInput
+}
 
 var _ CoinGetter = &TxInput{}
 

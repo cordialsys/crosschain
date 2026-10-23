@@ -62,30 +62,9 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 		return nil, fmt.Errorf("failed to create tx builder: %w", err)
 	}
 
-	tx, err := builder.Stake(args, stakingInput)
+	err = c.estimateAndValidate(ctx, &stakingInput.TxInput, true, func() (xc.Tx, error) { return builder.Stake(args, stakingInput) })
 	if err != nil {
-		return nil, fmt.Errorf("could not build tx: %v", err)
-	}
-	// staking is always native
-	isNative := true
-	gasFee, ok, err := c.simulateTransactionGasFee(ctx, tx, isNative)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get staking transaction gas fee: %w", err)
-	}
-	if !ok && stakingInput.AddressBalance != nil {
-		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
-	}
-	if ok {
-		stakingInput.GasBudget = gasFee
-		if stakingInput.AddressBalance != nil {
-			_, err = builder.Stake(args, stakingInput)
-			if err != nil {
-				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
-			}
-			if stakingInput.GasBudget < gasFee {
-				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, stakingInput.GasBudget)
-			}
-		}
+		return nil, err
 	}
 
 	return stakingInput, nil
@@ -195,7 +174,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 			remainingAfterSplit, ok := s.TrySplit(amountToUnstake, minAmount, decimals)
 			if ok {
-				amountToUnstake = amountToUnstake.Sub(&remainingStake)
+				amountToUnstake = zeroAmount
 				stakeToSplit = s
 				splitRemainder = remainingAfterSplit
 				break
@@ -227,32 +206,11 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 		return nil, fmt.Errorf("failed to create tx builder: %w", err)
 	}
 
-	tx, err := builder.Unstake(args, unstakingInput)
+	err = c.estimateAndValidate(ctx, &unstakingInput.TxInput, true, func() (xc.Tx, error) { return builder.Unstake(args, unstakingInput) })
 	if err != nil {
-		return nil, fmt.Errorf("could not build tx: %v", err)
+		return nil, err
 	}
 
-	// staking is always native
-	isNative := true
-	gasFee, ok, err := c.simulateTransactionGasFee(ctx, tx, isNative)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get unstaking transaction gas fee: %w", err)
-	}
-	if !ok && unstakingInput.AddressBalance != nil {
-		return nil, fmt.Errorf("Sui simulation failed for address-balance transaction")
-	}
-	if ok {
-		unstakingInput.GasBudget = gasFee
-		if unstakingInput.AddressBalance != nil {
-			_, err = builder.Unstake(args, unstakingInput)
-			if err != nil {
-				return nil, fmt.Errorf("insufficient funds for estimated gas: %w", err)
-			}
-			if unstakingInput.GasBudget < gasFee {
-				return nil, fmt.Errorf("insufficient SUI in gas funding source: need %d, have %d", gasFee, unstakingInput.GasBudget)
-			}
-		}
-	}
 	return unstakingInput, nil
 }
 

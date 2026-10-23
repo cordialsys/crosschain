@@ -3,8 +3,10 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	xc "github.com/cordialsys/crosschain"
 	"github.com/cordialsys/crosschain/builder"
@@ -13,10 +15,33 @@ import (
 	xctypes "github.com/cordialsys/crosschain/client/types"
 )
 
-func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.Tx, isNative bool) (uint64, bool, error) {
+var errInsufficientGas = errors.New("insufficient gas funding")
+
+// Every funding path is rebuilt with the simulated fee. Builders can clamp the
+// budget to available funds, so a successful build alone does not prove funding.
+func (c *Client) estimateAndValidate(ctx context.Context, input *sui.TxInput, isNative bool, build func() (xc.Tx, error)) error {
+	tx, err := build()
+	if err != nil {
+		return fmt.Errorf("could not build tx: %w", err)
+	}
+	fee, err := c.simulateTransactionGasFee(ctx, tx, isNative)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction gas fee: %w", err)
+	}
+	input.GasBudget = fee
+	if _, err = build(); err != nil {
+		return fmt.Errorf("insufficient funds for estimated gas: %w", err)
+	}
+	if input.GasBudget < fee {
+		return fmt.Errorf("%w: insufficient SUI in gas funding source: need %d, have %d", errInsufficientGas, fee, input.GasBudget)
+	}
+	return nil
+}
+
+func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.Tx, isNative bool) (uint64, error) {
 	serialized, err := transaction.Serialize()
 	if err != nil {
-		return 0, false, err
+		return 0, err
 	}
 	// Simulation masks are relative to SimulateTransactionResponse, unlike execution.
 	resp, err := c.Execution.SimulateTransaction(ctx, &pb.SimulateTransactionRequest{
@@ -24,22 +49,25 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 		ReadMask:    mask("transaction.effects.status", "transaction.effects.gas_used"),
 	})
 	if err != nil {
-		return 0, false, fmt.Errorf("simulate Sui transaction: %w", err)
+		return 0, fmt.Errorf("simulate Sui transaction: %w", err)
 	}
 	effects := resp.GetTransaction().GetEffects()
 	if effects.GetStatus() == nil || effects.Status.Success == nil {
-		return 0, false, fmt.Errorf("Sui simulation returned no execution status")
+		return 0, fmt.Errorf("Sui simulation returned no execution status")
 	}
 	// Never return signable input for a transaction the node has rejected.
 	if !effects.Status.GetSuccess() {
-		return 0, false, fmt.Errorf("Sui simulation failed: %s", executionError(effects.Status))
+		if effects.Status.GetError().GetKind() == pb.ExecutionError_INSUFFICIENT_GAS || strings.Contains(executionError(effects.Status), "InsufficientGas") {
+			return 0, fmt.Errorf("%w: Sui simulation failed: %s", errInsufficientGas, executionError(effects.Status))
+		}
+		return 0, fmt.Errorf("Sui simulation failed: %s", executionError(effects.Status))
 	}
 	gas := effects.GetGasUsed()
 	if gas == nil || gas.ComputationCost == nil || gas.StorageCost == nil || gas.StorageRebate == nil {
-		return 0, false, fmt.Errorf("Sui simulation returned incomplete gas costs")
+		return 0, fmt.Errorf("Sui simulation returned incomplete gas costs")
 	}
 	if gas.GetComputationCost() > math.MaxUint64-gas.GetStorageCost() {
-		return 0, false, fmt.Errorf("Sui simulation gas cost overflow")
+		return 0, fmt.Errorf("Sui simulation gas cost overflow")
 	}
 	fee := gas.GetComputationCost() + gas.GetStorageCost()
 	if gas.GetStorageRebate() > fee {
@@ -66,11 +94,11 @@ func (c *Client) simulateTransactionGasFee(ctx context.Context, transaction xc.T
 			margin++
 		}
 		if fee > math.MaxUint64-margin {
-			return 0, false, fmt.Errorf("Sui gas budget overflow")
+			return 0, fmt.Errorf("Sui gas budget overflow")
 		}
 		fee += margin
 	}
-	return fee, true, nil
+	return fee, nil
 }
 
 // SubmitTx sends the existing TransactionData BCS and scheme/signature/public-key

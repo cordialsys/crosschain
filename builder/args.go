@@ -121,6 +121,10 @@ func (opts *builderOptions) IsVersionAtLeast(version string) bool {
 	return semver.Compare("v"+reportedVersion, "v"+version) >= 0
 }
 
+func (opts *builderOptions) GetTransactionID() (string, bool) {
+	return get(opts.transactionID)
+}
+
 func (opts *builderOptions) SetContract(contract xc.ContractAddress) {
 	opts.contract = &contract
 }

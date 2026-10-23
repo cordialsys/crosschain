@@ -81,6 +81,8 @@ type TransferInputReq struct {
 	FeeInclusive bool          `json:"fee_inclusive,omitempty"`
 	PublicKey    string        `json:"public_key,omitempty"`
 
+	TransactionID string `json:"transaction_id,omitempty"`
+
 	Extra TransferInputReqExtra `json:"extra,omitempty"`
 
 	Version string `json:"version,omitempty"`
@@ -145,8 +147,9 @@ type MultiTransferInputReq struct {
 	Receivers []*Receiver    `json:"receivers"`
 	FeePayer  *FeePayerInfo  `json:"fee_payer,omitempty"`
 
-	Extra   MultiTransferInputReqExtra `json:"extra,omitempty"`
-	Version string                     `json:"version,omitempty"`
+	Extra         MultiTransferInputReqExtra `json:"extra,omitempty"`
+	Version       string                     `json:"version,omitempty"`
+	TransactionID string                     `json:"transaction_id,omitempty"`
 }
 
 type StakingInputReqExtra struct {
@@ -168,6 +171,7 @@ type StakingInputReq struct {
 	Extra         StakingInputReqExtra `json:"extra,omitempty"`
 	Memo          string               `json:"memo,omitempty"`
 	Version       string               `json:"version,omitempty"`
+	TransactionID string               `json:"transaction_id,omitempty"`
 }
 
 type CreateAccountInputReq struct {
@@ -305,6 +309,7 @@ type CallInputReq struct {
 	Request   json.RawMessage `json:"request"`
 	Addresses []xc.Address    `json:"addresses"`
 
-	NonceAccount string `json:"nonce_account,omitempty"`
-	Version      string `json:"version,omitempty"`
+	NonceAccount  string `json:"nonce_account,omitempty"`
+	Version       string `json:"version,omitempty"`
+	TransactionID string `json:"transaction_id,omitempty"`
 }

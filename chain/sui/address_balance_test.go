@@ -57,11 +57,11 @@ func TestCoinTypeParsing(t *testing.T) {
 
 func TestInvalidAddressFunding(t *testing.T) {
 	from := xc.Address("0x" + strings.Repeat("11", 32))
-	input := protectedInput("42")
+	input := conflictInput(t, "42")
 	input.GasCoinOwner = from
 	input.GasBudget = 1
 	input.AddressBalance = &AddressBalanceInput{Sender: from, CoinType: NativeCoin, Balance: 100, GasBalance: 100, ChainID: "invalid"}
-	builder, _ := NewTxBuilder(xc.NewChainConfig(xc.SUI).Base())
+	builder, _ := NewTxBuilder(conflictBuilderConfig())
 	_, err := builder.NewTransfer(from, make([]byte, 32), from, from, xc.NewAmountBlockchainFromUint64(10), input)
 	require.ErrorContains(t, err, "chain ID")
 	_, err = input.balanceFunding(from, from, xc.NewAmountBlockchainFromStr("18446744073709551616"))
