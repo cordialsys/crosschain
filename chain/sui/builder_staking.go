@@ -39,6 +39,12 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	if !ok {
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
 	}
+	// Staking does not execute Payment Kit, even if an application set an ID.
+	original := stakeInput
+	copyInput := *stakeInput
+	copyInput.TxInput = *stakeInput.TxInput.coinOnlyFunding()
+	stakeInput = &copyInput
+	defer func() { original.GasBudget = stakeInput.GasBudget }()
 
 	validator, ok := args.GetValidator()
 	if !ok {
@@ -140,6 +146,11 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	if !ok {
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
 	}
+	original := unstakeInput
+	copyInput := *unstakeInput
+	copyInput.TxInput = *unstakeInput.TxInput.coinOnlyFunding()
+	unstakeInput = &copyInput
+	defer func() { original.GasBudget = unstakeInput.GasBudget }()
 
 	validator, _ := args.GetValidator()
 	account, _ := args.GetStakeAccount()

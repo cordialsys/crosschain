@@ -264,12 +264,9 @@ func CmdTxTransfer() *cobra.Command {
 
 			// Apply trusted options after every fetch, before any conflict checks.
 			prepareInput := func(in xc.TxInput) (xc.TxInput, error) {
-				if setter, ok := in.(xc.TxInputWithTransactionID); ok {
-					setter.SetTransactionID(transferID)
-				}
 				timestamp, _ := tfArgs.GetTimestamp()
 				priority, _ := tfArgs.GetPriority()
-				return builder.WithTxInputOptions(in, timestamp, priority)
+				return builder.WithTxInputOptions(in, timestamp, priority, transferID)
 			}
 			var reservation *transferReservation
 			broadcastStarted := false

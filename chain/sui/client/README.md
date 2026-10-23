@@ -45,8 +45,11 @@ optional `address_balance` field retain the original wire encoding for valid
 coin-based transfers. Updated builders also accept the new field; older builders can still
 handle coin-only inputs, but cannot spend address balances.
 
-Transfers and staking automatically combine selected coin objects and address
-balances. The builder withdraws only the shortfall through `coin::redeem_funds`
+Transfers with Payment Kit metadata and a trusted Transfer ID automatically
+combine selected coin objects and address balances. Without both, the builder
+uses only coin objects, including for sponsored gas. Staking and unstaking use
+only coin objects because they do not execute Payment Kit. The transfer builder
+withdraws only the shortfall through `coin::redeem_funds`
 inside the same transaction. The optional funding data also supports smashing
 multiple gas coins when their individual balances are too small. Native coins
 can be smashed for gas; token coins
@@ -62,9 +65,10 @@ Address-balance gas uses an empty gas-payment list and `ValidDuring` expiration
 restricted to the fetched epoch. Chain ID and a random nonce are fetched once
 and retained in the input, so offline rebuilds are deterministic. New balance
 amounts are decimal strings in JSON. The nonce distinguishes transactions; it
-is not an exclusive account sequence. Without a Transfer ID, retry-safety checks conservatively reject
-re-signing with address-balance inputs in the same epoch. Resubmitting the exact
-same signed bytes remains safe. After expiration, fresh inputs can be fetched.
+is not an exclusive account sequence. Retry safety requires Payment Kit
+deduplication or an exact owned-object reference consumed by both attempts.
+Expiration alone cannot prove that an earlier attempt never executed.
+Resubmitting the exact same signed bytes remains safe.
 
 Balance queries include both coin-object and address balances. Staking discovery
 still uses the legacy `suix_getStakes` method as described above.
@@ -125,14 +129,18 @@ The client fetches deployment metadata and estimates the registry write with a
 throwaway simulation ID. It leaves `TransactionID` empty. On supported networks,
 applications may also fetch without the option and apply just the input setter.
 The builder accepts either trusted source and rejects mismatching IDs. Without
-an ID, builders retain the ordinary transfer path. All old `TxInput` fields and
-staking behavior are unchanged; old software cannot enforce Payment Kit IDs.
+an ID, builders retain the ordinary coin-only transfer path and exclude address
+funds. No-ID fetches retain coin references and, when both paths are available,
+reserve the larger gas estimate; supply the ID option when fetching for the most
+precise funding selection. All old `TxInput` fields remain compatible; old
+software cannot enforce Payment Kit IDs.
 
 Mainnet and testnet use the
 [upstream deployments](https://github.com/MystenLabs/ts-sdks/blob/main/packages/payment-kit/src/constants.ts),
 selected by the node's genesis digest. The default registry is derived from the
 published namespace; it requires no per-address setup. Devnet/custom networks
-require a deployed package and shared registry:
+require a deployed package and shared registry for protected/address-funded
+transfers. Ordinary coin-only transfers remain available without a deployment:
 
 ```yaml
 sui_payment_kit:
@@ -147,8 +155,12 @@ The CLI accepts the same overrides with `--sui-payment-kit-package` and
 `--sui-payment-kit-registry`.
 
 `IndependentOf` rejects the same logical ID, even across epochs. Different IDs
-are independent when their owned coin references do not overlap (or the older
-input expired). When address funds cover the amount and gas, the client selects
+are independent when their candidate owned-object references do not overlap (or
+the older input expired). Queuing conservatively includes optional gas coins;
+retry safety only counts objects guaranteed to be consumed. Stake objects are
+included for unstaking. An expired input can release a queue conflict, but cannot
+by itself authorize retrying a payment that might already have executed.
+When an ID is supplied during fetching and address funds cover the amount and gas, the client selects
 those funds to avoid owned-coin dependencies. It re-estimates gas after changing
 funding sources, retaining the coin plan if address funds cannot cover the new
 fee. Mixed/coin-only funding still

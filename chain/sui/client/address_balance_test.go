@@ -27,7 +27,7 @@ func TestAddressBalanceTransfers(t *testing.T) {
 		{name: "address_only", address: 100_000_000, amount: 10_000_000, withdrawal: 10_000_000, addressGas: true},
 		{name: "mixed_address_gas", coins: 10_000_000, address: 30_000_000, amount: 35_000_000, withdrawal: 25_000_000, addressGas: true},
 		{name: "mixed_coin_gas", coins: 30_000_000, address: 10_000_000, amount: 35_000_000, withdrawal: 9_000_000},
-		{name: "coins_with_address_gas", coins: 10_000_000, address: 30_000_000, amount: 5_000_000, addressGas: true},
+		{name: "coins_with_address_gas", coins: 10_000_000, address: 30_000_000, amount: 5_000_000, withdrawal: 5_000_000, addressGas: true},
 		{name: "token_address_only", token: true, address: 100, gasAddress: 100_000_000, amount: 50, withdrawal: 50, addressGas: true},
 		{name: "token_mixed_coin_gas", token: true, coins: 40, address: 60, gasCoins: 100_000_000, amount: 70, withdrawal: 30},
 		{name: "token_mixed_address_gas", token: true, coins: 40, address: 60, gasAddress: 100_000_000, amount: 70, withdrawal: 30, addressGas: true},
@@ -57,8 +57,8 @@ func TestAddressBalanceTransfers(t *testing.T) {
 				// Exercise gas smashing and merging multiple objects, not just one coin.
 				return &pb.ListOwnedObjectsResponse{Objects: []*pb.Object{coinObject(id, balance/2), coinObject(id+1, balance-balance/2)}}, nil
 			}
-			c := newTestClient(t, server)
-			options := []builder.BuilderOption{builder.OptionPublicKey(make([]byte, 32))}
+			c := newTestClient(t, server, testKit(t, server))
+			options := []builder.BuilderOption{builder.OptionPublicKey(make([]byte, 32)), builder.OptionTransactionID("balance-test")}
 			if tc.token {
 				options = append(options, builder.OptionContractAddress(testToken))
 			}
@@ -69,8 +69,14 @@ func TestAddressBalanceTransfers(t *testing.T) {
 			fetched, err := c.FetchTransferInput(context.Background(), args)
 			require.NoError(t, err)
 			input := fetched.(*sui.TxInput)
+			input.SetTransactionID("balance-test")
 			require.NotNil(t, input.AddressBalance)
-			require.Equal(t, tc.coins+tc.address, input.TotalBalance().Uint64())
+			if tc.name == "coins_with_address_gas" {
+				// Payment Kit drops unnecessary coin references for parallel payments.
+				require.Equal(t, tc.address, input.TotalBalance().Uint64())
+			} else {
+				require.Equal(t, tc.coins+tc.address, input.TotalBalance().Uint64())
+			}
 			encoded, err := json.Marshal(input)
 			require.NoError(t, err)
 			var decoded sui.TxInput
@@ -115,7 +121,7 @@ func TestAddressBalanceTransfers(t *testing.T) {
 				count = 2
 			}
 			require.Len(t, sighashes, count)
-			require.False(t, input.SafeFromDoubleSend(&decoded))
+			require.True(t, input.SafeFromDoubleSend(&decoded))
 			require.False(t, input.IndependentOf(&decoded))
 		})
 	}
@@ -146,15 +152,15 @@ func TestAddressBalanceFundingErrors(t *testing.T) {
 					return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false)}}}}, nil
 				}
 			}
-			c := newTestClient(t, server)
-			args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(tc.amount))
+			c := newTestClient(t, server, testKit(t, server))
+			args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(tc.amount), builder.OptionTransactionID("funding-errors"))
 			_, err := c.FetchTransferInput(context.Background(), args)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
 }
 
-func TestStakeWithAddressBalance(t *testing.T) {
+func TestStakeCannotUseAddressBalance(t *testing.T) {
 	for _, sponsored := range []bool{false, true} {
 		t.Run(fmt.Sprint(sponsored), func(t *testing.T) {
 			server := transferServer(t)
@@ -170,23 +176,8 @@ func TestStakeWithAddressBalance(t *testing.T) {
 				options = append(options, builder.OptionFeePayer(sponsor, make([]byte, 32)))
 			}
 			args := buildertest.MustNewStakingArgs(xc.SUI, sender, options...)
-			input, err := c.FetchStakingInput(context.Background(), args)
-			require.NoError(t, err)
-			b, err := sui.NewTxBuilder(c.Asset.Base())
-			require.NoError(t, err)
-			tx, err := b.Stake(args, input)
-			require.NoError(t, err)
-			hashes, err := tx.Sighashes()
-			require.NoError(t, err)
-			count := 1
-			if sponsored {
-				count = 2
-			}
-			require.Len(t, hashes, count)
-			ptb := tx.(*sui.Tx).Tx.Value.Kind.(*bcs.TransactionKind__ProgrammableTransaction).Value
-			require.Len(t, ptb.Commands, 2) // redeem_funds followed by request_add_stake; no unused coin
-			require.Equal(t, "redeem_funds", string(ptb.Commands[0].(*bcs.Command__MoveCall).Value.Function))
-			require.Equal(t, "request_add_stake", string(ptb.Commands[1].(*bcs.Command__MoveCall).Value.Function))
+			_, err := c.FetchStakingInput(context.Background(), args)
+			require.Error(t, err)
 		})
 	}
 }

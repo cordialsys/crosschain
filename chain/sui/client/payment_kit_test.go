@@ -171,6 +171,73 @@ func TestPaymentKitApplicationSetterAndUnsupportedNetwork(t *testing.T) {
 	require.Equal(t, bcs.Identifier("process_registry_payment"), commands[len(commands)-1].(*bcs.Command__MoveCall).Value.Function)
 }
 
+func TestNoIDKeepsCoinsAndBudgetsBothFundingPaths(t *testing.T) {
+	server := transferServer(t)
+	server.balance = func(context.Context, *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
+		return &pb.GetBalanceResponse{Balance: &pb.Balance{AddressBalance: proto.Uint64(100_000_000)}}, nil
+	}
+	server.coins = func(context.Context, *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
+		return &pb.ListOwnedObjectsResponse{Objects: []*pb.Object{coinObject(1, 10_000_000)}}, nil
+	}
+	simulations := 0
+	server.simulate = func(_ context.Context, r *pb.SimulateTransactionRequest) (*pb.SimulateTransactionResponse, error) {
+		simulations++
+		wire, err := bcs.BcsDeserializeTransactionData(r.Transaction.Bcs.Value)
+		require.NoError(t, err)
+		data := wire.(*bcs.TransactionData__V1).Value
+		fee := uint64(4_000_000)
+		if len(data.GasData.Payment) > 0 {
+			fee = 6_000_000
+		}
+		require.GreaterOrEqual(t, data.GasData.Budget, fee)
+		effects := successfulEffects()
+		effects.GasUsed = &pb.GasCostSummary{ComputationCost: proto.Uint64(fee), StorageCost: proto.Uint64(0), StorageRebate: proto.Uint64(0)}
+		return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: effects}}, nil
+	}
+	c := newTestClient(t, server, testKit(t, server))
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1_000_000), builder.OptionPublicKey(make([]byte, 32)))
+	fetched, err := c.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+	input := fetched.(*sui.TxInput)
+	require.Equal(t, 2, simulations)
+	require.Empty(t, input.TransactionID)
+	require.NotEmpty(t, input.GasCoin.Digest)
+	require.EqualValues(t, 6_000_000, input.GasBudget)
+	require.False(t, input.IsFeeLimitAccurate())
+	tb, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	plain, err := tb.Transfer(args, input)
+	require.NoError(t, err)
+	require.Len(t, plain.(*sui.Tx).Tx.Value.GasData.Payment, 1)
+	require.EqualValues(t, 100_000_000, input.AddressBalance.Balance, "builder must preserve address metadata for the setter")
+	input.SetTransactionID("set-after-fetch")
+	protected, err := tb.Transfer(args, input)
+	require.NoError(t, err)
+	require.Empty(t, protected.(*sui.Tx).Tx.Value.GasData.Payment)
+	require.False(t, input.IsFeeLimitAccurate(), "setting an ID does not make a two-plan budget exact")
+}
+
+func TestAddressOnlyInputCanApplyIDAfterFetch(t *testing.T) {
+	server := transferServer(t)
+	server.balance = func(context.Context, *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
+		return &pb.GetBalanceResponse{Balance: &pb.Balance{AddressBalance: proto.Uint64(100_000_000)}}, nil
+	}
+	server.coins = func(context.Context, *pb.ListOwnedObjectsRequest) (*pb.ListOwnedObjectsResponse, error) {
+		return &pb.ListOwnedObjectsResponse{}, nil
+	}
+	c := newTestClient(t, server, testKit(t, server))
+	args := buildertest.MustNewTransferArgs(c.Asset.Base(), sender, recipient, xc.NewAmountBlockchainFromUint64(1_000_000), builder.OptionPublicKey(make([]byte, 32)))
+	input, err := c.FetchTransferInput(context.Background(), args)
+	require.NoError(t, err)
+	tb, err := sui.NewTxBuilder(c.Asset.Base())
+	require.NoError(t, err)
+	_, err = tb.Transfer(args, input)
+	require.Error(t, err)
+	input.(xc.TxInputWithTransactionID).SetTransactionID("trusted")
+	_, err = tb.Transfer(args, input)
+	require.NoError(t, err)
+}
+
 func TestPaymentKitReestimatesAfterFundingChanges(t *testing.T) {
 	server := transferServer(t)
 	server.balance = func(context.Context, *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
