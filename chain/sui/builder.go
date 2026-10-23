@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"slices"
 
 	xc "github.com/cordialsys/crosschain"
 	xcbuilder "github.com/cordialsys/crosschain/builder"
@@ -23,7 +22,7 @@ func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
 	return xcbuilder.FeePayerWithConflicts
 }
 
-// NewTxBuilder creates a new Template TxBuilder
+// NewTxBuilder creates a Sui transaction builder.
 func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
@@ -54,10 +53,9 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 			return nil, fmt.Errorf("transaction ID does not match TxInput")
 		}
 		// The argument is trusted application data, like the optional input setter.
-		copyInput := *local
-		copyInput.Coins = slices.Clone(local.Coins)
+		copyInput := local.Clone()
 		copyInput.TransactionID = id
-		local = &copyInput
+		local = copyInput
 		input = local
 	}
 	requested, _ := args.GetContract()
@@ -333,6 +331,11 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 	}
 	if len(fromPubKey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
+	}
+	if local_input.TransactionID != "" {
+		if err := txBuilder.validatePaymentKit(local_input); err != nil {
+			return nil, err
+		}
 	}
 	if !local_input.paymentProtected() && local_input.AddressBalance != nil {
 		original := local_input

@@ -369,33 +369,31 @@ func TestStakingKeepsOnlyDiscoveryOnJSONRPC(t *testing.T) {
 	require.Equal(t, 1, calls) // Staking itself does not require the old API.
 }
 
-func TestGasSimulationAndFallback(t *testing.T) {
+func TestGasSimulationValidation(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		effects   *pb.TransactionEffects
 		budget    uint64
-		ok        bool
 		wantError bool
 	}{
-		{"normal", successfulEffects(), 4_000_000, true, false},
-		{"rebate_exceeds_cost", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(1), StorageCost: proto.Uint64(2), StorageRebate: proto.Uint64(10)}}, 2_000_000, true, false},
-		{"failed_execution", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false)}}, 0, false, true},
-		{"large_rebate_cannot_fund_computation", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(10_000_000), StorageCost: proto.Uint64(1_000_000), StorageRebate: proto.Uint64(20_000_000)}}, 10_000_000, true, false},
-		{"missing_effects", nil, 0, false, true},
-		{"missing_gas", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}}, 0, false, true},
+		{"normal", successfulEffects(), 4_000_000, false},
+		{"rebate_exceeds_cost", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(1), StorageCost: proto.Uint64(2), StorageRebate: proto.Uint64(10)}}, 2_000_000, false},
+		{"failed_execution", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(false)}}, 0, true},
+		{"large_rebate_cannot_fund_computation", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}, GasUsed: &pb.GasCostSummary{ComputationCost: proto.Uint64(10_000_000), StorageCost: proto.Uint64(1_000_000), StorageRebate: proto.Uint64(20_000_000)}}, 10_000_000, false},
+		{"missing_effects", nil, 0, true},
+		{"missing_gas", &pb.TransactionEffects{Status: &pb.ExecutionStatus{Success: proto.Bool(true)}}, 0, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := newTestClient(t, &rpcServer{simulate: func(context.Context, *pb.SimulateTransactionRequest) (*pb.SimulateTransactionResponse, error) {
 				return &pb.SimulateTransactionResponse{Transaction: &pb.ExecutedTransaction{Effects: tc.effects}}, nil
 			}})
-			budget, ok, err := c.simulateTransactionGasFee(context.Background(), &xctypes.SubmitTxReq{TxData: []byte{1}}, true)
+			budget, err := c.simulateTransactionGasFee(context.Background(), &xctypes.SubmitTxReq{TxData: []byte{1}}, true)
 			if tc.wantError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 			}
 			require.Equal(t, tc.budget, budget)
-			require.Equal(t, tc.ok, ok)
 		})
 	}
 	server := transferServer(t)

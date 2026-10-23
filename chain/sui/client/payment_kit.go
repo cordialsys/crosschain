@@ -11,25 +11,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Sui chain IDs are the base58-encoded genesis checkpoint digests.
-const (
-	mainnetChainID = "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S"
-	testnetChainID = "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD"
-)
-
-// Published by MystenLabs/ts-sdks/packages/payment-kit/src/constants.ts.
-// Select by genesis digest, never by RPC hostname or a possibly stale net label.
-func paymentKitDeployment(chainID string) *xc.SuiPaymentKitConfig {
-	switch chainID {
-	case testnetChainID:
-		return &xc.SuiPaymentKitConfig{PackageID: "0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497", RegistryID: "0x4960b8dc38cc80df9a548bd72ce09d157e4f5e32c570973cb54c9a634bcaa0d8"}
-	case mainnetChainID:
-		return &xc.SuiPaymentKitConfig{PackageID: "0xbc126f1535fba7d641cb9150ad9eae93b104972586ba20f3c60bfe0e53b69bc6", RegistryID: "0x0481b22fd3c73f3176db4c20419e1d09c6a3074aeed65acdc776f7359285ffd2"}
-	default:
-		return nil
-	}
-}
-
 func (c *Client) fetchPaymentKit(ctx context.Context, from xc.Address, coin string, required bool) (*sui.PaymentKitInput, error) {
 	info, err := c.Ledger.GetServiceInfo(ctx, &pb.GetServiceInfoRequest{})
 	if err != nil {
@@ -37,7 +18,7 @@ func (c *Client) fetchPaymentKit(ctx context.Context, from xc.Address, coin stri
 	}
 	deployment := c.Asset.SuiPaymentKit
 	if deployment == nil {
-		deployment = paymentKitDeployment(info.GetChainId())
+		deployment = sui.DefaultPaymentKitConfig(info.GetChainId())
 	}
 	if deployment == nil {
 		if !required {

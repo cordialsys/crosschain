@@ -151,6 +151,10 @@ sui_payment_kit:
 The client validates the shared registry, version, and supported configuration.
 It requires a registry that sends payment directly to the recipient, and reads
 its current retention setting. Devnet resets can invalidate custom deployments.
+The offline builder also checks the package and registry against its trusted
+configuration or the built-in mainnet/testnet deployment. Configure custom
+deployments on both the client and builder; metadata in `TxInput` cannot select
+arbitrary Move code for the signer to execute.
 The CLI accepts the same overrides with `--sui-payment-kit-package` and
 `--sui-payment-kit-registry`.
 
@@ -206,3 +210,12 @@ It records seven distinct IDs in one checkpoint, an on-chain duplicate rejection
 parallel CLI processes, and a coin conflict resolved by refetching. All temporary
 account funds were recovered. It also records the failed probes that exposed the
 funding-change estimation bug, which is covered by regression tests.
+
+The [2026-10-23 cleanup stress report](testdata/cleanup-stress-testnet-2026-10-23.json)
+records 59 successful native SUI transactions, four expected on-chain duplicate
+rejections, and five identical signed resubmissions without additional debits.
+Twenty-four distinct IDs succeeded in one checkpoint. Coverage includes mixed
+funding, sponsored gas, fragmented coins, legacy transfers, and concurrent CLI
+history checks. All temporary balances were recovered; fees reconcile exactly
+after accounting for a separate incoming 1 SUI deposit. Tokens and staking were
+covered by automated tests, not live transactions in that run.

@@ -1,0 +1,719 @@
+{
+  "date": "2026-10-23",
+  "network": "Sui testnet",
+  "genesis_checkpoint_digest": "69WiPg3DAQiwdxfncX6wYQ2siKwAe6L9BZthQea3JNMD",
+  "rpc": "https://fullnode.testnet.sui.io:443",
+  "base_revision": "8f881ca9162d0db6b07214daa699c967b3bc5dcb",
+  "revision_note": "Executed against the working-tree cleanup changes accompanying this report.",
+  "summary": {
+    "successful_transactions": 59,
+    "expected_onchain_duplicate_rejections": 4,
+    "unexpected_onchain_failures": 0,
+    "identical_signed_resubmissions_without_additional_debit": 5,
+    "local_builder_rejections": 2,
+    "cli_duplicate_blocked_before_broadcast": 1,
+    "all_temporary_accounts_empty": true,
+    "net_gas_mist": 222658455
+  },
+  "concurrency": {
+    "attempts": 28,
+    "distinct_ids_succeeded": 24,
+    "duplicate_id_attempts_rejected": 4,
+    "distinct_id_success_checkpoint": 398425422,
+    "amount_per_payment_mist": 1000,
+    "recipient_credit_mist": 24000,
+    "submission_wall_time_ms": 531.569416,
+    "timing_note": "Concurrent submission time only; not an end-to-end throughput benchmark.",
+    "duplicate_abort_constant": "EPaymentAlreadyExists",
+    "cli_parallel_successes": 6,
+    "cli_conflicting_coin_transfers_queued_and_succeeded": 2
+  },
+  "coverage": [
+    "Native SUI: address-only, coin-only, mixed funding with address gas and coin gas.",
+    "Sponsored native SUI: address/coin/mixed sender funds with address/coin sponsor funds.",
+    "Legacy transfers without Payment Kit IDs, including mixed accounts whose address balance must remain unused.",
+    "One MIST payment; fragmented gas coins; full-balance sponsored recovery.",
+    "JSON TxInput round trips before offline building and signing.",
+    "Distinct IDs submitted concurrently; duplicate ID submitted with distinct transaction bytes; identical signed-byte replay.",
+    "CLI explicit IDs and random default ID; concurrent history reservations; coin conflicts cleared by refetch.",
+    "Local rejection of forged Payment Kit package and address-only transfer without ID; epoch change alone rejected as retry safety."
+  ],
+  "limits": [
+    "Live coverage in this run is native SUI on testnet. Token and staking paths were covered by automated tests, not live transactions in this run.",
+    "Parallel independence applies when owned coin resources do not overlap. Coin-funded transfers still require fresh versions or queuing.",
+    "Payment Kit deduplication assumes the same immutable transfer and trusted registry, within its retention window."
+  ],
+  "accounting": {
+    "root_address": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+    "initial_balance_mist": 5819947703,
+    "external_credit_mist": 1000000000,
+    "external_credit_hash": "93GaJevR4nngeUqV8aUWGoxaKduD7z9tPZ3Va8pinYBC",
+    "external_credit_checkpoint": 398427066,
+    "external_credit_sender": "0x059e21c19f9a8233f4fcbc11fba713c022dcf9d3632961b7ac7836a9ffa8d94f",
+    "final_balance_mist": 6597289248,
+    "net_gas_mist": 222658455,
+    "verified_equation": "initial + external credit - final = total net gas",
+    "note": "Recovery paused when a separate incoming 1 SUI deposit changed the root balance. Its checkpoint receipt was identified before completing recovery. Storage rebates make some transaction net gas costs negative."
+  },
+  "cli_logs": {
+    "cli-queue-0": [
+      "transfer history: id=\"cleanup-cli-queue-0\" checked=1 conflicts=1 skipped=0",
+      "transfer history: id=\"cleanup-cli-queue-0\" checked=1 conflicts=0 skipped=0"
+    ],
+    "cli-queue-1": [
+      "transfer history: id=\"cleanup-cli-queue-1\" checked=0 conflicts=0 skipped=0"
+    ],
+    "cli-duplicate": [
+      "transfer history: id=\"cleanup-cli-parallel-0\" checked=6 conflicts=1 skipped=0",
+      "transfer history: id=\"cleanup-cli-parallel-0\" checked=6 conflicts=1 skipped=0",
+      "Error: refresh transfer input: failed to get transaction gas fee: simulate Sui transaction: rpc error: code = DeadlineExceeded desc = context deadline exceeded"
+    ]
+  },
+  "cli_duplicate_note": "The shortened 7-second conflict deadline expired during input refresh. History blocked the duplicate and no duplicate transaction was broadcast.",
+  "harness_note": "The first duplicate assertion expected a numeric Move abort code of zero. The harness was corrected to inspect the structured EPaymentAlreadyExists constant, then all 28 receipts and recipient balance were verified. No failed transaction was retried as a new payment.",
+  "automated_validation": [
+    "PASS: go test -mod=readonly -race ./chain/sui/... ./builder/... ./cmd/xc/commands ./factory/drivers/...",
+    "PASS: go test -mod=readonly -tags not_ci ./...",
+    "PASS: CGO_ENABLED=0 go build -mod=readonly ./...",
+    "PASS: git diff --check"
+  ],
+  "accounts": {
+    "address": "0xec929e5e46ceac7438f47953de0642b52ad95794e49b051932491551d5995012",
+    "coins": "0xd408bca4007ee30d2c937736388257d862c2b2336a39cfe713d18c0376fb01ef",
+    "dust": "0x445de6766880cabc45be637e5ac3a65be2541a37e940b6af0f7d5df53b4fe3a1",
+    "fragmented": "0x771404259b781262dccbdcb5656bfbd473e1a6bfcace4e9599202eb3bc2beee5",
+    "mixed-address": "0xc12c3b7089083d37fd6abc3d9636a3d168b2917dfd165829f1b0de3f9afbed47",
+    "mixed-coins": "0xded7e30190f9edd01b8100914d66425f3481b4686ad549220fa238dda26d0ce3",
+    "recipient": "0x68434e301ddf1e0c89f9e4c0ce0e9d6e0d42f76935f840d88800d6cb6026bb63",
+    "root": "0x64bdfec370cec1659f3799cb3c436bd057067932c748cb28d54164fa0494c320",
+    "sponsor-address": "0x135f04745184a4f9eb3d95f5e254fb9ce6ae51c8cb690981036b69a764fbbfa5",
+    "sponsor-coins": "0xefb0b5290b6578c42b324cdef38aa194d89f18006104f4e400d138d6205b97fa",
+    "token-address-gas": "0xee5f6c4f14a6973832544f540092c5811b63837e1ee0c3f3ac4eef756ab8c874",
+    "token-coin-gas": "0x62e42d74fed5b82f7e440ef8ea42174d675651ce91e9afd2e2f170c372daaf45"
+  },
+  "transactions": [
+    {
+      "case": "setup-native-profiles",
+      "hash": "2nqQXpbtR4BhTE2ZHmysb9dU8FWZwBpk5VWk2o7ie3SD",
+      "status": "succeeded",
+      "net_gas_mist": 5940000,
+      "checkpoint": 398425114,
+      "address_gas": true,
+      "withdrawals_mist": [
+        1780000000
+      ]
+    },
+    {
+      "case": "native-address-only",
+      "hash": "ENb2XESrr1LnF4qZK5w5Sm92ozYkGn2Smd7YeEHvCdMk",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425121,
+      "address_gas": true,
+      "withdrawals_mist": [
+        10000000
+      ]
+    },
+    {
+      "case": "native-coin-only",
+      "hash": "CBprpdEQGZZPyd6XXb1rjD564fgaCsHQSsEcWnEeDqmN",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398425130,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "native-mixed-address-gas",
+      "hash": "7psgwqW7jb5Jb8FEHHZ4WgTf5j2V6Zor9tQ6CZu6Km45",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398425141,
+      "address_gas": true,
+      "withdrawals_mist": [
+        170000000
+      ]
+    },
+    {
+      "case": "native-mixed-coin-gas",
+      "hash": "HEQbQdVACJ5sJcx6VAe9bA6pokJsjwfF5KjZNztohgVL",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398425149,
+      "address_gas": false,
+      "withdrawals_mist": [
+        10142264
+      ]
+    },
+    {
+      "case": "native-sponsored-address-address",
+      "hash": "ZYJNcyW36keB3Z6UBa4thh1eNt1kVXkAGQ2DtxUNnwp",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425157,
+      "address_gas": true,
+      "withdrawals_mist": [
+        10000000
+      ]
+    },
+    {
+      "case": "native-sponsored-address-coins",
+      "hash": "89BhX5yUcwy8agRi6mg6mAFY8kab2B3KneNyaCt5QjVd",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398425166,
+      "address_gas": false,
+      "withdrawals_mist": [
+        10000000
+      ]
+    },
+    {
+      "case": "native-sponsored-coins-address",
+      "hash": "HnyAt9ufQgTrYUP1YwewLsBEmyMJgzUkNqyZU7NFp764",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398425175,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "native-sponsored-coins-coins",
+      "hash": "DrwwDAZSirsPbRCwd6qYDkkaQ2XtEgp767TH5L73NpX6",
+      "status": "succeeded",
+      "net_gas_mist": 5142363,
+      "checkpoint": 398425183,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "native-sponsored-mixed-address",
+      "hash": "DY4cdfCtGTy277w2rwgYfYVzWGSmQerdg5Uiv3AcGDG2",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425192,
+      "address_gas": true,
+      "withdrawals_mist": [
+        3000000
+      ]
+    },
+    {
+      "case": "native-sponsored-mixed-coins",
+      "hash": "Ht7nPVgLPFDb4YoptmLzhxcLo1mwzTavAd5UmPo7FpmV",
+      "status": "succeeded",
+      "net_gas_mist": 5142363,
+      "checkpoint": 398425201,
+      "address_gas": false,
+      "withdrawals_mist": [
+        1000000
+      ]
+    },
+    {
+      "case": "native-one-mist",
+      "hash": "6CHLwf2qXj6fDhbNWdGgkKhiyP6PKbKCahKdpZ92HsBE",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425210,
+      "address_gas": true,
+      "withdrawals_mist": [
+        1
+      ]
+    },
+    {
+      "case": "stress-0",
+      "hash": "5eQMY4SQeKvPTZhEm3pyjvbELeTWaKznsn1wYD3w7KQz",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-1",
+      "hash": "G8QHuW3vbRFbNagoWeRtysMrCiLaBrLtcyY7AoUbMXAq",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-2",
+      "hash": "88ABopUbyrFcQgobebfirSxyzgSgGK9tDhsTevWaah5V",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-3",
+      "hash": "G8R7Nz68LbPJrxmZEv5mdbMJqHgEQL49MaEqP6BY7ncn",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-4",
+      "hash": "BUdb6SbdmCzxxaVMz5qCKzJH3XPmbz3xn7UVniXxp4B3",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-5",
+      "hash": "9w4rvv3TQEoXYBidGkSU2QCymyvhHLhTvTfp1w9wRf24",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-6",
+      "hash": "8F6KYHFWjLfstMm1qM7qsS8Sj6aKwjqdp42fTBGAEz8U",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-7",
+      "hash": "4qqfXsbdhsdyaVLCVbGpa3GFpDEJQSiySUp7V4M818nY",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-8",
+      "hash": "AbcXW6vLR1WM7PfcPrfz5invXKQsAdXVWWVx8U2ZkFdS",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-9",
+      "hash": "4JbCpxpW963oHpRiY3nscLSavrQzmRaUSXAnAaAp6AtY",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-10",
+      "hash": "DS9vW6BEFGxLTTvrr6ncwRexnD2KrvpBd61q5tSwBpz3",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-11",
+      "hash": "6bus2WHriG6ggvhAm6XLPHBfAU8EdXLVQNZRTBQ2HhE4",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-12",
+      "hash": "AyvyN9LjbTGwcmheRx6NwHo129XrGzUTpDpCfwC4sn62",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-13",
+      "hash": "Bz8kXkhWi4c6FrbfriKeVk1fpbnx7fmkjBbzegJbPzrK",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-14",
+      "hash": "22QnLBuudmeeAcS9UawDP7hAwjCTA5ssvoGUCXDaZhmx",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-15",
+      "hash": "F2Hk2URMyKp6kQuxiE7rv2zYQhzsRhryVuaGDVkf6vNw",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-16",
+      "hash": "2SDA7sXswZLFnS7Q8N3MPWSVcuTwAGPkDz6PwczsZMHU",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-17",
+      "hash": "3uwyHYG2ErqsWSWEXEHftyphXxcy3eF72KQtmN8m41R8",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-18",
+      "hash": "DZ27bgrzHanV6ogPq6Sxt1arcWyB1rvQqPM9gZjuK1zL",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-19",
+      "hash": "Ada5jug3bWfhMSW47iHhfJptirPe6zBsMxaWeDAbM2Wk",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-20",
+      "hash": "7EFiuCyP9PaRS7AoQj6khEp91eCvi8n2rcZnYpJwTdgu",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-21",
+      "hash": "2Hjr4c6AxcVUCjRq5HwRydvhJHywtnws6AwDByrMVgoM",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-22",
+      "hash": "BzjBg3PicvE4oZUBhjKLu1ty6LnKgqEjrTHGyjkeeX3C",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-23",
+      "hash": "8DunYhwq4G8bs51MTc7iFVcvZqpr621L4nQgc1Vfvds3",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "stress-24",
+      "hash": "G4fuHQbaSbQWFifsgUsY5LXMHmyV2Hv5CnvgbjspK3TM",
+      "status": "duplicate-rejected-on-chain",
+      "net_gas_mist": 1000166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": [],
+      "error": "success:false  error:{description:\"MoveAbort(MoveLocation { module: ModuleId { address: 7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497, name: Identifier(\\\"payment_kit\\\") }, function: 16, instruction: 15, function_name: Some(\\\"write_payment_record\\\") }, 13835059854873460737) in command 1\"  command:1  kind:MOVE_ABORT  abort:{abort_code:13835059854873460737  location:{package:\"0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497\"  module:\"payment_kit\"  function:16  instruction:15  function_name:\"write_payment_record\"}  clever_error:{error_code:0  line_number:419  constant_name:\"EPaymentAlreadyExists\"  rendered:\"Duplicate payment detected\"}}}"
+    },
+    {
+      "case": "stress-25",
+      "hash": "7XiDTvK4MCwpzbdCennY7X5LKQT7YVGEJKHZmADHPtt",
+      "status": "duplicate-rejected-on-chain",
+      "net_gas_mist": 1000166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": [],
+      "error": "success:false  error:{description:\"MoveAbort(MoveLocation { module: ModuleId { address: 7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497, name: Identifier(\\\"payment_kit\\\") }, function: 16, instruction: 15, function_name: Some(\\\"write_payment_record\\\") }, 13835059854873460737) in command 1\"  command:1  kind:MOVE_ABORT  abort:{abort_code:13835059854873460737  location:{package:\"0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497\"  module:\"payment_kit\"  function:16  instruction:15  function_name:\"write_payment_record\"}  clever_error:{error_code:0  line_number:419  constant_name:\"EPaymentAlreadyExists\"  rendered:\"Duplicate payment detected\"}}}"
+    },
+    {
+      "case": "stress-26",
+      "hash": "3s6runsRZtrV4JcJdHM4p2xZWXqp4xoHWKNbKcgYmQVE",
+      "status": "duplicate-rejected-on-chain",
+      "net_gas_mist": 1000166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": [],
+      "error": "success:false  error:{description:\"MoveAbort(MoveLocation { module: ModuleId { address: 7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497, name: Identifier(\\\"payment_kit\\\") }, function: 16, instruction: 15, function_name: Some(\\\"write_payment_record\\\") }, 13835059854873460737) in command 1\"  command:1  kind:MOVE_ABORT  abort:{abort_code:13835059854873460737  location:{package:\"0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497\"  module:\"payment_kit\"  function:16  instruction:15  function_name:\"write_payment_record\"}  clever_error:{error_code:0  line_number:419  constant_name:\"EPaymentAlreadyExists\"  rendered:\"Duplicate payment detected\"}}}"
+    },
+    {
+      "case": "stress-27",
+      "hash": "29RWaGxk1BLrScSTQKhEtVDvcoNPVXDgtt5mWdLwz1bA",
+      "status": "duplicate-rejected-on-chain",
+      "net_gas_mist": 1000166,
+      "checkpoint": 398425422,
+      "address_gas": true,
+      "withdrawals_mist": [],
+      "error": "success:false  error:{description:\"MoveAbort(MoveLocation { module: ModuleId { address: 7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497, name: Identifier(\\\"payment_kit\\\") }, function: 16, instruction: 15, function_name: Some(\\\"write_payment_record\\\") }, 13835059854873460737) in command 1\"  command:1  kind:MOVE_ABORT  abort:{abort_code:13835059854873460737  location:{package:\"0x7e069abe383e80d32f2aec17b3793da82aabc8c2edf84abbf68dd7b719e71497\"  module:\"payment_kit\"  function:16  instruction:15  function_name:\"write_payment_record\"}  clever_error:{error_code:0  line_number:419  constant_name:\"EPaymentAlreadyExists\"  rendered:\"Duplicate payment detected\"}}}"
+    },
+    {
+      "case": "legacy-coins",
+      "hash": "HCL4RZTf7LwhNZ1yRHup8P3hU5FF7Pd9EUoEfhwq4ZfJ",
+      "status": "succeeded",
+      "net_gas_mist": 1988099,
+      "checkpoint": 398425979,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "legacy-mixed-coins-only",
+      "hash": "MP22xtGXSmQSYSaVEHA2TwzKzzCHDt5G4kRb6QRsDYQ",
+      "status": "succeeded",
+      "net_gas_mist": -19745629,
+      "checkpoint": 398425989,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "forged-package",
+      "hash": "",
+      "status": "rejected-as-expected",
+      "net_gas_mist": 0,
+      "checkpoint": 0,
+      "address_gas": false,
+      "withdrawals_mist": [],
+      "error": "Payment Kit input does not match trusted deployment"
+    },
+    {
+      "case": "address-only-without-id",
+      "hash": "",
+      "status": "rejected-as-expected",
+      "net_gas_mist": 0,
+      "checkpoint": 0,
+      "address_gas": false,
+      "withdrawals_mist": [],
+      "error": "failed to build transfer base: insufficient funds: have 0, need 1"
+    },
+    {
+      "case": "setup-fragmented-gas",
+      "hash": "ACrAopVwtrDvAMDaVhfCCZh3nmwYZMj9LimdqeVC4Ho7",
+      "status": "succeeded",
+      "net_gas_mist": 10880000,
+      "checkpoint": 398425996,
+      "address_gas": true,
+      "withdrawals_mist": [
+        10001000
+      ]
+    },
+    {
+      "case": "fragmented-payment-kit",
+      "hash": "BVYsVimNjVTegJs2b3N4BsokFtPnKXoVNi5gyUbBi95k",
+      "status": "succeeded",
+      "net_gas_mist": -3748846,
+      "checkpoint": 398426004,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-parallel-4",
+      "hash": "7nsydM7iKV9BTuPJ7zb2XzRXgDw9xWF5YycSLb8M1Zs7",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426211,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-parallel-2",
+      "hash": "HCcyfF8TkZaTeP9DzvK4Hrvc26RutAZjMLfmxX7B84rx",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426212,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-parallel-1",
+      "hash": "GkuJSUS2yaBm1EkdQ9myjSbMGEWbAYLnFf6mod95dhDs",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426212,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-b931d56c-9248-4d25-92f2-fac064991c60",
+      "hash": "CvkFJpcdu1jvoupNyFzRGyosP3GcphHKatJoQzT8BXT",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426211,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-parallel-3",
+      "hash": "HUZ5KtaNCvCZ2zAAwLyGs8Kb1thxizkptYFZBphVrKRw",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426212,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-parallel-0",
+      "hash": "44Jn7wsxMzPwZ59wcPPJoGLnaVoGHz87jJddttxzav5y",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398426212,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-queue-1",
+      "hash": "4fmSHsXxVwzpn1ojKhATDjSywqcq6gB8JPG5SRr9WHsa",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398426221,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "cli-cleanup-cli-queue-0",
+      "hash": "65fqvkAn4hts3XCUVFxGKdQ1Cn48TjvnbAZh349GmDxQ",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398426236,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "return-sui-address",
+      "hash": "HQJ57hbRf3tdA2NTweSMuEdqK9K6Wd6LmqDGTsUfD7L8",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427017,
+      "address_gas": true,
+      "withdrawals_mist": [
+        259715667
+      ]
+    },
+    {
+      "case": "return-sui-coins",
+      "hash": "HSbXBkbvUNq9oKoZUxwYJzhUevRnywPQY9Dr27oDuqnz",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398427026,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "return-sui-dust",
+      "hash": "4Q79ZUK6mme5TraLrN5ang5BJHXRkWZBDgdZNXHJ5AJV",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427035,
+      "address_gas": true,
+      "withdrawals_mist": [
+        1000
+      ]
+    },
+    {
+      "case": "return-sui-fragmented",
+      "hash": "4qj4Z3HbgRSNedTnQDvnTV2aqQTTgwALHMirE8fh3bJd",
+      "status": "succeeded",
+      "net_gas_mist": -5724550,
+      "checkpoint": 398427044,
+      "address_gas": false,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "return-sui-mixed-address",
+      "hash": "A6NTQJyqhWwQgDE8DbWYzhUJCWBsXfMZMqghUAHdy6Jp",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427055,
+      "address_gas": true,
+      "withdrawals_mist": [
+        20857736
+      ]
+    },
+    {
+      "case": "return-sui-mixed-coins",
+      "hash": "3sFNdPWydmDAaUYgKpnbvgxbSGC9ZuTfEZDPnrH1pSnK",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427065,
+      "address_gas": true,
+      "withdrawals_mist": [
+        29857736
+      ]
+    },
+    {
+      "case": "return-sui-recipient",
+      "hash": "1498vxZYCqVZNkABM1xP9Br3JXbLNsZXPeqboB3u6wDy",
+      "status": "succeeded",
+      "net_gas_mist": -31410080,
+      "checkpoint": 398427567,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "return-sui-sponsor-address",
+      "hash": "FPHTGVKx2DnCqpwqMhxWUhCUErfiTigNdRRcQ8aZxdEj",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427575,
+      "address_gas": true,
+      "withdrawals_mist": [
+        184573404
+      ]
+    },
+    {
+      "case": "return-sui-sponsor-coins",
+      "hash": "5JnVsGDPLjbiS5DWhdLRoSoE6W32MTPtjJhYUnMvn7Fi",
+      "status": "succeeded",
+      "net_gas_mist": 5142264,
+      "checkpoint": 398427585,
+      "address_gas": true,
+      "withdrawals_mist": []
+    },
+    {
+      "case": "return-sui-token-address-gas",
+      "hash": "z7dCrqdeafzhdW8izu8qMhWxpzCfD6PBYotZMc8ie6X",
+      "status": "succeeded",
+      "net_gas_mist": 5142166,
+      "checkpoint": 398427595,
+      "address_gas": true,
+      "withdrawals_mist": [
+        150000000
+      ]
+    },
+    {
+      "case": "return-sui-token-coin-gas",
+      "hash": "H5mfpdFymt17RfGqJgMf5GMgzAfCnW7oS6SRrdrXd2Fa",
+      "status": "succeeded",
+      "net_gas_mist": -1772945,
+      "checkpoint": 398427604,
+      "address_gas": false,
+      "withdrawals_mist": []
+    }
+  ]
+}

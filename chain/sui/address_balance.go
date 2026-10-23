@@ -16,14 +16,11 @@ import (
 // sponsor's address funds. Work on a copy: applications may later set a trusted
 // transaction ID on the original input and build a protected transfer.
 func (input *TxInput) coinOnlyFunding() *TxInput {
-	copyInput := *input
-	copyInput.Coins = append([]*types.Coin(nil), input.Coins...)
-	if input.AddressBalance != nil {
-		balance := *input.AddressBalance
-		balance.Balance, balance.GasBalance = 0, 0
-		copyInput.AddressBalance = &balance
+	copyInput := input.Clone()
+	if copyInput.AddressBalance != nil {
+		copyInput.AddressBalance.Balance, copyInput.AddressBalance.GasBalance = 0, 0
 	}
-	return &copyInput
+	return copyInput
 }
 
 // addressTransferCoins includes the sender's gas coin when it is spendable SUI.
