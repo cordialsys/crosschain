@@ -55,7 +55,7 @@ func (c *Client) FetchStakingInput(ctx context.Context, args builder.StakeArgs) 
 	}
 
 	stakingInput := &sui.StakingInput{
-		*txInput,
+		TxInput: *txInput,
 	}
 	builder, err := sui.NewTxBuilder(c.Asset.GetChain().Base())
 	if err != nil {

@@ -150,7 +150,7 @@ func (r *transferReservation) write() error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if _, err = tmp.Write(data); err != nil {
 		tmp.Close()
 		return err
