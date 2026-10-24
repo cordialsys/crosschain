@@ -1,6 +1,7 @@
 package sui
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 
@@ -21,7 +22,7 @@ func (txBuilder TxBuilder) SupportsFeePayer() xcbuilder.FeePayerType {
 	return xcbuilder.FeePayerWithConflicts
 }
 
-// NewTxBuilder creates a new Template TxBuilder
+// NewTxBuilder creates a Sui transaction builder.
 func NewTxBuilder(asset *xc.ChainBaseConfig) (*TxBuilder, error) {
 	return &TxBuilder{
 		Asset: asset,
@@ -37,6 +38,85 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	fromPubKey, ok := args.GetPublicKey()
 	if !ok {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
+	}
+	local, ok := input.(*TxInput)
+	if !ok {
+		return nil, errors.New("xc.TxInput is not from a sui chain")
+	}
+	original := local
+	defer func() { original.GasBudget = local.GasBudget }()
+	if id, ok := args.GetTransactionID(); ok {
+		if id == "" {
+			return nil, fmt.Errorf("transaction ID must not be empty")
+		}
+		if local.TransactionID != "" && local.TransactionID != id {
+			return nil, fmt.Errorf("transaction ID does not match TxInput")
+		}
+		// The argument is trusted application data, like the optional input setter.
+		copyInput := local.Clone()
+		copyInput.TransactionID = id
+		local = copyInput
+		input = local
+	}
+	requested, _ := args.GetContract()
+	expected := string(requested)
+	if expected == "" {
+		expected = NativeCoin
+	}
+	expectedTag, err := parseCoinType(NormalizeCoinContract(expected))
+	if err != nil {
+		return nil, fmt.Errorf("invalid transfer coin type: %w", err)
+	}
+	expectedBytes, err := expectedTag.BcsSerialize()
+	if err != nil {
+		return nil, err
+	}
+	checkType := func(actual string) error {
+		tag, err := parseCoinType(NormalizeCoinContract(actual))
+		if err != nil {
+			return err
+		}
+		encoded, err := tag.BcsSerialize()
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(expectedBytes, encoded) {
+			return fmt.Errorf("transaction input coin type does not match requested transfer asset")
+		}
+		return nil
+	}
+	if local.AddressBalance != nil {
+		if err := checkType(local.AddressBalance.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	if local.paymentProtected() {
+		if err := checkType(local.PaymentKit.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	transferCoins := 0
+	for _, coin := range local.Coins {
+		if coin == nil {
+			return nil, fmt.Errorf("nil transfer coin")
+		}
+		// Legacy inputs may also include GasCoin in Coins; newTransactionBase
+		// removes that entry before building transfer commands.
+		if local.AddressBalance == nil && coin.CoinObjectId.String() == local.GasCoin.CoinObjectId.String() {
+			continue
+		}
+		transferCoins++
+		if err := checkType(coin.CoinType); err != nil {
+			return nil, err
+		}
+	}
+	if local.AddressBalance == nil && transferCoins == 0 {
+		// With no transfer coins the legacy builder uses GasCoin. Never allow a
+		// missing token balance to turn a token request into a native SUI transfer.
+		// Gas objects are intrinsically SUI; older inputs may omit CoinType.
+		if err := checkType(NativeCoin); err != nil {
+			return nil, fmt.Errorf("no coins available for requested transfer asset: %w", err)
+		}
 	}
 	return txBuilder.NewTransfer(feePayer, fromPubKey, args.GetFrom(), args.GetTo(), args.GetAmount(), input)
 }
@@ -63,6 +143,10 @@ func (txBuilder TxBuilder) newTransactionBase(feePayer xc.Address, from xc.Addre
 	var ok bool
 	if local_input, ok = input.(*TxInput); !ok {
 		return transactionBase{}, errors.New("xc.TxInput is not from a sui chain")
+	}
+
+	if local_input.AddressBalance != nil {
+		return txBuilder.newAddressTransactionBase(feePayer, from, amount, local_input)
 	}
 
 	fromData, err := HexToAddress(string(from))
@@ -154,8 +238,11 @@ func (txBuilder TxBuilder) newTransactionBase(feePayer xc.Address, from xc.Addre
 // 2. Merge coins if necessary
 // 3. Set the primary coin when only one coin is provided
 // Required for staking and transfer operations
-func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, from xc.Address, input TxInput) (bcs.Argument, []bcs.Command, []bcs.CallArg, error) {
+func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, from xc.Address, input TxInput, amount xc.AmountBlockchain) (bcs.Argument, []bcs.Command, []bcs.CallArg, error) {
 
+	if input.AddressBalance != nil {
+		return txBuilder.prepareAddressBalanceCommands(feePayer, from, input, amount)
+	}
 	cmd_inputs := []bcs.CallArg{}
 	commands := []bcs.Command{}
 	var gasRemainderResult bcs.Argument
@@ -234,6 +321,9 @@ func (txBuilder TxBuilder) prepareGasSplitAndMergeCommands(feePayer xc.Address, 
 
 // Old transfer interface
 func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
+	if amount.Sign() < 0 || amount.Int().BitLen() > 64 {
+		return nil, fmt.Errorf("Sui transfer amount must fit uint64")
+	}
 	var local_input *TxInput
 	var ok bool
 	if local_input, ok = input.(*TxInput); !ok {
@@ -241,6 +331,17 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 	}
 	if len(fromPubKey) == 0 {
 		return &Tx{}, errors.New("must set public key on TxInput for SUI")
+	}
+	if local_input.TransactionID != "" {
+		if err := txBuilder.validatePaymentKit(local_input); err != nil {
+			return nil, err
+		}
+	}
+	if !local_input.paymentProtected() && local_input.AddressBalance != nil {
+		original := local_input
+		local_input = local_input.coinOnlyFunding()
+		input = local_input
+		defer func() { original.GasBudget = local_input.GasBudget }()
 	}
 
 	txBase, err := txBuilder.newTransactionBase(
@@ -253,35 +354,51 @@ func (txBuilder TxBuilder) NewTransfer(feePayer xc.Address, fromPubKey []byte, f
 		return nil, fmt.Errorf("failed to build transfer base: %w", err)
 	}
 
-	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer, from, *local_input)
+	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer, from, *local_input, amount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gas split and merge commands: %w", err)
 	}
 
-	// spend the primary coin by splitting `amt` from it
-	commands = append(commands, &bcs.Command__SplitCoins{
-		Field0: primaryCoinInput,
-		Field1: []bcs.Argument{
-			// the last input has the amount
-			ArgumentInput(uint16(len(cmd_inputs))),
-		},
-	})
-	cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+	// A freshly redeemed withdrawal is already exactly the requested amount.
+	// Consume it directly: splitting would leave an unused (even if zero) Coin.
+	transferCoin := primaryCoinInput
+	_, freshWithdrawal := primaryCoinInput.(*bcs.Argument__Result)
+	if local_input.AddressBalance == nil || !freshWithdrawal {
+		// spend the primary coin by splitting `amt` from it
+		commands = append(commands, &bcs.Command__SplitCoins{
+			Field0: primaryCoinInput,
+			Field1: []bcs.Argument{
+				// the last input has the amount
+				ArgumentInput(uint16(len(cmd_inputs))),
+			},
+		})
+		cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
 
-	// send the newly split object
-	commands = append(commands, &bcs.Command__TransferObjects{
-		Field0: []bcs.Argument{
-			// last cmd result has the coin to send
-			ArgumentResult(uint16(len(commands) - 1)),
-		},
-		Field1: ArgumentInput(uint16(len(cmd_inputs))),
-	})
-
-	toPure, err := HexToPure(string(to))
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode 'to': %w", err)
+		transferCoin = ArgumentResult(uint16(len(commands) - 1))
 	}
-	cmd_inputs = append(cmd_inputs, toPure)
+
+	if local_input.TransactionID != "" {
+		cmd_inputs, commands, err = local_input.appendPayment(from, to, amount.Uint64(), transferCoin, cmd_inputs, commands)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// send the newly split object
+		commands = append(commands, &bcs.Command__TransferObjects{
+			Field0: []bcs.Argument{
+				// Either the exact withdrawal or the split coin.
+				transferCoin,
+			},
+			Field1: ArgumentInput(uint16(len(cmd_inputs))),
+		})
+
+		toPure, err := HexToPure(string(to))
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode 'to': %w", err)
+		}
+		cmd_inputs = append(cmd_inputs, toPure)
+
+	}
 
 	xcTx := &Tx{
 		Tx:         txBase.Build(cmd_inputs, commands),

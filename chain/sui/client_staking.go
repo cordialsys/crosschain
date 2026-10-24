@@ -185,7 +185,7 @@ func (c *Client) FetchUnstakingInput(ctx context.Context, args builder.StakeArgs
 
 			remainingAfterSplit, ok := s.TrySplit(amountToUnstake, minAmount, decimals)
 			if ok {
-				amountToUnstake = amountToUnstake.Sub(&remainingStake)
+				amountToUnstake = zeroAmount
 				stakeToSplit = s
 				splitRemainder = remainingAfterSplit
 				break

@@ -23,6 +23,7 @@ import (
 	"github.com/cordialsys/crosschain/config"
 	"github.com/cordialsys/crosschain/factory/drivers"
 	"github.com/cordialsys/crosschain/factory/signer"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -40,6 +41,8 @@ func CmdTxTransfer() *cobra.Command {
 	var addressFormat string
 	var nonDeterministic bool
 	var transferInputFile string
+	var transferID, historyDir, paymentPackage, paymentRegistry string
+	var conflictTimeout time.Duration
 
 	cmd := &cobra.Command{
 		Use:     "transfer <to> <amount>",
@@ -105,6 +108,21 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("must set env %s", signer.EnvPrivateKey)
 			}
 
+			if conflictTimeout <= 0 || conflictTimeout > 30*time.Minute {
+				return fmt.Errorf("--conflict-timeout must be between 0 and 30m")
+			}
+			if paymentPackage != "" || paymentRegistry != "" {
+				if chainConfig.Driver != xc.DriverSui || paymentPackage == "" || paymentRegistry == "" {
+					return fmt.Errorf("both Payment Kit package and registry must be supplied for Sui")
+				}
+				chainConfig.SuiPaymentKit = &xc.SuiPaymentKitConfig{PackageID: paymentPackage, RegistryID: paymentRegistry}
+			}
+			if transferID == "" {
+				if cmd.Flags().Changed("id") {
+					return fmt.Errorf("--id must not be empty")
+				}
+				transferID = uuid.NewString()
+			}
 			client, err := xcFactory.NewClient(chainConfig)
 			if err != nil {
 				return fmt.Errorf("could not load client: %v", err)
@@ -210,6 +228,7 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("invalid to address: %v", err)
 			}
 
+			tfOptions = append(tfOptions, builder.OptionTransactionID(transferID))
 			tfArgs, err := builder.NewTransferArgs(chainConfig.Base(), from, xc.Address(toWalletAddress), amountBlockchain, tfOptions...)
 			if err != nil {
 				return fmt.Errorf("invalid transfer args: %v", err)
@@ -243,12 +262,38 @@ func CmdTxTransfer() *cobra.Command {
 				return fmt.Errorf("could not unmarshal transaction input: %v", err)
 			}
 
-			// set params on input that are enforced by the builder (rather than depending soley on untrusted RPC)
-			timeStamp, _ := tfArgs.GetTimestamp()
-			priorityMaybe, _ := tfArgs.GetPriority()
-			input, err = builder.WithTxInputOptions(input, timeStamp, priorityMaybe)
+			// Apply trusted options after every fetch, before any conflict checks.
+			prepareInput := func(in xc.TxInput) (xc.TxInput, error) {
+				timestamp, _ := tfArgs.GetTimestamp()
+				priority, _ := tfArgs.GetPriority()
+				return builder.WithTxInputOptions(in, timestamp, priority, transferID)
+			}
+			var reservation *transferReservation
+			broadcastStarted := false
+			defer func() {
+				if !broadcastStarted {
+					reservation.discard()
+				}
+			}()
+			if !dryRun && !offline {
+				history, historyErr := newTransferHistory(historyDir, chainConfig, from)
+				if historyErr != nil {
+					logrus.WithError(historyErr).Warn("transfer history unavailable")
+				}
+				if history != nil {
+					var fetch func(context.Context) (xc.TxInput, error)
+					if transferInputFile == "" {
+						fetch = func(ctx context.Context) (xc.TxInput, error) { return client.FetchTransferInput(ctx, tfArgs) }
+					}
+					input, reservation, err = waitForTransferInput(cmd.Context(), history, transferID, tfArgs, input, fetch, prepareInput, conflictTimeout, 3*time.Second)
+				} else {
+					input, err = prepareInput(input)
+				}
+			} else {
+				input, err = prepareInput(input)
+			}
 			if err != nil {
-				return fmt.Errorf("could not apply trusted options to tx-input: %v", err)
+				return err
 			}
 
 			if inclusiveFee {
@@ -350,6 +395,10 @@ func CmdTxTransfer() *cobra.Command {
 				return nil
 			}
 
+			if err := reservation.update(cmd.Context(), tfArgs, input, tx.Hash()); err != nil {
+				logrus.WithError(err).Warn("could not update transfer history")
+			}
+			broadcastStarted = true
 			// submit the tx, wait a bit, fetch the tx info (network needed)
 			err = SubmitTransaction(chainConfig.Chain, client, tx, timeout)
 			if err != nil {
@@ -411,6 +460,11 @@ func CmdTxTransfer() *cobra.Command {
 	cmd.Flags().StringVar(&addressFormat, "address-format", "", "format of the address")
 	cmd.Flags().BoolVar(&nonDeterministic, "non-deterministic", false, "Skip implementation checks for determinism (only important in for consensus sensitive contexts)")
 	cmd.Flags().StringVar(&transferInputFile, "input", "", "File containing the transfer input.  If used, will skip fetching the input from the RPC.")
+	cmd.Flags().StringVar(&transferID, "id", "", "Stable ID for this logical transfer (random UUID by default; reuse for retries only)")
+	cmd.Flags().StringVar(&historyDir, "history-dir", "", "Transfer history directory (defaults to XC_TRANSFER_HISTORY_DIR or the user cache)")
+	cmd.Flags().DurationVar(&conflictTimeout, "conflict-timeout", 30*time.Minute, "Wait for input conflicts to clear, up to 30m")
+	cmd.Flags().StringVar(&paymentPackage, "sui-payment-kit-package", "", "Payment Kit package override, required with registry on devnet")
+	cmd.Flags().StringVar(&paymentRegistry, "sui-payment-kit-registry", "", "Payment Kit shared registry override")
 	return cmd
 }
 

@@ -23,6 +23,9 @@ func (args *TransferArgs) GetFrom() xc.Address            { return args.from }
 func (args *TransferArgs) GetTo() xc.Address              { return args.to }
 func (args *TransferArgs) GetAmount() xc.AmountBlockchain { return args.amount }
 
+func (args *TransferArgs) GetTransactionID() (string, bool) { return get(args.options.transactionID) }
+func (args *TransferArgs) SetTransactionID(id string)       { args.options.transactionID = &id }
+
 // Exposed options
 func (args *TransferArgs) GetMemo() (string, bool)                { return args.options.GetMemo() }
 func (args *TransferArgs) GetTimestamp() (int64, bool)            { return args.options.GetTimestamp() }

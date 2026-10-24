@@ -39,6 +39,12 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	if !ok {
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
 	}
+	// Staking does not execute Payment Kit, even if an application set an ID.
+	original := stakeInput
+	copyInput := *stakeInput
+	copyInput.TxInput = *stakeInput.TxInput.coinOnlyFunding()
+	stakeInput = &copyInput
+	defer func() { original.GasBudget = stakeInput.GasBudget }()
 
 	validator, ok := args.GetValidator()
 	if !ok {
@@ -48,6 +54,9 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	amount, ok := args.GetAmount()
 	if !ok {
 		return nil, buildererrors.ErrStakingAmountRequired
+	}
+	if amount.Sign() < 0 || amount.Int().BitLen() > 64 {
+		return nil, fmt.Errorf("Sui stake amount must fit uint64")
 	}
 	feePayer, ok := args.GetFeePayer()
 	if !ok {
@@ -71,22 +80,28 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 	primaryCoinInput, commands, cmd_inputs, err := txBuilder.prepareGasSplitAndMergeCommands(feePayer,
 		args.GetFrom(),
 		stakeInput.TxInput,
+		amount,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare split and merge commands: %w", err)
 	}
 
-	// save split result for later use in MoveCall command
-	cointSplitResult := ArgumentResult(uint16(len(commands)))
-	// now let's spend the primary coin by splitting `amt` from it
-	commands = append(commands, &bcs.Command__SplitCoins{
-		Field0: primaryCoinInput,
-		Field1: []bcs.Argument{
-			// the last input has the amount
-			ArgumentInput(uint16(len(cmd_inputs))),
-		},
-	})
-	cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+	cointSplitResult := primaryCoinInput
+	_, freshWithdrawal := primaryCoinInput.(*bcs.Argument__Result)
+	if stakeInput.AddressBalance == nil || !freshWithdrawal {
+		// save split result for later use in MoveCall command
+		cointSplitResult = ArgumentResult(uint16(len(commands)))
+		// now let's spend the primary coin by splitting `amt` from it
+		commands = append(commands, &bcs.Command__SplitCoins{
+			Field0: primaryCoinInput,
+			Field1: []bcs.Argument{
+				// the last input has the amount
+				ArgumentInput(uint16(len(cmd_inputs))),
+			},
+		})
+		cmd_inputs = append(cmd_inputs, U64ToPure(amount.Uint64()))
+
+	}
 
 	// add system state input
 	systemStateArg := ArgumentInput(uint16(len(cmd_inputs)))
@@ -123,6 +138,9 @@ func (txBuilder TxBuilder) Stake(args xcbuilder.StakeArgs, input xc.StakeTxInput
 		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
 	}
+	if feePayer != args.GetFrom() {
+		xcTx.extraFeePayer = feePayer
+	}
 	return xcTx, nil
 }
 
@@ -131,6 +149,11 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	if !ok {
 		return &Tx{}, errors.New("xc.StakeTxInput is not from a sui chain")
 	}
+	original := unstakeInput
+	copyInput := *unstakeInput
+	copyInput.TxInput = *unstakeInput.TxInput.coinOnlyFunding()
+	unstakeInput = &copyInput
+	defer func() { original.GasBudget = unstakeInput.GasBudget }()
 
 	validator, _ := args.GetValidator()
 	account, _ := args.GetStakeAccount()
@@ -151,7 +174,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	txBase, err := txBuilder.newTransactionBase(
 		feePayer,
 		args.GetFrom(),
-		amount,
+		xc.NewAmountBlockchainFromUint64(0),
 		&unstakeInput.TxInput,
 	)
 	if err != nil {
@@ -174,7 +197,7 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 	// prepare unstake commands
 	unstakedAmount := xc.NewAmountBlockchainFromUint64(0)
 	for _, s := range unstakeInput.StakesToUnstake {
-		err := ValidateStakeObject(unstakeInput.StakeToSplit, validator, account)
+		err := ValidateStakeObject(s, validator, account)
 		if err != nil {
 			return nil, fmt.Errorf("invalid input: %w", err)
 		}
@@ -222,12 +245,15 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 		if unstakeInput.SplitAmount.IsZero() {
 			return nil, fmt.Errorf("split object is provided, but split remainder is incorrect")
 		}
-		balance := unstakeInput.StakeToSplit.GetBalance()
-		remainder := balance.Sub(&unstakeInput.SplitAmount)
-		unstakedAmount = unstakedAmount.Add(&remainder)
-		if unstakedAmount.Cmp(&amount) != 0 {
-			return nil, fmt.Errorf("input unstake(%v) amount and arg amount(%v) are different", unstakedAmount, amount)
+		remaining := amount.Sub(&unstakedAmount)
+		// SplitAmount is principal left staked, not principal plus rewards.
+		// Validate with the same principal conversion used by input preparation.
+		minStake := xc.NewAmountBlockchainFromUint64(1_000_000_000)
+		expected, ok := unstakeInput.StakeToSplit.TrySplit(remaining, minStake, 9)
+		if !ok || expected.Cmp(&unstakeInput.SplitAmount) != 0 {
+			return nil, fmt.Errorf("input split principal does not match requested unstake amount")
 		}
+		unstakedAmount = amount
 		mainStakeIdInput := ArgumentInput(uint16(len(cmd_inputs)))
 		mainStakeId, err := HexToObjectID(unstakeInput.StakeToSplit.ObjectId)
 		if err != nil {
@@ -279,10 +305,16 @@ func (txBuilder TxBuilder) Unstake(args xcbuilder.StakeArgs, input xc.UnstakeTxI
 			},
 		})
 	}
+	if unstakedAmount.Cmp(&amount) != 0 {
+		return nil, fmt.Errorf("input unstake(%v) amount and arg amount(%v) are different", unstakedAmount, amount)
+	}
 
 	xcTx := &Tx{
 		Tx:         txBase.Build(cmd_inputs, commands),
 		public_key: fromPubkey,
+	}
+	if feePayer != args.GetFrom() {
+		xcTx.extraFeePayer = feePayer
 	}
 	return xcTx, nil
 }

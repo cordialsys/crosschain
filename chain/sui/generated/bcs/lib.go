@@ -485,6 +485,8 @@ func DeserializeCallArg(deserializer serde.Deserializer) (CallArg, error) {
 			return nil, err
 		}
 
+	case 2:
+		return loadFundsWithdrawal(deserializer)
 	default:
 		return nil, fmt.Errorf("Unknown variant index for CallArg: %d", index)
 	}
@@ -8814,6 +8816,8 @@ func DeserializeTransactionExpiration(deserializer serde.Deserializer) (Transact
 			return nil, err
 		}
 
+	case 2:
+		return loadValidDuring(deserializer)
 	default:
 		return nil, fmt.Errorf("Unknown variant index for TransactionExpiration: %d", index)
 	}
