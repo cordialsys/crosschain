@@ -126,8 +126,8 @@ func TestRetrySafetyRequiresConsumedObjectOrPaymentID(t *testing.T) {
 	}
 	// Both transfers use address-funded sponsor gas; the shared coin is unused.
 	require.False(t, next.SafeFromDoubleSend(old))
-	// Queuing is deliberately conservative about optional references.
-	require.False(t, next.IndependentOf(old))
+	// Unused sponsor coins must not stall protected transfers.
+	require.True(t, next.IndependentOf(old))
 	// Neither stripping an ID from a cached input nor crossing epochs proves safety.
 	old.TransactionID, next.TransactionID = "", ""
 	next.CurrentEpoch++

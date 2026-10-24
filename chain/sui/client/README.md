@@ -159,9 +159,10 @@ The CLI accepts the same overrides with `--sui-payment-kit-package` and
 `--sui-payment-kit-registry`.
 
 `IndependentOf` rejects the same logical ID, even across epochs. Different IDs
-are independent when their candidate owned-object references do not overlap (or
-the older input expired). Queuing conservatively includes optional gas coins;
-retry safety only counts objects guaranteed to be consumed. Stake objects are
+are independent when their consumed owned-object references do not overlap (or
+the older input expired). Protected transfers exclude unused sponsor gas coins
+from queuing; legacy inputs retain conservative checks. Retry safety only counts
+objects guaranteed to be consumed. Stake objects are
 included for unstaking. An expired input can release a queue conflict, but cannot
 by itself authorize retrying a payment that might already have executed.
 When an ID is supplied during fetching and address funds cover the amount and gas, the client selects

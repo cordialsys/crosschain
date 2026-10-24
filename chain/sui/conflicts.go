@@ -114,9 +114,9 @@ func resourcesOverlap(a, b map[ownedResource]struct{}) bool {
 	return false
 }
 
-// Queuing considers every candidate resource (conservative false conflicts are
-// harmless). Retry safety uses only resources guaranteed to be consumed. In
-// particular, a listed sponsor gas coin may be replaced by address-funded gas.
+// Protected transfers have a deterministic funding choice: queue only consumed
+// resources, excluding unused sponsor coins. Keep legacy queue checks conservative
+// and keep retry safety restricted to resources guaranteed to be consumed.
 func inputResources(input xc.TxInput, guaranteed bool) map[ownedResource]struct{} {
 	refs := map[ownedResource]struct{}{}
 	base := baseInput(input)
@@ -131,7 +131,7 @@ func inputResources(input xc.TxInput, guaranteed bool) map[ownedResource]struct{
 		}
 	}
 	unstake, isUnstake := input.(*UnstakingInput)
-	if !guaranteed {
+	if !guaranteed && !protectedTransfer(input) {
 		addCoins(&base.GasCoin)
 		addCoins(base.Coins...)
 		if base.AddressBalance != nil {
