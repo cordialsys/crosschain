@@ -154,7 +154,10 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, args xcbuilder.
 	}
 
 	instructions := []solana.Instruction{}
-	if txInput.ShouldCreateATA {
+	// Always ensure the recipient ATA exists at execution time: it may have been
+	// closed since the input was fetched. Direct token-account destinations do
+	// not provide the owner needed to derive and recreate an ATA.
+	if !txInput.ToIsATA {
 		// fee payer should pay for the ATA creation, if used.
 		accountCreatorPayer := accountFrom
 		if feePayer != from {
@@ -164,16 +167,12 @@ func (txBuilder TxBuilder) NewTokenTransfer(feePayer xc.Address, args xcbuilder.
 			}
 			accountCreatorPayer = accountFeePayer
 		}
-		createAta := ata.NewCreateInstruction(
+		createAta := ata.NewCreateIdempotentInstructionWithTokenProgram(
 			accountCreatorPayer,
 			accountTo,
 			accountContract,
+			txInput.TokenProgram,
 		).Build()
-		// Adjust the ata-create-account arguments:
-		// index 1 - associated token account
-		// index 5 - token program
-		createAta.Impl.(ata.Create).AccountMetaSlice[1].PublicKey = ataTo
-		createAta.Impl.(ata.Create).AccountMetaSlice[5].PublicKey = txInput.TokenProgram
 		instructions = append(instructions,
 			createAta,
 		)
