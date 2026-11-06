@@ -31,7 +31,7 @@ func (txBuilder TxBuilder) Transfer(args xcbuilder.TransferArgs, input xc.TxInpu
 	if err != nil {
 		return nil, err
 	}
-	return NewTx(tx.(*bitcointx.Tx)), nil
+	return txBuilder.wrapTx(tx.(*bitcointx.Tx))
 }
 
 func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amount xc.AmountBlockchain, input xc.TxInput) (xc.Tx, error) {
@@ -39,7 +39,7 @@ func (txBuilder TxBuilder) NewNativeTransfer(from xc.Address, to xc.Address, amo
 	if err != nil {
 		return nil, err
 	}
-	return NewTx(tx.(*bitcointx.Tx)), nil
+	return txBuilder.wrapTx(tx.(*bitcointx.Tx))
 }
 
 func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input xc.MultiTransferInput) (xc.Tx, error) {
@@ -47,5 +47,17 @@ func (txBuilder TxBuilder) MultiTransfer(args xcbuilder.MultiTransferArgs, input
 	if err != nil {
 		return nil, err
 	}
-	return NewTx(tx.(*bitcointx.Tx)), nil
+	return txBuilder.wrapTx(tx.(*bitcointx.Tx))
+}
+
+func (txBuilder TxBuilder) wrapTx(btcTx *bitcointx.Tx) (xc.Tx, error) {
+	tx := NewTx(btcTx)
+	// The shared driver must not apply Zcash upgrades to forks such as Flux.
+	tx.legacy = txBuilder.Asset.Chain != xc.ZEC
+	if !tx.legacy {
+		if _, err := tx.Build(); err != nil {
+			return nil, err
+		}
+	}
+	return tx, nil
 }

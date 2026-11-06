@@ -15,17 +15,20 @@ import (
 	"github.com/harshavardhana/blake2b-simd"
 )
 
-// Tx for Bitcoin
+// Tx is a transparent Zcash transaction. Flux uses the legacy v4 format.
 type Tx struct {
 	*bitcointx.Tx
 	signatures []*xc.SignatureResponse
+	legacy     bool
 }
 
+// NewTx wraps transparent Bitcoin-style inputs and outputs in a Zcash v5
+// transaction. The inputs must include a consensus branch ID and prevout data.
 func NewTx(tx *bitcointx.Tx) *Tx {
 	return &Tx{Tx: tx}
 }
 
-var _ xc.Tx = &bitcointx.Tx{}
+var _ xc.Tx = &Tx{}
 
 type ZcashTxInput struct {
 	TxID         []byte
@@ -64,7 +67,7 @@ func (output *ZcashTxOutput) Serialize() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// All inputs to match Zcash transaction format + hashing: https://zips.z.cash/zip-0243
+// ZcashTx contains the transparent fields of a v4 or v5 transaction.
 type ZcashTx struct {
 	Version           uint32
 	VersionGroupId    uint32
@@ -76,8 +79,14 @@ type ZcashTx struct {
 	ConsensusBranchId uint32
 }
 
-// ZIP-0243
+// Serialize implements ZIP 225 for v5, and the legacy Sapling format for v4.
 func (tx *ZcashTx) Serialize() ([]byte, error) {
+	if tx.Version == versionV5 {
+		return tx.serializeV5()
+	}
+	if tx.Version != 0x80000004 {
+		return nil, fmt.Errorf("unsupported Zcash transaction version: %#x", tx.Version)
+	}
 	buf := new(bytes.Buffer)
 
 	// Header: Version (4 bytes)
@@ -176,6 +185,9 @@ func (tx *ZcashTx) Serialize() ([]byte, error) {
 }
 
 func (tx *ZcashTx) Hash() ([]byte, error) {
+	if tx.Version == versionV5 {
+		return tx.hashV5()
+	}
 	serialized, err := tx.Serialize()
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize transaction: %w", err)
@@ -202,6 +214,12 @@ func blake2bConfig(person []byte) *blake2b.Config {
 }
 
 func (tx *ZcashTx) Sighashes() ([][]byte, error) {
+	if tx.Version == versionV5 {
+		return tx.sighashesV5()
+	}
+	if tx.Version != 0x80000004 {
+		return nil, fmt.Errorf("unsupported Zcash transaction version: %#x", tx.Version)
+	}
 	hashPrevouts, err := blake2b.New(blake2bConfig([]byte("ZcashPrevoutHash")))
 	if err != nil {
 		return nil, err
@@ -309,13 +327,16 @@ func (tx *ZcashTx) Sighashes() ([][]byte, error) {
 }
 
 func (tx *Tx) Build() (*ZcashTx, error) {
+	if tx.Tx == nil || tx.MsgTx == nil {
+		return nil, fmt.Errorf("missing transaction")
+	}
 	ztx := &ZcashTx{
 		// Version 4 (Sapling) with overwintered bit set
 		Version: 4 | (0x80000000),
 		// Sapling version group ID
 		VersionGroupId: 0x892F2085,
 		Inputs:         make([]ZcashTxInput, len(tx.UnspentOutputs)),
-		Outputs:        make([]ZcashTxOutput, len(tx.Recipients)),
+		Outputs:        make([]ZcashTxOutput, len(tx.MsgTx.TxOut)),
 		// No locktime
 		LockTime: 0,
 		// No expiry
@@ -323,8 +344,29 @@ func (tx *Tx) Build() (*ZcashTx, error) {
 		SigHash:           txscript.SigHashAll,
 		ConsensusBranchId: tx.Zcash.ConsensusBranchId,
 	}
+	if !tx.legacy {
+		ztx.Version = versionV5
+		ztx.VersionGroupId = versionGroupV5
+		if len(tx.UnspentOutputs) == 0 || len(tx.MsgTx.TxOut) == 0 {
+			return nil, fmt.Errorf("transparent transfers require inputs and outputs")
+		}
+		for i, recipient := range tx.Recipients {
+			if !recipient.Value.Int().IsUint64() || recipient.Value.Uint64() > maxMoney {
+				return nil, fmt.Errorf("recipient %d amount is out of range", i)
+			}
+		}
+	}
 
 	for i, utxo := range tx.UnspentOutputs {
+		if !tx.legacy {
+			if !utxo.Value.Int().IsUint64() || utxo.Value.Uint64() > maxMoney {
+				return nil, fmt.Errorf("input %d amount is out of range", i)
+			}
+			// This builder supplies a signature and public key, not a redeem script.
+			if !txscript.IsPayToPubKeyHash(utxo.PubKeyScript) {
+				return nil, fmt.Errorf("input %d must spend a transparent P2PKH output", i)
+			}
+		}
 		ztx.Inputs[i] = ZcashTxInput{
 			TxID:         utxo.Hash,
 			Index:        utxo.Index,
@@ -357,9 +399,27 @@ func (tx *Tx) Build() (*ZcashTx, error) {
 		}
 	}
 	for i, out := range tx.MsgTx.TxOut {
+		if out == nil {
+			return nil, fmt.Errorf("missing output %d", i)
+		}
 		ztx.Outputs[i] = ZcashTxOutput{
 			Amount:       out.Value,
 			ScriptPubkey: out.PkScript,
+		}
+	}
+	if !tx.legacy {
+		if err := ztx.validateV5(); err != nil {
+			return nil, err
+		}
+		var totalIn, totalOut uint64
+		for _, in := range ztx.Inputs {
+			totalIn += in.Amount
+		}
+		for _, out := range ztx.Outputs {
+			totalOut += uint64(out.Amount)
+		}
+		if totalOut > totalIn {
+			return nil, fmt.Errorf("output value exceeds input value")
 		}
 	}
 	return ztx, nil
@@ -407,6 +467,18 @@ func (tx *Tx) SetSignatures(signatureResponses ...*xc.SignatureResponse) error {
 	if len(signatureResponses) != len(tx.UnspentOutputs) {
 		return fmt.Errorf("expected %d signatures, got %d", len(tx.UnspentOutputs), len(signatureResponses))
 	}
-	tx.signatures = signatureResponses
+	for i, response := range signatureResponses {
+		if response == nil {
+			return fmt.Errorf("missing signature %d", i)
+		}
+	}
+	// Own the signature bytes after validation; callers may reuse their buffers.
+	tx.signatures = make([]*xc.SignatureResponse, len(signatureResponses))
+	for i, response := range signatureResponses {
+		copyResponse := *response
+		copyResponse.Signature = append(xc.TxSignature(nil), response.Signature...)
+		copyResponse.PublicKey = append([]byte(nil), response.PublicKey...)
+		tx.signatures[i] = &copyResponse
+	}
 	return nil
 }

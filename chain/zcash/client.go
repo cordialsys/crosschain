@@ -21,6 +21,12 @@ var _ xclient.Client = &Client{}
 var _ xclient.MultiTransferClient = &Client{}
 
 func NewClient(cfgI *xc.ChainConfig) (xclient.Client, error) {
+	if cfgI.Chain == xc.ZEC && cfgI.ChainID != "" {
+		branch, ok := cfgI.ChainID.AsInt()
+		if !ok || branch == 0 || branch > 0xffffffff {
+			return nil, fmt.Errorf("Zcash consensus branch ID must be a nonzero uint32")
+		}
+	}
 	cli, err := bitcoin.NewBitcoinClient(cfgI)
 	if err != nil {
 		return cli, err
@@ -35,11 +41,13 @@ func NewClient(cfgI *xc.ChainConfig) (xclient.Client, error) {
 func (client Client) GetZcashInput(numOutputs int) tx_input.Zcash {
 	consensusBranchId, ok := client.Chain.ChainID.AsInt()
 	if !ok || consensusBranchId == 0 {
-		// default to n6 checkpoint (latest checkpoint as of this release)
-		// https://zips.z.cash/zip-0253
-		// May need to override this for new releases via config.
+		// Preserve the legacy fallback for forks using this driver. ZEC uses
+		// NU7; explicit chain_id overrides remain available for custom networks.
 		consensusBranchKeyN6 := uint32(0xC8E71055)
 		consensusBranchId = uint64(consensusBranchKeyN6)
+		if client.Chain.Chain == xc.ZEC {
+			consensusBranchId = uint64(ConsensusBranchIDNU7)
+		}
 	}
 
 	zcash := tx_input.Zcash{
