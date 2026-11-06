@@ -3,6 +3,18 @@
 network: "testnet"
 http_timeout: 60s
 chains:
+  ZEC:
+    chain: ZEC
+    driver: zcash
+    chain_name: Zcash Testnet
+    # NU7 consensus branch ID, active from height 4465026.
+    chain_id: 0x77190AD9
+    decimals: 8
+    fee_limit: "1.0"
+    confirmations_final: 6
+    support:
+      fee:
+        accurate: true
   EOS:
     chain: EOS
     support:

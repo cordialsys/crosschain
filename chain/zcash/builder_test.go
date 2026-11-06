@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTransfer(t *testing.T) {
+func TestFluxLegacyTransfer(t *testing.T) {
 	input := tx_input.NewTxInput()
 	input.UnspentOutputs = []tx_input.Output{
 		{
@@ -21,7 +21,7 @@ func TestTransfer(t *testing.T) {
 		},
 	}
 
-	cfg := xc.NewChainConfig(xc.ZEC).WithNet("mainnet")
+	cfg := xc.NewChainConfig(xc.FLUX).WithNet("mainnet")
 
 	txBuilder, err := zcash.NewTxBuilder(cfg.Base())
 	if err != nil {
@@ -36,7 +36,7 @@ func TestTransfer(t *testing.T) {
 	tx, err := txBuilder.Transfer(args, input)
 	require.NoError(t, err)
 
-	// tx must be a bitcoin cash tx
+	// Flux keeps its legacy transaction format and signing behavior.
 	btcTx, ok := tx.(*zcash.Tx)
 	require.True(t, ok)
 	require.NotNil(t, btcTx)
@@ -68,9 +68,12 @@ func TestTransfer(t *testing.T) {
 
 func TestTransferToP2SH(t *testing.T) {
 	input := tx_input.NewTxInput()
+	input.ConsensusBranchId = zcash.ConsensusBranchIDNU7
 	input.UnspentOutputs = []tx_input.Output{
 		{
-			Value: xc.NewAmountBlockchainFromUint64(200000000),
+			Value:        xc.NewAmountBlockchainFromUint64(200000000),
+			Outpoint:     tx_input.Outpoint{Hash: make([]byte, 32)},
+			PubKeyScript: mustDecodeHex(t, "76a914f37872277cd9210d5506f372e840c3da3ae11cf988ac"),
 		},
 	}
 
@@ -111,12 +114,15 @@ func TestMultiTransferToP2SH(t *testing.T) {
 	require.NoError(t, err)
 
 	input := tx_input.NewMultiTransferInput()
+	input.ConsensusBranchId = zcash.ConsensusBranchIDNU7
 	input.Inputs = []tx_input.TxInput{
 		{
 			Address: from,
 			UnspentOutputs: []tx_input.Output{
 				{
-					Value: xc.NewAmountBlockchainFromUint64(200000000),
+					Value:        xc.NewAmountBlockchainFromUint64(200000000),
+					Outpoint:     tx_input.Outpoint{Hash: make([]byte, 32)},
+					PubKeyScript: mustDecodeHex(t, "76a914f37872277cd9210d5506f372e840c3da3ae11cf988ac"),
 				},
 			},
 		},
