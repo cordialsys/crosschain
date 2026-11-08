@@ -42,6 +42,12 @@ var _ xclient.CallClient = &Client{}
 // https://solana.com/docs/core/fees#key-points
 const baseFeeLamports = tx_input.LamportsPerSignature
 
+// Reserve one default SBF instruction budget for ATA creation, even when
+// CreateIdempotent was a no-op during simulation. This is a conservative
+// allowance, not a measurement of the ATA program's compute usage.
+// https://solana.com/docs/core/fees/compute-budget
+const ataCreationComputeReserve uint64 = 200_000
+
 // NewClient returns a new JSON-RPC Client to the Solana node
 func NewClient(cfgI *xc.ChainConfig) (*Client, error) {
 	cfg := cfgI.GetChain()
@@ -500,7 +506,15 @@ func (client *Client) WithTransferSimulation(ctx context.Context, args xcbuilder
 			if units > uint64(tx_input.MaxComputeUnitLimit) {
 				return nil, fmt.Errorf("Solana simulation compute usage exceeds runtime maximum")
 			}
-			txInput.ComputeUnitLimit = uint32(min(uint64(tx_input.MaxComputeUnitLimit), max(uint64(1000), (units*120+99)/100)))
+			limit := max(uint64(1000), (units*120+99)/100)
+			if _, isToken := args.GetContract(); isToken && !txInput.ToIsATA {
+				// The builder always includes CreateIdempotent for wallet
+				// destinations. The ATA can be closed after simulation, so a
+				// percentage of the no-op cost is insufficient. Do not gate this
+				// on ShouldCreateATA: that earlier account lookup can also race.
+				limit += ataCreationComputeReserve
+			}
+			txInput.ComputeUnitLimit = uint32(min(uint64(tx_input.MaxComputeUnitLimit), limit))
 		}
 		if sim.Value.LoadedAccountsDataSize != nil {
 			size := uint64(*sim.Value.LoadedAccountsDataSize)
