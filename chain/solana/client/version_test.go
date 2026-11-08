@@ -220,6 +220,92 @@ func TestDisabledV1Call(t *testing.T) {
 	require.ErrorContains(t, err, "Solana V1 transactions are disabled for FOGO")
 }
 
+func TestTransferSimulationReservesATACreationCompute(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		native       bool
+		direct       bool
+		missingATA   bool
+		token2022    bool
+		feePayer     bool
+		missingUsage bool
+		units        uint64
+		wantLimit    uint32
+	}{
+		{name: "existing ATA can be closed after simulation", units: 5_000, wantLimit: 206_000},
+		{name: "missing ATA can be created before simulation", missingATA: true, units: 5_000, wantLimit: 206_000},
+		{name: "creation already simulated", missingATA: true, units: 30_000, wantLimit: 236_000},
+		{name: "token 2022", token2022: true, units: 5_000, wantLimit: 206_000},
+		{name: "separate fee payer", feePayer: true, units: 5_000, wantLimit: 206_000},
+		{name: "expensive transfer retains additive headroom", units: 100_000, wantLimit: 320_000},
+		{name: "runtime maximum", units: 1_100_000, wantLimit: 1_400_000},
+		{name: "missing measurement retains maximum", missingUsage: true, wantLimit: 1_400_000},
+		{name: "native transfer", native: true, units: 5_000, wantLimit: 6_000},
+		{name: "direct token account", direct: true, units: 5_000, wantLimit: 6_000},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := xc.NewChainConfig(xc.SOL)
+			var opts []xcbuilder.BuilderOption
+			if !tc.native {
+				opts = append(opts, xcbuilder.OptionContractAddress(xc.ContractAddress(solana.NewWallet().PublicKey().String()), 6))
+			}
+			args, err := xcbuilder.NewTransferArgs(cfg.Base(),
+				xc.Address(solana.NewWallet().PublicKey().String()),
+				xc.Address(solana.NewWallet().PublicKey().String()),
+				xc.NewAmountBlockchainFromUint64(1000), opts...)
+			require.NoError(t, err)
+			if tc.feePayer {
+				args.SetFeePayer(xc.Address(solana.NewWallet().PublicKey().String()))
+			}
+			input := tx_input.NewTxInput()
+			input.ToIsATA = tc.direct
+			input.ShouldCreateATA = tc.missingATA
+			input.TokenProgram = solana.TokenProgramID
+			if tc.token2022 {
+				input.TokenProgram = solana.Token2022ProgramID
+			}
+			input.BaseFee = xc.NewAmountBlockchainFromUint64(5000)
+			input.PrioritizationFee = xc.NewAmountBlockchainFromUint64(1000)
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var request struct {
+					ID     json.RawMessage `json:"id"`
+					Method string          `json:"method"`
+				}
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
+				require.Equal(t, "simulateTransaction", request.Method)
+				value := map[string]any{"err": nil}
+				if !tc.missingUsage {
+					value["unitsConsumed"] = tc.units
+				}
+				require.NoError(t, json.NewEncoder(w).Encode(map[string]any{
+					"jsonrpc": "2.0", "id": request.ID,
+					"result": map[string]any{"value": value},
+				}))
+			}))
+			defer server.Close()
+			c := &client.Client{SolClient: rpc.New(server.URL), Asset: cfg}
+			result, err := c.WithTransferSimulation(context.Background(), args, input)
+			require.NoError(t, err)
+			// Preserve the observed usage separately from the execution budget.
+			require.Equal(t, tc.units, result.(*tx_input.TxInput).UnitsConsumed)
+			b, err := solanabuilder.NewTxBuilder(cfg.Base())
+			require.NoError(t, err)
+			built, err := b.Transfer(args, result)
+			require.NoError(t, err)
+			wire, err := built.Serialize()
+			require.NoError(t, err)
+			transaction, err := solana.TransactionFromBytes(wire)
+			require.NoError(t, err)
+			config := transaction.Message.TransactionConfig
+			require.Equal(t, tc.wantLimit, *config.ComputeUnitLimit)
+			wantPriorityFee := (uint64(tc.wantLimit)*1000 + 999_999) / 1_000_000
+			require.Equal(t, wantPriorityFee, *config.PriorityFee)
+			fee, _ := input.GetFeeLimit()
+			require.Equal(t, uint64(transaction.Message.Header.NumRequiredSignatures)*5000+wantPriorityFee, fee.Uint64())
+		})
+	}
+}
+
 func TestTransferClientVersions(t *testing.T) {
 	for _, tc := range []struct {
 		name            string
