@@ -1,6 +1,7 @@
 package taostats
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,7 +24,7 @@ type Pagination struct {
 }
 
 type ExtrinsicError struct {
-	ExtraInfo string `json:"extra_info"`
+	ExtraInfo string `json:"docs"`
 	Name      string `json:"name"`
 	Pallet    string `json:"pallet"`
 }
@@ -36,21 +37,21 @@ func (err *ExtrinsicError) String() string {
 }
 
 type Extrinsic struct {
-	Timestamp     time.Time       `json:"timestamp"`
-	BlockNumber   int64           `json:"block_number"`
-	Hash          string          `json:"hash"`
-	ID            string          `json:"id"`
-	Index         int             `json:"index"`
-	Version       int             `json:"version"`
-	Signature     Signature       `json:"signature"`
-	SignerAddress string          `json:"signer_address"`
-	Tip           string          `json:"tip"`
-	Fee           string          `json:"fee"`
-	Success       bool            `json:"success"`
-	Error         *ExtrinsicError `json:"error"`
-	CallID        string          `json:"call_id"`
-	FullName      string          `json:"full_name"`
-	CallArgs      CallArgs        `json:"call_args"`
+	Timestamp     time.Time              `json:"timestamp"`
+	BlockNumber   int64                  `json:"block_number"`
+	Hash          string                 `json:"hash"`
+	ID            string                 `json:"id"`
+	Index         int                    `json:"index"`
+	Version       int                    `json:"version"`
+	Signature     string                 `json:"signature"`
+	SignerAddress string                 `json:"signer_address"`
+	Tip           string                 `json:"tip"`
+	Fee           string                 `json:"fee"`
+	Success       bool                   `json:"success"`
+	Error         *ExtrinsicError        `json:"error"`
+	CallID        string                 `json:"call_id"`
+	FullName      string                 `json:"full_name"`
+	CallArgs      map[string]interface{} `json:"args"`
 }
 
 type Signature struct {
@@ -131,7 +132,7 @@ func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
 	if args, ok := ev.Args.(map[string]interface{}); ok {
 		for key, value := range args {
 			if key == name {
-				return value, true
+				return eventParam(value), true
 			}
 		}
 	}
@@ -142,7 +143,7 @@ func (ev *Event) GetParam(name string, index int) (interface{}, bool) {
 		if index >= len(args) {
 			return nil, false
 		}
-		return args[index], true
+		return eventParam(args[index]), true
 	}
 	return nil, false
 }
@@ -196,4 +197,12 @@ type Block struct {
 	EventsCount     int       `json:"events_count"`
 	ExtrinsicsCount int       `json:"extrinsics_count"`
 	CallsCount      int       `json:"calls_count"`
+}
+
+// Preserve exact integer values for the shared Substrate event parser.
+func eventParam(value interface{}) interface{} {
+	if number, ok := value.(json.Number); ok {
+		return number.String()
+	}
+	return value
 }

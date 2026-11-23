@@ -1,11 +1,13 @@
 package taostats
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -39,7 +41,7 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 	if err != nil {
 		return fmt.Errorf("failed wait on limiter: %w", err)
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return err
 	}
@@ -68,11 +70,13 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 		rpcErr := &Error{}
 		err2 := json.Unmarshal(body, rpcErr)
 		if err2 != nil || rpcErr.Message == "" {
-			return fmt.Errorf("respones failed (%d)", resp.StatusCode)
+			return fmt.Errorf("response failed (%d)", resp.StatusCode)
 		}
 		return fmt.Errorf("%s (%d)", rpcErr.Message, resp.StatusCode)
 	}
-	err = json.Unmarshal(body, &outputData)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
+	err = decoder.Decode(outputData)
 	if err != nil {
 		return err
 	}
@@ -82,12 +86,12 @@ func (client *Client) Get(ctx context.Context, url string, outputData any) error
 func (client *Client) GetTransaction(ctx context.Context, txHash string) (*Extrinsic, error) {
 	url := ""
 	if _, _, err := api.BlockAndOffset(txHash).Parse(); err == nil {
-		url = fmt.Sprintf("%s/api/extrinsic/v1?id=%s", client.baseUrl, txHash)
+		url = fmt.Sprintf("%s/v1/extrinsics?id=%s", client.baseUrl, txHash)
 	} else {
 		if !strings.HasPrefix(string(txHash), "0x") {
 			txHash = "0x" + txHash
 		}
-		url = fmt.Sprintf("%s/api/extrinsic/v1?hash=%s", client.baseUrl, txHash)
+		url = fmt.Sprintf("%s/v1/extrinsics?hash=%s", client.baseUrl, txHash)
 	}
 	var extResponse GetExtrinicResponse
 	err := client.Get(ctx, url, &extResponse)
@@ -101,7 +105,7 @@ func (client *Client) GetTransaction(ctx context.Context, txHash string) (*Extri
 }
 
 func (client *Client) GetBlock(ctx context.Context, height int64) (*Block, error) {
-	url := fmt.Sprintf("%s/api/block/v1?block_number=%d", client.baseUrl, height)
+	url := fmt.Sprintf("%s/v1/blocks?block_number=%d", client.baseUrl, height)
 	var extResponse GetBlocksResponse
 	err := client.Get(ctx, url, &extResponse)
 	if err != nil {
@@ -114,25 +118,31 @@ func (client *Client) GetBlock(ctx context.Context, height int64) (*Block, error
 }
 
 func (client *Client) GetEvents(ctx context.Context, ext *Extrinsic) ([]*Event, error) {
-	// use the ID and not the hash
-	url := fmt.Sprintf("%s/api/event/v1?extrinsic_id=%s", client.baseUrl, ext.ID)
-
-	var extResponse GetEventsResponse
-	err := client.Get(ctx, url, &extResponse)
-	if err != nil {
-		return nil, fmt.Errorf("could not lookup events for %s: %v", ext.ID, err)
+	var events []*Event
+	for page := 1; ; {
+		endpoint := fmt.Sprintf("%s/v1/events?extrinsic_id=%s&limit=200&page=%d", client.baseUrl, url.QueryEscape(ext.ID), page)
+		var response GetEventsResponse
+		if err := client.Get(ctx, endpoint, &response); err != nil {
+			return nil, fmt.Errorf("could not lookup events for %s: %w", ext.ID, err)
+		}
+		events = append(events, response.Data...)
+		if response.Pagination.NextPage == nil {
+			return events, nil
+		}
+		next := *response.Pagination.NextPage
+		if next <= page {
+			return nil, fmt.Errorf("invalid events pagination: next page %d after %d", next, page)
+		}
+		page = next
 	}
-	return extResponse.Data, nil
+
 }
 
 func (client *Client) GetAccount(ctx context.Context, address string) (*AccountData, error) {
-	// use the ID and not the hash
-	url := fmt.Sprintf("%s/api/account/latest/v1?address=%s", client.baseUrl, address)
-
+	endpoint := fmt.Sprintf("%s/v1/accounts/%s", client.baseUrl, url.PathEscape(address))
 	var response AccountResponse
-	err := client.Get(ctx, url, &response)
-	if err != nil {
-		return nil, fmt.Errorf("could not lookup account %s: %v", address, err)
+	if err := client.Get(ctx, endpoint, &response); err != nil {
+		return nil, fmt.Errorf("could not lookup account %s: %w", address, err)
 	}
 	if len(response.Data) == 0 {
 		return nil, fmt.Errorf("TAO address %s not found", address)
